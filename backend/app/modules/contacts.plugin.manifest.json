@@ -1,0 +1,11 @@
+{
+  "id": "tribu.contacts",
+  "type": "feature",
+  "name": "Kontakte",
+  "version": "1.0.0",
+  "compatibility": { "tribu": ">=0.3.0" },
+  "entrypoints": {
+    "backend_router": "backend/app/modules/contacts_router.py"
+  },
+  "menu": { "label_key": "module.contacts.name", "icon": "BookUser", "order": 15 }
+}

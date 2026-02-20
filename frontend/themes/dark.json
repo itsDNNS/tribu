@@ -1,0 +1,15 @@
+{
+  "id": "tribu.theme.dark",
+  "name": "Dark",
+  "tokens": {
+    "bg": "#0f172a",
+    "surface": "#111827",
+    "text": "#e5e7eb",
+    "muted": "#9ca3af",
+    "border": "#334155",
+    "primary": "#6366f1",
+    "primaryText": "#ffffff",
+    "sidebar": "#0b1220",
+    "sidebarActive": "#1e293b"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "tribu.theme.midnight-glass",
+  "name": "Midnight Glass",
+  "tokens": {
+    "bg": "#090c18",
+    "surface": "#12182b",
+    "text": "#e8edff",
+    "muted": "#9aa4c7",
+    "border": "#2b3558",
+    "primary": "#7c3aed",
+    "primaryText": "#ffffff",
+    "sidebar": "#0f1426",
+    "sidebarActive": "#1b2440"
+  }
+}
