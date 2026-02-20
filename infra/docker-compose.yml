@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tribu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tribu
+      POSTGRES_USER: tribu
+      POSTGRES_PASSWORD: tribu
+    volumes:
+      - tribu_pg_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: tribu-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: tribu-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://tribu:tribu@postgres:5432/tribu
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: tribu-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  tribu_pg_data:
