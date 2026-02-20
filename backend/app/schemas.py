@@ -22,3 +22,9 @@ class MeResponse(BaseModel):
     user_id: int
     email: str
     display_name: str
+
+
+class FamilySummary(BaseModel):
+    family_id: int
+    family_name: str
+    role: str

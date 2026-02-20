@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
 from .models import User, Family, Membership
-from .schemas import RegisterRequest, LoginRequest, TokenResponse, MeResponse
+from .schemas import RegisterRequest, LoginRequest, TokenResponse, MeResponse, FamilySummary
 from .security import hash_password, verify_password, create_access_token, decode_token
 
 app = FastAPI(title="Tribu API", version="0.2.0")
@@ -76,6 +76,17 @@ def current_user(
 @app.get("/auth/me", response_model=MeResponse)
 def me(user: User = Depends(current_user)):
     return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name)
+
+
+@app.get("/families/me", response_model=list[FamilySummary])
+def my_families(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    memberships = db.query(Membership).filter(Membership.user_id == user.id).all()
+    result = []
+    for membership in memberships:
+        family = db.query(Family).filter(Family.id == membership.family_id).first()
+        if family:
+            result.append(FamilySummary(family_id=family.id, family_name=family.name, role=membership.role))
+    return result
 
 
 @app.get("/")
