@@ -1,23 +1,21 @@
 # Changelog
 
+All notable changes to Tribu are documented here.
+
 ## 2026-02-20
 
-- Initiales Tribu Scaffold erstellt
-- Docker Compose mit frontend, backend, postgres, redis
-- Projekt Doku begonnen (Architektur, Roadmap)
-- Auth Basis mit Register, Login und Me Endpoint gebaut
-- Family Basis mit Memberships und Endpoint /families/me erweitert
-- Kalender v1 implementiert mit Events CRUD API unter /calendar/events
-- Frontend Kalender Testbereich fuer Events erstellen und laden hinzugefuegt
-- Geburtstage Modul v1 mit API unter /birthdays
-- Dashboard Summary API unter /dashboard/summary fuer naechste Termine und Geburtstage in den naechsten 4 Wochen
-- Welcome Bereich nach Login zeigt direkt die wichtigsten Infos
-- UI zu moderner App Shell mit Sidebar Navigation umgebaut
-- Lucide Icons in Navigation und Einstellungen eingebunden
-- Feature Struktur im Backend in separate Module zerlegt
-- Rollenmodell erweitert: erster Nutzer ist automatisch Admin und Erwachsener
-- Design Tokens und Theme Packs eingeführt (Light, Dark, Midnight Glass)
-- Plugin Manifest Spezifikation v1 dokumentiert
-- i18n Foundation erweitert für Core und Module mit nachladbaren Sprachpaketen
-- Neues Kontakte Modul mit CSV Import und automatischer Geburtstagsübernahme
-- Kalender Monatsansicht erweitert: Tag klickbar, Tagesdetails dynamisch aufklappbar, Terminformular erst nach Tagauswahl sichtbar
+### Added
+
+- **Project foundation**: Scaffold with Docker Compose (PostgreSQL 16, Redis 7, FastAPI, Next.js 14)
+- **Auth system**: Register, login, JWT sessions, profile image support
+- **Family model**: Multi-family memberships with roles (admin, parent, child)
+- **Calendar module**: Event CRUD API, monthly grid view with clickable days, dynamic day-detail panels, inline event forms
+- **Birthday module**: Dedicated tracker scoped to family, auto-sync from contacts
+- **Contacts module**: Family address book, CSV import with automatic birthday extraction
+- **Dashboard module**: Summary API showing upcoming events and birthdays within 4 weeks
+- **Plugin system**: Manifest spec v1 for features, themes, and language packs
+- **Theme engine**: Switchable design tokens (Light, Dark, Midnight Glass)
+- **i18n**: German and English, core + module-level language packs with lazy loading
+- **App shell**: Modern sidebar navigation with Lucide icons
+- **Role model**: First registered user auto-promoted to admin and adult
+- **Architecture docs**: Architecture overview, plugin manifest spec, roadmap
