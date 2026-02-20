@@ -1,0 +1,8 @@
+{
+  "id": "tribu.theme.light",
+  "type": "theme",
+  "name": "Light",
+  "version": "1.0.0",
+  "compatibility": { "tribu": ">=0.3.0" },
+  "entrypoints": { "theme_tokens": "frontend/themes/light.json" }
+}

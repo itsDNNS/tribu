@@ -1,0 +1,15 @@
+{
+  "id": "tribu.dashboard",
+  "type": "feature",
+  "name": "Dashboard",
+  "version": "1.0.0",
+  "compatibility": { "tribu": ">=0.3.0" },
+  "entrypoints": {
+    "backend_router": "backend/app/modules/dashboard_router.py",
+    "i18n": [
+      "frontend/i18n/modules/dashboard/de.json",
+      "frontend/i18n/modules/dashboard/en.json"
+    ]
+  },
+  "menu": { "label_key": "module.dashboard.name", "icon": "LayoutDashboard", "order": 10 }
+}

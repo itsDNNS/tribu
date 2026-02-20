@@ -1,0 +1,15 @@
+{
+  "id": "tribu.calendar",
+  "type": "feature",
+  "name": "Kalender",
+  "version": "1.0.0",
+  "compatibility": { "tribu": ">=0.3.0" },
+  "entrypoints": {
+    "backend_router": "backend/app/modules/calendar_router.py",
+    "i18n": [
+      "frontend/i18n/modules/calendar/de.json",
+      "frontend/i18n/modules/calendar/en.json"
+    ]
+  },
+  "menu": { "label_key": "module.calendar.name", "icon": "CalendarDays", "order": 20 }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "tribu.theme.light",
+  "name": "Light",
+  "tokens": {
+    "bg": "#f5f7fb",
+    "surface": "#ffffff",
+    "text": "#111827",
+    "muted": "#6b7280",
+    "border": "#e5e7eb",
+    "primary": "#4f46e5",
+    "primaryText": "#ffffff",
+    "sidebar": "#ffffff",
+    "sidebarActive": "#eef2ff"
+  }
+}
