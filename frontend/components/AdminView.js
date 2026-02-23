@@ -5,7 +5,7 @@ import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
 export default function AdminView() {
-  const { familyId, members, ui, messages, loadMembers } = useApp();
+  const { familyId, members, messages, loadMembers } = useApp();
   const [adminMsg, setAdminMsg] = useState('');
 
   async function handleSetAdult(userId, isAdult) {
@@ -23,20 +23,32 @@ export default function AdminView() {
   }
 
   return (
-    <div style={ui.card}>
-      <h2>{t(messages, 'admin_members')}</h2>
-      {adminMsg && <p>{adminMsg}</p>}
-      {members.map((m) => (
-        <div key={m.user_id} style={{ ...ui.smallCard, marginBottom: 8 }}>
-          <strong>{m.display_name}</strong> <small>({m.email})</small><br />
-          <small>{t(messages, 'role')}: {m.role} | {m.is_adult ? t(messages, 'adult') : t(messages, 'child')}</small>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button style={ui.secondaryBtn} onClick={() => handleSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
-            <button style={ui.secondaryBtn} onClick={() => handleSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
-            <button style={ui.secondaryBtn} onClick={() => handleSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
-          </div>
+    <div className="view-enter">
+      <div className="view-header">
+        <div>
+          <h1 className="view-title">{t(messages, 'admin_members')}</h1>
         </div>
-      ))}
+      </div>
+      {adminMsg && <p style={{ color: 'var(--danger)', marginBottom: 'var(--space-md)' }}>{adminMsg}</p>}
+      <div className="settings-grid">
+        {members.map((m) => (
+          <div key={m.user_id} className="glass-sm settings-section">
+            <div className="profile-row">
+              <div className="sidebar-user-avatar">{m.display_name?.[0] || '?'}</div>
+              <div className="profile-info">
+                <div className="profile-name">{m.display_name}</div>
+                <div className="profile-email">{m.email}</div>
+                <span className="profile-role">{m.role} · {m.is_adult ? t(messages, 'adult') : t(messages, 'child')}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+              <button className="btn-ghost" onClick={() => handleSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
+              <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
+              <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

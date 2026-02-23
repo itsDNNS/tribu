@@ -20,8 +20,28 @@ const views = {
 
 const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
 
+function DashboardSkeleton() {
+  return (
+    <div>
+      <div className="view-header">
+        <div>
+          <div className="skeleton skeleton-text lg" />
+          <div className="skeleton skeleton-text sm" />
+        </div>
+      </div>
+      <div className="bento-grid">
+        <div className="bento-welcome glass skeleton skeleton-card" style={{ minHeight: 140 }} />
+        <div className="bento-stats glass skeleton skeleton-card" style={{ minHeight: 140 }} />
+        <div className="bento-events glass skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-tasks glass skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-birthdays glass skeleton skeleton-card" style={{ minHeight: 180 }} />
+      </div>
+    </div>
+  );
+}
+
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, messages, me, members, families, familyId, tasks, logout, demoMode } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, messages, me, members, families, familyId, tasks, logout, demoMode, loading } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -166,7 +186,7 @@ export default function AppShell() {
         )}
 
         <div className="view-enter">
-          <ActiveComponent />
+          {loading ? <DashboardSkeleton /> : <ActiveComponent />}
         </div>
       </main>
 

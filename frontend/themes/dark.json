@@ -1,6 +1,6 @@
 {
   "id": "tribu.theme.dark",
-  "name": "Dunkel",
+  "name": "Dark",
   "dataTheme": "dark",
   "tokens": {
     "bg": "#0f172a",
