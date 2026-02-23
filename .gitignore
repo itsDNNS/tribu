@@ -15,5 +15,8 @@ node_modules/
 .vscode/
 .idea/
 
+# Internal docs (not for the repo)
+.internal/
+
 # OS
 .DS_Store
