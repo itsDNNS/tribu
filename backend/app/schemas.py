@@ -176,3 +176,17 @@ class TaskResponse(BaseModel):
     created_by_user_id: Optional[int]
     created_at: datetime
     completed_at: Optional[datetime]
+
+
+class PaginatedCalendarEvents(BaseModel):
+    items: list[CalendarEventResponse]
+    total: int
+    offset: int
+    limit: int
+
+
+class PaginatedTasks(BaseModel):
+    items: list[TaskResponse]
+    total: int
+    offset: int
+    limit: int
