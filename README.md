@@ -36,7 +36,19 @@
 
 <img src="docs/assets/screenshot-light.png" alt="Dashboard - Morning Mist theme" width="100%" />
 
-**Mobile (375px)**
+**Calendar with day-detail panel**
+
+<img src="docs/assets/screenshot-calendar.png" alt="Calendar view" width="100%" />
+
+**Tasks with priorities, assignees, and overdue tracking**
+
+<img src="docs/assets/screenshot-tasks.png" alt="Tasks view" width="100%" />
+
+**Login page**
+
+<img src="docs/assets/screenshot-auth.png" alt="Login page" width="100%" />
+
+**Mobile (390px)**
 
 <p align="center">
   <img src="docs/assets/screenshot-mobile.png" alt="Mobile dashboard" width="320" />
@@ -99,7 +111,7 @@ docker compose up --build
 
 > The first user to register becomes the family **admin**.
 >
-> Want to explore first? Click **Demo ausprobieren** on the login page.
+> Want to explore first? Click **Try demo** on the login page.
 
 ## Tech Stack
 
