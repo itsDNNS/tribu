@@ -35,7 +35,7 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [familyName, setFamilyName] = useState('');
-  const [token, setToken] = useState('');
+  const [loggedIn, setLoggedIn] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [msg, setMsg] = useState('');
 
@@ -161,12 +161,27 @@ export default function Home() {
   useEffect(() => {
     setTheme(window.localStorage.getItem('tribu_theme') || 'light');
     setLang(window.localStorage.getItem('tribu_lang') || 'de');
-    setToken(window.localStorage.getItem('tribu_token') || '');
     setProfileImage('');
 
     const onResize = () => setIsMobile(window.innerWidth < 900);
     onResize();
     window.addEventListener('resize', onResize);
+
+    // Auto-login: check if cookie session is still valid
+    fetch(`${API}/auth/me`, { credentials: 'include' })
+      .then((res) => {
+        if (res.ok) return res.json();
+        return null;
+      })
+      .then((data) => {
+        if (data) {
+          setMe(data);
+          if (data.profile_image) setProfileImage(data.profile_image);
+          setLoggedIn(true);
+        }
+      })
+      .catch(() => {});
+
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
@@ -180,29 +195,24 @@ export default function Home() {
   }, [lang]);
 
   useEffect(() => {
-    if (token) window.localStorage.setItem('tribu_token', token);
-    else window.localStorage.removeItem('tribu_token');
-  }, [token]);
-
-  useEffect(() => {
     // Profilbild wird serverseitig gespeichert, nicht in localStorage.
   }, [profileImage]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!loggedIn) return;
     bootstrapAfterLogin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [loggedIn]);
 
   async function bootstrapAfterLogin() {
-    const meRes = await fetch(`${apiBase}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+    const meRes = await fetch(`${apiBase}/auth/me`, { credentials: 'include' });
     const meData = await meRes.json();
     if (meRes.ok) {
       setMe(meData);
       if (meData.profile_image) setProfileImage(meData.profile_image);
     }
 
-    const famRes = await fetch(`${apiBase}/families/me`, { headers: { Authorization: `Bearer ${token}` } });
+    const famRes = await fetch(`${apiBase}/families/me`, { credentials: 'include' });
     const famData = await famRes.json();
     if (famRes.ok && famData.length > 0) {
       setFamilies(famData);
@@ -218,11 +228,12 @@ export default function Home() {
     setMsg('');
     const res = await fetch(`${apiBase}/auth/register`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password, display_name: displayName, family_name: familyName }),
     });
     const data = await res.json();
     if (!res.ok) return setMsg(errorText(data.detail, 'Register fehlgeschlagen'));
-    setToken(data.access_token);
+    setLoggedIn(true);
     setMsg('Registrierung erfolgreich');
   }
 
@@ -230,34 +241,36 @@ export default function Home() {
     e.preventDefault();
     setMsg('');
     const res = await fetch(`${apiBase}/auth/login`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
     if (!res.ok) return setMsg(errorText(data.detail, 'Login fehlgeschlagen'));
-    setToken(data.access_token);
+    setLoggedIn(true);
   }
 
   async function loadDashboard(fid = familyId) {
-    const res = await fetch(`${apiBase}/dashboard/summary?family_id=${fid}`, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(`${apiBase}/dashboard/summary?family_id=${fid}`, { credentials: 'include' });
     const data = await res.json();
     if (res.ok) setSummary(data);
   }
 
   async function loadEvents(fid = familyId) {
-    const res = await fetch(`${apiBase}/calendar/events?family_id=${fid}`, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(`${apiBase}/calendar/events?family_id=${fid}`, { credentials: 'include' });
     const data = await res.json();
     if (!res.ok) return setCalendarMsg(errorText(data.detail, 'Events konnten nicht geladen werden'));
     setEvents(data);
   }
 
   async function loadMembers(fid = familyId) {
-    const res = await fetch(`${apiBase}/families/${fid}/members`, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(`${apiBase}/families/${fid}/members`, { credentials: 'include' });
     const data = await res.json();
     if (res.ok) setMembers(data);
   }
 
   async function loadContacts(fid = familyId) {
-    const res = await fetch(`${apiBase}/contacts?family_id=${fid}`, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(`${apiBase}/contacts?family_id=${fid}`, { credentials: 'include' });
     const data = await res.json();
     if (res.ok) setContacts(data);
   }
@@ -269,7 +282,8 @@ export default function Home() {
       starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
     };
     const res = await fetch(`${apiBase}/calendar/events`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(payload),
     });
     const data = await res.json();
@@ -282,7 +296,8 @@ export default function Home() {
   async function addBirthday(e) {
     e.preventDefault();
     const res = await fetch(`${apiBase}/birthdays`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ family_id: Number(familyId), person_name: birthdayName, month: Number(birthdayMonth), day: Number(birthdayDay) }),
     });
     const data = await res.json();
@@ -295,7 +310,8 @@ export default function Home() {
     e.preventDefault();
     const res = await fetch(`${apiBase}/contacts/import-csv`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ family_id: Number(familyId), csv_text: contactsCsv }),
     });
     const data = await res.json();
@@ -307,7 +323,8 @@ export default function Home() {
 
   async function setAdult(userId, isAdult) {
     await fetch(`${apiBase}/families/${familyId}/members/${userId}/adult`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ is_adult: isAdult }),
     });
     await loadMembers();
@@ -315,7 +332,8 @@ export default function Home() {
 
   async function setRole(userId, role) {
     const res = await fetch(`${apiBase}/families/${familyId}/members/${userId}/role`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ role }),
     });
     if (!res.ok) {
@@ -333,10 +351,11 @@ export default function Home() {
     reader.onload = async () => {
       const value = String(reader.result || '');
       setProfileImage(value);
-      if (token) {
+      if (loggedIn) {
         await fetch(`${apiBase}/auth/me/profile-image`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ profile_image: value }),
         });
       }
@@ -344,8 +363,9 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
-  function logout() {
-    setToken(''); setMe(null); setEvents([]); setSummary({ next_events: [], upcoming_birthdays: [] }); setMembers([]); setContacts([]);
+  async function logout() {
+    await fetch(`${apiBase}/auth/logout`, { method: 'POST', credentials: 'include' });
+    setLoggedIn(false); setMe(null); setEvents([]); setSummary({ next_events: [], upcoming_birthdays: [] }); setMembers([]); setContacts([]);
   }
 
   const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
@@ -358,7 +378,7 @@ export default function Home() {
     primaryBtn: { ...styles.primaryBtn, background: tokens.primary, color: tokens.primaryText },
   };
 
-  if (!token) {
+  if (!loggedIn) {
     return (
       <main style={{ ...styles.page, background: '#f5f7fb' }}>
         <div style={styles.hero}><h1 style={{ margin: 0 }}>{t(messages, 'app_name')}</h1><p style={{ marginTop: 8 }}>{t(messages, 'tagline')}</p></div>

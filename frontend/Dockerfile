@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -6,7 +6,25 @@ COPY package.json ./
 RUN npm install
 
 COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN addgroup -S tribu && adduser -S tribu -G tribu
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/next.config.js ./next.config.js
+COPY --from=builder /app/i18n ./i18n
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/themes ./themes
+
+RUN chown -R tribu:tribu /app
+USER tribu
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "start"]

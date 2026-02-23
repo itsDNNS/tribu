@@ -1,6 +1,7 @@
 from datetime import UTC, date
+from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -8,15 +9,24 @@ from app.database import get_db
 from app.models import Membership, User
 from app.security import decode_token
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+
+COOKIE_NAME = "tribu_token"
 
 
 def current_user(
-    creds: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
 ):
+    token = request.cookies.get(COOKIE_NAME)
+    if not token and creds:
+        token = creds.credentials
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert")
+
     try:
-        payload = decode_token(creds.credentials)
+        payload = decode_token(token)
         user_id = int(payload.get("sub"))
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token")

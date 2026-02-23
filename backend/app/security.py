@@ -6,9 +6,12 @@ from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
+JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALG = "HS256"
 JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
+
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET is required. Set it via environment variable.")
 
 
 def hash_password(password: str) -> str:
