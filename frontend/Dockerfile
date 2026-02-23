@@ -21,6 +21,9 @@ COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/i18n ./i18n
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/themes ./themes
+COPY --from=builder /app/contexts ./contexts
+COPY --from=builder /app/hooks ./hooks
+COPY --from=builder /app/components ./components
 
 RUN chown -R tribu:tribu /app
 USER tribu

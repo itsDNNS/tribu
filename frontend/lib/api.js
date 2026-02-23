@@ -1,0 +1,110 @@
+const API = '/api';
+
+async function request(path, options = {}) {
+  const res = await fetch(`${API}${path}`, { credentials: 'include', ...options });
+  let data;
+  try { data = await res.json(); } catch { data = null; }
+  return { ok: res.ok, data };
+}
+
+function post(path, body) {
+  return request(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+function patch(path, body) {
+  return request(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+function del(path) {
+  return request(path, { method: 'DELETE' });
+}
+
+// Auth
+export function apiLogin(email, password) {
+  return post('/auth/login', { email, password });
+}
+
+export function apiRegister(email, password, display_name, family_name) {
+  return post('/auth/register', { email, password, display_name, family_name });
+}
+
+export function apiLogout() {
+  return post('/auth/logout');
+}
+
+export function apiGetMe() {
+  return request('/auth/me');
+}
+
+export function apiUpdateProfileImage(profile_image) {
+  return patch('/auth/me/profile-image', { profile_image });
+}
+
+// Families
+export function apiGetMyFamilies() {
+  return request('/families/me');
+}
+
+export function apiGetMembers(familyId) {
+  return request(`/families/${familyId}/members`);
+}
+
+export function apiSetAdult(familyId, userId, is_adult) {
+  return patch(`/families/${familyId}/members/${userId}/adult`, { is_adult });
+}
+
+export function apiSetRole(familyId, userId, role) {
+  return patch(`/families/${familyId}/members/${userId}/role`, { role });
+}
+
+// Dashboard
+export function apiGetDashboard(familyId) {
+  return request(`/dashboard/summary?family_id=${familyId}`);
+}
+
+// Calendar
+export function apiGetEvents(familyId) {
+  return request(`/calendar/events?family_id=${familyId}`);
+}
+
+export function apiCreateEvent(payload) {
+  return post('/calendar/events', payload);
+}
+
+export function apiAddBirthday(payload) {
+  return post('/birthdays', payload);
+}
+
+// Contacts
+export function apiGetContacts(familyId) {
+  return request(`/contacts?family_id=${familyId}`);
+}
+
+export function apiImportContactsCsv(family_id, csv_text) {
+  return post('/contacts/import-csv', { family_id, csv_text });
+}
+
+// Tasks
+export function apiGetTasks(familyId) {
+  return request(`/tasks?family_id=${familyId}`);
+}
+
+export function apiCreateTask(payload) {
+  return post('/tasks', payload);
+}
+
+export function apiUpdateTask(taskId, payload) {
+  return patch(`/tasks/${taskId}`, payload);
+}
+
+export function apiDeleteTask(taskId) {
+  return del(`/tasks/${taskId}`);
+}
