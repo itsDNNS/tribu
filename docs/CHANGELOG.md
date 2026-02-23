@@ -6,6 +6,10 @@ All notable changes to Tribu are documented here.
 
 ### Added
 
+- **UI redesign**: Complete visual overhaul based on approved prototype. CSS design system with glassmorphism, bento grid dashboard, stagger animations, mesh background, and grain texture. Three polished themes: Morning Mist (light), Dunkel (dark), Midnight Glass (glassmorphism).
+- **Demo mode**: Interactive demo accessible from the auth page. Pre-loaded with realistic German family data (4 members, 12 events, 10 tasks, 7 contacts, 3 birthdays). All CRUD operations work locally without a backend.
+- **Frontend refactor**: Monolithic `pages/index.js` split into Context + Hooks + Views architecture. AppContext for global state, dedicated hooks for calendar and task logic, individual view components per screen.
+- **CSS design system**: Global stylesheet (`styles/globals.css`) with CSS custom properties, `data-theme` attribute switching, responsive breakpoints (768px, 1100px), and utility classes for glass effects and animations.
 - **Tasks module**: Family-shared task list with CRUD, priorities (low/normal/high), due dates, assignees, status filter (all/open/done), and recurring tasks (daily/weekly/monthly/yearly). Completing a recurring task auto-creates the next instance.
 - **Tasks i18n**: German and English translations for the tasks module
 - **Tasks plugin manifest**: `tribu.tasks` feature manifest with menu entry (CheckSquare icon, order 25)

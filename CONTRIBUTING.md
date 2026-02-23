@@ -70,17 +70,38 @@ tribu/
 │           ├── calendar_router.py
 │           ├── birthdays_router.py
 │           ├── contacts_router.py
+│           ├── tasks_router.py
 │           ├── dashboard_router.py
 │           └── families_router.py
 ├── frontend/
-│   ├── pages/index.js           # App shell (sidebar, routing, views)
+│   ├── pages/
+│   │   ├── _app.js              # AppProvider wrapper, global CSS import
+│   │   └── index.js             # Root route (AuthPage or AppShell)
+│   ├── components/              # View components (one per screen)
+│   │   ├── AppShell.js          # Sidebar, mobile nav, view routing
+│   │   ├── AuthPage.js          # Login, register, demo mode
+│   │   ├── DashboardView.js     # Bento grid dashboard
+│   │   ├── CalendarView.js      # Month/week calendar
+│   │   ├── TasksView.js         # Task list with filters
+│   │   ├── ContactsView.js      # Contact card grid
+│   │   └── SettingsView.js      # Theme picker, language, profile
+│   ├── contexts/
+│   │   └── AppContext.js        # Global state (auth, data, theme, demo)
+│   ├── hooks/
+│   │   ├── useCalendar.js       # Calendar state, computed cells, event forms
+│   │   └── useTasks.js          # Task filters, form state, mutations
 │   ├── lib/
+│   │   ├── api.js               # Backend API client
+│   │   ├── demo-data.js         # Mock data for demo mode
+│   │   ├── helpers.js           # Date formatting, error utilities
 │   │   ├── i18n.js              # i18n loader (core + module packs)
-│   │   └── themes.js            # Theme engine (design token system)
+│   │   └── themes.js            # Theme registry
+│   ├── styles/
+│   │   └── globals.css          # CSS design system (themes, animations)
 │   ├── i18n/
 │   │   ├── core/                # Core UI strings (de.json, en.json)
 │   │   └── modules/             # Per-module translations
-│   └── themes/                  # Theme token files + manifests
+│   └── themes/                  # Theme token JSON files
 ├── infra/
 │   ├── docker-compose.yml       # Full stack definition
 │   └── .env.example             # Required environment variables
