@@ -1,15 +1,17 @@
 {
   "id": "tribu.theme.light",
-  "name": "Light",
+  "name": "Morning Mist",
+  "dataTheme": "light",
   "tokens": {
-    "bg": "#f5f7fb",
+    "bg": "#f8f6f3",
     "surface": "#ffffff",
-    "text": "#111827",
-    "muted": "#6b7280",
-    "border": "#e5e7eb",
-    "primary": "#4f46e5",
+    "text": "#1a1520",
+    "muted": "#9b93a8",
+    "border": "rgba(0,0,0,0.06)",
+    "primary": "#7c3aed",
     "primaryText": "#ffffff",
-    "sidebar": "#ffffff",
-    "sidebarActive": "#eef2ff"
+    "sidebar": "rgba(240,237,245,0.92)",
+    "sidebarActive": "rgba(124,58,237,0.08)",
+    "textSecondary": "#6b6380"
   }
 }

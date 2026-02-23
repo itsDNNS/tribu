@@ -1,15 +1,17 @@
 {
   "id": "tribu.theme.midnight-glass",
   "name": "Midnight Glass",
+  "dataTheme": "midnight-glass",
   "tokens": {
-    "bg": "#090c18",
-    "surface": "#12182b",
+    "bg": "#06080f",
+    "surface": "#111628",
     "text": "#e8edff",
-    "muted": "#9aa4c7",
-    "border": "#2b3558",
+    "muted": "#565f82",
+    "border": "rgba(120,130,180,0.12)",
     "primary": "#7c3aed",
     "primaryText": "#ffffff",
-    "sidebar": "#0f1426",
-    "sidebarActive": "#1b2440"
+    "sidebar": "rgba(10,13,24,0.85)",
+    "sidebarActive": "rgba(124,58,237,0.12)",
+    "textSecondary": "#8b93b8"
   }
 }

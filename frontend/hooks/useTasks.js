@@ -5,7 +5,7 @@ import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
 export function useTasks() {
-  const { tasks, familyId, members, messages, loadTasks } = useApp();
+  const { tasks, setTasks, familyId, members, messages, loadTasks, demoMode } = useApp();
 
   const [taskFilter, setTaskFilter] = useState('open');
   const [taskTitle, setTaskTitle] = useState('');
@@ -33,22 +33,35 @@ export function useTasks() {
       recurrence: taskRecurrence || null,
       assigned_to_user_id: taskAssignee ? Number(taskAssignee) : null,
     };
-    const { ok, data } = await api.apiCreateTask(payload);
-    if (!ok) return setTaskMsg(errorText(data?.detail, 'Aufgabe erstellen fehlgeschlagen'));
+    if (demoMode) {
+      const newTask = { id: Date.now(), ...payload, status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+      setTasks((prev) => [newTask, ...prev]);
+    } else {
+      const { ok, data } = await api.apiCreateTask(payload);
+      if (!ok) return setTaskMsg(errorText(data?.detail, 'Aufgabe erstellen fehlgeschlagen'));
+      await loadTasks();
+    }
     setTaskTitle(''); setTaskDesc(''); setTaskDueDate(''); setTaskPriority('normal'); setTaskRecurrence(''); setTaskAssignee('');
-    await loadTasks();
     setTaskMsg(t(messages, 'module.tasks.created'));
   }
 
   async function toggleTask(id, currentStatus) {
     const newStatus = currentStatus === 'done' ? 'open' : 'done';
-    await api.apiUpdateTask(id, { status: newStatus });
-    await loadTasks();
+    if (demoMode) {
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: newStatus, updated_at: new Date().toISOString() } : t));
+    } else {
+      await api.apiUpdateTask(id, { status: newStatus });
+      await loadTasks();
+    }
   }
 
   async function deleteTask(id) {
-    await api.apiDeleteTask(id);
-    await loadTasks();
+    if (demoMode) {
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    } else {
+      await api.apiDeleteTask(id);
+      await loadTasks();
+    }
   }
 
   return {

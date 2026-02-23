@@ -1,15 +1,17 @@
 {
   "id": "tribu.theme.dark",
-  "name": "Dark",
+  "name": "Dunkel",
+  "dataTheme": "dark",
   "tokens": {
     "bg": "#0f172a",
-    "surface": "#111827",
-    "text": "#e5e7eb",
-    "muted": "#9ca3af",
-    "border": "#334155",
-    "primary": "#6366f1",
+    "surface": "#1e293b",
+    "text": "#e2e8f0",
+    "muted": "#64748b",
+    "border": "rgba(100,116,139,0.15)",
+    "primary": "#7c3aed",
     "primaryText": "#ffffff",
-    "sidebar": "#0b1220",
-    "sidebarActive": "#1e293b"
+    "sidebar": "rgba(15,23,42,0.85)",
+    "sidebarActive": "rgba(124,58,237,0.12)",
+    "textSecondary": "#94a3b8"
   }
 }
