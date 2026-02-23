@@ -4,6 +4,22 @@ All notable changes to Tribu are documented here.
 
 ## 2026-02-23
 
+### Security
+
+- **Password validation**: Registration requires min 8 chars, 1 uppercase letter, 1 digit (max 128 chars, bcrypt-safe). Login enforces same length bounds. Frontend hint text shown below register password field.
+
+### Changed
+
+- **Admin demotion feedback**: Backend returns `role` in adult-toggle response. Frontend detects when setting a member to child demotes them from admin and shows an i18n notification.
+- **AdminView CSS**: Last two inline styles migrated to `.admin-error` and `.admin-actions` CSS classes.
+
+### Infrastructure
+
+- **Alembic migrations**: Replaced raw SQL `on_startup()` with two idempotent Alembic migrations (initial schema + tasks extension). Fixed `sys.path` for Docker compatibility.
+- **N+1 query fix**: Added `joinedload` to family member and membership queries in `families_router.py`.
+- **Pagination**: Calendar events and tasks endpoints support `offset`/`limit` (default 50, max 200). Frontend shimmed to handle paginated responses.
+- **Test fixes**: TasksView tests updated for redesigned component markup (checkbox divs, assignee initials, Lucide X icon).
+
 ### Added
 
 - **UI redesign**: Complete visual overhaul based on approved prototype. CSS design system with glassmorphism, bento grid dashboard, stagger animations, mesh background, and grain texture. Three polished themes: Morning Mist (light), Dark, Midnight Glass (glassmorphism).
