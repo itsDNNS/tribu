@@ -9,7 +9,15 @@ export default function AdminView() {
   const [adminMsg, setAdminMsg] = useState('');
 
   async function handleSetAdult(userId, isAdult) {
-    await api.apiSetAdult(familyId, userId, isAdult);
+    const { ok, data } = await api.apiSetAdult(familyId, userId, isAdult);
+    if (!ok) {
+      setAdminMsg(errorText(data?.detail, 'Failed'));
+      return;
+    }
+    const member = members.find((m) => m.user_id === userId);
+    if (data?.role && member && data.role !== member.role) {
+      setAdminMsg(t(messages, 'admin_demoted'));
+    }
     await loadMembers();
   }
 
@@ -29,7 +37,7 @@ export default function AdminView() {
           <h1 className="view-title">{t(messages, 'admin_members')}</h1>
         </div>
       </div>
-      {adminMsg && <p style={{ color: 'var(--danger)', marginBottom: 'var(--space-md)' }}>{adminMsg}</p>}
+      {adminMsg && <p className="admin-error">{adminMsg}</p>}
       <div className="settings-grid">
         {members.map((m) => (
           <div key={m.user_id} className="glass-sm settings-section">
@@ -41,7 +49,7 @@ export default function AdminView() {
                 <span className="profile-role">{m.role} · {m.is_adult ? t(messages, 'adult') : t(messages, 'child')}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+            <div className="admin-actions">
               <button className="btn-ghost" onClick={() => handleSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
               <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
               <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
