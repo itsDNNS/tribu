@@ -45,6 +45,26 @@
 - [x] .dockerignore for both services
 - [x] PostgreSQL and Redis ports not exposed to host
 
+## Phase 3.6: Frontend Refactor
+
+- [x] Split monolithic `pages/index.js` into Context + Hooks + Views architecture
+- [x] AppContext for centralized state management (auth, data, theme, layout)
+- [x] Dedicated hooks: `useCalendar` (calendar state, forms), `useTasks` (task filters, forms)
+- [x] Individual view components: AppShell, AuthPage, DashboardView, CalendarView, TasksView, ContactsView, SettingsView
+
+## Phase 3.7: UI Redesign + Demo Mode
+
+- [x] CSS design system (`styles/globals.css`) with CSS custom properties and `data-theme` switching
+- [x] Glassmorphism, mesh background, grain texture, stagger animations
+- [x] Bento grid dashboard (welcome, stats, events, tasks, birthdays)
+- [x] Calendar with event dots, day-detail panel, week view
+- [x] Task cards with priority/overdue/recurring badges and assignee avatars
+- [x] Contact card grid with colored avatars
+- [x] Visual theme picker with preview cards
+- [x] Three polished themes: Morning Mist (light), Dunkel (dark), Midnight Glass (glassmorphism)
+- [x] Responsive layout with mobile bottom nav (768px breakpoint)
+- [x] Interactive demo mode with realistic sample data and local mutations
+
 ## Phase 4: Collaboration
 
 - [ ] Shared todo lists

@@ -92,32 +92,75 @@ Optional:
 
 **Framework**: Next.js 14, React 18
 
+### Architecture
+
+The frontend uses a Context + Hooks + Views pattern:
+
+- **AppContext** (`contexts/AppContext.js`): Central state management for auth, family data, theme, and demo mode. All data flows through a single React Context.
+- **Hooks** (`hooks/`): Encapsulate UI-local state and form logic. `useCalendar` manages calendar navigation, event forms, and computed month cells. `useTasks` manages task filters, form state, and filtered task lists.
+- **Views** (`components/`): Pure rendering components that consume context and hooks. Each view handles one screen (Dashboard, Calendar, Tasks, Contacts, Settings).
+
 ### Key Components
 
 | Component | Description |
 |-----------|-------------|
-| App Shell | Sidebar navigation with Lucide icons, responsive layout |
-| Theme Engine | Design token system with runtime theme switching |
-| i18n | Core + module-level language packs, lazy-loaded on module activation |
-| Calendar View | Month grid with clickable days, dynamic detail panels, event forms |
-| Dashboard | Welcome screen with upcoming events and birthdays summary |
-| Cookie Auth | Auto-login on mount via `/auth/me`, logout clears httpOnly cookie |
+| AppShell | Sidebar with brand, family switcher, nav items with badges, user area. Mobile: floating bottom nav pill + header. |
+| AuthPage | Login/register forms with glass card styling. Demo mode entry button. |
+| DashboardView | Bento grid (12-column CSS grid): welcome card, family stats, next events, open tasks, birthday countdown. |
+| CalendarView | Month grid with event dots, today marker, day-detail side panel (desktop) or stacked (mobile), week view, quick-add forms. |
+| TasksView | Quick-add bar, expanded form fields, filter tabs (all/open/done), task cards with priority/overdue/recurring badges. |
+| ContactsView | Responsive card grid with colored avatars, CSV import section. |
+| SettingsView | Profile section, visual theme picker cards, language toggle, privacy info. |
 
-### Theme System
+### CSS Design System
 
-Themes are JSON files containing design tokens:
+The UI uses a global CSS file (`styles/globals.css`) with CSS custom properties for theming. Theme switching sets a `data-theme` attribute on `<html>`, which activates the corresponding CSS variable set.
 
-```json
-{
-  "bg": "#090c18",
-  "surface": "#12182b",
-  "text": "#e8edff",
-  "primary": "#7c3aed",
-  "sidebar": "#0f1426"
+```css
+:root { /* Midnight Glass (default) */
+  --void: #06080f;
+  --glass: rgba(17, 22, 40, 0.65);
+  --amethyst: #7c3aed;
+  /* ... */
+}
+
+[data-theme="light"] {
+  --void: #f8f6f3;
+  --glass: rgba(255, 255, 255, 0.72);
+  /* ... */
 }
 ```
 
-Available themes: **Light**, **Dark**, **Midnight Glass**
+Key design elements: glassmorphism (`backdrop-filter: blur`), mesh background with animated gradients, grain texture overlay, stagger animations on view enter, bento grid layout, and responsive breakpoints at 1100px and 768px.
+
+### Theme System
+
+Each theme is a JSON file with design tokens and a `dataTheme` field that maps to the CSS selector:
+
+```json
+{
+  "id": "tribu.theme.midnight-glass",
+  "name": "Midnight Glass",
+  "dataTheme": "midnight-glass",
+  "tokens": {
+    "bg": "#06080f", "surface": "#111628", "text": "#e8edff",
+    "primary": "#7c3aed", "primaryText": "#ffffff",
+    "sidebar": "rgba(10,13,24,0.85)", "sidebarActive": "rgba(124,58,237,0.12)"
+  }
+}
+```
+
+Available themes: **Morning Mist** (light), **Dunkel** (dark), **Midnight Glass** (glassmorphism)
+
+### Demo Mode
+
+The app includes an interactive demo mode accessible from the auth page. When activated:
+
+- `enterDemo()` in AppContext injects realistic mock data (4 family members, 12 events, 10 tasks, 7 contacts, 3 birthdays)
+- All data loaders become no-ops (no API calls)
+- Mutations (create/toggle/delete tasks, create events) update local state directly
+- A gradient banner indicates demo mode is active
+- Logout cleanly exits demo mode and returns to the auth page
 
 ### i18n
 

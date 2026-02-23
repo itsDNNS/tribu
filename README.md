@@ -30,12 +30,13 @@ Tribu is a self-hosted family hub that brings calendars, contacts, birthdays, an
 | Module | Description |
 |--------|-------------|
 | **Auth & Families** | Register, login, httpOnly cookie sessions. Multi-family support with role-based access (admin, parent, child). |
-| **Calendar** | Monthly calendar with clickable days, event CRUD, and dynamic day-detail panels. |
-| **Birthdays** | Dedicated birthday tracker. Auto-syncs from contacts. |
-| **Contacts** | Family address book with CSV import and automatic birthday extraction. |
-| **Tasks** | Shared family task list with priorities, due dates, assignees, and recurring tasks. |
-| **Dashboard** | At-a-glance summary: upcoming events and birthdays within the next 4 weeks. |
-| **Themes** | Switchable design tokens: Light, Dark, and Midnight Glass. Themeable via plugin manifests. |
+| **Calendar** | Month grid with event dots, day-detail panel, week view, quick event creation. |
+| **Birthdays** | Dedicated birthday tracker. Auto-syncs from contacts. 4-week lookahead with countdown. |
+| **Contacts** | Family address book with CSV import, colored avatars, and automatic birthday extraction. |
+| **Tasks** | Shared task list with priorities, due dates, assignees, recurring tasks, and overdue tracking. |
+| **Dashboard** | Bento grid layout with welcome card, family stats, next events, open tasks, and birthday countdown. |
+| **Themes** | Three polished themes: Morning Mist (light), Dunkel (dark), Midnight Glass (glassmorphism). CSS design system with custom properties. |
+| **Demo Mode** | Try the full UI without registration. Pre-loaded with realistic sample data, fully interactive. |
 | **i18n** | German and English out of the box. Module-level language packs, lazy-loaded. |
 | **Security** | httpOnly cookies, rate limiting, PBKDF2-SHA256 passwords, non-root Docker containers, CORS restricted to localhost/LAN. |
 
@@ -43,7 +44,7 @@ Tribu is a self-hosted family hub that brings calendars, contacts, birthdays, an
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | **Next.js 14** (React 18), Lucide Icons |
+| Frontend | **Next.js 14** (React 18), Lucide Icons, CSS custom properties |
 | Backend | **FastAPI** (Python), SQLAlchemy |
 | Database | **PostgreSQL 16** |
 | Cache / Realtime | **Redis 7** (prepared) |
@@ -82,6 +83,8 @@ Once running:
 | API Docs (Swagger) | [localhost:8000/docs](http://localhost:8000/docs) |
 
 > The first user to register automatically becomes the family **admin**.
+>
+> Want to explore first? Click **Demo ausprobieren** on the login page to try the full UI with sample data.
 
 ## Architecture
 
@@ -104,12 +107,32 @@ tribu/
 │           ├── dashboard_router.py
 │           └── families_router.py
 ├── frontend/
-│   ├── pages/index.js           # App shell with sidebar navigation
+│   ├── pages/
+│   │   ├── _app.js              # AppProvider, global CSS import, mesh/grain overlays
+│   │   └── index.js             # Root route (AuthPage or AppShell)
+│   ├── components/              # View components
+│   │   ├── AppShell.js          # Sidebar, mobile nav, view routing
+│   │   ├── AuthPage.js          # Login, register, demo mode entry
+│   │   ├── DashboardView.js     # Bento grid dashboard
+│   │   ├── CalendarView.js      # Month/week calendar with day-detail panel
+│   │   ├── TasksView.js         # Task list with filters and quick-add
+│   │   ├── ContactsView.js      # Contact cards grid
+│   │   └── SettingsView.js      # Theme picker, language, profile
+│   ├── contexts/
+│   │   └── AppContext.js        # Global state (auth, data, theme, demo mode)
+│   ├── hooks/
+│   │   ├── useCalendar.js       # Calendar UI state and event forms
+│   │   └── useTasks.js          # Task filters, forms, and mutations
 │   ├── lib/
+│   │   ├── api.js               # Backend API client
+│   │   ├── demo-data.js         # Mock data generator for demo mode
 │   │   ├── i18n.js              # i18n loader (core + module packs)
-│   │   └── themes.js            # Theme engine (design token system)
+│   │   ├── helpers.js           # Date formatting, error text utilities
+│   │   └── themes.js            # Theme registry
+│   ├── styles/
+│   │   └── globals.css          # CSS design system (themes, glassmorphism, animations)
 │   ├── i18n/                    # Language packs (core + per-module)
-│   └── themes/                  # Theme token files + manifests
+│   └── themes/                  # Theme token files (light, dark, midnight-glass)
 ├── infra/
 │   ├── docker-compose.yml       # Full stack: PG, Redis, backend, frontend
 │   └── .env.example             # Required environment variables template
