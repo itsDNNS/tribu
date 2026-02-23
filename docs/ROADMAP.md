@@ -65,6 +65,16 @@
 - [x] Responsive layout with mobile bottom nav (768px breakpoint)
 - [x] Interactive demo mode with realistic sample data and local mutations
 
+## Phase 3.8: Quality Hardening
+
+- [x] N+1 query fixes (joinedload on family/membership queries)
+- [x] Alembic migrations (replace raw SQL on_startup, idempotent initial + tasks migration)
+- [x] Pagination on calendar events and tasks (offset/limit, default 50, max 200)
+- [x] i18n test suite (key symmetry, empty strings, fallback, buildMessages, t())
+- [x] Password strength validation (1 uppercase + 1 digit, max 128 chars)
+- [x] Admin demotion feedback (role returned in response, frontend notification)
+- [x] AdminView inline styles fully migrated to CSS classes
+
 ## Phase 4: Collaboration
 
 - [ ] Shared todo lists
