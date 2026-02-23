@@ -4,7 +4,7 @@ import { errorText, toIsoOrNull } from '../lib/helpers';
 import * as api from '../lib/api';
 
 export function useCalendar() {
-  const { events, familyId, loadEvents, loadDashboard } = useApp();
+  const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary } = useApp();
 
   const [calendarView, setCalendarView] = useState('month');
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
@@ -96,22 +96,53 @@ export function useCalendar() {
       family_id: Number(familyId), title, description: description || null,
       starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
     };
-    const { ok, data } = await api.apiCreateEvent(payload);
-    if (!ok) return setCalendarMsg(errorText(data?.detail, 'Event erstellen fehlgeschlagen'));
+    if (demoMode) {
+      const newEvent = { id: Date.now(), ...payload };
+      setEvents((prev) => [...prev, newEvent]);
+      setSummary((prev) => ({
+        ...prev,
+        next_events: [...(prev.next_events || []), newEvent]
+          .filter((ev) => new Date(ev.starts_at) >= new Date())
+          .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+          .slice(0, 5),
+      }));
+    } else {
+      const { ok, data } = await api.apiCreateEvent(payload);
+      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Event erstellen fehlgeschlagen'));
+      await Promise.all([loadEvents(), loadDashboard()]);
+    }
     setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
-    await Promise.all([loadEvents(), loadDashboard()]);
     setCalendarMsg('Event erstellt');
   }
 
   async function addBirthday(e) {
     e.preventDefault();
-    const { ok, data } = await api.apiAddBirthday({
-      family_id: Number(familyId), person_name: birthdayName,
-      month: Number(birthdayMonth), day: Number(birthdayDay),
-    });
-    if (!ok) return setCalendarMsg(errorText(data?.detail, 'Geburtstag konnte nicht gespeichert werden'));
+    if (demoMode) {
+      const bMonth = Number(birthdayMonth);
+      const bDay = Number(birthdayDay);
+      const now = new Date();
+      let bDate = new Date(now.getFullYear(), bMonth - 1, bDay);
+      if (bDate < now) bDate = new Date(now.getFullYear() + 1, bMonth - 1, bDay);
+      const daysUntil = Math.round((bDate - now) / (1000 * 60 * 60 * 24));
+      setSummary((prev) => ({
+        ...prev,
+        upcoming_birthdays: [...(prev.upcoming_birthdays || []), {
+          person_name: birthdayName,
+          occurs_on: bDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }),
+          days_until: daysUntil,
+          month: bMonth,
+          day: bDay,
+        }].sort((a, b) => a.days_until - b.days_until),
+      }));
+    } else {
+      const { ok, data } = await api.apiAddBirthday({
+        family_id: Number(familyId), person_name: birthdayName,
+        month: Number(birthdayMonth), day: Number(birthdayDay),
+      });
+      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Geburtstag konnte nicht gespeichert werden'));
+      await loadDashboard();
+    }
     setBirthdayName(''); setBirthdayMonth(''); setBirthdayDay('');
-    await loadDashboard();
   }
 
   return {

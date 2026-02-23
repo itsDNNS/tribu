@@ -3,6 +3,7 @@ import { buildMessages } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 import { buildUi } from '../lib/styles';
 import * as api from '../lib/api';
+import { buildDemoData } from '../lib/demo-data';
 
 const AppContext = createContext(null);
 
@@ -11,6 +12,9 @@ export function useApp() {
 }
 
 export function AppProvider({ children }) {
+  // Demo mode
+  const [demoMode, setDemoMode] = useState(false);
+
   // Auth
   const [loggedIn, setLoggedIn] = useState(false);
   const [me, setMe] = useState(null);
@@ -44,31 +48,36 @@ export function AppProvider({ children }) {
   const ui = useMemo(() => buildUi(tokens), [tokens]);
   const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
 
-  // Loaders
+  // Loaders (no-op in demo mode)
   const loadDashboard = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
     const { ok, data } = await api.apiGetDashboard(fid);
     if (ok) setSummary(data);
-  }, [familyId]);
+  }, [familyId, demoMode]);
 
   const loadEvents = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
     const { ok, data } = await api.apiGetEvents(fid);
     if (ok) setEvents(data);
-  }, [familyId]);
+  }, [familyId, demoMode]);
 
   const loadMembers = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
     const { ok, data } = await api.apiGetMembers(fid);
     if (ok) setMembers(data);
-  }, [familyId]);
+  }, [familyId, demoMode]);
 
   const loadContacts = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
     const { ok, data } = await api.apiGetContacts(fid);
     if (ok) setContacts(data);
-  }, [familyId]);
+  }, [familyId, demoMode]);
 
   const loadTasks = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
     const { ok, data } = await api.apiGetTasks(fid);
     if (ok) setTasks(data);
-  }, [familyId]);
+  }, [familyId, demoMode]);
 
   const switchFamily = useCallback(async (fid) => {
     setFamilyId(fid);
@@ -77,8 +86,24 @@ export function AppProvider({ children }) {
     await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid)]);
   }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks]);
 
+  const enterDemo = useCallback(() => {
+    const demo = buildDemoData();
+    setDemoMode(true);
+    setMe(demo.me);
+    setFamilies(demo.families);
+    setFamilyId(String(demo.families[0].family_id));
+    setMyFamilyRole(demo.families[0].role);
+    setMembers(demo.members);
+    setEvents(demo.events);
+    setTasks(demo.tasks);
+    setContacts(demo.contacts);
+    setSummary(demo.summary);
+    setLoggedIn(true);
+  }, []);
+
   const logout = useCallback(async () => {
-    await api.apiLogout();
+    if (!demoMode) await api.apiLogout();
+    setDemoMode(false);
     setLoggedIn(false);
     setMe(null);
     setEvents([]);
@@ -86,7 +111,7 @@ export function AppProvider({ children }) {
     setMembers([]);
     setContacts([]);
     setTasks([]);
-  }, []);
+  }, [demoMode]);
 
   // Init: localStorage, resize, auto-login
   useEffect(() => {
@@ -94,7 +119,7 @@ export function AppProvider({ children }) {
     setLang(window.localStorage.getItem('tribu_lang') || 'de');
     setProfileImage('');
 
-    const onResize = () => setIsMobile(window.innerWidth < 900);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
     onResize();
     window.addEventListener('resize', onResize);
 
@@ -109,20 +134,21 @@ export function AppProvider({ children }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Persist theme + body background
+  // Persist theme + set data-theme attribute for CSS
   useEffect(() => {
     window.localStorage.setItem('tribu_theme', theme);
-    document.body.style.background = tokens.bg;
-  }, [theme, tokens.bg]);
+    const dataTheme = themeConfig.dataTheme || theme;
+    document.documentElement.setAttribute('data-theme', dataTheme);
+  }, [theme, themeConfig]);
 
   // Persist lang
   useEffect(() => {
     window.localStorage.setItem('tribu_lang', lang);
   }, [lang]);
 
-  // Bootstrap after login
+  // Bootstrap after login (skip in demo mode — data already injected)
   useEffect(() => {
-    if (!loggedIn) return;
+    if (!loggedIn || demoMode) return;
 
     (async () => {
       const { ok: meOk, data: meData } = await api.apiGetMe();
@@ -160,13 +186,14 @@ export function AppProvider({ children }) {
     activeView, setActiveView,
     isMobile,
     isAdmin,
-    summary,
-    events,
+    summary, setSummary,
+    events, setEvents,
     contacts,
-    tasks,
+    tasks, setTasks,
     loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks,
     switchFamily,
     logout,
+    demoMode, enterDemo,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

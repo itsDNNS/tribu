@@ -1,7 +1,6 @@
-import { CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser } from 'lucide-react';
+import { CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, Users } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
-import { navBtn, styles } from '../lib/styles';
 import DashboardView from './DashboardView';
 import CalendarView from './CalendarView';
 import ContactsView from './ContactsView';
@@ -18,68 +17,136 @@ const views = {
   admin: AdminView,
 };
 
+const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
+
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, tokens, messages, ui, me, profileImage, logout } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, messages, me, members, families, familyId, tasks, logout, demoMode } = useApp();
 
   const ActiveComponent = views[activeView] || DashboardView;
+  const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
+  const openTaskCount = tasks.filter((t) => t.status === 'open').length;
+  const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
+
+  const navItems = [
+    { key: 'dashboard', icon: LayoutDashboard, label: t(messages, 'dashboard'), mobileLabel: 'Home' },
+    { key: 'calendar', icon: CalendarDays, label: t(messages, 'calendar'), mobileLabel: t(messages, 'calendar') },
+    { key: 'tasks', icon: CheckSquare, label: t(messages, 'module.tasks.name'), mobileLabel: t(messages, 'module.tasks.name'), badge: openTaskCount || null },
+    { key: 'contacts', icon: BookUser, label: t(messages, 'contacts'), mobileLabel: t(messages, 'contacts') },
+  ];
+
+  const systemItems = [
+    { key: 'settings', icon: Settings, label: t(messages, 'settings'), mobileLabel: 'Mehr' },
+    ...(isAdmin ? [{ key: 'admin', icon: Shield, label: t(messages, 'admin') }] : []),
+  ];
 
   return (
-    <main style={{ ...styles.page, background: tokens.bg, color: tokens.text }}>
-      <div style={{ ...styles.layout, gridTemplateColumns: isMobile ? '1fr' : '240px 1fr' }}>
-        {!isMobile && (
-          <aside style={{ ...styles.sidebar, background: tokens.sidebar, borderColor: tokens.border, color: tokens.text }}>
-            <h2 style={{ marginTop: 0 }}>{t(messages, 'app_name')}</h2>
-            <button style={navBtn(activeView === 'dashboard', tokens)} onClick={() => setActiveView('dashboard')}><LayoutDashboard size={16} /> {t(messages, 'dashboard')}</button>
-            <button style={navBtn(activeView === 'calendar', tokens)} onClick={() => setActiveView('calendar')}><CalendarDays size={16} /> {t(messages, 'calendar')}</button>
-            <button style={navBtn(activeView === 'contacts', tokens)} onClick={() => setActiveView('contacts')}><BookUser size={16} /> {t(messages, 'contacts')}</button>
-            <button style={navBtn(activeView === 'tasks', tokens)} onClick={() => setActiveView('tasks')}><CheckSquare size={16} /> {t(messages, 'module.tasks.name')}</button>
-            <button style={navBtn(activeView === 'settings', tokens)} onClick={() => setActiveView('settings')}><Settings size={16} /> {t(messages, 'settings')}</button>
-            {isAdmin && <button style={navBtn(activeView === 'admin', tokens)} onClick={() => setActiveView('admin')}><Shield size={16} /> {t(messages, 'admin')}</button>}
-            <div style={{ marginTop: 'auto' }}><button style={ui.secondaryBtn} onClick={logout}>{t(messages, 'logout')}</button></div>
-          </aside>
-        )}
+    <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 2 }}>
+      {demoMode && (
+        <div className="demo-banner">
+          Demo-Modus — Daten werden nicht gespeichert
+        </div>
+      )}
+      {!isMobile && (
+        <aside className="sidebar">
+          <div className="sidebar-brand">
+            <div className="sidebar-logo">
+              <Users size={20} color="white" />
+            </div>
+            <div className="sidebar-brand-text">
+              <h2>Tribu</h2>
+              <span>Family OS</span>
+            </div>
+          </div>
 
-        <section style={{ ...styles.content, paddingBottom: isMobile ? 86 : 0 }}>
-          {isMobile && (
-            <div style={{ ...ui.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <img src={profileImage || 'https://placehold.co/40x40?text=U'} alt="Profil" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
-                <div>
-                  <strong>{t(messages, 'app_name')}</strong>
-                  <div style={{ fontSize: 12, color: tokens.muted }}>{me?.display_name || ''}</div>
-                </div>
+          {currentFamily && (
+            <div className="family-switcher">
+              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{currentFamily.family_name}</span>
+              <div className="family-avatars">
+                {members.slice(0, 4).map((m, i) => (
+                  <div key={m.user_id} className="family-avatar-mini" style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
+                    {(m.display_name || '?').charAt(0).toUpperCase()}
+                  </div>
+                ))}
               </div>
-              <button style={ui.secondaryBtn} onClick={logout}>{t(messages, 'logout')}</button>
+              <ChevronDown size={16} style={{ color: 'var(--text-muted)', marginLeft: 4 }} />
             </div>
           )}
 
+          <nav className="nav-section">
+            {navItems.map((item) => (
+              <button
+                key={item.key}
+                className={`nav-item${activeView === item.key ? ' active' : ''}`}
+                onClick={() => setActiveView(item.key)}
+              >
+                <item.icon size={20} />
+                {item.label}
+                {item.badge && <span className="nav-badge">{item.badge}</span>}
+              </button>
+            ))}
+            <div className="nav-section-label">System</div>
+            {systemItems.map((item) => (
+              <button
+                key={item.key}
+                className={`nav-item${activeView === item.key ? ' active' : ''}`}
+                onClick={() => setActiveView(item.key)}
+              >
+                <item.icon size={20} />
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="sidebar-user">
+            <div className="sidebar-user-avatar">{initials}</div>
+            <div className="sidebar-user-info">
+              <div className="sidebar-user-name">{me?.display_name || 'User'}</div>
+              <div className="sidebar-user-role">{isAdmin ? 'Admin' : 'Mitglied'}</div>
+            </div>
+            <button className="sidebar-logout" onClick={logout} title={t(messages, 'logout')}>
+              <LogOut size={18} />
+            </button>
+          </div>
+        </aside>
+      )}
+
+      <main className="main-content" style={isMobile ? { marginLeft: 0, width: '100%' } : undefined}>
+        {isMobile && (
+          <div className="mobile-header" style={{ display: 'flex' }}>
+            <div className="mobile-header-user">
+              <div className="mobile-header-avatar">{initials}</div>
+              <div className="mobile-header-text">
+                <h3>Tribu</h3>
+                <span>{currentFamily?.family_name || ''}</span>
+              </div>
+            </div>
+            <button className="sidebar-logout" onClick={logout}>
+              <LogOut size={18} />
+            </button>
+          </div>
+        )}
+
+        <div className="view-enter">
           <ActiveComponent />
-        </section>
-      </div>
+        </div>
+      </main>
 
       {isMobile && (
-        <nav style={{
-          position: 'fixed',
-          left: 10,
-          right: 10,
-          bottom: 10,
-          display: 'grid',
-          gridTemplateColumns: isAdmin ? 'repeat(6, 1fr)' : 'repeat(5, 1fr)',
-          gap: 8,
-          background: tokens.surface,
-          border: `1px solid ${tokens.border}`,
-          borderRadius: 14,
-          padding: 8,
-          zIndex: 50,
-        }}>
-          <button style={navBtn(activeView === 'dashboard', tokens)} onClick={() => setActiveView('dashboard')}><LayoutDashboard size={16} /></button>
-          <button style={navBtn(activeView === 'calendar', tokens)} onClick={() => setActiveView('calendar')}><CalendarDays size={16} /></button>
-          <button style={navBtn(activeView === 'contacts', tokens)} onClick={() => setActiveView('contacts')}><BookUser size={16} /></button>
-          <button style={navBtn(activeView === 'tasks', tokens)} onClick={() => setActiveView('tasks')}><CheckSquare size={16} /></button>
-          <button style={navBtn(activeView === 'settings', tokens)} onClick={() => setActiveView('settings')}><Settings size={16} /></button>
-          {isAdmin && <button style={navBtn(activeView === 'admin', tokens)} onClick={() => setActiveView('admin')}><Shield size={16} /></button>}
+        <nav className="bottom-nav" style={{ display: 'block' }}>
+          <div className="bottom-nav-inner">
+            {[...navItems.filter((n) => n.mobileLabel), ...systemItems.filter((n) => n.mobileLabel)].map((item) => (
+              <button
+                key={item.key}
+                className={`bottom-nav-item${activeView === item.key ? ' active' : ''}`}
+                onClick={() => setActiveView(item.key)}
+              >
+                <item.icon size={22} />
+                <span>{item.mobileLabel}</span>
+              </button>
+            ))}
+          </div>
         </nav>
       )}
-    </main>
+    </div>
   );
 }
