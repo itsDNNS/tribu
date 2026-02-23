@@ -42,6 +42,7 @@ export function AppProvider({ children }) {
   const [events, setEvents] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [shoppingLists, setShoppingLists] = useState([]);
 
   // Derived
   const messages = useMemo(() => buildMessages(lang), [lang]);
@@ -82,14 +83,20 @@ export function AppProvider({ children }) {
     if (ok) setTasks(data);
   }, [familyId, demoMode]);
 
+  const loadShoppingLists = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    const { ok, data } = await api.apiGetShoppingLists(fid);
+    if (ok) setShoppingLists(data);
+  }, [familyId, demoMode]);
+
   const switchFamily = useCallback(async (fid) => {
     setLoading(true);
     setFamilyId(fid);
     const selected = families.find((f) => String(f.family_id) === String(fid));
     if (selected) setMyFamilyRole(selected.role);
-    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid)]);
+    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid)]);
     setLoading(false);
-  }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks]);
+  }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks, loadShoppingLists]);
 
   const enterDemo = useCallback(() => {
     const demo = buildDemoData(lang);
@@ -101,6 +108,7 @@ export function AppProvider({ children }) {
     setMembers(demo.members);
     setEvents(demo.events);
     setTasks(demo.tasks);
+    setShoppingLists(demo.shoppingLists);
     setContacts(demo.contacts);
     setSummary(demo.summary);
     setLoggedIn(true);
@@ -117,6 +125,7 @@ export function AppProvider({ children }) {
     setMembers([]);
     setContacts([]);
     setTasks([]);
+    setShoppingLists([]);
   }, [demoMode]);
 
   // Init: localStorage, resize, auto-login
@@ -172,7 +181,7 @@ export function AppProvider({ children }) {
         const fid = String(famData[0].family_id);
         setFamilyId(fid);
         setMyFamilyRole(famData[0].role);
-        await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid)]);
+        await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid)]);
       }
       setLoading(false);
     })();
@@ -201,7 +210,8 @@ export function AppProvider({ children }) {
     events, setEvents,
     contacts,
     tasks, setTasks,
-    loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks,
+    shoppingLists, setShoppingLists,
+    loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks, loadShoppingLists,
     switchFamily,
     logout,
     demoMode, enterDemo,

@@ -1,0 +1,22 @@
+{
+  "module.shopping.name": "Shopping",
+  "module.shopping.lists": "Lists",
+  "module.shopping.items": "Items",
+  "module.shopping.add_item": "Add item",
+  "module.shopping.add_list": "Create list",
+  "module.shopping.list_name": "List name",
+  "module.shopping.list_name_placeholder": "e.g. Grocery Store",
+  "module.shopping.item_name": "Item",
+  "module.shopping.item_name_placeholder": "Add an item...",
+  "module.shopping.item_spec": "Details",
+  "module.shopping.item_spec_placeholder": "e.g. 500g, organic",
+  "module.shopping.checked_section": "Checked",
+  "module.shopping.no_items": "No items yet",
+  "module.shopping.no_lists": "No shopping lists yet",
+  "module.shopping.delete_list": "Delete list",
+  "module.shopping.delete_list_confirm": "Delete this list and all its items?",
+  "module.shopping.clear_checked": "Clear checked",
+  "module.shopping.clear_checked_confirm": "Remove all checked items?",
+  "module.shopping.new_list": "New list",
+  "module.shopping.added_by": "Added by"
+}

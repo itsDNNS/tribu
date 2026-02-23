@@ -18,6 +18,7 @@ from app.modules.dashboard_router import router as dashboard_router
 from app.modules.families_router import router as families_router
 from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
+from app.modules.shopping_router import router as shopping_router
 from app.modules.tokens_router import router as tokens_router
 from app.schemas import LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
@@ -125,6 +126,7 @@ app.include_router(birthdays_router)
 app.include_router(dashboard_router)
 app.include_router(contacts_router)
 app.include_router(tasks_router)
+app.include_router(shopping_router)
 app.include_router(tokens_router)
 
 

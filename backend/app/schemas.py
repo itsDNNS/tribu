@@ -223,3 +223,45 @@ class PATResponse(BaseModel):
 class PATCreatedResponse(BaseModel):
     token: str
     pat: PATResponse
+
+
+# Shopping
+class ShoppingListCreate(BaseModel):
+    family_id: int
+    name: str = Field(min_length=1, max_length=100)
+
+
+class ShoppingListResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    name: str
+    created_by_user_id: Optional[int]
+    created_at: datetime
+    item_count: int = 0
+    checked_count: int = 0
+
+
+class ShoppingItemCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    spec: Optional[str] = Field(None, max_length=200)
+
+
+class ShoppingItemUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    spec: Optional[str] = Field(None, max_length=200)
+    checked: Optional[bool] = None
+
+
+class ShoppingItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    list_id: int
+    name: str
+    spec: Optional[str]
+    checked: bool
+    checked_at: Optional[datetime]
+    added_by_user_id: Optional[int]
+    created_at: datetime

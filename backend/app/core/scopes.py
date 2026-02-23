@@ -7,6 +7,7 @@ VALID_SCOPES = {
     "contacts:read", "contacts:write",
     "birthdays:read", "birthdays:write",
     "families:read", "families:write",
+    "shopping:read", "shopping:write",
     "profile:read", "profile:write",
 }
 
