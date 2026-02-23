@@ -4,6 +4,12 @@ All notable changes to Tribu are documented here.
 
 ## 2026-02-23
 
+### Added
+
+- **Shopping lists module**: Multi-list support (e.g. Grocery, Drugstore) with minimal item model (name + optional spec freetext). Tap-to-toggle between active and checked states. Checked items shown at bottom with count divider (Google Keep style). Bulk clear checked items. 8 REST endpoints with family membership checks. `shopping:read` and `shopping:write` scopes. Alembic migration 0004 for `shopping_lists` and `shopping_items` tables.
+- **Shopping frontend**: ShoppingView with 2-column desktop layout (lists panel + items panel), horizontal scroll lists on mobile. `useShopping` hook with full demo mode support. i18n translations (EN/DE). Nav badge showing unchecked item count. Demo data with 2 sample lists (12 items total).
+- **Personal Access Tokens**: Scoped PAT system with SHA-256 hash storage, prefix detection (`tribu_pat_`), expiration, and last-used tracking. Token CRUD API (create with plain token response, list, revoke). Max 25 tokens per user. Scope validation on all module endpoints. Alembic migration 0003.
+
 ### Security
 
 - **Password validation**: Registration requires min 8 chars, 1 uppercase letter, 1 digit (max 128 chars, bcrypt-safe). Login enforces same length bounds. Frontend hint text shown below register password field.
