@@ -29,6 +29,22 @@
 - [x] i18n foundation (DE/EN, lazy-loaded module packs)
 - [x] App shell with sidebar navigation
 
+## Phase 3.5: Security Hardening
+
+- [x] httpOnly cookie authentication (replaces token-in-response)
+- [x] Logout endpoint with cookie clearing
+- [x] Cookie-first auth with Bearer fallback for API testing
+- [x] Password minimum length (8 characters)
+- [x] Rate limiting (10/min register, 20/min login)
+- [x] CORS restricted to localhost and LAN
+- [x] CSV import validation (row limit, range checks)
+- [x] DATABASE_URL and JWT_SECRET required without fallback
+- [x] Docker Compose secrets via .env (no hardcoded values)
+- [x] Non-root Docker containers (backend + frontend)
+- [x] Multi-stage frontend build
+- [x] .dockerignore for both services
+- [x] PostgreSQL and Redis ports not exposed to host
+
 ## Phase 4: Collaboration
 
 - [ ] Shared todo lists

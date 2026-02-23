@@ -31,13 +31,13 @@ Tribu is a self-hosted family organizer built as a modular monolith. The backend
 
 ```
 backend/app/
-├── main.py              # App factory, auth routes, module registration
+├── main.py              # App factory, auth routes, rate limiting, module registration
 ├── models.py            # SQLAlchemy models
-├── schemas.py           # Pydantic schemas
+├── schemas.py           # Pydantic schemas (with input validation)
 ├── security.py          # JWT creation, password hashing (PBKDF2-SHA256)
-├── database.py          # Engine, session factory
+├── database.py          # Engine, session factory (requires DATABASE_URL)
 ├── core/
-│   └── deps.py          # Shared dependencies (current_user, get_db)
+│   └── deps.py          # Shared dependencies (current_user, get_db, family checks)
 └── modules/
     ├── calendar_router.py
     ├── birthdays_router.py
@@ -66,11 +66,25 @@ User ──┬── Membership ──── Family
 
 | Concern | Implementation |
 |---------|---------------|
-| Password storage | PBKDF2-SHA256 |
-| Session tokens | JWT (HS256) |
+| Password storage | PBKDF2-SHA256 (min 8 characters) |
+| Auth | httpOnly cookie (JWT HS256), Bearer fallback for API testing |
+| Rate limiting | 10/min register, 20/min login (slowapi) |
 | Authorization | Role check per family membership |
 | Data isolation | All queries filtered by family_id |
-| CORS | Restricted to localhost and LAN IPs |
+| CORS | Restricted to localhost and LAN IPs (regex pattern) |
+| Environment | `DATABASE_URL` and `JWT_SECRET` required, no fallback defaults |
+| CSV import | 500 row limit, month/day range checks, email format validation |
+
+### Environment Variables
+
+The backend requires the following environment variables and will not start without them:
+
+- `DATABASE_URL`: PostgreSQL connection string
+- `JWT_SECRET`: Secret key for JWT signing
+
+Optional:
+- `JWT_EXPIRE_HOURS`: Token expiration (default: 24)
+- `REDIS_URL`: Redis connection string (prepared for future use)
 
 ## Frontend
 
@@ -85,6 +99,7 @@ User ──┬── Membership ──── Family
 | i18n | Core + module-level language packs, lazy-loaded on module activation |
 | Calendar View | Month grid with clickable days, dynamic detail panels, event forms |
 | Dashboard | Welcome screen with upcoming events and birthdays summary |
+| Cookie Auth | Auto-login on mount via `/auth/me`, logout clears httpOnly cookie |
 
 ### Theme System
 
@@ -122,29 +137,34 @@ Module translations are loaded on demand when the user navigates to a module.
 
 Docker Compose stack (`infra/docker-compose.yml`):
 
-| Service | Image | Port |
-|---------|-------|------|
-| `postgres` | postgres:16-alpine | 5433 |
-| `redis` | redis:7-alpine | 6380 |
-| `backend` | Custom (FastAPI) | 8000 |
-| `frontend` | Custom (Next.js) | 3000 |
+| Service | Image | Exposed Port |
+|---------|-------|--------------|
+| `postgres` | postgres:16-alpine | Internal only |
+| `redis` | redis:7-alpine | Internal only |
+| `backend` | Custom (FastAPI, non-root) | 8000 |
+| `frontend` | Custom (Next.js, multi-stage build, non-root) | 3000 |
 
-Persistent data is stored in the `tribu_pg_data` Docker volume.
+PostgreSQL and Redis are only accessible within the Docker network. Persistent data is stored in the `tribu_pg_data` Docker volume.
+
+A `.env` file in `infra/` is required before starting. See [`infra/.env.example`](../infra/.env.example) for the template.
 
 ## API Structure
 
 ```
-/auth/register          POST    Create user + family
-/auth/login             POST    Get JWT token
+/auth/register          POST    Create user + family (sets httpOnly cookie)
+/auth/login             POST    Authenticate, sets httpOnly cookie
+/auth/logout            POST    Clear auth cookie
 /auth/me                GET     Current user profile
 /auth/me/profile-image  PATCH   Update profile image
 
 /families/me            GET     User's families
 /families/{id}/members  GET     Family members
+/families/{id}/members/{uid}/role   PATCH  Update member role (admin only)
+/families/{id}/members/{uid}/adult  PATCH  Update adult status (admin only)
 
 /calendar/events        GET     List events
 /calendar/events        POST    Create event
-/calendar/events/{id}   PUT     Update event
+/calendar/events/{id}   PATCH   Update event
 /calendar/events/{id}   DELETE  Delete event
 
 /birthdays              GET     List birthdays
@@ -152,7 +172,7 @@ Persistent data is stored in the `tribu_pg_data` Docker volume.
 
 /contacts               GET     List contacts
 /contacts               POST    Create contact
-/contacts/import/csv    POST    Import from CSV
+/contacts/import-csv    POST    Import from CSV (max 500 rows)
 
 /dashboard/summary      GET     Upcoming events + birthdays
 ```

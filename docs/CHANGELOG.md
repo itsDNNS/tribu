@@ -2,6 +2,31 @@
 
 All notable changes to Tribu are documented here.
 
+## 2026-02-23
+
+### Security
+
+- **Auth**: Replaced JWT token response with httpOnly cookie authentication (SameSite=Lax)
+- **Auth**: Added `/auth/logout` endpoint to clear auth cookie
+- **Auth**: Cookie-first authentication with Bearer token fallback for API testing
+- **Auth**: Password minimum length of 8 characters enforced via Pydantic validation
+- **CORS**: Restricted to localhost, 127.0.0.1, and 192.168.x.x via regex pattern
+- **CSV import**: Row limit (500), month/day range validation, email format check
+- **Environment**: `DATABASE_URL` and `JWT_SECRET` required without fallback defaults (backend refuses to start)
+- **Docker Compose**: Secrets (`JWT_SECRET`, `POSTGRES_PASSWORD`) parametrized via `.env` file
+
+### Infrastructure
+
+- **Docker**: Non-root user (`tribu`) in both backend and frontend containers
+- **Docker**: Multi-stage frontend build (build step separated from runtime image)
+- **Docker**: `.dockerignore` files for both services
+- **Docker**: PostgreSQL and Redis ports no longer exposed to host
+
+### Added
+
+- **Rate limiting**: 10/min for registration, 20/min for login (slowapi)
+- **`.env.example`**: Template with generation hints for secrets
+
 ## 2026-02-20
 
 ### Added

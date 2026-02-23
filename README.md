@@ -13,6 +13,8 @@
   <a href="#quick-start">Quick Start</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="#architecture">Architecture</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="#plugin-system">Plugins</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+  <a href="CONTRIBUTING.md">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+  <a href="SECURITY.md">Security</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="docs/ROADMAP.md">Roadmap</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="docs/CHANGELOG.md">Changelog</a>
 </p>
@@ -27,13 +29,14 @@ Tribu is a self-hosted family hub that brings calendars, contacts, birthdays, an
 
 | Module | Description |
 |--------|-------------|
-| **Auth & Families** | Register, login, JWT sessions. Multi-family support with role-based access (admin, parent, child). |
+| **Auth & Families** | Register, login, httpOnly cookie sessions. Multi-family support with role-based access (admin, parent, child). |
 | **Calendar** | Monthly calendar with clickable days, event CRUD, and dynamic day-detail panels. |
 | **Birthdays** | Dedicated birthday tracker. Auto-syncs from contacts. |
 | **Contacts** | Family address book with CSV import and automatic birthday extraction. |
 | **Dashboard** | At-a-glance summary: upcoming events and birthdays within the next 4 weeks. |
 | **Themes** | Switchable design tokens: Light, Dark, and Midnight Glass. Themeable via plugin manifests. |
 | **i18n** | German and English out of the box. Module-level language packs, lazy-loaded. |
+| **Security** | httpOnly cookies, rate limiting, PBKDF2-SHA256 passwords, non-root Docker containers, CORS restricted to localhost/LAN. |
 
 ## Tech Stack
 
@@ -50,6 +53,22 @@ Tribu is a self-hosted family hub that brings calendars, contacts, birthdays, an
 ```bash
 git clone https://github.com/itsDNNS/tribu.git
 cd tribu/infra
+cp .env.example .env
+```
+
+Generate secrets and fill in `.env`:
+
+```bash
+# JWT secret (required)
+openssl rand -hex 32
+
+# PostgreSQL password (required)
+openssl rand -hex 16
+```
+
+Then start the stack:
+
+```bash
 docker compose up --build
 ```
 
@@ -72,7 +91,8 @@ tribu/
 │       ├── main.py              # FastAPI app, auth routes, startup
 │       ├── models.py            # SQLAlchemy models (User, Family, Membership, ...)
 │       ├── schemas.py           # Pydantic request/response schemas
-│       ├── security.py          # JWT + password hashing
+│       ├── security.py          # JWT + password hashing (PBKDF2-SHA256)
+│       ├── database.py          # Engine, session factory
 │       ├── core/
 │       │   └── deps.py          # Dependency injection (current_user, db)
 │       └── modules/             # Feature modules (one router per feature)
@@ -89,7 +109,8 @@ tribu/
 │   ├── i18n/                    # Language packs (core + per-module)
 │   └── themes/                  # Theme token files + manifests
 ├── infra/
-│   └── docker-compose.yml       # Full stack: PG, Redis, backend, frontend
+│   ├── docker-compose.yml       # Full stack: PG, Redis, backend, frontend
+│   └── .env.example             # Required environment variables template
 └── docs/
     ├── ARCHITECTURE.md          # Detailed architecture documentation
     ├── PLUGIN-MANIFEST.md       # Plugin manifest specification v1
@@ -127,14 +148,15 @@ Full spec: [docs/PLUGIN-MANIFEST.md](docs/PLUGIN-MANIFEST.md)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/auth/register` | Register user + create family |
-| `POST` | `/auth/login` | Login, returns JWT |
+| `POST` | `/auth/register` | Register user + create family (sets cookie) |
+| `POST` | `/auth/login` | Login, sets httpOnly cookie |
+| `POST` | `/auth/logout` | Logout, clears cookie |
 | `GET` | `/auth/me` | Current user profile |
 | `GET` | `/families/me` | User's families + memberships |
 | `GET/POST` | `/calendar/events` | List / create calendar events |
 | `GET` | `/birthdays` | List birthdays for family |
 | `GET` | `/contacts` | List contacts |
-| `POST` | `/contacts/import/csv` | Import contacts from CSV |
+| `POST` | `/contacts/import-csv` | Import contacts from CSV |
 | `GET` | `/dashboard/summary` | Upcoming events + birthdays (4 weeks) |
 
 Interactive API docs available at `/docs` when running.
@@ -152,6 +174,19 @@ cd frontend
 npm install
 npm run dev
 ```
+
+> When running locally, `DATABASE_URL` and `JWT_SECRET` must be set as environment variables. See [infra/.env.example](infra/.env.example) for details.
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, project structure, PR guidelines |
+| [SECURITY.md](SECURITY.md) | Security policy, features, and responsible disclosure |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Detailed architecture and design decisions |
+| [docs/PLUGIN-MANIFEST.md](docs/PLUGIN-MANIFEST.md) | Plugin manifest specification v1 |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Development phases and planned features |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Release history |
 
 ## License
 
