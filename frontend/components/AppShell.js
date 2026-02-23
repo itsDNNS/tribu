@@ -205,6 +205,7 @@ export default function AppShell() {
                 onClick={() => navigate(item.key)}
               >
                 <item.icon size={22} />
+                {item.badge && <span className="bottom-nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>}
                 <span>{item.mobileLabel}</span>
               </button>
             ))}
