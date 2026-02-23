@@ -1,0 +1,22 @@
+{
+  "module.shopping.name": "Einkauf",
+  "module.shopping.lists": "Listen",
+  "module.shopping.items": "Artikel",
+  "module.shopping.add_item": "Artikel hinzufügen",
+  "module.shopping.add_list": "Liste erstellen",
+  "module.shopping.list_name": "Listenname",
+  "module.shopping.list_name_placeholder": "z.B. Supermarkt",
+  "module.shopping.item_name": "Artikel",
+  "module.shopping.item_name_placeholder": "Artikel hinzufügen...",
+  "module.shopping.item_spec": "Details",
+  "module.shopping.item_spec_placeholder": "z.B. 500g, Bio",
+  "module.shopping.checked_section": "Erledigt",
+  "module.shopping.no_items": "Noch keine Artikel",
+  "module.shopping.no_lists": "Noch keine Einkaufslisten",
+  "module.shopping.delete_list": "Liste löschen",
+  "module.shopping.delete_list_confirm": "Liste und alle Artikel löschen?",
+  "module.shopping.clear_checked": "Erledigte löschen",
+  "module.shopping.clear_checked_confirm": "Alle erledigten Artikel entfernen?",
+  "module.shopping.new_list": "Neue Liste",
+  "module.shopping.added_by": "Hinzugefügt von"
+}

@@ -117,6 +117,39 @@ export function apiDeleteTask(taskId) {
   return del(`/tasks/${taskId}`);
 }
 
+// Shopping
+export function apiGetShoppingLists(familyId) {
+  return request(`/shopping/lists?family_id=${familyId}`);
+}
+
+export function apiCreateShoppingList(payload) {
+  return post('/shopping/lists', payload);
+}
+
+export function apiDeleteShoppingList(listId) {
+  return del(`/shopping/lists/${listId}`);
+}
+
+export function apiGetShoppingItems(listId) {
+  return request(`/shopping/lists/${listId}/items`);
+}
+
+export function apiAddShoppingItem(listId, payload) {
+  return post(`/shopping/lists/${listId}/items`, payload);
+}
+
+export function apiUpdateShoppingItem(itemId, payload) {
+  return patch(`/shopping/items/${itemId}`, payload);
+}
+
+export function apiDeleteShoppingItem(itemId) {
+  return del(`/shopping/items/${itemId}`);
+}
+
+export function apiClearCheckedItems(listId) {
+  return del(`/shopping/lists/${listId}/checked`);
+}
+
 // Tokens
 export function apiGetTokens() {
   return request('/tokens');

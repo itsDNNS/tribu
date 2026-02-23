@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -29,6 +29,7 @@ class Family(Base):
     calendar_events = relationship("CalendarEvent", back_populates="family", cascade="all, delete-orphan")
     birthdays = relationship("FamilyBirthday", back_populates="family", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
+    shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -119,3 +120,32 @@ class PersonalAccessToken(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="personal_access_tokens")
+
+
+class ShoppingList(Base):
+    __tablename__ = "shopping_lists"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    family = relationship("Family", back_populates="shopping_lists")
+    items = relationship("ShoppingItem", back_populates="shopping_list", cascade="all, delete-orphan")
+
+
+class ShoppingItem(Base):
+    __tablename__ = "shopping_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    list_id = Column(Integer, ForeignKey("shopping_lists.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    spec = Column(String, nullable=True)
+    checked = Column(Boolean, nullable=False, default=False)
+    checked_at = Column(DateTime, nullable=True)
+    added_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    position = Column(Integer, nullable=False, default=0)
+
+    shopping_list = relationship("ShoppingList", back_populates="items")

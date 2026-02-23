@@ -1,17 +1,19 @@
 import { useState, useCallback } from 'react';
-import { CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu } from 'lucide-react';
+import { CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import DashboardView from './DashboardView';
 import CalendarView from './CalendarView';
 import ContactsView from './ContactsView';
 import TasksView from './TasksView';
+import ShoppingView from './ShoppingView';
 import SettingsView from './SettingsView';
 import AdminView from './AdminView';
 
 const views = {
   dashboard: DashboardView,
   calendar: CalendarView,
+  shopping: ShoppingView,
   contacts: ContactsView,
   tasks: TasksView,
   settings: SettingsView,
@@ -41,18 +43,20 @@ function DashboardSkeleton() {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, messages, me, members, families, familyId, tasks, logout, demoMode, loading } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, messages, me, members, families, familyId, tasks, shoppingLists, logout, demoMode, loading } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const ActiveComponent = views[activeView] || DashboardView;
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
   const openTaskCount = tasks.filter((t) => t.status === 'open').length;
+  const totalUnchecked = shoppingLists.reduce((sum, l) => sum + (l.item_count - l.checked_count), 0);
   const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
 
   const navItems = [
     { key: 'dashboard', icon: LayoutDashboard, label: t(messages, 'dashboard'), mobileLabel: 'Home' },
     { key: 'calendar', icon: CalendarDays, label: t(messages, 'calendar'), mobileLabel: t(messages, 'calendar') },
+    { key: 'shopping', icon: ShoppingCart, label: t(messages, 'module.shopping.name'), mobileLabel: t(messages, 'module.shopping.name'), badge: totalUnchecked || null },
     { key: 'tasks', icon: CheckSquare, label: t(messages, 'module.tasks.name'), mobileLabel: t(messages, 'module.tasks.name'), badge: openTaskCount || null },
     { key: 'contacts', icon: BookUser, label: t(messages, 'contacts'), mobileLabel: t(messages, 'contacts') },
   ];

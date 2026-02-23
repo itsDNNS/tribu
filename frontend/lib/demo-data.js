@@ -40,6 +40,30 @@ const strings = {
       { title: 'Lantern parade daycare', desc: 'Meeting point at main entrance' },
       { title: 'Car inspection', desc: 'TÜV / MOT due' },
     ],
+    shoppingLists: [
+      {
+        name: 'Grocery Store',
+        items: [
+          { name: 'Milk', spec: '1L', checked: false },
+          { name: 'Sourdough bread', spec: null, checked: false },
+          { name: 'Eggs', spec: 'organic 10-pack', checked: false },
+          { name: 'Cheddar cheese', spec: '200g', checked: false },
+          { name: 'Bananas', spec: null, checked: false },
+          { name: 'Chicken breast', spec: '500g', checked: false },
+          { name: 'Olive oil', spec: null, checked: true },
+          { name: 'Oat milk', spec: null, checked: true },
+        ],
+      },
+      {
+        name: 'Drugstore',
+        items: [
+          { name: 'Shampoo', spec: null, checked: false },
+          { name: 'Toothpaste', spec: null, checked: false },
+          { name: 'Sunscreen', spec: 'SPF 50', checked: false },
+          { name: 'Tissues', spec: null, checked: true },
+        ],
+      },
+    ],
     tasks: [
       { title: 'Grocery shopping', desc: 'Milk, bread, eggs, cheese, fruit' },
       { title: 'Take out trash', desc: null },
@@ -68,6 +92,30 @@ const strings = {
       { title: 'Kino-Abend', desc: 'Familienfilm im CineStar' },
       { title: 'Laternenumzug Kita', desc: 'Treffpunkt am Haupteingang' },
       { title: 'Auto TÜV', desc: 'DEKRA Starnberger Str.' },
+    ],
+    shoppingLists: [
+      {
+        name: 'Supermarkt',
+        items: [
+          { name: 'Milch', spec: '1L', checked: false },
+          { name: 'Sauerteigbrot', spec: null, checked: false },
+          { name: 'Eier', spec: 'Bio 10er', checked: false },
+          { name: 'Gouda', spec: '200g', checked: false },
+          { name: 'Bananen', spec: null, checked: false },
+          { name: 'Hähnchenbrust', spec: '500g', checked: false },
+          { name: 'Olivenöl', spec: null, checked: true },
+          { name: 'Hafermilch', spec: null, checked: true },
+        ],
+      },
+      {
+        name: 'Drogerie',
+        items: [
+          { name: 'Shampoo', spec: null, checked: false },
+          { name: 'Zahnpasta', spec: null, checked: false },
+          { name: 'Sonnencreme', spec: 'LSF 50', checked: false },
+          { name: 'Taschentücher', spec: null, checked: true },
+        ],
+      },
     ],
     tasks: [
       { title: 'Einkaufen', desc: 'Milch, Brot, Eier, Käse, Obst' },
@@ -150,6 +198,32 @@ export function buildDemoData(lang = 'en') {
     { id: nextId(), family_id: 1, full_name: 'Peter Schneider', email: 'peter.schneider@web.de', phone: '+49 163 2223344', birthday_month: 11, birthday_day: 25 },
   ];
 
+  const shoppingLists = s.shoppingLists.map((list) => {
+    const listId = nextId();
+    const items = list.items.map((item) => ({
+      id: nextId(),
+      list_id: listId,
+      name: item.name,
+      spec: item.spec,
+      checked: item.checked,
+      checked_at: item.checked ? dateAt(-1) : null,
+      added_by_user_id: [1, 2][Math.floor(Math.random() * 2)],
+      created_at: dateAt(-3),
+    }));
+    const itemCount = items.length;
+    const checkedCount = items.filter((i) => i.checked).length;
+    return {
+      id: listId,
+      family_id: 1,
+      name: list.name,
+      created_by_user_id: 1,
+      created_at: dateAt(-7),
+      item_count: itemCount,
+      checked_count: checkedCount,
+      items,
+    };
+  });
+
   const summary = {
     next_events: events.filter((e) => new Date(e.starts_at) >= today()).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)).slice(0, 5),
     upcoming_birthdays: [
@@ -159,5 +233,5 @@ export function buildDemoData(lang = 'en') {
     ],
   };
 
-  return { me, families, members, events, tasks, contacts, summary };
+  return { me, families, members, events, tasks, contacts, shoppingLists, summary };
 }
