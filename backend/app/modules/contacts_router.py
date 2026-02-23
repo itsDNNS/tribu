@@ -73,17 +73,38 @@ def import_contacts_csv(
     if not required.issubset(set(reader.fieldnames or [])):
         raise HTTPException(status_code=400, detail="CSV braucht mindestens die Spalte full_name")
 
+    MAX_ROWS = 500
     created = 0
+    skipped = 0
     for row in reader:
+        if created + skipped >= MAX_ROWS:
+            break
         name = (row.get("full_name") or "").strip()
         if not name:
+            skipped += 1
             continue
-        month = int(row["birthday_month"]) if row.get("birthday_month") else None
-        day = int(row["birthday_day"]) if row.get("birthday_day") else None
+
+        try:
+            month = int(row["birthday_month"]) if row.get("birthday_month") else None
+        except (ValueError, TypeError):
+            month = None
+        try:
+            day = int(row["birthday_day"]) if row.get("birthday_day") else None
+        except (ValueError, TypeError):
+            day = None
+
+        if month is not None and not (1 <= month <= 12):
+            month = None
+        if day is not None and not (1 <= day <= 31):
+            day = None
+
+        email_raw = (row.get("email") or "").strip()
+        email = email_raw if "@" in email_raw else None
+
         contact = Contact(
             family_id=payload.family_id,
             full_name=name,
-            email=(row.get("email") or "").strip() or None,
+            email=email,
             phone=(row.get("phone") or "").strip() or None,
             birthday_month=month,
             birthday_day=day,
@@ -93,4 +114,4 @@ def import_contacts_csv(
         created += 1
 
     db.commit()
-    return {"status": "ok", "created": created}
+    return {"status": "ok", "created": created, "skipped": skipped}
