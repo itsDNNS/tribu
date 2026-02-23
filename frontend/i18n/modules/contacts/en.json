@@ -1,3 +1,8 @@
 {
-  "module.contacts.name": "Contacts"
+  "module.contacts.name": "Contacts",
+  "module.contacts.no_contacts": "No contacts yet",
+  "module.contacts.import_error": "Could not import contacts",
+  "module.contacts.import_success": "Contacts imported:",
+  "module.contacts.close": "Close",
+  "module.contacts.import": "Import"
 }

@@ -26,10 +26,10 @@ export default function ContactsView() {
   async function importContactsCsv(e) {
     e.preventDefault();
     const { ok, data } = await api.apiImportContactsCsv(Number(familyId), contactsCsv);
-    if (!ok) return setContactsMsg(errorText(data?.detail, 'Kontakte konnten nicht importiert werden'));
+    if (!ok) return setContactsMsg(errorText(data?.detail, t(messages, 'module.contacts.import_error')));
     setContactsCsv('');
     await Promise.all([loadContacts(), loadDashboard()]);
-    setContactsMsg(`Kontakte importiert: ${data.created}`);
+    setContactsMsg(`${t(messages, 'module.contacts.import_success')} ${data.created}`);
   }
 
   return (
@@ -37,17 +37,17 @@ export default function ContactsView() {
       <div className="view-header">
         <div>
           <div className="view-title">{t(messages, 'contacts')}</div>
-          <div className="view-subtitle">{contacts.length} Kontakte</div>
+          <div className="view-subtitle">{contacts.length} {t(messages, 'contacts')}</div>
         </div>
         <button className="btn-ghost" onClick={() => setShowImport(!showImport)}>
           {showImport ? <ChevronUp size={15} /> : <UserPlus size={15} />}
-          {showImport ? 'Schließen' : 'Importieren'}
+          {showImport ? t(messages, 'module.contacts.close') : t(messages, 'module.contacts.import')}
         </button>
       </div>
 
       {showImport && (
         <div className="glass" style={{ padding: 'var(--space-lg)', marginBottom: 'var(--space-md)' }}>
-          {contactsMsg && <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: contactsMsg.includes('importiert') ? 'var(--success)' : 'var(--danger)' }}>{contactsMsg}</p>}
+          {contactsMsg && <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: !contactsMsg.includes('error') && !contactsMsg.includes('Error') && !contactsMsg.includes('nicht') ? 'var(--success)' : 'var(--danger)' }}>{contactsMsg}</p>}
           <form onSubmit={importContactsCsv} className="quick-add-form">
             <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t(messages, 'contacts_csv_hint')}</label>
             <textarea
@@ -87,7 +87,7 @@ export default function ContactsView() {
 
         {contacts.length === 0 && (
           <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', gridColumn: '1 / -1' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Noch keine Kontakte vorhanden</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t(messages, 'module.contacts.no_contacts')}</div>
             <button className="btn-ghost" style={{ marginTop: 'var(--space-md)' }} onClick={() => setShowImport(true)}>
               <UserPlus size={15} /> CSV importieren
             </button>

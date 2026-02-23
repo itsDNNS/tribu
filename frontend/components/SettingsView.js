@@ -3,10 +3,14 @@ import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
+const THEME_DESCS = {
+  en: { light: 'Warm and inviting', dark: 'Subtle and dark', 'midnight-glass': 'Glassmorphism, deep violet' },
+  de: { light: 'Warm und einladend', dark: 'Dezent und dunkel', 'midnight-glass': 'Glassmorphism, tiefes Violett' },
+};
 const THEME_PREVIEWS = {
-  light: { bg: '#f8f6f3', surface: '#ffffff', accent: '#7c3aed', desc: 'Warm und einladend' },
-  dark: { bg: '#0f172a', surface: '#1e293b', accent: '#7c3aed', desc: 'Dezent und dunkel' },
-  'midnight-glass': { bg: '#06080f', surface: '#111628', accent: '#7c3aed', desc: 'Glassmorphism, tiefes Violett' },
+  light: { bg: '#f8f6f3', surface: '#ffffff', accent: '#7c3aed' },
+  dark: { bg: '#0f172a', surface: '#1e293b', accent: '#7c3aed' },
+  'midnight-glass': { bg: '#06080f', surface: '#111628', accent: '#7c3aed' },
 };
 
 export default function SettingsView() {
@@ -33,20 +37,20 @@ export default function SettingsView() {
       <div className="view-header">
         <div>
           <div className="view-title">{t(messages, 'settings')}</div>
-          <div className="view-subtitle">Profil, Theme und Sprache</div>
+          <div className="view-subtitle">{t(messages, 'settings_subtitle')}</div>
         </div>
       </div>
 
       <div className="settings-grid stagger">
         {/* Profile Section */}
         <div className="settings-section glass">
-          <div className="settings-section-title"><User size={16} /> Profil</div>
+          <div className="settings-section-title"><User size={16} /> {t(messages, 'profile')}</div>
           <div className="profile-row">
             <div className="profile-avatar">{initials}</div>
             <div className="profile-info">
               <div className="profile-name">{me?.display_name || 'User'}</div>
               <div className="profile-email">{me?.email || ''}</div>
-              <div className="profile-role">{isAdmin ? 'Admin' : 'Mitglied'}</div>
+              <div className="profile-role">{isAdmin ? 'Admin' : t(messages, 'member')}</div>
             </div>
           </div>
           <div style={{ marginTop: 'var(--space-md)' }}>
@@ -79,7 +83,7 @@ export default function SettingsView() {
                   />
                   <div className="theme-item-info">
                     <div className="theme-item-name">{th.name}</div>
-                    <div className="theme-item-desc">{preview.desc || ''}</div>
+                    <div className="theme-item-desc">{(THEME_DESCS[lang] || THEME_DESCS.en)[th.key] || ''}</div>
                   </div>
                 </div>
               );
@@ -98,9 +102,9 @@ export default function SettingsView() {
 
         {/* Privacy Section */}
         <div className="settings-section glass">
-          <div className="settings-section-title"><ShieldCheck size={16} /> Datenschutz</div>
+          <div className="settings-section-title"><ShieldCheck size={16} /> {t(messages, 'privacy')}</div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
-            Tribu ist selbstgehostet. Deine Daten bleiben auf deinem Server und werden niemals an Dritte weitergegeben.
+            {t(messages, 'privacy_note')}
           </p>
         </div>
       </div>

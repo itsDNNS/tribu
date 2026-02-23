@@ -53,5 +53,14 @@
   "set_adult": "Als erwachsen markieren",
   "set_child": "Als Kind markieren",
   "make_admin": "Zu Admin machen",
-  "make_member": "Zu Mitglied machen"
+  "make_member": "Zu Mitglied machen",
+  "demo_banner": "Demo-Modus — Daten werden nicht gespeichert",
+  "demo_try": "Demo ausprobieren",
+  "auth_footer": "Deine Daten bleiben auf deinem Server. Immer.",
+  "auth_selfhosted": "Self-Hosted • Open Source",
+  "privacy_note": "Tribu ist selbstgehostet. Deine Daten bleiben auf deinem Server und werden niemals an Dritte weitergegeben.",
+  "member": "Mitglied",
+  "profile": "Profil",
+  "settings_subtitle": "Profil, Theme und Sprache",
+  "privacy": "Datenschutz"
 }
