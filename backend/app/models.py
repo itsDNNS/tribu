@@ -27,6 +27,7 @@ class Family(Base):
     memberships = relationship("Membership", back_populates="family", cascade="all, delete-orphan")
     calendar_events = relationship("CalendarEvent", back_populates="family", cascade="all, delete-orphan")
     birthdays = relationship("FamilyBirthday", back_populates="family", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -70,6 +71,25 @@ class FamilyBirthday(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     family = relationship("Family", back_populates="birthdays")
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="open")
+    priority = Column(String, nullable=False, default="normal")
+    due_date = Column(DateTime, nullable=True)
+    recurrence = Column(String, nullable=True)
+    assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    family = relationship("Family", back_populates="tasks")
 
 
 class Contact(Base):

@@ -7,3 +7,4 @@ psycopg2-binary==2.9.10
 passlib==1.7.4
 python-jose[cryptography]==3.5.0
 slowapi==0.1.9
+python-dateutil==2.9.0

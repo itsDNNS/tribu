@@ -4,6 +4,12 @@ All notable changes to Tribu are documented here.
 
 ## 2026-02-23
 
+### Added
+
+- **Tasks module**: Family-shared task list with CRUD, priorities (low/normal/high), due dates, assignees, status filter (all/open/done), and recurring tasks (daily/weekly/monthly/yearly). Completing a recurring task auto-creates the next instance.
+- **Tasks i18n**: German and English translations for the tasks module
+- **Tasks plugin manifest**: `tribu.tasks` feature manifest with menu entry (CheckSquare icon, order 25)
+
 ### Security
 
 - **Auth**: Replaced JWT token response with httpOnly cookie authentication (SameSite=Lax)

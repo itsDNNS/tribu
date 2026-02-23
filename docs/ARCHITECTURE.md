@@ -42,6 +42,7 @@ backend/app/
     ├── calendar_router.py
     ├── birthdays_router.py
     ├── contacts_router.py
+    ├── tasks_router.py
     ├── dashboard_router.py
     └── families_router.py
 ```
@@ -56,7 +57,8 @@ User ──┬── Membership ──── Family
        │
        ├── CalendarEvent (scoped to family)
        ├── Birthday (scoped to family)
-       └── Contact (scoped to family)
+       ├── Contact (scoped to family)
+       └── Task (scoped to family, optional assignee, recurring)
 ```
 
 - First user to register becomes **admin** and **is_adult** automatically
@@ -173,6 +175,11 @@ A `.env` file in `infra/` is required before starting. See [`infra/.env.example`
 /contacts               GET     List contacts
 /contacts               POST    Create contact
 /contacts/import-csv    POST    Import from CSV (max 500 rows)
+
+/tasks                  GET     List tasks (filter by family_id, status)
+/tasks                  POST    Create task
+/tasks/{id}             PATCH   Update task (toggle done triggers recurring)
+/tasks/{id}             DELETE  Delete task
 
 /dashboard/summary      GET     Upcoming events + birthdays
 ```

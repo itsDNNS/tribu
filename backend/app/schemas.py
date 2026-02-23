@@ -139,3 +139,40 @@ class ContactResponse(BaseModel):
 class ContactsCsvImport(BaseModel):
     family_id: int
     csv_text: str
+
+
+class TaskCreate(BaseModel):
+    family_id: int
+    title: str = Field(min_length=1, max_length=200)
+    description: Optional[str] = None
+    priority: str = "normal"
+    due_date: Optional[datetime] = None
+    recurrence: Optional[str] = None
+    assigned_to_user_id: Optional[int] = None
+
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    due_date: Optional[datetime] = None
+    recurrence: Optional[str] = None
+    assigned_to_user_id: Optional[int] = None
+
+
+class TaskResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    title: str
+    description: Optional[str]
+    status: str
+    priority: str
+    due_date: Optional[datetime]
+    recurrence: Optional[str]
+    assigned_to_user_id: Optional[int]
+    created_by_user_id: Optional[int]
+    created_at: datetime
+    completed_at: Optional[datetime]
