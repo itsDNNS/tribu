@@ -7,7 +7,7 @@ import { t } from '../lib/i18n';
 const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
 
 export default function TasksView() {
-  const { familyId, families, members, messages, isMobile } = useApp();
+  const { familyId, families, members, messages, lang, isMobile } = useApp();
   const tk = useTasks();
 
   return (
@@ -78,7 +78,7 @@ export default function TasksView() {
               <button className={`tasks-filter-btn${tk.taskFilter === 'open' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('open')}>{t(messages, 'module.tasks.open')}</button>
               <button className={`tasks-filter-btn${tk.taskFilter === 'done' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('done')}>{t(messages, 'module.tasks.done')}</button>
             </div>
-            <div className="tasks-count">{tk.filteredTasks.length} Aufgaben</div>
+            <div className="tasks-count">{tk.filteredTasks.length} {t(messages, 'module.tasks.name')}</div>
           </div>
 
           {/* Task List */}
@@ -117,7 +117,7 @@ export default function TasksView() {
                       {task.due_date && (
                         <span className={`task-due${isOverdue ? ' overdue' : ''}`}>
                           <Clock size={12} />
-                          {prettyDate(task.due_date)}
+                          {prettyDate(task.due_date, lang)}
                         </span>
                       )}
                     </div>
@@ -132,7 +132,7 @@ export default function TasksView() {
                   <button
                     className="sidebar-logout"
                     onClick={() => tk.deleteTask(task.id)}
-                    title="Löschen"
+                    title="Delete"
                     style={{ marginLeft: 0 }}
                   >
                     <X size={16} />

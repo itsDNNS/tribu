@@ -1,3 +1,14 @@
 {
-  "module.calendar.name": "Calendar"
+  "module.calendar.name": "Calendar",
+  "module.calendar.today": "Today",
+  "module.calendar.month": "Month",
+  "module.calendar.week": "Week",
+  "module.calendar.weekdays": "Mon,Tue,Wed,Thu,Fri,Sat,Sun",
+  "module.calendar.no_events_day": "No events on this day",
+  "module.calendar.no_events_week": "No events this week",
+  "module.calendar.no_events": "No events",
+  "module.calendar.quick_add": "Quick add",
+  "module.calendar.new_event": "New event...",
+  "module.calendar.to": "to",
+  "module.calendar.cw": "CW"
 }

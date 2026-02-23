@@ -19,7 +19,7 @@ export default function AuthPage() {
     e.preventDefault();
     setMsg('');
     const { ok, data } = await api.apiLogin(email, password);
-    if (!ok) return setMsg(errorText(data?.detail, 'Login fehlgeschlagen'));
+    if (!ok) return setMsg(errorText(data?.detail, 'Login failed'));
     setLoggedIn(true);
   }
 
@@ -27,9 +27,8 @@ export default function AuthPage() {
     e.preventDefault();
     setMsg('');
     const { ok, data } = await api.apiRegister(email, password, displayName, familyName);
-    if (!ok) return setMsg(errorText(data?.detail, 'Register fehlgeschlagen'));
+    if (!ok) return setMsg(errorText(data?.detail, 'Registration failed'));
     setLoggedIn(true);
-    setMsg('Registrierung erfolgreich');
   }
 
   return (
@@ -40,7 +39,7 @@ export default function AuthPage() {
             <Users size={32} color="white" />
           </div>
           <h1>Tribu</h1>
-          <p>{t(messages, 'tagline') || 'Dein Familienalltag. Deine Daten. Dein Server.'}</p>
+          <p>{t(messages, 'tagline')}</p>
         </div>
 
         <div className="auth-card glass glow-purple">
@@ -49,63 +48,63 @@ export default function AuthPage() {
               className={`auth-tab${authMode === 'login' ? ' active' : ''}`}
               onClick={() => setAuthMode('login')}
             >
-              {t(messages, 'auth_login') || 'Anmelden'}
+              {t(messages, 'auth_login')}
             </button>
             <button
               className={`auth-tab${authMode === 'register' ? ' active' : ''}`}
               onClick={() => setAuthMode('register')}
             >
-              {t(messages, 'auth_register') || 'Registrieren'}
+              {t(messages, 'auth_register')}
             </button>
           </div>
 
           {authMode === 'login' ? (
             <form onSubmit={login} className="auth-form">
               <div className="form-field">
-                <label>{t(messages, 'email') || 'E-Mail'}</label>
-                <input className="form-input" type="email" placeholder="name@familie.de" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <label>{t(messages, 'email')}</label>
+                <input className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="form-field">
-                <label>{t(messages, 'password') || 'Passwort'}</label>
-                <input className="form-input" type="password" placeholder="Passwort" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <label>{t(messages, 'password')}</label>
+                <input className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
-              <button className="btn-primary" type="submit">{t(messages, 'login') || 'Anmelden'}</button>
+              <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
             </form>
           ) : (
             <form onSubmit={register} className="auth-form">
               <div className="form-field">
-                <label>{t(messages, 'email') || 'E-Mail'}</label>
-                <input className="form-input" type="email" placeholder="name@familie.de" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <label>{t(messages, 'email')}</label>
+                <input className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="form-field">
-                <label>{t(messages, 'password') || 'Passwort'}</label>
-                <input className="form-input" type="password" placeholder="Mind. 8 Zeichen" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <label>{t(messages, 'password')}</label>
+                <input className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <div className="form-field">
-                <label>{t(messages, 'your_name') || 'Dein Name'}</label>
+                <label>{t(messages, 'your_name')}</label>
                 <input className="form-input" type="text" placeholder="Dennis" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
               </div>
               <div className="form-field">
-                <label>{t(messages, 'family_name') || 'Familienname'}</label>
-                <input className="form-input" type="text" placeholder="Familie Müller" value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
+                <label>{t(messages, 'family_name')}</label>
+                <input className="form-input" type="text" placeholder="Müller Family" value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
               </div>
-              <button className="btn-primary" type="submit">{t(messages, 'register') || 'Familie gründen'}</button>
+              <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
             </form>
           )}
 
-          <div className="auth-divider">Self-Hosted &bull; Open Source</div>
+          <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
 
-          {msg && <p style={{ marginTop: 12, fontSize: '0.88rem', color: msg.includes('erfolgreich') ? 'var(--success)' : 'var(--danger)' }}>{msg}</p>}
+          {msg && <p style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
 
           <button className="btn-demo" type="button" onClick={enterDemo}>
             <Play size={15} />
-            Demo ausprobieren
+            {t(messages, 'demo_try')}
           </button>
         </div>
 
         <div className="auth-footer">
           <ShieldCheck size={14} />
-          Deine Daten bleiben auf deinem Server. Immer.
+          {t(messages, 'auth_footer')}
         </div>
       </div>
     </div>

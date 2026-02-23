@@ -1,3 +1,19 @@
 {
-  "module.dashboard.name": "Dashboard"
+  "module.dashboard.name": "Dashboard",
+  "module.dashboard.greeting_morning": "Guten Morgen",
+  "module.dashboard.greeting_afternoon": "Guten Tag",
+  "module.dashboard.greeting_evening": "Guten Abend",
+  "module.dashboard.summary_events": "Heute stehen {count} Termine",
+  "module.dashboard.summary_no_events": "Keine Termine heute",
+  "module.dashboard.summary_tasks": " und {count} offene Aufgaben an.",
+  "module.dashboard.quick_event": "Termin",
+  "module.dashboard.quick_task": "Aufgabe",
+  "module.dashboard.quick_contact": "Kontakt",
+  "module.dashboard.family": "Familie",
+  "module.dashboard.members": "Mitglieder",
+  "module.dashboard.events_count": "Termine",
+  "module.dashboard.tasks_done": "Aufgaben erledigt",
+  "module.dashboard.open_tasks": "Offene Aufgaben",
+  "module.dashboard.all": "Alle →",
+  "module.dashboard.days": "Tage"
 }

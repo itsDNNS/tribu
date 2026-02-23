@@ -4,7 +4,7 @@ import { errorText, toIsoOrNull } from '../lib/helpers';
 import * as api from '../lib/api';
 
 export function useCalendar() {
-  const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary } = useApp();
+  const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary, lang } = useApp();
 
   const [calendarView, setCalendarView] = useState('month');
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
@@ -23,9 +23,11 @@ export function useCalendar() {
   const [birthdayMonth, setBirthdayMonth] = useState('');
   const [birthdayDay, setBirthdayDay] = useState('');
 
+  const locale = lang === 'de' ? 'de-DE' : 'en-US';
+
   const monthLabel = useMemo(
-    () => calendarMonth.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
-    [calendarMonth],
+    () => calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
+    [calendarMonth, locale],
   );
 
   const selectedDayEvents = useMemo(() => {
@@ -108,11 +110,11 @@ export function useCalendar() {
       }));
     } else {
       const { ok, data } = await api.apiCreateEvent(payload);
-      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Event erstellen fehlgeschlagen'));
+      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Failed to create event'));
       await Promise.all([loadEvents(), loadDashboard()]);
     }
     setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
-    setCalendarMsg('Event erstellt');
+    setCalendarMsg('Event created');
   }
 
   async function addBirthday(e) {
@@ -128,7 +130,7 @@ export function useCalendar() {
         ...prev,
         upcoming_birthdays: [...(prev.upcoming_birthdays || []), {
           person_name: birthdayName,
-          occurs_on: bDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }),
+          occurs_on: bDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' }),
           days_until: daysUntil,
           month: bMonth,
           day: bDay,
@@ -139,7 +141,7 @@ export function useCalendar() {
         family_id: Number(familyId), person_name: birthdayName,
         month: Number(birthdayMonth), day: Number(birthdayDay),
       });
-      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Geburtstag konnte nicht gespeichert werden'));
+      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Failed to save birthday'));
       await loadDashboard();
     }
     setBirthdayName(''); setBirthdayMonth(''); setBirthdayDay('');

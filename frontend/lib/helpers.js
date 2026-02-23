@@ -3,10 +3,11 @@ export function toIsoOrNull(localValue) {
   return new Date(localValue).toISOString();
 }
 
-export function prettyDate(value) {
+export function prettyDate(value, lang = 'en') {
   if (!value) return '-';
   const d = new Date(value);
-  return d.toLocaleString('de-DE', {
+  const locale = lang === 'de' ? 'de-DE' : 'en-US';
+  return d.toLocaleString(locale, {
     weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
   });
 }

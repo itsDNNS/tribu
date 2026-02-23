@@ -7,8 +7,10 @@ import { t } from '../lib/i18n';
 const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
 
 export default function CalendarView() {
-  const { familyId, families, messages, isMobile, switchFamily, loadEvents, loadDashboard } = useApp();
+  const { familyId, families, messages, isMobile, lang, switchFamily, loadEvents, loadDashboard } = useApp();
   const cal = useCalendar();
+  const locale = lang === 'de' ? 'de-DE' : 'en-US';
+  const weekdays = t(messages, 'module.calendar.weekdays').split(',');
 
   const today = new Date();
   const isToday = (day) => {
@@ -34,15 +36,17 @@ export default function CalendarView() {
             <button className="calendar-nav-btn" onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() - 1, 1)); cal.setSelectedDate(null); }}>
               <ChevronLeft size={18} />
             </button>
-            <div className="calendar-month-label">{cal.monthLabel}</div>
+            <div className="calendar-month-label">
+              {cal.calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
+            </div>
             <button className="calendar-nav-btn" onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() + 1, 1)); cal.setSelectedDate(null); }}>
               <ChevronRight size={18} />
             </button>
           </div>
-          <button className="today-btn" onClick={() => { cal.setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); cal.setSelectedDate(today); }}>Heute</button>
+          <button className="today-btn" onClick={() => { cal.setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); cal.setSelectedDate(today); }}>{t(messages, 'module.calendar.today')}</button>
           <div className="calendar-view-toggle">
-            <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>Monat</button>
-            <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>Woche</button>
+            <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>{t(messages, 'module.calendar.month')}</button>
+            <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>{t(messages, 'module.calendar.week')}</button>
           </div>
         </div>
       )}
@@ -50,8 +54,8 @@ export default function CalendarView() {
       {cal.calendarView === 'week' && (
         <div className="calendar-controls">
           <div className="calendar-view-toggle">
-            <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>Monat</button>
-            <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>Woche</button>
+            <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>{t(messages, 'module.calendar.month')}</button>
+            <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>{t(messages, 'module.calendar.week')}</button>
           </div>
         </div>
       )}
@@ -62,7 +66,7 @@ export default function CalendarView() {
         <div className={isMobile ? '' : 'calendar-layout'}>
           <div className="glass calendar-grid-wrapper">
             <div className="calendar-weekdays" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
-              {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((d) => (
+              {weekdays.map((d) => (
                 <div key={d} className="calendar-weekday">{d}</div>
               ))}
             </div>
@@ -117,34 +121,34 @@ export default function CalendarView() {
           {!isMobile && cal.selectedDate && (
             <div className="glass day-detail-panel">
               <div className="day-detail-date">
-                {cal.selectedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {cal.selectedDate.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
               </div>
               <div className="day-detail-weekday">
-                {cal.selectedDate.toLocaleDateString('de-DE', { weekday: 'long' })}
+                {cal.selectedDate.toLocaleDateString(locale, { weekday: 'long' })}
               </div>
 
               <div className="day-detail-events">
                 {cal.selectedDayEvents.length === 0 && (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Keine Termine an diesem Tag</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_day')}</div>
                 )}
                 {cal.selectedDayEvents.map((ev, i) => (
                   <div key={ev.id} className="day-event-card" style={{ borderColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
                     <div>
                       <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{ev.title}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at)}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, lang)}</div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Schnell anlegen</div>
+              <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.quick_add')}</div>
               <form onSubmit={cal.createEvent} className="quick-add-form">
-                <input className="form-input" placeholder="Neuer Termin..." value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required style={{ fontSize: '0.88rem', padding: '12px 14px' }} />
+                <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required style={{ fontSize: '0.88rem', padding: '12px 14px' }} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
                   <input className="form-input" type="datetime-local" value={cal.endsAt} onChange={(e) => cal.setEndsAt(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
                 </div>
-                <button className="btn-sm" type="submit"><Plus size={14} /> Termin erstellen</button>
+                <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
               </form>
             </div>
           )}
@@ -152,21 +156,21 @@ export default function CalendarView() {
       ) : (
         <div className="glass" style={{ padding: 'var(--space-lg)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
-            <strong>KW {cal.weekInfo.weekNumber}</strong>
+            <strong>{t(messages, 'module.calendar.cw')} {cal.weekInfo.weekNumber}</strong>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              {cal.weekInfo.weekStart.toLocaleDateString('de-DE')} bis {new Date(cal.weekInfo.weekEnd.getTime() - 1).toLocaleDateString('de-DE')}
+              {cal.weekInfo.weekStart.toLocaleDateString(locale)} {t(messages, 'module.calendar.to')} {new Date(cal.weekInfo.weekEnd.getTime() - 1).toLocaleDateString(locale)}
             </span>
           </div>
 
           <div className="day-detail-events">
             {cal.weekInfo.weekEvents.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Keine Termine in der aktuellen Woche</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_week')}</div>
             )}
             {cal.weekInfo.weekEvents.map((ev, i) => (
               <div key={ev.id} className="day-event-card" style={{ borderColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
                 <div>
                   <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{ev.title}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at)}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, lang)}</div>
                 </div>
               </div>
             ))}
@@ -178,28 +182,28 @@ export default function CalendarView() {
       {isMobile && cal.calendarView === 'month' && cal.selectedDate && (
         <div className="glass" style={{ padding: 'var(--space-lg)', marginTop: 'var(--space-md)' }}>
           <div className="day-detail-date">
-            {cal.selectedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {cal.selectedDate.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
           </div>
           <div className="day-detail-weekday">
-            {cal.selectedDate.toLocaleDateString('de-DE', { weekday: 'long' })}
+            {cal.selectedDate.toLocaleDateString(locale, { weekday: 'long' })}
           </div>
           <div className="day-detail-events">
             {cal.selectedDayEvents.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Keine Termine</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events')}</div>
             )}
             {cal.selectedDayEvents.map((ev, i) => (
               <div key={ev.id} className="day-event-card" style={{ borderColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
                 <div>
                   <div style={{ fontWeight: 500 }}>{ev.title}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{prettyDate(ev.starts_at)}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{prettyDate(ev.starts_at, lang)}</div>
                 </div>
               </div>
             ))}
           </div>
           <form onSubmit={cal.createEvent} className="quick-add-form">
-            <input className="form-input" placeholder="Neuer Termin..." value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required />
+            <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required />
             <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required />
-            <button className="btn-sm" type="submit"><Plus size={14} /> Termin erstellen</button>
+            <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
           </form>
         </div>
       )}
@@ -207,14 +211,14 @@ export default function CalendarView() {
       {/* Birthday form in week view */}
       {cal.calendarView === 'week' && (
         <div className="glass" style={{ padding: 'var(--space-lg)', marginTop: 'var(--space-md)' }}>
-          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-md)' }}>Geburtstag anlegen</div>
+          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-md)' }}>{t(messages, 'create_birthday')}</div>
           <form onSubmit={cal.addBirthday} className="quick-add-form">
-            <input className="form-input" placeholder="Name" value={cal.birthdayName} onChange={(e) => cal.setBirthdayName(e.target.value)} required />
+            <input className="form-input" placeholder={t(messages, 'name')} value={cal.birthdayName} onChange={(e) => cal.setBirthdayName(e.target.value)} required />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <input className="form-input" type="number" min="1" max="12" placeholder="Monat" value={cal.birthdayMonth} onChange={(e) => cal.setBirthdayMonth(e.target.value)} required />
-              <input className="form-input" type="number" min="1" max="31" placeholder="Tag" value={cal.birthdayDay} onChange={(e) => cal.setBirthdayDay(e.target.value)} required />
+              <input className="form-input" type="number" min="1" max="12" placeholder={t(messages, 'month')} value={cal.birthdayMonth} onChange={(e) => cal.setBirthdayMonth(e.target.value)} required />
+              <input className="form-input" type="number" min="1" max="31" placeholder={t(messages, 'day')} value={cal.birthdayDay} onChange={(e) => cal.setBirthdayDay(e.target.value)} required />
             </div>
-            <button className="btn-sm" type="submit">Geburtstag speichern</button>
+            <button className="btn-sm" type="submit">{t(messages, 'save_birthday')}</button>
           </form>
         </div>
       )}

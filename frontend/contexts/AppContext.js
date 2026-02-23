@@ -28,7 +28,7 @@ export function AppProvider({ children }) {
 
   // Theme / i18n
   const [theme, setTheme] = useState('light');
-  const [lang, setLang] = useState('de');
+  const [lang, setLang] = useState('en');
 
   // Layout
   const [activeView, setActiveView] = useState('dashboard');
@@ -87,7 +87,7 @@ export function AppProvider({ children }) {
   }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks]);
 
   const enterDemo = useCallback(() => {
-    const demo = buildDemoData();
+    const demo = buildDemoData(lang);
     setDemoMode(true);
     setMe(demo.me);
     setFamilies(demo.families);
@@ -99,7 +99,7 @@ export function AppProvider({ children }) {
     setContacts(demo.contacts);
     setSummary(demo.summary);
     setLoggedIn(true);
-  }, []);
+  }, [lang]);
 
   const logout = useCallback(async () => {
     if (!demoMode) await api.apiLogout();
@@ -116,7 +116,7 @@ export function AppProvider({ children }) {
   // Init: localStorage, resize, auto-login
   useEffect(() => {
     setTheme(window.localStorage.getItem('tribu_theme') || 'light');
-    setLang(window.localStorage.getItem('tribu_lang') || 'de');
+    setLang(window.localStorage.getItem('tribu_lang') || 'en');
     setProfileImage('');
 
     const onResize = () => setIsMobile(window.innerWidth < 768);

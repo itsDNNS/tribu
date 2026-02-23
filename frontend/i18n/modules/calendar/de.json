@@ -1,3 +1,14 @@
 {
-  "module.calendar.name": "Kalender"
+  "module.calendar.name": "Kalender",
+  "module.calendar.today": "Heute",
+  "module.calendar.month": "Monat",
+  "module.calendar.week": "Woche",
+  "module.calendar.weekdays": "Mo,Di,Mi,Do,Fr,Sa,So",
+  "module.calendar.no_events_day": "Keine Termine an diesem Tag",
+  "module.calendar.no_events_week": "Keine Termine in der aktuellen Woche",
+  "module.calendar.no_events": "Keine Termine",
+  "module.calendar.quick_add": "Schnell anlegen",
+  "module.calendar.new_event": "Neuer Termin...",
+  "module.calendar.to": "bis",
+  "module.calendar.cw": "KW"
 }
