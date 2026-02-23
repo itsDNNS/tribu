@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership, to_utc_naive
+from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, User
 from app.schemas import CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, PaginatedCalendarEvents
@@ -16,6 +17,7 @@ def list_calendar_events(
     limit: int = Query(50, ge=1, le=200),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("calendar:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
     base = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id)
@@ -29,6 +31,7 @@ def create_calendar_event(
     payload: CalendarEventCreate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
 ):
     ensure_family_membership(db, user.id, payload.family_id)
 
@@ -58,6 +61,7 @@ def update_calendar_event(
     payload: CalendarEventUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
 ):
     event = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
     if not event:
@@ -89,6 +93,7 @@ def delete_calendar_event(
     event_id: int,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
 ):
     event = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
     if not event:

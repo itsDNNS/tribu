@@ -1,4 +1,4 @@
-from datetime import UTC, date
+from datetime import UTC, date, datetime
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, status
@@ -6,8 +6,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Membership, User
-from app.security import decode_token
+from app.models import Membership, PersonalAccessToken, User
+from app.security import decode_token, hash_pat, is_pat
+from app.core.scopes import parse_scopes
 
 security = HTTPBearer(auto_error=False)
 
@@ -25,6 +26,21 @@ def current_user(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert")
 
+    if is_pat(token):
+        token_hash = hash_pat(token)
+        pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.token_hash == token_hash).first()
+        if not pat:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token")
+        if pat.expires_at and pat.expires_at < datetime.utcnow():
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token abgelaufen")
+        pat.last_used_at = datetime.utcnow()
+        db.commit()
+        user = db.query(User).filter(User.id == pat.user_id).first()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Benutzer nicht gefunden")
+        request.state.pat_scopes = parse_scopes(pat.scopes)
+        return user
+
     try:
         payload = decode_token(token)
         user_id = int(payload.get("sub"))
@@ -34,6 +50,7 @@ def current_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Benutzer nicht gefunden")
+    request.state.pat_scopes = None
     return user
 
 

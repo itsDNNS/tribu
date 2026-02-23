@@ -201,3 +201,25 @@ class PaginatedTasks(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class PATCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    scopes: list[str] = ["*"]
+    expires_at: Optional[datetime] = None
+
+
+class PATResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    scopes: str
+    expires_at: Optional[datetime]
+    last_used_at: Optional[datetime]
+    created_at: datetime
+
+
+class PATCreatedResponse(BaseModel):
+    token: str
+    pat: PATResponse
