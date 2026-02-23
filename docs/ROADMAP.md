@@ -75,10 +75,18 @@
 - [x] Admin demotion feedback (role returned in response, frontend notification)
 - [x] AdminView inline styles fully migrated to CSS classes
 
+## Phase 3.9: Token System
+
+- [x] Personal Access Tokens (PATs) with scoped permissions
+- [x] Token CRUD API (create, list, revoke) with SHA-256 hash storage
+- [x] Scope enforcement on all module endpoints (calendar, tasks, contacts, birthdays, families, profile, shopping)
+- [x] PAT prefix detection (`tribu_pat_`) with Bearer auth fallback
+- [x] Migration 0003: personal_access_tokens table
+
 ## Phase 4: Collaboration
 
-- [ ] Shared todo lists
-- [ ] Shopping lists with real-time sync
+- [x] Shopping lists module (multi-list, tap-to-toggle, name+spec items, checked section, bulk clear)
+- [ ] Real-time sync for shopping lists (WebSocket/SSE)
 - [ ] Family chat (text, images)
 
 ## Phase 5: Smart Features
