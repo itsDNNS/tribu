@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, LayoutDashboard, Settings, Shield, Moon, Sun, Languages, BookUser } from 'lucide-react';
+import { CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, Moon, Sun, Languages, BookUser } from 'lucide-react';
 import { buildMessages, t } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 
@@ -69,6 +69,16 @@ export default function Home() {
   const [birthdayName, setBirthdayName] = useState('');
   const [birthdayMonth, setBirthdayMonth] = useState('');
   const [birthdayDay, setBirthdayDay] = useState('');
+
+  const [tasks, setTasks] = useState([]);
+  const [taskFilter, setTaskFilter] = useState('open');
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDesc, setTaskDesc] = useState('');
+  const [taskDueDate, setTaskDueDate] = useState('');
+  const [taskPriority, setTaskPriority] = useState('normal');
+  const [taskRecurrence, setTaskRecurrence] = useState('');
+  const [taskAssignee, setTaskAssignee] = useState('');
+  const [taskMsg, setTaskMsg] = useState('');
 
   const messages = useMemo(() => buildMessages(lang), [lang]);
   const apiBase = useMemo(() => resolveApiBase(), []);
@@ -219,7 +229,7 @@ export default function Home() {
       const fid = String(famData[0].family_id);
       setFamilyId(fid);
       setMyFamilyRole(famData[0].role);
-      await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid)]);
+      await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid)]);
     }
   }
 
@@ -273,6 +283,51 @@ export default function Home() {
     const res = await fetch(`${apiBase}/contacts?family_id=${fid}`, { credentials: 'include' });
     const data = await res.json();
     if (res.ok) setContacts(data);
+  }
+
+  async function loadTasks(fid = familyId) {
+    const res = await fetch(`${apiBase}/tasks?family_id=${fid}`, { credentials: 'include' });
+    const data = await res.json();
+    if (res.ok) setTasks(data);
+  }
+
+  async function createTask(e) {
+    e.preventDefault();
+    setTaskMsg('');
+    const payload = {
+      family_id: Number(familyId),
+      title: taskTitle,
+      description: taskDesc || null,
+      priority: taskPriority,
+      due_date: toIsoOrNull(taskDueDate),
+      recurrence: taskRecurrence || null,
+      assigned_to_user_id: taskAssignee ? Number(taskAssignee) : null,
+    };
+    const res = await fetch(`${apiBase}/tasks`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) return setTaskMsg(errorText(data.detail, 'Aufgabe erstellen fehlgeschlagen'));
+    setTaskTitle(''); setTaskDesc(''); setTaskDueDate(''); setTaskPriority('normal'); setTaskRecurrence(''); setTaskAssignee('');
+    await loadTasks();
+    setTaskMsg(t(messages, 'module.tasks.created'));
+  }
+
+  async function toggleTask(id, currentStatus) {
+    const newStatus = currentStatus === 'done' ? 'open' : 'done';
+    await fetch(`${apiBase}/tasks/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: newStatus }),
+    });
+    await loadTasks();
+  }
+
+  async function deleteTask(id) {
+    await fetch(`${apiBase}/tasks/${id}`, { method: 'DELETE', credentials: 'include' });
+    await loadTasks();
   }
 
   async function createEvent(e) {
@@ -365,7 +420,7 @@ export default function Home() {
 
   async function logout() {
     await fetch(`${apiBase}/auth/logout`, { method: 'POST', credentials: 'include' });
-    setLoggedIn(false); setMe(null); setEvents([]); setSummary({ next_events: [], upcoming_birthdays: [] }); setMembers([]); setContacts([]);
+    setLoggedIn(false); setMe(null); setEvents([]); setSummary({ next_events: [], upcoming_birthdays: [] }); setMembers([]); setContacts([]); setTasks([]);
   }
 
   const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
@@ -417,6 +472,7 @@ export default function Home() {
             <button style={navBtn(activeView === 'dashboard', tokens)} onClick={() => setActiveView('dashboard')}><LayoutDashboard size={16} /> {t(messages, 'dashboard')}</button>
             <button style={navBtn(activeView === 'calendar', tokens)} onClick={() => setActiveView('calendar')}><CalendarDays size={16} /> {t(messages, 'calendar')}</button>
             <button style={navBtn(activeView === 'contacts', tokens)} onClick={() => setActiveView('contacts')}><BookUser size={16} /> {t(messages, 'contacts')}</button>
+            <button style={navBtn(activeView === 'tasks', tokens)} onClick={() => setActiveView('tasks')}><CheckSquare size={16} /> {t(messages, 'module.tasks.name')}</button>
             <button style={navBtn(activeView === 'settings', tokens)} onClick={() => setActiveView('settings')}><Settings size={16} /> {t(messages, 'settings')}</button>
             {isAdmin && <button style={navBtn(activeView === 'admin', tokens)} onClick={() => setActiveView('admin')}><Shield size={16} /> {t(messages, 'admin')}</button>}
             <div style={{ marginTop: 'auto' }}><button style={ui.secondaryBtn} onClick={logout}>{t(messages, 'logout')}</button></div>
@@ -468,7 +524,7 @@ export default function Home() {
                     setFamilyId(fid);
                     const selected = families.find((f) => String(f.family_id) === String(fid));
                     if (selected) setMyFamilyRole(selected.role);
-                    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid)]);
+                    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid)]);
                   }}
                 >
                   {families.map((f) => (
@@ -622,6 +678,125 @@ export default function Home() {
             </div>
           )}
 
+          {activeView === 'tasks' && (
+            <div style={ui.card}>
+              <h2>{t(messages, 'module.tasks.name')}</h2>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                <select
+                  style={{ ...ui.input, maxWidth: 220 }}
+                  value={familyId}
+                  onChange={async (e) => {
+                    const fid = e.target.value;
+                    setFamilyId(fid);
+                    const selected = families.find((f) => String(f.family_id) === String(fid));
+                    if (selected) setMyFamilyRole(selected.role);
+                    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid)]);
+                  }}
+                >
+                  {families.map((f) => (
+                    <option key={f.family_id} value={String(f.family_id)}>{f.family_name}</option>
+                  ))}
+                </select>
+                <button style={navBtn(taskFilter === 'all', tokens)} onClick={() => setTaskFilter('all')}>{t(messages, 'module.tasks.all')}</button>
+                <button style={navBtn(taskFilter === 'open', tokens)} onClick={() => setTaskFilter('open')}>{t(messages, 'module.tasks.open')}</button>
+                <button style={navBtn(taskFilter === 'done', tokens)} onClick={() => setTaskFilter('done')}>{t(messages, 'module.tasks.done')}</button>
+              </div>
+
+              {taskMsg && <p>{taskMsg}</p>}
+
+              <form onSubmit={createTask} style={{ ...styles.formGrid, marginBottom: 14 }}>
+                <input style={ui.input} placeholder={t(messages, 'module.tasks.title')} value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} required />
+                <textarea style={ui.input} placeholder={t(messages, 'module.tasks.description')} value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} />
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 8 }}>
+                  <input style={ui.input} type="datetime-local" value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} />
+                  <select style={ui.input} value={taskPriority} onChange={(e) => setTaskPriority(e.target.value)}>
+                    <option value="low">{t(messages, 'module.tasks.priority.low')}</option>
+                    <option value="normal">{t(messages, 'module.tasks.priority.normal')}</option>
+                    <option value="high">{t(messages, 'module.tasks.priority.high')}</option>
+                  </select>
+                  <select style={ui.input} value={taskRecurrence} onChange={(e) => setTaskRecurrence(e.target.value)}>
+                    <option value="">{t(messages, 'module.tasks.recurrence.none')}</option>
+                    <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
+                    <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
+                    <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
+                    <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                  <select style={ui.input} value={taskAssignee} onChange={(e) => setTaskAssignee(e.target.value)}>
+                    <option value="">{t(messages, 'module.tasks.unassigned')}</option>
+                    {members.map((m) => (
+                      <option key={m.user_id} value={String(m.user_id)}>{m.display_name}</option>
+                    ))}
+                  </select>
+                  <button style={ui.primaryBtn} type="submit">{t(messages, 'module.tasks.add')}</button>
+                </div>
+              </form>
+
+              <div style={{ display: 'grid', gap: 8 }}>
+                {tasks
+                  .filter((tk) => taskFilter === 'all' || tk.status === taskFilter)
+                  .length === 0 && <p style={{ color: tokens.muted }}>{t(messages, 'module.tasks.no_tasks')}</p>}
+                {tasks
+                  .filter((tk) => taskFilter === 'all' || tk.status === taskFilter)
+                  .map((tk) => {
+                    const isOverdue = tk.due_date && tk.status === 'open' && new Date(tk.due_date) < new Date();
+                    const assignee = members.find((m) => m.user_id === tk.assigned_to_user_id);
+                    return (
+                      <div key={tk.id} style={{ ...ui.smallCard, opacity: tk.status === 'done' ? 0.6 : 1, display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: 10 }}>
+                        <input
+                          type="checkbox"
+                          checked={tk.status === 'done'}
+                          onChange={() => toggleTask(tk.id, tk.status)}
+                          style={{ width: 20, height: 20, cursor: 'pointer' }}
+                        />
+                        <div>
+                          <strong style={{ textDecoration: tk.status === 'done' ? 'line-through' : 'none' }}>{tk.title}</strong>
+                          {tk.description && <div style={{ fontSize: 13, color: tokens.muted }}>{tk.description}</div>}
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                            {tk.due_date && (
+                              <span style={{
+                                fontSize: 11, padding: '2px 6px', borderRadius: 6,
+                                background: isOverdue ? '#fecaca' : tokens.surface,
+                                color: isOverdue ? '#991b1b' : tokens.muted,
+                                border: `1px solid ${isOverdue ? '#f87171' : tokens.border}`,
+                              }}>
+                                {isOverdue && `${t(messages, 'module.tasks.overdue')} `}{prettyDate(tk.due_date)}
+                              </span>
+                            )}
+                            <span style={{
+                              fontSize: 11, padding: '2px 6px', borderRadius: 6,
+                              background: tk.priority === 'high' ? '#fef3c7' : tk.priority === 'low' ? '#e0f2fe' : tokens.surface,
+                              color: tk.priority === 'high' ? '#92400e' : tk.priority === 'low' ? '#075985' : tokens.muted,
+                              border: `1px solid ${tokens.border}`,
+                            }}>
+                              {t(messages, `module.tasks.priority.${tk.priority}`)}
+                            </span>
+                            {tk.recurrence && (
+                              <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 6, background: tokens.surface, color: tokens.muted, border: `1px solid ${tokens.border}` }}>
+                                {t(messages, `module.tasks.recurrence.${tk.recurrence}`)}
+                              </span>
+                            )}
+                            {assignee && (
+                              <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 6, background: tokens.surface, color: tokens.muted, border: `1px solid ${tokens.border}` }}>
+                                {assignee.display_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          style={{ ...ui.secondaryBtn, padding: '6px 10px', fontSize: 13, color: '#ef4444' }}
+                          onClick={() => deleteTask(tk.id)}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
           {activeView === 'settings' && (
             <div style={ui.card}>
               <h2>{t(messages, 'settings')}</h2>
@@ -677,7 +852,7 @@ export default function Home() {
           right: 10,
           bottom: 10,
           display: 'grid',
-          gridTemplateColumns: isAdmin ? '1fr 1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr',
+          gridTemplateColumns: isAdmin ? 'repeat(6, 1fr)' : 'repeat(5, 1fr)',
           gap: 8,
           background: tokens.surface,
           border: `1px solid ${tokens.border}`,
@@ -688,6 +863,7 @@ export default function Home() {
           <button style={navBtn(activeView === 'dashboard', tokens)} onClick={() => setActiveView('dashboard')}><LayoutDashboard size={16} /></button>
           <button style={navBtn(activeView === 'calendar', tokens)} onClick={() => setActiveView('calendar')}><CalendarDays size={16} /></button>
           <button style={navBtn(activeView === 'contacts', tokens)} onClick={() => setActiveView('contacts')}><BookUser size={16} /></button>
+          <button style={navBtn(activeView === 'tasks', tokens)} onClick={() => setActiveView('tasks')}><CheckSquare size={16} /></button>
           <button style={navBtn(activeView === 'settings', tokens)} onClick={() => setActiveView('settings')}><Settings size={16} /></button>
           {isAdmin && <button style={navBtn(activeView === 'admin', tokens)} onClick={() => setActiveView('admin')}><Shield size={16} /></button>}
         </nav>

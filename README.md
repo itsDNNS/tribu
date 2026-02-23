@@ -33,6 +33,7 @@ Tribu is a self-hosted family hub that brings calendars, contacts, birthdays, an
 | **Calendar** | Monthly calendar with clickable days, event CRUD, and dynamic day-detail panels. |
 | **Birthdays** | Dedicated birthday tracker. Auto-syncs from contacts. |
 | **Contacts** | Family address book with CSV import and automatic birthday extraction. |
+| **Tasks** | Shared family task list with priorities, due dates, assignees, and recurring tasks. |
 | **Dashboard** | At-a-glance summary: upcoming events and birthdays within the next 4 weeks. |
 | **Themes** | Switchable design tokens: Light, Dark, and Midnight Glass. Themeable via plugin manifests. |
 | **i18n** | German and English out of the box. Module-level language packs, lazy-loaded. |
@@ -99,6 +100,7 @@ tribu/
 │           ├── calendar_router.py
 │           ├── birthdays_router.py
 │           ├── contacts_router.py
+│           ├── tasks_router.py
 │           ├── dashboard_router.py
 │           └── families_router.py
 ├── frontend/
@@ -157,6 +159,9 @@ Full spec: [docs/PLUGIN-MANIFEST.md](docs/PLUGIN-MANIFEST.md)
 | `GET` | `/birthdays` | List birthdays for family |
 | `GET` | `/contacts` | List contacts |
 | `POST` | `/contacts/import-csv` | Import contacts from CSV |
+| `GET/POST` | `/tasks` | List / create tasks |
+| `PATCH` | `/tasks/{id}` | Update task (including toggle done) |
+| `DELETE` | `/tasks/{id}` | Delete task |
 | `GET` | `/dashboard/summary` | Upcoming events + birthdays (4 weeks) |
 
 Interactive API docs available at `/docs` when running.

@@ -1,0 +1,19 @@
+{
+  "id": "tribu.tasks",
+  "type": "feature",
+  "name": "Aufgaben",
+  "version": "1.0.0",
+  "compatibility": { "tribu": ">=0.3.1" },
+  "entrypoints": {
+    "backend_router": "backend/app/modules/tasks_router.py",
+    "i18n": [
+      "frontend/i18n/modules/tasks/de.json",
+      "frontend/i18n/modules/tasks/en.json"
+    ]
+  },
+  "menu": {
+    "label_key": "module.tasks.name",
+    "icon": "CheckSquare",
+    "order": 25
+  }
+}
