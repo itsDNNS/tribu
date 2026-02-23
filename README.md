@@ -17,6 +17,12 @@
   <a href="docs/CHANGELOG.md">Changelog</a>
 </p>
 
+<p align="center">
+  <a href="https://ko-fi.com/itsdnns"><img src="https://img.shields.io/badge/Ko--fi-Support%20Tribu-FF5E5B?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>&nbsp;
+  <a href="https://paypal.me/itsDNNS"><img src="https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white" alt="PayPal"></a>&nbsp;
+  <a href="https://github.com/sponsors/itsDNNS"><img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?logo=github-sponsors&logoColor=white" alt="GitHub Sponsors"></a>
+</p>
+
 ---
 
 <p align="center">
@@ -131,6 +137,14 @@ docker compose up --build
 | [Contributing](CONTRIBUTING.md) | Dev setup, project structure, PR guidelines |
 | [Security](SECURITY.md) | Security policy and responsible disclosure |
 | [Changelog](docs/CHANGELOG.md) | Release history |
+
+## Support
+
+If Tribu helps your family stay organized, consider supporting development:
+
+- [Ko-fi](https://ko-fi.com/itsdnns)
+- [PayPal](https://paypal.me/itsDNNS)
+- [GitHub Sponsors](https://github.com/sponsors/itsDNNS)
 
 ## License
 
