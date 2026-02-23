@@ -66,7 +66,7 @@ export default function AuthPage() {
               </div>
               <div className="form-field">
                 <label>{t(messages, 'password')}</label>
-                <input className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <input className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
               </div>
               <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
             </form>
@@ -78,7 +78,8 @@ export default function AuthPage() {
               </div>
               <div className="form-field">
                 <label>{t(messages, 'password')}</label>
-                <input className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <input className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
               </div>
               <div className="form-field">
                 <label>{t(messages, 'your_name')}</label>

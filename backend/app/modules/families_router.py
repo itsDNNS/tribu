@@ -76,7 +76,7 @@ def update_member_adult(
     if not payload.is_adult and membership.role == "admin":
         membership.role = "member"
     db.commit()
-    return {"status": "ok", "user_id": target_user_id, "is_adult": membership.is_adult}
+    return {"status": "ok", "user_id": target_user_id, "is_adult": membership.is_adult, "role": membership.role}
 
 
 @router.patch("/{family_id}/members/{target_user_id}/role")

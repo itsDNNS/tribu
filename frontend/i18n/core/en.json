@@ -62,5 +62,7 @@
   "member": "Member",
   "profile": "Profile",
   "settings_subtitle": "Profile, theme & language",
-  "privacy": "Privacy"
+  "privacy": "Privacy",
+  "admin_demoted": "Role changed to member (only adults can be admin)",
+  "password_hint": "Min. 8 characters, 1 uppercase letter, 1 number"
 }

@@ -486,6 +486,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .welcome-text h2 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
 .welcome-text p { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
 .welcome-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-md); }
+.admin-error { color: var(--danger); margin-bottom: var(--space-md); }
+.admin-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-md); }
 
 /* ─── Stats ─── */
 .stat-grid { display: grid; gap: var(--space-sm); }
