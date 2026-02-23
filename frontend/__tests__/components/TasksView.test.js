@@ -84,11 +84,11 @@ describe('TasksView', () => {
     expect(screen.getByText('From the store')).toBeInTheDocument();
   });
 
-  it('shows assignee badge', () => {
-    render(<TasksView />);
-    const matches = screen.getAllByText('Max');
-    // One in the select option, one as the assignee badge
-    expect(matches.length).toBeGreaterThanOrEqual(2);
+  it('shows assignee initial badge', () => {
+    const { container } = render(<TasksView />);
+    const badge = container.querySelector('.task-assignee');
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toBe('M');
   });
 
   it('shows recurrence badge', () => {
@@ -97,24 +97,24 @@ describe('TasksView', () => {
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders checkboxes for toggling', () => {
-    render(<TasksView />);
-    const checkboxes = screen.getAllByRole('checkbox');
+  it('renders task checkboxes for toggling', () => {
+    const { container } = render(<TasksView />);
+    const checkboxes = container.querySelectorAll('.task-checkbox');
     expect(checkboxes).toHaveLength(2);
-    expect(checkboxes[0].checked).toBe(false);
-    expect(checkboxes[1].checked).toBe(true);
+    expect(checkboxes[0].classList.contains('checked')).toBe(false);
+    expect(checkboxes[1].classList.contains('checked')).toBe(true);
   });
 
-  it('calls toggleTask on checkbox change', () => {
-    render(<TasksView />);
-    const checkboxes = screen.getAllByRole('checkbox');
+  it('calls toggleTask on checkbox click', () => {
+    const { container } = render(<TasksView />);
+    const checkboxes = container.querySelectorAll('.task-checkbox');
     fireEvent.click(checkboxes[0]);
     expect(mockToggleTask).toHaveBeenCalledWith(1, 'open');
   });
 
   it('renders delete buttons', () => {
     render(<TasksView />);
-    const deleteButtons = screen.getAllByText('×');
+    const deleteButtons = screen.getAllByTitle('Delete');
     expect(deleteButtons).toHaveLength(2);
     fireEvent.click(deleteButtons[0]);
     expect(mockDeleteTask).toHaveBeenCalledWith(1);
