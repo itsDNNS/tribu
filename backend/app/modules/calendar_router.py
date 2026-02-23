@@ -1,22 +1,27 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership, to_utc_naive
 from app.database import get_db
 from app.models import CalendarEvent, User
-from app.schemas import CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate
+from app.schemas import CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, PaginatedCalendarEvents
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
 
-@router.get("/events", response_model=list[CalendarEventResponse])
+@router.get("/events", response_model=PaginatedCalendarEvents)
 def list_calendar_events(
     family_id: int,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
     ensure_family_membership(db, user.id, family_id)
-    return db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).order_by(CalendarEvent.starts_at.asc()).all()
+    base = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id)
+    total = base.count()
+    items = base.order_by(CalendarEvent.starts_at.asc()).offset(offset).limit(limit).all()
+    return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
 
 
 @router.post("/events", response_model=CalendarEventResponse)

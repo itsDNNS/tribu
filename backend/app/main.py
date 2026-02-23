@@ -1,4 +1,3 @@
-from sqlalchemy import text
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,7 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.core.deps import current_user
-from app.database import Base, engine, get_db
+from app.database import get_db
 from app.models import Family, Membership, User
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
@@ -39,15 +38,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-
-@app.on_event("startup")
-def on_startup():
-    Base.metadata.create_all(bind=engine)
-    with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE memberships ADD COLUMN IF NOT EXISTS is_adult BOOLEAN NOT NULL DEFAULT FALSE"))
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image VARCHAR"))
-        conn.execute(text("UPDATE memberships SET role='admin' WHERE role='owner'"))
-        conn.execute(text("UPDATE memberships SET is_adult=TRUE WHERE role='admin'"))
 
 
 @app.get("/health")

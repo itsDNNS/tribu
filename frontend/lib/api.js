@@ -71,8 +71,12 @@ export function apiGetDashboard(familyId) {
 }
 
 // Calendar
-export function apiGetEvents(familyId) {
-  return request(`/calendar/events?family_id=${familyId}`);
+export async function apiGetEvents(familyId) {
+  const res = await request(`/calendar/events?family_id=${familyId}`);
+  if (res.ok && res.data?.items) {
+    return { ok: true, data: res.data.items };
+  }
+  return res;
 }
 
 export function apiCreateEvent(payload) {
@@ -93,8 +97,12 @@ export function apiImportContactsCsv(family_id, csv_text) {
 }
 
 // Tasks
-export function apiGetTasks(familyId) {
-  return request(`/tasks?family_id=${familyId}`);
+export async function apiGetTasks(familyId) {
+  const res = await request(`/tasks?family_id=${familyId}`);
+  if (res.ok && res.data?.items) {
+    return { ok: true, data: res.data.items };
+  }
+  return res;
 }
 
 export function apiCreateTask(payload) {

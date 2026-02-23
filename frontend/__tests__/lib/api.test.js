@@ -88,9 +88,14 @@ describe('Dashboard API', () => {
 });
 
 describe('Calendar API', () => {
-  it('apiGetEvents', async () => {
-    await apiGetEvents('1');
+  it('apiGetEvents unwraps paginated response', async () => {
+    const events = [{ id: 1, title: 'Test' }];
+    global.fetch = jest.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve({ items: events, total: 1, offset: 0, limit: 50 }) }),
+    );
+    const result = await apiGetEvents('1');
     expect(lastCall()[0]).toBe('/api/calendar/events?family_id=1');
+    expect(result.data).toEqual(events);
   });
 
   it('apiCreateEvent sends POST', async () => {
@@ -120,9 +125,14 @@ describe('Contacts API', () => {
 });
 
 describe('Tasks API', () => {
-  it('apiGetTasks', async () => {
-    await apiGetTasks('2');
+  it('apiGetTasks unwraps paginated response', async () => {
+    const tasks = [{ id: 1, title: 'Do laundry' }];
+    global.fetch = jest.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve({ items: tasks, total: 1, offset: 0, limit: 50 }) }),
+    );
+    const result = await apiGetTasks('2');
     expect(lastCall()[0]).toBe('/api/tasks?family_id=2');
+    expect(result.data).toEqual(tasks);
   });
 
   it('apiCreateTask sends POST', async () => {

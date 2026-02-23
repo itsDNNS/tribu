@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import current_user, ensure_family_membership, to_utc_naive
 from app.database import get_db
 from app.models import Membership, Task, User
-from app.schemas import TaskCreate, TaskResponse, TaskUpdate
+from app.schemas import PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -30,20 +30,24 @@ def _compute_next_due(current_due: Optional[datetime], recurrence: str) -> datet
     return base
 
 
-@router.get("", response_model=list[TaskResponse])
+@router.get("", response_model=PaginatedTasks)
 def list_tasks(
     family_id: int,
     status: Optional[str] = Query(None),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
     ensure_family_membership(db, user.id, family_id)
-    query = db.query(Task).filter(Task.family_id == family_id)
+    base = db.query(Task).filter(Task.family_id == family_id)
     if status is not None:
         if status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=f"Ungültiger Status: {status}")
-        query = query.filter(Task.status == status)
-    return query.order_by(Task.created_at.desc()).all()
+        base = base.filter(Task.status == status)
+    total = base.count()
+    items = base.order_by(Task.created_at.desc()).offset(offset).limit(limit).all()
+    return PaginatedTasks(items=items, total=total, offset=offset, limit=limit)
 
 
 @router.post("", response_model=TaskResponse)
