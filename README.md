@@ -124,7 +124,7 @@ docker compose up --build
 
 | | |
 |---|---|
-| [Wiki](https://github.com/itsDNNS/tribu/wiki) | Product plan, market analysis, all screenshots |
+| [Wiki](https://github.com/itsDNNS/tribu/wiki) | Screenshots, features, themes, getting started |
 | [Architecture](docs/ARCHITECTURE.md) | Backend modules, frontend patterns, security, API reference |
 | [Plugin Spec](docs/PLUGIN-MANIFEST.md) | How to build feature, theme, and language plugins |
 | [Roadmap](docs/ROADMAP.md) | Development phases and planned features |
