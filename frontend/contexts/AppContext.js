@@ -34,6 +34,9 @@ export function AppProvider({ children }) {
   const [activeView, setActiveView] = useState('dashboard');
   const [isMobile, setIsMobile] = useState(false);
 
+  // Loading
+  const [loading, setLoading] = useState(true);
+
   // Data
   const [summary, setSummary] = useState({ next_events: [], upcoming_birthdays: [] });
   const [events, setEvents] = useState([]);
@@ -80,10 +83,12 @@ export function AppProvider({ children }) {
   }, [familyId, demoMode]);
 
   const switchFamily = useCallback(async (fid) => {
+    setLoading(true);
     setFamilyId(fid);
     const selected = families.find((f) => String(f.family_id) === String(fid));
     if (selected) setMyFamilyRole(selected.role);
     await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid)]);
+    setLoading(false);
   }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks]);
 
   const enterDemo = useCallback(() => {
@@ -99,6 +104,7 @@ export function AppProvider({ children }) {
     setContacts(demo.contacts);
     setSummary(demo.summary);
     setLoggedIn(true);
+    setLoading(false);
   }, [lang]);
 
   const logout = useCallback(async () => {
@@ -128,6 +134,8 @@ export function AppProvider({ children }) {
         setMe(data);
         if (data.profile_image) setProfileImage(data.profile_image);
         setLoggedIn(true);
+      } else {
+        setLoading(false);
       }
     });
 
@@ -151,6 +159,7 @@ export function AppProvider({ children }) {
     if (!loggedIn || demoMode) return;
 
     (async () => {
+      setLoading(true);
       const { ok: meOk, data: meData } = await api.apiGetMe();
       if (meOk) {
         setMe(meData);
@@ -165,11 +174,13 @@ export function AppProvider({ children }) {
         setMyFamilyRole(famData[0].role);
         await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid)]);
       }
+      setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
 
   const value = {
+    loading,
     loggedIn, setLoggedIn,
     me, setMe,
     profileImage, setProfileImage,

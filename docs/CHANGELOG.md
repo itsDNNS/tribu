@@ -6,13 +6,24 @@ All notable changes to Tribu are documented here.
 
 ### Added
 
-- **UI redesign**: Complete visual overhaul based on approved prototype. CSS design system with glassmorphism, bento grid dashboard, stagger animations, mesh background, and grain texture. Three polished themes: Morning Mist (light), Dunkel (dark), Midnight Glass (glassmorphism).
-- **Demo mode**: Interactive demo accessible from the auth page. Pre-loaded with realistic German family data (4 members, 12 events, 10 tasks, 7 contacts, 3 birthdays). All CRUD operations work locally without a backend.
+- **UI redesign**: Complete visual overhaul based on approved prototype. CSS design system with glassmorphism, bento grid dashboard, stagger animations, mesh background, and grain texture. Three polished themes: Morning Mist (light), Dark, Midnight Glass (glassmorphism).
+- **Complete i18n overhaul**: English as default language. All hardcoded German strings replaced with `t()` calls across every view, hook, and component (AuthPage, AppShell, DashboardView, CalendarView, TasksView, ContactsView, SettingsView, AdminView, useCalendar, useTasks).
+- **Bilingual demo data**: `buildDemoData(lang)` generates locale-appropriate sample data for both English and German.
+- **DOCSight-style sidebar**: Collapsible navigation (240px to 70px) with tooltips on collapsed icons and mobile overlay drawer.
+- **Demo mode**: Interactive demo accessible from the auth page. Pre-loaded with realistic family data (4 members, 12 events, 10 tasks, 7 contacts, 3 birthdays). All CRUD operations work locally without a backend.
 - **Frontend refactor**: Monolithic `pages/index.js` split into Context + Hooks + Views architecture. AppContext for global state, dedicated hooks for calendar and task logic, individual view components per screen.
 - **CSS design system**: Global stylesheet (`styles/globals.css`) with CSS custom properties, `data-theme` attribute switching, responsive breakpoints (768px, 1100px), and utility classes for glass effects and animations.
+- **Loading states**: Skeleton shimmer placeholders while initial data loads and during family switch. CSS `@keyframes shimmer` animation with dedicated `.skeleton-*` utility classes and `.loading-spinner`.
 - **Tasks module**: Family-shared task list with CRUD, priorities (low/normal/high), due dates, assignees, status filter (all/open/done), and recurring tasks (daily/weekly/monthly/yearly). Completing a recurring task auto-creates the next instance.
 - **Tasks i18n**: German and English translations for the tasks module
 - **Tasks plugin manifest**: `tribu.tasks` feature manifest with menu entry (CheckSquare icon, order 25)
+
+### Changed
+
+- **AdminView**: Migrated from inline styles (`ui.card`, `ui.smallCard`, `ui.secondaryBtn`) to CSS classes (`glass-sm`, `settings-section`, `btn-ghost`, `profile-row`, etc.)
+- **Theme rename**: Dark theme display name changed from "Dunkel" to "Dark" for consistency with English-first approach
+- **Calendar locale**: Month labels and date formatting now respect the active language (was hardcoded `de-DE`)
+- **Settings theme picker**: Visual preview cards with locale-aware descriptions instead of plain dropdown
 
 ### Security
 
