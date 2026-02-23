@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership
+from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import FamilyBirthday, User
 from app.schemas import BirthdayCreate, BirthdayResponse
@@ -14,6 +15,7 @@ def list_birthdays(
     family_id: int,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("birthdays:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
     return db.query(FamilyBirthday).filter(FamilyBirthday.family_id == family_id).order_by(FamilyBirthday.month, FamilyBirthday.day).all()
@@ -24,6 +26,7 @@ def create_birthday(
     payload: BirthdayCreate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("birthdays:write"),
 ):
     ensure_family_membership(db, user.id, payload.family_id)
 

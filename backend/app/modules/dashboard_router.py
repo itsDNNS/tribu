@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership, next_birthday_date
+from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, FamilyBirthday, User
 from app.schemas import DashboardSummary, UpcomingBirthday
@@ -16,6 +17,7 @@ def dashboard_summary(
     family_id: int,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("calendar:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
 

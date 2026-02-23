@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -16,6 +16,7 @@ class User(Base):
     profile_image = Column(String, nullable=True)
 
     memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
+    personal_access_tokens = relationship("PersonalAccessToken", back_populates="user", cascade="all, delete-orphan")
 
 
 class Family(Base):
@@ -103,3 +104,18 @@ class Contact(Base):
     birthday_month = Column(Integer, nullable=True)
     birthday_day = Column(Integer, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class PersonalAccessToken(Base):
+    __tablename__ = "personal_access_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    scopes = Column(String, nullable=False, default="*")
+    expires_at = Column(DateTime, nullable=True)
+    last_used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    user = relationship("User", back_populates="personal_access_tokens")

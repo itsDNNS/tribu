@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership, to_utc_naive
+from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Membership, Task, User
 from app.schemas import PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
@@ -38,6 +39,7 @@ def list_tasks(
     limit: int = Query(50, ge=1, le=200),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("tasks:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
     base = db.query(Task).filter(Task.family_id == family_id)
@@ -55,6 +57,7 @@ def create_task(
     payload: TaskCreate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("tasks:write"),
 ):
     ensure_family_membership(db, user.id, payload.family_id)
 
@@ -92,6 +95,7 @@ def update_task(
     payload: TaskUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("tasks:write"),
 ):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
@@ -158,6 +162,7 @@ def delete_task(
     task_id: int,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("tasks:write"),
 ):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:

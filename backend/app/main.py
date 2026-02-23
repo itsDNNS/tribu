@@ -9,6 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.core.deps import current_user
+from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Family, Membership, User
 from app.modules.birthdays_router import router as birthdays_router
@@ -17,6 +18,7 @@ from app.modules.dashboard_router import router as dashboard_router
 from app.modules.families_router import router as families_router
 from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
+from app.modules.tokens_router import router as tokens_router
 from app.schemas import LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 
@@ -101,7 +103,7 @@ def logout():
 
 
 @app.get("/auth/me", response_model=MeResponse)
-def me(user: User = Depends(current_user)):
+def me(user: User = Depends(current_user), _scope=require_scope("profile:read")):
     return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image)
 
 
@@ -110,6 +112,7 @@ def update_profile_image(
     payload: ProfileImageUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
 ):
     user.profile_image = payload.profile_image
     db.commit()
@@ -122,6 +125,7 @@ app.include_router(birthdays_router)
 app.include_router(dashboard_router)
 app.include_router(contacts_router)
 app.include_router(tasks_router)
+app.include_router(tokens_router)
 
 
 @app.get("/")

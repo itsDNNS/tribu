@@ -1,4 +1,6 @@
+import hashlib
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
@@ -30,3 +32,20 @@ def create_access_token(user_id: int, email: str) -> str:
 
 def decode_token(token: str):
     return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+
+
+PAT_PREFIX = "tribu_pat_"
+
+
+def generate_pat() -> tuple[str, str]:
+    raw = secrets.token_urlsafe(32)
+    plain = f"{PAT_PREFIX}{raw}"
+    return plain, hashlib.sha256(plain.encode()).hexdigest()
+
+
+def hash_pat(plain: str) -> str:
+    return hashlib.sha256(plain.encode()).hexdigest()
+
+
+def is_pat(token: str) -> bool:
+    return token.startswith(PAT_PREFIX)

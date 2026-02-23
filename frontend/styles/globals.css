@@ -642,6 +642,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .lang-toggle { display: flex; gap: var(--space-sm); }
 .lang-btn { padding: 9px 20px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border); background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
 .lang-btn.active { background: var(--amethyst); color: white; border-color: var(--amethyst); }
+.token-display { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: var(--radius-sm); word-break: break-all; flex: 1; display: block; }
 
 /* ═══════════════════════════════════════════
    MOBILE

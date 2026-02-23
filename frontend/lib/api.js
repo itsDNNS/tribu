@@ -116,3 +116,16 @@ export function apiUpdateTask(taskId, payload) {
 export function apiDeleteTask(taskId) {
   return del(`/tasks/${taskId}`);
 }
+
+// Tokens
+export function apiGetTokens() {
+  return request('/tokens');
+}
+
+export function apiCreateToken(payload) {
+  return post('/tokens', payload);
+}
+
+export function apiRevokeToken(tokenId) {
+  return del(`/tokens/${tokenId}`);
+}

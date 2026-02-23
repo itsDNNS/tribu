@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership
+from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Contact, FamilyBirthday, User
 from app.schemas import ContactCreate, ContactResponse, ContactsCsvImport
@@ -32,6 +33,7 @@ def list_contacts(
     family_id: int,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("contacts:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
     return db.query(Contact).filter(Contact.family_id == family_id).order_by(Contact.full_name.asc()).all()
@@ -42,6 +44,7 @@ def create_contact(
     payload: ContactCreate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("contacts:write"),
 ):
     ensure_family_membership(db, user.id, payload.family_id)
 
@@ -65,6 +68,7 @@ def import_contacts_csv(
     payload: ContactsCsvImport,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("contacts:write"),
 ):
     ensure_family_membership(db, user.id, payload.family_id)
 

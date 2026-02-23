@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.deps import current_user, ensure_family_admin, ensure_family_membership
+from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Family, Membership, User
 from app.schemas import FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/families", tags=["families"])
 
 
 @router.get("/me", response_model=list[FamilySummary])
-def my_families(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def my_families(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("families:read")):
     memberships = (
         db.query(Membership)
         .options(joinedload(Membership.family))
@@ -34,6 +35,7 @@ def family_members(
     family_id: int,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("families:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
     memberships = (
@@ -62,6 +64,7 @@ def update_member_adult(
     payload: MemberAdultUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
 ):
     ensure_family_admin(db, user.id, family_id)
 
@@ -86,6 +89,7 @@ def update_member_role(
     payload: MemberRoleUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
 ):
     ensure_family_admin(db, user.id, family_id)
 
