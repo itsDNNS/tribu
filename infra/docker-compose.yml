@@ -31,6 +31,10 @@ services:
       - redis
     ports:
       - "8000:8000"
+    volumes:
+      # For external storage (e.g. NAS), replace with a bind mount:
+      # - /mnt/nas/backups/tribu:/backups
+      - tribu_backups:/backups
 
   frontend:
     build:
@@ -45,3 +49,4 @@ services:
 
 volumes:
   tribu_pg_data:
+  tribu_backups:
