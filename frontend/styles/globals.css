@@ -538,6 +538,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .stat-grid { display: grid; gap: var(--space-sm); }
 .stat-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.02); border: 1px solid transparent; transition: all 0.2s; }
 .stat-item:hover { background: rgba(255,255,255,0.04); border-color: var(--glass-border); }
+.stat-item-link { cursor: pointer; }
 .stat-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
 .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 600; }
 .stat-label { font-size: 0.75rem; color: var(--text-muted); }
