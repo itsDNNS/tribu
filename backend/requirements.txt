@@ -4,8 +4,8 @@ pydantic==2.11.7
 email-validator==2.2.0
 sqlalchemy==2.0.43
 psycopg2-binary==2.9.10
-passlib==1.7.4
-python-jose[cryptography]==3.5.0
+bcrypt==4.3.0
+PyJWT==2.10.1
 slowapi==0.1.9
 python-dateutil==2.9.0
 icalendar==6.1.0
