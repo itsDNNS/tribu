@@ -66,6 +66,7 @@
   "data_management": "Daten",
   "data_management_desc": "Kalender und Kontakte importieren oder exportieren.",
   "admin_demoted": "Rolle auf Mitglied geändert (nur Erwachsene können Admin sein)",
+  "admin_self_hint": "Eigene Rolle kann nicht geändert werden",
   "password_hint": "Mind. 8 Zeichen, 1 Großbuchstabe, 1 Zahl",
   "api_tokens": "API Tokens",
   "api_tokens_desc": "Persönliche Zugangstoken für Drittanbieter-Apps und Skripte.",

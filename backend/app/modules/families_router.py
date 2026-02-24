@@ -75,6 +75,9 @@ def update_member_adult(
     if not membership:
         raise HTTPException(status_code=404, detail="Mitglied nicht gefunden")
 
+    if not payload.is_adult and target_user_id == user.id:
+        raise HTTPException(status_code=400, detail="Cannot change own adult status")
+
     membership.is_adult = payload.is_adult
     if not payload.is_adult and membership.role == "admin":
         membership.role = "member"
@@ -102,6 +105,9 @@ def update_member_role(
 
     if payload.role not in ["admin", "member"]:
         raise HTTPException(status_code=400, detail="Rolle muss admin oder member sein")
+
+    if payload.role == "member" and target_user_id == user.id:
+        raise HTTPException(status_code=400, detail="Cannot demote yourself")
 
     if payload.role == "admin" and not membership.is_adult:
         raise HTTPException(status_code=400, detail="Nur Erwachsene können Admin werden")

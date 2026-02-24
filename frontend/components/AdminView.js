@@ -181,7 +181,7 @@ function BackupSection() {
 }
 
 export default function AdminView() {
-  const { familyId, members, messages, loadMembers } = useApp();
+  const { familyId, members, messages, loadMembers, me } = useApp();
   const [adminMsg, setAdminMsg] = useState('');
 
   async function handleSetAdult(userId, isAdult) {
@@ -226,9 +226,15 @@ export default function AdminView() {
               </div>
             </div>
             <div className="admin-actions">
-              <button className="btn-ghost" onClick={() => handleSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
-              <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
-              <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
+              {m.user_id === me?.user_id ? (
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{t(messages, 'admin_self_hint')}</span>
+              ) : (
+                <>
+                  <button className="btn-ghost" onClick={() => handleSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
+                  <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
+                  <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
+                </>
+              )}
             </div>
           </div>
         ))}
