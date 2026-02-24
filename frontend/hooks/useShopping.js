@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
+import { useWebSocket } from './useWebSocket';
 
 export function useShopping() {
   const {
@@ -17,7 +18,70 @@ export function useShopping() {
   const [showCreateList, setShowCreateList] = useState(false);
   const itemInputRef = useRef(null);
 
-  // Auto-select first list when lists change
+  // ── WebSocket integration ──────────────────────────────
+
+  const handleWsMessage = useCallback((msg) => {
+    switch (msg.type) {
+      case 'item_added':
+        setItems((prev) => {
+          if (prev.some((i) => i.id === msg.item.id)) return prev;
+          return [...prev, msg.item];
+        });
+        setShoppingLists((prev) =>
+          prev.map((l) => l.id === msg.item.list_id
+            ? { ...l, item_count: (l.item_count || 0) + 1 }
+            : l
+          ),
+        );
+        break;
+
+      case 'item_updated':
+        setItems((prev) => prev.map((i) => i.id === msg.item.id ? msg.item : i));
+        setShoppingLists((prev) =>
+          prev.map((l) => {
+            if (l.id !== msg.item.list_id) return l;
+            // Recalculate would need full list; just reload counts
+            return l;
+          }),
+        );
+        // Lightweight: reload list counts in background
+        loadShoppingLists();
+        break;
+
+      case 'item_deleted':
+        setItems((prev) => {
+          const item = prev.find((i) => i.id === msg.item_id);
+          if (!item) return prev;
+          return prev.filter((i) => i.id !== msg.item_id);
+        });
+        loadShoppingLists();
+        break;
+
+      case 'items_cleared':
+        setItems((prev) => prev.filter((i) => !i.checked));
+        loadShoppingLists();
+        break;
+
+      case 'list_created':
+        setShoppingLists((prev) => {
+          if (prev.some((l) => l.id === msg.list.id)) return prev;
+          return [...prev, msg.list];
+        });
+        break;
+
+      case 'list_deleted':
+        setShoppingLists((prev) => prev.filter((l) => l.id !== msg.list_id));
+        break;
+    }
+  }, [setShoppingLists, loadShoppingLists]);
+
+  const { connected: wsConnected } = useWebSocket(activeListId, {
+    onMessage: handleWsMessage,
+    enabled: !demoMode && !!activeListId,
+  });
+
+  // ── Auto-select first list when lists change ───────────
+
   useEffect(() => {
     if (shoppingLists.length > 0 && !shoppingLists.find((l) => l.id === activeListId)) {
       setActiveListId(shoppingLists[0].id);
@@ -55,6 +119,8 @@ export function useShopping() {
     if (ok) setItems(data);
   }, [activeListId, demoMode]);
 
+  // ── List operations ────────────────────────────────────
+
   async function createList(e) {
     e.preventDefault();
     if (!newListName.trim()) return;
@@ -74,7 +140,10 @@ export function useShopping() {
     } else {
       const { ok, data } = await api.apiCreateShoppingList({ family_id: Number(familyId), name: newListName.trim() });
       if (!ok) return;
-      await loadShoppingLists();
+      setShoppingLists((prev) => {
+        if (prev.some((l) => l.id === data.id)) return prev;
+        return [...prev, data];
+      });
       setActiveListId(data.id);
     }
     setNewListName('');
@@ -86,10 +155,13 @@ export function useShopping() {
     if (demoMode) {
       setShoppingLists((prev) => prev.filter((l) => l.id !== id));
     } else {
-      await api.apiDeleteShoppingList(id);
-      await loadShoppingLists();
+      setShoppingLists((prev) => prev.filter((l) => l.id !== id));
+      const { ok } = await api.apiDeleteShoppingList(id);
+      if (!ok) await loadShoppingLists();
     }
   }
+
+  // ── Item operations (optimistic UI when WS connected) ──
 
   async function addItem(e) {
     e.preventDefault();
@@ -113,9 +185,11 @@ export function useShopping() {
         ),
       );
     } else {
-      await api.apiAddShoppingItem(activeListId, payload);
-      await reloadItems();
-      await loadShoppingLists();
+      const { ok } = await api.apiAddShoppingItem(activeListId, payload);
+      if (!ok || !wsConnected) {
+        await reloadItems();
+        await loadShoppingLists();
+      }
     }
     setNewItemName('');
     setNewItemSpec('');
@@ -135,9 +209,15 @@ export function useShopping() {
         ),
       );
     } else {
-      await api.apiUpdateShoppingItem(id, { checked: !currentChecked });
-      await reloadItems();
-      await loadShoppingLists();
+      // Optimistic: update local state immediately
+      setItems((prev) =>
+        prev.map((i) => i.id === id ? { ...i, checked: !currentChecked, checked_at: !currentChecked ? new Date().toISOString() : null } : i),
+      );
+      const { ok } = await api.apiUpdateShoppingItem(id, { checked: !currentChecked });
+      if (!ok || !wsConnected) {
+        await reloadItems();
+        await loadShoppingLists();
+      }
     }
   }
 
@@ -157,9 +237,16 @@ export function useShopping() {
         ),
       );
     } else {
-      await api.apiDeleteShoppingItem(id);
-      await reloadItems();
-      await loadShoppingLists();
+      // Optimistic: remove from local state immediately
+      const prevItems = items;
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      const { ok } = await api.apiDeleteShoppingItem(id);
+      if (!ok) {
+        setItems(prevItems);
+      } else if (!wsConnected) {
+        await reloadItems();
+        await loadShoppingLists();
+      }
     }
   }
 
@@ -175,9 +262,16 @@ export function useShopping() {
         ),
       );
     } else {
-      await api.apiClearCheckedItems(activeListId);
-      await reloadItems();
-      await loadShoppingLists();
+      // Optimistic: clear checked items locally
+      const prevItems = items;
+      setItems((prev) => prev.filter((i) => !i.checked));
+      const { ok } = await api.apiClearCheckedItems(activeListId);
+      if (!ok) {
+        setItems(prevItems);
+      } else if (!wsConnected) {
+        await reloadItems();
+        await loadShoppingLists();
+      }
     }
   }
 
@@ -193,5 +287,6 @@ export function useShopping() {
     itemInputRef,
     createList, deleteList,
     addItem, toggleItem, deleteItem, clearChecked,
+    wsConnected,
   };
 }

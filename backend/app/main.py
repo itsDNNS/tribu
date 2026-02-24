@@ -21,11 +21,13 @@ from app.modules.families_router import router as families_router
 from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
 from app.modules.shopping_router import router as shopping_router
+from app.modules.shopping_ws import router as shopping_ws_router
 from app.modules.tokens_router import router as tokens_router
 from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATABASE_URL as BACKUP_DB_URL
 from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
+from app.core import ws_broadcast
 from app.schemas import ChangePasswordRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, needs_rehash, verify_password
 
@@ -152,6 +154,7 @@ app.include_router(dashboard_router)
 app.include_router(contacts_router)
 app.include_router(tasks_router)
 app.include_router(shopping_router)
+app.include_router(shopping_ws_router)
 app.include_router(tokens_router)
 app.include_router(backup_router)
 app.include_router(notifications_router)
@@ -159,7 +162,9 @@ app.include_router(nav_router)
 
 
 @app.on_event("startup")
-def startup_scheduler():
+async def startup_scheduler():
+    import asyncio
+    ws_broadcast.set_event_loop(asyncio.get_running_loop())
     db = SessionLocal()
     try:
         schedule_row = db.query(SystemSetting).filter(SystemSetting.key == "backup_schedule").first()
