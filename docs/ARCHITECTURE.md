@@ -37,7 +37,8 @@ backend/
 │       ├── 0001_initial_schema.py
 │       ├── 0002_add_is_adult_and_profile_image.py
 │       ├── 0003_add_personal_access_tokens.py
-│       └── 0004_add_shopping_lists.py
+│       ├── 0004_add_shopping_lists.py
+│       └── 0007_add_notifications.py
 └── app/
     ├── main.py              # App factory, auth routes, rate limiting, module registration
     ├── models.py            # SQLAlchemy models
@@ -46,7 +47,8 @@ backend/
     ├── database.py          # Engine, session factory (requires DATABASE_URL)
     ├── core/
     │   ├── deps.py          # Shared dependencies (current_user, get_db, family checks)
-    │   └── scopes.py        # PAT scope validation (require_scope, has_scope)
+    │   ├── scopes.py        # PAT scope validation (require_scope, has_scope)
+    │   └── scheduler.py     # APScheduler jobs (backups, notification checks)
     └── modules/
         ├── calendar_router.py
         ├── birthdays_router.py
@@ -55,7 +57,8 @@ backend/
         ├── shopping_router.py
         ├── dashboard_router.py
         ├── families_router.py
-        └── tokens_router.py   # Personal Access Token CRUD
+        ├── tokens_router.py   # Personal Access Token CRUD
+        └── notifications_router.py  # Notification feed, preferences, SSE stream
 ```
 
 ### Domain Model
@@ -67,8 +70,11 @@ User ──┬── Membership ──── Family
        │       └── is_adult     ├── Birthday
        │                        ├── Contact
        ├── PersonalAccessToken  ├── Task (optional assignee, recurring)
-       │   ├── scopes           └── ShoppingList
-       │   └── expires_at           └── ShoppingItem
+       │   ├── scopes           ├── ShoppingList
+       │   └── expires_at       │   └── ShoppingItem
+       │                        └── Notification
+       ├── NotificationPreference
+       ├── NotificationSentLog
        │
        └── (created_by on events, tasks, lists)
 ```
@@ -127,7 +133,8 @@ The frontend uses a Context + Hooks + Views pattern:
 | TasksView | Quick-add bar, expanded form fields, filter tabs (all/open/done), task cards with priority/overdue/recurring badges. |
 | ContactsView | Responsive card grid with colored avatars, CSV import section. |
 | ShoppingView | 2-column layout (lists panel + items), tap-to-toggle, checked section with bulk clear. |
-| SettingsView | Profile section, visual theme picker cards, language toggle, PAT management, privacy info. |
+| NotificationCenter | Notification feed with type icons, relative timestamps, mark read/delete, mark all read. |
+| SettingsView | Profile section, visual theme picker cards, language toggle, notification preferences, PAT management, privacy info. |
 
 ### CSS Design System
 
@@ -195,6 +202,15 @@ frontend/i18n/
 
 Module translations are loaded on demand when the user navigates to a module.
 
+## PWA
+
+Tribu is installable as a Progressive Web App. The frontend includes:
+
+- **Web App Manifest** (`public/manifest.json`): standalone display, purple theme, app icons
+- **Service Worker** (`public/sw.js`): network-first for HTML pages (ensures fresh content after deploys), cache-first for `_next/static/` assets (content-hashed filenames), network-first for API calls
+- **App icons**: 192px, 512px, and 512px maskable PNG icons
+- **iOS support**: `apple-mobile-web-app-capable` and `apple-touch-icon` meta tags
+
 ## Deployment
 
 Docker Compose stack (`infra/docker-compose.yml`):
@@ -255,4 +271,13 @@ A `.env` file in `infra/` is required before starting. See [`infra/.env.example`
 /tokens                 GET     List user's PATs
 /tokens                 POST    Create PAT (returns plain token once)
 /tokens/{id}            DELETE  Revoke PAT
+
+/notifications              GET     List notifications (limit/offset)
+/notifications/unread-count GET     Unread notification count
+/notifications/{id}/read    PATCH   Mark notification as read
+/notifications/read-all     POST    Mark all notifications as read
+/notifications/{id}         DELETE  Delete notification
+/notifications/stream       GET     SSE stream for real-time notifications
+/notifications/preferences  GET     Get notification preferences
+/notifications/preferences  PUT     Update notification preferences
 ```

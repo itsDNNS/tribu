@@ -86,9 +86,10 @@ Goal: A family can run their daily life through Tribu without needing an externa
 
 - [ ] Recurring calendar events (#6) with RRULE-compatible rules
 - [ ] Accessibility baseline (#14): contrast, focus, keyboard, screen reader labels
-- [ ] Notifications (#7): in-app feed, then push via Web Push API
-- [ ] Import/Export (#8): ICS calendar import/export, CSV hardening
-- [ ] Instance backup and restore (#15)
+- [x] Notifications (#7): in-app feed with scheduler-driven reminders, polling, per-user preferences
+- [x] Import/Export (#8): ICS calendar import/export, CSV contacts import/export
+- [x] Instance backup and restore (#15): CLI scripts + admin UI with scheduling and retention
+- [x] PWA foundation: Web App Manifest, Service Worker, installable home screen app
 
 ## Release 0.5: Collaboration
 
