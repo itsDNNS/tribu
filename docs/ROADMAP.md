@@ -132,20 +132,49 @@ Goal: Full admin control over family members, modernized stack, polished UX.
 - [x] Security: bcrypt + PyJWT replace legacy libs
 - [x] UX: customizable nav, persistent view, clickable dashboard stats, clipboard fallback
 
-## Release 0.6: Collaboration
+## Release 0.5.1: UI Platform
 
-- [ ] Real-time sync for shopping lists (WebSocket/SSE)
+- [x] Theme pack registry with version, author, active badge (#13)
+- [x] Language pack registry with completeness tracking (#13)
+
+---
+
+## Road to 1.0 (EPIC #46)
+
+### Release 0.6: Collaboration
+
+Goal: Make Tribu work for families who use it simultaneously.
+
+- [ ] Real-time shopping list sync via WebSocket (#36)
+- [ ] Child role restrictions and limited visibility (#37)
+- [ ] Family invitation via shareable link (#38)
+
+### Release 0.7: Integration
+
+Goal: Connect Tribu with the calendars and contacts already on people's phones.
+
+- [ ] CalDAV and CardDAV bidirectional sync (#39)
+- [ ] Web Push notifications via Service Worker (#40)
+
+### Release 0.8: Production Hardening
+
+Goal: Make Tribu trustworthy for long-term daily use by any family.
+
+- [ ] First-run setup wizard (#41)
+- [ ] E2E test suite with Playwright (#42)
+- [ ] Redis caching for hot queries (#43)
+- [ ] Self-hosting documentation (#44)
+- [ ] API reference documentation (#45)
+
+### Release 1.0: Stable
+
+Goal: All of the above complete. Tribu is ready for any family to deploy, configure, and rely on daily.
+
+---
+
+## Future (post-1.0)
+
 - [ ] Family chat (text, images)
-- [ ] Deeper role/permission controls (child sees own tasks only)
-
-## Release 0.7: Ecosystem
-
-- [ ] Plugin registry and marketplace (#13)
-- [ ] Theme pack loader
-- [ ] Language pack management
-
-## Release 0.8: Integrations
-
 - [ ] Home Assistant integration (events as automation triggers)
-- [ ] CalDAV/CardDAV sync
+- [ ] Plugin registry and dynamic module loading
 - [ ] Optional MQTT for IoT scenarios
