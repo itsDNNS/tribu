@@ -16,6 +16,7 @@ services:
     restart: unless-stopped
 
   backend:
+    image: ghcr.io/itsdnns/tribu-backend:latest
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -37,6 +38,7 @@ services:
       - tribu_backups:/backups
 
   frontend:
+    image: ghcr.io/itsdnns/tribu-frontend:latest
     build:
       context: ../frontend
       dockerfile: Dockerfile

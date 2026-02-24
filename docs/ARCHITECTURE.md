@@ -215,12 +215,16 @@ Tribu is installable as a Progressive Web App. The frontend includes:
 
 Docker Compose stack (`infra/docker-compose.yml`):
 
-| Service | Image | Exposed Port |
-|---------|-------|--------------|
-| `postgres` | postgres:16-alpine | Internal only |
-| `redis` | redis:7-alpine | Internal only |
-| `backend` | Custom (FastAPI, non-root) | 8000 |
-| `frontend` | Custom (Next.js, multi-stage build, non-root) | 3000 |
+| Service | Image | Architectures | Exposed Port |
+|---------|-------|---------------|--------------|
+| `postgres` | postgres:16-alpine | amd64, arm64 | Internal only |
+| `redis` | redis:7-alpine | amd64, arm64 | Internal only |
+| `backend` | ghcr.io/itsdnns/tribu-backend | amd64, arm64 | 8000 |
+| `frontend` | ghcr.io/itsdnns/tribu-frontend | amd64, arm64 | 3000 |
+
+All images support `linux/amd64` and `linux/arm64`. Multi-arch images are built via GitHub Actions (`.github/workflows/docker.yml`) using Docker Buildx with QEMU emulation and pushed to GHCR on tagged releases. `docker compose pull` automatically selects the correct architecture.
+
+For local development, `docker compose build` uses the Dockerfiles in `backend/` and `frontend/` as fallback.
 
 PostgreSQL and Redis are only accessible within the Docker network. Persistent data is stored in the `tribu_pg_data` Docker volume.
 
