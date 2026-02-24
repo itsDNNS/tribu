@@ -216,6 +216,37 @@ def reset_member_password(
     )
 
 
+@router.delete("/{family_id}/members/{target_user_id}")
+def remove_member(
+    family_id: int,
+    target_user_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+
+    if target_user_id == user.id:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself")
+
+    membership = db.query(Membership).filter(
+        Membership.family_id == family_id,
+        Membership.user_id == target_user_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    target_user = db.query(User).filter(User.id == target_user_id).first()
+    display_name = target_user.display_name if target_user else None
+
+    _audit(db, family_id, user.id, "member_removed", target_user_id=target_user_id,
+           details={"display_name": display_name, "role": membership.role})
+    db.delete(membership)
+    db.commit()
+
+    return {"status": "ok", "user_id": target_user_id}
+
+
 @router.get("/{family_id}/audit-log", response_model=PaginatedAuditLog)
 def get_audit_log(
     family_id: int,
