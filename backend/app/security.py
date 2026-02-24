@@ -1,6 +1,8 @@
 import hashlib
 import os
+import random
 import secrets
+import string
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
@@ -49,3 +51,11 @@ def hash_pat(plain: str) -> str:
 
 def is_pat(token: str) -> bool:
     return token.startswith(PAT_PREFIX)
+
+
+def generate_temp_password(length: int = 12) -> str:
+    alphabet = string.ascii_letters + string.digits
+    while True:
+        password = "".join(secrets.choice(alphabet) for _ in range(length))
+        if any(c.isupper() for c in password) and any(c.isdigit() for c in password):
+            return password

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Plus, Check, Copy, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -181,8 +182,16 @@ function BackupSection() {
 }
 
 export default function AdminView() {
-  const { familyId, members, messages, loadMembers, me } = useApp();
+  const { familyId, members, messages, loadMembers, me, demoMode } = useApp();
   const [adminMsg, setAdminMsg] = useState('');
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newRole, setNewRole] = useState('member');
+  const [newIsAdult, setNewIsAdult] = useState(false);
+  const [createdPassword, setCreatedPassword] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [creating, setCreating] = useState('');
 
   async function handleSetAdult(userId, isAdult) {
     const { ok, data } = await api.apiSetAdult(familyId, userId, isAdult);
@@ -206,6 +215,38 @@ export default function AdminView() {
     await loadMembers();
   }
 
+  async function handleCreateMember(e) {
+    e.preventDefault();
+    setCreating('loading');
+    setAdminMsg('');
+    const { ok, data } = await api.apiCreateMember(familyId, {
+      email: newEmail,
+      display_name: newName,
+      role: newRole,
+      is_adult: newIsAdult,
+    });
+    if (!ok) {
+      setAdminMsg(errorText(data?.detail, 'Failed to create member'));
+      setCreating('');
+      return;
+    }
+    setCreatedPassword(data.temporary_password);
+    setShowAddMember(false);
+    setNewEmail('');
+    setNewName('');
+    setNewRole('member');
+    setNewIsAdult(false);
+    setCreating('');
+    await loadMembers();
+  }
+
+  function handleCopyPassword() {
+    if (!createdPassword) return;
+    navigator.clipboard.writeText(createdPassword);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
     <div className="view-enter">
       <div className="view-header">
@@ -214,6 +255,38 @@ export default function AdminView() {
         </div>
       </div>
       {adminMsg && <p className="admin-error">{adminMsg}</p>}
+
+      {/* Member Created Banner */}
+      {createdPassword && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          borderRadius: 'var(--radius-sm)',
+          padding: 'var(--space-md)',
+          marginBottom: 'var(--space-md)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
+            <Check size={16} style={{ color: 'var(--success)' }} />
+            <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{t(messages, 'member_created')}</span>
+          </div>
+          <p style={{ color: 'var(--warning)', fontSize: '0.82rem', marginBottom: 'var(--space-sm)' }}>
+            {t(messages, 'member_created_warning')}
+          </p>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+            <code className="token-display">{createdPassword}</code>
+            <button className="btn-ghost" onClick={handleCopyPassword} style={{ flexShrink: 0 }}>
+              {copied ? <><Check size={14} /> {t(messages, 'token_copied')}</> : <><Copy size={14} /> {t(messages, 'token_copy')}</>}
+            </button>
+          </div>
+          <button
+            onClick={() => { setCreatedPassword(null); setCopied(false); }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginTop: 'var(--space-sm)', fontSize: '0.78rem' }}
+          >
+            <X size={12} style={{ verticalAlign: 'middle' }} /> Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="settings-grid">
         {members.map((m) => (
           <div key={m.user_id} className="glass-sm settings-section">
@@ -239,6 +312,72 @@ export default function AdminView() {
           </div>
         ))}
       </div>
+
+      {/* Add Member */}
+      {!demoMode && (
+        <div style={{ marginTop: 'var(--space-md)' }}>
+          {showAddMember ? (
+            <form onSubmit={handleCreateMember}>
+              <div className="glass-sm settings-section" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                  {t(messages, 'add_member_desc')}
+                </p>
+                <div className="form-field">
+                  <label>{t(messages, 'member_email')}</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label>{t(messages, 'member_name')}</label>
+                  <input
+                    className="form-input"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label>{t(messages, 'member_role')}</label>
+                  <select
+                    className="form-input"
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value)}
+                  >
+                    <option value="member">{t(messages, 'member')}</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={newIsAdult}
+                    onChange={(e) => setNewIsAdult(e.target.checked)}
+                  />
+                  {t(messages, 'member_is_adult')}
+                </label>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                  <button type="submit" className="btn-sm" disabled={!newEmail.trim() || !newName.trim() || creating === 'loading'}>
+                    <Plus size={14} /> {t(messages, 'add_member')}
+                  </button>
+                  <button type="button" className="btn-ghost" onClick={() => setShowAddMember(false)}>
+                    {t(messages, 'cancel')}
+                  </button>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <button className="btn-ghost" onClick={() => setShowAddMember(true)}>
+              <Plus size={14} /> {t(messages, 'add_member')}
+            </button>
+          )}
+        </div>
+      )}
+
       <BackupSection />
     </div>
   );

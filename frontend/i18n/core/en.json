@@ -158,5 +158,20 @@
   "nav_overflow": "More menu",
   "nav_save": "Save order",
   "nav_saved": "Saved!",
-  "nav_reset": "Reset"
+  "nav_reset": "Reset",
+  "add_member": "Add member",
+  "add_member_desc": "Create a new family member with a temporary password.",
+  "member_email": "Email",
+  "member_name": "Display name",
+  "member_role": "Role",
+  "member_is_adult": "Adult",
+  "member_created": "Member created",
+  "member_created_warning": "Copy this temporary password now. It will not be shown again.",
+  "member_temp_password": "Temporary password",
+  "force_change_password_title": "Change your password",
+  "force_change_password_desc": "Your account was created with a temporary password. Please set a new password to continue.",
+  "old_password": "Current password",
+  "new_password": "New password",
+  "change_password": "Change password",
+  "password_changed": "Password changed successfully"
 }

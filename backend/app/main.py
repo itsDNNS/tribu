@@ -26,7 +26,7 @@ from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATAB
 from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
-from app.schemas import LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
+from app.schemas import ChangePasswordRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 
 COOKIE_NAME = "tribu_token"
@@ -95,7 +95,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
         raise HTTPException(status_code=401, detail="Ungültige Zugangsdaten")
 
     token = create_access_token(user_id=user.id, email=user.email)
-    response = JSONResponse(content={"status": "ok"})
+    response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
     response.set_cookie(
         COOKIE_NAME, token, httponly=True, samesite="lax",
         secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
@@ -112,7 +112,21 @@ def logout():
 
 @app.get("/auth/me", response_model=MeResponse)
 def me(user: User = Depends(current_user), _scope=require_scope("profile:read")):
-    return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image)
+    return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image, must_change_password=user.must_change_password)
+
+
+@app.patch("/auth/me/password")
+def change_password(
+    payload: ChangePasswordRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(payload.old_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Old password is incorrect")
+    user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = False
+    db.commit()
+    return {"status": "ok"}
 
 
 @app.patch("/auth/me/profile-image")

@@ -39,6 +39,7 @@ class MeResponse(BaseModel):
     email: str
     display_name: str
     profile_image: Optional[str] = None
+    must_change_password: bool = False
 
 
 class ProfileImageUpdate(BaseModel):
@@ -346,3 +347,34 @@ class NavOrderResponse(BaseModel):
 
 class NavOrderUpdate(BaseModel):
     nav_order: list[str] = Field(min_length=1, max_length=10)
+
+
+# Member creation (admin)
+class CreateMemberRequest(BaseModel):
+    email: EmailStr
+    display_name: str
+    role: str = "member"
+    is_adult: bool = False
+
+
+class CreateMemberResponse(BaseModel):
+    user_id: int
+    email: str
+    display_name: str
+    role: str
+    is_adult: bool
+    temporary_password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
+        return v

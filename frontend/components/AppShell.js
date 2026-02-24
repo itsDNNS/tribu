@@ -10,6 +10,7 @@ import ShoppingView from './ShoppingView';
 import SettingsView from './SettingsView';
 import AdminView from './AdminView';
 import NotificationCenter from './NotificationCenter';
+import ForcePasswordChange from './ForcePasswordChange';
 
 const views = {
   dashboard: DashboardView,
@@ -259,7 +260,7 @@ export default function AppShell() {
         )}
 
         <div className="view-enter">
-          {loading ? <DashboardSkeleton /> : <ActiveComponent />}
+          {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : <ActiveComponent />}
         </div>
       </main>
 

@@ -5,7 +5,8 @@ from app.core.deps import current_user, ensure_family_admin, ensure_family_membe
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Family, Membership, User
-from app.schemas import FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate
+from app.schemas import CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate
+from app.security import generate_temp_password, hash_password
 
 router = APIRouter(prefix="/families", tags=["families"])
 
@@ -55,6 +56,55 @@ def family_members(
         for m in memberships
         if m.user
     ]
+
+
+@router.post("/{family_id}/members", response_model=CreateMemberResponse)
+def create_member(
+    family_id: int,
+    payload: CreateMemberRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+
+    if payload.role not in ("admin", "member"):
+        raise HTTPException(status_code=400, detail="Role must be admin or member")
+    if payload.role == "admin" and not payload.is_adult:
+        raise HTTPException(status_code=400, detail="Only adults can be admin")
+
+    existing = db.query(User).filter(User.email == payload.email.lower()).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already in use")
+
+    temp_password = generate_temp_password()
+
+    new_user = User(
+        email=payload.email.lower(),
+        password_hash=hash_password(temp_password),
+        display_name=payload.display_name,
+        must_change_password=True,
+    )
+    db.add(new_user)
+    db.flush()
+
+    membership = Membership(
+        user_id=new_user.id,
+        family_id=family_id,
+        role=payload.role,
+        is_adult=payload.is_adult,
+    )
+    db.add(membership)
+    db.commit()
+
+    return CreateMemberResponse(
+        user_id=new_user.id,
+        email=new_user.email,
+        display_name=new_user.display_name,
+        role=payload.role,
+        is_adult=payload.is_adult,
+        temporary_password=temp_password,
+    )
 
 
 @router.patch("/{family_id}/members/{target_user_id}/adult")
