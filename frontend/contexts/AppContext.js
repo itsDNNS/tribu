@@ -5,7 +5,7 @@ import { buildUi } from '../lib/styles';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
 
-export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'contacts', 'notifications', 'settings'];
+export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'contacts', 'notifications', 'settings', 'admin'];
 
 const AppContext = createContext(null);
 
@@ -101,7 +101,12 @@ export function AppProvider({ children }) {
   const loadNavOrder = useCallback(async () => {
     if (demoMode) return;
     const { ok, data } = await api.apiGetNavOrder();
-    if (ok && data?.nav_order) setNavOrder(data.nav_order);
+    if (ok && data?.nav_order) {
+      const order = data.nav_order;
+      // Migrate: append any keys from DEFAULT_NAV_ORDER missing in persisted order
+      const missing = DEFAULT_NAV_ORDER.filter((k) => !order.includes(k));
+      setNavOrder(missing.length ? [...order, ...missing] : order);
+    }
   }, [demoMode]);
 
   const loadNotifications = useCallback(async () => {
