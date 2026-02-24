@@ -5,6 +5,50 @@ import { t } from '../lib/i18n';
 
 const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
 
+function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) {
+  const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
+  const memberIdx = addedBy ? members.indexOf(addedBy) : 0;
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onToggle(item.id, item.checked);
+    }
+  }
+
+  return (
+    <div
+      className={`shopping-item${checked ? ' checked' : ''}`}
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={item.name}
+      tabIndex={0}
+      onClick={() => onToggle(item.id, item.checked)}
+      onKeyDown={handleKeyDown}
+    >
+      <div className={`shopping-check${checked ? ' done' : ''}`} aria-hidden="true">
+        {checked && <Check size={14} color="white" />}
+      </div>
+      <div className="shopping-item-info">
+        <span className="shopping-item-name">{item.name}</span>
+        {item.spec && <span className="shopping-spec">{item.spec}</span>}
+      </div>
+      {addedBy && (
+        <div className="shopping-added-by" style={{ background: MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] }}>
+          {(addedBy.display_name || '?').charAt(0).toUpperCase()}
+        </div>
+      )}
+      <button
+        className="shopping-item-delete"
+        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+        aria-label={t(messages, 'aria.delete_item').replace('{name}', item.name)}
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 export default function ShoppingView() {
   const { familyId, families, members, messages, isMobile } = useApp();
   const sh = useShopping();
@@ -13,7 +57,7 @@ export default function ShoppingView() {
     <div>
       <div className="view-header">
         <div>
-          <div className="view-title">{t(messages, 'module.shopping.name')}</div>
+          <h1 className="view-title">{t(messages, 'module.shopping.name')}</h1>
           <div className="view-subtitle">
             {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
           </div>
@@ -37,7 +81,7 @@ export default function ShoppingView() {
                 <button
                   className="shopping-list-delete"
                   onClick={(e) => { e.stopPropagation(); sh.deleteList(list.id); }}
-                  title={t(messages, 'module.shopping.delete_list')}
+                  aria-label={t(messages, 'aria.delete_list').replace('{name}', list.name)}
                 >
                   <X size={14} />
                 </button>
@@ -67,7 +111,7 @@ export default function ShoppingView() {
               className="shopping-add-list-btn"
               onClick={() => sh.setShowCreateList(true)}
             >
-              <Plus size={16} />
+              <Plus size={16} aria-hidden="true" />
               <span>{t(messages, 'module.shopping.new_list')}</span>
             </button>
           )}
@@ -94,7 +138,7 @@ export default function ShoppingView() {
                   onChange={(e) => sh.setNewItemSpec(e.target.value)}
                   style={{ maxWidth: isMobile ? '100%' : 180 }}
                 />
-                <button className="quick-add-btn" type="submit">
+                <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_item')}>
                   <Plus size={22} />
                 </button>
               </form>
@@ -106,32 +150,17 @@ export default function ShoppingView() {
                     {t(messages, 'module.shopping.no_items')}
                   </div>
                 )}
-                {sh.uncheckedItems.map((item) => {
-                  const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
-                  const memberIdx = addedBy ? members.indexOf(addedBy) : 0;
-                  return (
-                    <div key={item.id} className="shopping-item" onClick={() => sh.toggleItem(item.id, item.checked)}>
-                      <div className="shopping-check">
-                        <div className="shopping-check-inner" />
-                      </div>
-                      <div className="shopping-item-info">
-                        <span className="shopping-item-name">{item.name}</span>
-                        {item.spec && <span className="shopping-spec">{item.spec}</span>}
-                      </div>
-                      {addedBy && (
-                        <div className="shopping-added-by" style={{ background: MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] }}>
-                          {(addedBy.display_name || '?').charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <button
-                        className="shopping-item-delete"
-                        onClick={(e) => { e.stopPropagation(); sh.deleteItem(item.id); }}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  );
-                })}
+                {sh.uncheckedItems.map((item) => (
+                  <ShoppingItem
+                    key={item.id}
+                    item={item}
+                    checked={false}
+                    members={members}
+                    messages={messages}
+                    onToggle={sh.toggleItem}
+                    onDelete={sh.deleteItem}
+                  />
+                ))}
 
                 {/* Checked Section */}
                 {sh.checkedItems.length > 0 && (
@@ -139,35 +168,20 @@ export default function ShoppingView() {
                     <div className="shopping-divider">
                       {t(messages, 'module.shopping.checked_section')} ({sh.checkedItems.length})
                     </div>
-                    {sh.checkedItems.map((item) => {
-                      const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
-                      const memberIdx = addedBy ? members.indexOf(addedBy) : 0;
-                      return (
-                        <div key={item.id} className="shopping-item checked" onClick={() => sh.toggleItem(item.id, item.checked)}>
-                          <div className="shopping-check done">
-                            <Check size={14} color="white" />
-                          </div>
-                          <div className="shopping-item-info">
-                            <span className="shopping-item-name">{item.name}</span>
-                            {item.spec && <span className="shopping-spec">{item.spec}</span>}
-                          </div>
-                          {addedBy && (
-                            <div className="shopping-added-by" style={{ background: MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] }}>
-                              {(addedBy.display_name || '?').charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <button
-                            className="shopping-item-delete"
-                            onClick={(e) => { e.stopPropagation(); sh.deleteItem(item.id); }}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {sh.checkedItems.map((item) => (
+                      <ShoppingItem
+                        key={item.id}
+                        item={item}
+                        checked={true}
+                        members={members}
+                        messages={messages}
+                        onToggle={sh.toggleItem}
+                        onDelete={sh.deleteItem}
+                      />
+                    ))}
                     <div style={{ padding: '0 var(--space-md) var(--space-md)' }}>
                       <button className="btn-ghost" onClick={sh.clearChecked} style={{ width: '100%', justifyContent: 'center' }}>
-                        <Trash2 size={14} />
+                        <Trash2 size={14} aria-hidden="true" />
                         {t(messages, 'module.shopping.clear_checked')}
                       </button>
                     </div>
@@ -177,7 +191,7 @@ export default function ShoppingView() {
             </div>
           ) : (
             <div className="glass" style={{ padding: 'var(--space-xl)', textAlign: 'center' }}>
-              <ShoppingCart size={48} style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-md)' }} />
+              <ShoppingCart size={48} style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-md)' }} aria-hidden="true" />
               <p style={{ color: 'var(--text-muted)' }}>{t(messages, 'module.shopping.no_lists')}</p>
             </div>
           )}

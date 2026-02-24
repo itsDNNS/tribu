@@ -8,8 +8,9 @@ export default function TribuApp({ Component, pageProps }) {
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       </Head>
-      <div className="mesh-bg" />
-      <div className="grain" />
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <div className="mesh-bg" aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
       <Component {...pageProps} />
     </AppProvider>
   );

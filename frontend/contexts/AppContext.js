@@ -158,9 +158,10 @@ export function AppProvider({ children }) {
     document.documentElement.setAttribute('data-theme', dataTheme);
   }, [theme, themeConfig]);
 
-  // Persist lang
+  // Persist lang + set html lang attribute
   useEffect(() => {
     window.localStorage.setItem('tribu_lang', lang);
+    document.documentElement.lang = lang;
   }, [lang]);
 
   // Bootstrap after login (skip in demo mode — data already injected)

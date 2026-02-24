@@ -14,7 +14,7 @@ export default function TasksView() {
     <div>
       <div className="view-header">
         <div>
-          <div className="view-title">{t(messages, 'module.tasks.name')}</div>
+          <h1 className="view-title">{t(messages, 'module.tasks.name')}</h1>
           <div className="view-subtitle">
             {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
           </div>
@@ -34,7 +34,7 @@ export default function TasksView() {
               onChange={(e) => tk.setTaskTitle(e.target.value)}
               required
             />
-            <button className="quick-add-btn" type="submit">
+            <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_task')}>
               <Plus size={22} />
             </button>
           </form>
@@ -74,9 +74,9 @@ export default function TasksView() {
           {/* Filter Tabs */}
           <div className="tasks-toolbar" style={{ padding: '0 var(--space-md)' }}>
             <div className="tasks-filter-tabs">
-              <button className={`tasks-filter-btn${tk.taskFilter === 'all' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('all')}>{t(messages, 'module.tasks.all')}</button>
-              <button className={`tasks-filter-btn${tk.taskFilter === 'open' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('open')}>{t(messages, 'module.tasks.open')}</button>
-              <button className={`tasks-filter-btn${tk.taskFilter === 'done' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('done')}>{t(messages, 'module.tasks.done')}</button>
+              <button className={`tasks-filter-btn${tk.taskFilter === 'all' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('all')} aria-pressed={tk.taskFilter === 'all'}>{t(messages, 'module.tasks.all')}</button>
+              <button className={`tasks-filter-btn${tk.taskFilter === 'open' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('open')} aria-pressed={tk.taskFilter === 'open'}>{t(messages, 'module.tasks.open')}</button>
+              <button className={`tasks-filter-btn${tk.taskFilter === 'done' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('done')} aria-pressed={tk.taskFilter === 'done'}>{t(messages, 'module.tasks.done')}</button>
             </div>
             <div className="tasks-count">{tk.filteredTasks.length} {t(messages, 'module.tasks.name')}</div>
           </div>
@@ -96,12 +96,16 @@ export default function TasksView() {
 
               return (
                 <div key={task.id} className={`task-card${isOverdue ? ' overdue' : ''}${isDone ? ' done' : ''}`}>
-                  <div
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={isDone}
+                    aria-label={t(messages, 'aria.mark_task').replace('{title}', task.title)}
                     className={`task-checkbox${isDone ? ' checked' : ''}`}
                     onClick={() => tk.toggleTask(task.id, task.status)}
                   >
                     {isDone && <Check size={14} color="white" />}
-                  </div>
+                  </button>
 
                   <div className="task-content">
                     <div className="task-title-row">
@@ -116,7 +120,7 @@ export default function TasksView() {
                       {task.recurrence && <span className="task-badge badge-recurring">{t(messages, `module.tasks.recurrence.${task.recurrence}`)}</span>}
                       {task.due_date && (
                         <span className={`task-due${isOverdue ? ' overdue' : ''}`}>
-                          <Clock size={12} />
+                          <Clock size={12} aria-hidden="true" />
                           {prettyDate(task.due_date, lang)}
                         </span>
                       )}
@@ -132,7 +136,7 @@ export default function TasksView() {
                   <button
                     className="sidebar-logout"
                     onClick={() => tk.deleteTask(task.id)}
-                    title="Delete"
+                    aria-label={t(messages, 'aria.delete_task').replace('{title}', task.title)}
                     style={{ marginLeft: 0 }}
                   >
                     <X size={16} />

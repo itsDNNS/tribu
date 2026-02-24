@@ -36,7 +36,7 @@ export default function ContactsView() {
     <div>
       <div className="view-header">
         <div>
-          <div className="view-title">{t(messages, 'contacts')}</div>
+          <h1 className="view-title">{t(messages, 'contacts')}</h1>
           <div className="view-subtitle">{contacts.length} {t(messages, 'contacts')}</div>
         </div>
         <button className="btn-ghost" onClick={() => setShowImport(!showImport)}>
