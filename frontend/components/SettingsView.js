@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp, Navigation, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../contexts/AppContext';
 import { downloadBlob } from '../lib/helpers';
-import { t } from '../lib/i18n';
+import { t, languageCompleteness } from '../lib/i18n';
 import * as api from '../lib/api';
 
 const THEME_DESCS = {
@@ -36,7 +36,7 @@ const NAV_ITEM_META = {
 };
 
 export default function SettingsView() {
-  const { theme, setTheme, lang, setLang, availableThemes, messages, me, isAdmin, loggedIn, demoMode, profileImage, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
+  const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, loggedIn, demoMode, profileImage, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
 
   // Profile image feedback state
   const [imageSaved, setImageSaved] = useState(false);
@@ -328,6 +328,25 @@ export default function SettingsView() {
               );
             })}
           </div>
+          <div style={{ marginTop: 'var(--space-md)' }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)' }}>
+              {t(messages, 'installed_themes')}
+            </div>
+            <div className="pack-list">
+              {availableThemes.map((th) => (
+                <div key={th.key} className="pack-card glass-sm">
+                  <div className="pack-card-header">
+                    <span className="pack-card-name">{th.name}</span>
+                    {theme === th.key && <span className="pack-badge">{t(messages, 'pack_active')}</span>}
+                  </div>
+                  <div className="pack-meta">
+                    <span>{t(messages, 'pack_version')} {th.version}</span>
+                    <span>{t(messages, 'pack_author')}: {th.author}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Language Section */}
@@ -336,6 +355,35 @@ export default function SettingsView() {
           <div className="lang-toggle">
             <button className={`lang-btn${lang === 'de' ? ' active' : ''}`} onClick={() => setLang('de')}>Deutsch</button>
             <button className={`lang-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')}>English</button>
+          </div>
+          <div style={{ marginTop: 'var(--space-md)' }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)' }}>
+              {t(messages, 'installed_languages')}
+            </div>
+            <div className="pack-list">
+              {availableLanguages.map((l) => {
+                const comp = languageCompleteness(l.key);
+                return (
+                  <div key={l.key} className="pack-card glass-sm">
+                    <div className="pack-card-header">
+                      <span className="pack-card-name">{l.nativeName}</span>
+                      {lang === l.key && <span className="pack-badge">{t(messages, 'pack_active')}</span>}
+                    </div>
+                    <div className="pack-meta">
+                      <span>{t(messages, 'pack_version')} {l.version}</span>
+                      <span>{t(messages, 'pack_author')}: {l.author}</span>
+                    </div>
+                    <div className="pack-progress-row">
+                      <span className="pack-progress-label">{t(messages, 'pack_completeness')}</span>
+                      <div className="pack-progress">
+                        <div className="pack-progress-fill" style={{ width: `${comp.percent}%` }} />
+                      </div>
+                      <span className="pack-progress-value">{comp.percent}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 

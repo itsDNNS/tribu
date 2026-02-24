@@ -1,6 +1,9 @@
 {
   "id": "tribu.theme.dark",
   "name": "Dark",
+  "version": "1.0.0",
+  "author": "Tribu",
+  "description": "Subtle and dark",
   "dataTheme": "dark",
   "tokens": {
     "bg": "#0f172a",

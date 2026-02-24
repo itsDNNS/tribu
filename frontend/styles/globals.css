@@ -969,6 +969,24 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 }
 
 /* ═══════════════════════════════════════════
+   PACK REGISTRY (Theme & Language)
+   ═══════════════════════════════════════════ */
+.pack-list { display: grid; gap: 6px; }
+.pack-card { padding: 12px 14px; }
+.pack-card-header { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: 4px; }
+.pack-card-name { font-weight: 500; font-size: 0.9rem; }
+.pack-badge { font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(124, 58, 237, 0.1); color: var(--amethyst); font-family: 'JetBrains Mono', monospace; }
+.pack-meta { display: flex; gap: var(--space-md); font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+.pack-progress-row { display: flex; align-items: center; gap: var(--space-sm); margin-top: 8px; }
+.pack-progress-label { font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0; }
+.pack-progress { flex: 1; height: 6px; background: rgba(255, 255, 255, 0.06); border-radius: 3px; overflow: hidden; }
+.pack-progress-fill { height: 100%; background: var(--grad-primary); border-radius: 3px; transition: width 0.3s var(--ease-out-expo); }
+.pack-progress-value { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-secondary); flex-shrink: 0; min-width: 32px; text-align: right; }
+
+[data-theme="light"] .pack-badge { background: rgba(124, 58, 237, 0.08); color: #6d28d9; }
+[data-theme="light"] .pack-progress { background: rgba(0, 0, 0, 0.06); }
+
+/* ═══════════════════════════════════════════
    RESPONSIVE
    ═══════════════════════════════════════════ */
 @media (max-width: 1100px) {
