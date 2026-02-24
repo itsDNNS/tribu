@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { errorText, toIsoOrNull } from '../lib/helpers';
 import * as api from '../lib/api';
@@ -17,6 +17,11 @@ export function useCalendar() {
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
   const [allDay, setAllDay] = useState(false);
+  const [recurrence, setRecurrence] = useState('');
+  const [recurrenceEnd, setRecurrenceEnd] = useState('');
+
+  // Delete confirmation for recurring events
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // Birthday form
   const [birthdayName, setBirthdayName] = useState('');
@@ -29,6 +34,26 @@ export function useCalendar() {
     () => calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
     [calendarMonth, locale],
   );
+
+  // Range-based event loading when month changes (non-demo)
+  const loadEventsForRange = useCallback(async () => {
+    if (demoMode) return;
+    const y = calendarMonth.getFullYear();
+    const m = calendarMonth.getMonth();
+    const rangeStart = new Date(y, m, -7);
+    const rangeEnd = new Date(y, m + 1, 8);
+    const { ok, data } = await api.apiGetEvents(
+      familyId,
+      rangeStart.toISOString(),
+      rangeEnd.toISOString(),
+    );
+    if (ok) setEvents(data);
+  }, [calendarMonth, familyId, demoMode, setEvents]);
+
+  useEffect(() => {
+    if (!familyId || demoMode) return;
+    loadEventsForRange();
+  }, [calendarMonth, familyId, demoMode, loadEventsForRange]);
 
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
@@ -97,9 +122,11 @@ export function useCalendar() {
     const payload = {
       family_id: Number(familyId), title, description: description || null,
       starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
+      recurrence: recurrence || null,
+      recurrence_end: recurrenceEnd ? new Date(recurrenceEnd).toISOString() : null,
     };
     if (demoMode) {
-      const newEvent = { id: Date.now(), ...payload };
+      const newEvent = { id: Date.now(), ...payload, is_recurring: !!recurrence, occurrence_date: null };
       setEvents((prev) => [...prev, newEvent]);
       setSummary((prev) => ({
         ...prev,
@@ -111,10 +138,42 @@ export function useCalendar() {
     } else {
       const { ok, data } = await api.apiCreateEvent(payload);
       if (!ok) return setCalendarMsg(errorText(data?.detail, 'Failed to create event'));
-      await Promise.all([loadEvents(), loadDashboard()]);
+      await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
     setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
+    setRecurrence(''); setRecurrenceEnd('');
     setCalendarMsg('Event created');
+  }
+
+  async function deleteEvent(ev) {
+    if (ev.is_recurring) {
+      setDeleteConfirm(ev);
+      return;
+    }
+    await performDelete(ev.id, null);
+  }
+
+  async function performDelete(eventId, occurrenceDate) {
+    if (demoMode) {
+      if (occurrenceDate) {
+        setEvents((prev) => prev.filter((ev) => !(ev.id === eventId && ev.occurrence_date === occurrenceDate)));
+      } else {
+        setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
+      }
+      setSummary((prev) => ({
+        ...prev,
+        next_events: (prev.next_events || []).filter((ev) => {
+          if (occurrenceDate) return !(ev.id === eventId && ev.occurrence_date === occurrenceDate);
+          return ev.id !== eventId;
+        }),
+      }));
+    } else {
+      const { ok, data } = await api.apiDeleteEvent(eventId, occurrenceDate);
+      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Failed to delete event'));
+      await Promise.all([loadEventsForRange(), loadDashboard()]);
+    }
+    setDeleteConfirm(null);
+    setCalendarMsg('Event deleted');
   }
 
   async function addBirthday(e) {
@@ -157,10 +216,13 @@ export function useCalendar() {
     startsAt, setStartsAt,
     endsAt, setEndsAt,
     allDay, setAllDay,
+    recurrence, setRecurrence,
+    recurrenceEnd, setRecurrenceEnd,
+    deleteConfirm, setDeleteConfirm,
     birthdayName, setBirthdayName,
     birthdayMonth, setBirthdayMonth,
     birthdayDay, setBirthdayDay,
     monthLabel, selectedDayEvents, monthCells, weekInfo,
-    createEvent, addBirthday,
+    createEvent, deleteEvent, performDelete, addBirthday,
   };
 }
