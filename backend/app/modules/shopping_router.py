@@ -7,6 +7,14 @@ from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import ShoppingItem, ShoppingList, User
+from app.core.ws_broadcast import (
+    broadcast_item_added,
+    broadcast_item_deleted,
+    broadcast_item_updated,
+    broadcast_items_cleared,
+    broadcast_list_created,
+    broadcast_list_deleted,
+)
 from app.schemas import (
     ShoppingItemCreate,
     ShoppingItemResponse,
@@ -63,7 +71,9 @@ def create_list(
     db.add(sl)
     db.commit()
     db.refresh(sl)
-    return _list_response(sl)
+    resp = _list_response(sl)
+    broadcast_list_created(sl.family_id, resp.model_dump(mode="json"))
+    return resp
 
 
 @router.delete("/lists/{list_id}")
@@ -76,9 +86,11 @@ def delete_list(
     sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
     if not sl:
         raise HTTPException(status_code=404, detail="Liste nicht gefunden")
-    ensure_family_membership(db, user.id, sl.family_id)
+    family_id = sl.family_id
+    ensure_family_membership(db, user.id, family_id)
     db.delete(sl)
     db.commit()
+    broadcast_list_deleted(family_id, list_id)
     return {"status": "deleted", "list_id": list_id}
 
 
@@ -126,6 +138,7 @@ def add_item(
     db.add(item)
     db.commit()
     db.refresh(item)
+    broadcast_item_added(list_id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
     return item
 
 
@@ -153,6 +166,7 @@ def update_item(
 
     db.commit()
     db.refresh(item)
+    broadcast_item_updated(item.list_id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
     return item
 
 
@@ -168,8 +182,10 @@ def delete_item(
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
     sl = db.query(ShoppingList).filter(ShoppingList.id == item.list_id).first()
     ensure_family_membership(db, user.id, sl.family_id)
+    list_id = item.list_id
     db.delete(item)
     db.commit()
+    broadcast_item_deleted(list_id, item_id)
     return {"status": "deleted", "item_id": item_id}
 
 
@@ -189,4 +205,5 @@ def clear_checked(
         ShoppingItem.checked == True,
     ).delete(synchronize_session="fetch")
     db.commit()
+    broadcast_items_cleared(list_id, deleted)
     return {"status": "ok", "deleted_count": deleted}
