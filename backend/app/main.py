@@ -27,7 +27,7 @@ from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.schemas import ChangePasswordRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
-from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
+from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, needs_rehash, verify_password
 
 COOKIE_NAME = "tribu_token"
 COOKIE_MAX_AGE = JWT_EXPIRE_HOURS * 3600
@@ -93,6 +93,10 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Ungültige Zugangsdaten")
+
+    if needs_rehash(user.password_hash):
+        user.password_hash = hash_password(payload.password)
+        db.commit()
 
     token = create_access_token(user_id=user.id, email=user.email)
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
