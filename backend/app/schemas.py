@@ -366,6 +366,11 @@ class CreateMemberResponse(BaseModel):
     temporary_password: str
 
 
+class ResetPasswordResponse(BaseModel):
+    user_id: int
+    temporary_password: str
+
+
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str = Field(min_length=8, max_length=128)

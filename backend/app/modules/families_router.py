@@ -5,7 +5,7 @@ from app.core.deps import current_user, ensure_family_admin, ensure_family_membe
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Family, Membership, User
-from app.schemas import CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate
+from app.schemas import CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
 
 router = APIRouter(prefix="/families", tags=["families"])
@@ -165,3 +165,38 @@ def update_member_role(
     membership.role = payload.role
     db.commit()
     return {"status": "ok", "user_id": target_user_id, "role": membership.role}
+
+
+@router.post("/{family_id}/members/{target_user_id}/reset-password", response_model=ResetPasswordResponse)
+def reset_member_password(
+    family_id: int,
+    target_user_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+
+    if target_user_id == user.id:
+        raise HTTPException(status_code=400, detail="Cannot reset your own password here")
+
+    membership = db.query(Membership).filter(
+        Membership.family_id == family_id,
+        Membership.user_id == target_user_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    target_user = db.query(User).filter(User.id == target_user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    temp_password = generate_temp_password()
+    target_user.password_hash = hash_password(temp_password)
+    target_user.must_change_password = True
+    db.commit()
+
+    return ResetPasswordResponse(
+        user_id=target_user.id,
+        temporary_password=temp_password,
+    )
