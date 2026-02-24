@@ -48,6 +48,10 @@ export function apiUpdateProfileImage(profile_image) {
   return patch('/auth/me/profile-image', { profile_image });
 }
 
+export function apiChangePassword(old_password, new_password) {
+  return patch('/auth/me/password', { old_password, new_password });
+}
+
 // Families
 export function apiGetMyFamilies() {
   return request('/families/me');
@@ -63,6 +67,10 @@ export function apiSetAdult(familyId, userId, is_adult) {
 
 export function apiSetRole(familyId, userId, role) {
   return patch(`/families/${familyId}/members/${userId}/role`, { role });
+}
+
+export function apiCreateMember(familyId, payload) {
+  return post(`/families/${familyId}/members`, payload);
 }
 
 // Dashboard

@@ -158,5 +158,20 @@
   "nav_overflow": "Mehr-Menü",
   "nav_save": "Reihenfolge speichern",
   "nav_saved": "Gespeichert!",
-  "nav_reset": "Zurücksetzen"
+  "nav_reset": "Zurücksetzen",
+  "add_member": "Mitglied hinzufügen",
+  "add_member_desc": "Neues Familienmitglied mit temporärem Passwort anlegen.",
+  "member_email": "E-Mail",
+  "member_name": "Anzeigename",
+  "member_role": "Rolle",
+  "member_is_adult": "Erwachsen",
+  "member_created": "Mitglied erstellt",
+  "member_created_warning": "Kopiere dieses temporäre Passwort jetzt. Es wird nicht erneut angezeigt.",
+  "member_temp_password": "Temporäres Passwort",
+  "force_change_password_title": "Passwort ändern",
+  "force_change_password_desc": "Dein Konto wurde mit einem temporären Passwort erstellt. Bitte setze ein neues Passwort, um fortzufahren.",
+  "old_password": "Aktuelles Passwort",
+  "new_password": "Neues Passwort",
+  "change_password": "Passwort ändern",
+  "password_changed": "Passwort erfolgreich geändert"
 }
