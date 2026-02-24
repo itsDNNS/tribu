@@ -23,7 +23,8 @@ from app.modules.tasks_router import router as tasks_router
 from app.modules.shopping_router import router as shopping_router
 from app.modules.tokens_router import router as tokens_router
 from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATABASE_URL as BACKUP_DB_URL
-from app.core.scheduler import configure_backup_schedule, start_scheduler, shutdown_scheduler
+from app.modules.notifications_router import router as notifications_router
+from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.schemas import LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 
@@ -134,6 +135,7 @@ app.include_router(tasks_router)
 app.include_router(shopping_router)
 app.include_router(tokens_router)
 app.include_router(backup_router)
+app.include_router(notifications_router)
 
 
 @app.on_event("startup")
@@ -145,6 +147,7 @@ def startup_scheduler():
         schedule = schedule_row.value if schedule_row else "off"
         retention = int(retention_row.value) if retention_row else 7
         start_scheduler()
+        start_notification_job()
         if schedule != "off":
             configure_backup_schedule(schedule, BACKUP_DB_URL, BACKUP_DIR, retention)
     finally:

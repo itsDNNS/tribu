@@ -24,6 +24,7 @@ COPY --from=builder /app/themes ./themes
 COPY --from=builder /app/contexts ./contexts
 COPY --from=builder /app/hooks ./hooks
 COPY --from=builder /app/components ./components
+COPY --from=builder /app/public ./public
 
 RUN chown -R tribu:tribu /app
 USER tribu

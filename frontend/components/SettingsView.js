@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, Palette, Globe, ShieldCheck, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { downloadBlob } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -26,6 +26,10 @@ const SCOPE_MODULES = [
 
 export default function SettingsView() {
   const { theme, setTheme, lang, setLang, availableThemes, messages, me, isAdmin, loggedIn, demoMode, setProfileImage, familyId, loadContacts, loadDashboard } = useApp();
+
+  // Notification preferences state
+  const [notifPrefs, setNotifPrefs] = useState({ reminders_enabled: true, reminder_minutes: 30, quiet_start: '', quiet_end: '' });
+  const [notifSaved, setNotifSaved] = useState(false);
 
   const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
 
@@ -55,6 +59,32 @@ export default function SettingsView() {
   }, [loggedIn, demoMode]);
 
   useEffect(() => { loadTokens(); }, [loadTokens]);
+
+  const loadNotifPrefs = useCallback(async () => {
+    if (!loggedIn || demoMode) return;
+    const res = await api.apiGetNotificationPreferences();
+    if (res.ok) setNotifPrefs({
+      reminders_enabled: res.data.reminders_enabled,
+      reminder_minutes: res.data.reminder_minutes,
+      quiet_start: res.data.quiet_start || '',
+      quiet_end: res.data.quiet_end || '',
+    });
+  }, [loggedIn, demoMode]);
+
+  useEffect(() => { loadNotifPrefs(); }, [loadNotifPrefs]);
+
+  async function handleSaveNotifPrefs() {
+    const payload = {
+      ...notifPrefs,
+      quiet_start: notifPrefs.quiet_start || null,
+      quiet_end: notifPrefs.quiet_end || null,
+    };
+    const res = await api.apiUpdateNotificationPreferences(payload);
+    if (res.ok) {
+      setNotifSaved(true);
+      setTimeout(() => setNotifSaved(false), 2000);
+    }
+  }
 
   function onProfileImage(e) {
     const file = e.target.files?.[0];
@@ -258,6 +288,64 @@ export default function SettingsView() {
             {t(messages, 'privacy_note')}
           </p>
         </div>
+
+        {/* Notification Settings */}
+        {!demoMode && (
+          <div className="settings-section glass">
+            <div className="settings-section-title"><Bell size={16} /> {t(messages, 'notification_settings')}</div>
+            <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={notifPrefs.reminders_enabled}
+                  onChange={(e) => setNotifPrefs((p) => ({ ...p, reminders_enabled: e.target.checked }))}
+                />
+                {t(messages, 'notification_reminders_enabled')}
+              </label>
+
+              <div className="form-field">
+                <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{t(messages, 'notification_reminder_minutes')}</label>
+                <select
+                  className="form-input"
+                  value={notifPrefs.reminder_minutes}
+                  onChange={(e) => setNotifPrefs((p) => ({ ...p, reminder_minutes: Number(e.target.value) }))}
+                  style={{ maxWidth: 200 }}
+                >
+                  <option value={15}>{t(messages, 'notification_minutes_15')}</option>
+                  <option value={30}>{t(messages, 'notification_minutes_30')}</option>
+                  <option value={60}>{t(messages, 'notification_minutes_60')}</option>
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{t(messages, 'notification_quiet_hours')}</label>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+                  <input
+                    type="time"
+                    className="form-input"
+                    value={notifPrefs.quiet_start}
+                    onChange={(e) => setNotifPrefs((p) => ({ ...p, quiet_start: e.target.value }))}
+                    style={{ maxWidth: 140 }}
+                    placeholder={t(messages, 'notification_quiet_start')}
+                  />
+                  <span style={{ color: 'var(--text-muted)' }}>&ndash;</span>
+                  <input
+                    type="time"
+                    className="form-input"
+                    value={notifPrefs.quiet_end}
+                    onChange={(e) => setNotifPrefs((p) => ({ ...p, quiet_end: e.target.value }))}
+                    style={{ maxWidth: 140 }}
+                    placeholder={t(messages, 'notification_quiet_end')}
+                  />
+                </div>
+              </div>
+
+              <button className="btn-sm" onClick={handleSaveNotifPrefs} style={{ justifySelf: 'start' }}>
+                {notifSaved ? <><Check size={14} /> {t(messages, 'notification_saved')}</> : t(messages, 'notification_save')}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Data Management Section */}
         {!demoMode && (

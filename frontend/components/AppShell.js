@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart } from 'lucide-react';
+import { Bell, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import DashboardView from './DashboardView';
@@ -9,6 +9,7 @@ import TasksView from './TasksView';
 import ShoppingView from './ShoppingView';
 import SettingsView from './SettingsView';
 import AdminView from './AdminView';
+import NotificationCenter from './NotificationCenter';
 
 const views = {
   dashboard: DashboardView,
@@ -16,6 +17,7 @@ const views = {
   shopping: ShoppingView,
   contacts: ContactsView,
   tasks: TasksView,
+  notifications: NotificationCenter,
   settings: SettingsView,
   admin: AdminView,
 };
@@ -43,7 +45,7 @@ function DashboardSkeleton() {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, messages, me, members, families, familyId, tasks, shoppingLists, logout, demoMode, loading } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, messages, me, members, families, familyId, tasks, shoppingLists, unreadCount, logout, demoMode, loading } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -62,6 +64,7 @@ export default function AppShell() {
   ];
 
   const systemItems = [
+    { key: 'notifications', icon: Bell, label: t(messages, 'notifications'), mobileLabel: t(messages, 'notifications'), badge: unreadCount || null },
     { key: 'settings', icon: Settings, label: t(messages, 'settings'), mobileLabel: t(messages, 'settings') },
     ...(isAdmin ? [{ key: 'admin', icon: Shield, label: t(messages, 'admin') }] : []),
   ];
@@ -205,9 +208,24 @@ export default function AppShell() {
                 <span>{currentFamily?.family_name || ''}</span>
               </div>
             </div>
-            <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
-              <LogOut size={18} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                className="sidebar-logout"
+                onClick={() => navigate('notifications')}
+                aria-label={t(messages, 'notifications')}
+                style={{ position: 'relative' }}
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="bottom-nav-badge" style={{ position: 'absolute', top: -4, right: -4 }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
         )}
 

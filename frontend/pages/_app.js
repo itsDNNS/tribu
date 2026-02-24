@@ -1,8 +1,15 @@
+import { useEffect } from 'react';
 import Head from 'next/head';
 import { AppProvider } from '../contexts/AppContext';
 import '../styles/globals.css';
 
 export default function TribuApp({ Component, pageProps }) {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  }, []);
+
   return (
     <AppProvider>
       <Head>
