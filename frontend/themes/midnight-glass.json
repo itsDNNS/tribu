@@ -1,6 +1,9 @@
 {
   "id": "tribu.theme.midnight-glass",
   "name": "Midnight Glass",
+  "version": "1.0.0",
+  "author": "Tribu",
+  "description": "Glassmorphism, deep violet",
   "dataTheme": "midnight-glass",
   "tokens": {
     "bg": "#06080f",

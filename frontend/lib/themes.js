@@ -13,5 +13,5 @@ export function getTheme(themeKey) {
 }
 
 export function listThemes() {
-  return Object.entries(themes).map(([key, t]) => ({ key, id: t.id, name: t.name }));
+  return Object.entries(themes).map(([key, t]) => ({ key, id: t.id, name: t.name, version: t.version, author: t.author, description: t.description }));
 }

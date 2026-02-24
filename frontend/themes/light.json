@@ -1,6 +1,9 @@
 {
   "id": "tribu.theme.light",
   "name": "Morning Mist",
+  "version": "1.0.0",
+  "author": "Tribu",
+  "description": "Warm and inviting",
   "dataTheme": "light",
   "tokens": {
     "bg": "#f8f6f3",

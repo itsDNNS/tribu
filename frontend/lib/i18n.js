@@ -31,3 +31,20 @@ export function buildMessages(lang) {
 export function t(messages, key, fallback) {
   return messages[key] || fallback || key;
 }
+
+const languageMeta = {
+  en: { name: 'English', nativeName: 'English', version: '1.0.0', author: 'Tribu' },
+  de: { name: 'German', nativeName: 'Deutsch', version: '1.0.0', author: 'Tribu' },
+};
+
+export function listLanguages() {
+  return Object.entries(languageMeta).map(([key, meta]) => ({ key, ...meta }));
+}
+
+export function languageCompleteness(lang) {
+  const ref = buildMessages('en');
+  const target = buildMessages(lang);
+  const total = Object.keys(ref).length;
+  const translated = Object.keys(ref).filter((k) => target[k]).length;
+  return { total, translated, percent: total > 0 ? Math.round((translated / total) * 100) : 0 };
+}

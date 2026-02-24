@@ -186,5 +186,11 @@
   "audit_action_adult_changed": "Erwachsenen-Status geändert",
   "audit_by": "von",
   "remove_member": "Entfernen",
-  "remove_member_confirm": "Dieses Mitglied wirklich aus der Familie entfernen?"
+  "remove_member_confirm": "Dieses Mitglied wirklich aus der Familie entfernen?",
+  "installed_themes": "Installierte Themes",
+  "installed_languages": "Installierte Sprachen",
+  "pack_active": "Aktiv",
+  "pack_version": "Version",
+  "pack_author": "Autor",
+  "pack_completeness": "Vollständigkeit"
 }

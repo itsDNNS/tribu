@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { buildMessages } from '../lib/i18n';
+import { buildMessages, listLanguages } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 import { buildUi } from '../lib/styles';
 import * as api from '../lib/api';
@@ -67,6 +67,7 @@ export function AppProvider({ children }) {
   const themeConfig = useMemo(() => getTheme(theme), [theme]);
   const tokens = themeConfig.tokens;
   const availableThemes = useMemo(() => listThemes(), []);
+  const availableLanguages = useMemo(() => listLanguages(), []);
   const ui = useMemo(() => buildUi(tokens), [tokens]);
   const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
 
@@ -268,6 +269,7 @@ export function AppProvider({ children }) {
     messages,
     tokens,
     availableThemes,
+    availableLanguages,
     ui,
     activeView, setActiveView,
     isMobile,
