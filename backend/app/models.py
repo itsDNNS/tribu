@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -56,6 +56,9 @@ class CalendarEvent(Base):
     starts_at = Column(DateTime, nullable=False)
     ends_at = Column(DateTime, nullable=True)
     all_day = Column(Boolean, nullable=False, default=False)
+    recurrence = Column(String, nullable=True)
+    recurrence_end = Column(DateTime, nullable=True)
+    excluded_dates = Column(JSON, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 

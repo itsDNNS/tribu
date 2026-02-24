@@ -84,5 +84,6 @@
   "token_expires": "Expires",
   "token_no_tokens": "No API tokens yet.",
   "token_full_access": "Full access",
-  "token_limit_reached": "Token limit reached (max 25)"
+  "token_limit_reached": "Token limit reached (max 25)",
+  "cancel": "Cancel"
 }

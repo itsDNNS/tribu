@@ -73,6 +73,8 @@ class CalendarEventCreate(BaseModel):
     ends_at: Optional[datetime] = None
     description: Optional[str] = None
     all_day: bool = False
+    recurrence: Optional[str] = None
+    recurrence_end: Optional[datetime] = None
 
 
 class CalendarEventUpdate(BaseModel):
@@ -81,6 +83,8 @@ class CalendarEventUpdate(BaseModel):
     ends_at: Optional[datetime] = None
     description: Optional[str] = None
     all_day: Optional[bool] = None
+    recurrence: Optional[str] = None
+    recurrence_end: Optional[datetime] = None
 
 
 class CalendarEventResponse(BaseModel):
@@ -93,6 +97,10 @@ class CalendarEventResponse(BaseModel):
     ends_at: Optional[datetime]
     description: Optional[str]
     all_day: bool
+    recurrence: Optional[str] = None
+    recurrence_end: Optional[datetime] = None
+    is_recurring: bool = False
+    occurrence_date: Optional[str] = None
     created_by_user_id: Optional[int]
     created_at: datetime
 

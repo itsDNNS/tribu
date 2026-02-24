@@ -71,8 +71,11 @@ export function apiGetDashboard(familyId) {
 }
 
 // Calendar
-export async function apiGetEvents(familyId) {
-  const res = await request(`/calendar/events?family_id=${familyId}`);
+export async function apiGetEvents(familyId, rangeStart, rangeEnd) {
+  let url = `/calendar/events?family_id=${familyId}`;
+  if (rangeStart) url += `&range_start=${encodeURIComponent(rangeStart)}`;
+  if (rangeEnd) url += `&range_end=${encodeURIComponent(rangeEnd)}`;
+  const res = await request(url);
   if (res.ok && res.data?.items) {
     return { ok: true, data: res.data.items };
   }
@@ -81,6 +84,16 @@ export async function apiGetEvents(familyId) {
 
 export function apiCreateEvent(payload) {
   return post('/calendar/events', payload);
+}
+
+export function apiUpdateEvent(eventId, payload) {
+  return patch(`/calendar/events/${eventId}`, payload);
+}
+
+export function apiDeleteEvent(eventId, occurrenceDate) {
+  let url = `/calendar/events/${eventId}`;
+  if (occurrenceDate) url += `?occurrence_date=${encodeURIComponent(occurrenceDate)}`;
+  return request(url, { method: 'DELETE' });
 }
 
 export function apiAddBirthday(payload) {

@@ -10,5 +10,17 @@
   "module.calendar.quick_add": "Schnell anlegen",
   "module.calendar.new_event": "Neuer Termin...",
   "module.calendar.to": "bis",
-  "module.calendar.cw": "KW"
+  "module.calendar.cw": "KW",
+  "module.calendar.no_repeat": "Keine Wiederholung",
+  "module.calendar.repeat_daily": "Täglich",
+  "module.calendar.repeat_weekly": "Wöchentlich",
+  "module.calendar.repeat_biweekly": "Alle 2 Wochen",
+  "module.calendar.repeat_monthly": "Monatlich",
+  "module.calendar.repeat_yearly": "Jährlich",
+  "module.calendar.repeat_until": "Wiederholen bis",
+  "module.calendar.repeat_forever": "Unbegrenzt",
+  "module.calendar.delete_recurring_question": "Wiederkehrenden Termin löschen?",
+  "module.calendar.delete_this_only": "Nur diesen Termin",
+  "module.calendar.delete_all": "Alle Termine",
+  "module.calendar.recurring": "Wiederkehrend"
 }

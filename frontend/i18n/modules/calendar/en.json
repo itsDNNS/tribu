@@ -10,5 +10,17 @@
   "module.calendar.quick_add": "Quick add",
   "module.calendar.new_event": "New event...",
   "module.calendar.to": "to",
-  "module.calendar.cw": "CW"
+  "module.calendar.cw": "CW",
+  "module.calendar.no_repeat": "No repeat",
+  "module.calendar.repeat_daily": "Daily",
+  "module.calendar.repeat_weekly": "Weekly",
+  "module.calendar.repeat_biweekly": "Every 2 weeks",
+  "module.calendar.repeat_monthly": "Monthly",
+  "module.calendar.repeat_yearly": "Yearly",
+  "module.calendar.repeat_until": "Repeat until",
+  "module.calendar.repeat_forever": "Forever",
+  "module.calendar.delete_recurring_question": "Delete recurring event?",
+  "module.calendar.delete_this_only": "Only this event",
+  "module.calendar.delete_all": "All events",
+  "module.calendar.recurring": "Recurring"
 }

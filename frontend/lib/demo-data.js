@@ -40,6 +40,11 @@ const strings = {
       { title: 'Lantern parade daycare', desc: 'Meeting point at main entrance' },
       { title: 'Car inspection', desc: 'TÜV / MOT due' },
     ],
+    recurringEvents: [
+      { title: 'Piano lesson', desc: null, recurrence: 'weekly' },
+      { title: 'Recycling', desc: null, recurrence: 'biweekly' },
+      { title: 'Game night', desc: null, recurrence: 'weekly' },
+    ],
     shoppingLists: [
       {
         name: 'Grocery Store',
@@ -92,6 +97,11 @@ const strings = {
       { title: 'Kino-Abend', desc: 'Familienfilm im CineStar' },
       { title: 'Laternenumzug Kita', desc: 'Treffpunkt am Haupteingang' },
       { title: 'Auto TÜV', desc: 'DEKRA Starnberger Str.' },
+    ],
+    recurringEvents: [
+      { title: 'Klavierunterricht', desc: null, recurrence: 'weekly' },
+      { title: 'Altpapier', desc: null, recurrence: 'biweekly' },
+      { title: 'Spieleabend', desc: null, recurrence: 'weekly' },
     ],
     shoppingLists: [
       {
@@ -156,19 +166,57 @@ export function buildDemoData(lang = 'en') {
 
   const ev = s.events;
   const events = [
-    { id: nextId(), family_id: 1, title: ev[0].title, starts_at: dateAt(0, 10, 30), ends_at: dateAt(0, 11, 0), all_day: false, description: ev[0].desc },
-    { id: nextId(), family_id: 1, title: ev[1].title, starts_at: dateAt(1, 19, 0), ends_at: dateAt(1, 20, 30), all_day: false, description: ev[1].desc },
-    { id: nextId(), family_id: 1, title: ev[2].title, starts_at: dateAt(2, 15, 0), ends_at: dateAt(2, 16, 0), all_day: false, description: ev[2].desc },
-    { id: nextId(), family_id: 1, title: ev[3].title, starts_at: dateAt(3, 11, 0), ends_at: dateAt(3, 14, 0), all_day: false, description: ev[3].desc },
-    { id: nextId(), family_id: 1, title: ev[4].title, starts_at: dateAt(5, 8, 30), ends_at: dateAt(5, 9, 15), all_day: false, description: ev[4].desc },
-    { id: nextId(), family_id: 1, title: ev[5].title, starts_at: dateAt(7, 14, 0), ends_at: dateAt(7, 17, 0), all_day: false, description: ev[5].desc },
-    { id: nextId(), family_id: 1, title: ev[6].title, starts_at: dateAt(4, 8, 0), ends_at: dateAt(4, 12, 0), all_day: false, description: ev[6].desc },
-    { id: nextId(), family_id: 1, title: ev[7].title, starts_at: dateAt(1, 16, 0), ends_at: dateAt(1, 17, 0), all_day: false, description: ev[7].desc },
-    { id: nextId(), family_id: 1, title: ev[8].title, starts_at: dateAt(2, 9, 0), ends_at: dateAt(2, 10, 30), all_day: false, description: ev[8].desc },
-    { id: nextId(), family_id: 1, title: ev[9].title, starts_at: dateAt(6, 20, 0), ends_at: dateAt(6, 22, 30), all_day: false, description: ev[9].desc },
-    { id: nextId(), family_id: 1, title: ev[10].title, starts_at: dateAt(10, 17, 0), ends_at: dateAt(10, 18, 30), all_day: false, description: ev[10].desc },
-    { id: nextId(), family_id: 1, title: ev[11].title, starts_at: dateAt(12, 7, 30), ends_at: dateAt(12, 9, 0), all_day: false, description: ev[11].desc },
+    { id: nextId(), family_id: 1, title: ev[0].title, starts_at: dateAt(0, 10, 30), ends_at: dateAt(0, 11, 0), all_day: false, description: ev[0].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[1].title, starts_at: dateAt(1, 19, 0), ends_at: dateAt(1, 20, 30), all_day: false, description: ev[1].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[2].title, starts_at: dateAt(2, 15, 0), ends_at: dateAt(2, 16, 0), all_day: false, description: ev[2].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[3].title, starts_at: dateAt(3, 11, 0), ends_at: dateAt(3, 14, 0), all_day: false, description: ev[3].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[4].title, starts_at: dateAt(5, 8, 30), ends_at: dateAt(5, 9, 15), all_day: false, description: ev[4].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[5].title, starts_at: dateAt(7, 14, 0), ends_at: dateAt(7, 17, 0), all_day: false, description: ev[5].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[6].title, starts_at: dateAt(4, 8, 0), ends_at: dateAt(4, 12, 0), all_day: false, description: ev[6].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[7].title, starts_at: dateAt(1, 16, 0), ends_at: dateAt(1, 17, 0), all_day: false, description: ev[7].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[8].title, starts_at: dateAt(2, 9, 0), ends_at: dateAt(2, 10, 30), all_day: false, description: ev[8].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[9].title, starts_at: dateAt(6, 20, 0), ends_at: dateAt(6, 22, 30), all_day: false, description: ev[9].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[10].title, starts_at: dateAt(10, 17, 0), ends_at: dateAt(10, 18, 30), all_day: false, description: ev[10].desc, is_recurring: false, occurrence_date: null, recurrence: null },
+    { id: nextId(), family_id: 1, title: ev[11].title, starts_at: dateAt(12, 7, 30), ends_at: dateAt(12, 9, 0), all_day: false, description: ev[11].desc, is_recurring: false, occurrence_date: null, recurrence: null },
   ];
+
+  // Expand recurring demo events for current month
+  const rec = s.recurringEvents;
+  const now = today();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  // Piano/Klavierunterricht: weekly, Mondays 16:00
+  const pianoId = nextId();
+  // Recycling/Altpapier: biweekly, Wednesdays 7:00
+  const recyclingId = nextId();
+  // Game night/Spieleabend: weekly, Fridays 19:30
+  const gameId = nextId();
+
+  const recurringDefs = [
+    { id: pianoId, title: rec[0].title, desc: rec[0].desc, recurrence: rec[0].recurrence, dayOfWeek: 1, hour: 16, minute: 0, durationMin: 60 },
+    { id: recyclingId, title: rec[1].title, desc: rec[1].desc, recurrence: rec[1].recurrence, dayOfWeek: 3, hour: 7, minute: 0, durationMin: 30 },
+    { id: gameId, title: rec[2].title, desc: rec[2].desc, recurrence: rec[2].recurrence, dayOfWeek: 5, hour: 19, minute: 30, durationMin: 120 },
+  ];
+
+  for (const def of recurringDefs) {
+    // Find first occurrence of the day in the month
+    let d = new Date(monthStart);
+    while (d.getDay() !== def.dayOfWeek) d.setDate(d.getDate() + 1);
+    const stepDays = def.recurrence === 'biweekly' ? 14 : 7;
+    while (d <= monthEnd) {
+      const starts = new Date(d.getFullYear(), d.getMonth(), d.getDate(), def.hour, def.minute);
+      const ends = new Date(starts.getTime() + def.durationMin * 60000);
+      const occDate = starts.toISOString().slice(0, 10);
+      events.push({
+        id: def.id, family_id: 1, title: def.title, description: def.desc,
+        starts_at: starts.toISOString(), ends_at: ends.toISOString(),
+        all_day: false, is_recurring: true, occurrence_date: occDate,
+        recurrence: def.recurrence,
+      });
+      d.setDate(d.getDate() + stepDays);
+    }
+  }
 
   const tk = s.tasks;
   const tasks = [

@@ -1,10 +1,76 @@
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Repeat, Trash2, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useCalendar } from '../hooks/useCalendar';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 
 const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
+
+const RECURRENCE_OPTIONS = [
+  { value: '', key: 'module.calendar.no_repeat' },
+  { value: 'daily', key: 'module.calendar.repeat_daily' },
+  { value: 'weekly', key: 'module.calendar.repeat_weekly' },
+  { value: 'biweekly', key: 'module.calendar.repeat_biweekly' },
+  { value: 'monthly', key: 'module.calendar.repeat_monthly' },
+  { value: 'yearly', key: 'module.calendar.repeat_yearly' },
+];
+
+function DeleteRecurringDialog({ event, messages, onDeleteThis, onDeleteAll, onCancel }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
+    }}>
+      <div className="glass" style={{
+        padding: 'var(--space-xl)', maxWidth: 380, width: '90%',
+        display: 'flex', flexDirection: 'column', gap: 'var(--space-md)',
+      }}>
+        <div style={{ fontWeight: 600, fontSize: '1rem' }}>
+          {t(messages, 'module.calendar.delete_recurring_question')}
+        </div>
+        <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+          {event.title}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button className="btn-sm" onClick={onDeleteThis} style={{ width: '100%' }}>
+            {t(messages, 'module.calendar.delete_this_only')}
+          </button>
+          <button className="btn-sm" onClick={onDeleteAll} style={{ width: '100%', background: 'var(--danger, #e53e3e)', color: '#fff' }}>
+            {t(messages, 'module.calendar.delete_all')}
+          </button>
+          <button className="btn-sm" onClick={onCancel} style={{ width: '100%', background: 'transparent', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }}>
+            {t(messages, 'cancel')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EventCard({ ev, index, messages, onDelete }) {
+  return (
+    <div className="day-event-card" style={{ borderColor: MEMBER_COLORS[index % MEMBER_COLORS.length] }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 500, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {ev.title}
+          {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+        </div>
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, messages)}</div>
+      </div>
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
+          title="Delete"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function CalendarView() {
   const { familyId, families, messages, isMobile, lang, switchFamily, loadEvents, loadDashboard } = useApp();
@@ -21,6 +87,17 @@ export default function CalendarView() {
 
   return (
     <div>
+      {/* Delete confirmation dialog for recurring events */}
+      {cal.deleteConfirm && (
+        <DeleteRecurringDialog
+          event={cal.deleteConfirm}
+          messages={messages}
+          onDeleteThis={() => cal.performDelete(cal.deleteConfirm.id, cal.deleteConfirm.occurrence_date)}
+          onDeleteAll={() => cal.performDelete(cal.deleteConfirm.id, null)}
+          onCancel={() => cal.setDeleteConfirm(null)}
+        />
+      )}
+
       <div className="view-header">
         <div>
           <div className="view-title">{t(messages, 'calendar')}</div>
@@ -132,12 +209,7 @@ export default function CalendarView() {
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_day')}</div>
                 )}
                 {cal.selectedDayEvents.map((ev, i) => (
-                  <div key={ev.id} className="day-event-card" style={{ borderColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
-                    <div>
-                      <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{ev.title}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, lang)}</div>
-                    </div>
-                  </div>
+                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={lang} onDelete={cal.deleteEvent} />
                 ))}
               </div>
 
@@ -148,6 +220,14 @@ export default function CalendarView() {
                   <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
                   <input className="form-input" type="datetime-local" value={cal.endsAt} onChange={(e) => cal.setEndsAt(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
                 </div>
+                <select className="form-input" value={cal.recurrence} onChange={(e) => cal.setRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
+                  {RECURRENCE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
+                  ))}
+                </select>
+                {cal.recurrence && (
+                  <input className="form-input" type="date" value={cal.recurrenceEnd} onChange={(e) => cal.setRecurrenceEnd(e.target.value)} placeholder={t(messages, 'module.calendar.repeat_until')} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
+                )}
                 <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
               </form>
             </div>
@@ -167,12 +247,7 @@ export default function CalendarView() {
               <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_week')}</div>
             )}
             {cal.weekInfo.weekEvents.map((ev, i) => (
-              <div key={ev.id} className="day-event-card" style={{ borderColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
-                <div>
-                  <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{ev.title}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, lang)}</div>
-                </div>
-              </div>
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={lang} onDelete={cal.deleteEvent} />
             ))}
           </div>
         </div>
@@ -192,17 +267,17 @@ export default function CalendarView() {
               <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events')}</div>
             )}
             {cal.selectedDayEvents.map((ev, i) => (
-              <div key={ev.id} className="day-event-card" style={{ borderColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
-                <div>
-                  <div style={{ fontWeight: 500 }}>{ev.title}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{prettyDate(ev.starts_at, lang)}</div>
-                </div>
-              </div>
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={lang} onDelete={cal.deleteEvent} />
             ))}
           </div>
           <form onSubmit={cal.createEvent} className="quick-add-form">
             <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required />
             <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required />
+            <select className="form-input" value={cal.recurrence} onChange={(e) => cal.setRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
+              {RECURRENCE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
+              ))}
+            </select>
             <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
           </form>
         </div>
