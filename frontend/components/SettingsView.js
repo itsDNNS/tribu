@@ -36,7 +36,10 @@ const NAV_ITEM_META = {
 };
 
 export default function SettingsView() {
-  const { theme, setTheme, lang, setLang, availableThemes, messages, me, isAdmin, loggedIn, demoMode, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
+  const { theme, setTheme, lang, setLang, availableThemes, messages, me, isAdmin, loggedIn, demoMode, profileImage, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
+
+  // Profile image feedback state
+  const [imageSaved, setImageSaved] = useState(false);
 
   // Notification preferences state
   const [notifPrefs, setNotifPrefs] = useState({ reminders_enabled: true, reminder_minutes: 30, quiet_start: '', quiet_end: '' });
@@ -140,6 +143,8 @@ export default function SettingsView() {
       if (loggedIn) {
         await api.apiUpdateProfileImage(value);
       }
+      setImageSaved(true);
+      setTimeout(() => setImageSaved(false), 2000);
     };
     reader.readAsDataURL(file);
   }
@@ -271,7 +276,11 @@ export default function SettingsView() {
         <div className="settings-section glass">
           <div className="settings-section-title"><User size={16} /> {t(messages, 'profile')}</div>
           <div className="profile-row">
-            <div className="profile-avatar">{initials}</div>
+            {profileImage ? (
+              <img src={profileImage} alt="" className="profile-avatar" style={{ objectFit: 'cover' }} />
+            ) : (
+              <div className="profile-avatar">{initials}</div>
+            )}
             <div className="profile-info">
               <div className="profile-name">{me?.display_name || 'User'}</div>
               <div className="profile-email">{me?.email || ''}</div>
@@ -283,6 +292,11 @@ export default function SettingsView() {
               {t(messages, 'profile_image')}
             </label>
             <input type="file" accept="image/*" onChange={onProfileImage} style={{ fontSize: '0.88rem' }} />
+            {imageSaved && (
+              <span style={{ marginLeft: 'var(--space-sm)', fontSize: '0.82rem', color: 'var(--success)' }}>
+                <Check size={14} style={{ verticalAlign: 'middle' }} /> Saved!
+              </span>
+            )}
           </div>
         </div>
 
@@ -337,7 +351,7 @@ export default function SettingsView() {
               if (!meta) return null;
               if (key === 'admin' && !isAdmin) return null;
               const Icon = meta.icon;
-              const isVisible = i < 5;
+              const isVisible = localNavOrder.length > 5 ? i < 4 : i < 5;
               return (
                 <div
                   key={key}
@@ -387,14 +401,6 @@ export default function SettingsView() {
               {t(messages, 'nav_reset')}
             </button>
           </div>
-        </div>
-
-        {/* Privacy Section */}
-        <div className="settings-section glass">
-          <div className="settings-section-title"><ShieldCheck size={16} /> {t(messages, 'privacy')}</div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
-            {t(messages, 'privacy_note')}
-          </p>
         </div>
 
         {/* Notification Settings */}
@@ -716,6 +722,14 @@ export default function SettingsView() {
             )}
           </div>
         )}
+
+        {/* Privacy Section */}
+        <div className="settings-section glass">
+          <div className="settings-section-title"><ShieldCheck size={16} /> {t(messages, 'privacy')}</div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+            {t(messages, 'privacy_note')}
+          </p>
+        </div>
       </div>
     </div>
   );
