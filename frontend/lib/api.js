@@ -109,6 +109,18 @@ export function apiImportContactsCsv(family_id, csv_text) {
   return post('/contacts/import-csv', { family_id, csv_text });
 }
 
+export async function apiExportContactsCsv(familyId) {
+  return fetch(`${API}/contacts/export.csv?family_id=${familyId}`, { credentials: 'include' });
+}
+
+export async function apiExportCalendarIcs(familyId) {
+  return fetch(`${API}/calendar/events/export.ics?family_id=${familyId}`, { credentials: 'include' });
+}
+
+export function apiImportCalendarIcs(family_id, ics_text) {
+  return post('/calendar/events/import-ics', { family_id, ics_text });
+}
+
 // Tasks
 export async function apiGetTasks(familyId) {
   const res = await request(`/tasks?family_id=${familyId}`);

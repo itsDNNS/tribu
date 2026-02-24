@@ -22,5 +22,15 @@
   "module.calendar.delete_recurring_question": "Wiederkehrenden Termin löschen?",
   "module.calendar.delete_this_only": "Nur diesen Termin",
   "module.calendar.delete_all": "Alle Termine",
-  "module.calendar.recurring": "Wiederkehrend"
+  "module.calendar.recurring": "Wiederkehrend",
+  "module.calendar.export": "Exportieren",
+  "module.calendar.export_error": "Export fehlgeschlagen",
+  "module.calendar.import": "Importieren",
+  "module.calendar.close_import": "Schließen",
+  "module.calendar.import_hint": "ICS-Datei hochladen oder ICS-Text einfügen",
+  "module.calendar.import_placeholder": "BEGIN:VCALENDAR\n...",
+  "module.calendar.import_submit": "ICS importieren",
+  "module.calendar.import_success": "{count} Termine importiert",
+  "module.calendar.import_error": "Import fehlgeschlagen",
+  "module.calendar.import_warnings": "Hinweise"
 }

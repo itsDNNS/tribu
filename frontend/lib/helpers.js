@@ -12,6 +12,17 @@ export function prettyDate(value, lang = 'en') {
   });
 }
 
+export function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export function errorText(detail, fallback) {
   if (!detail) return fallback;
   if (typeof detail === 'string') return detail;

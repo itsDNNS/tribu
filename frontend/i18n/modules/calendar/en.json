@@ -22,5 +22,15 @@
   "module.calendar.delete_recurring_question": "Delete recurring event?",
   "module.calendar.delete_this_only": "Only this event",
   "module.calendar.delete_all": "All events",
-  "module.calendar.recurring": "Recurring"
+  "module.calendar.recurring": "Recurring",
+  "module.calendar.export": "Export",
+  "module.calendar.export_error": "Export failed",
+  "module.calendar.import": "Import",
+  "module.calendar.close_import": "Close",
+  "module.calendar.import_hint": "Upload an ICS file or paste ICS text",
+  "module.calendar.import_placeholder": "BEGIN:VCALENDAR\n...",
+  "module.calendar.import_submit": "Import ICS",
+  "module.calendar.import_success": "{count} events imported",
+  "module.calendar.import_error": "Import failed",
+  "module.calendar.import_warnings": "Warnings"
 }

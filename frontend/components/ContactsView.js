@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { errorText } from '../lib/helpers';
+import { downloadBlob, errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
@@ -17,19 +17,33 @@ function getAvatarColor(name) {
 }
 
 export default function ContactsView() {
-  const { contacts, familyId, messages, loadContacts, loadDashboard } = useApp();
+  const { contacts, familyId, messages, demoMode, loadContacts, loadDashboard } = useApp();
 
   const [contactsCsv, setContactsCsv] = useState('');
   const [contactsMsg, setContactsMsg] = useState('');
   const [showImport, setShowImport] = useState(false);
+  const [rowErrors, setRowErrors] = useState([]);
 
   async function importContactsCsv(e) {
     e.preventDefault();
+    setRowErrors([]);
     const { ok, data } = await api.apiImportContactsCsv(Number(familyId), contactsCsv);
     if (!ok) return setContactsMsg(errorText(data?.detail, t(messages, 'module.contacts.import_error')));
     setContactsCsv('');
     await Promise.all([loadContacts(), loadDashboard()]);
     setContactsMsg(`${t(messages, 'module.contacts.import_success')} ${data.created}`);
+    if (data.row_errors?.length) setRowErrors(data.row_errors);
+  }
+
+  async function handleExportCsv() {
+    try {
+      const res = await api.apiExportContactsCsv(familyId);
+      if (!res.ok) return setContactsMsg(t(messages, 'module.contacts.export_error') || 'Export failed');
+      const blob = await res.blob();
+      downloadBlob(blob, 'tribu-contacts.csv');
+    } catch {
+      setContactsMsg(t(messages, 'module.contacts.export_error') || 'Export failed');
+    }
   }
 
   return (
@@ -39,15 +53,32 @@ export default function ContactsView() {
           <h1 className="view-title">{t(messages, 'contacts')}</h1>
           <div className="view-subtitle">{contacts.length} {t(messages, 'contacts')}</div>
         </div>
-        <button className="btn-ghost" onClick={() => setShowImport(!showImport)}>
-          {showImport ? <ChevronUp size={15} /> : <UserPlus size={15} />}
-          {showImport ? t(messages, 'module.contacts.close') : t(messages, 'module.contacts.import')}
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+          {!demoMode && (
+            <button className="btn-ghost" onClick={handleExportCsv}>
+              <Download size={15} /> {t(messages, 'module.contacts.export')}
+            </button>
+          )}
+          <button className="btn-ghost" onClick={() => setShowImport(!showImport)}>
+            {showImport ? <ChevronUp size={15} /> : <UserPlus size={15} />}
+            {showImport ? t(messages, 'module.contacts.close') : t(messages, 'module.contacts.import')}
+          </button>
+        </div>
       </div>
 
       {showImport && (
         <div className="glass" style={{ padding: 'var(--space-lg)', marginBottom: 'var(--space-md)' }}>
           {contactsMsg && <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: !contactsMsg.includes('error') && !contactsMsg.includes('Error') && !contactsMsg.includes('nicht') ? 'var(--success)' : 'var(--danger)' }}>{contactsMsg}</p>}
+          {rowErrors.length > 0 && (
+            <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.82rem', color: 'var(--warning, #f6ad55)' }}>
+              <strong>{t(messages, 'module.contacts.import_warnings')}:</strong>
+              <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                {rowErrors.map((re, i) => (
+                  <li key={i}>{t(messages, 'module.contacts.row')} {re.row} ({re.name}): {re.errors.join(', ')}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <form onSubmit={importContactsCsv} className="quick-add-form">
             <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t(messages, 'contacts_csv_hint')}</label>
             <textarea
