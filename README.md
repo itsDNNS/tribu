@@ -86,7 +86,7 @@ Most family organizer apps lock your data in their cloud and charge monthly fees
 | **Contacts** | Card grid with colored avatars, CSV import, automatic birthday extraction |
 | **Birthdays** | 4-week lookahead with countdown, auto-synced from contacts |
 | **Themes** | Morning Mist (light), Dunkel (dark), Midnight Glass (glassmorphism) |
-| **Security** | httpOnly cookies, rate limiting, PBKDF2-SHA256, non-root containers, CORS locked down |
+| **Security** | httpOnly cookies, rate limiting, bcrypt, non-root containers, CORS locked down |
 
 ## Quick Start
 
@@ -121,10 +121,10 @@ docker compose up --build
 
 ## Tech Stack
 
-**Frontend:** Next.js 14, React 18, Lucide Icons, CSS custom properties<br>
-**Backend:** FastAPI, SQLAlchemy, Python 3.12+<br>
+**Frontend:** Next.js 16, React 19, Lucide Icons, CSS custom properties<br>
+**Backend:** FastAPI, SQLAlchemy, Python 3.13+<br>
 **Database:** PostgreSQL 16<br>
-**Deployment:** Docker Compose (Redis 7 prepared for realtime features)
+**Deployment:** Docker Compose (Valkey 8 prepared for realtime features)
 
 ## Documentation
 

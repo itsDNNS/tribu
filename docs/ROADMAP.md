@@ -80,12 +80,27 @@
 - [x] Mobile shell quality (safe areas, 44px touch targets, bottom nav badges)
 - [x] Configurable `SECURE_COOKIES` env var for production TLS deployments
 
+## Phase 4.0: Admin & Member Management
+
+- [x] Admin member creation with temporary passwords
+- [x] Forced password change on first login (`must_change_password`)
+- [x] `PATCH /auth/me/password` and `POST /families/{id}/members` endpoints
+
+## Phase 4.1: Dependency Modernization (#23-#29)
+
+- [x] Replace passlib with bcrypt (legacy PBKDF2-SHA256 auto-migrated on login)
+- [x] Replace python-jose with PyJWT
+- [x] Upgrade Node.js 20 to 22, Python 3.12 to 3.13
+- [x] Upgrade Next.js 14 to 16 (Turbopack default), React 18 to 19.2
+- [x] Replace Redis 7 with Valkey 8
+- [x] All backend dependencies bumped to latest
+
 ## Release 0.4: Everyday MVP
 
 Goal: A family can run their daily life through Tribu without needing an external app.
 
-- [ ] Recurring calendar events (#6) with RRULE-compatible rules
-- [ ] Accessibility baseline (#14): contrast, focus, keyboard, screen reader labels
+- [x] Recurring calendar events (#6) with RRULE-compatible rules
+- [x] Accessibility baseline (#14): contrast, focus, keyboard, screen reader labels
 - [x] Notifications (#7): in-app feed with scheduler-driven reminders, polling, per-user preferences
 - [x] Import/Export (#8): ICS calendar import/export, CSV contacts import/export
 - [x] Instance backup and restore (#15): CLI scripts + admin UI with scheduling and retention
@@ -102,8 +117,8 @@ Goal: A family can run their daily life through Tribu without needing an externa
 - [ ] Plugin registry and marketplace
 - [ ] Theme pack loader
 - [ ] Language pack management
-- [ ] Customizable bottom nav (#17)
-- [ ] Multi-arch Docker images (#16)
+- [x] Customizable bottom nav (#17)
+- [x] Multi-arch Docker images (#16)
 
 ## Release 0.7: Integrations
 

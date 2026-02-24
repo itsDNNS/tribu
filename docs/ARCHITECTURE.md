@@ -11,7 +11,7 @@ Tribu is a self-hosted family organizer built as a modular monolith. The backend
 └─────────────┘     └──────┬───────┘     └──────────────┘
                            │
                     ┌──────▼───────┐
-                    │    Redis     │
+                    │   Valkey     │
                     │  (prepared)  │
                     └──────────────┘
 ```
@@ -38,12 +38,16 @@ backend/
 │       ├── 0002_add_is_adult_and_profile_image.py
 │       ├── 0003_add_personal_access_tokens.py
 │       ├── 0004_add_shopping_lists.py
-│       └── 0007_add_notifications.py
+│       ├── 0005_add_calendar_recurrence.py
+│       ├── 0006_add_system_settings.py
+│       ├── 0007_add_notifications.py
+│       ├── 0008_add_nav_order.py
+│       └── 0009_add_must_change_password.py
 └── app/
     ├── main.py              # App factory, auth routes, rate limiting, module registration
     ├── models.py            # SQLAlchemy models
     ├── schemas.py           # Pydantic schemas (with input validation)
-    ├── security.py          # JWT creation, password hashing, PAT generation
+    ├── security.py          # JWT (PyJWT), bcrypt hashing, legacy hash migration, PAT generation, temp passwords
     ├── database.py          # Engine, session factory (requires DATABASE_URL)
     ├── core/
     │   ├── deps.py          # Shared dependencies (current_user, get_db, family checks)
@@ -80,6 +84,7 @@ User ──┬── Membership ──── Family
 ```
 
 - First user to register becomes **admin** and **is_adult** automatically
+- Admins can create family members with temporary passwords (`must_change_password` flag forces password change on first login)
 - Calendar events, birthdays, contacts, tasks, and shopping lists are always scoped to exactly one family
 - Personal Access Tokens are user-scoped (not family-scoped) with granular permission scopes
 
@@ -87,7 +92,7 @@ User ──┬── Membership ──── Family
 
 | Concern | Implementation |
 |---------|---------------|
-| Password storage | PBKDF2-SHA256 (min 8 characters) |
+| Password storage | bcrypt (min 8 characters, legacy PBKDF2-SHA256 auto-migrated on login) |
 | Auth | httpOnly cookie (JWT HS256), Bearer fallback for API testing |
 | Rate limiting | 10/min register, 20/min login (slowapi) |
 | Authorization | Role check per family membership |
@@ -107,12 +112,12 @@ The backend requires the following environment variables and will not start with
 
 Optional:
 - `JWT_EXPIRE_HOURS`: Token expiration (default: 24)
-- `REDIS_URL`: Redis connection string (prepared for future use)
+- `REDIS_URL`: Valkey/Redis connection string (prepared for future use)
 - `SECURE_COOKIES`: Set to `true` when behind TLS reverse proxy (default: `false`)
 
 ## Frontend
 
-**Framework**: Next.js 14, React 18
+**Framework**: Next.js 16 (Turbopack), React 19
 
 ### Architecture
 
@@ -135,6 +140,7 @@ The frontend uses a Context + Hooks + Views pattern:
 | ShoppingView | 2-column layout (lists panel + items), tap-to-toggle, checked section with bulk clear. |
 | NotificationCenter | Notification feed with type icons, relative timestamps, mark read/delete, mark all read. |
 | SettingsView | Profile section, visual theme picker cards, language toggle, notification preferences, PAT management, privacy info. |
+| ForcePasswordChange | Full-screen overlay forcing password change for admin-created members on first login. |
 
 ### CSS Design System
 
@@ -218,7 +224,7 @@ Docker Compose stack (`infra/docker-compose.yml`):
 | Service | Image | Architectures | Exposed Port |
 |---------|-------|---------------|--------------|
 | `postgres` | postgres:16-alpine | amd64, arm64 | Internal only |
-| `redis` | redis:7-alpine | amd64, arm64 | Internal only |
+| `valkey` | valkey/valkey:8-alpine | amd64, arm64 | Internal only |
 | `backend` | ghcr.io/itsdnns/tribu-backend | amd64, arm64 | 8000 |
 | `frontend` | ghcr.io/itsdnns/tribu-frontend | amd64, arm64 | 3000 |
 
@@ -238,11 +244,13 @@ A `.env` file in `infra/` is required before starting. See [`infra/.env.example`
 /auth/logout            POST    Clear auth cookie
 /auth/me                GET     Current user profile
 /auth/me/profile-image  PATCH   Update profile image
+/auth/me/password       PATCH   Change password (required on first login for admin-created members)
 
 /families/me            GET     User's families
 /families/{id}/members  GET     Family members
 /families/{id}/members/{uid}/role   PATCH  Update member role (admin only)
 /families/{id}/members/{uid}/adult  PATCH  Update adult status (admin only)
+/families/{id}/members  POST   Create member with temp password (admin only)
 
 /calendar/events        GET     List events
 /calendar/events        POST    Create event
