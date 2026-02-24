@@ -4,6 +4,8 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        <link rel="icon" href="/favicon.ico" sizes="48x48" />
+        <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#7c3aed" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
