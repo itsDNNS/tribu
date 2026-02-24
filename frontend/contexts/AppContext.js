@@ -33,7 +33,16 @@ export function AppProvider({ children }) {
   const [lang, setLang] = useState('en');
 
   // Layout
-  const [activeView, setActiveView] = useState('dashboard');
+  const [activeView, setActiveViewRaw] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('tribu_view') || 'dashboard';
+    }
+    return 'dashboard';
+  });
+  const setActiveView = (view) => {
+    sessionStorage.setItem('tribu_view', view);
+    setActiveViewRaw(view);
+  };
   const [isMobile, setIsMobile] = useState(false);
 
   // Loading
