@@ -39,7 +39,7 @@ export default function DashboardView() {
     <div>
       <div className="view-header">
         <div>
-          <div className="view-title">{t(messages, 'dashboard')}</div>
+          <h1 className="view-title">{t(messages, 'dashboard')}</h1>
           <div className="view-subtitle">{t(messages, 'important_first')}</div>
         </div>
         <div className="view-date">{todayStr}</div>
@@ -47,7 +47,7 @@ export default function DashboardView() {
 
       <div className="bento-grid stagger">
         {/* Welcome Card */}
-        <div className="bento-card bento-welcome glass glow-purple">
+        <div className="bento-card bento-welcome glass glow-purple" role="region" aria-label={t(messages, 'aria.welcome')}>
           <div className="welcome-row">
             <div className="welcome-avatar">{initials}</div>
             <div className="welcome-text">
@@ -56,37 +56,37 @@ export default function DashboardView() {
             </div>
           </div>
           <div className="welcome-actions">
-            <button className="btn-ghost" onClick={() => setActiveView('calendar')}><Plus size={15} /> {t(messages, 'module.dashboard.quick_event')}</button>
-            <button className="btn-ghost" onClick={() => setActiveView('tasks')}><CheckSquare size={15} /> {t(messages, 'module.dashboard.quick_task')}</button>
-            <button className="btn-ghost" onClick={() => setActiveView('contacts')}><UserPlus size={15} /> {t(messages, 'module.dashboard.quick_contact')}</button>
+            <button className="btn-ghost" onClick={() => setActiveView('calendar')}><Plus size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_event')}</button>
+            <button className="btn-ghost" onClick={() => setActiveView('tasks')}><CheckSquare size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_task')}</button>
+            <button className="btn-ghost" onClick={() => setActiveView('contacts')}><UserPlus size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_contact')}</button>
           </div>
         </div>
 
         {/* Stats Card */}
-        <div className="bento-card bento-stats glass">
+        <div className="bento-card bento-stats glass" role="region" aria-label={t(messages, 'module.dashboard.family')}>
           <div className="bento-card-header">
-            <div className="bento-card-title"><BarChart3 size={16} /> {t(messages, 'module.dashboard.family')}</div>
+            <h2 className="bento-card-title"><BarChart3 size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.family')}</h2>
           </div>
           <div className="stat-grid">
             <div className="stat-item">
-              <div className="stat-icon" style={{ background: 'rgba(124,58,237,0.12)' }}><Users size={18} style={{ color: 'var(--amethyst)' }} /></div>
+              <div className="stat-icon" style={{ background: 'rgba(124,58,237,0.12)' }}><Users size={18} style={{ color: 'var(--amethyst)' }} aria-hidden="true" /></div>
               <div><div className="stat-value">{members.length}</div><div className="stat-label">{t(messages, 'module.dashboard.members')}</div></div>
             </div>
             <div className="stat-item">
-              <div className="stat-icon" style={{ background: 'rgba(59,130,246,0.12)' }}><Calendar size={18} style={{ color: 'var(--sapphire)' }} /></div>
+              <div className="stat-icon" style={{ background: 'rgba(59,130,246,0.12)' }}><Calendar size={18} style={{ color: 'var(--sapphire)' }} aria-hidden="true" /></div>
               <div><div className="stat-value">{events.length}</div><div className="stat-label">{t(messages, 'module.dashboard.events_count')}</div></div>
             </div>
             <div className="stat-item">
-              <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)' }}><CheckCircle size={18} style={{ color: 'var(--success)' }} /></div>
+              <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)' }}><CheckCircle size={18} style={{ color: 'var(--success)' }} aria-hidden="true" /></div>
               <div><div className="stat-value">{donePercent}%</div><div className="stat-label">{t(messages, 'module.dashboard.tasks_done')}</div></div>
             </div>
           </div>
         </div>
 
         {/* Events Card */}
-        <div className="bento-card bento-events glass glow-blue">
+        <div className="bento-card bento-events glass glow-blue" role="region" aria-label={t(messages, 'next_events')}>
           <div className="bento-card-header">
-            <div className="bento-card-title"><CalendarClock size={16} /> {t(messages, 'next_events')}</div>
+            <h2 className="bento-card-title"><CalendarClock size={16} aria-hidden="true" /> {t(messages, 'next_events')}</h2>
             <button className="bento-more" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.all')}</button>
           </div>
           <div className="event-list">
@@ -96,7 +96,7 @@ export default function DashboardView() {
             {summary.next_events?.slice(0, 4).map((ev, i) => (
               <div key={ev.id} className="event-item">
                 <div className="event-time">{new Date(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</div>
-                <div className="event-dot" style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
+                <div className="event-dot" style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }} aria-hidden="true" />
                 <div className="event-info">
                   <div className="event-title">{ev.title}</div>
                   <div className="event-meta">{prettyDate(ev.starts_at, lang)}</div>
@@ -107,9 +107,9 @@ export default function DashboardView() {
         </div>
 
         {/* Tasks Card */}
-        <div className="bento-card bento-tasks glass">
+        <div className="bento-card bento-tasks glass" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
           <div className="bento-card-header">
-            <div className="bento-card-title"><ListChecks size={16} /> {t(messages, 'module.dashboard.open_tasks')}</div>
+            <h2 className="bento-card-title"><ListChecks size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.open_tasks')}</h2>
             <button className="bento-more" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.all')}</button>
           </div>
           <div className="task-preview-list">
@@ -122,12 +122,12 @@ export default function DashboardView() {
               return (
                 <div key={task.id} className="task-preview-item">
                   <div className="task-check">
-                    <CheckSquare size={12} style={{ opacity: 0 }} />
+                    <CheckSquare size={12} style={{ opacity: 0 }} aria-hidden="true" />
                   </div>
                   <div className="task-preview-info">
                     <div className="task-preview-title">{task.title}</div>
                   </div>
-                  <div className="task-priority-dot" style={{ background: priorityColor }} />
+                  <div className="task-priority-dot" style={{ background: priorityColor }} aria-hidden="true" />
                   {assignee && (
                     <div className="task-assignee-mini" style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
                       {(assignee.display_name || '?').charAt(0).toUpperCase()}
@@ -140,9 +140,9 @@ export default function DashboardView() {
         </div>
 
         {/* Birthdays Card */}
-        <div className="bento-card bento-birthdays glass glow-rose">
+        <div className="bento-card bento-birthdays glass glow-rose" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
           <div className="bento-card-header">
-            <div className="bento-card-title"><Cake size={16} /> {t(messages, 'upcoming_birthdays_4w')}</div>
+            <h2 className="bento-card-title"><Cake size={16} aria-hidden="true" /> {t(messages, 'upcoming_birthdays_4w')}</h2>
           </div>
           <div className="birthday-list">
             {summary.upcoming_birthdays?.length === 0 && (
@@ -157,7 +157,7 @@ export default function DashboardView() {
               const c = colors[i % colors.length];
               return (
                 <div key={i} className="birthday-item">
-                  <div className="birthday-avatar">🎂</div>
+                  <div className="birthday-avatar" aria-hidden="true">🎂</div>
                   <div className="birthday-info">
                     <div className="birthday-name">{b.person_name}</div>
                     <div className="birthday-date">{b.occurs_on}</div>

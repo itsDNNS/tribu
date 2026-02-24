@@ -36,75 +36,87 @@ export default function AuthPage() {
       <div className="auth-container">
         <div className="auth-brand">
           <div className="auth-logo">
-            <Users size={32} color="white" />
+            <Users size={32} color="white" aria-hidden="true" />
           </div>
           <h1>Tribu</h1>
           <p>{t(messages, 'tagline')}</p>
         </div>
 
         <div className="auth-card glass glow-purple">
-          <div className="auth-tabs">
+          <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
             <button
               className={`auth-tab${authMode === 'login' ? ' active' : ''}`}
               onClick={() => setAuthMode('login')}
+              role="tab"
+              id="tab-login"
+              aria-selected={authMode === 'login'}
+              aria-controls="panel-login"
             >
               {t(messages, 'auth_login')}
             </button>
             <button
               className={`auth-tab${authMode === 'register' ? ' active' : ''}`}
               onClick={() => setAuthMode('register')}
+              role="tab"
+              id="tab-register"
+              aria-selected={authMode === 'register'}
+              aria-controls="panel-register"
             >
               {t(messages, 'auth_register')}
             </button>
           </div>
 
           {authMode === 'login' ? (
-            <form onSubmit={login} className="auth-form">
-              <div className="form-field">
-                <label>{t(messages, 'email')}</label>
-                <input className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <div className="form-field">
-                <label>{t(messages, 'password')}</label>
-                <input className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
-              </div>
-              <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
-            </form>
+            <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
+              <form onSubmit={login} className="auth-form">
+                <div className="form-field">
+                  <label htmlFor="login-email">{t(messages, 'email')}</label>
+                  <input id="login-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="login-password">{t(messages, 'password')}</label>
+                  <input id="login-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
+                </div>
+                <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
+              </form>
+            </div>
           ) : (
-            <form onSubmit={register} className="auth-form">
-              <div className="form-field">
-                <label>{t(messages, 'email')}</label>
-                <input className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <div className="form-field">
-                <label>{t(messages, 'password')}</label>
-                <input className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
-                <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
-              </div>
-              <div className="form-field">
-                <label>{t(messages, 'your_name')}</label>
-                <input className="form-input" type="text" placeholder="Dennis" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
-              </div>
-              <div className="form-field">
-                <label>{t(messages, 'family_name')}</label>
-                <input className="form-input" type="text" placeholder="Müller Family" value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
-              </div>
-              <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
-            </form>
+            <div role="tabpanel" id="panel-register" aria-labelledby="tab-register">
+              <form onSubmit={register} className="auth-form">
+                <div className="form-field">
+                  <label htmlFor="register-email">{t(messages, 'email')}</label>
+                  <input id="register-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="register-password">{t(messages, 'password')}</label>
+                  <input id="register-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="register-name">{t(messages, 'your_name')}</label>
+                  <input id="register-name" className="form-input" type="text" placeholder="Dennis" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="register-family">{t(messages, 'family_name')}</label>
+                  <input id="register-family" className="form-input" type="text" placeholder="Müller Family" value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
+                </div>
+                <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
+              </form>
+            </div>
           )}
 
           <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
 
-          {msg && <p style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
+          {msg && <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
 
           <button className="btn-demo" type="button" onClick={enterDemo}>
-            <Play size={15} />
+            <Play size={15} aria-hidden="true" />
             {t(messages, 'demo_try')}
           </button>
         </div>
 
         <div className="auth-footer">
-          <ShieldCheck size={14} />
+          <ShieldCheck size={14} aria-hidden="true" />
           {t(messages, 'auth_footer')}
         </div>
       </div>

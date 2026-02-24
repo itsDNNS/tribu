@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
@@ -24,7 +24,7 @@ const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 
 
 function DashboardSkeleton() {
   return (
-    <div>
+    <div role="status" aria-label="Loading" aria-busy="true">
       <div className="view-header">
         <div>
           <div className="skeleton skeleton-text lg" />
@@ -71,6 +71,16 @@ export default function AppShell() {
     if (isMobile) setMobileOpen(false);
   }, [setActiveView, isMobile]);
 
+  // Escape key closes mobile sidebar
+  useEffect(() => {
+    if (!isMobile || !mobileOpen) return;
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setMobileOpen(false);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMobile, mobileOpen]);
+
   const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}${isMobile && mobileOpen ? ' mobile-open' : ''}`;
 
   return (
@@ -82,11 +92,11 @@ export default function AppShell() {
       )}
 
       {/* Sidebar */}
-      <aside className={sidebarClass}>
+      <aside className={sidebarClass} aria-label="Tribu">
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="sidebar-logo">
-              <Users size={20} color="white" />
+              <Users size={20} color="white" aria-hidden="true" />
             </div>
             {!collapsed && (
               <div className="sidebar-brand-text">
@@ -96,7 +106,12 @@ export default function AppShell() {
             )}
           </div>
           {!isMobile && (
-            <button className="sidebar-toggle" onClick={() => setCollapsed((c) => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
+            <button
+              className="sidebar-toggle"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? t(messages, 'aria.expand_sidebar') : t(messages, 'aria.collapse_sidebar')}
+              aria-expanded={!collapsed}
+            >
               {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
             </button>
           )}
@@ -113,19 +128,20 @@ export default function AppShell() {
                   </div>
                 ))}
               </div>
-              <ChevronDown size={16} style={{ color: 'var(--text-muted)', marginLeft: 4 }} />
+              <ChevronDown size={16} style={{ color: 'var(--text-muted)', marginLeft: 4 }} aria-hidden="true" />
             </div>
           )}
 
-          <nav className="nav-section">
+          <nav className="nav-section" aria-label={t(messages, 'aria.main_navigation')}>
             {navItems.map((item) => (
               <button
                 key={item.key}
                 className={`nav-item${activeView === item.key ? ' active' : ''}`}
                 onClick={() => navigate(item.key)}
                 data-tooltip={item.label}
+                aria-current={activeView === item.key ? 'page' : undefined}
               >
-                <span className="nav-icon"><item.icon size={20} /></span>
+                <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
                 {!collapsed && <span className="nav-label">{item.label}</span>}
                 {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
               </button>
@@ -139,8 +155,9 @@ export default function AppShell() {
                 className={`nav-item${activeView === item.key ? ' active' : ''}`}
                 onClick={() => navigate(item.key)}
                 data-tooltip={item.label}
+                aria-current={activeView === item.key ? 'page' : undefined}
               >
-                <span className="nav-icon"><item.icon size={20} /></span>
+                <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
                 {!collapsed && <span className="nav-label">{item.label}</span>}
               </button>
             ))}
@@ -158,7 +175,7 @@ export default function AppShell() {
                 <div className="sidebar-user-role">{isAdmin ? 'Admin' : t(messages, 'member')}</div>
               </div>
             )}
-            <button className="sidebar-logout" onClick={logout} title={t(messages, 'logout')}>
+            <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
               <LogOut size={18} />
             </button>
           </div>
@@ -167,15 +184,20 @@ export default function AppShell() {
 
       {/* Mobile backdrop */}
       {isMobile && mobileOpen && (
-        <div className="sidebar-backdrop active" onClick={() => setMobileOpen(false)} />
+        <div className="sidebar-backdrop active" onClick={() => setMobileOpen(false)} role="presentation" aria-hidden="true" />
       )}
 
       {/* Main */}
-      <main className="main-content" style={isMobile ? { marginLeft: 0, width: '100%' } : collapsed ? { marginLeft: 70, width: 'calc(100% - 70px)' } : undefined}>
+      <main id="main-content" className="main-content" style={isMobile ? { marginLeft: 0, width: '100%' } : collapsed ? { marginLeft: 70, width: 'calc(100% - 70px)' } : undefined}>
         {isMobile && (
           <div className="mobile-header" style={{ display: 'flex' }}>
             <div className="mobile-header-user">
-              <button className="mobile-hamburger" onClick={() => setMobileOpen(true)}>
+              <button
+                className="mobile-hamburger"
+                onClick={() => setMobileOpen(true)}
+                aria-label={t(messages, 'aria.open_menu')}
+                aria-expanded={mobileOpen}
+              >
                 <Menu size={22} />
               </button>
               <div className="mobile-header-text">
@@ -183,7 +205,7 @@ export default function AppShell() {
                 <span>{currentFamily?.family_name || ''}</span>
               </div>
             </div>
-            <button className="sidebar-logout" onClick={logout}>
+            <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
               <LogOut size={18} />
             </button>
           </div>
@@ -196,15 +218,16 @@ export default function AppShell() {
 
       {/* Mobile bottom nav */}
       {isMobile && (
-        <nav className="bottom-nav" style={{ display: 'block' }}>
+        <nav className="bottom-nav" style={{ display: 'block' }} aria-label={t(messages, 'aria.bottom_navigation')}>
           <div className="bottom-nav-inner">
             {[...navItems.filter((n) => n.mobileLabel), ...systemItems.filter((n) => n.mobileLabel)].map((item) => (
               <button
                 key={item.key}
                 className={`bottom-nav-item${activeView === item.key ? ' active' : ''}`}
                 onClick={() => navigate(item.key)}
+                aria-current={activeView === item.key ? 'page' : undefined}
               >
-                <item.icon size={22} />
+                <item.icon size={22} aria-hidden="true" />
                 {item.badge && <span className="bottom-nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>}
                 <span>{item.mobileLabel}</span>
               </button>
@@ -212,6 +235,9 @@ export default function AppShell() {
           </div>
         </nav>
       )}
+
+      {/* Live region for screen reader announcements */}
+      <div id="a11y-announcer" className="sr-only" aria-live="polite" aria-atomic="true" />
     </div>
   );
 }

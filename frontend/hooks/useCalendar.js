@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { errorText, toIsoOrNull } from '../lib/helpers';
+import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
 export function useCalendar() {
@@ -143,6 +144,7 @@ export function useCalendar() {
     setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
     setRecurrence(''); setRecurrenceEnd('');
     setCalendarMsg('Event created');
+    announce('Event created');
   }
 
   async function deleteEvent(ev) {
@@ -174,6 +176,7 @@ export function useCalendar() {
     }
     setDeleteConfirm(null);
     setCalendarMsg('Event deleted');
+    announce('Event deleted');
   }
 
   async function addBirthday(e) {

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { errorText, toIsoOrNull } from '../lib/helpers';
 import { t } from '../lib/i18n';
+import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
 export function useTasks() {
@@ -42,7 +43,9 @@ export function useTasks() {
       await loadTasks();
     }
     setTaskTitle(''); setTaskDesc(''); setTaskDueDate(''); setTaskPriority('normal'); setTaskRecurrence(''); setTaskAssignee('');
-    setTaskMsg(t(messages, 'module.tasks.created'));
+    const msg = t(messages, 'module.tasks.created');
+    setTaskMsg(msg);
+    announce(msg);
   }
 
   async function toggleTask(id, currentStatus) {

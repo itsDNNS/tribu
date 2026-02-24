@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Repeat, Trash2, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useCalendar } from '../hooks/useCalendar';
@@ -16,24 +17,40 @@ const RECURRENCE_OPTIONS = [
 ];
 
 function DeleteRecurringDialog({ event, messages, onDeleteThis, onDeleteAll, onCancel }) {
+  const firstBtnRef = useRef(null);
+
+  useEffect(() => {
+    firstBtnRef.current?.focus();
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') onCancel();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
-    }}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-recurring-title"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
+      }}
+    >
       <div className="glass" style={{
         padding: 'var(--space-xl)', maxWidth: 380, width: '90%',
         display: 'flex', flexDirection: 'column', gap: 'var(--space-md)',
       }}>
-        <div style={{ fontWeight: 600, fontSize: '1rem' }}>
+        <div id="delete-recurring-title" style={{ fontWeight: 600, fontSize: '1rem' }}>
           {t(messages, 'module.calendar.delete_recurring_question')}
         </div>
         <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
           {event.title}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button className="btn-sm" onClick={onDeleteThis} style={{ width: '100%' }}>
+          <button ref={firstBtnRef} className="btn-sm" onClick={onDeleteThis} style={{ width: '100%' }}>
             {t(messages, 'module.calendar.delete_this_only')}
           </button>
           <button className="btn-sm" onClick={onDeleteAll} style={{ width: '100%', background: 'var(--danger, #e53e3e)', color: '#fff' }}>
@@ -54,7 +71,7 @@ function EventCard({ ev, index, messages, onDelete }) {
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 500, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
           {ev.title}
-          {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+          {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />}
         </div>
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, messages)}</div>
       </div>
@@ -63,7 +80,7 @@ function EventCard({ ev, index, messages, onDelete }) {
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
-          title="Delete"
+          aria-label={t(messages, 'aria.delete_event').replace('{title}', ev.title)}
         >
           <Trash2 size={14} />
         </button>
@@ -100,7 +117,7 @@ export default function CalendarView() {
 
       <div className="view-header">
         <div>
-          <div className="view-title">{t(messages, 'calendar')}</div>
+          <h1 className="view-title">{t(messages, 'calendar')}</h1>
           <div className="view-subtitle">
             {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
           </div>
@@ -110,13 +127,21 @@ export default function CalendarView() {
       {cal.calendarView === 'month' && (
         <div className="calendar-controls">
           <div className="calendar-nav">
-            <button className="calendar-nav-btn" onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() - 1, 1)); cal.setSelectedDate(null); }}>
+            <button
+              className="calendar-nav-btn"
+              onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() - 1, 1)); cal.setSelectedDate(null); }}
+              aria-label={t(messages, 'aria.previous_month')}
+            >
               <ChevronLeft size={18} />
             </button>
-            <div className="calendar-month-label">
+            <div className="calendar-month-label" aria-live="polite">
               {cal.calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
             </div>
-            <button className="calendar-nav-btn" onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() + 1, 1)); cal.setSelectedDate(null); }}>
+            <button
+              className="calendar-nav-btn"
+              onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() + 1, 1)); cal.setSelectedDate(null); }}
+              aria-label={t(messages, 'aria.next_month')}
+            >
               <ChevronRight size={18} />
             </button>
           </div>
@@ -159,11 +184,20 @@ export default function CalendarView() {
                 if (isTodayCell) cls.push('today');
                 if (isSelectedDay) cls.push('selected');
 
+                const dayDate = !c.empty
+                  ? new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth(), c.day)
+                  : null;
+                const dayLabel = dayDate
+                  ? dayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' }) + (c.count > 0 ? `, ${t(messages, 'aria.events').replace('{count}', c.count)}` : '')
+                  : undefined;
+
                 return (
                   <button
                     key={idx}
                     type="button"
                     className={cls.join(' ')}
+                    tabIndex={c.empty ? -1 : 0}
+                    aria-label={dayLabel}
                     onClick={() => {
                       if (c.empty) return;
                       const picked = new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth(), c.day);
@@ -180,7 +214,7 @@ export default function CalendarView() {
                       <>
                         <span className="calendar-day-num">{c.day}</span>
                         {c.count > 0 && (
-                          <div className="calendar-day-dots">
+                          <div className="calendar-day-dots" aria-hidden="true">
                             {Array.from({ length: Math.min(c.count, 3) }).map((_, di) => (
                               <div key={di} className="calendar-day-dot" style={{ background: MEMBER_COLORS[di % MEMBER_COLORS.length] }} />
                             ))}
@@ -209,7 +243,7 @@ export default function CalendarView() {
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_day')}</div>
                 )}
                 {cal.selectedDayEvents.map((ev, i) => (
-                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={lang} onDelete={cal.deleteEvent} />
+                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={cal.deleteEvent} />
                 ))}
               </div>
 
@@ -247,7 +281,7 @@ export default function CalendarView() {
               <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_week')}</div>
             )}
             {cal.weekInfo.weekEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={lang} onDelete={cal.deleteEvent} />
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={cal.deleteEvent} />
             ))}
           </div>
         </div>
@@ -267,7 +301,7 @@ export default function CalendarView() {
               <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events')}</div>
             )}
             {cal.selectedDayEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={lang} onDelete={cal.deleteEvent} />
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={cal.deleteEvent} />
             ))}
           </div>
           <form onSubmit={cal.createEvent} className="quick-add-form">

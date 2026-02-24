@@ -113,8 +113,8 @@ describe('TasksView', () => {
   });
 
   it('renders delete buttons', () => {
-    render(<TasksView />);
-    const deleteButtons = screen.getAllByTitle('Delete');
+    const { container } = render(<TasksView />);
+    const deleteButtons = container.querySelectorAll('.sidebar-logout');
     expect(deleteButtons).toHaveLength(2);
     fireEvent.click(deleteButtons[0]);
     expect(mockDeleteTask).toHaveBeenCalledWith(1);

@@ -122,7 +122,7 @@ export default function SettingsView() {
     <div>
       <div className="view-header">
         <div>
-          <div className="view-title">{t(messages, 'settings')}</div>
+          <h1 className="view-title">{t(messages, 'settings')}</h1>
           <div className="view-subtitle">{t(messages, 'settings_subtitle')}</div>
         </div>
       </div>
