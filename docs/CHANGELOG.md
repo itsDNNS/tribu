@@ -2,6 +2,18 @@
 
 All notable changes to Tribu are documented here.
 
+## 2026-02-24 (late)
+
+### Added
+
+- **Admin member creation**: Admins can create family members directly from the Admin view with a generated temporary password. New members must change their password on first login (`must_change_password` flag). Includes `ForcePasswordChange` overlay component, `PATCH /auth/me/password` endpoint, and `POST /families/{id}/members` endpoint.
+- **Alembic migration 0009**: `must_change_password` boolean column on users table.
+
+### Changed
+
+- **Stack upgrades** (#23-#29): Replaced passlib with bcrypt (legacy PBKDF2-SHA256 hashes auto-migrated on login). Replaced python-jose with PyJWT. Upgraded Node.js 20 to 22 (Dockerfile), Python 3.12 to 3.13 (Dockerfile), Next.js 14 to 16 (Turbopack now default), React 18 to 19.2, Redis 7 to Valkey 8. All backend dependencies bumped to latest.
+- **Architecture docs**: Updated tech stack versions, security details, migration list, API endpoints, and deployment table across README, ARCHITECTURE.md, Wiki, CHANGELOG, and ROADMAP.
+
 ## 2026-02-24
 
 ### Added
