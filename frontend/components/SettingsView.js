@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp } from 'lucide-react';
-import { useApp } from '../contexts/AppContext';
+import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp, Navigation, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart } from 'lucide-react';
+import { useApp, DEFAULT_NAV_ORDER } from '../contexts/AppContext';
 import { downloadBlob } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
@@ -24,8 +24,19 @@ const SCOPE_MODULES = [
   { key: 'profile', label: 'Profile' },
 ];
 
+const NAV_ITEM_META = {
+  dashboard: { icon: LayoutDashboard, labelKey: 'dashboard' },
+  calendar: { icon: CalendarDays, labelKey: 'calendar' },
+  shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
+  tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
+  contacts: { icon: BookUser, labelKey: 'contacts' },
+  notifications: { icon: Bell, labelKey: 'notifications' },
+  settings: { icon: Settings, labelKey: 'settings' },
+  admin: { icon: Shield, labelKey: 'admin' },
+};
+
 export default function SettingsView() {
-  const { theme, setTheme, lang, setLang, availableThemes, messages, me, isAdmin, loggedIn, demoMode, setProfileImage, familyId, loadContacts, loadDashboard } = useApp();
+  const { theme, setTheme, lang, setLang, availableThemes, messages, me, isAdmin, loggedIn, demoMode, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
 
   // Notification preferences state
   const [notifPrefs, setNotifPrefs] = useState({ reminders_enabled: true, reminder_minutes: 30, quiet_start: '', quiet_end: '' });
@@ -41,6 +52,39 @@ export default function SettingsView() {
   const [newExpiry, setNewExpiry] = useState('');
   const [createdToken, setCreatedToken] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // Nav order state
+  const [localNavOrder, setLocalNavOrder] = useState(navOrder);
+  const [navSaved, setNavSaved] = useState(false);
+
+  useEffect(() => { setLocalNavOrder(navOrder); }, [navOrder]);
+
+  function moveNavItem(index, direction) {
+    const newOrder = [...localNavOrder];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+    setLocalNavOrder(newOrder);
+  }
+
+  async function handleSaveNavOrder() {
+    if (demoMode) {
+      setNavOrder(localNavOrder);
+    } else {
+      const res = await api.apiUpdateNavOrder(localNavOrder);
+      if (!res.ok) return;
+      setNavOrder(localNavOrder);
+    }
+    setNavSaved(true);
+    setTimeout(() => setNavSaved(false), 2000);
+  }
+
+  function handleResetNavOrder() {
+    setLocalNavOrder(DEFAULT_NAV_ORDER);
+    if (demoMode) {
+      setNavOrder(DEFAULT_NAV_ORDER);
+    }
+  }
 
   // Data management state
   const [showCalImport, setShowCalImport] = useState(false);
@@ -278,6 +322,70 @@ export default function SettingsView() {
           <div className="lang-toggle">
             <button className={`lang-btn${lang === 'de' ? ' active' : ''}`} onClick={() => setLang('de')}>Deutsch</button>
             <button className={`lang-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')}>English</button>
+          </div>
+        </div>
+
+        {/* Navigation Order Section */}
+        <div className="settings-section glass">
+          <div className="settings-section-title"><Navigation size={16} /> {t(messages, 'nav_order_title')}</div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
+            {t(messages, 'nav_order_desc')}
+          </p>
+          <div style={{ display: 'grid', gap: '2px' }}>
+            {localNavOrder.map((key, i) => {
+              const meta = NAV_ITEM_META[key];
+              if (!meta) return null;
+              if (key === 'admin' && !isAdmin) return null;
+              const Icon = meta.icon;
+              const isVisible = i < 5;
+              return (
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    borderLeft: `3px solid ${isVisible ? 'var(--amethyst)' : 'transparent'}`,
+                    background: isVisible ? 'rgba(124, 58, 237, 0.04)' : 'transparent',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Icon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />
+                  <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>{t(messages, meta.labelKey)}</span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
+                    {isVisible ? t(messages, 'nav_visible') : t(messages, 'nav_overflow')}
+                  </span>
+                  <button
+                    className="btn-ghost"
+                    style={{ padding: '4px 6px', minHeight: 32, border: 'none', background: 'none' }}
+                    onClick={() => moveNavItem(i, -1)}
+                    disabled={i === 0}
+                    aria-label={`Move ${t(messages, meta.labelKey)} up`}
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    style={{ padding: '4px 6px', minHeight: 32, border: 'none', background: 'none' }}
+                    onClick={() => moveNavItem(i, 1)}
+                    disabled={i === localNavOrder.length - 1}
+                    aria-label={`Move ${t(messages, meta.labelKey)} down`}
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+            <button className="btn-sm" onClick={handleSaveNavOrder}>
+              {navSaved ? <><Check size={14} /> {t(messages, 'nav_saved')}</> : t(messages, 'nav_save')}
+            </button>
+            <button className="btn-ghost" onClick={handleResetNavOrder}>
+              {t(messages, 'nav_reset')}
+            </button>
           </div>
         </div>
 

@@ -24,6 +24,7 @@ from app.modules.shopping_router import router as shopping_router
 from app.modules.tokens_router import router as tokens_router
 from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATABASE_URL as BACKUP_DB_URL
 from app.modules.notifications_router import router as notifications_router
+from app.modules.nav_router import router as nav_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.schemas import LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
@@ -136,6 +137,7 @@ app.include_router(shopping_router)
 app.include_router(tokens_router)
 app.include_router(backup_router)
 app.include_router(notifications_router)
+app.include_router(nav_router)
 
 
 @app.on_event("startup")

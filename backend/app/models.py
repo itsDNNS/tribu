@@ -188,6 +188,13 @@ class NotificationSentLog(Base):
     sent_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
+class UserNavOrder(Base):
+    __tablename__ = "user_nav_order"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    nav_order = Column(JSON, nullable=False, default=["dashboard", "calendar", "shopping", "tasks", "contacts", "notifications", "settings"])
+
+
 class SystemSetting(Base):
     __tablename__ = "system_settings"
 

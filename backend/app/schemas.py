@@ -337,3 +337,12 @@ class NotificationPreferenceUpdate(BaseModel):
     reminder_minutes: Optional[int] = None
     quiet_start: Optional[str] = None
     quiet_end: Optional[str] = None
+
+
+# Nav Order
+class NavOrderResponse(BaseModel):
+    nav_order: list[str]
+
+
+class NavOrderUpdate(BaseModel):
+    nav_order: list[str] = Field(min_length=1, max_length=10)
