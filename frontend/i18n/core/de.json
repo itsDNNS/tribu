@@ -63,6 +63,8 @@
   "profile": "Profil",
   "settings_subtitle": "Profil, Theme und Sprache",
   "privacy": "Datenschutz",
+  "data_management": "Daten",
+  "data_management_desc": "Kalender und Kontakte importieren oder exportieren.",
   "admin_demoted": "Rolle auf Mitglied geändert (nur Erwachsene können Admin sein)",
   "password_hint": "Mind. 8 Zeichen, 1 Großbuchstabe, 1 Zahl",
   "api_tokens": "API Tokens",

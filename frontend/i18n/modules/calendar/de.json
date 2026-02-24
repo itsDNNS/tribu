@@ -32,5 +32,6 @@
   "module.calendar.import_submit": "ICS importieren",
   "module.calendar.import_success": "{count} Termine importiert",
   "module.calendar.import_error": "Import fehlgeschlagen",
-  "module.calendar.import_warnings": "Hinweise"
+  "module.calendar.import_warnings": "Hinweise",
+  "module.calendar.import_cta": "Noch keine Termine? ICS in den Einstellungen importieren."
 }
