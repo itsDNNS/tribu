@@ -182,6 +182,9 @@
   "audit_action_member_created": "Member created",
   "audit_action_password_reset": "Password reset",
   "audit_action_role_changed": "Role changed",
+  "audit_action_member_removed": "Member removed",
   "audit_action_adult_changed": "Adult status changed",
-  "audit_by": "by"
+  "audit_by": "by",
+  "remove_member": "Remove",
+  "remove_member_confirm": "Really remove this member from the family?"
 }

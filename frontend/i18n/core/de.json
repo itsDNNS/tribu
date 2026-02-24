@@ -182,6 +182,9 @@
   "audit_action_member_created": "Mitglied erstellt",
   "audit_action_password_reset": "Passwort zurückgesetzt",
   "audit_action_role_changed": "Rolle geändert",
+  "audit_action_member_removed": "Mitglied entfernt",
   "audit_action_adult_changed": "Erwachsenen-Status geändert",
-  "audit_by": "von"
+  "audit_by": "von",
+  "remove_member": "Entfernen",
+  "remove_member_confirm": "Dieses Mitglied wirklich aus der Familie entfernen?"
 }

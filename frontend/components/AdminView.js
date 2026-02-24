@@ -7,6 +7,7 @@ import * as api from '../lib/api';
 
 const ACTION_KEYS = {
   member_created: 'audit_action_member_created',
+  member_removed: 'audit_action_member_removed',
   password_reset: 'audit_action_password_reset',
   role_changed: 'audit_action_role_changed',
   adult_changed: 'audit_action_adult_changed',
@@ -276,6 +277,17 @@ export default function AdminView() {
   const [copied, setCopied] = useState(false);
   const [creating, setCreating] = useState('');
 
+  async function handleRemoveMember(userId) {
+    if (!confirm(t(messages, 'remove_member_confirm'))) return;
+    setAdminMsg('');
+    const { ok, data } = await api.apiRemoveMember(familyId, userId);
+    if (!ok) {
+      setAdminMsg(errorText(data?.detail, 'Failed to remove member'));
+      return;
+    }
+    await loadMembers();
+  }
+
   async function handleSetAdult(userId, isAdult) {
     const { ok, data } = await api.apiSetAdult(familyId, userId, isAdult);
     if (!ok) {
@@ -402,6 +414,7 @@ export default function AdminView() {
                   <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
                   <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
                   <button className="btn-ghost" onClick={() => handleResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>
+                  <button className="btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => handleRemoveMember(m.user_id)}><X size={13} /> {t(messages, 'remove_member')}</button>
                 </>
               )}
             </div>
