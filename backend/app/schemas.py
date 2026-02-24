@@ -3,6 +3,8 @@ from typing import Optional
 
 import re
 
+from enum import Enum
+
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
 
@@ -278,3 +280,31 @@ class ShoppingItemResponse(BaseModel):
     checked_at: Optional[datetime]
     added_by_user_id: Optional[int]
     created_at: datetime
+
+
+# Backup
+class BackupSchedule(str, Enum):
+    off = "off"
+    daily = "daily"
+    weekly = "weekly"
+    monthly = "monthly"
+
+
+class BackupConfigResponse(BaseModel):
+    schedule: BackupSchedule = BackupSchedule.off
+    retention: int = 7
+    last_backup: Optional[datetime] = None
+    last_backup_status: Optional[str] = None
+
+
+class BackupConfigUpdate(BaseModel):
+    schedule: BackupSchedule
+    retention: int = Field(ge=1, le=100, default=7)
+
+
+class BackupEntry(BaseModel):
+    filename: str
+    size_bytes: int
+    created_at: datetime
+    alembic_revision: Optional[str] = None
+    pg_version: Optional[str] = None

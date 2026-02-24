@@ -152,3 +152,11 @@ class ShoppingItem(Base):
     position = Column(Integer, nullable=False, default=0)
 
     shopping_list = relationship("ShoppingList", back_populates="items")
+
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(Text, nullable=False)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())

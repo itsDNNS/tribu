@@ -187,3 +187,32 @@ export function apiCreateToken(payload) {
 export function apiRevokeToken(tokenId) {
   return del(`/tokens/${tokenId}`);
 }
+
+// Backup
+export function apiGetBackupConfig() {
+  return request('/admin/backup/config');
+}
+
+export function apiUpdateBackupConfig(config) {
+  return request('/admin/backup/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+}
+
+export function apiTriggerBackup() {
+  return post('/admin/backup/trigger');
+}
+
+export function apiGetBackups() {
+  return request('/admin/backup/list');
+}
+
+export async function apiDownloadBackup(filename) {
+  return fetch(`${API}/admin/backup/${encodeURIComponent(filename)}/download`, { credentials: 'include' });
+}
+
+export function apiDeleteBackup(filename) {
+  return del(`/admin/backup/${encodeURIComponent(filename)}`);
+}

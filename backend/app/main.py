@@ -12,8 +12,8 @@ import os
 
 from app.core.deps import current_user
 from app.core.scopes import require_scope
-from app.database import get_db
-from app.models import Family, Membership, User
+from app.database import get_db, SessionLocal
+from app.models import Family, Membership, SystemSetting, User
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
@@ -22,6 +22,8 @@ from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
 from app.modules.shopping_router import router as shopping_router
 from app.modules.tokens_router import router as tokens_router
+from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATABASE_URL as BACKUP_DB_URL
+from app.core.scheduler import configure_backup_schedule, start_scheduler, shutdown_scheduler
 from app.schemas import LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 
@@ -131,6 +133,27 @@ app.include_router(contacts_router)
 app.include_router(tasks_router)
 app.include_router(shopping_router)
 app.include_router(tokens_router)
+app.include_router(backup_router)
+
+
+@app.on_event("startup")
+def startup_scheduler():
+    db = SessionLocal()
+    try:
+        schedule_row = db.query(SystemSetting).filter(SystemSetting.key == "backup_schedule").first()
+        retention_row = db.query(SystemSetting).filter(SystemSetting.key == "backup_retention").first()
+        schedule = schedule_row.value if schedule_row else "off"
+        retention = int(retention_row.value) if retention_row else 7
+        start_scheduler()
+        if schedule != "off":
+            configure_backup_schedule(schedule, BACKUP_DB_URL, BACKUP_DIR, retention)
+    finally:
+        db.close()
+
+
+@app.on_event("shutdown")
+def shutdown_app_scheduler():
+    shutdown_scheduler()
 
 
 @app.get("/")

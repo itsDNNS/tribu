@@ -10,3 +10,4 @@ slowapi==0.1.9
 python-dateutil==2.9.0
 icalendar==6.1.0
 alembic==1.14.1
+apscheduler==3.11.0
