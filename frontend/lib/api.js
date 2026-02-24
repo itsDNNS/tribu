@@ -73,6 +73,10 @@ export function apiCreateMember(familyId, payload) {
   return post(`/families/${familyId}/members`, payload);
 }
 
+export function apiResetMemberPassword(familyId, userId) {
+  return post(`/families/${familyId}/members/${userId}/reset-password`);
+}
+
 // Dashboard
 export function apiGetDashboard(familyId) {
   return request(`/dashboard/summary?family_id=${familyId}`);

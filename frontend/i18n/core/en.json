@@ -173,5 +173,7 @@
   "old_password": "Current password",
   "new_password": "New password",
   "change_password": "Change password",
-  "password_changed": "Password changed successfully"
+  "password_changed": "Password changed successfully",
+  "reset_password": "Reset password",
+  "password_was_reset": "Password was reset"
 }

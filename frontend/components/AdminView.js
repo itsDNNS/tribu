@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Check, Copy, X } from 'lucide-react';
+import { Plus, Check, Copy, X, KeyRound } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -190,6 +190,7 @@ export default function AdminView() {
   const [newRole, setNewRole] = useState('member');
   const [newIsAdult, setNewIsAdult] = useState(false);
   const [createdPassword, setCreatedPassword] = useState(null);
+  const [passwordBannerType, setPasswordBannerType] = useState('created');
   const [copied, setCopied] = useState(false);
   const [creating, setCreating] = useState('');
 
@@ -231,6 +232,7 @@ export default function AdminView() {
       return;
     }
     setCreatedPassword(data.temporary_password);
+    setPasswordBannerType('created');
     setShowAddMember(false);
     setNewEmail('');
     setNewName('');
@@ -238,6 +240,17 @@ export default function AdminView() {
     setNewIsAdult(false);
     setCreating('');
     await loadMembers();
+  }
+
+  async function handleResetPassword(userId) {
+    setAdminMsg('');
+    const { ok, data } = await api.apiResetMemberPassword(familyId, userId);
+    if (!ok) {
+      setAdminMsg(errorText(data?.detail, 'Failed to reset password'));
+      return;
+    }
+    setCreatedPassword(data.temporary_password);
+    setPasswordBannerType('reset');
   }
 
   function handleCopyPassword() {
@@ -267,7 +280,7 @@ export default function AdminView() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
             <Check size={16} style={{ color: 'var(--success)' }} />
-            <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{t(messages, 'member_created')}</span>
+            <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{t(messages, passwordBannerType === 'reset' ? 'password_was_reset' : 'member_created')}</span>
           </div>
           <p style={{ color: 'var(--warning)', fontSize: '0.82rem', marginBottom: 'var(--space-sm)' }}>
             {t(messages, 'member_created_warning')}
@@ -306,6 +319,7 @@ export default function AdminView() {
                   <button className="btn-ghost" onClick={() => handleSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
                   <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
                   <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
+                  <button className="btn-ghost" onClick={() => handleResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>
                 </>
               )}
             </div>
