@@ -2,14 +2,16 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership, to_utc_naive
+from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, User
-from app.schemas import CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, PaginatedCalendarEvents
+from app.schemas import CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, PaginatedCalendarEvents
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
@@ -71,6 +73,43 @@ def list_calendar_events(
     total = base.count()
     items = base.order_by(CalendarEvent.starts_at.asc()).offset(offset).limit(limit).all()
     return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
+
+
+@router.get("/events/export.ics")
+def export_calendar_ics(
+    family_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("calendar:read"),
+):
+    ensure_family_membership(db, user.id, family_id)
+    events = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).all()
+    ics_text = events_to_ics(events)
+    return Response(
+        content=ics_text,
+        media_type="text/calendar",
+        headers={"Content-Disposition": "attachment; filename=tribu-calendar.ics"},
+    )
+
+
+@router.post("/events/import-ics")
+def import_calendar_ics(
+    payload: CalendarIcsImport,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
+):
+    ensure_family_membership(db, user.id, payload.family_id)
+    valid_events, errors = ics_to_event_dicts(payload.ics_text, payload.family_id, user.id)
+
+    MAX_EVENTS = 500
+    created = 0
+    for event_dict in valid_events[:MAX_EVENTS]:
+        db.add(CalendarEvent(**event_dict))
+        created += 1
+
+    db.commit()
+    return {"status": "ok", "created": created, "errors": errors}
 
 
 @router.post("/events", response_model=CalendarEventResponse)

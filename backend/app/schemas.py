@@ -160,6 +160,11 @@ class ContactsCsvImport(BaseModel):
     csv_text: str
 
 
+class CalendarIcsImport(BaseModel):
+    family_id: int
+    ics_text: str
+
+
 class TaskCreate(BaseModel):
     family_id: int
     title: str = Field(min_length=1, max_length=200)

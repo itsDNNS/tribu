@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Repeat, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Download, Plus, Repeat, Trash2, Upload, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useCalendar } from '../hooks/useCalendar';
-import { prettyDate } from '../lib/helpers';
+import { downloadBlob, prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
+import * as api from '../lib/api';
 
 const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
 
@@ -90,10 +91,15 @@ function EventCard({ ev, index, messages, onDelete }) {
 }
 
 export default function CalendarView() {
-  const { familyId, families, messages, isMobile, lang, switchFamily, loadEvents, loadDashboard } = useApp();
+  const { familyId, families, messages, isMobile, lang, demoMode, switchFamily, loadEvents, loadDashboard } = useApp();
   const cal = useCalendar();
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const weekdays = t(messages, 'module.calendar.weekdays').split(',');
+
+  const [showImport, setShowImport] = useState(false);
+  const [icsText, setIcsText] = useState('');
+  const [importMsg, setImportMsg] = useState('');
+  const [importErrors, setImportErrors] = useState([]);
 
   const today = new Date();
   const isToday = (day) => {
@@ -101,6 +107,37 @@ export default function CalendarView() {
       && cal.calendarMonth.getMonth() === today.getMonth()
       && cal.calendarMonth.getFullYear() === today.getFullYear();
   };
+
+  async function handleExportIcs() {
+    try {
+      const res = await api.apiExportCalendarIcs(familyId);
+      if (!res.ok) return cal.setCalendarMsg(t(messages, 'module.calendar.export_error') || 'Export failed');
+      const blob = await res.blob();
+      downloadBlob(blob, 'tribu-calendar.ics');
+    } catch {
+      cal.setCalendarMsg(t(messages, 'module.calendar.export_error') || 'Export failed');
+    }
+  }
+
+  async function handleImportIcs(e) {
+    e.preventDefault();
+    setImportMsg('');
+    setImportErrors([]);
+    const { ok, data } = await api.apiImportCalendarIcs(Number(familyId), icsText);
+    if (!ok) return setImportMsg(t(messages, 'module.calendar.import_error') || 'Import failed');
+    setImportMsg(t(messages, 'module.calendar.import_success').replace('{count}', data.created));
+    if (data.errors?.length) setImportErrors(data.errors);
+    setIcsText('');
+    await cal.loadEventsForRange();
+  }
+
+  function handleIcsFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setIcsText(ev.target.result);
+    reader.readAsText(file);
+  }
 
   return (
     <div>
@@ -122,7 +159,52 @@ export default function CalendarView() {
             {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
           </div>
         </div>
+        {!demoMode && (
+          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            <button className="btn-ghost" onClick={handleExportIcs}>
+              <Download size={15} /> {t(messages, 'module.calendar.export')}
+            </button>
+            <button className="btn-ghost" onClick={() => setShowImport(!showImport)}>
+              {showImport ? <X size={15} /> : <Upload size={15} />}
+              {showImport ? t(messages, 'module.calendar.close_import') : t(messages, 'module.calendar.import')}
+            </button>
+          </div>
+        )}
       </div>
+
+      {showImport && (
+        <div className="glass" style={{ padding: 'var(--space-lg)', marginBottom: 'var(--space-md)' }}>
+          {importMsg && (
+            <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: importErrors.length === 0 && importMsg.includes(t(messages, 'module.calendar.import_success').split('{')[0]) ? 'var(--success)' : 'var(--danger)' }}>
+              {importMsg}
+            </p>
+          )}
+          {importErrors.length > 0 && (
+            <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.82rem', color: 'var(--warning, #f6ad55)' }}>
+              <strong>{t(messages, 'module.calendar.import_warnings')}:</strong>
+              <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                {importErrors.map((err, i) => (
+                  <li key={i}>#{err.index} {err.summary ? `"${err.summary}"` : ''}: {err.error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <form onSubmit={handleImportIcs} className="quick-add-form">
+            <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t(messages, 'module.calendar.import_hint')}</label>
+            <input type="file" accept=".ics" onChange={handleIcsFile} className="form-input" style={{ padding: '10px 12px' }} />
+            <textarea
+              className="form-input"
+              style={{ minHeight: 100 }}
+              value={icsText}
+              onChange={(e) => setIcsText(e.target.value)}
+              placeholder={t(messages, 'module.calendar.import_placeholder')}
+            />
+            <button className="btn-primary" type="submit" disabled={!icsText.trim()}>
+              {t(messages, 'module.calendar.import_submit')}
+            </button>
+          </form>
+        </div>
+      )}
 
       {cal.calendarView === 'month' && (
         <div className="calendar-controls">

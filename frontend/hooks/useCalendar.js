@@ -226,6 +226,6 @@ export function useCalendar() {
     birthdayMonth, setBirthdayMonth,
     birthdayDay, setBirthdayDay,
     monthLabel, selectedDayEvents, monthCells, weekInfo,
-    createEvent, deleteEvent, performDelete, addBirthday,
+    createEvent, deleteEvent, performDelete, addBirthday, loadEventsForRange,
   };
 }

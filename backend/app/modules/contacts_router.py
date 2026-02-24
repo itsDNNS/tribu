@@ -2,6 +2,7 @@ import csv
 import io
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership
@@ -63,6 +64,29 @@ def create_contact(
     return contact
 
 
+@router.get("/export.csv")
+def export_contacts_csv(
+    family_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("contacts:read"),
+):
+    ensure_family_membership(db, user.id, family_id)
+    contacts = db.query(Contact).filter(Contact.family_id == family_id).order_by(Contact.full_name.asc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["full_name", "email", "phone", "birthday_month", "birthday_day"])
+    for c in contacts:
+        writer.writerow([c.full_name, c.email or "", c.phone or "", c.birthday_month or "", c.birthday_day or ""])
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=tribu-contacts.csv"},
+    )
+
+
 @router.post("/import-csv")
 def import_contacts_csv(
     payload: ContactsCsvImport,
@@ -80,30 +104,45 @@ def import_contacts_csv(
     MAX_ROWS = 500
     created = 0
     skipped = 0
+    row_errors = []
+    row_num = 1
     for row in reader:
+        row_num += 1
         if created + skipped >= MAX_ROWS:
             break
         name = (row.get("full_name") or "").strip()
+        errors_for_row = []
+
         if not name:
             skipped += 1
+            row_errors.append({"row": row_num, "name": name or "(empty)", "errors": ["Missing full_name"]})
             continue
 
         try:
             month = int(row["birthday_month"]) if row.get("birthday_month") else None
         except (ValueError, TypeError):
             month = None
+            errors_for_row.append(f"Invalid birthday_month: {row.get('birthday_month')}")
         try:
             day = int(row["birthday_day"]) if row.get("birthday_day") else None
         except (ValueError, TypeError):
             day = None
+            errors_for_row.append(f"Invalid birthday_day: {row.get('birthday_day')}")
 
         if month is not None and not (1 <= month <= 12):
+            errors_for_row.append(f"birthday_month out of range: {month}")
             month = None
         if day is not None and not (1 <= day <= 31):
+            errors_for_row.append(f"birthday_day out of range: {day}")
             day = None
 
         email_raw = (row.get("email") or "").strip()
+        if email_raw and "@" not in email_raw:
+            errors_for_row.append(f"Invalid email: {email_raw}")
         email = email_raw if "@" in email_raw else None
+
+        if errors_for_row:
+            row_errors.append({"row": row_num, "name": name, "errors": errors_for_row})
 
         contact = Contact(
             family_id=payload.family_id,
@@ -118,4 +157,4 @@ def import_contacts_csv(
         created += 1
 
     db.commit()
-    return {"status": "ok", "created": created, "skipped": skipped}
+    return {"status": "ok", "created": created, "skipped": skipped, "row_errors": row_errors}

@@ -3,6 +3,7 @@ import {
   apiGetMyFamilies, apiGetMembers, apiSetAdult, apiSetRole,
   apiGetDashboard, apiGetEvents, apiCreateEvent, apiAddBirthday,
   apiGetContacts, apiImportContactsCsv,
+  apiExportCalendarIcs, apiImportCalendarIcs, apiExportContactsCsv,
   apiGetTasks, apiCreateTask, apiUpdateTask, apiDeleteTask,
 } from '../../lib/api';
 
@@ -121,6 +122,32 @@ describe('Contacts API', () => {
     await apiImportContactsCsv(1, 'Name,Email\nMax,max@test.de');
     const [, opts] = lastCall();
     expect(JSON.parse(opts.body)).toMatchObject({ family_id: 1 });
+  });
+});
+
+describe('Calendar ICS Import/Export API', () => {
+  it('apiExportCalendarIcs fetches GET with family_id', async () => {
+    await apiExportCalendarIcs('3');
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/calendar/events/export.ics?family_id=3');
+    expect(opts?.method).toBeUndefined(); // GET is default
+  });
+
+  it('apiImportCalendarIcs sends POST with ics_text', async () => {
+    await apiImportCalendarIcs(1, 'BEGIN:VCALENDAR...');
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/calendar/events/import-ics');
+    expect(opts.method).toBe('POST');
+    expect(JSON.parse(opts.body)).toEqual({ family_id: 1, ics_text: 'BEGIN:VCALENDAR...' });
+  });
+});
+
+describe('Contacts CSV Export API', () => {
+  it('apiExportContactsCsv fetches GET with family_id', async () => {
+    await apiExportContactsCsv('4');
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/contacts/export.csv?family_id=4');
+    expect(opts?.method).toBeUndefined();
   });
 });
 

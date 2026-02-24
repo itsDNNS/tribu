@@ -4,5 +4,9 @@
   "module.contacts.import_error": "Kontakte konnten nicht importiert werden",
   "module.contacts.import_success": "Kontakte importiert:",
   "module.contacts.close": "Schließen",
-  "module.contacts.import": "Importieren"
+  "module.contacts.import": "Importieren",
+  "module.contacts.export": "Exportieren",
+  "module.contacts.export_error": "Export fehlgeschlagen",
+  "module.contacts.import_warnings": "Hinweise",
+  "module.contacts.row": "Zeile"
 }
