@@ -183,9 +183,6 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!loggedIn || demoMode) return;
 
-    let eventSource = null;
-    let pollInterval = null;
-
     (async () => {
       setLoading(true);
       const { ok: meOk, data: meData } = await api.apiGetMe();
@@ -203,43 +200,33 @@ export function AppProvider({ children }) {
         await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid)]);
       }
 
-      // Load notifications
-      await loadNotifications();
-
-      // Start SSE for real-time notifications
-      try {
-        eventSource = api.connectNotificationStream((notif) => {
-          setNotifications((prev) => [notif, ...prev]);
-          if (!notif.read) setUnreadCount((c) => c + 1);
-        });
-        eventSource.onerror = () => {
-          // Fallback to polling on SSE failure
-          eventSource.close();
-          eventSource = null;
-          if (!pollInterval) {
-            pollInterval = setInterval(async () => {
-              const { ok, data } = await api.apiGetUnreadCount();
-              if (ok) setUnreadCount(data.count);
-            }, 30000);
-          }
-        };
-      } catch {
-        // SSE not supported, use polling
-        pollInterval = setInterval(async () => {
-          const { ok, data } = await api.apiGetUnreadCount();
-          if (ok) setUnreadCount(data.count);
-        }, 30000);
-      }
-
       setLoading(false);
     })();
-
-    return () => {
-      if (eventSource) eventSource.close();
-      if (pollInterval) clearInterval(pollInterval);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
+
+  // Notification polling — separate effect to avoid race conditions with bootstrap
+  useEffect(() => {
+    if (!loggedIn || demoMode) return;
+
+    let cancelled = false;
+    let pollInterval = null;
+
+    (async () => {
+      const { ok, data } = await api.apiGetUnreadCount();
+      if (!cancelled && ok) setUnreadCount(data.count);
+    })();
+
+    pollInterval = setInterval(async () => {
+      const { ok, data } = await api.apiGetUnreadCount();
+      if (!cancelled && ok) setUnreadCount(data.count);
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+    };
+  }, [loggedIn, demoMode]);
 
   const value = {
     loading,

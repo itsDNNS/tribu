@@ -162,6 +162,7 @@ export default function AppShell() {
               >
                 <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
                 {!collapsed && <span className="nav-label">{item.label}</span>}
+                {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
               </button>
             ))}
           </nav>
