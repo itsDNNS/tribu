@@ -10,13 +10,18 @@ All notable changes to Tribu are documented here.
 - **PWA foundation**: Web App Manifest (`manifest.json`), Service Worker with network-first strategy for HTML and cache-first for hashed static assets, app icons (192/512/maskable). iOS standalone mode meta tags. Installable as home screen app.
 - **Alembic migration 0007**: `notifications`, `notification_preferences`, and `notification_sent_log` tables with indexes.
 
+### Infrastructure
+
+- **Multi-arch Docker images (#16)**: GitHub Actions workflow (`.github/workflows/docker.yml`) builds `linux/amd64` and `linux/arm64` images for both backend and frontend using Docker Buildx with QEMU emulation. Triggered on semver tags (`v*`) and manual dispatch. Images pushed to GHCR with `latest`, `x.y.z`, and `x.y` tags. GHA build cache for faster rebuilds.
+- **Docker Compose GHCR references**: `docker-compose.yml` now includes `image:` fields pointing to `ghcr.io/itsdnns/tribu-backend` and `ghcr.io/itsdnns/tribu-frontend`. `docker compose pull` fetches pre-built images; `docker compose build` falls back to local Dockerfiles.
+
 ### Security
 
 - **Cookie hardening**: Replaced hardcoded `secure=False` with configurable `SECURE_COOKIES` environment variable. Set to `true` when running behind a TLS reverse proxy.
 
 ### Changed
 
-- **ARCHITECTURE.md**: Added notifications router, scheduler, PWA, and notification models to docs.
+- **ARCHITECTURE.md**: Added notifications router, scheduler, PWA, notification models, multi-arch deployment details.
 - **ROADMAP.md**: Restructured to align with vision document. Release 0.4-0.7 milestones replace old Phase 4-6 buckets. Marked notifications (#7) and backup/restore (#15) as complete.
 - **SECURITY.md**: Added production deployment checklist (TLS, secure cookies, secrets, backups).
 
