@@ -175,5 +175,13 @@
   "change_password": "Passwort ändern",
   "password_changed": "Passwort erfolgreich geändert",
   "reset_password": "Passwort zurücksetzen",
-  "password_was_reset": "Passwort wurde zurückgesetzt"
+  "password_was_reset": "Passwort wurde zurückgesetzt",
+  "audit_log_title": "Audit Log",
+  "audit_log_empty": "Noch keine Einträge im Audit Log.",
+  "audit_log_load_more": "Mehr laden",
+  "audit_action_member_created": "Mitglied erstellt",
+  "audit_action_password_reset": "Passwort zurückgesetzt",
+  "audit_action_role_changed": "Rolle geändert",
+  "audit_action_adult_changed": "Erwachsenen-Status geändert",
+  "audit_by": "von"
 }

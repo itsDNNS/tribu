@@ -371,6 +371,27 @@ class ResetPasswordResponse(BaseModel):
     temporary_password: str
 
 
+class AuditLogEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    admin_user_id: Optional[int]
+    admin_display_name: Optional[str] = None
+    action: str
+    target_user_id: Optional[int]
+    target_display_name: Optional[str] = None
+    details: Optional[dict] = None
+    created_at: datetime
+
+
+class PaginatedAuditLog(BaseModel):
+    items: list[AuditLogEntry]
+    total: int
+    offset: int
+    limit: int
+
+
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str = Field(min_length=8, max_length=128)

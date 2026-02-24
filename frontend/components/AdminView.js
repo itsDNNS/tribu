@@ -5,6 +5,13 @@ import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
+const ACTION_KEYS = {
+  member_created: 'audit_action_member_created',
+  password_reset: 'audit_action_password_reset',
+  role_changed: 'audit_action_role_changed',
+  adult_changed: 'audit_action_adult_changed',
+};
+
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -176,6 +183,81 @@ function BackupSection() {
             </div>
           </div>
         ))}
+      </div>
+    </>
+  );
+}
+
+function AuditLogSection() {
+  const { familyId, messages } = useApp();
+  const [entries, setEntries] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async (offset = 0) => {
+    setLoading(true);
+    const { ok, data } = await api.apiGetAuditLog(familyId, 50, offset);
+    if (ok) {
+      setEntries((prev) => offset === 0 ? data.items : [...prev, ...data.items]);
+      setTotal(data.total);
+    }
+    setLoading(false);
+  }, [familyId]);
+
+  useEffect(() => { load(0); }, [load]);
+
+  function formatAction(entry) {
+    const key = ACTION_KEYS[entry.action] || entry.action;
+    return t(messages, key);
+  }
+
+  function formatDetails(entry) {
+    if (!entry.details) return null;
+    if (entry.action === 'role_changed') return `${entry.details.old} → ${entry.details.new}`;
+    if (entry.action === 'adult_changed') return entry.details.is_adult ? '→ adult' : '→ child';
+    if (entry.action === 'member_created' && entry.details.email) return entry.details.email;
+    return null;
+  }
+
+  return (
+    <>
+      <div className="view-header" style={{ marginTop: '2rem' }}>
+        <div>
+          <h1 className="view-title">{t(messages, 'audit_log_title')}</h1>
+        </div>
+      </div>
+
+      <div className="glass-sm settings-section">
+        {entries.length === 0 && !loading && (
+          <p style={{ opacity: 0.6 }}>{t(messages, 'audit_log_empty')}</p>
+        )}
+        {entries.map((e) => (
+          <div key={e.id} className="audit-entry">
+            <span className="audit-time">
+              {new Date(e.created_at).toLocaleString()}
+            </span>
+            <span className="audit-action-badge">{formatAction(e)}</span>
+            {e.target_display_name && (
+              <span className="audit-target">→ {e.target_display_name}</span>
+            )}
+            {formatDetails(e) && (
+              <span className="audit-details">{formatDetails(e)}</span>
+            )}
+            {e.admin_display_name && (
+              <span className="audit-admin">{t(messages, 'audit_by')} {e.admin_display_name}</span>
+            )}
+          </div>
+        ))}
+        {entries.length < total && (
+          <button
+            className="btn-ghost"
+            onClick={() => load(entries.length)}
+            disabled={loading}
+            style={{ marginTop: 'var(--space-sm)' }}
+          >
+            {t(messages, 'audit_log_load_more')}
+          </button>
+        )}
       </div>
     </>
   );
@@ -393,6 +475,7 @@ export default function AdminView() {
       )}
 
       <BackupSection />
+      <AuditLogSection />
     </div>
   );
 }
