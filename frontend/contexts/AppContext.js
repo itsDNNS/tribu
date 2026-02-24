@@ -5,6 +5,8 @@ import { buildUi } from '../lib/styles';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
 
+export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'contacts', 'notifications', 'settings'];
+
 const AppContext = createContext(null);
 
 export function useApp() {
@@ -43,6 +45,9 @@ export function AppProvider({ children }) {
   const [contacts, setContacts] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [shoppingLists, setShoppingLists] = useState([]);
+
+  // Nav Order
+  const [navOrder, setNavOrder] = useState(DEFAULT_NAV_ORDER);
 
   // Notifications
   const [notifications, setNotifications] = useState([]);
@@ -93,6 +98,12 @@ export function AppProvider({ children }) {
     if (ok) setShoppingLists(data);
   }, [familyId, demoMode]);
 
+  const loadNavOrder = useCallback(async () => {
+    if (demoMode) return;
+    const { ok, data } = await api.apiGetNavOrder();
+    if (ok && data?.nav_order) setNavOrder(data.nav_order);
+  }, [demoMode]);
+
   const loadNotifications = useCallback(async () => {
     if (demoMode) return;
     const { ok, data } = await api.apiGetNotifications(50, 0);
@@ -139,6 +150,7 @@ export function AppProvider({ children }) {
     setContacts([]);
     setTasks([]);
     setShoppingLists([]);
+    setNavOrder(DEFAULT_NAV_ORDER);
     setNotifications([]);
     setUnreadCount(0);
   }, [demoMode]);
@@ -197,7 +209,7 @@ export function AppProvider({ children }) {
         const fid = String(famData[0].family_id);
         setFamilyId(fid);
         setMyFamilyRole(famData[0].role);
-        await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid)]);
+        await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid), loadNavOrder()]);
       }
 
       setLoading(false);
@@ -251,6 +263,7 @@ export function AppProvider({ children }) {
     contacts,
     tasks, setTasks,
     shoppingLists, setShoppingLists,
+    navOrder, setNavOrder, loadNavOrder,
     loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks, loadShoppingLists, loadNotifications,
     notifications, setNotifications, unreadCount, setUnreadCount,
     switchFamily,

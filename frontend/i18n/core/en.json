@@ -149,5 +149,13 @@
   "notification_minutes_60": "60 minutes",
   "notification_save": "Save",
   "notification_saved": "Saved",
-  "aria.delete_notification": "Delete notification"
+  "aria.delete_notification": "Delete notification",
+  "nav_more": "More",
+  "nav_order_title": "Navigation",
+  "nav_order_desc": "Customize the order of navigation items. The first 5 appear in the bottom bar on mobile.",
+  "nav_visible": "Visible",
+  "nav_overflow": "More menu",
+  "nav_save": "Save order",
+  "nav_saved": "Saved!",
+  "nav_reset": "Reset"
 }

@@ -149,5 +149,13 @@
   "notification_minutes_60": "60 Minuten",
   "notification_save": "Speichern",
   "notification_saved": "Gespeichert",
-  "aria.delete_notification": "Benachrichtigung löschen"
+  "aria.delete_notification": "Benachrichtigung löschen",
+  "nav_more": "Mehr",
+  "nav_order_title": "Navigation",
+  "nav_order_desc": "Reihenfolge der Navigationselemente anpassen. Die ersten 5 erscheinen in der unteren Leiste auf dem Handy.",
+  "nav_visible": "Sichtbar",
+  "nav_overflow": "Mehr-Menü",
+  "nav_save": "Reihenfolge speichern",
+  "nav_saved": "Gespeichert!",
+  "nav_reset": "Zurücksetzen"
 }

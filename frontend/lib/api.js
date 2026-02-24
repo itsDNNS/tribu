@@ -250,6 +250,19 @@ export function apiUpdateNotificationPreferences(prefs) {
   });
 }
 
+// Nav Order
+export function apiGetNavOrder() {
+  return request('/nav/order');
+}
+
+export function apiUpdateNavOrder(nav_order) {
+  return request('/nav/order', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nav_order }),
+  });
+}
+
 export function connectNotificationStream(onMessage) {
   const es = new EventSource(`${API}/notifications/stream`, { withCredentials: true });
   es.onmessage = (event) => {
