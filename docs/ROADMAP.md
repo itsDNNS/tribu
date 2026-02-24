@@ -85,6 +85,10 @@
 - [x] Admin member creation with temporary passwords
 - [x] Forced password change on first login (`must_change_password`)
 - [x] `PATCH /auth/me/password` and `POST /families/{id}/members` endpoints
+- [x] Admin password reset for family members (#30)
+- [x] Admin member removal with confirmation (#35)
+- [x] Admin audit log: append-only trail for all admin actions (#33)
+- [x] Self-protection guards (no self-demotion, no self-removal)
 
 ## Phase 4.1: Dependency Modernization (#23-#29)
 
@@ -94,6 +98,18 @@
 - [x] Upgrade Next.js 14 to 16 (Turbopack default), React 18 to 19.2
 - [x] Replace Redis 7 with Valkey 8
 - [x] All backend dependencies bumped to latest
+
+## Phase 4.2: UX Polish
+
+- [x] Customizable bottom nav with overflow menu (#17)
+- [x] Multi-arch Docker images (#16)
+- [x] Dashboard stats link to respective views (#32)
+- [x] Active view persists across page refreshes (sessionStorage)
+- [x] Favicon and PWA icon (#31)
+- [x] Clipboard copy fallback for non-HTTPS deployments
+- [x] Mobile nav label truncation (#34)
+
+---
 
 ## Release 0.4: Everyday MVP
 
@@ -106,21 +122,29 @@ Goal: A family can run their daily life through Tribu without needing an externa
 - [x] Instance backup and restore (#15): CLI scripts + admin UI with scheduling and retention
 - [x] PWA foundation: Web App Manifest, Service Worker, installable home screen app
 
-## Release 0.5: Collaboration
+## Release 0.5: Admin & Modernization
+
+Goal: Full admin control over family members, modernized stack, polished UX.
+
+- [x] Admin member lifecycle: create, remove, reset password, change role/adult status
+- [x] Admin audit log with pagination (#33)
+- [x] Dependency modernization: Python 3.13, Node 22, Next.js 16, React 19, Valkey 8
+- [x] Security: bcrypt + PyJWT replace legacy libs
+- [x] UX: customizable nav, persistent view, clickable dashboard stats, clipboard fallback
+
+## Release 0.6: Collaboration
 
 - [ ] Real-time sync for shopping lists (WebSocket/SSE)
 - [ ] Family chat (text, images)
 - [ ] Deeper role/permission controls (child sees own tasks only)
 
-## Release 0.6: Ecosystem
+## Release 0.7: Ecosystem
 
-- [ ] Plugin registry and marketplace
+- [ ] Plugin registry and marketplace (#13)
 - [ ] Theme pack loader
 - [ ] Language pack management
-- [x] Customizable bottom nav (#17)
-- [x] Multi-arch Docker images (#16)
 
-## Release 0.7: Integrations
+## Release 0.8: Integrations
 
 - [ ] Home Assistant integration (events as automation triggers)
 - [ ] CalDAV/CardDAV sync
