@@ -68,15 +68,15 @@ export default function DashboardView() {
             <h2 className="bento-card-title"><BarChart3 size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.family')}</h2>
           </div>
           <div className="stat-grid">
-            <div className="stat-item">
+            <div className="stat-item stat-item-link" onClick={() => setActiveView('admin')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('admin')}>
               <div className="stat-icon" style={{ background: 'rgba(124,58,237,0.12)' }}><Users size={18} style={{ color: 'var(--amethyst)' }} aria-hidden="true" /></div>
               <div><div className="stat-value">{members.length}</div><div className="stat-label">{t(messages, 'module.dashboard.members')}</div></div>
             </div>
-            <div className="stat-item">
+            <div className="stat-item stat-item-link" onClick={() => setActiveView('calendar')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('calendar')}>
               <div className="stat-icon" style={{ background: 'rgba(59,130,246,0.12)' }}><Calendar size={18} style={{ color: 'var(--sapphire)' }} aria-hidden="true" /></div>
               <div><div className="stat-value">{events.length}</div><div className="stat-label">{t(messages, 'module.dashboard.events_count')}</div></div>
             </div>
-            <div className="stat-item">
+            <div className="stat-item stat-item-link" onClick={() => setActiveView('tasks')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('tasks')}>
               <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)' }}><CheckCircle size={18} style={{ color: 'var(--success)' }} aria-hidden="true" /></div>
               <div><div className="stat-value">{donePercent}%</div><div className="stat-label">{t(messages, 'module.dashboard.tasks_done')}</div></div>
             </div>
