@@ -216,3 +216,47 @@ export async function apiDownloadBackup(filename) {
 export function apiDeleteBackup(filename) {
   return del(`/admin/backup/${encodeURIComponent(filename)}`);
 }
+
+// Notifications
+export function apiGetNotifications(limit = 50, offset = 0) {
+  return request(`/notifications?limit=${limit}&offset=${offset}`);
+}
+
+export function apiGetUnreadCount() {
+  return request('/notifications/unread-count');
+}
+
+export function apiMarkNotificationRead(id) {
+  return patch(`/notifications/${id}/read`, {});
+}
+
+export function apiMarkAllNotificationsRead() {
+  return post('/notifications/read-all', {});
+}
+
+export function apiDeleteNotification(id) {
+  return del(`/notifications/${id}`);
+}
+
+export function apiGetNotificationPreferences() {
+  return request('/notifications/preferences');
+}
+
+export function apiUpdateNotificationPreferences(prefs) {
+  return request('/notifications/preferences', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs),
+  });
+}
+
+export function connectNotificationStream(onMessage) {
+  const es = new EventSource(`${API}/notifications/stream`, { withCredentials: true });
+  es.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      onMessage(data);
+    } catch {}
+  };
+  return es;
+}

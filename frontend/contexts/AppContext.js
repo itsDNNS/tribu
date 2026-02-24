@@ -44,6 +44,10 @@ export function AppProvider({ children }) {
   const [tasks, setTasks] = useState([]);
   const [shoppingLists, setShoppingLists] = useState([]);
 
+  // Notifications
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   // Derived
   const messages = useMemo(() => buildMessages(lang), [lang]);
   const themeConfig = useMemo(() => getTheme(theme), [theme]);
@@ -89,6 +93,15 @@ export function AppProvider({ children }) {
     if (ok) setShoppingLists(data);
   }, [familyId, demoMode]);
 
+  const loadNotifications = useCallback(async () => {
+    if (demoMode) return;
+    const { ok, data } = await api.apiGetNotifications(50, 0);
+    if (ok) {
+      setNotifications(data);
+      setUnreadCount(data.filter((n) => !n.read).length);
+    }
+  }, [demoMode]);
+
   const switchFamily = useCallback(async (fid) => {
     setLoading(true);
     setFamilyId(fid);
@@ -126,6 +139,8 @@ export function AppProvider({ children }) {
     setContacts([]);
     setTasks([]);
     setShoppingLists([]);
+    setNotifications([]);
+    setUnreadCount(0);
   }, [demoMode]);
 
   // Init: localStorage, resize, auto-login
@@ -168,6 +183,9 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!loggedIn || demoMode) return;
 
+    let eventSource = null;
+    let pollInterval = null;
+
     (async () => {
       setLoading(true);
       const { ok: meOk, data: meData } = await api.apiGetMe();
@@ -184,8 +202,42 @@ export function AppProvider({ children }) {
         setMyFamilyRole(famData[0].role);
         await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid)]);
       }
+
+      // Load notifications
+      await loadNotifications();
+
+      // Start SSE for real-time notifications
+      try {
+        eventSource = api.connectNotificationStream((notif) => {
+          setNotifications((prev) => [notif, ...prev]);
+          if (!notif.read) setUnreadCount((c) => c + 1);
+        });
+        eventSource.onerror = () => {
+          // Fallback to polling on SSE failure
+          eventSource.close();
+          eventSource = null;
+          if (!pollInterval) {
+            pollInterval = setInterval(async () => {
+              const { ok, data } = await api.apiGetUnreadCount();
+              if (ok) setUnreadCount(data.count);
+            }, 30000);
+          }
+        };
+      } catch {
+        // SSE not supported, use polling
+        pollInterval = setInterval(async () => {
+          const { ok, data } = await api.apiGetUnreadCount();
+          if (ok) setUnreadCount(data.count);
+        }, 30000);
+      }
+
       setLoading(false);
     })();
+
+    return () => {
+      if (eventSource) eventSource.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
 
@@ -212,7 +264,8 @@ export function AppProvider({ children }) {
     contacts,
     tasks, setTasks,
     shoppingLists, setShoppingLists,
-    loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks, loadShoppingLists,
+    loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks, loadShoppingLists, loadNotifications,
+    notifications, setNotifications, unreadCount, setUnreadCount,
     switchFamily,
     logout,
     demoMode, enterDemo,

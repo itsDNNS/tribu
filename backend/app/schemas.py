@@ -308,3 +308,32 @@ class BackupEntry(BaseModel):
     created_at: datetime
     alembic_revision: Optional[str] = None
     pg_version: Optional[str] = None
+
+
+# Notifications
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    type: str
+    title: str
+    body: Optional[str]
+    link: Optional[str]
+    read: bool
+    created_at: datetime
+
+
+class NotificationPreferenceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    reminders_enabled: bool
+    reminder_minutes: int
+    quiet_start: Optional[str]
+    quiet_end: Optional[str]
+
+
+class NotificationPreferenceUpdate(BaseModel):
+    reminders_enabled: Optional[bool] = None
+    reminder_minutes: Optional[int] = None
+    quiet_start: Optional[str] = None
+    quiet_end: Optional[str] = None

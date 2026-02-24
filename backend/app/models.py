@@ -154,6 +154,40 @@ class ShoppingItem(Base):
     shopping_list = relationship("ShoppingList", back_populates="items")
 
 
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    body = Column(Text, nullable=True)
+    link = Column(String, nullable=True)
+    read = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class NotificationPreference(Base):
+    __tablename__ = "notification_preferences"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    reminders_enabled = Column(Boolean, nullable=False, default=True)
+    reminder_minutes = Column(Integer, nullable=False, default=30)
+    quiet_start = Column(String, nullable=True)
+    quiet_end = Column(String, nullable=True)
+
+
+class NotificationSentLog(Base):
+    __tablename__ = "notification_sent_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_type = Column(String, nullable=False)
+    source_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    sent_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
 class SystemSetting(Base):
     __tablename__ = "system_settings"
 
