@@ -4,14 +4,20 @@ All notable changes to Tribu are documented here.
 
 ## 2026-02-24
 
+### Added
+
+- **In-app notifications (#7)**: Scheduler-driven notification engine checks every 5 minutes for event reminders (configurable lead time), overdue tasks, and upcoming birthdays. Deduplication via `notification_sent_log`. Per-user preferences: reminder toggle, reminder minutes (15/30/60), quiet hours. Full REST API with 8 endpoints. Frontend: NotificationCenter view with type-specific icons, relative timestamps, mark read, delete, and mark-all-read. Unread badge on sidebar, mobile header, and bottom nav with 30-second polling.
+- **PWA foundation**: Web App Manifest (`manifest.json`), Service Worker with network-first strategy for HTML and cache-first for hashed static assets, app icons (192/512/maskable). iOS standalone mode meta tags. Installable as home screen app.
+- **Alembic migration 0007**: `notifications`, `notification_preferences`, and `notification_sent_log` tables with indexes.
+
 ### Security
 
 - **Cookie hardening**: Replaced hardcoded `secure=False` with configurable `SECURE_COOKIES` environment variable. Set to `true` when running behind a TLS reverse proxy.
 
 ### Changed
 
-- **ARCHITECTURE.md**: Added shopping router, tokens router, scopes module, Alembic migrations, PAT system, and ShoppingList/ShoppingItem to domain model and API docs.
-- **ROADMAP.md**: Restructured to align with vision document. Release 0.4-0.7 milestones replace old Phase 4-6 buckets.
+- **ARCHITECTURE.md**: Added notifications router, scheduler, PWA, and notification models to docs.
+- **ROADMAP.md**: Restructured to align with vision document. Release 0.4-0.7 milestones replace old Phase 4-6 buckets. Marked notifications (#7) and backup/restore (#15) as complete.
 - **SECURITY.md**: Added production deployment checklist (TLS, secure cookies, secrets, backups).
 
 ## 2026-02-23 (late)
