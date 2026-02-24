@@ -175,5 +175,13 @@
   "change_password": "Change password",
   "password_changed": "Password changed successfully",
   "reset_password": "Reset password",
-  "password_was_reset": "Password was reset"
+  "password_was_reset": "Password was reset",
+  "audit_log_title": "Audit Log",
+  "audit_log_empty": "No audit log entries yet.",
+  "audit_log_load_more": "Load more",
+  "audit_action_member_created": "Member created",
+  "audit_action_password_reset": "Password reset",
+  "audit_action_role_changed": "Role changed",
+  "audit_action_adult_changed": "Adult status changed",
+  "audit_by": "by"
 }

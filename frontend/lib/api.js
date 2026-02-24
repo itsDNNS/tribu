@@ -77,6 +77,11 @@ export function apiResetMemberPassword(familyId, userId) {
   return post(`/families/${familyId}/members/${userId}/reset-password`);
 }
 
+// Audit Log
+export function apiGetAuditLog(familyId, limit = 50, offset = 0) {
+  return request(`/families/${familyId}/audit-log?limit=${limit}&offset=${offset}`);
+}
+
 // Dashboard
 export function apiGetDashboard(familyId) {
   return request(`/dashboard/summary?family_id=${familyId}`);

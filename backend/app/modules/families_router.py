@@ -1,14 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func as sa_func
+from sqlalchemy.orm import Session, joinedload, aliased
 
 from app.core.deps import current_user, ensure_family_admin, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
-from app.models import Family, Membership, User
-from app.schemas import CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate, ResetPasswordResponse
+from app.models import AuditLog, Family, Membership, User
+from app.schemas import AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
 
 router = APIRouter(prefix="/families", tags=["families"])
+
+
+def _audit(db, family_id, admin_id, action, target_user_id=None, details=None):
+    db.add(AuditLog(family_id=family_id, admin_user_id=admin_id, action=action,
+                     target_user_id=target_user_id, details=details))
 
 
 @router.get("/me", response_model=list[FamilySummary])
@@ -95,6 +101,8 @@ def create_member(
         is_adult=payload.is_adult,
     )
     db.add(membership)
+    _audit(db, family_id, user.id, "member_created", target_user_id=new_user.id,
+           details={"role": payload.role, "email": payload.email.lower()})
     db.commit()
 
     return CreateMemberResponse(
@@ -131,6 +139,8 @@ def update_member_adult(
     membership.is_adult = payload.is_adult
     if not payload.is_adult and membership.role == "admin":
         membership.role = "member"
+    _audit(db, family_id, user.id, "adult_changed", target_user_id=target_user_id,
+           details={"is_adult": payload.is_adult})
     db.commit()
     return {"status": "ok", "user_id": target_user_id, "is_adult": membership.is_adult, "role": membership.role}
 
@@ -162,7 +172,10 @@ def update_member_role(
     if payload.role == "admin" and not membership.is_adult:
         raise HTTPException(status_code=400, detail="Nur Erwachsene können Admin werden")
 
+    old_role = membership.role
     membership.role = payload.role
+    _audit(db, family_id, user.id, "role_changed", target_user_id=target_user_id,
+           details={"old": old_role, "new": payload.role})
     db.commit()
     return {"status": "ok", "user_id": target_user_id, "role": membership.role}
 
@@ -194,9 +207,57 @@ def reset_member_password(
     temp_password = generate_temp_password()
     target_user.password_hash = hash_password(temp_password)
     target_user.must_change_password = True
+    _audit(db, family_id, user.id, "password_reset", target_user_id=target_user_id)
     db.commit()
 
     return ResetPasswordResponse(
         user_id=target_user.id,
         temporary_password=temp_password,
     )
+
+
+@router.get("/{family_id}/audit-log", response_model=PaginatedAuditLog)
+def get_audit_log(
+    family_id: int,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:read"),
+):
+    ensure_family_admin(db, user.id, family_id)
+
+    AdminUser = aliased(User)
+    TargetUser = aliased(User)
+
+    query = (
+        db.query(
+            AuditLog,
+            AdminUser.display_name.label("admin_display_name"),
+            TargetUser.display_name.label("target_display_name"),
+        )
+        .outerjoin(AdminUser, AuditLog.admin_user_id == AdminUser.id)
+        .outerjoin(TargetUser, AuditLog.target_user_id == TargetUser.id)
+        .filter(AuditLog.family_id == family_id)
+    )
+
+    total = db.query(sa_func.count(AuditLog.id)).filter(AuditLog.family_id == family_id).scalar()
+
+    rows = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
+
+    items = [
+        AuditLogEntry(
+            id=row.AuditLog.id,
+            family_id=row.AuditLog.family_id,
+            admin_user_id=row.AuditLog.admin_user_id,
+            admin_display_name=row.admin_display_name,
+            action=row.AuditLog.action,
+            target_user_id=row.AuditLog.target_user_id,
+            target_display_name=row.target_display_name,
+            details=row.AuditLog.details,
+            created_at=row.AuditLog.created_at,
+        )
+        for row in rows
+    ]
+
+    return PaginatedAuditLog(items=items, total=total, offset=offset, limit=limit)
