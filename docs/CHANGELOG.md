@@ -2,6 +2,29 @@
 
 All notable changes to Tribu are documented here.
 
+## 2026-02-24
+
+### Security
+
+- **Cookie hardening**: Replaced hardcoded `secure=False` with configurable `SECURE_COOKIES` environment variable. Set to `true` when running behind a TLS reverse proxy.
+
+### Changed
+
+- **ARCHITECTURE.md**: Added shopping router, tokens router, scopes module, Alembic migrations, PAT system, and ShoppingList/ShoppingItem to domain model and API docs.
+- **ROADMAP.md**: Restructured to align with vision document. Release 0.4-0.7 milestones replace old Phase 4-6 buckets.
+- **SECURITY.md**: Added production deployment checklist (TLS, secure cookies, secrets, backups).
+
+## 2026-02-23 (late)
+
+### Added
+
+- **Funding**: `.github/FUNDING.yml` with Ko-fi, PayPal, and GitHub Sponsors. Funding badges in README.
+- **Issues**: #15 (Backup/Restore), #16 (Multi-Arch Docker), #17 (Customizable Nav) created.
+
+### Fixed
+
+- **Mobile shell quality** (#10): `viewport-fit=cover` for iOS safe area support, `_document.js` with `lang="de"`, safe area insets on bottom nav/sidebar/header, 44px touch targets on all interactive elements, bottom nav CSS grid with badge bubbles, overflow fixes on contacts grid/calendar/shopping panel. Tested at 375px and 390px.
+
 ## 2026-02-23
 
 ### Added

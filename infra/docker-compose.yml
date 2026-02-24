@@ -25,6 +25,7 @@ services:
       DATABASE_URL: postgresql://tribu:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/tribu
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
     depends_on:
       - postgres
       - redis

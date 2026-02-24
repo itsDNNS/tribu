@@ -8,6 +8,8 @@ from slowapi.extension import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
+import os
+
 from app.core.deps import current_user
 from app.core.scopes import require_scope
 from app.database import get_db
@@ -25,6 +27,7 @@ from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, v
 
 COOKIE_NAME = "tribu_token"
 COOKIE_MAX_AGE = JWT_EXPIRE_HOURS * 3600
+COOKIE_SECURE = os.getenv("SECURE_COOKIES", "false").lower() == "true"
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -75,7 +78,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     response = JSONResponse(content={"status": "ok"})
     response.set_cookie(
         COOKIE_NAME, token, httponly=True, samesite="lax",
-        secure=False, max_age=COOKIE_MAX_AGE, path="/",
+        secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
     )
     return response
 
@@ -91,7 +94,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     response = JSONResponse(content={"status": "ok"})
     response.set_cookie(
         COOKIE_NAME, token, httponly=True, samesite="lax",
-        secure=False, max_age=COOKIE_MAX_AGE, path="/",
+        secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
     )
     return response
 

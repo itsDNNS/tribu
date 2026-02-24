@@ -30,39 +30,52 @@ Tribu is a self-hosted family organizer built as a modular monolith. The backend
 ### Module Structure
 
 ```
-backend/app/
-├── main.py              # App factory, auth routes, rate limiting, module registration
-├── models.py            # SQLAlchemy models
-├── schemas.py           # Pydantic schemas (with input validation)
-├── security.py          # JWT creation, password hashing (PBKDF2-SHA256)
-├── database.py          # Engine, session factory (requires DATABASE_URL)
-├── core/
-│   └── deps.py          # Shared dependencies (current_user, get_db, family checks)
-└── modules/
-    ├── calendar_router.py
-    ├── birthdays_router.py
-    ├── contacts_router.py
-    ├── tasks_router.py
-    ├── dashboard_router.py
-    └── families_router.py
+backend/
+├── alembic/                # Database migrations (Alembic)
+│   ├── env.py
+│   └── versions/
+│       ├── 0001_initial_schema.py
+│       ├── 0002_add_is_adult_and_profile_image.py
+│       ├── 0003_add_personal_access_tokens.py
+│       └── 0004_add_shopping_lists.py
+└── app/
+    ├── main.py              # App factory, auth routes, rate limiting, module registration
+    ├── models.py            # SQLAlchemy models
+    ├── schemas.py           # Pydantic schemas (with input validation)
+    ├── security.py          # JWT creation, password hashing, PAT generation
+    ├── database.py          # Engine, session factory (requires DATABASE_URL)
+    ├── core/
+    │   ├── deps.py          # Shared dependencies (current_user, get_db, family checks)
+    │   └── scopes.py        # PAT scope validation (require_scope, has_scope)
+    └── modules/
+        ├── calendar_router.py
+        ├── birthdays_router.py
+        ├── contacts_router.py
+        ├── tasks_router.py
+        ├── shopping_router.py
+        ├── dashboard_router.py
+        ├── families_router.py
+        └── tokens_router.py   # Personal Access Token CRUD
 ```
 
 ### Domain Model
 
 ```
 User ──┬── Membership ──── Family
-       │       │
-       │       ├── role: admin | parent | child
-       │       └── is_adult: bool
+       │       │                │
+       │       ├── role         ├── CalendarEvent
+       │       └── is_adult     ├── Birthday
+       │                        ├── Contact
+       ├── PersonalAccessToken  ├── Task (optional assignee, recurring)
+       │   ├── scopes           └── ShoppingList
+       │   └── expires_at           └── ShoppingItem
        │
-       ├── CalendarEvent (scoped to family)
-       ├── Birthday (scoped to family)
-       ├── Contact (scoped to family)
-       └── Task (scoped to family, optional assignee, recurring)
+       └── (created_by on events, tasks, lists)
 ```
 
 - First user to register becomes **admin** and **is_adult** automatically
-- Calendar events, birthdays, and contacts are always scoped to exactly one family
+- Calendar events, birthdays, contacts, tasks, and shopping lists are always scoped to exactly one family
+- Personal Access Tokens are user-scoped (not family-scoped) with granular permission scopes
 
 ### Security
 
@@ -76,6 +89,8 @@ User ──┬── Membership ──── Family
 | CORS | Restricted to localhost and LAN IPs (regex pattern) |
 | Environment | `DATABASE_URL` and `JWT_SECRET` required, no fallback defaults |
 | CSV import | 500 row limit, month/day range checks, email format validation |
+| PAT scopes | `require_scope()` dependency on all module endpoints |
+| Cookie security | `SECURE_COOKIES` env var controls Secure flag (enable behind TLS) |
 
 ### Environment Variables
 
@@ -87,6 +102,7 @@ The backend requires the following environment variables and will not start with
 Optional:
 - `JWT_EXPIRE_HOURS`: Token expiration (default: 24)
 - `REDIS_URL`: Redis connection string (prepared for future use)
+- `SECURE_COOKIES`: Set to `true` when behind TLS reverse proxy (default: `false`)
 
 ## Frontend
 
@@ -97,7 +113,7 @@ Optional:
 The frontend uses a Context + Hooks + Views pattern:
 
 - **AppContext** (`contexts/AppContext.js`): Central state management for auth, family data, theme, and demo mode. All data flows through a single React Context.
-- **Hooks** (`hooks/`): Encapsulate UI-local state and form logic. `useCalendar` manages calendar navigation, event forms, and computed month cells. `useTasks` manages task filters, form state, and filtered task lists.
+- **Hooks** (`hooks/`): Encapsulate UI-local state and form logic. `useCalendar` manages calendar navigation, event forms, and computed month cells. `useTasks` manages task filters, form state, and filtered task lists. `useShopping` manages list selection, item CRUD, and checked-state toggling.
 - **Views** (`components/`): Pure rendering components that consume context and hooks. Each view handles one screen (Dashboard, Calendar, Tasks, Contacts, Settings).
 
 ### Key Components
@@ -110,7 +126,8 @@ The frontend uses a Context + Hooks + Views pattern:
 | CalendarView | Month grid with event dots, today marker, day-detail side panel (desktop) or stacked (mobile), week view, quick-add forms. |
 | TasksView | Quick-add bar, expanded form fields, filter tabs (all/open/done), task cards with priority/overdue/recurring badges. |
 | ContactsView | Responsive card grid with colored avatars, CSV import section. |
-| SettingsView | Profile section, visual theme picker cards, language toggle, privacy info. |
+| ShoppingView | 2-column layout (lists panel + items), tap-to-toggle, checked section with bulk clear. |
+| SettingsView | Profile section, visual theme picker cards, language toggle, PAT management, privacy info. |
 
 ### CSS Design System
 
@@ -225,4 +242,17 @@ A `.env` file in `infra/` is required before starting. See [`infra/.env.example`
 /tasks/{id}             DELETE  Delete task
 
 /dashboard/summary      GET     Upcoming events + birthdays
+
+/shopping/lists                     GET     List shopping lists
+/shopping/lists                     POST    Create shopping list
+/shopping/lists/{id}                PATCH   Rename shopping list
+/shopping/lists/{id}                DELETE  Delete shopping list
+/shopping/lists/{id}/items          GET     List items in shopping list
+/shopping/lists/{id}/items          POST    Add item
+/shopping/lists/{id}/items/{iid}    PATCH   Update item (toggle checked, rename)
+/shopping/lists/{id}/items/{iid}    DELETE  Delete item
+
+/tokens                 GET     List user's PATs
+/tokens                 POST    Create PAT (returns plain token once)
+/tokens/{id}            DELETE  Revoke PAT
 ```

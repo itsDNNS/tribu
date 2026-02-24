@@ -39,11 +39,22 @@ Never use default or placeholder values for these secrets.
 2. If exposing Tribu to the internet, put it behind a reverse proxy (nginx, Caddy, Traefik) with TLS
 3. Keep Docker images up to date for security patches
 
+## Production Deployment Checklist
+
+Follow these steps before exposing Tribu to the internet:
+
+1. **TLS termination**: Place Tribu behind a reverse proxy (Caddy, nginx, or Traefik) with a valid TLS certificate. Caddy handles this automatically with Let's Encrypt.
+2. **Enable secure cookies**: Set `SECURE_COOKIES=true` in your `.env` file. This adds the `Secure` flag to auth cookies so they are only sent over HTTPS.
+3. **Generate strong secrets**: Use `openssl rand -hex 32` for `JWT_SECRET` and `openssl rand -hex 16` for `POSTGRES_PASSWORD`. Never reuse secrets across instances.
+4. **Restrict CORS** (optional): The default regex allows all `192.168.x.x` addresses. If your instance is public, consider narrowing this to your specific domain by modifying the `allow_origin_regex` in `backend/app/main.py`.
+5. **Backups**: Schedule regular PostgreSQL dumps of the `tribu_pg_data` Docker volume. A minimal cron job: `docker exec tribu-postgres pg_dump -U tribu tribu > backup_$(date +%F).sql`
+6. **Keep images updated**: Rebuild Docker images periodically to pick up security patches in base images (Python, Node, PostgreSQL, Redis).
+
 ## Known Limitations
 
 | Limitation | Context |
 |------------|---------|
-| No HTTPS in dev | Cookies use `secure=False` for local development. Enable `secure=True` when behind TLS. |
+| No HTTPS in dev | Cookies use `secure=false` for local development. Set `SECURE_COOKIES=true` in `.env` when behind TLS. |
 | No audit log | User actions are not logged for review. Planned for a future release. |
 | No CSRF token | `SameSite=Lax` on cookies provides sufficient protection against cross-origin form submissions. |
 | No email verification | Registration does not require email confirmation. |
