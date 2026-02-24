@@ -32,5 +32,6 @@
   "module.calendar.import_submit": "Import ICS",
   "module.calendar.import_success": "{count} events imported",
   "module.calendar.import_error": "Import failed",
-  "module.calendar.import_warnings": "Warnings"
+  "module.calendar.import_warnings": "Warnings",
+  "module.calendar.import_cta": "No events yet? Import ICS in Settings."
 }

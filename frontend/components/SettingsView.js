@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, Palette, Globe, ShieldCheck, Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
+import { User, Palette, Globe, ShieldCheck, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { downloadBlob } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
@@ -24,7 +25,7 @@ const SCOPE_MODULES = [
 ];
 
 export default function SettingsView() {
-  const { theme, setTheme, lang, setLang, availableThemes, messages, me, isAdmin, loggedIn, demoMode, setProfileImage } = useApp();
+  const { theme, setTheme, lang, setLang, availableThemes, messages, me, isAdmin, loggedIn, demoMode, setProfileImage, familyId, loadContacts, loadDashboard } = useApp();
 
   const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
 
@@ -36,6 +37,16 @@ export default function SettingsView() {
   const [newExpiry, setNewExpiry] = useState('');
   const [createdToken, setCreatedToken] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // Data management state
+  const [showCalImport, setShowCalImport] = useState(false);
+  const [icsText, setIcsText] = useState('');
+  const [calMsg, setCalMsg] = useState('');
+  const [calErrors, setCalErrors] = useState([]);
+  const [showContactsImport, setShowContactsImport] = useState(false);
+  const [csvText, setCsvText] = useState('');
+  const [contactsMsg, setContactsMsg] = useState('');
+  const [rowErrors, setRowErrors] = useState([]);
 
   const loadTokens = useCallback(async () => {
     if (!loggedIn || demoMode) return;
@@ -116,6 +127,60 @@ export default function SettingsView() {
     return scopeStr.split(',').join(', ');
   }
 
+  // Data management handlers
+  async function handleExportIcs() {
+    try {
+      const res = await api.apiExportCalendarIcs(familyId);
+      if (!res.ok) return setCalMsg(t(messages, 'module.calendar.export_error') || 'Export failed');
+      const blob = await res.blob();
+      downloadBlob(blob, 'tribu-calendar.ics');
+    } catch {
+      setCalMsg(t(messages, 'module.calendar.export_error') || 'Export failed');
+    }
+  }
+
+  async function handleImportIcs(e) {
+    e.preventDefault();
+    setCalMsg('');
+    setCalErrors([]);
+    const { ok, data } = await api.apiImportCalendarIcs(Number(familyId), icsText);
+    if (!ok) return setCalMsg(t(messages, 'module.calendar.import_error') || 'Import failed');
+    setCalMsg(t(messages, 'module.calendar.import_success').replace('{count}', data.created));
+    if (data.errors?.length) setCalErrors(data.errors);
+    setIcsText('');
+  }
+
+  function handleIcsFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setIcsText(ev.target.result);
+    reader.readAsText(file);
+  }
+
+  async function handleExportCsv() {
+    try {
+      const res = await api.apiExportContactsCsv(familyId);
+      if (!res.ok) return setContactsMsg(t(messages, 'module.contacts.export_error') || 'Export failed');
+      const blob = await res.blob();
+      downloadBlob(blob, 'tribu-contacts.csv');
+    } catch {
+      setContactsMsg(t(messages, 'module.contacts.export_error') || 'Export failed');
+    }
+  }
+
+  async function handleImportCsv(e) {
+    e.preventDefault();
+    setRowErrors([]);
+    setContactsMsg('');
+    const { ok, data } = await api.apiImportContactsCsv(Number(familyId), csvText);
+    if (!ok) return setContactsMsg(t(messages, 'module.contacts.import_error') || 'Import failed');
+    setCsvText('');
+    await Promise.all([loadContacts(), loadDashboard()]);
+    setContactsMsg(`${t(messages, 'module.contacts.import_success')} ${data.created}`);
+    if (data.row_errors?.length) setRowErrors(data.row_errors);
+  }
+
   const isFullAccess = newScopes.includes('*');
 
   return (
@@ -193,6 +258,113 @@ export default function SettingsView() {
             {t(messages, 'privacy_note')}
           </p>
         </div>
+
+        {/* Data Management Section */}
+        {!demoMode && (
+          <div className="settings-section glass">
+            <div className="settings-section-title"><Database size={16} /> {t(messages, 'data_management')}</div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
+              {t(messages, 'data_management_desc')}
+            </p>
+
+            {/* Calendar (ICS) */}
+            <div style={{ marginBottom: 'var(--space-lg)' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)' }}>
+                {t(messages, 'calendar')} (ICS)
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+                <button className="btn-ghost" onClick={handleExportIcs}>
+                  <Download size={15} /> {t(messages, 'module.calendar.export')}
+                </button>
+                <button className="btn-ghost" onClick={() => setShowCalImport(!showCalImport)}>
+                  {showCalImport ? <ChevronUp size={15} /> : <Upload size={15} />}
+                  {showCalImport ? t(messages, 'module.calendar.close_import') : t(messages, 'module.calendar.import')}
+                </button>
+              </div>
+              {showCalImport && (
+                <div className="glass-sm" style={{ padding: 'var(--space-md)' }}>
+                  {calMsg && (
+                    <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: calErrors.length === 0 && calMsg.includes(t(messages, 'module.calendar.import_success').split('{')[0]) ? 'var(--success)' : 'var(--danger)' }}>
+                      {calMsg}
+                    </p>
+                  )}
+                  {calErrors.length > 0 && (
+                    <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.82rem', color: 'var(--warning, #f6ad55)' }}>
+                      <strong>{t(messages, 'module.calendar.import_warnings')}:</strong>
+                      <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                        {calErrors.map((err, i) => (
+                          <li key={i}>#{err.index} {err.summary ? `"${err.summary}"` : ''}: {err.error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <form onSubmit={handleImportIcs} className="quick-add-form">
+                    <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t(messages, 'module.calendar.import_hint')}</label>
+                    <input type="file" accept=".ics" onChange={handleIcsFile} className="form-input" style={{ padding: '10px 12px' }} />
+                    <textarea
+                      className="form-input"
+                      style={{ minHeight: 100 }}
+                      value={icsText}
+                      onChange={(e) => setIcsText(e.target.value)}
+                      placeholder={t(messages, 'module.calendar.import_placeholder')}
+                    />
+                    <button className="btn-primary" type="submit" disabled={!icsText.trim()}>
+                      {t(messages, 'module.calendar.import_submit')}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+
+            {/* Contacts (CSV) */}
+            <div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)' }}>
+                {t(messages, 'contacts')} (CSV)
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+                <button className="btn-ghost" onClick={handleExportCsv}>
+                  <Download size={15} /> {t(messages, 'module.contacts.export')}
+                </button>
+                <button className="btn-ghost" onClick={() => setShowContactsImport(!showContactsImport)}>
+                  {showContactsImport ? <ChevronUp size={15} /> : <Upload size={15} />}
+                  {showContactsImport ? t(messages, 'module.contacts.close') : t(messages, 'module.contacts.import')}
+                </button>
+              </div>
+              {showContactsImport && (
+                <div className="glass-sm" style={{ padding: 'var(--space-md)' }}>
+                  {contactsMsg && (
+                    <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: contactsMsg.includes(t(messages, 'module.contacts.import_success')) ? 'var(--success)' : 'var(--danger)' }}>
+                      {contactsMsg}
+                    </p>
+                  )}
+                  {rowErrors.length > 0 && (
+                    <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.82rem', color: 'var(--warning, #f6ad55)' }}>
+                      <strong>{t(messages, 'module.contacts.import_warnings')}:</strong>
+                      <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                        {rowErrors.map((re, i) => (
+                          <li key={i}>{t(messages, 'module.contacts.row')} {re.row} ({re.name}): {re.errors.join(', ')}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <form onSubmit={handleImportCsv} className="quick-add-form">
+                    <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t(messages, 'contacts_csv_hint')}</label>
+                    <textarea
+                      className="form-input"
+                      style={{ minHeight: 120 }}
+                      value={csvText}
+                      onChange={(e) => setCsvText(e.target.value)}
+                      placeholder={t(messages, 'contacts_csv_hint')}
+                    />
+                    <button className="btn-primary" type="submit" disabled={!csvText.trim()}>
+                      {t(messages, 'contacts_import')}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* API Tokens Section */}
         {!demoMode && (

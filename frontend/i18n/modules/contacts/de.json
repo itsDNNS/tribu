@@ -8,5 +8,6 @@
   "module.contacts.export": "Exportieren",
   "module.contacts.export_error": "Export fehlgeschlagen",
   "module.contacts.import_warnings": "Hinweise",
-  "module.contacts.row": "Zeile"
+  "module.contacts.row": "Zeile",
+  "module.contacts.import_cta": "Kontakte in den Einstellungen importieren"
 }
