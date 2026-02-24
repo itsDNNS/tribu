@@ -25,7 +25,7 @@
 
 - [x] Plugin manifest spec v1
 - [x] Modular backend (one router per feature)
-- [x] Theme engine (Light, Dark, Midnight Glass)
+- [x] Theme engine (Morning Mist, Dark, Midnight Glass)
 - [x] i18n foundation (DE/EN, lazy-loaded module packs)
 - [x] App shell with sidebar navigation
 
@@ -34,7 +34,7 @@
 - [x] httpOnly cookie authentication (replaces token-in-response)
 - [x] Logout endpoint with cookie clearing
 - [x] Cookie-first auth with Bearer fallback for API testing
-- [x] Password minimum length (8 characters)
+- [x] Password minimum length (8 characters, 1 uppercase, 1 digit)
 - [x] Rate limiting (10/min register, 20/min login)
 - [x] CORS restricted to localhost and LAN
 - [x] CSV import validation (row limit, range checks)
@@ -42,63 +42,70 @@
 - [x] Docker Compose secrets via .env (no hardcoded values)
 - [x] Non-root Docker containers (backend + frontend)
 - [x] Multi-stage frontend build
-- [x] .dockerignore for both services
 - [x] PostgreSQL and Redis ports not exposed to host
 
 ## Phase 3.6: Frontend Refactor
 
 - [x] Split monolithic `pages/index.js` into Context + Hooks + Views architecture
 - [x] AppContext for centralized state management (auth, data, theme, layout)
-- [x] Dedicated hooks: `useCalendar` (calendar state, forms), `useTasks` (task filters, forms)
-- [x] Individual view components: AppShell, AuthPage, DashboardView, CalendarView, TasksView, ContactsView, SettingsView
+- [x] Dedicated hooks: `useCalendar`, `useTasks`, `useShopping`
+- [x] Individual view components per screen
 
 ## Phase 3.7: UI Redesign + Demo Mode
 
-- [x] CSS design system (`styles/globals.css`) with CSS custom properties and `data-theme` switching
+- [x] CSS design system with custom properties and `data-theme` switching
 - [x] Glassmorphism, mesh background, grain texture, stagger animations
-- [x] Bento grid dashboard (welcome, stats, events, tasks, birthdays)
+- [x] Bento grid dashboard with welcome, stats, events, tasks, birthdays
 - [x] Calendar with event dots, day-detail panel, week view
 - [x] Task cards with priority/overdue/recurring badges and assignee avatars
 - [x] Contact card grid with colored avatars
-- [x] Visual theme picker with preview cards
-- [x] Three polished themes: Morning Mist (light), Dunkel (dark), Midnight Glass (glassmorphism)
+- [x] Three polished themes: Morning Mist, Dark, Midnight Glass
 - [x] Responsive layout with mobile bottom nav (768px breakpoint)
-- [x] Interactive demo mode with realistic sample data and local mutations
+- [x] Interactive demo mode with realistic bilingual sample data
 
 ## Phase 3.8: Quality Hardening
 
 - [x] N+1 query fixes (joinedload on family/membership queries)
-- [x] Alembic migrations (replace raw SQL on_startup, idempotent initial + tasks migration)
+- [x] Alembic migrations (4 idempotent migrations, replaces raw SQL on_startup)
 - [x] Pagination on calendar events and tasks (offset/limit, default 50, max 200)
 - [x] i18n test suite (key symmetry, empty strings, fallback, buildMessages, t())
 - [x] Password strength validation (1 uppercase + 1 digit, max 128 chars)
-- [x] Admin demotion feedback (role returned in response, frontend notification)
-- [x] AdminView inline styles fully migrated to CSS classes
+- [x] Admin demotion feedback (role in response, frontend notification)
 
-## Phase 3.9: Token System
+## Phase 3.9: Token System + Shopping Lists
 
-- [x] Personal Access Tokens (PATs) with scoped permissions
-- [x] Token CRUD API (create, list, revoke) with SHA-256 hash storage
-- [x] Scope enforcement on all module endpoints (calendar, tasks, contacts, birthdays, families, profile, shopping)
-- [x] PAT prefix detection (`tribu_pat_`) with Bearer auth fallback
-- [x] Migration 0003: personal_access_tokens table
+- [x] Personal Access Tokens (PATs) with scoped permissions (SHA-256 hash storage)
+- [x] Scope enforcement on all module endpoints
+- [x] Shopping lists module (multi-list, tap-to-toggle, checked section, bulk clear)
+- [x] Mobile shell quality (safe areas, 44px touch targets, bottom nav badges)
+- [x] Configurable `SECURE_COOKIES` env var for production TLS deployments
 
-## Phase 4: Collaboration
+## Release 0.4: Everyday MVP
 
-- [x] Shopping lists module (multi-list, tap-to-toggle, name+spec items, checked section, bulk clear)
+Goal: A family can run their daily life through Tribu without needing an external app.
+
+- [ ] Recurring calendar events (#6) with RRULE-compatible rules
+- [ ] Accessibility baseline (#14): contrast, focus, keyboard, screen reader labels
+- [ ] Notifications (#7): in-app feed, then push via Web Push API
+- [ ] Import/Export (#8): ICS calendar import/export, CSV hardening
+- [ ] Instance backup and restore (#15)
+
+## Release 0.5: Collaboration
+
 - [ ] Real-time sync for shopping lists (WebSocket/SSE)
 - [ ] Family chat (text, images)
+- [ ] Deeper role/permission controls (child sees own tasks only)
 
-## Phase 5: Smart Features
+## Release 0.6: Ecosystem
 
-- [ ] Reminders and push notifications
-- [ ] Recurring events
-- [ ] Meal planner
-- [ ] Budget tracker
+- [ ] Plugin registry and marketplace
+- [ ] Theme pack loader
+- [ ] Language pack management
+- [ ] Customizable bottom nav (#17)
+- [ ] Multi-arch Docker images (#16)
 
-## Phase 6: Advanced
+## Release 0.7: Integrations
 
-- [ ] Location sharing (opt-in)
-- [ ] Geofencing notifications
-- [ ] File sharing / family vault
-- [ ] Plugin marketplace
+- [ ] Home Assistant integration (events as automation triggers)
+- [ ] CalDAV/CardDAV sync
+- [ ] Optional MQTT for IoT scenarios
