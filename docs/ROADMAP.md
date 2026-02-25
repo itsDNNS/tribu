@@ -145,8 +145,8 @@ Goal: Full admin control over family members, modernized stack, polished UX.
 
 Goal: Make Tribu work for families who use it simultaneously.
 
-- [ ] Real-time shopping list sync via WebSocket (#36)
-- [ ] Child role restrictions and limited visibility (#37)
+- [x] Real-time shopping list sync via WebSocket (#36)
+- [x] Child role restrictions and limited visibility (#37)
 - [ ] Family invitation via shareable link (#38)
 
 ### Release 0.7: Integration

@@ -2,6 +2,18 @@
 
 All notable changes to Tribu are documented here.
 
+## 2026-02-25
+
+### Added
+
+- **Child role restrictions (#37)**: Age-appropriate access control for child family members. Backend `ensure_adult()` dependency returns 403 on write endpoints for children. Nuanced PATCH: children can toggle task status on their own tasks and check/uncheck shopping items, but cannot create, edit, or delete anything else. Token router uses separate `_ensure_user_is_adult()` since PATs are user-scoped. Frontend `isChild` flag in AppContext hides create/delete buttons, Data Management, and API Tokens sections. Role label shows "Kind"/"Child" in sidebar and settings.
+- **WebSocket shopping list sync (#36)**: Real-time updates across devices using unidirectional broadcast pattern. Mutations go through HTTP (single source of truth), WebSocket pushes events to all connected clients. Backend: `ConnectionManager` (in-memory), `ws_broadcast` (fire-and-forget via `asyncio.run_coroutine_threadsafe`), JWT cookie auth on WS endpoint. Frontend: `useWebSocket` hook with reconnecting exponential backoff (1s-30s) and keepalive ping (25s), `useShopping` with optimistic UI and HTTP fallback.
+### Changed
+
+- **GET /tasks**: Children see only tasks assigned to them (filtered by `assigned_to_user_id`).
+- **Shopping item PATCH**: Children can only update `checked` field, all other fields return 403.
+- **Task PATCH**: Children can only update `status` on tasks assigned to them, all other fields or other users' tasks return 403.
+
 ## 2026-02-24 (late)
 
 ### Added
