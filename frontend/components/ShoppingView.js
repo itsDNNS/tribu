@@ -134,6 +134,7 @@ export default function ShoppingView() {
                     placeholder={t(messages, 'module.shopping.item_name_placeholder')}
                     value={sh.newItemName}
                     onChange={(e) => sh.setNewItemName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sh.itemInputRef.current?.form?.requestSubmit(); } }}
                     required
                   />
                   <input
