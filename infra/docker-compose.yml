@@ -10,9 +10,9 @@ services:
     volumes:
       - tribu_pg_data:/var/lib/postgresql/data
 
-  redis:
+  valkey:
     image: valkey/valkey:8-alpine
-    container_name: tribu-redis
+    container_name: tribu-valkey
     restart: unless-stopped
 
   backend:
@@ -24,13 +24,13 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://tribu:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/tribu
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://valkey:6379/0
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
       BASE_URL: ${BASE_URL:-}
     depends_on:
       - postgres
-      - redis
+      - valkey
     ports:
       - "8000:8000"
     volumes:
