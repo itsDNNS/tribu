@@ -12,9 +12,9 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki">Wiki</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-  <a href="CONTRIBUTING.md">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-  <a href="docs/ROADMAP.md">Roadmap</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-  <a href="docs/CHANGELOG.md">Changelog</a>
+  <a href="https://github.com/itsDNNS/tribu/wiki/Contributing">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+  <a href="https://github.com/itsDNNS/tribu/wiki/Roadmap">Roadmap</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+  <a href="https://github.com/itsDNNS/tribu/wiki/Changelog">Changelog</a>
 </p>
 
 <p align="center">
@@ -131,12 +131,12 @@ docker compose up --build
 | | |
 |---|---|
 | [Wiki](https://github.com/itsDNNS/tribu/wiki) | Screenshots, features, themes, getting started |
-| [Architecture](docs/ARCHITECTURE.md) | Backend modules, frontend patterns, security, API reference |
-| [Plugin Spec](docs/PLUGIN-MANIFEST.md) | How to build feature, theme, and language plugins |
-| [Roadmap](docs/ROADMAP.md) | Development phases and planned features |
-| [Contributing](CONTRIBUTING.md) | Dev setup, project structure, PR guidelines |
+| [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) | Backend modules, frontend patterns, security, API reference |
+| [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest) | How to build feature, theme, and language plugins |
+| [Roadmap](https://github.com/itsDNNS/tribu/wiki/Roadmap) | Development phases and planned features |
+| [Contributing](https://github.com/itsDNNS/tribu/wiki/Contributing) | Dev setup, project structure, PR guidelines |
 | [Security](SECURITY.md) | Security policy and responsible disclosure |
-| [Changelog](docs/CHANGELOG.md) | Release history |
+| [Changelog](https://github.com/itsDNNS/tribu/wiki/Changelog) | Release history |
 
 ## Support
 
