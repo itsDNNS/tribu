@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Self-hosted family organizer to tame the everyday chaos.</strong><br>
-  Calendars, tasks, contacts, birthdays &mdash; one place, your server, your data.
+  Calendars, tasks, shopping lists, contacts, birthdays &mdash; one place, your server, your data.
 </p>
 
 <p align="center">
@@ -81,18 +81,25 @@ Most family organizer apps lock your data in their cloud and charge monthly fees
 | | |
 |---|---|
 | **Dashboard** | Bento grid with today's events, open tasks, birthday countdowns, and family stats |
-| **Calendar** | Month/week view, event dots, day-detail panel, quick event creation |
+| **Calendar** | Month/week view, event dots, day-detail panel, recurring events, ICS import/export |
 | **Tasks** | Priorities, due dates, assignees, recurring tasks, overdue tracking |
-| **Contacts** | Card grid with colored avatars, CSV import, automatic birthday extraction |
+| **Shopping** | Multiple lists, tap-to-toggle items, real-time sync via WebSocket |
+| **Contacts** | Card grid with colored avatars, CSV import/export, birthday extraction |
 | **Birthdays** | 4-week lookahead with countdown, auto-synced from contacts |
-| **Themes** | Morning Mist (light), Dunkel (dark), Midnight Glass (glassmorphism) |
-| **Security** | httpOnly cookies, rate limiting, bcrypt, non-root containers, CORS locked down |
+| **Notifications** | In-app feed with event reminders, overdue tasks, and birthday alerts |
+| **Themes** | Morning Mist (light), Dark, Midnight Glass (glassmorphism) |
+| **i18n** | English and German out of the box, lazy-loaded per module |
+| **Demo mode** | Try the full UI with realistic sample data, no server setup required |
+| **Security** | httpOnly cookies, rate limiting, scoped PATs, non-root containers |
 
 ## Quick Start
 
+Download the Compose file and environment template:
+
 ```bash
-git clone https://github.com/itsDNNS/tribu.git
-cd tribu/infra
+mkdir tribu && cd tribu
+curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/infra/docker-compose.yml
+curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/infra/.env.example
 cp .env.example .env
 ```
 
@@ -103,10 +110,10 @@ openssl rand -hex 32    # JWT_SECRET
 openssl rand -hex 16    # POSTGRES_PASSWORD
 ```
 
-Start the stack:
+Start the stack (pre-built images are pulled automatically):
 
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 
 | Service | URL |
@@ -118,13 +125,16 @@ docker compose up --build
 > The first user to register becomes the family **admin**.
 >
 > Want to explore first? Click **Try demo** on the login page.
+>
+> **Development setup?** See [Contributing](https://github.com/itsDNNS/tribu/wiki/Contributing) for building from source.
 
 ## Tech Stack
 
 **Frontend:** Next.js 16, React 19, Lucide Icons, CSS custom properties<br>
 **Backend:** FastAPI, SQLAlchemy, Python 3.13+<br>
 **Database:** PostgreSQL 16<br>
-**Deployment:** Docker Compose (Valkey 8 prepared for realtime features)
+**Cache:** Valkey 8<br>
+**Deployment:** Docker Compose, multi-arch images (amd64/arm64) on GHCR
 
 ## Documentation
 
