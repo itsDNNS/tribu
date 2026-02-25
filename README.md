@@ -160,8 +160,8 @@ Deploy the stack, open [localhost:3000](http://localhost:3000), and register.
 
 ```bash
 mkdir tribu && cd tribu
-curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/infra/docker-compose.yml
-curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/infra/.env.example
+curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/docker/docker-compose.yml
+curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/docker/.env.example
 cp .env.example .env
 # Fill in JWT_SECRET and POSTGRES_PASSWORD
 docker compose up -d
