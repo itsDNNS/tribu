@@ -273,5 +273,10 @@
   "sub_setup_ios_title": "iOS (Apple Kalender)",
   "sub_setup_ios": "Einstellungen → Kalender → Accounts → Account hinzufügen → Andere → Kalenderabo hinzufügen → Kalender-Feed-URL einfügen.",
   "sub_setup_contacts_hint": "Kontakte-Feed-URL im Browser öffnen, um eine VCF-Datei herunterzuladen, die in jede Kontakte-App importiert werden kann.",
-  "sub_token_missing": "Erstelle zuerst ein Abo-Token, um Feed-URLs zu generieren."
+  "sub_token_missing": "Erstelle zuerst ein Abo-Token, um Feed-URLs zu generieren.",
+  "version": "Version",
+  "update_available": "v{version} verfügbar",
+  "view_release": "Release-Notes anzeigen",
+  "up_to_date": "Aktuell",
+  "version_check_label": "Update-Prüfung"
 }

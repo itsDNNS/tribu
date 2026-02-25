@@ -27,6 +27,11 @@ function del(path) {
   return request(path, { method: 'DELETE' });
 }
 
+// Health
+export function apiGetHealth() {
+  return request('/health');
+}
+
 // Auth
 export function apiLogin(email, password) {
   return post('/auth/login', { email, password });

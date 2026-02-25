@@ -40,6 +40,10 @@ export default function SettingsView() {
   const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, demoMode, profileImage, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
   const { pushSupported, pushSubscription, pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushSubscription(loggedIn, demoMode);
 
+  // Version & update state
+  const [version, setVersion] = useState(null);
+  const [updateInfo, setUpdateInfo] = useState(null); // { version, url } | 'up_to_date' | null
+
   // Profile image feedback state
   const [imageSaved, setImageSaved] = useState(false);
 
@@ -155,6 +159,43 @@ export default function SettingsView() {
   }, [loggedIn, demoMode]);
 
   useEffect(() => { loadNotifPrefs(); }, [loadNotifPrefs]);
+
+  // Fetch version from backend + check for updates (admin only)
+  useEffect(() => {
+    let cancelled = false;
+    api.apiGetHealth().then(res => {
+      if (cancelled || !res.ok || !res.data?.version) return;
+      const current = res.data.version;
+      setVersion(current);
+
+      if (!isAdmin) return;
+      const CACHE_KEY = 'tribu_update_check';
+      const CACHE_TTL = 60 * 60 * 1000;
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && Date.now() - cached.ts < CACHE_TTL) {
+          setUpdateInfo(cached.data);
+          return;
+        }
+      } catch {}
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      fetch('https://api.github.com/repos/itsDNNS/tribu/releases/latest', { signal: ctrl.signal })
+        .then(r => r.json())
+        .then(data => {
+          clearTimeout(timer);
+          if (cancelled || !data.tag_name) return;
+          const latest = data.tag_name.replace(/^v/, '');
+          const result = latest !== current
+            ? { version: latest, url: data.html_url }
+            : 'up_to_date';
+          setUpdateInfo(result);
+          try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
+        })
+        .catch(() => clearTimeout(timer));
+    }).catch(() => null);
+    return () => { cancelled = true; };
+  }, [isAdmin]);
 
   async function handleSaveNotifPrefs() {
     const payload = {
@@ -917,6 +958,22 @@ export default function SettingsView() {
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
             {t(messages, 'privacy_note')}
           </p>
+          {version && (
+            <div style={{ marginTop: 'var(--space-md)', paddingTop: 'var(--space-sm)', borderTop: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              <span>{t(messages, 'version')}: v{version}</span>
+              {isAdmin && updateInfo === 'up_to_date' && (
+                <span style={{ marginLeft: 'var(--space-sm)', color: 'var(--accent)' }}>— {t(messages, 'up_to_date')}</span>
+              )}
+              {isAdmin && updateInfo && updateInfo !== 'up_to_date' && (
+                <span style={{ marginLeft: 'var(--space-sm)' }}>
+                  — {t(messages, 'update_available').replace('{version}', updateInfo.version)}{' '}
+                  <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+                    {t(messages, 'view_release')}
+                  </a>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
