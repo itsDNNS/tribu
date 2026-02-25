@@ -134,7 +134,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="Tribu API",
-    version="0.3.1",
+    version="0.7.0",
     description=API_DESCRIPTION,
     contact={"name": "Tribu", "url": "https://github.com/itsDNNS/tribu"},
     license_info={"name": "All rights reserved"},
