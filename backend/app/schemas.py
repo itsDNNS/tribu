@@ -440,6 +440,17 @@ class RegisterWithInviteRequest(BaseModel):
         return v
 
 
+class SetupStatusResponse(BaseModel):
+    needs_setup: bool
+
+
+class RestoreResponse(BaseModel):
+    status: str
+    alembic_revision: Optional[str] = None
+    pg_version: Optional[str] = None
+    created_at: Optional[str] = None
+
+
 class BaseUrlUpdate(BaseModel):
     base_url: str = ""
 

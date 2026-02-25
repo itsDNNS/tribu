@@ -305,6 +305,24 @@ export function apiRegisterWithInvite(payload) {
   return post('/auth/register-with-invite', payload);
 }
 
+// Setup
+export function apiGetSetupStatus() {
+  return request('/setup/status');
+}
+
+export async function apiRestoreBackup(file) {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`${API}/setup/restore`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  });
+  let data;
+  try { data = await res.json(); } catch { data = null; }
+  return { ok: res.ok, data };
+}
+
 // Base URL settings
 export function apiGetBaseUrl() {
   return request('/admin/settings/base-url');

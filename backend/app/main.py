@@ -27,6 +27,7 @@ from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATAB
 from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.modules.invitations_router import router as invitations_router, public_router as invitations_public_router, settings_router as invitations_settings_router
+from app.modules.setup_router import router as setup_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import ws_broadcast
 from app.schemas import ChangePasswordRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
@@ -160,6 +161,7 @@ app.include_router(nav_router)
 app.include_router(invitations_router)
 app.include_router(invitations_public_router)
 app.include_router(invitations_settings_router)
+app.include_router(setup_router)
 
 
 @app.on_event("startup")

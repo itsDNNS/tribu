@@ -172,3 +172,70 @@ def get_backup_path(backup_dir: str, filename: str) -> str | None:
     if path.exists() and path.is_file():
         return str(path)
     return None
+
+
+def validate_backup(archive_path: str) -> dict:
+    meta = _read_metadata(archive_path)
+    if not meta:
+        raise ValueError("Invalid backup: missing or unreadable metadata.json")
+    with tarfile.open(archive_path, "r:gz") as tar:
+        names = tar.getnames()
+        if "database.dump" not in names:
+            raise ValueError("Invalid backup: missing database.dump")
+    return meta
+
+
+def restore_backup(archive_path: str, db_url: str) -> dict:
+    meta = validate_backup(archive_path)
+    db = _parse_db_url(db_url)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with tarfile.open(archive_path, "r:gz") as tar:
+            tar.extractall(tmpdir, filter="data")
+        dump_path = os.path.join(tmpdir, "database.dump")
+        if not os.path.exists(dump_path):
+            raise RuntimeError("database.dump not found in archive")
+
+        env = os.environ.copy()
+        env["PGPASSWORD"] = db["password"]
+        pg_args = ["-h", db["host"], "-p", db["port"], "-U", db["user"]]
+
+        # Terminate existing connections
+        subprocess.run(
+            ["psql", *pg_args, "-d", "postgres", "-c",
+             f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db['dbname']}' AND pid <> pg_backend_pid()"],
+            capture_output=True, text=True, timeout=15, env=env,
+        )
+
+        # Drop and recreate database
+        subprocess.run(
+            ["psql", *pg_args, "-d", "postgres", "-c",
+             f"DROP DATABASE IF EXISTS {db['dbname']}"],
+            capture_output=True, text=True, timeout=15, env=env, check=True,
+        )
+        subprocess.run(
+            ["psql", *pg_args, "-d", "postgres", "-c",
+             f"CREATE DATABASE {db['dbname']}"],
+            capture_output=True, text=True, timeout=15, env=env, check=True,
+        )
+
+        # Restore dump
+        result = subprocess.run(
+            ["pg_restore", "-Fc", "--no-owner", "--no-privileges",
+             *pg_args, "-d", db["dbname"], dump_path],
+            capture_output=True, text=True, timeout=600, env=env,
+        )
+        if result.returncode not in (0, 1):
+            raise RuntimeError(f"pg_restore failed: {result.stderr}")
+
+        # Run alembic upgrade head to handle schema version gaps
+        alembic_result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            capture_output=True, text=True, timeout=120, env=env,
+            cwd="/app",
+        )
+        if alembic_result.returncode != 0:
+            logger.warning("alembic upgrade after restore: %s", alembic_result.stderr)
+
+    logger.info("Backup restored from: %s", archive_path)
+    return meta
