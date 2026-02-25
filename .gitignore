@@ -18,5 +18,8 @@ node_modules/
 # Internal docs (not for the repo)
 .internal/
 
+# Agent memory (session context)
+tasks/
+
 # OS
 .DS_Store
