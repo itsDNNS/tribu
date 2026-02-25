@@ -46,6 +46,9 @@ export function AppProvider({ children }) {
   };
   const [isMobile, setIsMobile] = useState(false);
 
+  // Setup
+  const [needsSetup, setNeedsSetup] = useState(false);
+
   // Loading
   const [loading, setLoading] = useState(true);
 
@@ -187,12 +190,14 @@ export function AppProvider({ children }) {
     onResize();
     window.addEventListener('resize', onResize);
 
-    api.apiGetMe().then(({ ok, data }) => {
+    api.apiGetMe().then(async ({ ok, data }) => {
       if (ok && data) {
         setMe(data);
         if (data.profile_image) setProfileImage(data.profile_image);
         setLoggedIn(true);
       } else {
+        const { ok: sOk, data: sData } = await api.apiGetSetupStatus();
+        if (sOk && sData?.needs_setup) setNeedsSetup(true);
         setLoading(false);
       }
     });
@@ -292,6 +297,7 @@ export function AppProvider({ children }) {
     notifications, setNotifications, unreadCount, setUnreadCount,
     switchFamily,
     logout,
+    needsSetup, setNeedsSetup,
     demoMode, enterDemo,
   };
 

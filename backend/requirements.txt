@@ -11,3 +11,4 @@ python-dateutil==2.9.0.post0
 icalendar==7.0.1
 alembic==1.18.4
 apscheduler==3.11.2
+python-multipart==0.0.20

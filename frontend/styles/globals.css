@@ -1024,3 +1024,27 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .calendar-month-label { min-width: auto; }
   .quick-add-bar { flex-wrap: wrap; }
 }
+
+/* ─── Setup Wizard ─── */
+.setup-steps { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+.setup-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--glass-border); transition: all 0.3s; }
+.setup-dot.active { background: var(--amethyst); box-shadow: 0 0 8px var(--amethyst-glow); transform: scale(1.3); }
+.setup-dot.done { background: var(--success); }
+
+.setup-upload-zone { border: 2px dashed var(--glass-border); border-radius: var(--radius-md); padding: var(--space-xl) var(--space-lg); text-align: center; cursor: pointer; transition: all 0.2s; }
+.setup-upload-zone:hover, .setup-upload-zone.drag-over { border-color: var(--amethyst); background: rgba(124, 58, 237, 0.04); }
+
+.setup-theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+.setup-theme-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-radius: var(--radius-sm); border: 2px solid var(--glass-border); background: transparent; color: var(--text-secondary); font-size: 0.78rem; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.setup-theme-card.active { border-color: var(--amethyst); color: var(--text-primary); }
+.setup-theme-card:hover { border-color: var(--amethyst); }
+.setup-theme-preview { width: 100%; height: 28px; border-radius: 6px; border: 1px solid; }
+
+.setup-lang-toggle { position: fixed; top: 16px; right: 16px; z-index: 10; display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 0.8rem; }
+.setup-lang-toggle select { background: transparent; border: 1px solid var(--glass-border); border-radius: 6px; color: var(--text-secondary); padding: 4px 8px; font-family: inherit; font-size: 0.8rem; cursor: pointer; }
+
+.btn-secondary { background: transparent; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 15px; font-family: inherit; font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
+.btn-secondary:hover { border-color: var(--amethyst); color: var(--text-primary); background: rgba(124, 58, 237, 0.06); }
+
+.btn-link { background: transparent; border: none; color: var(--text-muted); font-family: inherit; font-size: 0.85rem; cursor: pointer; padding: 8px; transition: color 0.2s; }
+.btn-link:hover { color: var(--text-primary); }
