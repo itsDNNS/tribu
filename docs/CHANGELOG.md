@@ -2,6 +2,27 @@
 
 All notable changes to Tribu are documented here.
 
+## v0.7.0 — 2026-02-25
+
+### Milestone 0.6: Collaboration
+
+- **Family invitation links (#38)**: Admins create shareable invite URLs with configurable expiry (1-90 days) and max uses. Public endpoint for invite validation, rate-limited registration with preset role and adult status.
+- **Child role restrictions (#37)**: Backend `ensure_adult()` enforcement on write endpoints. Children can view data, toggle own task status, and check/uncheck shopping items.
+- **WebSocket shopping sync (#36)**: Real-time shopping list updates via WebSocket broadcast. HTTP mutations remain source of truth; WebSocket pushes to all connected clients.
+
+### Milestone 0.7: Infrastructure & Performance
+
+- **First-run setup wizard (#41)**: Fresh deployments show guided setup — start fresh or restore from backup. Theme/language preferences step included.
+- **Valkey caching (#43)**: Cached hot endpoints (dashboard, unread count, members, nav order, preferences) with automatic invalidation on writes. Graceful DB fallback.
+- **API reference documentation (#45)**: All 69 endpoints with summaries, descriptions, error responses. Schema field descriptions and JSON examples. Auth guide, rate limits, error format, permissions model, PAT scope matrix. 16 tag descriptions.
+
+### Infrastructure
+
+- Docker Compose project name set to `tribu`
+- Valkey service renamed from `redis`
+
+---
+
 ## 2026-02-25
 
 ### Added

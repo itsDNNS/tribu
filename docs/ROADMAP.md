@@ -141,30 +141,35 @@ Goal: Full admin control over family members, modernized stack, polished UX.
 
 ## Road to 1.0 (EPIC #46)
 
-### Release 0.6: Collaboration
+### Release 0.6: Collaboration ✅
 
 Goal: Make Tribu work for families who use it simultaneously.
 
 - [x] Real-time shopping list sync via WebSocket (#36)
 - [x] Child role restrictions and limited visibility (#37)
-- [ ] Family invitation via shareable link (#38)
+- [x] Family invitation via shareable link (#38)
 
-### Release 0.7: Integration
+### Release 0.7: Infrastructure & Performance ✅
 
-Goal: Connect Tribu with the calendars and contacts already on people's phones.
+Goal: Harden the backend before adding major features.
 
-- [ ] CalDAV and CardDAV bidirectional sync (#39)
+- [x] First-run setup wizard with backup restore (#41)
+- [x] Valkey caching for hot queries (#43)
+- [x] API reference documentation (#45)
+
+### Release 0.8: Integration
+
+Goal: Connect Tribu with external devices and standards.
+
 - [ ] Web Push notifications via Service Worker (#40)
+- [ ] CalDAV and CardDAV bidirectional sync (#39)
 
-### Release 0.8: Production Hardening
+### Release 0.9: Production Readiness
 
-Goal: Make Tribu trustworthy for long-term daily use by any family.
+Goal: Final quality gate before 1.0.
 
-- [ ] First-run setup wizard (#41)
-- [ ] E2E test suite with Playwright (#42)
-- [ ] Redis caching for hot queries (#43)
 - [ ] Self-hosting documentation (#44)
-- [ ] API reference documentation (#45)
+- [ ] E2E test suite with Playwright (#42)
 
 ### Release 1.0: Stable
 
