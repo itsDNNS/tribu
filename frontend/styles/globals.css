@@ -703,6 +703,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    CONTACTS
    ═══════════════════════════════════════════ */
 .contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: var(--space-md); }
+.contacts-section-letter { grid-column: 1 / -1; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding-top: var(--space-md); }
 .contact-card { padding: var(--space-lg); display: flex; align-items: center; gap: var(--space-md); transition: all 0.2s; }
 .contact-card:hover { transform: translateY(-2px); }
 .contact-avatar { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.1rem; color: white; flex-shrink: 0; }

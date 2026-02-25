@@ -1,3 +1,4 @@
+import React from 'react';
 import { UserPlus } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
@@ -26,29 +27,41 @@ export default function ContactsView() {
       </div>
 
       <div className="contacts-grid stagger">
-        {contacts.map((c) => {
-          const initials = (c.full_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-          return (
-            <div key={c.id} className="contact-card glass-sm">
-              <div className="contact-avatar" style={{ background: getAvatarColor(c.full_name) }}>
-                {initials}
-              </div>
-              <div className="contact-info">
-                <div className="contact-name">{c.full_name}</div>
-                {(c.email || c.phone) && (
-                  <div className="contact-detail">{c.email || c.phone}</div>
-                )}
-                {c.birthday_month && c.birthday_day && (
-                  <div className="contact-birthday">
-                    🎂 {c.birthday_day}.{c.birthday_month}.
+        {contacts.length > 0 ? (
+          Array.from(
+            contacts.reduce((map, c) => {
+              const letter = (c.full_name || '?')[0].toUpperCase();
+              if (!map.has(letter)) map.set(letter, []);
+              map.get(letter).push(c);
+              return map;
+            }, new Map())
+          ).map(([letter, group]) => (
+            <React.Fragment key={letter}>
+              <div className="contacts-section-letter">{letter}</div>
+              {group.map((c) => {
+                const initials = (c.full_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+                return (
+                  <div key={c.id} className="contact-card glass-sm">
+                    <div className="contact-avatar" style={{ background: getAvatarColor(c.full_name) }}>
+                      {initials}
+                    </div>
+                    <div className="contact-info">
+                      <div className="contact-name">{c.full_name}</div>
+                      {(c.email || c.phone) && (
+                        <div className="contact-detail">{c.email || c.phone}</div>
+                      )}
+                      {c.birthday_month && c.birthday_day && (
+                        <div className="contact-birthday">
+                          🎂 {c.birthday_day}.{c.birthday_month}.
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {contacts.length === 0 && (
+                );
+              })}
+            </React.Fragment>
+          ))
+        ) : (
           <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', gridColumn: '1 / -1' }}>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t(messages, 'module.contacts.no_contacts')}</div>
             {!demoMode && !isChild && (
