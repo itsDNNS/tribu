@@ -392,6 +392,58 @@ class PaginatedAuditLog(BaseModel):
     limit: int
 
 
+# Invitations
+class InvitationCreate(BaseModel):
+    role_preset: str = "member"
+    is_adult_preset: bool = False
+    max_uses: Optional[int] = Field(None, ge=1, le=1000)
+    expires_in_days: int = Field(7, ge=1, le=90)
+
+
+class InvitationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    token: str
+    invite_url: str = ""
+    role_preset: str
+    is_adult_preset: bool
+    max_uses: Optional[int]
+    use_count: int
+    expires_at: datetime
+    revoked: bool
+    created_by_user_id: Optional[int]
+    created_at: datetime
+
+
+class InviteInfoResponse(BaseModel):
+    family_name: str
+    valid: bool
+    role_preset: str
+    is_adult_preset: bool
+
+
+class RegisterWithInviteRequest(BaseModel):
+    token: str
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
+        return v
+
+
+class BaseUrlUpdate(BaseModel):
+    base_url: str = ""
+
+
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str = Field(min_length=8, max_length=128)

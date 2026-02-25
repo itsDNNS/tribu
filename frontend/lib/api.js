@@ -284,6 +284,40 @@ export function apiUpdateNavOrder(nav_order) {
   });
 }
 
+// Invitations
+export function apiGetInvitations(familyId) {
+  return request(`/families/${familyId}/invitations`);
+}
+
+export function apiCreateInvitation(familyId, payload) {
+  return post(`/families/${familyId}/invitations`, payload);
+}
+
+export function apiRevokeInvitation(familyId, inviteId) {
+  return del(`/families/${familyId}/invitations/${inviteId}`);
+}
+
+export function apiGetInviteInfo(token) {
+  return request(`/invitations/${token}`);
+}
+
+export function apiRegisterWithInvite(payload) {
+  return post('/auth/register-with-invite', payload);
+}
+
+// Base URL settings
+export function apiGetBaseUrl() {
+  return request('/admin/settings/base-url');
+}
+
+export function apiSetBaseUrl(base_url) {
+  return request('/admin/settings/base-url', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base_url }),
+  });
+}
+
 export function connectNotificationStream(onMessage) {
   const es = new EventSource(`${API}/notifications/stream`, { withCredentials: true });
   es.onmessage = (event) => {

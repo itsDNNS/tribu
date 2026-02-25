@@ -31,6 +31,7 @@ class Family(Base):
     birthdays = relationship("FamilyBirthday", back_populates="family", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
     shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
+    invitations = relationship("FamilyInvitation", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -206,6 +207,24 @@ class AuditLog(Base):
     target_user_id = Column(Integer, nullable=True)
     details = Column(JSON, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class FamilyInvitation(Base):
+    __tablename__ = "family_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    role_preset = Column(String, nullable=False, default="member")
+    is_adult_preset = Column(Boolean, nullable=False, default=False)
+    max_uses = Column(Integer, nullable=True)
+    use_count = Column(Integer, nullable=False, default=0)
+    expires_at = Column(DateTime, nullable=False)
+    revoked = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    family = relationship("Family", back_populates="invitations")
 
 
 class SystemSetting(Base):
