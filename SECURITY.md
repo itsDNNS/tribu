@@ -35,7 +35,7 @@ Never use default or placeholder values for these secrets.
 
 ### Recommended Setup
 
-1. Copy `infra/.env.example` to `infra/.env` and generate strong secrets
+1. Copy `docker/.env.example` to `docker/.env` and generate strong secrets
 2. If exposing Tribu to the internet, put it behind a reverse proxy (nginx, Caddy, Traefik) with TLS
 3. Keep Docker images up to date for security patches
 
