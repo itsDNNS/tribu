@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp, Navigation, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart } from 'lucide-react';
+import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp, Navigation, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart, BellRing } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../contexts/AppContext';
 import { downloadBlob } from '../lib/helpers';
 import { t, languageCompleteness } from '../lib/i18n';
+import usePushSubscription from '../hooks/usePushSubscription';
 import * as api from '../lib/api';
 
 const THEME_DESCS = {
@@ -37,6 +38,7 @@ const NAV_ITEM_META = {
 
 export default function SettingsView() {
   const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, demoMode, profileImage, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
+  const { pushSupported, pushSubscription, pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushSubscription(loggedIn, demoMode);
 
   // Profile image feedback state
   const [imageSaved, setImageSaved] = useState(false);
@@ -505,6 +507,38 @@ export default function SettingsView() {
               <button className="btn-sm" onClick={handleSaveNotifPrefs} style={{ justifySelf: 'start' }}>
                 {notifSaved ? <><Check size={14} /> {t(messages, 'notification_saved')}</> : t(messages, 'notification_save')}
               </button>
+
+              {pushSupported && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-md)', marginTop: 'var(--space-sm)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
+                    <BellRing size={16} />
+                    <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{t(messages, 'push_notifications')}</span>
+                  </div>
+                  {pushSubscription ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--success)' }}>{t(messages, 'push_enabled')}</span>
+                      <button className="btn-ghost" onClick={pushUnsubscribe} style={{ fontSize: '0.82rem' }}>
+                        {t(messages, 'push_disable')}
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <button
+                        className="btn-sm"
+                        onClick={pushSubscribe}
+                        disabled={pushPermission === 'denied'}
+                      >
+                        {t(messages, 'push_enable')}
+                      </button>
+                      {pushPermission === 'denied' && (
+                        <p style={{ fontSize: '0.78rem', color: 'var(--warning)', marginTop: 'var(--space-sm)' }}>
+                          {t(messages, 'push_blocked_hint')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

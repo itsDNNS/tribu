@@ -179,6 +179,18 @@ class NotificationPreference(Base):
     reminder_minutes = Column(Integer, nullable=False, default=30)
     quiet_start = Column(String, nullable=True)
     quiet_end = Column(String, nullable=True)
+    push_enabled = Column(Boolean, nullable=False, default=False, server_default="false")
+
+
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    endpoint = Column(Text, nullable=False, unique=True)
+    p256dh = Column(Text, nullable=False)
+    auth = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
 class NotificationSentLog(Base):

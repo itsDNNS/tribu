@@ -251,6 +251,18 @@ export function AppProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
 
+  // Listen for NAVIGATE messages from service worker (push notification clicks)
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event) => {
+      if (event.data?.type === 'NAVIGATE' && event.data.url) {
+        setActiveView(event.data.url);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
   // Notification polling — separate effect to avoid race conditions with bootstrap
   useEffect(() => {
     if (!loggedIn || demoMode) return;

@@ -133,6 +133,12 @@ def _check_notifications():
             db.add(notif)
             log = NotificationSentLog(source_type=source_type, source_id=source_id, user_id=uid)
             db.add(log)
+            if pref.push_enabled:
+                try:
+                    from app.core.push import send_push_for_user
+                    send_push_for_user(db, uid, title, body, link)
+                except Exception:
+                    logger.exception("Push notification failed for user %s", uid)
 
         # 1. Event reminders
         for uid, fam_ids in user_families.items():

@@ -566,6 +566,7 @@ class NotificationPreferenceResponse(BaseModel):
     reminder_minutes: int = Field(..., description="Minutes before event to send reminder")
     quiet_start: Optional[str] = Field(None, description="Quiet hours start (HH:MM format)")
     quiet_end: Optional[str] = Field(None, description="Quiet hours end (HH:MM format)")
+    push_enabled: bool = Field(False, description="Whether push notifications are enabled")
 
 
 class NotificationPreferenceUpdate(BaseModel):
@@ -574,6 +575,19 @@ class NotificationPreferenceUpdate(BaseModel):
     reminder_minutes: Optional[int] = Field(None, description="Minutes before event to send reminder")
     quiet_start: Optional[str] = Field(None, description="Quiet hours start (HH:MM)")
     quiet_end: Optional[str] = Field(None, description="Quiet hours end (HH:MM)")
+    push_enabled: Optional[bool] = Field(None, description="Enable/disable push notifications")
+
+
+class PushSubscriptionCreate(BaseModel):
+    """Register a push subscription."""
+    endpoint: str = Field(..., description="Push service endpoint URL")
+    p256dh: str = Field(..., description="Client public key for encryption")
+    auth: str = Field(..., description="Client auth secret")
+
+
+class PushUnsubscribe(BaseModel):
+    """Unregister a push subscription."""
+    endpoint: str = Field(..., description="Push service endpoint URL to remove")
 
 
 # ---------------------------------------------------------------------------

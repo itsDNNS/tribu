@@ -13,3 +13,4 @@ alembic==1.18.4
 apscheduler==3.11.2
 python-multipart==0.0.20
 redis==5.2.1
+pywebpush==2.0.1
