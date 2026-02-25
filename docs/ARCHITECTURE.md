@@ -50,9 +50,11 @@ backend/
     ├── security.py          # JWT (PyJWT), bcrypt hashing, legacy hash migration, PAT generation, temp passwords
     ├── database.py          # Engine, session factory (requires DATABASE_URL)
     ├── core/
-    │   ├── deps.py          # Shared dependencies (current_user, get_db, family checks)
+    │   ├── deps.py          # Shared dependencies (current_user, get_db, family checks, ensure_adult)
     │   ├── scopes.py        # PAT scope validation (require_scope, has_scope)
-    │   └── scheduler.py     # APScheduler jobs (backups, notification checks)
+    │   ├── scheduler.py     # APScheduler jobs (backups, notification checks)
+    │   ├── ws_manager.py    # WebSocket ConnectionManager (in-memory)
+    │   └── ws_broadcast.py  # Fire-and-forget broadcast via asyncio
     └── modules/
         ├── calendar_router.py
         ├── birthdays_router.py
@@ -62,7 +64,8 @@ backend/
         ├── dashboard_router.py
         ├── families_router.py
         ├── tokens_router.py   # Personal Access Token CRUD
-        └── notifications_router.py  # Notification feed, preferences, SSE stream
+        ├── notifications_router.py  # Notification feed, preferences, SSE stream
+        └── shopping_ws.py           # WebSocket endpoint for real-time shopping sync
 ```
 
 ### Domain Model
@@ -95,7 +98,8 @@ User ──┬── Membership ──── Family
 | Password storage | bcrypt (min 8 characters, legacy PBKDF2-SHA256 auto-migrated on login) |
 | Auth | httpOnly cookie (JWT HS256), Bearer fallback for API testing |
 | Rate limiting | 10/min register, 20/min login (slowapi) |
-| Authorization | Role check per family membership |
+| Authorization | Role check per family membership, `ensure_adult()` on write endpoints |
+| Child restrictions | Children (non-adult members) get 403 on create/edit/delete, can toggle task status and shopping checked |
 | Data isolation | All queries filtered by family_id |
 | CORS | Restricted to localhost and LAN IPs (regex pattern) |
 | Environment | `DATABASE_URL` and `JWT_SECRET` required, no fallback defaults |
@@ -217,6 +221,28 @@ Tribu is installable as a Progressive Web App. The frontend includes:
 - **App icons**: 192px, 512px, and 512px maskable PNG icons
 - **iOS support**: `apple-mobile-web-app-capable` and `apple-touch-icon` meta tags
 
+## WebSocket Architecture (Shopping)
+
+Real-time shopping list sync uses a unidirectional broadcast pattern:
+
+```
+Client A ──HTTP POST──▶ Backend ──── DB write ────▶ PostgreSQL
+                            │
+                            ▼
+                      ws_broadcast()
+                            │
+              ┌─────────────┼─────────────┐
+              ▼             ▼             ▼
+          Client A      Client B      Client C
+         (WS conn)     (WS conn)     (WS conn)
+```
+
+Mutations always go through HTTP endpoints (single source of truth). After a successful mutation, `ws_broadcast` fires a WebSocket event to all connected clients in the same family. The broadcast is fire-and-forget via `asyncio.run_coroutine_threadsafe` since shopping endpoints are synchronous.
+
+The frontend `useWebSocket` hook manages reconnection with exponential backoff (1s to 30s) and keepalive pings every 25 seconds. `useShopping` applies optimistic UI updates and falls back to HTTP polling if WebSocket is unavailable.
+
+This architecture can be extended to Redis Pub/Sub for multi-worker deployments.
+
 ## Deployment
 
 Docker Compose stack (`infra/docker-compose.yml`):
@@ -279,6 +305,9 @@ A `.env` file in `infra/` is required before starting. See [`infra/.env.example`
 /shopping/lists/{id}/items          POST    Add item
 /shopping/lists/{id}/items/{iid}    PATCH   Update item (toggle checked, rename)
 /shopping/lists/{id}/items/{iid}    DELETE  Delete item
+/shopping/lists/{id}/checked        DELETE  Clear checked items
+
+/shopping/ws/{family_id}            WS      Real-time shopping sync (JWT cookie auth)
 
 /tokens                 GET     List user's PATs
 /tokens                 POST    Create PAT (returns plain token once)
