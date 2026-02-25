@@ -11,9 +11,9 @@ from app.core.deps import current_user
 from app.core.scheduler import configure_backup_schedule
 from app.database import get_db
 from app.models import Membership, SystemSetting, User
-from app.schemas import BackupConfigResponse, BackupConfigUpdate, BackupEntry, BackupSchedule
+from app.schemas import ADMIN_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, BackupConfigResponse, BackupConfigUpdate, BackupEntry, BackupSchedule
 
-router = APIRouter(prefix="/admin/backup", tags=["backup"])
+router = APIRouter(prefix="/admin/backup", tags=["backup"], responses={**ADMIN_RESPONSES})
 
 BACKUP_DIR = os.getenv("BACKUP_DIR", "/backups")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
@@ -44,7 +44,13 @@ def _set_setting(db: Session, key: str, value: str):
     db.flush()
 
 
-@router.get("/config", response_model=BackupConfigResponse)
+@router.get(
+    "/config",
+    response_model=BackupConfigResponse,
+    summary="Get backup configuration",
+    description="Return current backup schedule, retention policy, and last backup status. Admin role required.",
+    response_description="Backup configuration",
+)
 def get_config(user: User = Depends(current_user), db: Session = Depends(get_db)):
     _require_admin(user, db)
     schedule = _get_setting(db, "backup_schedule", "off")
@@ -59,7 +65,13 @@ def get_config(user: User = Depends(current_user), db: Session = Depends(get_db)
     )
 
 
-@router.put("/config", response_model=BackupConfigResponse)
+@router.put(
+    "/config",
+    response_model=BackupConfigResponse,
+    summary="Update backup configuration",
+    description="Set backup schedule and retention policy. Reconfigures the background scheduler. Admin role required.",
+    response_description="Updated backup configuration",
+)
 def update_config(
     payload: BackupConfigUpdate,
     user: User = Depends(current_user),
@@ -75,7 +87,12 @@ def update_config(
     return get_config(user, db)
 
 
-@router.post("/trigger")
+@router.post(
+    "/trigger",
+    summary="Trigger a manual backup",
+    description="Create a database backup immediately and enforce the retention policy. Admin role required.",
+    response_description="Backup filename",
+)
 def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get_db)):
     _require_admin(user, db)
     try:
@@ -93,14 +110,26 @@ def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/list", response_model=list[BackupEntry])
+@router.get(
+    "/list",
+    response_model=list[BackupEntry],
+    summary="List all backups",
+    description="Return metadata for all backup files on disk. Admin role required.",
+    response_description="List of backup entries",
+)
 def list_all_backups(user: User = Depends(current_user), db: Session = Depends(get_db)):
     _require_admin(user, db)
     entries = list_backups(BACKUP_DIR)
     return [BackupEntry(**e) for e in entries]
 
 
-@router.get("/{filename}/download")
+@router.get(
+    "/{filename}/download",
+    summary="Download a backup file",
+    description="Download a specific backup archive (.tar.gz). Admin role required.",
+    response_description="Backup file download",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def download_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
     _require_admin(user, db)
     path = get_backup_path(BACKUP_DIR, filename)
@@ -109,7 +138,13 @@ def download_backup(filename: str, user: User = Depends(current_user), db: Sessi
     return FileResponse(path, media_type="application/gzip", filename=filename)
 
 
-@router.delete("/{filename}")
+@router.delete(
+    "/{filename}",
+    summary="Delete a backup file",
+    description="Permanently delete a specific backup file from disk. Admin role required.",
+    response_description="Deletion confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def delete_single_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
     _require_admin(user, db)
     if not delete_backup(BACKUP_DIR, filename):

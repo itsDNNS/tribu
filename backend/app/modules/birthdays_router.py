@@ -6,12 +6,18 @@ from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import FamilyBirthday, User
-from app.schemas import BirthdayCreate, BirthdayResponse
+from app.schemas import AUTH_RESPONSES, ErrorResponse, BirthdayCreate, BirthdayResponse
 
-router = APIRouter(prefix="/birthdays", tags=["birthdays"])
+router = APIRouter(prefix="/birthdays", tags=["birthdays"], responses={**AUTH_RESPONSES})
 
 
-@router.get("", response_model=list[BirthdayResponse])
+@router.get(
+    "",
+    response_model=list[BirthdayResponse],
+    summary="List birthdays",
+    description="Return all birthday entries for a family sorted by month and day. Scope: `birthdays:read`.",
+    response_description="List of birthday entries",
+)
 def list_birthdays(
     family_id: int,
     user: User = Depends(current_user),
@@ -22,7 +28,13 @@ def list_birthdays(
     return db.query(FamilyBirthday).filter(FamilyBirthday.family_id == family_id).order_by(FamilyBirthday.month, FamilyBirthday.day).all()
 
 
-@router.post("", response_model=BirthdayResponse)
+@router.post(
+    "",
+    response_model=BirthdayResponse,
+    summary="Create a birthday",
+    description="Add a birthday entry for a person in the family. Scope: `birthdays:write`.",
+    response_description="The created birthday entry",
+)
 def create_birthday(
     payload: BirthdayCreate,
     user: User = Depends(current_user),

@@ -10,12 +10,18 @@ from app.core import cache
 from app.core.deps import current_user
 from app.database import get_db
 from app.models import Notification, NotificationPreference, User
-from app.schemas import NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse
 
-router = APIRouter(prefix="/notifications", tags=["notifications"])
+router = APIRouter(prefix="/notifications", tags=["notifications"], responses={**AUTH_RESPONSES})
 
 
-@router.get("", response_model=list[NotificationResponse])
+@router.get(
+    "",
+    response_model=list[NotificationResponse],
+    summary="List notifications",
+    description="Return paginated notifications for the current user, newest first.",
+    response_description="List of notifications",
+)
 def list_notifications(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -33,14 +39,25 @@ def list_notifications(
     return rows
 
 
-@router.get("/unread-count")
+@router.get(
+    "/unread-count",
+    summary="Get unread notification count",
+    description="Return the number of unread notifications for the current user.",
+    response_description="Object with unread count",
+)
 def unread_count(user: User = Depends(current_user), db: Session = Depends(get_db)):
     def _load():
         return {"count": db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).count()}
     return cache.get_or_set(f"tribu:notif_count:{user.id}", 15, _load)
 
 
-@router.patch("/{notification_id}/read")
+@router.patch(
+    "/{notification_id}/read",
+    summary="Mark notification as read",
+    description="Mark a single notification as read.",
+    response_description="Confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def mark_read(notification_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
     notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
     if not notif:
@@ -51,7 +68,12 @@ def mark_read(notification_id: int, user: User = Depends(current_user), db: Sess
     return {"status": "ok"}
 
 
-@router.post("/read-all")
+@router.post(
+    "/read-all",
+    summary="Mark all notifications as read",
+    description="Mark all unread notifications as read for the current user.",
+    response_description="Confirmation",
+)
 def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_db)):
     db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).update({"read": True})
     db.commit()
@@ -59,7 +81,13 @@ def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_
     return {"status": "ok"}
 
 
-@router.delete("/{notification_id}")
+@router.delete(
+    "/{notification_id}",
+    summary="Delete a notification",
+    description="Permanently delete a notification.",
+    response_description="Confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def delete_notification(notification_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
     notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
     if not notif:
@@ -70,7 +98,12 @@ def delete_notification(notification_id: int, user: User = Depends(current_user)
     return {"status": "ok"}
 
 
-@router.get("/stream")
+@router.get(
+    "/stream",
+    summary="Stream notifications (SSE)",
+    description="Server-Sent Events stream that pushes new notifications in real time. The connection polls every 5 seconds and emits `data:` frames as JSON.",
+    response_description="SSE event stream (text/event-stream)",
+)
 async def notification_stream(user: User = Depends(current_user)):
     user_id = user.id
 
@@ -101,7 +134,13 @@ async def notification_stream(user: User = Depends(current_user)):
     return StreamingResponse(event_generator(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
-@router.get("/preferences", response_model=NotificationPreferenceResponse)
+@router.get(
+    "/preferences",
+    response_model=NotificationPreferenceResponse,
+    summary="Get notification preferences",
+    description="Return the current user's notification preferences (reminders, quiet hours).",
+    response_description="Notification preferences",
+)
 def get_preferences(user: User = Depends(current_user), db: Session = Depends(get_db)):
     def _load():
         pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
@@ -112,7 +151,13 @@ def get_preferences(user: User = Depends(current_user), db: Session = Depends(ge
     return NotificationPreferenceResponse(**data)
 
 
-@router.put("/preferences", response_model=NotificationPreferenceResponse)
+@router.put(
+    "/preferences",
+    response_model=NotificationPreferenceResponse,
+    summary="Update notification preferences",
+    description="Update the current user's notification preferences. Creates default preferences if none exist.",
+    response_description="Updated notification preferences",
+)
 def update_preferences(
     payload: NotificationPreferenceUpdate,
     user: User = Depends(current_user),

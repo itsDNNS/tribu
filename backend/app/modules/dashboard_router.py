@@ -9,12 +9,18 @@ from app.core.recurrence import expand_event
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, FamilyBirthday, User
-from app.schemas import CalendarEventResponse, DashboardSummary, UpcomingBirthday
+from app.schemas import AUTH_RESPONSES, ErrorResponse, CalendarEventResponse, DashboardSummary, UpcomingBirthday
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["dashboard"], responses={**AUTH_RESPONSES})
 
 
-@router.get("/summary", response_model=DashboardSummary)
+@router.get(
+    "/summary",
+    response_model=DashboardSummary,
+    summary="Get dashboard summary",
+    description="Return upcoming events (14 days) and birthdays (28 days) for a family. Scope: `calendar:read`.",
+    response_description="Dashboard summary with events and birthdays",
+)
 def dashboard_summary(
     family_id: int,
     user: User = Depends(current_user),

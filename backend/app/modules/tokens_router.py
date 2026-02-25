@@ -5,10 +5,10 @@ from app.core.deps import current_user
 from app.core.scopes import VALID_SCOPES, require_scope
 from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
-from app.schemas import PATCreate, PATCreatedResponse, PATResponse
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, PATCreate, PATCreatedResponse, PATResponse
 from app.security import generate_pat
 
-router = APIRouter(prefix="/tokens", tags=["tokens"])
+router = APIRouter(prefix="/tokens", tags=["tokens"], responses={**AUTH_RESPONSES})
 
 MAX_TOKENS_PER_USER = 25
 
@@ -21,7 +21,13 @@ def _ensure_user_is_adult(db: Session, user_id: int):
         raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
 
 
-@router.get("", response_model=list[PATResponse])
+@router.get(
+    "",
+    response_model=list[PATResponse],
+    summary="List personal access tokens",
+    description="Return all PATs for the current user. Adult only. Scope: `profile:read`.",
+    response_description="List of token metadata",
+)
 def list_tokens(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
@@ -36,7 +42,13 @@ def list_tokens(
     )
 
 
-@router.post("", response_model=PATCreatedResponse)
+@router.post(
+    "",
+    response_model=PATCreatedResponse,
+    summary="Create a personal access token",
+    description="Generate a new PAT with specified scopes. The token value is only returned once. Adult only. Scope: `profile:write`.",
+    response_description="Token value (shown once) and metadata",
+)
 def create_token(
     payload: PATCreate,
     user: User = Depends(current_user),
@@ -69,7 +81,13 @@ def create_token(
     return PATCreatedResponse(token=plain, pat=PATResponse.model_validate(pat))
 
 
-@router.delete("/{token_id}")
+@router.delete(
+    "/{token_id}",
+    summary="Revoke a personal access token",
+    description="Permanently delete a PAT. Adult only. Scope: `profile:write`.",
+    response_description="Deletion confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def revoke_token(
     token_id: int,
     user: User = Depends(current_user),

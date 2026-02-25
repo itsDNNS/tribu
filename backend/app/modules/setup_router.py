@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.backup import restore_backup, validate_backup
 from app.database import get_db, engine
 from app.models import User
-from app.schemas import SetupStatusResponse, RestoreResponse
+from app.schemas import CONFLICT_RESPONSE, ErrorResponse, SetupStatusResponse, RestoreResponse
 
 router = APIRouter(prefix="/setup", tags=["setup"])
 
@@ -21,12 +21,25 @@ def _needs_setup(db: Session) -> bool:
     return db.query(User).count() == 0
 
 
-@router.get("/status", response_model=SetupStatusResponse)
+@router.get(
+    "/status",
+    response_model=SetupStatusResponse,
+    summary="Check setup status",
+    description="Check whether the instance requires initial setup (no users exist yet). No authentication required.",
+    response_description="Setup status flag",
+)
 def setup_status(db: Session = Depends(get_db)):
     return SetupStatusResponse(needs_setup=_needs_setup(db))
 
 
-@router.post("/restore", response_model=RestoreResponse)
+@router.post(
+    "/restore",
+    response_model=RestoreResponse,
+    summary="Restore from backup",
+    description="Upload a .tar.gz backup archive and restore the database. Only available during initial setup (no users). No authentication required.",
+    response_description="Restore result with backup metadata",
+    responses={**CONFLICT_RESPONSE},
+)
 def setup_restore(
     request: Request,
     file: UploadFile = File(...),

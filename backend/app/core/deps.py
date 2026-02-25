@@ -10,7 +10,18 @@ from app.models import Membership, PersonalAccessToken, User
 from app.security import decode_token, hash_pat, is_pat
 from app.core.scopes import parse_scopes
 
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer(
+    auto_error=False,
+    scheme_name="BearerAuth",
+    description=(
+        "Personal Access Token (PAT) authentication. "
+        "Create tokens via POST /tokens. Tokens are prefixed with `tribu_pat_` "
+        "and passed in the Authorization header.\n\n"
+        "Example: `Authorization: Bearer tribu_pat_abc123...`\n\n"
+        "Cookie-based JWT auth (set automatically on login via POST /auth/login) "
+        "is also supported and takes precedence."
+    ),
+)
 
 COOKIE_NAME = "tribu_token"
 

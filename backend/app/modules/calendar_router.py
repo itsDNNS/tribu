@@ -12,12 +12,18 @@ from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, User
-from app.schemas import CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, PaginatedCalendarEvents
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, PaginatedCalendarEvents
 
-router = APIRouter(prefix="/calendar", tags=["calendar"])
+router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})
 
 
-@router.get("/events", response_model=PaginatedCalendarEvents)
+@router.get(
+    "/events",
+    response_model=PaginatedCalendarEvents,
+    summary="List calendar events",
+    description="Return paginated calendar events for a family, with optional date range filtering and recurrence expansion. Scope: `calendar:read`.",
+    response_description="Paginated list of calendar events",
+)
 def list_calendar_events(
     family_id: int,
     range_start: Optional[datetime] = Query(None),
@@ -76,7 +82,12 @@ def list_calendar_events(
     return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
 
 
-@router.get("/events/export.ics")
+@router.get(
+    "/events/export.ics",
+    summary="Export calendar as ICS",
+    description="Download all family calendar events as an ICS file. Adult only. Scope: `calendar:read`.",
+    response_description="ICS file download",
+)
 def export_calendar_ics(
     family_id: int,
     user: User = Depends(current_user),
@@ -93,7 +104,12 @@ def export_calendar_ics(
     )
 
 
-@router.post("/events/import-ics")
+@router.post(
+    "/events/import-ics",
+    summary="Import events from ICS",
+    description="Parse ICS text and create calendar events (max 500). Adult only. Scope: `calendar:write`.",
+    response_description="Import result with created count and errors",
+)
 def import_calendar_ics(
     payload: CalendarIcsImport,
     user: User = Depends(current_user),
@@ -115,7 +131,13 @@ def import_calendar_ics(
     return {"status": "ok", "created": created, "errors": errors}
 
 
-@router.post("/events", response_model=CalendarEventResponse)
+@router.post(
+    "/events",
+    response_model=CalendarEventResponse,
+    summary="Create a calendar event",
+    description="Create a new calendar event with optional recurrence. Adult only. Scope: `calendar:write`.",
+    response_description="The created calendar event",
+)
 def create_calendar_event(
     payload: CalendarEventCreate,
     user: User = Depends(current_user),
@@ -152,7 +174,14 @@ def create_calendar_event(
     return event
 
 
-@router.patch("/events/{event_id}", response_model=CalendarEventResponse)
+@router.patch(
+    "/events/{event_id}",
+    response_model=CalendarEventResponse,
+    summary="Update a calendar event",
+    description="Partially update an existing calendar event. Adult only. Scope: `calendar:write`.",
+    response_description="The updated calendar event",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def update_calendar_event(
     event_id: int,
     payload: CalendarEventUpdate,
@@ -197,7 +226,13 @@ def update_calendar_event(
     return event
 
 
-@router.delete("/events/{event_id}")
+@router.delete(
+    "/events/{event_id}",
+    summary="Delete a calendar event",
+    description="Delete a calendar event or exclude a single occurrence from a recurring series. Adult only. Scope: `calendar:write`.",
+    response_description="Deletion or exclusion confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def delete_calendar_event(
     event_id: int,
     occurrence_date: Optional[str] = Query(None),

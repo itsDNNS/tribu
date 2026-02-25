@@ -1,4 +1,12 @@
-"""WebSocket endpoint for real-time shopping list sync."""
+"""WebSocket endpoint for real-time shopping list sync.
+
+Clients connect to ``/ws/shopping/{list_id}`` with a valid JWT cookie.
+The server authenticates via the ``tribu_token`` cookie and verifies
+family membership.  Mutations made through the REST API are broadcast
+to all connected clients for the same list.  Clients may send
+``{"type": "ping"}`` to keep the connection alive; the server replies
+with ``{"type": "pong"}``.
+"""
 
 import logging
 

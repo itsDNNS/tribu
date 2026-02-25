@@ -10,9 +10,9 @@ from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Contact, FamilyBirthday, User
-from app.schemas import ContactCreate, ContactResponse, ContactsCsvImport
+from app.schemas import AUTH_RESPONSES, ErrorResponse, ContactCreate, ContactResponse, ContactsCsvImport
 
-router = APIRouter(prefix="/contacts", tags=["contacts"])
+router = APIRouter(prefix="/contacts", tags=["contacts"], responses={**AUTH_RESPONSES})
 
 
 def upsert_birthday(db: Session, family_id: int, full_name: str, month: int | None, day: int | None):
@@ -30,7 +30,13 @@ def upsert_birthday(db: Session, family_id: int, full_name: str, month: int | No
     db.add(FamilyBirthday(family_id=family_id, person_name=full_name, month=month, day=day))
 
 
-@router.get("", response_model=list[ContactResponse])
+@router.get(
+    "",
+    response_model=list[ContactResponse],
+    summary="List contacts",
+    description="Return all contacts for a family sorted by name. Scope: `contacts:read`.",
+    response_description="List of contacts",
+)
 def list_contacts(
     family_id: int,
     user: User = Depends(current_user),
@@ -41,7 +47,13 @@ def list_contacts(
     return db.query(Contact).filter(Contact.family_id == family_id).order_by(Contact.full_name.asc()).all()
 
 
-@router.post("", response_model=ContactResponse)
+@router.post(
+    "",
+    response_model=ContactResponse,
+    summary="Create a contact",
+    description="Create a new contact. Auto-creates a birthday entry if birthday fields are provided. Adult only. Scope: `contacts:write`.",
+    response_description="The created contact",
+)
 def create_contact(
     payload: ContactCreate,
     user: User = Depends(current_user),
@@ -66,7 +78,12 @@ def create_contact(
     return contact
 
 
-@router.get("/export.csv")
+@router.get(
+    "/export.csv",
+    summary="Export contacts as CSV",
+    description="Download all family contacts as a CSV file. Adult only. Scope: `contacts:read`.",
+    response_description="CSV file download",
+)
 def export_contacts_csv(
     family_id: int,
     user: User = Depends(current_user),
@@ -89,7 +106,12 @@ def export_contacts_csv(
     )
 
 
-@router.post("/import-csv")
+@router.post(
+    "/import-csv",
+    summary="Import contacts from CSV",
+    description="Parse CSV text and create contacts (max 500 rows). Auto-creates birthday entries. Adult only. Scope: `contacts:write`.",
+    response_description="Import result with created/skipped counts and row errors",
+)
 def import_contacts_csv(
     payload: ContactsCsvImport,
     user: User = Depends(current_user),
