@@ -14,7 +14,7 @@ function getAvatarColor(name) {
 }
 
 export default function ContactsView() {
-  const { contacts, messages, demoMode, setActiveView } = useApp();
+  const { contacts, messages, demoMode, setActiveView, isChild } = useApp();
 
   return (
     <div>
@@ -51,7 +51,7 @@ export default function ContactsView() {
         {contacts.length === 0 && (
           <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', gridColumn: '1 / -1' }}>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t(messages, 'module.contacts.no_contacts')}</div>
-            {!demoMode && (
+            {!demoMode && !isChild && (
               <button className="btn-ghost" style={{ marginTop: 'var(--space-md)' }} onClick={() => setActiveView('settings')}>
                 <UserPlus size={15} /> {t(messages, 'module.contacts.import_cta')}
               </button>

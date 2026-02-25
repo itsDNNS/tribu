@@ -38,19 +38,21 @@ function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) 
           {(addedBy.display_name || '?').charAt(0).toUpperCase()}
         </div>
       )}
-      <button
-        className="shopping-item-delete"
-        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-        aria-label={t(messages, 'aria.delete_item').replace('{name}', item.name)}
-      >
-        <X size={14} />
-      </button>
+      {onDelete && (
+        <button
+          className="shopping-item-delete"
+          onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+          aria-label={t(messages, 'aria.delete_item').replace('{name}', item.name)}
+        >
+          <X size={14} />
+        </button>
+      )}
     </div>
   );
 }
 
 export default function ShoppingView() {
-  const { familyId, families, members, messages, isMobile } = useApp();
+  const { familyId, families, members, messages, isMobile, isChild } = useApp();
   const sh = useShopping();
 
   return (
@@ -77,7 +79,7 @@ export default function ShoppingView() {
               <div className="shopping-list-meta">
                 {list.checked_count}/{list.item_count}
               </div>
-              {list.id === sh.activeListId && (
+              {list.id === sh.activeListId && !isChild && (
                 <button
                   className="shopping-list-delete"
                   onClick={(e) => { e.stopPropagation(); sh.deleteList(list.id); }}
@@ -89,31 +91,33 @@ export default function ShoppingView() {
             </button>
           ))}
 
-          {sh.showCreateList ? (
-            <form onSubmit={sh.createList} className="shopping-new-list-form">
-              <input
-                className="form-input"
-                placeholder={t(messages, 'module.shopping.list_name_placeholder')}
-                value={sh.newListName}
-                onChange={(e) => sh.setNewListName(e.target.value)}
-                autoFocus
-                style={{ fontSize: '0.88rem', padding: '10px 14px' }}
-              />
-              <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
-                <button className="btn-sm" type="submit"><Plus size={16} /></button>
-                <button className="btn-ghost" type="button" onClick={() => sh.setShowCreateList(false)}>
-                  <X size={16} />
-                </button>
-              </div>
-            </form>
-          ) : (
-            <button
-              className="shopping-add-list-btn"
-              onClick={() => sh.setShowCreateList(true)}
-            >
-              <Plus size={16} aria-hidden="true" />
-              <span>{t(messages, 'module.shopping.new_list')}</span>
-            </button>
+          {!isChild && (
+            sh.showCreateList ? (
+              <form onSubmit={sh.createList} className="shopping-new-list-form">
+                <input
+                  className="form-input"
+                  placeholder={t(messages, 'module.shopping.list_name_placeholder')}
+                  value={sh.newListName}
+                  onChange={(e) => sh.setNewListName(e.target.value)}
+                  autoFocus
+                  style={{ fontSize: '0.88rem', padding: '10px 14px' }}
+                />
+                <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
+                  <button className="btn-sm" type="submit"><Plus size={16} /></button>
+                  <button className="btn-ghost" type="button" onClick={() => sh.setShowCreateList(false)}>
+                    <X size={16} />
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                className="shopping-add-list-btn"
+                onClick={() => sh.setShowCreateList(true)}
+              >
+                <Plus size={16} aria-hidden="true" />
+                <span>{t(messages, 'module.shopping.new_list')}</span>
+              </button>
+            )
           )}
         </div>
 
@@ -122,26 +126,28 @@ export default function ShoppingView() {
           {sh.activeList ? (
             <div className="glass" style={{ overflow: 'hidden' }}>
               {/* Quick-Add Bar */}
-              <form onSubmit={sh.addItem} className="quick-add-bar">
-                <input
-                  ref={sh.itemInputRef}
-                  className="quick-add-input"
-                  placeholder={t(messages, 'module.shopping.item_name_placeholder')}
-                  value={sh.newItemName}
-                  onChange={(e) => sh.setNewItemName(e.target.value)}
-                  required
-                />
-                <input
-                  className="quick-add-input shopping-spec-input"
-                  placeholder={t(messages, 'module.shopping.item_spec_placeholder')}
-                  value={sh.newItemSpec}
-                  onChange={(e) => sh.setNewItemSpec(e.target.value)}
-                  style={{ maxWidth: isMobile ? '100%' : 180 }}
-                />
-                <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_item')}>
-                  <Plus size={22} />
-                </button>
-              </form>
+              {!isChild && (
+                <form onSubmit={sh.addItem} className="quick-add-bar">
+                  <input
+                    ref={sh.itemInputRef}
+                    className="quick-add-input"
+                    placeholder={t(messages, 'module.shopping.item_name_placeholder')}
+                    value={sh.newItemName}
+                    onChange={(e) => sh.setNewItemName(e.target.value)}
+                    required
+                  />
+                  <input
+                    className="quick-add-input shopping-spec-input"
+                    placeholder={t(messages, 'module.shopping.item_spec_placeholder')}
+                    value={sh.newItemSpec}
+                    onChange={(e) => sh.setNewItemSpec(e.target.value)}
+                    style={{ maxWidth: isMobile ? '100%' : 180 }}
+                  />
+                  <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_item')}>
+                    <Plus size={22} />
+                  </button>
+                </form>
+              )}
 
               {/* Unchecked Items */}
               <div className="shopping-items-list stagger">
@@ -158,7 +164,7 @@ export default function ShoppingView() {
                     members={members}
                     messages={messages}
                     onToggle={sh.toggleItem}
-                    onDelete={sh.deleteItem}
+                    onDelete={isChild ? null : sh.deleteItem}
                   />
                 ))}
 
@@ -176,15 +182,17 @@ export default function ShoppingView() {
                         members={members}
                         messages={messages}
                         onToggle={sh.toggleItem}
-                        onDelete={sh.deleteItem}
+                        onDelete={isChild ? null : sh.deleteItem}
                       />
                     ))}
-                    <div style={{ padding: '0 var(--space-md) var(--space-md)' }}>
-                      <button className="btn-ghost" onClick={sh.clearChecked} style={{ width: '100%', justifyContent: 'center' }}>
-                        <Trash2 size={14} aria-hidden="true" />
-                        {t(messages, 'module.shopping.clear_checked')}
-                      </button>
-                    </div>
+                    {!isChild && (
+                      <div style={{ padding: '0 var(--space-md) var(--space-md)' }}>
+                        <button className="btn-ghost" onClick={sh.clearChecked} style={{ width: '100%', justifyContent: 'center' }}>
+                          <Trash2 size={14} aria-hidden="true" />
+                          {t(messages, 'module.shopping.clear_checked')}
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

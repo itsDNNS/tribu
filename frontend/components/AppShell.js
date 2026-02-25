@@ -48,7 +48,7 @@ function DashboardSkeleton() {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, messages, me, members, families, familyId, tasks, shoppingLists, unreadCount, logout, demoMode, loading, navOrder } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, tasks, shoppingLists, unreadCount, logout, demoMode, loading, navOrder } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -205,7 +205,7 @@ export default function AppShell() {
             {!collapsed && (
               <div className="sidebar-user-info">
                 <div className="sidebar-user-name">{me?.display_name || 'User'}</div>
-                <div className="sidebar-user-role">{isAdmin ? 'Admin' : t(messages, 'member')}</div>
+                <div className="sidebar-user-role">{isAdmin ? 'Admin' : isChild ? t(messages, 'child') : t(messages, 'member')}</div>
               </div>
             )}
             <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>

@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.deps import current_user, ensure_family_membership, to_utc_naive
+from app.core.deps import current_user, ensure_adult, ensure_family_membership, to_utc_naive
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Membership, Task, User
@@ -41,8 +41,10 @@ def list_tasks(
     db: Session = Depends(get_db),
     _scope=require_scope("tasks:read"),
 ):
-    ensure_family_membership(db, user.id, family_id)
+    membership = ensure_family_membership(db, user.id, family_id)
     base = db.query(Task).filter(Task.family_id == family_id)
+    if not membership.is_adult:
+        base = base.filter(Task.assigned_to_user_id == user.id)
     if status is not None:
         if status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=f"Ungültiger Status: {status}")
@@ -59,7 +61,7 @@ def create_task(
     db: Session = Depends(get_db),
     _scope=require_scope("tasks:write"),
 ):
-    ensure_family_membership(db, user.id, payload.family_id)
+    ensure_adult(db, user.id, payload.family_id)
 
     if payload.priority not in VALID_PRIORITIES:
         raise HTTPException(status_code=400, detail=f"Ungültige Priorität: {payload.priority}")
@@ -101,7 +103,13 @@ def update_task(
     if not task:
         raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
 
-    ensure_family_membership(db, user.id, task.family_id)
+    membership = ensure_family_membership(db, user.id, task.family_id)
+    if not membership.is_adult:
+        if task.assigned_to_user_id != user.id:
+            raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
+        fields = payload.model_dump(exclude_unset=True)
+        if set(fields.keys()) - {"status"}:
+            raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
 
     if payload.priority is not None:
         if payload.priority not in VALID_PRIORITIES:
@@ -168,7 +176,7 @@ def delete_task(
     if not task:
         raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
 
-    ensure_family_membership(db, user.id, task.family_id)
+    ensure_adult(db, user.id, task.family_id)
     db.delete(task)
     db.commit()
     return {"status": "deleted", "task_id": task_id}

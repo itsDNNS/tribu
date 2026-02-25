@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.core.deps import current_user, ensure_family_membership
+from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Contact, FamilyBirthday, User
@@ -47,7 +47,7 @@ def create_contact(
     db: Session = Depends(get_db),
     _scope=require_scope("contacts:write"),
 ):
-    ensure_family_membership(db, user.id, payload.family_id)
+    ensure_adult(db, user.id, payload.family_id)
 
     contact = Contact(
         family_id=payload.family_id,
@@ -71,7 +71,7 @@ def export_contacts_csv(
     db: Session = Depends(get_db),
     _scope=require_scope("contacts:read"),
 ):
-    ensure_family_membership(db, user.id, family_id)
+    ensure_adult(db, user.id, family_id)
     contacts = db.query(Contact).filter(Contact.family_id == family_id).order_by(Contact.full_name.asc()).all()
 
     output = io.StringIO()
@@ -94,7 +94,7 @@ def import_contacts_csv(
     db: Session = Depends(get_db),
     _scope=require_scope("contacts:write"),
 ):
-    ensure_family_membership(db, user.id, payload.family_id)
+    ensure_adult(db, user.id, payload.family_id)
 
     reader = csv.DictReader(io.StringIO(payload.csv_text))
     required = {"full_name"}

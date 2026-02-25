@@ -36,7 +36,7 @@ const NAV_ITEM_META = {
 };
 
 export default function SettingsView() {
-  const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, loggedIn, demoMode, profileImage, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
+  const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, demoMode, profileImage, setProfileImage, familyId, loadContacts, loadDashboard, navOrder, setNavOrder, loadNavOrder } = useApp();
 
   // Profile image feedback state
   const [imageSaved, setImageSaved] = useState(false);
@@ -284,7 +284,7 @@ export default function SettingsView() {
             <div className="profile-info">
               <div className="profile-name">{me?.display_name || 'User'}</div>
               <div className="profile-email">{me?.email || ''}</div>
-              <div className="profile-role">{isAdmin ? 'Admin' : t(messages, 'member')}</div>
+              <div className="profile-role">{isAdmin ? 'Admin' : isChild ? t(messages, 'child') : t(messages, 'member')}</div>
             </div>
           </div>
           <div style={{ marginTop: 'var(--space-md)' }}>
@@ -510,7 +510,7 @@ export default function SettingsView() {
         )}
 
         {/* Data Management Section */}
-        {!demoMode && (
+        {!demoMode && !isChild && (
           <div className="settings-section glass">
             <div className="settings-section-title"><Database size={16} /> {t(messages, 'data_management')}</div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
@@ -617,7 +617,7 @@ export default function SettingsView() {
         )}
 
         {/* API Tokens Section */}
-        {!demoMode && (
+        {!demoMode && !isChild && (
           <div className="settings-section glass">
             <div className="settings-section-title"><Key size={16} /> {t(messages, 'api_tokens')}</div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>

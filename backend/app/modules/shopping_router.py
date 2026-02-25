@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.deps import current_user, ensure_family_membership
+from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import ShoppingItem, ShoppingList, User
@@ -62,7 +62,7 @@ def create_list(
     db: Session = Depends(get_db),
     _scope=require_scope("shopping:write"),
 ):
-    ensure_family_membership(db, user.id, payload.family_id)
+    ensure_adult(db, user.id, payload.family_id)
     sl = ShoppingList(
         family_id=payload.family_id,
         name=payload.name,
@@ -87,7 +87,7 @@ def delete_list(
     if not sl:
         raise HTTPException(status_code=404, detail="Liste nicht gefunden")
     family_id = sl.family_id
-    ensure_family_membership(db, user.id, family_id)
+    ensure_adult(db, user.id, family_id)
     db.delete(sl)
     db.commit()
     broadcast_list_deleted(family_id, list_id)
@@ -128,7 +128,7 @@ def add_item(
     sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
     if not sl:
         raise HTTPException(status_code=404, detail="Liste nicht gefunden")
-    ensure_family_membership(db, user.id, sl.family_id)
+    ensure_adult(db, user.id, sl.family_id)
     item = ShoppingItem(
         list_id=list_id,
         name=payload.name,
@@ -154,7 +154,11 @@ def update_item(
     if not item:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
     sl = db.query(ShoppingList).filter(ShoppingList.id == item.list_id).first()
-    ensure_family_membership(db, user.id, sl.family_id)
+    membership = ensure_family_membership(db, user.id, sl.family_id)
+    if not membership.is_adult:
+        fields = payload.model_dump(exclude_unset=True)
+        if set(fields.keys()) - {"checked"}:
+            raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
 
     if payload.name is not None:
         item.name = payload.name
@@ -181,7 +185,7 @@ def delete_item(
     if not item:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
     sl = db.query(ShoppingList).filter(ShoppingList.id == item.list_id).first()
-    ensure_family_membership(db, user.id, sl.family_id)
+    ensure_adult(db, user.id, sl.family_id)
     list_id = item.list_id
     db.delete(item)
     db.commit()
@@ -199,7 +203,7 @@ def clear_checked(
     sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
     if not sl:
         raise HTTPException(status_code=404, detail="Liste nicht gefunden")
-    ensure_family_membership(db, user.id, sl.family_id)
+    ensure_adult(db, user.id, sl.family_id)
     deleted = db.query(ShoppingItem).filter(
         ShoppingItem.list_id == list_id,
         ShoppingItem.checked == True,
