@@ -34,12 +34,7 @@ export function AppProvider({ children }) {
   const [lang, setLang] = useState('en');
 
   // Layout
-  const [activeView, setActiveViewRaw] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('tribu_view') || 'dashboard';
-    }
-    return 'dashboard';
-  });
+  const [activeView, setActiveViewRaw] = useState('dashboard');
   const setActiveView = (view) => {
     sessionStorage.setItem('tribu_view', view);
     setActiveViewRaw(view);
@@ -185,6 +180,8 @@ export function AppProvider({ children }) {
     setTheme(window.localStorage.getItem('tribu_theme') || 'light');
     setLang(window.localStorage.getItem('tribu_lang') || 'en');
     setProfileImage('');
+    const savedView = sessionStorage.getItem('tribu_view');
+    if (savedView) setActiveViewRaw(savedView);
 
     const onResize = () => setIsMobile(window.innerWidth < 768);
     onResize();

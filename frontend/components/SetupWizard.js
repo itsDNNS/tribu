@@ -108,7 +108,7 @@ export default function SetupWizard() {
         aria-label={t(messages, 'language')}
       >
         {availableLanguages.map((l) => (
-          <option key={l.code} value={l.code}>{l.code.toUpperCase()}</option>
+          <option key={l.key} value={l.key}>{l.key.toUpperCase()}</option>
         ))}
       </select>
     </div>
@@ -296,7 +296,7 @@ export default function SetupWizard() {
                   onChange={(e) => setLang(e.target.value)}
                 >
                   {availableLanguages.map((l) => (
-                    <option key={l.code} value={l.code}>{l.name}</option>
+                    <option key={l.key} value={l.key}>{l.name}</option>
                   ))}
                 </select>
               </div>
