@@ -21,6 +21,9 @@ export function useCalendar() {
   const [recurrence, setRecurrence] = useState('');
   const [recurrenceEnd, setRecurrenceEnd] = useState('');
 
+  // Assigned members
+  const [assignedTo, setAssignedTo] = useState([]);
+
   // Delete confirmation for recurring events
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -120,11 +123,13 @@ export function useCalendar() {
 
   async function createEvent(e) {
     e.preventDefault();
+    const assignedPayload = assignedTo.includes('all') ? 'all' : assignedTo.length > 0 ? assignedTo.map(Number) : null;
     const payload = {
       family_id: Number(familyId), title, description: description || null,
       starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
       recurrence: recurrence || null,
       recurrence_end: recurrenceEnd ? new Date(recurrenceEnd).toISOString() : null,
+      assigned_to: assignedPayload,
     };
     if (demoMode) {
       const newEvent = { id: Date.now(), ...payload, is_recurring: !!recurrence, occurrence_date: null };
@@ -142,7 +147,7 @@ export function useCalendar() {
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
     setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
-    setRecurrence(''); setRecurrenceEnd('');
+    setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]);
     setCalendarMsg('Event created');
     announce('Event created');
   }
@@ -221,6 +226,7 @@ export function useCalendar() {
     allDay, setAllDay,
     recurrence, setRecurrence,
     recurrenceEnd, setRecurrenceEnd,
+    assignedTo, setAssignedTo,
     deleteConfirm, setDeleteConfirm,
     birthdayName, setBirthdayName,
     birthdayMonth, setBirthdayMonth,

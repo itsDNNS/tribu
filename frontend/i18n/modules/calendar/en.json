@@ -33,5 +33,8 @@
   "module.calendar.import_success": "{count} events imported",
   "module.calendar.import_error": "Import failed",
   "module.calendar.import_warnings": "Warnings",
-  "module.calendar.import_cta": "No events yet? Import ICS in Settings."
+  "module.calendar.import_cta": "No events yet? Import ICS in Settings.",
+  "module.calendar.assign_to": "Assign to",
+  "module.calendar.assign_all": "Everyone",
+  "module.calendar.event_assigned": "You were tagged in: {title}"
 }

@@ -65,7 +65,91 @@ function DeleteRecurringDialog({ event, messages, onDeleteThis, onDeleteAll, onC
   );
 }
 
-function EventCard({ ev, index, messages, onDelete }) {
+function AssignChips({ members, assignedTo, setAssignedTo, messages }) {
+  const toggle = (id) => {
+    if (id === 'all') {
+      setAssignedTo((prev) => prev.includes('all') ? [] : ['all']);
+      return;
+    }
+    setAssignedTo((prev) => {
+      const filtered = prev.filter((v) => v !== 'all');
+      return filtered.includes(id) ? filtered.filter((v) => v !== id) : [...filtered, id];
+    });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      <button
+        type="button"
+        onClick={() => toggle('all')}
+        style={{
+          padding: '4px 10px', borderRadius: 999, fontSize: '0.78rem', cursor: 'pointer',
+          border: assignedTo.includes('all') ? '1.5px solid var(--amethyst)' : '1.5px solid var(--border-color, rgba(255,255,255,0.15))',
+          background: assignedTo.includes('all') ? 'var(--amethyst)' : 'transparent',
+          color: assignedTo.includes('all') ? '#fff' : 'var(--text-secondary)',
+        }}
+      >
+        {t(messages, 'module.calendar.assign_all')}
+      </button>
+      {members.map((m, i) => {
+        const selected = assignedTo.includes('all') || assignedTo.includes(m.user_id);
+        const color = MEMBER_COLORS[i % MEMBER_COLORS.length];
+        return (
+          <button
+            key={m.user_id}
+            type="button"
+            onClick={() => toggle(m.user_id)}
+            style={{
+              padding: '4px 10px', borderRadius: 999, fontSize: '0.78rem', cursor: 'pointer',
+              border: `1.5px solid ${color}`,
+              background: selected ? color : 'transparent',
+              color: selected ? '#fff' : 'var(--text-secondary)',
+            }}
+          >
+            {m.display_name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AssignedBadges({ assignedTo, members }) {
+  if (!assignedTo) return null;
+
+  let badgeMembers;
+  if (assignedTo === 'all') {
+    badgeMembers = members;
+  } else if (Array.isArray(assignedTo)) {
+    badgeMembers = members.filter((m) => assignedTo.includes(m.user_id));
+  } else {
+    return null;
+  }
+  if (badgeMembers.length === 0) return null;
+
+  return (
+    <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
+      {badgeMembers.map((m, i) => {
+        const initials = m.display_name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+        return (
+          <span
+            key={m.user_id}
+            title={m.display_name}
+            style={{
+              width: 20, height: 20, borderRadius: '50%', fontSize: '0.6rem', fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: MEMBER_COLORS[i % MEMBER_COLORS.length], color: '#fff',
+            }}
+          >
+            {initials}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function EventCard({ ev, index, messages, onDelete, members }) {
   return (
     <div className="day-event-card" style={{ borderColor: MEMBER_COLORS[index % MEMBER_COLORS.length] }}>
       <div style={{ flex: 1 }}>
@@ -74,6 +158,7 @@ function EventCard({ ev, index, messages, onDelete }) {
           {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />}
         </div>
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, messages)}</div>
+        {members && <AssignedBadges assignedTo={ev.assigned_to} members={members} />}
       </div>
       {onDelete && (
         <button
@@ -90,7 +175,7 @@ function EventCard({ ev, index, messages, onDelete }) {
 }
 
 export default function CalendarView() {
-  const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild } = useApp();
+  const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild, members } = useApp();
   const cal = useCalendar();
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const weekdays = t(messages, 'module.calendar.weekdays').split(',');
@@ -256,7 +341,7 @@ export default function CalendarView() {
                   </div>
                 )}
                 {cal.selectedDayEvents.map((ev, i) => (
-                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} />
+                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} members={members} />
                 ))}
               </div>
 
@@ -276,6 +361,12 @@ export default function CalendarView() {
                     </select>
                     {cal.recurrence && (
                       <input className="form-input" type="date" value={cal.recurrenceEnd} onChange={(e) => cal.setRecurrenceEnd(e.target.value)} placeholder={t(messages, 'module.calendar.repeat_until')} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
+                    )}
+                    {members.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.assign_to')}</div>
+                        <AssignChips members={members} assignedTo={cal.assignedTo} setAssignedTo={cal.setAssignedTo} messages={messages} />
+                      </div>
                     )}
                     <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
                   </form>
@@ -298,7 +389,7 @@ export default function CalendarView() {
               <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_week')}</div>
             )}
             {cal.weekInfo.weekEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} />
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} members={members} />
             ))}
           </div>
         </div>
@@ -331,7 +422,7 @@ export default function CalendarView() {
               </div>
             )}
             {cal.selectedDayEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} />
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} members={members} />
             ))}
           </div>
           {!isChild && (
@@ -343,6 +434,12 @@ export default function CalendarView() {
                   <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
                 ))}
               </select>
+              {members.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.assign_to')}</div>
+                  <AssignChips members={members} assignedTo={cal.assignedTo} setAssignedTo={cal.setAssignedTo} messages={messages} />
+                </div>
+              )}
               <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
             </form>
           )}

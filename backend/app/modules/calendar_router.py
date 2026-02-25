@@ -11,7 +11,7 @@ from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
 from app.database import get_db
-from app.models import CalendarEvent, User
+from app.models import CalendarEvent, Membership, Notification, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, PaginatedCalendarEvents
 
 router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})
@@ -165,9 +165,14 @@ def create_calendar_event(
         all_day=payload.all_day,
         recurrence=payload.recurrence,
         recurrence_end=recurrence_end,
+        assigned_to=payload.assigned_to,
         created_by_user_id=user.id,
     )
     db.add(event)
+    db.flush()
+
+    _create_assignment_notifications(db, event, user.id)
+
     db.commit()
     db.refresh(event)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
@@ -217,6 +222,12 @@ def update_calendar_event(
     if payload.recurrence_end is not None:
         event.recurrence_end = to_utc_naive(payload.recurrence_end)
 
+    if payload.assigned_to is not None:
+        old_assigned = event.assigned_to
+        event.assigned_to = payload.assigned_to
+        if payload.assigned_to != old_assigned:
+            _create_assignment_notifications(db, event, user.id)
+
     if event.ends_at and event.ends_at < event.starts_at:
         raise HTTPException(status_code=400, detail="Ende muss nach dem Start liegen")
 
@@ -262,3 +273,30 @@ def delete_calendar_event(
     db.commit()
     cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")
     return {"status": "deleted", "event_id": event_id}
+
+
+def _create_assignment_notifications(db: Session, event: CalendarEvent, actor_user_id: int):
+    """Create notifications for members assigned to an event."""
+    assigned = event.assigned_to
+    if not assigned:
+        return
+
+    if assigned == "all":
+        member_rows = db.query(Membership).filter(Membership.family_id == event.family_id).all()
+        user_ids = [m.user_id for m in member_rows]
+    elif isinstance(assigned, list):
+        user_ids = assigned
+    else:
+        return
+
+    for uid in user_ids:
+        if uid == actor_user_id:
+            continue
+        db.add(Notification(
+            user_id=uid,
+            family_id=event.family_id,
+            type="event_assigned",
+            title=event.title,
+            body=None,
+            link=f"/calendar?event={event.id}",
+        ))

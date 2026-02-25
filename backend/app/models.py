@@ -61,6 +61,7 @@ class CalendarEvent(Base):
     recurrence = Column(String, nullable=True)
     recurrence_end = Column(DateTime, nullable=True)
     excluded_dates = Column(JSON, nullable=True)
+    assigned_to = Column(JSON, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 

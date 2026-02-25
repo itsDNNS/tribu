@@ -33,5 +33,8 @@
   "module.calendar.import_success": "{count} Termine importiert",
   "module.calendar.import_error": "Import fehlgeschlagen",
   "module.calendar.import_warnings": "Hinweise",
-  "module.calendar.import_cta": "Noch keine Termine? ICS in den Einstellungen importieren."
+  "module.calendar.import_cta": "Noch keine Termine? ICS in den Einstellungen importieren.",
+  "module.calendar.assign_to": "Zuweisen an",
+  "module.calendar.assign_all": "Alle",
+  "module.calendar.event_assigned": "Du wurdest getaggt in: {title}"
 }
