@@ -102,6 +102,7 @@ name: tribu
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: tribu-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: tribu
@@ -112,10 +113,12 @@ services:
 
   valkey:
     image: valkey/valkey:8-alpine
+    container_name: tribu-valkey
     restart: unless-stopped
 
   backend:
     image: ghcr.io/itsdnns/tribu-backend:latest
+    container_name: tribu-backend
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://tribu:${POSTGRES_PASSWORD}@postgres:5432/tribu
@@ -129,6 +132,7 @@ services:
 
   frontend:
     image: ghcr.io/itsdnns/tribu-frontend:latest
+    container_name: tribu-frontend
     restart: unless-stopped
     depends_on: [backend]
     ports: ["3000:3000"]
