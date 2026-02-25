@@ -178,7 +178,16 @@ export function AppProvider({ children }) {
   // Init: localStorage, resize, auto-login
   useEffect(() => {
     setTheme(window.localStorage.getItem('tribu_theme') || 'light');
-    setLang(window.localStorage.getItem('tribu_lang') || 'en');
+    const stored = window.localStorage.getItem('tribu_lang');
+    if (stored) {
+      setLang(stored);
+    } else {
+      const supported = ['en', 'de'];
+      const browserLangs = (navigator.languages || [navigator.language || ''])
+        .map(l => l.split('-')[0].toLowerCase());
+      const match = browserLangs.find(l => supported.includes(l));
+      setLang(match || 'en');
+    }
     setProfileImage('');
     const savedView = sessionStorage.getItem('tribu_view');
     if (savedView) setActiveViewRaw(savedView);
