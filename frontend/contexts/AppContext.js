@@ -26,6 +26,7 @@ export function AppProvider({ children }) {
   const [familyId, setFamilyId] = useState('1');
   const [families, setFamilies] = useState([]);
   const [myFamilyRole, setMyFamilyRole] = useState('member');
+  const [myFamilyIsAdult, setMyFamilyIsAdult] = useState(true);
   const [members, setMembers] = useState([]);
 
   // Theme / i18n
@@ -70,6 +71,7 @@ export function AppProvider({ children }) {
   const availableLanguages = useMemo(() => listLanguages(), []);
   const ui = useMemo(() => buildUi(tokens), [tokens]);
   const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
+  const isChild = !isAdmin && !myFamilyIsAdult;
 
   // Loaders (no-op in demo mode)
   const loadDashboard = useCallback(async (fid = familyId) => {
@@ -132,7 +134,10 @@ export function AppProvider({ children }) {
     setLoading(true);
     setFamilyId(fid);
     const selected = families.find((f) => String(f.family_id) === String(fid));
-    if (selected) setMyFamilyRole(selected.role);
+    if (selected) {
+      setMyFamilyRole(selected.role);
+      setMyFamilyIsAdult(selected.is_adult);
+    }
     await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid)]);
     setLoading(false);
   }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks, loadShoppingLists]);
@@ -144,6 +149,7 @@ export function AppProvider({ children }) {
     setFamilies(demo.families);
     setFamilyId(String(demo.families[0].family_id));
     setMyFamilyRole(demo.families[0].role);
+    setMyFamilyIsAdult(true);
     setMembers(demo.members);
     setEvents(demo.events);
     setTasks(demo.tasks);
@@ -159,6 +165,7 @@ export function AppProvider({ children }) {
     setDemoMode(false);
     setLoggedIn(false);
     setMe(null);
+    setMyFamilyIsAdult(true);
     setEvents([]);
     setSummary({ next_events: [], upcoming_birthdays: [] });
     setMembers([]);
@@ -224,6 +231,7 @@ export function AppProvider({ children }) {
         const fid = String(famData[0].family_id);
         setFamilyId(fid);
         setMyFamilyRole(famData[0].role);
+        setMyFamilyIsAdult(famData[0].is_adult);
         await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid), loadNavOrder()]);
       }
 
@@ -273,7 +281,7 @@ export function AppProvider({ children }) {
     ui,
     activeView, setActiveView,
     isMobile,
-    isAdmin,
+    isAdmin, isChild,
     summary, setSummary,
     events, setEvents,
     contacts,

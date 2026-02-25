@@ -7,7 +7,7 @@ import { t } from '../lib/i18n';
 const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
 
 export default function TasksView() {
-  const { familyId, families, members, messages, lang, isMobile } = useApp();
+  const { familyId, families, members, messages, lang, isMobile, isChild } = useApp();
   const tk = useTasks();
 
   return (
@@ -26,50 +26,54 @@ export default function TasksView() {
       <div className="tasks-layout">
         <div className="glass" style={{ overflow: 'hidden' }}>
           {/* Quick Add */}
-          <form onSubmit={tk.createTask} className="quick-add-bar">
-            <input
-              className="quick-add-input"
-              placeholder={t(messages, 'module.tasks.title') || 'Neue Aufgabe hinzufügen...'}
-              value={tk.taskTitle}
-              onChange={(e) => tk.setTaskTitle(e.target.value)}
-              required
-            />
-            <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_task')}>
-              <Plus size={22} />
-            </button>
-          </form>
+          {!isChild && (
+            <>
+              <form onSubmit={tk.createTask} className="quick-add-bar">
+                <input
+                  className="quick-add-input"
+                  placeholder={t(messages, 'module.tasks.title') || 'Neue Aufgabe hinzufügen...'}
+                  value={tk.taskTitle}
+                  onChange={(e) => tk.setTaskTitle(e.target.value)}
+                  required
+                />
+                <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_task')}>
+                  <Plus size={22} />
+                </button>
+              </form>
 
-          {/* Expanded form fields */}
-          <div style={{ padding: '0 var(--space-md) var(--space-sm)', display: 'grid', gap: 'var(--space-sm)' }}>
-            <textarea
-              className="form-input"
-              placeholder={t(messages, 'module.tasks.description')}
-              value={tk.taskDesc}
-              onChange={(e) => tk.setTaskDesc(e.target.value)}
-              style={{ fontSize: '0.88rem', padding: '10px 14px', minHeight: 60 }}
-            />
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: 8 }}>
-              <input className="form-input" type="datetime-local" value={tk.taskDueDate} onChange={(e) => tk.setTaskDueDate(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
-              <select className="form-input" value={tk.taskPriority} onChange={(e) => tk.setTaskPriority(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
-                <option value="low">{t(messages, 'module.tasks.priority.low')}</option>
-                <option value="normal">{t(messages, 'module.tasks.priority.normal')}</option>
-                <option value="high">{t(messages, 'module.tasks.priority.high')}</option>
-              </select>
-              <select className="form-input" value={tk.taskRecurrence} onChange={(e) => tk.setTaskRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
-                <option value="">{t(messages, 'module.tasks.recurrence.none')}</option>
-                <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
-                <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
-                <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
-                <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
-              </select>
-              <select className="form-input" value={tk.taskAssignee} onChange={(e) => tk.setTaskAssignee(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
-                <option value="">{t(messages, 'module.tasks.unassigned')}</option>
-                {members.map((m) => (
-                  <option key={m.user_id} value={String(m.user_id)}>{m.display_name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+              {/* Expanded form fields */}
+              <div style={{ padding: '0 var(--space-md) var(--space-sm)', display: 'grid', gap: 'var(--space-sm)' }}>
+                <textarea
+                  className="form-input"
+                  placeholder={t(messages, 'module.tasks.description')}
+                  value={tk.taskDesc}
+                  onChange={(e) => tk.setTaskDesc(e.target.value)}
+                  style={{ fontSize: '0.88rem', padding: '10px 14px', minHeight: 60 }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: 8 }}>
+                  <input className="form-input" type="datetime-local" value={tk.taskDueDate} onChange={(e) => tk.setTaskDueDate(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
+                  <select className="form-input" value={tk.taskPriority} onChange={(e) => tk.setTaskPriority(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
+                    <option value="low">{t(messages, 'module.tasks.priority.low')}</option>
+                    <option value="normal">{t(messages, 'module.tasks.priority.normal')}</option>
+                    <option value="high">{t(messages, 'module.tasks.priority.high')}</option>
+                  </select>
+                  <select className="form-input" value={tk.taskRecurrence} onChange={(e) => tk.setTaskRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
+                    <option value="">{t(messages, 'module.tasks.recurrence.none')}</option>
+                    <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
+                    <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
+                    <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
+                    <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
+                  </select>
+                  <select className="form-input" value={tk.taskAssignee} onChange={(e) => tk.setTaskAssignee(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
+                    <option value="">{t(messages, 'module.tasks.unassigned')}</option>
+                    {members.map((m) => (
+                      <option key={m.user_id} value={String(m.user_id)}>{m.display_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Filter Tabs */}
           <div className="tasks-toolbar" style={{ padding: '0 var(--space-md)' }}>
@@ -133,14 +137,16 @@ export default function TasksView() {
                     </div>
                   )}
 
-                  <button
-                    className="sidebar-logout"
-                    onClick={() => tk.deleteTask(task.id)}
-                    aria-label={t(messages, 'aria.delete_task').replace('{title}', task.title)}
-                    style={{ marginLeft: 0 }}
-                  >
-                    <X size={16} />
-                  </button>
+                  {!isChild && (
+                    <button
+                      className="sidebar-logout"
+                      onClick={() => tk.deleteTask(task.id)}
+                      aria-label={t(messages, 'aria.delete_task').replace('{title}', task.title)}
+                      style={{ marginLeft: 0 }}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
               );
             })}

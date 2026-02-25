@@ -72,6 +72,13 @@ def ensure_family_membership(db: Session, user_id: int, family_id: int):
     return membership
 
 
+def ensure_adult(db: Session, user_id: int, family_id: int):
+    membership = ensure_family_membership(db, user_id, family_id)
+    if not membership.is_adult:
+        raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
+    return membership
+
+
 def ensure_family_admin(db: Session, user_id: int, family_id: int):
     membership = ensure_family_membership(db, user_id, family_id)
     if membership.role != "admin":

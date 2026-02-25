@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.core.deps import current_user, ensure_family_membership, to_utc_naive
+from app.core.deps import current_user, ensure_adult, ensure_family_membership, to_utc_naive
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
@@ -82,7 +82,7 @@ def export_calendar_ics(
     db: Session = Depends(get_db),
     _scope=require_scope("calendar:read"),
 ):
-    ensure_family_membership(db, user.id, family_id)
+    ensure_adult(db, user.id, family_id)
     events = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).all()
     ics_text = events_to_ics(events)
     return Response(
@@ -99,7 +99,7 @@ def import_calendar_ics(
     db: Session = Depends(get_db),
     _scope=require_scope("calendar:write"),
 ):
-    ensure_family_membership(db, user.id, payload.family_id)
+    ensure_adult(db, user.id, payload.family_id)
     valid_events, errors = ics_to_event_dicts(payload.ics_text, payload.family_id, user.id)
 
     MAX_EVENTS = 500
@@ -119,7 +119,7 @@ def create_calendar_event(
     db: Session = Depends(get_db),
     _scope=require_scope("calendar:write"),
 ):
-    ensure_family_membership(db, user.id, payload.family_id)
+    ensure_adult(db, user.id, payload.family_id)
 
     starts_at = to_utc_naive(payload.starts_at)
     ends_at = to_utc_naive(payload.ends_at)
@@ -160,7 +160,7 @@ def update_calendar_event(
     if not event:
         raise HTTPException(status_code=404, detail="Termin nicht gefunden")
 
-    ensure_family_membership(db, user.id, event.family_id)
+    ensure_adult(db, user.id, event.family_id)
 
     if payload.title is not None:
         event.title = payload.title
@@ -204,7 +204,7 @@ def delete_calendar_event(
     if not event:
         raise HTTPException(status_code=404, detail="Termin nicht gefunden")
 
-    ensure_family_membership(db, user.id, event.family_id)
+    ensure_adult(db, user.id, event.family_id)
 
     if occurrence_date and event.recurrence:
         # Add date to exclusion list instead of deleting

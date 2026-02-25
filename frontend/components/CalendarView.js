@@ -90,7 +90,7 @@ function EventCard({ ev, index, messages, onDelete }) {
 }
 
 export default function CalendarView() {
-  const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView } = useApp();
+  const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild } = useApp();
   const cal = useCalendar();
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const weekdays = t(messages, 'module.calendar.weekdays').split(',');
@@ -256,27 +256,31 @@ export default function CalendarView() {
                   </div>
                 )}
                 {cal.selectedDayEvents.map((ev, i) => (
-                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={cal.deleteEvent} />
+                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} />
                 ))}
               </div>
 
-              <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.quick_add')}</div>
-              <form onSubmit={cal.createEvent} className="quick-add-form">
-                <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required style={{ fontSize: '0.88rem', padding: '12px 14px' }} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
-                  <input className="form-input" type="datetime-local" value={cal.endsAt} onChange={(e) => cal.setEndsAt(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
-                </div>
-                <select className="form-input" value={cal.recurrence} onChange={(e) => cal.setRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
-                  {RECURRENCE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
-                  ))}
-                </select>
-                {cal.recurrence && (
-                  <input className="form-input" type="date" value={cal.recurrenceEnd} onChange={(e) => cal.setRecurrenceEnd(e.target.value)} placeholder={t(messages, 'module.calendar.repeat_until')} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
-                )}
-                <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
-              </form>
+              {!isChild && (
+                <>
+                  <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.quick_add')}</div>
+                  <form onSubmit={cal.createEvent} className="quick-add-form">
+                    <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required style={{ fontSize: '0.88rem', padding: '12px 14px' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
+                      <input className="form-input" type="datetime-local" value={cal.endsAt} onChange={(e) => cal.setEndsAt(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
+                    </div>
+                    <select className="form-input" value={cal.recurrence} onChange={(e) => cal.setRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
+                      {RECURRENCE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
+                      ))}
+                    </select>
+                    {cal.recurrence && (
+                      <input className="form-input" type="date" value={cal.recurrenceEnd} onChange={(e) => cal.setRecurrenceEnd(e.target.value)} placeholder={t(messages, 'module.calendar.repeat_until')} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
+                    )}
+                    <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
+                  </form>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -294,7 +298,7 @@ export default function CalendarView() {
               <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_week')}</div>
             )}
             {cal.weekInfo.weekEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={cal.deleteEvent} />
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} />
             ))}
           </div>
         </div>
@@ -327,24 +331,26 @@ export default function CalendarView() {
               </div>
             )}
             {cal.selectedDayEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={cal.deleteEvent} />
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} />
             ))}
           </div>
-          <form onSubmit={cal.createEvent} className="quick-add-form">
-            <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required />
-            <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required />
-            <select className="form-input" value={cal.recurrence} onChange={(e) => cal.setRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
-              {RECURRENCE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
-              ))}
-            </select>
-            <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
-          </form>
+          {!isChild && (
+            <form onSubmit={cal.createEvent} className="quick-add-form">
+              <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required />
+              <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required />
+              <select className="form-input" value={cal.recurrence} onChange={(e) => cal.setRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
+                {RECURRENCE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
+                ))}
+              </select>
+              <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
+            </form>
+          )}
         </div>
       )}
 
       {/* Birthday form in week view */}
-      {cal.calendarView === 'week' && (
+      {cal.calendarView === 'week' && !isChild && (
         <div className="glass" style={{ padding: 'var(--space-lg)', marginTop: 'var(--space-md)' }}>
           <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-md)' }}>{t(messages, 'create_birthday')}</div>
           <form onSubmit={cal.addBirthday} className="quick-add-form">

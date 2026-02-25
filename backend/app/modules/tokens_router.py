@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import current_user
 from app.core.scopes import VALID_SCOPES, require_scope
 from app.database import get_db
-from app.models import PersonalAccessToken, User
+from app.models import Membership, PersonalAccessToken, User
 from app.schemas import PATCreate, PATCreatedResponse, PATResponse
 from app.security import generate_pat
 
@@ -13,12 +13,21 @@ router = APIRouter(prefix="/tokens", tags=["tokens"])
 MAX_TOKENS_PER_USER = 25
 
 
+def _ensure_user_is_adult(db: Session, user_id: int):
+    adult = db.query(Membership).filter(
+        Membership.user_id == user_id, Membership.is_adult == True,
+    ).first()
+    if not adult:
+        raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
+
+
 @router.get("", response_model=list[PATResponse])
 def list_tokens(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
     _scope=require_scope("profile:read"),
 ):
+    _ensure_user_is_adult(db, user.id)
     return (
         db.query(PersonalAccessToken)
         .filter(PersonalAccessToken.user_id == user.id)
@@ -34,6 +43,7 @@ def create_token(
     db: Session = Depends(get_db),
     _scope=require_scope("profile:write"),
 ):
+    _ensure_user_is_adult(db, user.id)
     invalid = set(payload.scopes) - VALID_SCOPES
     if invalid:
         raise HTTPException(status_code=400, detail=f"Ungültige Scopes: {', '.join(sorted(invalid))}")
@@ -66,6 +76,7 @@ def revoke_token(
     db: Session = Depends(get_db),
     _scope=require_scope("profile:write"),
 ):
+    _ensure_user_is_adult(db, user.id)
     pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.id == token_id).first()
     if not pat:
         raise HTTPException(status_code=404, detail="Token nicht gefunden")
