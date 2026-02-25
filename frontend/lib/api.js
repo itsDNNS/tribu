@@ -271,6 +271,25 @@ export function apiUpdateNotificationPreferences(prefs) {
   });
 }
 
+// Push Notifications
+export function apiGetVapidKey() {
+  return request('/notifications/push/vapid-key');
+}
+
+export function apiPushSubscribe(subscription) {
+  const key = subscription.getKey('p256dh');
+  const auth = subscription.getKey('auth');
+  return post('/notifications/push/subscribe', {
+    endpoint: subscription.endpoint,
+    p256dh: btoa(String.fromCharCode(...new Uint8Array(key))),
+    auth: btoa(String.fromCharCode(...new Uint8Array(auth))),
+  });
+}
+
+export function apiPushUnsubscribe(endpoint) {
+  return post('/notifications/push/unsubscribe', { endpoint });
+}
+
 // Nav Order
 export function apiGetNavOrder() {
   return request('/nav/order');

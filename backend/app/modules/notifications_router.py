@@ -8,9 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.core import cache
 from app.core.deps import current_user
+from app.core.push import get_vapid_public_key
 from app.database import get_db
-from app.models import Notification, NotificationPreference, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse
+from app.models import Notification, NotificationPreference, PushSubscription, User
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushSubscriptionCreate, PushUnsubscribe
 
 router = APIRouter(prefix="/notifications", tags=["notifications"], responses={**AUTH_RESPONSES})
 
@@ -135,6 +136,83 @@ async def notification_stream(user: User = Depends(current_user)):
 
 
 @router.get(
+    "/push/vapid-key",
+    summary="Get VAPID public key",
+    description="Return the VAPID public key for push subscription. Returns null if push is not configured.",
+    response_description="VAPID public key or null",
+)
+def vapid_key():
+    key = get_vapid_public_key()
+    return {"vapid_key": key}
+
+
+@router.post(
+    "/push/subscribe",
+    summary="Register push subscription",
+    description="Register a browser push subscription for the current user. Upserts on endpoint.",
+    response_description="Confirmation",
+)
+def push_subscribe(
+    payload: PushSubscriptionCreate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    existing = db.query(PushSubscription).filter(PushSubscription.endpoint == payload.endpoint).first()
+    if existing:
+        existing.user_id = user.id
+        existing.p256dh = payload.p256dh
+        existing.auth = payload.auth
+    else:
+        sub = PushSubscription(
+            user_id=user.id,
+            endpoint=payload.endpoint,
+            p256dh=payload.p256dh,
+            auth=payload.auth,
+        )
+        db.add(sub)
+
+    pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
+    if not pref:
+        pref = NotificationPreference(user_id=user.id, push_enabled=True)
+        db.add(pref)
+    else:
+        pref.push_enabled = True
+
+    db.commit()
+    cache.invalidate(f"tribu:notif_prefs:{user.id}")
+    return {"status": "ok"}
+
+
+@router.post(
+    "/push/unsubscribe",
+    summary="Unregister push subscription",
+    description="Remove a browser push subscription. Disables push if no subscriptions remain.",
+    response_description="Confirmation",
+)
+def push_unsubscribe(
+    payload: PushUnsubscribe,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    sub = db.query(PushSubscription).filter(
+        PushSubscription.endpoint == payload.endpoint,
+        PushSubscription.user_id == user.id,
+    ).first()
+    if sub:
+        db.delete(sub)
+
+    remaining = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).count()
+    if remaining <= (1 if sub else 0):
+        pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
+        if pref:
+            pref.push_enabled = False
+
+    db.commit()
+    cache.invalidate(f"tribu:notif_prefs:{user.id}")
+    return {"status": "ok"}
+
+
+@router.get(
     "/preferences",
     response_model=NotificationPreferenceResponse,
     summary="Get notification preferences",
@@ -145,7 +223,7 @@ def get_preferences(user: User = Depends(current_user), db: Session = Depends(ge
     def _load():
         pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
         if not pref:
-            return {"reminders_enabled": True, "reminder_minutes": 30, "quiet_start": None, "quiet_end": None}
+            return {"reminders_enabled": True, "reminder_minutes": 30, "quiet_start": None, "quiet_end": None, "push_enabled": False}
         return NotificationPreferenceResponse.model_validate(pref).model_dump()
     data = cache.get_or_set(f"tribu:notif_prefs:{user.id}", 600, _load)
     return NotificationPreferenceResponse(**data)
