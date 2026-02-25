@@ -278,5 +278,9 @@
   "update_available": "v{version} verfügbar",
   "view_release": "Release-Notes anzeigen",
   "up_to_date": "Aktuell",
-  "version_check_label": "Update-Prüfung"
+  "version_check_label": "Update-Prüfung",
+  "about_support": "Über & Unterstützung",
+  "about_support_desc": "Tribu ist kostenlos und Open Source. Wenn es dir gefällt, unterstütze das Projekt.",
+  "donate": "Spenden",
+  "report_bug": "Fehler melden"
 }

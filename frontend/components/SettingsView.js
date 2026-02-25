@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp, Navigation, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart, BellRing, Rss } from 'lucide-react';
+import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp, Navigation, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart, BellRing, Rss, Heart, Bug, ExternalLink } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../contexts/AppContext';
 import { downloadBlob } from '../lib/helpers';
 import { t, languageCompleteness } from '../lib/i18n';
@@ -974,6 +974,34 @@ export default function SettingsView() {
               )}
             </div>
           )}
+        </div>
+
+        {/* About & Support Section */}
+        <div className="settings-section glass">
+          <div className="settings-section-title"><Heart size={16} /> {t(messages, 'about_support')}</div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 'var(--space-md)' }}>
+            {t(messages, 'about_support_desc')}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
+            <a
+              href="https://ko-fi.com/itsdnns"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <Heart size={14} /> {t(messages, 'donate')} <ExternalLink size={12} />
+            </a>
+            <a
+              href={`https://github.com/itsDNNS/tribu/issues/new?labels=bug&title=&body=${encodeURIComponent(`**Tribu Version:** ${version || 'unknown'}\n**Browser:** ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}\n\n**Describe the bug:**\n\n`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <Bug size={14} /> {t(messages, 'report_bug')} <ExternalLink size={12} />
+            </a>
+          </div>
         </div>
       </div>
     </div>

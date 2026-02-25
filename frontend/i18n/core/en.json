@@ -278,5 +278,9 @@
   "update_available": "v{version} available",
   "view_release": "View release notes",
   "up_to_date": "Up to date",
-  "version_check_label": "Update check"
+  "version_check_label": "Update check",
+  "about_support": "About & Support",
+  "about_support_desc": "Tribu is free and open source. If you enjoy it, consider supporting the project.",
+  "donate": "Donate",
+  "report_bug": "Report a bug"
 }
