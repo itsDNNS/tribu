@@ -6,7 +6,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import cache
-from app.core.deps import current_user, ensure_adult, ensure_family_membership, to_utc_naive
+from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership, to_utc_naive
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
@@ -101,6 +101,28 @@ def export_calendar_ics(
         content=ics_text,
         media_type="text/calendar",
         headers={"Content-Disposition": "attachment; filename=tribu-calendar.ics"},
+    )
+
+
+@router.get(
+    "/events/feed.ics",
+    summary="Calendar subscription feed",
+    description="ICS feed URL for calendar app subscriptions. Supports `?token=` query parameter for authentication. Scope: `calendar:read`.",
+    response_description="ICS calendar feed",
+)
+def calendar_feed_ics(
+    family_id: int,
+    user: User = Depends(current_user_via_token_param),
+    db: Session = Depends(get_db),
+    _scope=require_scope("calendar:read"),
+):
+    ensure_family_membership(db, user.id, family_id)
+    events = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).all()
+    ics_text = events_to_ics(events)
+    return Response(
+        content=ics_text,
+        media_type="text/calendar",
+        headers={"Content-Disposition": "inline; filename=tribu-calendar.ics"},
     )
 
 
