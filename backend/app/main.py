@@ -35,7 +35,7 @@ from app.schemas import (
     ChangePasswordRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest,
 )
 from app.security import create_access_token, hash_password, needs_rehash, verify_password
-from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE
+from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE, VERSION
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="Tribu API",
-    version="0.7.0",
+    version=VERSION,
     description=API_DESCRIPTION,
     contact={"name": "Tribu", "url": "https://github.com/itsDNNS/tribu"},
     license_info={"name": "All rights reserved"},
@@ -165,7 +165,7 @@ app.add_middleware(
     response_description="Service status",
 )
 def health():
-    return {"status": "ok", "service": "tribu-api"}
+    return {"status": "ok", "service": "tribu-api", "version": VERSION}
 
 
 @app.post(
