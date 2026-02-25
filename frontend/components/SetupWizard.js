@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Users, ShieldCheck, Upload, CheckCircle, Globe, AlertCircle } from 'lucide-react';
+import { Users, ShieldCheck, Upload, CheckCircle, Globe, AlertCircle, Play } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -12,7 +12,7 @@ const STEPS_RESTORE = ['welcome', 'restore'];
 
 export default function SetupWizard() {
   const {
-    messages, setLoggedIn, setNeedsSetup,
+    messages, setLoggedIn, setNeedsSetup, enterDemo,
     theme, setTheme, lang, setLang,
     availableThemes, availableLanguages,
   } = useApp();
@@ -154,6 +154,13 @@ export default function SetupWizard() {
                   {t(messages, 'setup_welcome_restore')}
                 </button>
               </div>
+
+              <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
+
+              <button className="btn-demo" type="button" onClick={enterDemo}>
+                <Play size={15} aria-hidden="true" />
+                {t(messages, 'demo_try')}
+              </button>
             </div>
           )}
 
