@@ -29,7 +29,7 @@ export default function ContactsView() {
       <div className="contacts-grid stagger">
         {contacts.length > 0 ? (
           Array.from(
-            contacts.reduce((map, c) => {
+            [...contacts].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'de')).reduce((map, c) => {
               const letter = (c.full_name || '?')[0].toUpperCase();
               if (!map.has(letter)) map.set(letter, []);
               map.get(letter).push(c);
