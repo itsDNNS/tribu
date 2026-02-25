@@ -94,38 +94,77 @@ Most family organizer apps lock your data in their cloud and charge monthly fees
 
 ## Quick Start
 
-Download the Compose file and environment template:
+Create a new stack in **Portainer**, **Dockge**, or **Dockhand** and paste:
+
+```yaml
+name: tribu
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tribu
+      POSTGRES_USER: tribu
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - tribu_pg_data:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/itsdnns/tribu-backend:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://tribu:${POSTGRES_PASSWORD}@postgres:5432/tribu
+      REDIS_URL: redis://valkey:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+    depends_on: [postgres, valkey]
+    ports: ["8000:8000"]
+    volumes:
+      - tribu_backups:/backups
+
+  frontend:
+    image: ghcr.io/itsdnns/tribu-frontend:latest
+    restart: unless-stopped
+    depends_on: [backend]
+    ports: ["3000:3000"]
+
+volumes:
+  tribu_pg_data:
+  tribu_backups:
+```
+
+Set two environment variables (generate with `openssl rand -hex 32`):
+
+| Variable | Description |
+|----------|-------------|
+| `JWT_SECRET` | Random 64-char hex string for JWT signing |
+| `POSTGRES_PASSWORD` | Random 32-char hex string for the database |
+
+Deploy the stack, open [localhost:3000](http://localhost:3000), and register.
+
+> The first user to register becomes the family **admin**.
+>
+> Want to explore first? Click **Try demo** on the login page.
+
+<details>
+<summary><strong>CLI alternative</strong></summary>
 
 ```bash
 mkdir tribu && cd tribu
 curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/infra/docker-compose.yml
 curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/infra/.env.example
 cp .env.example .env
-```
-
-Generate secrets and fill in `.env`:
-
-```bash
-openssl rand -hex 32    # JWT_SECRET
-openssl rand -hex 16    # POSTGRES_PASSWORD
-```
-
-Start the stack (pre-built images are pulled automatically):
-
-```bash
+# Fill in JWT_SECRET and POSTGRES_PASSWORD
 docker compose up -d
 ```
 
-| Service | URL |
-|---------|-----|
-| Frontend | [localhost:3000](http://localhost:3000) |
-| Backend API | [localhost:8000](http://localhost:8000) |
-| Swagger Docs | [localhost:8000/docs](http://localhost:8000/docs) |
+</details>
 
-> The first user to register becomes the family **admin**.
->
-> Want to explore first? Click **Try demo** on the login page.
->
 > **Development setup?** See [Contributing](https://github.com/itsDNNS/tribu/wiki/Contributing) for building from source.
 
 ## Tech Stack
