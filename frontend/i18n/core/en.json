@@ -258,5 +258,20 @@
   "setup_done_title": "You're all set!",
   "setup_done_desc": "Your family hub is ready. Let's get started.",
   "setup_done_go": "Go to Dashboard",
-  "name_placeholder": "Jane"
+  "name_placeholder": "Jane",
+  "subscriptions": "Subscriptions",
+  "subscriptions_desc": "Subscribe to your calendar and contacts in external apps (Google Calendar, Apple Calendar, etc.).",
+  "sub_create_token": "Create subscription token",
+  "sub_creating": "Creating...",
+  "sub_calendar_feed": "Calendar feed URL",
+  "sub_contacts_feed": "Contacts feed URL",
+  "sub_copy": "Copy",
+  "sub_copied": "Copied!",
+  "sub_setup_hints": "Setup instructions",
+  "sub_setup_android_title": "Android (Google Calendar)",
+  "sub_setup_android": "Open Google Calendar → Settings → Add calendar → From URL → Paste the calendar feed URL.",
+  "sub_setup_ios_title": "iOS (Apple Calendar)",
+  "sub_setup_ios": "Open Settings → Calendar → Accounts → Add Account → Other → Add Subscribed Calendar → Paste the calendar feed URL.",
+  "sub_setup_contacts_hint": "Open the contacts feed URL in your browser to download a VCF file that can be imported into any contacts app.",
+  "sub_token_missing": "Create a subscription token first to generate feed URLs."
 }

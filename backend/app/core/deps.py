@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -26,19 +26,10 @@ security = HTTPBearer(
 COOKIE_NAME = "tribu_token"
 
 
-def current_user(
-    request: Request,
-    creds: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: Session = Depends(get_db),
-):
-    token = request.cookies.get(COOKIE_NAME)
-    if not token and creds:
-        token = creds.credentials
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert")
-
-    if is_pat(token):
-        token_hash = hash_pat(token)
+def _resolve_user(request: Request, token_str: str, db: Session) -> User:
+    """Resolve a user from a token string (JWT or PAT). Sets request.state.pat_scopes."""
+    if is_pat(token_str):
+        token_hash = hash_pat(token_str)
         pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.token_hash == token_hash).first()
         if not pat:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token")
@@ -53,7 +44,7 @@ def current_user(
         return user
 
     try:
-        payload = decode_token(token)
+        payload = decode_token(token_str)
         user_id = int(payload.get("sub"))
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token")
@@ -63,6 +54,38 @@ def current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Benutzer nicht gefunden")
     request.state.pat_scopes = None
     return user
+
+
+def current_user(
+    request: Request,
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+):
+    token = request.cookies.get(COOKIE_NAME)
+    if not token and creds:
+        token = creds.credentials
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert")
+
+    return _resolve_user(request, token, db)
+
+
+def current_user_via_token_param(
+    request: Request,
+    token: Optional[str] = Query(None),
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Like current_user but also accepts ?token= query parameter. For feed endpoints."""
+    token_str = request.cookies.get(COOKIE_NAME)
+    if not token_str and creds:
+        token_str = creds.credentials
+    if not token_str and token:
+        token_str = token
+    if not token_str:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert")
+
+    return _resolve_user(request, token_str, db)
 
 
 def to_utc_naive(value):

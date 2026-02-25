@@ -6,8 +6,9 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import cache
-from app.core.deps import current_user, ensure_adult, ensure_family_membership
+from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
+from app.core.vcf_utils import contacts_to_vcf
 from app.database import get_db
 from app.models import Contact, FamilyBirthday, User
 from app.schemas import AUTH_RESPONSES, ErrorResponse, ContactCreate, ContactResponse, ContactsCsvImport
@@ -76,6 +77,28 @@ def create_contact(
     db.refresh(contact)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return contact
+
+
+@router.get(
+    "/feed.vcf",
+    summary="Contacts subscription feed",
+    description="VCF feed URL for contacts app subscriptions. Supports `?token=` query parameter for authentication. Scope: `contacts:read`.",
+    response_description="VCF contacts feed",
+)
+def contacts_feed_vcf(
+    family_id: int,
+    user: User = Depends(current_user_via_token_param),
+    db: Session = Depends(get_db),
+    _scope=require_scope("contacts:read"),
+):
+    ensure_family_membership(db, user.id, family_id)
+    contacts = db.query(Contact).filter(Contact.family_id == family_id).order_by(Contact.full_name.asc()).all()
+    vcf_text = contacts_to_vcf(contacts)
+    return Response(
+        content=vcf_text,
+        media_type="text/vcard",
+        headers={"Content-Disposition": "inline; filename=tribu-contacts.vcf"},
+    )
 
 
 @router.get(

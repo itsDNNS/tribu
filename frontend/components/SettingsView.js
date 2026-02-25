@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp, Navigation, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart, BellRing } from 'lucide-react';
+import { User, Palette, Globe, ShieldCheck, Bell, Database, Key, Plus, Trash2, Copy, Check, X, Download, Upload, ChevronDown, ChevronUp, Navigation, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart, BellRing, Rss } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../contexts/AppContext';
 import { downloadBlob } from '../lib/helpers';
 import { t, languageCompleteness } from '../lib/i18n';
@@ -88,6 +88,40 @@ export default function SettingsView() {
     setLocalNavOrder(DEFAULT_NAV_ORDER);
     if (demoMode) {
       setNavOrder(DEFAULT_NAV_ORDER);
+    }
+  }
+
+  // Subscription state
+  const [subToken, setSubToken] = useState('');
+  const [subCreating, setSubCreating] = useState(false);
+  const [subCopiedCal, setSubCopiedCal] = useState(false);
+  const [subCopiedContacts, setSubCopiedContacts] = useState(false);
+  const [subShowHints, setSubShowHints] = useState(false);
+
+  const subCalendarUrl = subToken ? `${window.location.origin}/api/calendar/events/feed.ics?family_id=${familyId}&token=${subToken}` : '';
+  const subContactsUrl = subToken ? `${window.location.origin}/api/contacts/feed.vcf?family_id=${familyId}&token=${subToken}` : '';
+
+  async function handleCreateSubToken() {
+    setSubCreating(true);
+    const res = await api.apiCreateToken({
+      name: `Feed subscription (${new Date().toLocaleDateString()})`,
+      scopes: ['calendar:read', 'contacts:read'],
+    });
+    setSubCreating(false);
+    if (res.ok) {
+      setSubToken(res.data.token);
+      loadTokens();
+    }
+  }
+
+  function handleCopySubUrl(url, type) {
+    navigator.clipboard.writeText(url);
+    if (type === 'calendar') {
+      setSubCopiedCal(true);
+      setTimeout(() => setSubCopiedCal(false), 2000);
+    } else {
+      setSubCopiedContacts(true);
+      setTimeout(() => setSubCopiedContacts(false), 2000);
     }
   }
 
@@ -647,6 +681,78 @@ export default function SettingsView() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Subscriptions Section */}
+        {!demoMode && !isChild && (
+          <div className="settings-section glass">
+            <div className="settings-section-title"><Rss size={16} /> {t(messages, 'subscriptions')}</div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
+              {t(messages, 'subscriptions_desc')}
+            </p>
+
+            {subToken ? (
+              <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+                {/* Calendar Feed URL */}
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)', display: 'block' }}>
+                    {t(messages, 'sub_calendar_feed')}
+                  </label>
+                  <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+                    <code className="token-display" style={{ flex: 1 }}>{subCalendarUrl}</code>
+                    <button className="btn-ghost" onClick={() => handleCopySubUrl(subCalendarUrl, 'calendar')} style={{ flexShrink: 0 }}>
+                      {subCopiedCal ? <><Check size={14} /> {t(messages, 'sub_copied')}</> : <><Copy size={14} /> {t(messages, 'sub_copy')}</>}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Contacts Feed URL */}
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)', display: 'block' }}>
+                    {t(messages, 'sub_contacts_feed')}
+                  </label>
+                  <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+                    <code className="token-display" style={{ flex: 1 }}>{subContactsUrl}</code>
+                    <button className="btn-ghost" onClick={() => handleCopySubUrl(subContactsUrl, 'contacts')} style={{ flexShrink: 0 }}>
+                      {subCopiedContacts ? <><Check size={14} /> {t(messages, 'sub_copied')}</> : <><Copy size={14} /> {t(messages, 'sub_copy')}</>}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Setup Hints */}
+                <div>
+                  <button className="btn-ghost" onClick={() => setSubShowHints(!subShowHints)} style={{ fontSize: '0.85rem' }}>
+                    {subShowHints ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                    {t(messages, 'sub_setup_hints')}
+                  </button>
+                  {subShowHints && (
+                    <div className="glass-sm" style={{ padding: 'var(--space-md)', marginTop: 'var(--space-sm)', display: 'grid', gap: 'var(--space-md)', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      <div>
+                        <strong>{t(messages, 'sub_setup_android_title')}</strong>
+                        <p style={{ margin: '4px 0 0' }}>{t(messages, 'sub_setup_android')}</p>
+                      </div>
+                      <div>
+                        <strong>{t(messages, 'sub_setup_ios_title')}</strong>
+                        <p style={{ margin: '4px 0 0' }}>{t(messages, 'sub_setup_ios')}</p>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0 }}>{t(messages, 'sub_setup_contacts_hint')}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 'var(--space-sm)' }}>
+                  {t(messages, 'sub_token_missing')}
+                </p>
+                <button className="btn-sm" onClick={handleCreateSubToken} disabled={subCreating}>
+                  <Plus size={14} /> {subCreating ? t(messages, 'sub_creating') : t(messages, 'sub_create_token')}
+                </button>
+              </div>
+            )}
           </div>
         )}
 

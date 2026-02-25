@@ -258,5 +258,20 @@
   "setup_done_title": "Alles bereit!",
   "setup_done_desc": "Dein Familien-Hub ist eingerichtet. Los geht's.",
   "setup_done_go": "Zum Dashboard",
-  "name_placeholder": "Anna"
+  "name_placeholder": "Anna",
+  "subscriptions": "Abonnements",
+  "subscriptions_desc": "Kalender und Kontakte in externen Apps abonnieren (Google Kalender, Apple Kalender, etc.).",
+  "sub_create_token": "Abo-Token erstellen",
+  "sub_creating": "Wird erstellt...",
+  "sub_calendar_feed": "Kalender-Feed-URL",
+  "sub_contacts_feed": "Kontakte-Feed-URL",
+  "sub_copy": "Kopieren",
+  "sub_copied": "Kopiert!",
+  "sub_setup_hints": "Einrichtungshinweise",
+  "sub_setup_android_title": "Android (Google Kalender)",
+  "sub_setup_android": "Google Kalender öffnen → Einstellungen → Kalender hinzufügen → Per URL → Kalender-Feed-URL einfügen.",
+  "sub_setup_ios_title": "iOS (Apple Kalender)",
+  "sub_setup_ios": "Einstellungen → Kalender → Accounts → Account hinzufügen → Andere → Kalenderabo hinzufügen → Kalender-Feed-URL einfügen.",
+  "sub_setup_contacts_hint": "Kontakte-Feed-URL im Browser öffnen, um eine VCF-Datei herunterzuladen, die in jede Kontakte-App importiert werden kann.",
+  "sub_token_missing": "Erstelle zuerst ein Abo-Token, um Feed-URLs zu generieren."
 }
