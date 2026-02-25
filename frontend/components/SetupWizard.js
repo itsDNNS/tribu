@@ -241,7 +241,7 @@ export default function SetupWizard() {
                 </div>
                 <div className="form-field">
                   <label htmlFor="setup-name">{t(messages, 'your_name')}</label>
-                  <input id="setup-name" className="form-input" type="text" placeholder="Dennis" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+                  <input id="setup-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
                 </div>
                 <button className="btn-primary" type="submit">{t(messages, 'setup_admin_next')}</button>
               </form>

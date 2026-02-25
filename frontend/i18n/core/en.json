@@ -251,5 +251,6 @@
   "setup_prefs_skip": "Skip for now",
   "setup_done_title": "You're all set!",
   "setup_done_desc": "Your family hub is ready. Let's get started.",
-  "setup_done_go": "Go to Dashboard"
+  "setup_done_go": "Go to Dashboard",
+  "name_placeholder": "Jane"
 }

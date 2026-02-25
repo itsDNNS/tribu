@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ShieldCheck, Users, Play } from 'lucide-react';
+import { ShieldCheck, Users, Play, Globe } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
 export default function AuthPage() {
-  const { messages, setLoggedIn, enterDemo } = useApp();
+  const { messages, setLoggedIn, enterDemo, lang, setLang, availableLanguages } = useApp();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,6 +33,18 @@ export default function AuthPage() {
 
   return (
     <div className="auth-page">
+      <div className="setup-lang-toggle">
+        <Globe size={14} />
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          aria-label={t(messages, 'language')}
+        >
+          {availableLanguages.map((l) => (
+            <option key={l.key} value={l.key}>{l.key.toUpperCase()}</option>
+          ))}
+        </select>
+      </div>
       <div className="auth-container">
         <div className="auth-brand">
           <div className="auth-logo">
@@ -94,11 +106,11 @@ export default function AuthPage() {
                 </div>
                 <div className="form-field">
                   <label htmlFor="register-name">{t(messages, 'your_name')}</label>
-                  <input id="register-name" className="form-input" type="text" placeholder="Dennis" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+                  <input id="register-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
                 </div>
                 <div className="form-field">
                   <label htmlFor="register-family">{t(messages, 'family_name')}</label>
-                  <input id="register-family" className="form-input" type="text" placeholder="Müller Family" value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
+                  <input id="register-family" className="form-input" type="text" placeholder={t(messages, 'setup_family_placeholder')} value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
                 </div>
                 <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
               </form>

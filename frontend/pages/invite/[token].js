@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Users, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Users, ShieldCheck, AlertCircle, Globe } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
@@ -9,7 +9,7 @@ import { apiGetInviteInfo, apiRegisterWithInvite } from '../../lib/api';
 export default function InvitePage() {
   const router = useRouter();
   const { token } = router.query;
-  const { messages, setLoggedIn } = useApp();
+  const { messages, setLoggedIn, lang, setLang, availableLanguages } = useApp();
 
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState(null);
@@ -79,6 +79,18 @@ export default function InvitePage() {
 
   return (
     <div className="auth-page">
+      <div className="setup-lang-toggle">
+        <Globe size={14} />
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          aria-label={t(messages, 'language')}
+        >
+          {availableLanguages.map((l) => (
+            <option key={l.key} value={l.key}>{l.key.toUpperCase()}</option>
+          ))}
+        </select>
+      </div>
       <div className="auth-container">
         <div className="auth-brand">
           <div className="auth-logo"><Users size={32} color="white" aria-hidden="true" /></div>
@@ -104,7 +116,7 @@ export default function InvitePage() {
             </div>
             <div className="form-field">
               <label htmlFor="invite-name">{t(messages, 'your_name')}</label>
-              <input id="invite-name" className="form-input" type="text" placeholder="Dennis" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+              <input id="invite-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
             </div>
             <button className="btn-primary" type="submit" disabled={submitting}>
               {t(messages, 'invite_page_register')}

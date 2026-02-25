@@ -251,5 +251,6 @@
   "setup_prefs_skip": "Erstmal überspringen",
   "setup_done_title": "Alles bereit!",
   "setup_done_desc": "Dein Familien-Hub ist eingerichtet. Los geht's.",
-  "setup_done_go": "Zum Dashboard"
+  "setup_done_go": "Zum Dashboard",
+  "name_placeholder": "Anna"
 }
