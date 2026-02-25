@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.core import cache
 from app.core.deps import current_user
 from app.database import get_db
 from app.models import Notification, NotificationPreference, User
@@ -34,8 +35,9 @@ def list_notifications(
 
 @router.get("/unread-count")
 def unread_count(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    count = db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).count()
-    return {"count": count}
+    def _load():
+        return {"count": db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).count()}
+    return cache.get_or_set(f"tribu:notif_count:{user.id}", 15, _load)
 
 
 @router.patch("/{notification_id}/read")
@@ -45,6 +47,7 @@ def mark_read(notification_id: int, user: User = Depends(current_user), db: Sess
         raise HTTPException(status_code=404, detail="Notification not found")
     notif.read = True
     db.commit()
+    cache.invalidate(f"tribu:notif_count:{user.id}")
     return {"status": "ok"}
 
 
@@ -52,6 +55,7 @@ def mark_read(notification_id: int, user: User = Depends(current_user), db: Sess
 def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_db)):
     db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).update({"read": True})
     db.commit()
+    cache.invalidate(f"tribu:notif_count:{user.id}")
     return {"status": "ok"}
 
 
@@ -62,6 +66,7 @@ def delete_notification(notification_id: int, user: User = Depends(current_user)
         raise HTTPException(status_code=404, detail="Notification not found")
     db.delete(notif)
     db.commit()
+    cache.invalidate(f"tribu:notif_count:{user.id}")
     return {"status": "ok"}
 
 
@@ -98,10 +103,13 @@ async def notification_stream(user: User = Depends(current_user)):
 
 @router.get("/preferences", response_model=NotificationPreferenceResponse)
 def get_preferences(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
-    if not pref:
-        return NotificationPreferenceResponse(reminders_enabled=True, reminder_minutes=30, quiet_start=None, quiet_end=None)
-    return pref
+    def _load():
+        pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
+        if not pref:
+            return {"reminders_enabled": True, "reminder_minutes": 30, "quiet_start": None, "quiet_end": None}
+        return NotificationPreferenceResponse.model_validate(pref).model_dump()
+    data = cache.get_or_set(f"tribu:notif_prefs:{user.id}", 600, _load)
+    return NotificationPreferenceResponse(**data)
 
 
 @router.put("/preferences", response_model=NotificationPreferenceResponse)
@@ -120,4 +128,5 @@ def update_preferences(
 
     db.commit()
     db.refresh(pref)
+    cache.invalidate(f"tribu:notif_prefs:{user.id}")
     return pref

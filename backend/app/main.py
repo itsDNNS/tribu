@@ -167,7 +167,15 @@ app.include_router(setup_router)
 @app.on_event("startup")
 async def startup_scheduler():
     import asyncio
+    from app.core import cache
+
     ws_broadcast.set_event_loop(asyncio.get_running_loop())
+
+    if cache.ping():
+        print("INFO:     Valkey connected")
+    else:
+        print("WARNING:  Valkey not available — caching disabled, falling back to DB")
+
     db = SessionLocal()
     try:
         schedule_row = db.query(SystemSetting).filter(SystemSetting.key == "backup_schedule").first()
