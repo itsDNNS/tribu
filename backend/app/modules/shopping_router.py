@@ -16,6 +16,9 @@ from app.core.ws_broadcast import (
     broadcast_list_deleted,
 )
 from app.schemas import (
+    AUTH_RESPONSES,
+    NOT_FOUND_RESPONSE,
+    ErrorResponse,
     ShoppingItemCreate,
     ShoppingItemResponse,
     ShoppingItemUpdate,
@@ -23,7 +26,7 @@ from app.schemas import (
     ShoppingListResponse,
 )
 
-router = APIRouter(prefix="/shopping", tags=["shopping"])
+router = APIRouter(prefix="/shopping", tags=["shopping"], responses={**AUTH_RESPONSES})
 
 
 def _list_response(sl: ShoppingList) -> ShoppingListResponse:
@@ -43,7 +46,13 @@ def _list_response(sl: ShoppingList) -> ShoppingListResponse:
 # ── Lists ──────────────────────────────────────────────
 
 
-@router.get("/lists", response_model=list[ShoppingListResponse])
+@router.get(
+    "/lists",
+    response_model=list[ShoppingListResponse],
+    summary="List shopping lists",
+    description="Return all shopping lists for a family with item counts. Scope: `shopping:read`.",
+    response_description="List of shopping lists",
+)
 def get_lists(
     family_id: int,
     user: User = Depends(current_user),
@@ -55,7 +64,13 @@ def get_lists(
     return [_list_response(sl) for sl in lists]
 
 
-@router.post("/lists", response_model=ShoppingListResponse)
+@router.post(
+    "/lists",
+    response_model=ShoppingListResponse,
+    summary="Create a shopping list",
+    description="Create a new shopping list. Broadcasts via WebSocket. Adult only. Scope: `shopping:write`.",
+    response_description="The created shopping list",
+)
 def create_list(
     payload: ShoppingListCreate,
     user: User = Depends(current_user),
@@ -76,7 +91,13 @@ def create_list(
     return resp
 
 
-@router.delete("/lists/{list_id}")
+@router.delete(
+    "/lists/{list_id}",
+    summary="Delete a shopping list",
+    description="Delete a shopping list and all its items. Broadcasts via WebSocket. Adult only. Scope: `shopping:write`.",
+    response_description="Deletion confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def delete_list(
     list_id: int,
     user: User = Depends(current_user),
@@ -97,7 +118,14 @@ def delete_list(
 # ── Items ──────────────────────────────────────────────
 
 
-@router.get("/lists/{list_id}/items", response_model=list[ShoppingItemResponse])
+@router.get(
+    "/lists/{list_id}/items",
+    response_model=list[ShoppingItemResponse],
+    summary="List shopping items",
+    description="Return all items in a shopping list, sorted by checked status then creation date. Scope: `shopping:read`.",
+    response_description="List of shopping items",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def get_items(
     list_id: int,
     user: User = Depends(current_user),
@@ -117,7 +145,14 @@ def get_items(
     return items
 
 
-@router.post("/lists/{list_id}/items", response_model=ShoppingItemResponse)
+@router.post(
+    "/lists/{list_id}/items",
+    response_model=ShoppingItemResponse,
+    summary="Add a shopping item",
+    description="Add an item to a shopping list. Broadcasts via WebSocket. Adult only. Scope: `shopping:write`.",
+    response_description="The created shopping item",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def add_item(
     list_id: int,
     payload: ShoppingItemCreate,
@@ -142,7 +177,14 @@ def add_item(
     return item
 
 
-@router.patch("/items/{item_id}", response_model=ShoppingItemResponse)
+@router.patch(
+    "/items/{item_id}",
+    response_model=ShoppingItemResponse,
+    summary="Update a shopping item",
+    description="Update a shopping item's name, spec, or checked state. Children can only toggle checked. Broadcasts via WebSocket. Scope: `shopping:write`.",
+    response_description="The updated shopping item",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def update_item(
     item_id: int,
     payload: ShoppingItemUpdate,
@@ -174,7 +216,13 @@ def update_item(
     return item
 
 
-@router.delete("/items/{item_id}")
+@router.delete(
+    "/items/{item_id}",
+    summary="Delete a shopping item",
+    description="Remove an item from its shopping list. Broadcasts via WebSocket. Adult only. Scope: `shopping:write`.",
+    response_description="Deletion confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def delete_item(
     item_id: int,
     user: User = Depends(current_user),
@@ -193,7 +241,13 @@ def delete_item(
     return {"status": "deleted", "item_id": item_id}
 
 
-@router.delete("/lists/{list_id}/checked")
+@router.delete(
+    "/lists/{list_id}/checked",
+    summary="Clear checked items",
+    description="Remove all checked items from a shopping list. Broadcasts via WebSocket. Adult only. Scope: `shopping:write`.",
+    response_description="Number of deleted items",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def clear_checked(
     list_id: int,
     user: User = Depends(current_user),

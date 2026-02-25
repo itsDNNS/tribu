@@ -11,7 +11,7 @@ from slowapi.util import get_remote_address
 import os
 
 from app.core.deps import current_user
-from app.core.scopes import require_scope
+from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.database import get_db, SessionLocal
 from app.models import Family, Membership, SystemSetting, User
 from app.modules.birthdays_router import router as birthdays_router
@@ -30,13 +30,116 @@ from app.modules.invitations_router import router as invitations_router, public_
 from app.modules.setup_router import router as setup_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import ws_broadcast
-from app.schemas import ChangePasswordRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest
+from app.schemas import (
+    AUTH_RESPONSES, CONFLICT_RESPONSE, ErrorResponse,
+    ChangePasswordRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest,
+)
 from app.security import create_access_token, hash_password, needs_rehash, verify_password
 from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE
 
+
+# ---------------------------------------------------------------------------
+# API description (rendered as Markdown in /docs and /redoc)
+# ---------------------------------------------------------------------------
+
+API_DESCRIPTION = """
+Self-hosted family organizer — calendars, tasks, shopping lists, contacts,
+birthdays, and notifications in one place.
+
+## Authentication
+
+Tribu supports two authentication methods:
+
+### 1. Cookie-based JWT (browser sessions)
+
+Login via `POST /auth/login` sets an httpOnly cookie (`tribu_token`).
+All subsequent requests are automatically authenticated.
+
+### 2. Personal Access Token — PAT (API automation)
+
+Create a token via `POST /tokens` and pass it in the `Authorization` header:
+
+```
+curl -H "Authorization: Bearer tribu_pat_abc123..." \\
+     https://your-instance/calendar/events?family_id=1
+```
+
+## Rate Limiting
+
+| Endpoint | Limit |
+|----------|-------|
+| `POST /auth/register` | 10 / minute |
+| `POST /auth/login` | 20 / minute |
+| `POST /auth/register-with-invite` | 10 / minute |
+
+## Error Format
+
+All errors return JSON with a `detail` field:
+
+```json
+{"detail": "Human-readable error message"}
+```
+
+Common HTTP status codes: `400` (bad request), `401` (not authenticated),
+`403` (forbidden), `404` (not found), `409` (conflict), `422` (validation error),
+`429` (rate limit exceeded).
+
+## Permissions Model
+
+Three permission levels control access to family data:
+
+| Level | Check | Description |
+|-------|-------|-------------|
+| **Member** | Family membership | Any family member can read data |
+| **Adult** | `is_adult` flag | Required for write operations, CSV/ICS import/export, PAT management |
+| **Admin** | `role = admin` | Required for member management, backup, audit log, invitations |
+
+## PAT Scope Reference
+
+| Scope | Description |
+|-------|-------------|
+""" + "\n".join(
+    f"| `{scope}` | {desc} |"
+    for scope, desc in SCOPE_DESCRIPTIONS.items()
+)
+
+# ---------------------------------------------------------------------------
+# Tag metadata (section descriptions in /docs and /redoc)
+# ---------------------------------------------------------------------------
+
+TAG_METADATA = [
+    {"name": "auth", "description": "Register, login, logout, and profile management. Supports cookie-based JWT and PAT bearer tokens."},
+    {"name": "families", "description": "Family membership management, member CRUD, role assignments, and audit logging."},
+    {"name": "calendar", "description": "Calendar event CRUD with recurrence support, plus ICS import/export."},
+    {"name": "tasks", "description": "Family task management with priority levels, recurrence, and user assignment."},
+    {"name": "shopping", "description": "Shopping lists and items with real-time sync via WebSocket (`/ws/shopping/{list_id}`)."},
+    {"name": "contacts", "description": "Contact management with CSV import/export. Auto-syncs birthday entries."},
+    {"name": "birthdays", "description": "Family birthday tracking."},
+    {"name": "dashboard", "description": "Aggregated dashboard with upcoming events (14 days) and birthdays (28 days)."},
+    {"name": "notifications", "description": "User notifications with SSE streaming, read/unread management, and notification preferences."},
+    {"name": "tokens", "description": "Personal Access Token (PAT) management for API automation."},
+    {"name": "backup", "description": "Database backup management — schedule, trigger, download, and delete. Admin only."},
+    {"name": "invitations", "description": "Family invitation links — create, list, revoke, and accept."},
+    {"name": "admin-settings", "description": "System-wide admin settings (base URL configuration)."},
+    {"name": "nav", "description": "User navigation bar order customization."},
+    {"name": "setup", "description": "Initial setup wizard — check status and restore from backup. Only available on empty databases."},
+    {"name": "health", "description": "Health check and service info."},
+]
+
+# ---------------------------------------------------------------------------
+# App
+# ---------------------------------------------------------------------------
+
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="Tribu API", version="0.3.1")
+app = FastAPI(
+    title="Tribu API",
+    version="0.3.1",
+    description=API_DESCRIPTION,
+    contact={"name": "Tribu", "url": "https://github.com/itsDNNS/tribu"},
+    license_info={"name": "All rights reserved"},
+    openapi_tags=TAG_METADATA,
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
@@ -50,13 +153,33 @@ app.add_middleware(
 )
 
 
+# ---------------------------------------------------------------------------
+# Auth & health endpoints
+# ---------------------------------------------------------------------------
 
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["health"],
+    summary="Health check",
+    description="Returns service status. No authentication required.",
+    response_description="Service status",
+)
 def health():
     return {"status": "ok", "service": "tribu-api"}
 
 
-@app.post("/auth/register")
+@app.post(
+    "/auth/register",
+    tags=["auth"],
+    summary="Register new user",
+    description=(
+        "Create a new user account and their first family. "
+        "The user becomes admin of the new family. "
+        "Rate limited to 10 requests per minute. No authentication required."
+    ),
+    responses={**CONFLICT_RESPONSE},
+    response_description="Registration successful",
+)
 @limiter.limit("10/minute")
 def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
@@ -88,7 +211,18 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     return response
 
 
-@app.post("/auth/login")
+@app.post(
+    "/auth/login",
+    tags=["auth"],
+    summary="Login",
+    description=(
+        "Authenticate with email and password. "
+        "Sets an httpOnly JWT cookie on success. "
+        "Rate limited to 20 requests per minute. No authentication required."
+    ),
+    responses={401: {"model": ErrorResponse, "description": "Invalid credentials"}},
+    response_description="Login successful",
+)
 @limiter.limit("20/minute")
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email.lower()).first()
@@ -108,19 +242,40 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     return response
 
 
-@app.post("/auth/logout")
+@app.post(
+    "/auth/logout",
+    tags=["auth"],
+    summary="Logout",
+    description="Clear the authentication cookie. No authentication required.",
+    response_description="Logout successful",
+)
 def logout():
     response = JSONResponse(content={"status": "ok"})
     response.delete_cookie(COOKIE_NAME, path="/")
     return response
 
 
-@app.get("/auth/me", response_model=MeResponse)
+@app.get(
+    "/auth/me",
+    tags=["auth"],
+    summary="Get current user",
+    description="Return the authenticated user's profile. Scope: `profile:read`.",
+    response_model=MeResponse,
+    responses={**AUTH_RESPONSES},
+    response_description="User profile",
+)
 def me(user: User = Depends(current_user), _scope=require_scope("profile:read")):
     return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image, must_change_password=user.must_change_password)
 
 
-@app.patch("/auth/me/password")
+@app.patch(
+    "/auth/me/password",
+    tags=["auth"],
+    summary="Change password",
+    description="Change the current user's password. Requires the old password for verification. Scope: `profile:write`.",
+    responses={**AUTH_RESPONSES, 400: {"model": ErrorResponse, "description": "Old password incorrect"}},
+    response_description="Password changed",
+)
 def change_password(
     payload: ChangePasswordRequest,
     user: User = Depends(current_user),
@@ -134,7 +289,14 @@ def change_password(
     return {"status": "ok"}
 
 
-@app.patch("/auth/me/profile-image")
+@app.patch(
+    "/auth/me/profile-image",
+    tags=["auth"],
+    summary="Update profile image",
+    description="Upload a new profile image as base64-encoded string. Scope: `profile:write`.",
+    responses={**AUTH_RESPONSES},
+    response_description="Profile image updated",
+)
 def update_profile_image(
     payload: ProfileImageUpdate,
     user: User = Depends(current_user),
@@ -145,6 +307,10 @@ def update_profile_image(
     db.commit()
     return {"status": "ok"}
 
+
+# ---------------------------------------------------------------------------
+# Router registration
+# ---------------------------------------------------------------------------
 
 app.include_router(families_router)
 app.include_router(calendar_router)
@@ -163,6 +329,10 @@ app.include_router(invitations_public_router)
 app.include_router(invitations_settings_router)
 app.include_router(setup_router)
 
+
+# ---------------------------------------------------------------------------
+# Startup / Shutdown
+# ---------------------------------------------------------------------------
 
 @app.on_event("startup")
 async def startup_scheduler():
@@ -195,6 +365,12 @@ def shutdown_app_scheduler():
     shutdown_scheduler()
 
 
-@app.get("/")
+@app.get(
+    "/",
+    tags=["health"],
+    summary="Root",
+    description="Service info. No authentication required.",
+    response_description="Service info",
+)
 def root():
     return {"name": "Tribu API", "message": "Tribu läuft"}

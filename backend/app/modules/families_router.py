@@ -7,10 +7,10 @@ from app.core.deps import current_user, ensure_family_admin, ensure_family_membe
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import AuditLog, Family, Membership, User
-from app.schemas import AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
+from app.schemas import AUTH_RESPONSES, ADMIN_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, ErrorResponse, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
 
-router = APIRouter(prefix="/families", tags=["families"])
+router = APIRouter(prefix="/families", tags=["families"], responses={**AUTH_RESPONSES})
 
 
 def _audit(db, family_id, admin_id, action, target_user_id=None, details=None):
@@ -18,7 +18,13 @@ def _audit(db, family_id, admin_id, action, target_user_id=None, details=None):
                      target_user_id=target_user_id, details=details))
 
 
-@router.get("/me", response_model=list[FamilySummary])
+@router.get(
+    "/me",
+    response_model=list[FamilySummary],
+    summary="List my families",
+    description="Return all families the current user belongs to, with role and adult status. Scope: `families:read`.",
+    response_description="List of family memberships",
+)
 def my_families(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("families:read")):
     def _load():
         memberships = (
@@ -40,7 +46,13 @@ def my_families(user: User = Depends(current_user), db: Session = Depends(get_db
     return cache.get_or_set(f"tribu:families:{user.id}", 300, _load)
 
 
-@router.get("/{family_id}/members", response_model=list[FamilyMemberResponse])
+@router.get(
+    "/{family_id}/members",
+    response_model=list[FamilyMemberResponse],
+    summary="List family members",
+    description="Return all members of a family. Requires family membership. Scope: `families:read`.",
+    response_description="List of family members",
+)
 def family_members(
     family_id: int,
     user: User = Depends(current_user),
@@ -70,7 +82,14 @@ def family_members(
     return cache.get_or_set(f"tribu:members:{family_id}", 300, _load)
 
 
-@router.post("/{family_id}/members", response_model=CreateMemberResponse)
+@router.post(
+    "/{family_id}/members",
+    response_model=CreateMemberResponse,
+    summary="Create a family member",
+    description="Create a new user and add them to the family with a temporary password. Admin role required. Scope: `families:write`.",
+    response_description="Newly created member with temporary password",
+    responses={**CONFLICT_RESPONSE},
+)
 def create_member(
     family_id: int,
     payload: CreateMemberRequest,
@@ -123,7 +142,13 @@ def create_member(
     )
 
 
-@router.patch("/{family_id}/members/{target_user_id}/adult")
+@router.patch(
+    "/{family_id}/members/{target_user_id}/adult",
+    summary="Update member adult status",
+    description="Change a member's adult flag. Demotes admins to member when set to non-adult. Admin role required. Scope: `families:write`.",
+    response_description="Updated adult status and role",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def update_member_adult(
     family_id: int,
     target_user_id: int,
@@ -155,7 +180,13 @@ def update_member_adult(
     return {"status": "ok", "user_id": target_user_id, "is_adult": membership.is_adult, "role": membership.role}
 
 
-@router.patch("/{family_id}/members/{target_user_id}/role")
+@router.patch(
+    "/{family_id}/members/{target_user_id}/role",
+    summary="Update member role",
+    description="Change a member's role to admin or member. Only adults can be promoted to admin. Admin role required. Scope: `families:write`.",
+    response_description="Updated role",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def update_member_role(
     family_id: int,
     target_user_id: int,
@@ -192,7 +223,14 @@ def update_member_role(
     return {"status": "ok", "user_id": target_user_id, "role": membership.role}
 
 
-@router.post("/{family_id}/members/{target_user_id}/reset-password", response_model=ResetPasswordResponse)
+@router.post(
+    "/{family_id}/members/{target_user_id}/reset-password",
+    response_model=ResetPasswordResponse,
+    summary="Reset member password",
+    description="Generate a new temporary password for a family member. Cannot reset your own password. Admin role required. Scope: `families:write`.",
+    response_description="New temporary password",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def reset_member_password(
     family_id: int,
     target_user_id: int,
@@ -228,7 +266,13 @@ def reset_member_password(
     )
 
 
-@router.delete("/{family_id}/members/{target_user_id}")
+@router.delete(
+    "/{family_id}/members/{target_user_id}",
+    summary="Remove a family member",
+    description="Remove a member from the family. Cannot remove yourself. Admin role required. Scope: `families:write`.",
+    response_description="Confirmation of removal",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def remove_member(
     family_id: int,
     target_user_id: int,
@@ -260,7 +304,13 @@ def remove_member(
     return {"status": "ok", "user_id": target_user_id}
 
 
-@router.get("/{family_id}/audit-log", response_model=PaginatedAuditLog)
+@router.get(
+    "/{family_id}/audit-log",
+    response_model=PaginatedAuditLog,
+    summary="Get family audit log",
+    description="Return paginated admin action history for the family. Admin role required. Scope: `families:read`.",
+    response_description="Paginated audit log entries",
+)
 def get_audit_log(
     family_id: int,
     offset: int = Query(0, ge=0),

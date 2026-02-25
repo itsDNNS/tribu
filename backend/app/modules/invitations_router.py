@@ -15,6 +15,7 @@ from app.models import (
     AuditLog, Family, FamilyInvitation, Membership, SystemSetting, User,
 )
 from app.schemas import (
+    AUTH_RESPONSES, ADMIN_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse,
     BaseUrlUpdate, InvitationCreate, InvitationResponse,
     InviteInfoResponse, RegisterWithInviteRequest,
 )
@@ -28,7 +29,7 @@ limiter = Limiter(key_func=get_remote_address)
 # Admin endpoints (authenticated, family-scoped)
 # ---------------------------------------------------------------------------
 
-router = APIRouter(prefix="/families", tags=["invitations"])
+router = APIRouter(prefix="/families", tags=["invitations"], responses={**AUTH_RESPONSES})
 
 
 def _audit(db, family_id, admin_id, action, target_user_id=None, details=None):
@@ -65,7 +66,13 @@ def _invitation_to_response(inv: FamilyInvitation, base_url: str) -> InvitationR
     )
 
 
-@router.post("/{family_id}/invitations", response_model=InvitationResponse)
+@router.post(
+    "/{family_id}/invitations",
+    response_model=InvitationResponse,
+    summary="Create an invitation link",
+    description="Generate a shareable invitation link for the family with configurable role, adult preset, and expiry. Admin role required. Scope: `families:write`.",
+    response_description="The created invitation with shareable URL",
+)
 def create_invitation(
     family_id: int,
     payload: InvitationCreate,
@@ -101,7 +108,13 @@ def create_invitation(
     return _invitation_to_response(invitation, base_url)
 
 
-@router.get("/{family_id}/invitations", response_model=list[InvitationResponse])
+@router.get(
+    "/{family_id}/invitations",
+    response_model=list[InvitationResponse],
+    summary="List family invitations",
+    description="Return all invitation links for the family, including revoked and expired. Admin role required. Scope: `families:read`.",
+    response_description="List of invitations",
+)
 def list_invitations(
     family_id: int,
     request: Request,
@@ -121,7 +134,13 @@ def list_invitations(
     return [_invitation_to_response(inv, base_url) for inv in invitations]
 
 
-@router.delete("/{family_id}/invitations/{invite_id}")
+@router.delete(
+    "/{family_id}/invitations/{invite_id}",
+    summary="Revoke an invitation",
+    description="Mark an invitation as revoked so it can no longer be used. Admin role required. Scope: `families:write`.",
+    response_description="Confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def revoke_invitation(
     family_id: int,
     invite_id: int,
@@ -153,7 +172,13 @@ def revoke_invitation(
 public_router = APIRouter(tags=["invitations"])
 
 
-@public_router.get("/invitations/{token}", response_model=InviteInfoResponse)
+@public_router.get(
+    "/invitations/{token}",
+    response_model=InviteInfoResponse,
+    summary="Get invitation info",
+    description="Return public info about an invitation link (family name, validity, role preset). No authentication required.",
+    response_description="Invitation validity and preset info",
+)
 def get_invite_info(
     token: str,
     db: Session = Depends(get_db),
@@ -180,7 +205,12 @@ def get_invite_info(
     )
 
 
-@public_router.post("/auth/register-with-invite")
+@public_router.post(
+    "/auth/register-with-invite",
+    summary="Register via invitation",
+    description="Create a new user account using an invitation token and join the family. No authentication required. Rate-limited to 10 requests per minute.",
+    response_description="Login cookie set on success",
+)
 @limiter.limit("10/minute")
 def register_with_invite(
     request: Request,
@@ -245,10 +275,15 @@ def register_with_invite(
 # Admin settings (BASE_URL)
 # ---------------------------------------------------------------------------
 
-settings_router = APIRouter(prefix="/admin/settings", tags=["admin-settings"])
+settings_router = APIRouter(prefix="/admin/settings", tags=["admin-settings"], responses={**AUTH_RESPONSES})
 
 
-@settings_router.get("/base-url")
+@settings_router.get(
+    "/base-url",
+    summary="Get base URL setting",
+    description="Return the saved, environment, and effective base URL used for generating invitation links. Admin role required.",
+    response_description="Base URL values",
+)
 def get_base_url(
     request: Request,
     user: User = Depends(current_user),
@@ -261,7 +296,12 @@ def get_base_url(
     return {"saved": saved, "env": env_val, "effective": effective}
 
 
-@settings_router.put("/base-url")
+@settings_router.put(
+    "/base-url",
+    summary="Update base URL setting",
+    description="Set or clear the instance base URL used for generating invitation links. Admin role required.",
+    response_description="Confirmation with new base URL",
+)
 def set_base_url(
     payload: BaseUrlUpdate,
     user: User = Depends(current_user),

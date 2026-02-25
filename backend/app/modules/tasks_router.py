@@ -9,9 +9,9 @@ from app.core.deps import current_user, ensure_adult, ensure_family_membership, 
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Membership, Task, User
-from app.schemas import PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(prefix="/tasks", tags=["tasks"], responses={**AUTH_RESPONSES})
 
 VALID_PRIORITIES = {"low", "normal", "high"}
 VALID_STATUSES = {"open", "done"}
@@ -31,7 +31,13 @@ def _compute_next_due(current_due: Optional[datetime], recurrence: str) -> datet
     return base
 
 
-@router.get("", response_model=PaginatedTasks)
+@router.get(
+    "",
+    response_model=PaginatedTasks,
+    summary="List tasks",
+    description="Return paginated tasks for a family. Children only see tasks assigned to them. Scope: `tasks:read`.",
+    response_description="Paginated list of tasks",
+)
 def list_tasks(
     family_id: int,
     status: Optional[str] = Query(None),
@@ -54,7 +60,13 @@ def list_tasks(
     return PaginatedTasks(items=items, total=total, offset=offset, limit=limit)
 
 
-@router.post("", response_model=TaskResponse)
+@router.post(
+    "",
+    response_model=TaskResponse,
+    summary="Create a task",
+    description="Create a new task with optional recurrence and assignment. Adult only. Scope: `tasks:write`.",
+    response_description="The created task",
+)
 def create_task(
     payload: TaskCreate,
     user: User = Depends(current_user),
@@ -91,7 +103,14 @@ def create_task(
     return task
 
 
-@router.patch("/{task_id}", response_model=TaskResponse)
+@router.patch(
+    "/{task_id}",
+    response_model=TaskResponse,
+    summary="Update a task",
+    description="Partially update a task. Children can only toggle status on tasks assigned to them. Completing a recurring task auto-creates the next occurrence. Scope: `tasks:write`.",
+    response_description="The updated task",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def update_task(
     task_id: int,
     payload: TaskUpdate,
@@ -165,7 +184,13 @@ def update_task(
     return task
 
 
-@router.delete("/{task_id}")
+@router.delete(
+    "/{task_id}",
+    summary="Delete a task",
+    description="Permanently delete a task. Adult only. Scope: `tasks:write`.",
+    response_description="Deletion confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
 def delete_task(
     task_id: int,
     user: User = Depends(current_user),

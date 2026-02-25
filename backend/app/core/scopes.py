@@ -1,15 +1,24 @@
 from fastapi import Depends, HTTPException, Request, status
 
-VALID_SCOPES = {
-    "*",
-    "calendar:read", "calendar:write",
-    "tasks:read", "tasks:write",
-    "contacts:read", "contacts:write",
-    "birthdays:read", "birthdays:write",
-    "families:read", "families:write",
-    "shopping:read", "shopping:write",
-    "profile:read", "profile:write",
+SCOPE_DESCRIPTIONS: dict[str, str] = {
+    "*": "Full access to all resources (wildcard)",
+    "calendar:read": "View calendar events and export ICS",
+    "calendar:write": "Create, update, and delete calendar events; import ICS",
+    "tasks:read": "View tasks",
+    "tasks:write": "Create, update, and delete tasks",
+    "contacts:read": "View contacts and export CSV",
+    "contacts:write": "Create contacts and import CSV",
+    "birthdays:read": "View birthdays",
+    "birthdays:write": "Create birthdays",
+    "families:read": "View family members, invitations, and audit log",
+    "families:write": "Manage members, invitations, roles, and passwords",
+    "shopping:read": "View shopping lists and items",
+    "shopping:write": "Create, update, and delete shopping lists and items",
+    "profile:read": "View own profile and list personal access tokens",
+    "profile:write": "Update profile image, change password, manage tokens",
 }
+
+VALID_SCOPES = set(SCOPE_DESCRIPTIONS.keys())
 
 
 def parse_scopes(raw: str) -> set[str]:
