@@ -206,6 +206,10 @@ def _check_notifications():
                     )
 
         db.commit()
+        # Invalidate notification count caches for affected users
+        from app.core import cache
+        for uid in user_families:
+            cache.invalidate(f"tribu:notif_count:{uid}")
         logger.info("Notification check completed.")
 
     except Exception:

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.core import cache
 from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
@@ -61,6 +62,7 @@ def create_contact(
     upsert_birthday(db, payload.family_id, payload.full_name, payload.birthday_month, payload.birthday_day)
     db.commit()
     db.refresh(contact)
+    cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return contact
 
 
@@ -157,4 +159,6 @@ def import_contacts_csv(
         created += 1
 
     db.commit()
+    if created:
+        cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return {"status": "ok", "created": created, "skipped": skipped, "row_errors": row_errors}

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.core import cache
 from app.core.deps import current_user, ensure_adult, ensure_family_membership, to_utc_naive
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.recurrence import VALID_RECURRENCES, expand_event
@@ -109,6 +110,8 @@ def import_calendar_ics(
         created += 1
 
     db.commit()
+    if created:
+        cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return {"status": "ok", "created": created, "errors": errors}
 
 
@@ -145,6 +148,7 @@ def create_calendar_event(
     db.add(event)
     db.commit()
     db.refresh(event)
+    cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return event
 
 
@@ -189,6 +193,7 @@ def update_calendar_event(
 
     db.commit()
     db.refresh(event)
+    cache.invalidate_pattern(f"tribu:dashboard:{event.family_id}:*")
     return event
 
 
@@ -206,6 +211,8 @@ def delete_calendar_event(
 
     ensure_adult(db, user.id, event.family_id)
 
+    family_id = event.family_id
+
     if occurrence_date and event.recurrence:
         # Add date to exclusion list instead of deleting
         excluded = list(event.excluded_dates or [])
@@ -213,8 +220,10 @@ def delete_calendar_event(
             excluded.append(occurrence_date)
         event.excluded_dates = excluded
         db.commit()
+        cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")
         return {"status": "occurrence_excluded", "event_id": event_id, "excluded_date": occurrence_date}
 
     db.delete(event)
     db.commit()
+    cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")
     return {"status": "deleted", "event_id": event_id}

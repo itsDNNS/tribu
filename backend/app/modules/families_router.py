@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session, joinedload, aliased
 
+from app.core import cache
 from app.core.deps import current_user, ensure_family_admin, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
@@ -19,22 +20,24 @@ def _audit(db, family_id, admin_id, action, target_user_id=None, details=None):
 
 @router.get("/me", response_model=list[FamilySummary])
 def my_families(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("families:read")):
-    memberships = (
-        db.query(Membership)
-        .options(joinedload(Membership.family))
-        .filter(Membership.user_id == user.id)
-        .all()
-    )
-    return [
-        FamilySummary(
-            family_id=m.family.id,
-            family_name=m.family.name,
-            role=m.role,
-            is_adult=m.is_adult,
+    def _load():
+        memberships = (
+            db.query(Membership)
+            .options(joinedload(Membership.family))
+            .filter(Membership.user_id == user.id)
+            .all()
         )
-        for m in memberships
-        if m.family
-    ]
+        return [
+            FamilySummary(
+                family_id=m.family.id,
+                family_name=m.family.name,
+                role=m.role,
+                is_adult=m.is_adult,
+            ).model_dump()
+            for m in memberships
+            if m.family
+        ]
+    return cache.get_or_set(f"tribu:families:{user.id}", 300, _load)
 
 
 @router.get("/{family_id}/members", response_model=list[FamilyMemberResponse])
@@ -45,23 +48,26 @@ def family_members(
     _scope=require_scope("families:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
-    memberships = (
-        db.query(Membership)
-        .options(joinedload(Membership.user))
-        .filter(Membership.family_id == family_id)
-        .all()
-    )
-    return [
-        FamilyMemberResponse(
-            user_id=m.user.id,
-            display_name=m.user.display_name,
-            email=m.user.email,
-            role=m.role,
-            is_adult=m.is_adult,
+
+    def _load():
+        memberships = (
+            db.query(Membership)
+            .options(joinedload(Membership.user))
+            .filter(Membership.family_id == family_id)
+            .all()
         )
-        for m in memberships
-        if m.user
-    ]
+        return [
+            FamilyMemberResponse(
+                user_id=m.user.id,
+                display_name=m.user.display_name,
+                email=m.user.email,
+                role=m.role,
+                is_adult=m.is_adult,
+            ).model_dump()
+            for m in memberships
+            if m.user
+        ]
+    return cache.get_or_set(f"tribu:members:{family_id}", 300, _load)
 
 
 @router.post("/{family_id}/members", response_model=CreateMemberResponse)
@@ -105,6 +111,8 @@ def create_member(
            details={"role": payload.role, "email": payload.email.lower()})
     db.commit()
 
+    cache.invalidate(f"tribu:members:{family_id}")
+    cache.invalidate_pattern("tribu:families:*")
     return CreateMemberResponse(
         user_id=new_user.id,
         email=new_user.email,
@@ -142,6 +150,8 @@ def update_member_adult(
     _audit(db, family_id, user.id, "adult_changed", target_user_id=target_user_id,
            details={"is_adult": payload.is_adult})
     db.commit()
+    cache.invalidate(f"tribu:members:{family_id}")
+    cache.invalidate_pattern("tribu:families:*")
     return {"status": "ok", "user_id": target_user_id, "is_adult": membership.is_adult, "role": membership.role}
 
 
@@ -177,6 +187,8 @@ def update_member_role(
     _audit(db, family_id, user.id, "role_changed", target_user_id=target_user_id,
            details={"old": old_role, "new": payload.role})
     db.commit()
+    cache.invalidate(f"tribu:members:{family_id}")
+    cache.invalidate_pattern("tribu:families:*")
     return {"status": "ok", "user_id": target_user_id, "role": membership.role}
 
 
@@ -243,7 +255,8 @@ def remove_member(
            details={"display_name": display_name, "role": membership.role})
     db.delete(membership)
     db.commit()
-
+    cache.invalidate(f"tribu:members:{family_id}")
+    cache.invalidate_pattern("tribu:families:*")
     return {"status": "ok", "user_id": target_user_id}
 
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core import cache
 from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
@@ -44,4 +45,5 @@ def create_birthday(
     db.add(birthday)
     db.commit()
     db.refresh(birthday)
+    cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return birthday

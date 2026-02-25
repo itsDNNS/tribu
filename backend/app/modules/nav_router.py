@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core import cache
 from app.core.deps import current_user
 from app.database import get_db
 from app.models import User, UserNavOrder
@@ -14,10 +15,13 @@ KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "contacts", "notific
 
 @router.get("/order", response_model=NavOrderResponse)
 def get_nav_order(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    row = db.query(UserNavOrder).filter(UserNavOrder.user_id == user.id).first()
-    if not row:
-        return NavOrderResponse(nav_order=DEFAULT_NAV_ORDER)
-    return NavOrderResponse(nav_order=row.nav_order)
+    def _load():
+        row = db.query(UserNavOrder).filter(UserNavOrder.user_id == user.id).first()
+        if not row:
+            return {"nav_order": DEFAULT_NAV_ORDER}
+        return {"nav_order": row.nav_order}
+    data = cache.get_or_set(f"tribu:nav_order:{user.id}", 600, _load)
+    return NavOrderResponse(**data)
 
 
 @router.put("/order", response_model=NavOrderResponse)
@@ -33,4 +37,5 @@ def update_nav_order(payload: NavOrderUpdate, user: User = Depends(current_user)
         row = UserNavOrder(user_id=user.id, nav_order=payload.nav_order)
         db.add(row)
     db.commit()
+    cache.invalidate(f"tribu:nav_order:{user.id}")
     return NavOrderResponse(nav_order=row.nav_order)
