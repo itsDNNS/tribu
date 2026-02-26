@@ -3,12 +3,12 @@ import { Bell, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, Boo
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import DashboardView from './DashboardView';
-import CalendarView from './CalendarView';
+import CalendarView from './calendar';
 import ContactsView from './ContactsView';
 import TasksView from './TasksView';
 import ShoppingView from './ShoppingView';
 import SettingsView from './settings';
-import AdminView from './AdminView';
+import AdminView from './admin';
 import NotificationCenter from './NotificationCenter';
 import ForcePasswordChange from './ForcePasswordChange';
 
