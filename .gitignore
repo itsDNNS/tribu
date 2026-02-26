@@ -21,5 +21,9 @@ node_modules/
 # Agent memory (session context)
 tasks/
 
+# Playwright
+e2e/test-results/
+playwright-report/
+
 # OS
 .DS_Store
