@@ -10,7 +10,7 @@ We will acknowledge reports within 48 hours and provide a timeline for fixes.
 
 | Feature | Implementation |
 |---------|---------------|
-| Password storage | PBKDF2-SHA256 via passlib |
+| Password storage | bcrypt (legacy PBKDF2-SHA256 hashes are verified and auto-rehashed on login) |
 | Password policy | Minimum 8 characters (enforced via Pydantic schema validation) |
 | Authentication | httpOnly cookie (JWT HS256), Bearer token fallback for API testing |
 | Rate limiting | 10/min for registration, 20/min for login (slowapi) |
@@ -55,7 +55,6 @@ Follow these steps before exposing Tribu to the internet:
 | Limitation | Context |
 |------------|---------|
 | No HTTPS in dev | Cookies use `secure=false` for local development. Set `SECURE_COOKIES=true` in `.env` when behind TLS. |
-| No audit log | User actions are not logged for review. Planned for a future release. |
 | No CSRF token | `SameSite=Lax` on cookies provides sufficient protection against cross-origin form submissions. |
 | No email verification | Registration does not require email confirmation. |
 | No account lockout | Failed login attempts are rate-limited but do not lock accounts. |

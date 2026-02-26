@@ -183,6 +183,7 @@ docker compose up -d
 
 | | |
 |---|---|
+| [Self-Hosting Guide](docs/self-hosting.md) | Configuration, reverse proxy, backups, updating, troubleshooting |
 | [Wiki](https://github.com/itsDNNS/tribu/wiki) | Screenshots, features, themes, getting started |
 | [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) | Backend modules, frontend patterns, security, API reference |
 | [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest) | How to build feature, theme, and language plugins |
