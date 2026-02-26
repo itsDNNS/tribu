@@ -23,8 +23,9 @@ const views = {
   admin: AdminView,
 };
 
+import { getMemberColor } from '../lib/member-colors';
+
 const SYSTEM_KEYS = new Set(['notifications', 'settings', 'admin']);
-const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
 const MAX_BOTTOM_NAV = 5;
 
 function DashboardSkeleton() {
@@ -162,7 +163,7 @@ export default function AppShell() {
               <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{currentFamily.family_name}</span>
               <div className="family-avatars">
                 {members.slice(0, 4).map((m, i) => (
-                  <div key={m.user_id} className="family-avatar-mini" style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
+                  <div key={m.user_id} className="family-avatar-mini" style={{ background: getMemberColor(m, i) }}>
                     {(m.display_name || '?').charAt(0).toUpperCase()}
                   </div>
                 ))}

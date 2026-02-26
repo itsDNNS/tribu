@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { User, Palette, Globe, Check } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t, languageCompleteness } from '../../lib/i18n';
+import { COLOR_PALETTE, getMemberColor } from '../../lib/member-colors';
 import * as api from '../../lib/api';
 
 const THEME_DESCS = {
@@ -15,9 +16,12 @@ const THEME_PREVIEWS = {
 };
 
 export default function AccountTab() {
-  const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage } = useApp();
+  const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers } = useApp();
   const [imageSaved, setImageSaved] = useState(false);
+  const [colorSaving, setColorSaving] = useState(false);
   const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
+  const currentMember = members.find((m) => m.user_id === me?.user_id);
+  const myColor = currentMember?.color || null;
 
   function onProfileImage(e) {
     const file = e.target.files?.[0];
@@ -62,6 +66,48 @@ export default function AccountTab() {
               <Check size={14} style={{ verticalAlign: 'middle' }} /> Saved!
             </span>
           )}
+        </div>
+        <div style={{ marginTop: 'var(--space-md)' }}>
+          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 'var(--space-sm)' }}>
+            {t(messages, 'personal_color')}
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {COLOR_PALETTE.map((c) => {
+              const owner = members.find((m) => m.color === c && m.user_id !== me?.user_id);
+              const isMine = myColor === c;
+              const taken = !!owner;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  disabled={taken || colorSaving}
+                  title={taken ? t(messages, 'color_taken_by').replace('{name}', owner.display_name) : undefined}
+                  onClick={async () => {
+                    if (taken) return;
+                    setColorSaving(true);
+                    const newColor = isMine ? null : c;
+                    if (loggedIn) {
+                      await api.apiSetMemberColor(familyId, newColor);
+                      await loadMembers();
+                    }
+                    setColorSaving(false);
+                  }}
+                  style={{
+                    width: 32, height: 32, borderRadius: '50%', border: isMine ? '2.5px solid var(--text-primary)' : '2px solid transparent',
+                    background: c, cursor: taken ? 'not-allowed' : 'pointer', opacity: taken ? 0.4 : 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative',
+                  }}
+                >
+                  {isMine && <Check size={16} color="#fff" />}
+                  {taken && (
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>
+                      {(owner.display_name || '?').charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

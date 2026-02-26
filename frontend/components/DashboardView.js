@@ -2,8 +2,7 @@ import { CalendarClock, ListChecks, Cake, BarChart3, Users, Calendar, CheckCircl
 import { useApp } from '../contexts/AppContext';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
-
-const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
+import { getMemberColor } from '../lib/member-colors';
 
 function getGreeting(messages) {
   const h = new Date().getHours();
@@ -96,7 +95,7 @@ export default function DashboardView() {
             {summary.next_events?.slice(0, 4).map((ev, i) => (
               <div key={ev.id} className="event-item">
                 <div className="event-time">{new Date(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</div>
-                <div className="event-dot" style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }} aria-hidden="true" />
+                <div className="event-dot" style={{ background: getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">
                   <div className="event-title">{ev.title}</div>
                   <div className="event-meta">{prettyDate(ev.starts_at, lang)}</div>
@@ -129,7 +128,7 @@ export default function DashboardView() {
                   </div>
                   <div className="task-priority-dot" style={{ background: priorityColor }} aria-hidden="true" />
                   {assignee && (
-                    <div className="task-assignee-mini" style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
+                    <div className="task-assignee-mini" style={{ background: getMemberColor(assignee, members.indexOf(assignee)) }}>
                       {(assignee.display_name || '?').charAt(0).toUpperCase()}
                     </div>
                   )}

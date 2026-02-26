@@ -43,6 +43,7 @@ class Membership(Base):
     family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False)
     role = Column(String, nullable=False, default="member")
     is_adult = Column(Boolean, nullable=False, default=False)
+    color = Column(String, nullable=True)
 
     user = relationship("User", back_populates="memberships")
     family = relationship("Family", back_populates="memberships")

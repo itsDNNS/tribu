@@ -286,5 +286,7 @@
   "about_support": "About & Support",
   "about_support_desc": "Tribu is free and open source. If you enjoy it, consider supporting the project.",
   "donate": "Donate",
-  "report_bug": "Report a bug"
+  "report_bug": "Report a bug",
+  "personal_color": "Personal color",
+  "color_taken_by": "Taken by {name}"
 }

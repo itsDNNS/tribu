@@ -158,10 +158,10 @@ export function buildDemoData(lang = 'en') {
   ];
 
   const members = [
-    { user_id: 1, display_name: 'Dennis', family_id: 1, is_adult: true, role: 'owner' },
-    { user_id: 2, display_name: 'Anna', family_id: 1, is_adult: true, role: 'admin' },
-    { user_id: 3, display_name: 'Max', family_id: 1, is_adult: false, role: 'member' },
-    { user_id: 4, display_name: 'Lena', family_id: 1, is_adult: false, role: 'member' },
+    { user_id: 1, display_name: 'Dennis', family_id: 1, is_adult: true, role: 'owner', color: '#7c3aed' },
+    { user_id: 2, display_name: 'Anna', family_id: 1, is_adult: true, role: 'admin', color: '#f43f5e' },
+    { user_id: 3, display_name: 'Max', family_id: 1, is_adult: false, role: 'member', color: '#06b6d4' },
+    { user_id: 4, display_name: 'Lena', family_id: 1, is_adult: false, role: 'member', color: '#f59e0b' },
   ];
 
   const ev = s.events;
