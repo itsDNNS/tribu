@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Navigation, Bell, Database, Key, Heart, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
@@ -22,6 +22,13 @@ export default function SettingsView() {
   const { messages, isMobile, isChild, demoMode } = useApp();
   const visibleTabs = TABS.filter(tab => tab.visible({ isChild, demoMode }));
   const [activeTab, setActiveTab] = useState(isMobile ? null : visibleTabs[0]?.key || 'account');
+
+  // When switching from mobile to desktop, ensure a tab is selected
+  useEffect(() => {
+    if (!isMobile && activeTab === null) {
+      setActiveTab(visibleTabs[0]?.key || 'account');
+    }
+  }, [isMobile, activeTab, visibleTabs]);
 
   const activeTabConfig = visibleTabs.find(tab => tab.key === activeTab);
   const ActiveComponent = activeTabConfig?.component;
