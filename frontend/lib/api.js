@@ -86,6 +86,10 @@ export function apiRemoveMember(familyId, userId) {
   return del(`/families/${familyId}/members/${userId}`);
 }
 
+export function apiSetMemberColor(familyId, color) {
+  return patch(`/families/${familyId}/members/me/color`, { color });
+}
+
 // Audit Log
 export function apiGetAuditLog(familyId, limit = 50, offset = 0) {
   return request(`/families/${familyId}/audit-log?limit=${limit}&offset=${offset}`);

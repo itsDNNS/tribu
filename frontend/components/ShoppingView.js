@@ -2,8 +2,7 @@ import { Plus, Check, Trash2, X, ShoppingCart } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useShopping } from '../hooks/useShopping';
 import { t } from '../lib/i18n';
-
-const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
+import { getMemberColor } from '../lib/member-colors';
 
 function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) {
   const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
@@ -34,7 +33,7 @@ function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) 
         {item.spec && <span className="shopping-spec">{item.spec}</span>}
       </div>
       {addedBy && (
-        <div className="shopping-added-by" style={{ background: MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] }}>
+        <div className="shopping-added-by" style={{ background: getMemberColor(addedBy, memberIdx) }}>
           {(addedBy.display_name || '?').charAt(0).toUpperCase()}
         </div>
       )}

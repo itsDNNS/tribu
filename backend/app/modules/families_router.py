@@ -7,7 +7,7 @@ from app.core.deps import current_user, ensure_family_admin, ensure_family_membe
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import AuditLog, Family, Membership, User
-from app.schemas import AUTH_RESPONSES, ADMIN_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, ErrorResponse, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
+from app.schemas import AUTH_RESPONSES, ADMIN_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, ErrorResponse, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
 
 router = APIRouter(prefix="/families", tags=["families"], responses={**AUTH_RESPONSES})
@@ -75,11 +75,57 @@ def family_members(
                 email=m.user.email,
                 role=m.role,
                 is_adult=m.is_adult,
+                color=m.color,
             ).model_dump()
             for m in memberships
             if m.user
         ]
     return cache.get_or_set(f"tribu:members:{family_id}", 300, _load)
+
+
+ALLOWED_COLORS = {
+    "#7c3aed", "#f43f5e", "#06b6d4",
+    "#f59e0b", "#10b981", "#ec4899",
+    "#3b82f6", "#ef4444", "#8b5cf6",
+    "#14b8a6", "#f97316", "#6366f1",
+}
+
+
+@router.patch(
+    "/{family_id}/members/me/color",
+    summary="Set my color",
+    description="Set or remove the current user's personal color in this family. Scope: `families:write`.",
+    response_description="Updated color",
+)
+def set_member_color(
+    family_id: int,
+    payload: MemberColorUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    membership = db.query(Membership).filter(
+        Membership.family_id == family_id,
+        Membership.user_id == user.id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Not a member of this family")
+
+    if payload.color is not None:
+        if payload.color not in ALLOWED_COLORS:
+            raise HTTPException(status_code=400, detail="Color not in allowed palette")
+        taken = db.query(Membership).filter(
+            Membership.family_id == family_id,
+            Membership.color == payload.color,
+            Membership.user_id != user.id,
+        ).first()
+        if taken:
+            raise HTTPException(status_code=409, detail="Color already taken by another member")
+
+    membership.color = payload.color
+    db.commit()
+    cache.invalidate(f"tribu:members:{family_id}")
+    return {"status": "ok", "color": membership.color}
 
 
 @router.post(

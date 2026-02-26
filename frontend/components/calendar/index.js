@@ -2,7 +2,8 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useCalendar } from '../../hooks/useCalendar';
 import { t } from '../../lib/i18n';
-import { MEMBER_COLORS, RECURRENCE_OPTIONS, DeleteRecurringDialog, AssignChips, EventCard } from './CalendarHelpers';
+import { RECURRENCE_OPTIONS, DeleteRecurringDialog, AssignChips, EventCard } from './CalendarHelpers';
+import { getMemberColor } from '../../lib/member-colors';
 
 export default function CalendarView() {
   const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild, members } = useApp();
@@ -131,7 +132,7 @@ export default function CalendarView() {
                         {c.count > 0 && (
                           <div className="calendar-day-dots" aria-hidden="true">
                             {Array.from({ length: Math.min(c.count, 3) }).map((_, di) => (
-                              <div key={di} className="calendar-day-dot" style={{ background: MEMBER_COLORS[di % MEMBER_COLORS.length] }} />
+                              <div key={di} className="calendar-day-dot" style={{ background: getMemberColor(null, di) }} />
                             ))}
                           </div>
                         )}

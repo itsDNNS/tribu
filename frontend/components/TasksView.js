@@ -3,8 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
-
-const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
+import { getMemberColor } from '../lib/member-colors';
 
 export default function TasksView() {
   const { familyId, families, members, messages, lang, isMobile, isChild } = useApp();
@@ -132,7 +131,7 @@ export default function TasksView() {
                   </div>
 
                   {assignee && (
-                    <div className="task-assignee" style={{ background: MEMBER_COLORS[assigneeIndex % MEMBER_COLORS.length] }}>
+                    <div className="task-assignee" style={{ background: getMemberColor(assignee, assigneeIndex) }}>
                       {(assignee.display_name || '?').charAt(0).toUpperCase()}
                     </div>
                   )}

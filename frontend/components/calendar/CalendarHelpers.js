@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Repeat, Trash2 } from 'lucide-react';
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
-
-export const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
+import { getMemberColor } from '../../lib/member-colors';
 
 export const RECURRENCE_OPTIONS = [
   { value: '', key: 'module.calendar.no_repeat' },
@@ -91,7 +90,7 @@ export function AssignChips({ members, assignedTo, setAssignedTo, messages }) {
       </button>
       {members.map((m, i) => {
         const selected = assignedTo.includes('all') || assignedTo.includes(m.user_id);
-        const color = MEMBER_COLORS[i % MEMBER_COLORS.length];
+        const color = getMemberColor(m, i);
         return (
           <button
             key={m.user_id}
@@ -136,7 +135,7 @@ export function AssignedBadges({ assignedTo, members }) {
             style={{
               width: 20, height: 20, borderRadius: '50%', fontSize: '0.6rem', fontWeight: 600,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: MEMBER_COLORS[i % MEMBER_COLORS.length], color: '#fff',
+              background: getMemberColor(m, i), color: '#fff',
             }}
           >
             {initials}
@@ -149,7 +148,7 @@ export function AssignedBadges({ assignedTo, members }) {
 
 export function EventCard({ ev, index, messages, onDelete, members }) {
   return (
-    <div className="day-event-card" style={{ borderColor: MEMBER_COLORS[index % MEMBER_COLORS.length] }}>
+    <div className="day-event-card" style={{ borderColor: getMemberColor(null, index) }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 500, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
           {ev.title}
