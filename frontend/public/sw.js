@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tribu-v3';
+const CACHE_NAME = 'tribu-v4';
 const STATIC_ASSETS = ['/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -72,8 +72,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
       data: { url: data.url || '/' },
     })
   );
