@@ -7,7 +7,7 @@ import CalendarView from './CalendarView';
 import ContactsView from './ContactsView';
 import TasksView from './TasksView';
 import ShoppingView from './ShoppingView';
-import SettingsView from './SettingsView';
+import SettingsView from './settings';
 import AdminView from './AdminView';
 import NotificationCenter from './NotificationCenter';
 import ForcePasswordChange from './ForcePasswordChange';

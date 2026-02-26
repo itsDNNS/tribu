@@ -715,6 +715,26 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 /* ═══════════════════════════════════════════
    SETTINGS
    ═══════════════════════════════════════════ */
+/* Layout */
+.settings-layout { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-lg); max-width: 900px; }
+.settings-sidebar { position: sticky; top: var(--space-md); align-self: start; display: flex; flex-direction: column; gap: 2px; }
+.settings-sidebar-group { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 12px 4px; }
+.settings-sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: all 0.15s; width: 100%; text-align: left; }
+.settings-sidebar-item:hover { background: rgba(124, 58, 237, 0.06); color: var(--text-primary); }
+.settings-sidebar-item.active { background: rgba(124, 58, 237, 0.1); color: var(--amethyst); font-weight: 600; }
+.settings-content { min-width: 0; }
+/* Mobile */
+.settings-mobile-list { display: grid; gap: 2px; }
+.settings-mobile-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--radius-md); border: none; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: all 0.15s; width: 100%; text-align: left; }
+.settings-mobile-item:hover { background: rgba(124, 58, 237, 0.06); }
+.settings-mobile-item svg:last-child { margin-left: auto; color: var(--text-muted); }
+.settings-mobile-back { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.85rem; font-weight: 500; cursor: pointer; margin-bottom: var(--space-md); }
+.settings-mobile-back:hover { color: var(--text-primary); }
+@media (max-width: 768px) {
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-sidebar { display: none; }
+}
+/* Section cards */
 .settings-grid { display: grid; gap: var(--space-md); max-width: 640px; }
 .settings-section { padding: var(--space-lg); }
 .settings-section-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-md); display: flex; align-items: center; gap: 8px; }
