@@ -272,6 +272,15 @@ export function buildDemoData(lang = 'en') {
     };
   });
 
+  const birthdays = [
+    { id: nextId(), family_id: 1, person_name: 'Helga Müller', month: bd1.month, day: bd1.day },
+    { id: nextId(), family_id: 1, person_name: 'Thomas Müller', month: bd2.month, day: bd2.day },
+    { id: nextId(), family_id: 1, person_name: 'Sophie Weber', month: bd3.month, day: bd3.day },
+    { id: nextId(), family_id: 1, person_name: 'Markus Fischer', month: 6, day: 14 },
+    { id: nextId(), family_id: 1, person_name: 'Claudia Braun', month: 3, day: 8 },
+    { id: nextId(), family_id: 1, person_name: 'Peter Schneider', month: 11, day: 25 },
+  ];
+
   const summary = {
     next_events: events.filter((e) => new Date(e.starts_at) >= today()).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)).slice(0, 5),
     upcoming_birthdays: [
@@ -281,5 +290,5 @@ export function buildDemoData(lang = 'en') {
     ],
   };
 
-  return { me, families, members, events, tasks, contacts, shoppingLists, summary };
+  return { me, families, members, events, tasks, contacts, birthdays, shoppingLists, summary };
 }

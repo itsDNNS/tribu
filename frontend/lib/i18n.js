@@ -11,10 +11,12 @@ import tasksDe from '../i18n/modules/tasks/de.json';
 import tasksEn from '../i18n/modules/tasks/en.json';
 import shoppingDe from '../i18n/modules/shopping/de.json';
 import shoppingEn from '../i18n/modules/shopping/en.json';
+import birthdaysDe from '../i18n/modules/birthdays/de.json';
+import birthdaysEn from '../i18n/modules/birthdays/en.json';
 
 const moduleLocales = {
-  de: [calendarDe, dashboardDe, contactsDe, tasksDe, shoppingDe],
-  en: [calendarEn, dashboardEn, contactsEn, tasksEn, shoppingEn],
+  de: [calendarDe, dashboardDe, contactsDe, tasksDe, shoppingDe, birthdaysDe],
+  en: [calendarEn, dashboardEn, contactsEn, tasksEn, shoppingEn, birthdaysEn],
 };
 
 const coreLocales = { de: coreDe, en: coreEn };

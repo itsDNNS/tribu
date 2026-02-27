@@ -1,0 +1,20 @@
+{
+  "module.birthdays.name": "Birthdays",
+  "module.birthdays.add": "Add Birthday",
+  "module.birthdays.edit": "Edit Birthday",
+  "module.birthdays.close": "Close",
+  "module.birthdays.created": "Birthday added",
+  "module.birthdays.updated": "Birthday updated",
+  "module.birthdays.deleted": "Birthday deleted",
+  "module.birthdays.name_required": "Name is required",
+  "module.birthdays.date_required": "Month and day are required",
+  "module.birthdays.no_birthdays": "No birthdays yet",
+  "module.birthdays.form.name": "Name",
+  "module.birthdays.form.date": "Date",
+  "module.birthdays.form.month": "Month",
+  "module.birthdays.form.day": "Day",
+  "module.birthdays.save": "Save",
+  "module.birthdays.delete": "Delete",
+  "module.birthdays.days_until": "in {days} days",
+  "module.birthdays.today": "Today!"
+}

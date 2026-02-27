@@ -126,8 +126,20 @@ export function apiDeleteEvent(eventId, occurrenceDate) {
   return request(url, { method: 'DELETE' });
 }
 
+export function apiGetBirthdays(familyId) {
+  return request(`/birthdays?family_id=${familyId}`);
+}
+
 export function apiAddBirthday(payload) {
   return post('/birthdays', payload);
+}
+
+export function apiUpdateBirthday(birthdayId, payload) {
+  return patch(`/birthdays/${birthdayId}`, payload);
+}
+
+export function apiDeleteBirthday(birthdayId) {
+  return del(`/birthdays/${birthdayId}`);
 }
 
 // Contacts

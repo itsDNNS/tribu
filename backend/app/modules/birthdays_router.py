@@ -6,7 +6,7 @@ from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import FamilyBirthday, User
-from app.schemas import AUTH_RESPONSES, ErrorResponse, BirthdayCreate, BirthdayResponse
+from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ErrorResponse, BirthdayCreate, BirthdayUpdate, BirthdayResponse
 
 router = APIRouter(prefix="/birthdays", tags=["birthdays"], responses={**AUTH_RESPONSES})
 
@@ -59,3 +59,64 @@ def create_birthday(
     db.refresh(birthday)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return birthday
+
+
+@router.patch(
+    "/{birthday_id}",
+    response_model=BirthdayResponse,
+    responses={**CRUD_RESPONSES},
+    summary="Update a birthday",
+    description="Partially update a birthday entry. Scope: `birthdays:write`.",
+    response_description="The updated birthday entry",
+)
+def update_birthday(
+    birthday_id: int,
+    payload: BirthdayUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("birthdays:write"),
+):
+    birthday = db.query(FamilyBirthday).filter(FamilyBirthday.id == birthday_id).first()
+    if not birthday:
+        raise HTTPException(status_code=404, detail="Birthday not found")
+    ensure_family_membership(db, user.id, birthday.family_id)
+
+    if payload.person_name is not None:
+        birthday.person_name = payload.person_name
+    if payload.month is not None:
+        if payload.month < 1 or payload.month > 12:
+            raise HTTPException(status_code=400, detail="Monat muss zwischen 1 und 12 liegen")
+        birthday.month = payload.month
+    if payload.day is not None:
+        if payload.day < 1 or payload.day > 31:
+            raise HTTPException(status_code=400, detail="Tag muss zwischen 1 und 31 liegen")
+        birthday.day = payload.day
+
+    db.commit()
+    db.refresh(birthday)
+    cache.invalidate_pattern(f"tribu:dashboard:{birthday.family_id}:*")
+    return birthday
+
+
+@router.delete(
+    "/{birthday_id}",
+    status_code=204,
+    responses={**CRUD_RESPONSES},
+    summary="Delete a birthday",
+    description="Remove a birthday entry. Scope: `birthdays:write`.",
+)
+def delete_birthday(
+    birthday_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("birthdays:write"),
+):
+    birthday = db.query(FamilyBirthday).filter(FamilyBirthday.id == birthday_id).first()
+    if not birthday:
+        raise HTTPException(status_code=404, detail="Birthday not found")
+    ensure_family_membership(db, user.id, birthday.family_id)
+
+    family_id = birthday.family_id
+    db.delete(birthday)
+    db.commit()
+    cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")

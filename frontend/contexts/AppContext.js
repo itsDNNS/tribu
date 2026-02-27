@@ -5,7 +5,7 @@ import { buildUi } from '../lib/styles';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
 
-export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'contacts', 'notifications', 'settings', 'admin'];
+export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'contacts', 'birthdays', 'notifications', 'settings', 'admin'];
 
 const AppContext = createContext(null);
 
@@ -51,6 +51,7 @@ export function AppProvider({ children }) {
   const [summary, setSummary] = useState({ next_events: [], upcoming_birthdays: [] });
   const [events, setEvents] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [birthdays, setBirthdays] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [shoppingLists, setShoppingLists] = useState([]);
 
@@ -96,6 +97,12 @@ export function AppProvider({ children }) {
     if (ok) setContacts(data);
   }, [familyId, demoMode]);
 
+  const loadBirthdays = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    const { ok, data } = await api.apiGetBirthdays(fid);
+    if (ok) setBirthdays(data);
+  }, [familyId, demoMode]);
+
   const loadTasks = useCallback(async (fid = familyId) => {
     if (demoMode) return;
     const { ok, data } = await api.apiGetTasks(fid);
@@ -136,9 +143,9 @@ export function AppProvider({ children }) {
       setMyFamilyRole(selected.role);
       setMyFamilyIsAdult(selected.is_adult);
     }
-    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid)]);
+    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid)]);
     setLoading(false);
-  }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks, loadShoppingLists]);
+  }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists]);
 
   const enterDemo = useCallback(() => {
     const demo = buildDemoData(lang);
@@ -153,6 +160,7 @@ export function AppProvider({ children }) {
     setTasks(demo.tasks);
     setShoppingLists(demo.shoppingLists);
     setContacts(demo.contacts);
+    setBirthdays(demo.birthdays);
     setSummary(demo.summary);
     setLoggedIn(true);
     setLoading(false);
@@ -168,6 +176,7 @@ export function AppProvider({ children }) {
     setSummary({ next_events: [], upcoming_birthdays: [] });
     setMembers([]);
     setContacts([]);
+    setBirthdays([]);
     setTasks([]);
     setShoppingLists([]);
     setNavOrder(DEFAULT_NAV_ORDER);
@@ -243,7 +252,7 @@ export function AppProvider({ children }) {
         setFamilyId(fid);
         setMyFamilyRole(famData[0].role);
         setMyFamilyIsAdult(famData[0].is_adult);
-        await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadTasks(fid), loadShoppingLists(fid), loadNavOrder()]);
+        await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadNavOrder()]);
       }
 
       setLoading(false);
@@ -308,10 +317,11 @@ export function AppProvider({ children }) {
     summary, setSummary,
     events, setEvents,
     contacts, setContacts,
+    birthdays, setBirthdays,
     tasks, setTasks,
     shoppingLists, setShoppingLists,
     navOrder, setNavOrder, loadNavOrder,
-    loadDashboard, loadEvents, loadMembers, loadContacts, loadTasks, loadShoppingLists, loadNotifications,
+    loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications,
     notifications, setNotifications, unreadCount, setUnreadCount,
     switchFamily,
     logout,

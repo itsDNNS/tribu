@@ -456,6 +456,13 @@ class BirthdayCreate(BaseModel):
     })
 
 
+class BirthdayUpdate(BaseModel):
+    """Update a birthday entry (partial update)."""
+    person_name: Optional[str] = Field(None, description="Person's name")
+    month: Optional[int] = Field(None, description="Birthday month (1-12)")
+    day: Optional[int] = Field(None, description="Birthday day (1-31)")
+
+
 class BirthdayResponse(BaseModel):
     """Birthday entry."""
     model_config = ConfigDict(from_attributes=True)
