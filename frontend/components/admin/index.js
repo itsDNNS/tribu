@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Check, Copy, X, KeyRound } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
@@ -10,7 +11,7 @@ import AuditLogSection from './AuditLogSection';
 
 export default function AdminView() {
   const { familyId, members, messages, loadMembers, me, demoMode } = useApp();
-  const [adminMsg, setAdminMsg] = useState('');
+  const { error: toastError, info: toastInfo } = useToast();
   const [showAddMember, setShowAddMember] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
@@ -23,10 +24,9 @@ export default function AdminView() {
 
   async function handleRemoveMember(userId) {
     if (!confirm(t(messages, 'remove_member_confirm'))) return;
-    setAdminMsg('');
     const { ok, data } = await api.apiRemoveMember(familyId, userId);
     if (!ok) {
-      setAdminMsg(errorText(data?.detail, 'Failed to remove member'));
+      toastError(errorText(data?.detail, 'Failed to remove member'));
       return;
     }
     await loadMembers();
@@ -35,12 +35,12 @@ export default function AdminView() {
   async function handleSetAdult(userId, isAdult) {
     const { ok, data } = await api.apiSetAdult(familyId, userId, isAdult);
     if (!ok) {
-      setAdminMsg(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, 'Failed'));
       return;
     }
     const member = members.find((m) => m.user_id === userId);
     if (data?.role && member && data.role !== member.role) {
-      setAdminMsg(t(messages, 'admin_demoted'));
+      toastInfo(t(messages, 'admin_demoted'));
     }
     await loadMembers();
   }
@@ -48,7 +48,7 @@ export default function AdminView() {
   async function handleSetRole(userId, role) {
     const { ok, data } = await api.apiSetRole(familyId, userId, role);
     if (!ok) {
-      setAdminMsg(errorText(data?.detail, 'Failed to set role'));
+      toastError(errorText(data?.detail, 'Failed to set role'));
       return;
     }
     await loadMembers();
@@ -57,7 +57,6 @@ export default function AdminView() {
   async function handleCreateMember(e) {
     e.preventDefault();
     setCreating('loading');
-    setAdminMsg('');
     const { ok, data } = await api.apiCreateMember(familyId, {
       email: newEmail,
       display_name: newName,
@@ -65,7 +64,7 @@ export default function AdminView() {
       is_adult: newIsAdult,
     });
     if (!ok) {
-      setAdminMsg(errorText(data?.detail, 'Failed to create member'));
+      toastError(errorText(data?.detail, 'Failed to create member'));
       setCreating('');
       return;
     }
@@ -81,10 +80,9 @@ export default function AdminView() {
   }
 
   async function handleResetPassword(userId) {
-    setAdminMsg('');
     const { ok, data } = await api.apiResetMemberPassword(familyId, userId);
     if (!ok) {
-      setAdminMsg(errorText(data?.detail, 'Failed to reset password'));
+      toastError(errorText(data?.detail, 'Failed to reset password'));
       return;
     }
     setCreatedPassword(data.temporary_password);
@@ -122,8 +120,6 @@ export default function AdminView() {
           <h1 className="view-title">{t(messages, 'admin_members')}</h1>
         </div>
       </div>
-      {adminMsg && <p className="admin-error">{adminMsg}</p>}
-
       {/* Member Created Banner */}
       {createdPassword && (
         <div style={{

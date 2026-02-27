@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 import { useWebSocket } from './useWebSocket';
@@ -9,6 +10,7 @@ export function useShopping() {
     shoppingLists, setShoppingLists, familyId, members, messages,
     loadShoppingLists, demoMode,
   } = useApp();
+  const { error: toastError } = useToast();
 
   const [activeListId, setActiveListId] = useState(null);
   const [items, setItems] = useState([]);
@@ -139,7 +141,7 @@ export function useShopping() {
       setActiveListId(newList.id);
     } else {
       const { ok, data } = await api.apiCreateShoppingList({ family_id: Number(familyId), name: newListName.trim() });
-      if (!ok) return;
+      if (!ok) return toastError(t(messages, 'toast.error'));
       setShoppingLists((prev) => {
         if (prev.some((l) => l.id === data.id)) return prev;
         return [...prev, data];
@@ -157,7 +159,10 @@ export function useShopping() {
     } else {
       setShoppingLists((prev) => prev.filter((l) => l.id !== id));
       const { ok } = await api.apiDeleteShoppingList(id);
-      if (!ok) await loadShoppingLists();
+      if (!ok) {
+        toastError(t(messages, 'toast.error'));
+        await loadShoppingLists();
+      }
     }
   }
 
@@ -186,7 +191,11 @@ export function useShopping() {
       );
     } else {
       const { ok } = await api.apiAddShoppingItem(activeListId, payload);
-      if (!ok || !wsConnected) {
+      if (!ok) {
+        toastError(t(messages, 'toast.error'));
+        await reloadItems();
+        await loadShoppingLists();
+      } else if (!wsConnected) {
         await reloadItems();
         await loadShoppingLists();
       }
@@ -242,6 +251,7 @@ export function useShopping() {
       setItems((prev) => prev.filter((i) => i.id !== id));
       const { ok } = await api.apiDeleteShoppingItem(id);
       if (!ok) {
+        toastError(t(messages, 'toast.error'));
         setItems(prevItems);
       } else if (!wsConnected) {
         await reloadItems();
@@ -267,6 +277,7 @@ export function useShopping() {
       setItems((prev) => prev.filter((i) => !i.checked));
       const { ok } = await api.apiClearCheckedItems(activeListId);
       if (!ok) {
+        toastError(t(messages, 'toast.error'));
         setItems(prevItems);
       } else if (!wsConnected) {
         await reloadItems();

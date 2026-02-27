@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
 export default function ForcePasswordChange() {
   const { messages, me, setMe } = useApp();
+  const { success: toastSuccess } = useToast();
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
@@ -23,6 +25,7 @@ export default function ForcePasswordChange() {
       return;
     }
     setSuccess(true);
+    toastSuccess(t(messages, 'password_changed'));
     setMe({ ...me, must_change_password: false });
   }
 

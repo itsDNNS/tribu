@@ -78,8 +78,6 @@ export default function CalendarView() {
         </div>
       )}
 
-      {cal.calendarMsg && <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' }}>{cal.calendarMsg}</p>}
-
       {cal.calendarView === 'month' ? (
         <div className={isMobile ? '' : 'calendar-layout'}>
           <div className="glass calendar-grid-wrapper">

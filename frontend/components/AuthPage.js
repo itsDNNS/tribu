@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { ShieldCheck, Users, Play, Globe } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
 export default function AuthPage() {
   const { messages, setLoggedIn, enterDemo, lang, setLang, availableLanguages } = useApp();
+  const { error: toastError } = useToast();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +21,7 @@ export default function AuthPage() {
     e.preventDefault();
     setMsg('');
     const { ok, data } = await api.apiLogin(email, password);
-    if (!ok) return setMsg(errorText(data?.detail, 'Login failed'));
+    if (!ok) { setMsg(errorText(data?.detail, 'Login failed')); toastError(errorText(data?.detail, 'Login failed')); return; }
     setLoggedIn(true);
   }
 
@@ -27,7 +29,7 @@ export default function AuthPage() {
     e.preventDefault();
     setMsg('');
     const { ok, data } = await api.apiRegister(email, password, displayName, familyName);
-    if (!ok) return setMsg(errorText(data?.detail, 'Registration failed'));
+    if (!ok) { setMsg(errorText(data?.detail, 'Registration failed')); toastError(errorText(data?.detail, 'Registration failed')); return; }
     setLoggedIn(true);
   }
 

@@ -1,6 +1,8 @@
 import { Component as ReactComponent, useEffect } from 'react';
 import Head from 'next/head';
 import { AppProvider } from '../contexts/AppContext';
+import { ToastProvider } from '../contexts/ToastContext';
+import { ToastContainer } from '../components/Toast';
 import '../styles/globals.css';
 
 class ErrorBoundary extends ReactComponent {
@@ -35,13 +37,16 @@ export default function TribuApp({ Component, pageProps }) {
   return (
     <ErrorBoundary>
       <AppProvider>
-        <Head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-        </Head>
-        <a href="#main-content" className="skip-link">Skip to main content</a>
-        <div className="mesh-bg" aria-hidden="true" />
-        <div className="grain" aria-hidden="true" />
-        <Component {...pageProps} />
+        <ToastProvider>
+          <Head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+          </Head>
+          <a href="#main-content" className="skip-link">Skip to main content</a>
+          <div className="mesh-bg" aria-hidden="true" />
+          <div className="grain" aria-hidden="true" />
+          <Component {...pageProps} />
+          <ToastContainer />
+        </ToastProvider>
       </AppProvider>
     </ErrorBoundary>
   );

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Database, Rss, Download, Upload, ChevronUp, ChevronDown, Plus, Copy, Check } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useToast } from '../../contexts/ToastContext';
 import { downloadBlob } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
 export default function DataTab() {
   const { messages, familyId, loggedIn, demoMode, loadContacts, loadDashboard } = useApp();
+  const { error: toastError } = useToast();
 
   // Data management state
   const [showCalImport, setShowCalImport] = useState(false);
@@ -54,11 +56,11 @@ export default function DataTab() {
   async function handleExportIcs() {
     try {
       const res = await api.apiExportCalendarIcs(familyId);
-      if (!res.ok) return setCalMsg(t(messages, 'module.calendar.export_error') || 'Export failed');
+      if (!res.ok) return toastError(t(messages, 'module.calendar.export_error') || 'Export failed');
       const blob = await res.blob();
       downloadBlob(blob, 'tribu-calendar.ics');
     } catch {
-      setCalMsg(t(messages, 'module.calendar.export_error') || 'Export failed');
+      toastError(t(messages, 'module.calendar.export_error') || 'Export failed');
     }
   }
 
@@ -84,11 +86,11 @@ export default function DataTab() {
   async function handleExportCsv() {
     try {
       const res = await api.apiExportContactsCsv(familyId);
-      if (!res.ok) return setContactsMsg(t(messages, 'module.contacts.export_error') || 'Export failed');
+      if (!res.ok) return toastError(t(messages, 'module.contacts.export_error') || 'Export failed');
       const blob = await res.blob();
       downloadBlob(blob, 'tribu-contacts.csv');
     } catch {
-      setContactsMsg(t(messages, 'module.contacts.export_error') || 'Export failed');
+      toastError(t(messages, 'module.contacts.export_error') || 'Export failed');
     }
   }
 

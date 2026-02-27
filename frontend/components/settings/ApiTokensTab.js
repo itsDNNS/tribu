@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useToast } from '../../contexts/ToastContext';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
@@ -15,6 +16,7 @@ const SCOPE_MODULES = [
 
 export default function ApiTokensTab() {
   const { messages, lang, loggedIn, demoMode } = useApp();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const [tokens, setTokens] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -62,7 +64,10 @@ export default function ApiTokensTab() {
       setNewName('');
       setNewScopes(['*']);
       setNewExpiry('');
+      toastSuccess(t(messages, 'token_created'));
       loadTokens();
+    } else {
+      toastError(t(messages, 'toast.error'));
     }
   }
 
@@ -71,6 +76,9 @@ export default function ApiTokensTab() {
     const res = await api.apiRevokeToken(tokenId);
     if (res.ok) {
       setTokens(prev => prev.filter(tk => tk.id !== tokenId));
+      toastSuccess(t(messages, 'toast.token_revoked'));
+    } else {
+      toastError(t(messages, 'toast.error'));
     }
   }
 

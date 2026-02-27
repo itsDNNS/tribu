@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
@@ -12,13 +13,13 @@ function formatBytes(bytes) {
 
 export default function BackupSection() {
   const { messages } = useApp();
+  const { error: toastError } = useToast();
   const [config, setConfig] = useState(null);
   const [backups, setBackups] = useState([]);
   const [schedule, setSchedule] = useState('off');
   const [retention, setRetention] = useState(7);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
 
   const loadConfig = useCallback(async () => {
     const { ok, data } = await api.apiGetBackupConfig();
@@ -41,22 +42,20 @@ export default function BackupSection() {
 
   async function handleSaveConfig() {
     setSaving(true);
-    setError('');
     const { ok, data } = await api.apiUpdateBackupConfig({ schedule, retention });
     if (ok) {
       setConfig(data);
     } else {
-      setError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, 'Failed'));
     }
     setSaving(false);
   }
 
   async function handleTrigger() {
     setCreating(true);
-    setError('');
     const { ok, data } = await api.apiTriggerBackup();
     if (!ok) {
-      setError(errorText(data?.detail, 'Backup failed'));
+      toastError(errorText(data?.detail, 'Backup failed'));
     }
     await loadConfig();
     await loadBackups();
@@ -79,7 +78,7 @@ export default function BackupSection() {
     if (!confirm(t(messages, 'backup_delete_confirm'))) return;
     const { ok, data } = await api.apiDeleteBackup(filename);
     if (!ok) {
-      setError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, 'Failed'));
     }
     await loadBackups();
   }
@@ -98,8 +97,6 @@ export default function BackupSection() {
           <h1 className="view-title">{t(messages, 'backup_title')}</h1>
         </div>
       </div>
-      {error && <p className="admin-error">{error}</p>}
-
       <div className="glass-sm settings-section" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <label>

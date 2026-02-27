@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { errorText, toIsoOrNull } from '../lib/helpers';
+import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
 export function useCalendar() {
-  const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary, lang } = useApp();
+  const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary, lang, messages } = useApp();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const [calendarView, setCalendarView] = useState('month');
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(null);
-  const [calendarMsg, setCalendarMsg] = useState('');
 
   // Event form
   const [title, setTitle] = useState('');
@@ -143,13 +145,14 @@ export function useCalendar() {
       }));
     } else {
       const { ok, data } = await api.apiCreateEvent(payload);
-      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Failed to create event'));
+      if (!ok) return toastError(errorText(data?.detail, 'Failed to create event'));
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
     setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
     setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]);
-    setCalendarMsg('Event created');
-    announce('Event created');
+    const msg = t(messages, 'toast.event_created');
+    toastSuccess(msg);
+    announce(msg);
   }
 
   async function deleteEvent(ev) {
@@ -176,12 +179,13 @@ export function useCalendar() {
       }));
     } else {
       const { ok, data } = await api.apiDeleteEvent(eventId, occurrenceDate);
-      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Failed to delete event'));
+      if (!ok) return toastError(errorText(data?.detail, 'Failed to delete event'));
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
     setDeleteConfirm(null);
-    setCalendarMsg('Event deleted');
-    announce('Event deleted');
+    const msg = t(messages, 'toast.event_deleted');
+    toastSuccess(msg);
+    announce(msg);
   }
 
   async function addBirthday(e) {
@@ -208,7 +212,7 @@ export function useCalendar() {
         family_id: Number(familyId), person_name: birthdayName,
         month: Number(birthdayMonth), day: Number(birthdayDay),
       });
-      if (!ok) return setCalendarMsg(errorText(data?.detail, 'Failed to save birthday'));
+      if (!ok) return toastError(errorText(data?.detail, 'Failed to save birthday'));
       await loadDashboard();
     }
     setBirthdayName(''); setBirthdayMonth(''); setBirthdayDay('');
@@ -218,7 +222,6 @@ export function useCalendar() {
     calendarView, setCalendarView,
     calendarMonth, setCalendarMonth,
     selectedDate, setSelectedDate,
-    calendarMsg, setCalendarMsg,
     title, setTitle,
     description, setDescription,
     startsAt, setStartsAt,

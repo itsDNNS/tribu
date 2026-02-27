@@ -59,7 +59,6 @@ jest.mock('../../hooks/useTasks', () => ({
     setTaskRecurrence: jest.fn(),
     taskAssignee: '',
     setTaskAssignee: jest.fn(),
-    taskMsg: '',
     filteredTasks: [
       { id: 1, title: 'Buy milk', status: 'open', priority: 'normal', description: 'From the store' },
       { id: 2, title: 'Clean house', status: 'done', priority: 'high', description: null, recurrence: 'weekly', assigned_to_user_id: 10 },

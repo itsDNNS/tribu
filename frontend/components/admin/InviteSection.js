@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Check, Copy, X, Link, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
 export default function InviteSection() {
   const { familyId, messages, demoMode } = useApp();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [invites, setInvites] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [rolePreset, setRolePreset] = useState('member');
@@ -15,13 +17,11 @@ export default function InviteSection() {
   const [maxUses, setMaxUses] = useState('');
   const [createdUrl, setCreatedUrl] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState('');
 
   // Base URL settings
   const [baseUrl, setBaseUrl] = useState('');
   const [baseUrlEnv, setBaseUrlEnv] = useState('');
   const [baseUrlEffective, setBaseUrlEffective] = useState('');
-  const [baseUrlSaved, setBaseUrlSaved] = useState(false);
 
   const loadInvites = useCallback(async () => {
     if (demoMode) return;
@@ -46,7 +46,6 @@ export default function InviteSection() {
 
   async function handleCreate(e) {
     e.preventDefault();
-    setError('');
     const payload = {
       role_preset: rolePreset,
       is_adult_preset: isAdultPreset,
@@ -55,7 +54,7 @@ export default function InviteSection() {
     if (maxUses) payload.max_uses = parseInt(maxUses);
     const { ok, data } = await api.apiCreateInvitation(familyId, payload);
     if (!ok) {
-      setError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, 'Failed'));
       return;
     }
     setCreatedUrl(data.invite_url);
@@ -71,7 +70,7 @@ export default function InviteSection() {
     if (!confirm(t(messages, 'invite_revoke_confirm'))) return;
     const { ok, data } = await api.apiRevokeInvitation(familyId, inviteId);
     if (!ok) {
-      setError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, 'Failed'));
       return;
     }
     await loadInvites();
@@ -80,8 +79,7 @@ export default function InviteSection() {
   async function handleSaveBaseUrl() {
     const { ok } = await api.apiSetBaseUrl(baseUrl);
     if (ok) {
-      setBaseUrlSaved(true);
-      setTimeout(() => setBaseUrlSaved(false), 2000);
+      toastSuccess(t(messages, 'toast.saved'));
       await loadBaseUrl();
     }
   }
@@ -121,8 +119,6 @@ export default function InviteSection() {
           <h1 className="view-title">{t(messages, 'invite_title')}</h1>
         </div>
       </div>
-      {error && <p className="admin-error">{error}</p>}
-
       {/* Base URL setting */}
       {!demoMode && (
         <div className="glass-sm settings-section" style={{ marginBottom: '1rem' }}>
@@ -145,7 +141,7 @@ export default function InviteSection() {
               {t(messages, 'base_url_effective')}: {baseUrlEffective}
             </small>
             <button className="btn-primary" onClick={handleSaveBaseUrl} style={{ alignSelf: 'flex-start' }}>
-              {baseUrlSaved ? t(messages, 'base_url_saved') : t(messages, 'base_url_save')}
+              {t(messages, 'base_url_save')}
             </button>
           </div>
         </div>

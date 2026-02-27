@@ -288,5 +288,11 @@
   "donate": "Donate",
   "report_bug": "Report a bug",
   "personal_color": "Personal color",
-  "color_taken_by": "Taken by {name}"
+  "color_taken_by": "Taken by {name}",
+  "toast.event_created": "Event created",
+  "toast.event_deleted": "Event deleted",
+  "toast.saved": "Saved",
+  "toast.profile_updated": "Profile updated",
+  "toast.token_revoked": "Token revoked",
+  "toast.error": "Something went wrong"
 }

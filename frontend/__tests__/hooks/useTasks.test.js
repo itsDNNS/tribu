@@ -18,6 +18,10 @@ jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockContext,
 }));
 
+jest.mock('../../contexts/ToastContext', () => ({
+  useToast: () => ({ success: jest.fn(), error: jest.fn(), info: jest.fn(), toast: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
+}));
+
 jest.mock('../../lib/api', () => ({
   apiCreateTask: jest.fn(() => Promise.resolve({ ok: true, data: { id: 4 } })),
   apiUpdateTask: jest.fn(() => Promise.resolve({ ok: true, data: {} })),

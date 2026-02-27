@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User, Palette, Globe, Check } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useToast } from '../../contexts/ToastContext';
 import { t, languageCompleteness } from '../../lib/i18n';
 import { COLOR_PALETTE, getMemberColor } from '../../lib/member-colors';
 import * as api from '../../lib/api';
@@ -17,7 +18,7 @@ const THEME_PREVIEWS = {
 
 export default function AccountTab() {
   const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers } = useApp();
-  const [imageSaved, setImageSaved] = useState(false);
+  const { success: toastSuccess } = useToast();
   const [colorSaving, setColorSaving] = useState(false);
   const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
   const currentMember = members.find((m) => m.user_id === me?.user_id);
@@ -33,8 +34,7 @@ export default function AccountTab() {
       if (loggedIn) {
         await api.apiUpdateProfileImage(value);
       }
-      setImageSaved(true);
-      setTimeout(() => setImageSaved(false), 2000);
+      toastSuccess(t(messages, 'toast.profile_updated'));
     };
     reader.readAsDataURL(file);
   }
@@ -61,11 +61,6 @@ export default function AccountTab() {
             {t(messages, 'profile_image')}
           </label>
           <input type="file" accept="image/*" onChange={onProfileImage} style={{ fontSize: '0.88rem' }} />
-          {imageSaved && (
-            <span style={{ marginLeft: 'var(--space-sm)', fontSize: '0.82rem', color: 'var(--success)' }}>
-              <Check size={14} style={{ verticalAlign: 'middle' }} /> Saved!
-            </span>
-          )}
         </div>
         <div style={{ marginTop: 'var(--space-md)' }}>
           <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 'var(--space-sm)' }}>

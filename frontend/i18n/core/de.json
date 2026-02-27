@@ -288,5 +288,11 @@
   "donate": "Spenden",
   "report_bug": "Fehler melden",
   "personal_color": "Persönliche Farbe",
-  "color_taken_by": "Vergeben an {name}"
+  "color_taken_by": "Vergeben an {name}",
+  "toast.event_created": "Termin erstellt",
+  "toast.event_deleted": "Termin gelöscht",
+  "toast.saved": "Gespeichert",
+  "toast.profile_updated": "Profil aktualisiert",
+  "toast.token_revoked": "Token widerrufen",
+  "toast.error": "Etwas ist schiefgelaufen"
 }

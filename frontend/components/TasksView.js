@@ -20,8 +20,6 @@ export default function TasksView() {
         </div>
       </div>
 
-      {tk.taskMsg && <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' }}>{tk.taskMsg}</p>}
-
       <div className="tasks-layout">
         <div className="glass" style={{ overflow: 'hidden' }}>
           {/* Quick Add */}

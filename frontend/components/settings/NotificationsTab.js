@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, BellRing, Check } from 'lucide-react';
+import { Bell, BellRing } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { useToast } from '../../contexts/ToastContext';
 import { t } from '../../lib/i18n';
 import usePushSubscription from '../../hooks/usePushSubscription';
 import * as api from '../../lib/api';
 
 export default function NotificationsTab() {
   const { messages, loggedIn, demoMode } = useApp();
+  const { success: toastSuccess } = useToast();
   const { pushSupported, pushSubscription, pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushSubscription(loggedIn, demoMode);
 
   const [notifPrefs, setNotifPrefs] = useState({ reminders_enabled: true, reminder_minutes: 30, quiet_start: '', quiet_end: '' });
-  const [notifSaved, setNotifSaved] = useState(false);
 
   const loadNotifPrefs = useCallback(async () => {
     if (!loggedIn || demoMode) return;
@@ -33,8 +34,7 @@ export default function NotificationsTab() {
     };
     const res = await api.apiUpdateNotificationPreferences(payload);
     if (res.ok) {
-      setNotifSaved(true);
-      setTimeout(() => setNotifSaved(false), 2000);
+      toastSuccess(t(messages, 'notification_saved'));
     }
   }
 
@@ -90,7 +90,7 @@ export default function NotificationsTab() {
           </div>
 
           <button className="btn-sm" onClick={handleSaveNotifPrefs} style={{ justifySelf: 'start' }}>
-            {notifSaved ? <><Check size={14} /> {t(messages, 'notification_saved')}</> : t(messages, 'notification_save')}
+            {t(messages, 'notification_save')}
           </button>
 
           {pushSupported && (

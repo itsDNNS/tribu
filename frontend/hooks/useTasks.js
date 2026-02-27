@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { errorText, toIsoOrNull } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
@@ -7,6 +8,7 @@ import * as api from '../lib/api';
 
 export function useTasks() {
   const { tasks, setTasks, familyId, members, messages, loadTasks, demoMode } = useApp();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const [taskFilter, setTaskFilter] = useState('open');
   const [taskTitle, setTaskTitle] = useState('');
@@ -15,7 +17,6 @@ export function useTasks() {
   const [taskPriority, setTaskPriority] = useState('normal');
   const [taskRecurrence, setTaskRecurrence] = useState('');
   const [taskAssignee, setTaskAssignee] = useState('');
-  const [taskMsg, setTaskMsg] = useState('');
 
   const filteredTasks = useMemo(
     () => tasks.filter((tk) => taskFilter === 'all' || tk.status === taskFilter),
@@ -24,7 +25,6 @@ export function useTasks() {
 
   async function createTask(e) {
     e.preventDefault();
-    setTaskMsg('');
     const payload = {
       family_id: Number(familyId),
       title: taskTitle,
@@ -39,12 +39,12 @@ export function useTasks() {
       setTasks((prev) => [newTask, ...prev]);
     } else {
       const { ok, data } = await api.apiCreateTask(payload);
-      if (!ok) return setTaskMsg(errorText(data?.detail, 'Failed to create task'));
+      if (!ok) return toastError(errorText(data?.detail, 'Failed to create task'));
       await loadTasks();
     }
     setTaskTitle(''); setTaskDesc(''); setTaskDueDate(''); setTaskPriority('normal'); setTaskRecurrence(''); setTaskAssignee('');
     const msg = t(messages, 'module.tasks.created');
-    setTaskMsg(msg);
+    toastSuccess(msg);
     announce(msg);
   }
 
@@ -53,7 +53,8 @@ export function useTasks() {
     if (demoMode) {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: newStatus, updated_at: new Date().toISOString() } : t));
     } else {
-      await api.apiUpdateTask(id, { status: newStatus });
+      const { ok } = await api.apiUpdateTask(id, { status: newStatus });
+      if (!ok) toastError(t(messages, 'toast.error'));
       await loadTasks();
     }
   }
@@ -62,7 +63,8 @@ export function useTasks() {
     if (demoMode) {
       setTasks((prev) => prev.filter((t) => t.id !== id));
     } else {
-      await api.apiDeleteTask(id);
+      const { ok } = await api.apiDeleteTask(id);
+      if (!ok) toastError(t(messages, 'toast.error'));
       await loadTasks();
     }
   }
@@ -75,7 +77,6 @@ export function useTasks() {
     taskPriority, setTaskPriority,
     taskRecurrence, setTaskRecurrence,
     taskAssignee, setTaskAssignee,
-    taskMsg,
     filteredTasks,
     createTask, toggleTask, deleteTask,
   };
