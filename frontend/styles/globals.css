@@ -711,6 +711,12 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .contact-name { font-weight: 600; font-size: 0.95rem; }
 .contact-detail { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; }
 .contact-birthday { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.contact-card-clickable { cursor: pointer; }
+.contact-card-clickable:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
+.contact-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.contact-modal-panel { padding: var(--space-xl); max-width: 440px; width: 90%; }
+.contact-delete-btn { color: var(--text-muted); }
+.contact-delete-btn:hover { color: var(--danger); border-color: var(--danger); }
 
 /* ═══════════════════════════════════════════
    SETTINGS

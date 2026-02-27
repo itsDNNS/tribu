@@ -135,6 +135,18 @@ export function apiGetContacts(familyId) {
   return request(`/contacts?family_id=${familyId}`);
 }
 
+export function apiCreateContact(payload) {
+  return post('/contacts', payload);
+}
+
+export function apiUpdateContact(contactId, payload) {
+  return patch(`/contacts/${contactId}`, payload);
+}
+
+export function apiDeleteContact(contactId) {
+  return del(`/contacts/${contactId}`);
+}
+
 export function apiImportContactsCsv(family_id, csv_text) {
   return post('/contacts/import-csv', { family_id, csv_text });
 }

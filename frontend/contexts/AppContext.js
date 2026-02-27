@@ -307,7 +307,7 @@ export function AppProvider({ children }) {
     isAdmin, isChild,
     summary, setSummary,
     events, setEvents,
-    contacts,
+    contacts, setContacts,
     tasks, setTasks,
     shoppingLists, setShoppingLists,
     navOrder, setNavOrder, loadNavOrder,

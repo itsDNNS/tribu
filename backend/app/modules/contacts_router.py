@@ -11,7 +11,7 @@ from app.core.scopes import require_scope
 from app.core.vcf_utils import contacts_to_vcf
 from app.database import get_db
 from app.models import Contact, FamilyBirthday, User
-from app.schemas import AUTH_RESPONSES, ErrorResponse, ContactCreate, ContactResponse, ContactsCsvImport
+from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ErrorResponse, ContactCreate, ContactResponse, ContactUpdate, ContactsCsvImport
 
 router = APIRouter(prefix="/contacts", tags=["contacts"], responses={**AUTH_RESPONSES})
 
@@ -77,6 +77,90 @@ def create_contact(
     db.refresh(contact)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return contact
+
+
+@router.patch(
+    "/{contact_id}",
+    response_model=ContactResponse,
+    responses={**CRUD_RESPONSES},
+    summary="Update a contact",
+    description="Partially update a contact. Auto-updates or removes the birthday entry. Adult only. Scope: `contacts:write`.",
+    response_description="The updated contact",
+)
+def update_contact(
+    contact_id: int,
+    payload: ContactUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("contacts:write"),
+):
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    ensure_adult(db, user.id, contact.family_id)
+
+    old_name = contact.full_name
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(contact, key, value)
+
+    new_name = contact.full_name
+    new_month = contact.birthday_month
+    new_day = contact.birthday_day
+
+    # If the name changed, update the linked birthday entry
+    if old_name != new_name:
+        existing_bday = db.query(FamilyBirthday).filter(
+            FamilyBirthday.family_id == contact.family_id,
+            FamilyBirthday.person_name == old_name,
+        ).first()
+        if existing_bday:
+            existing_bday.person_name = new_name
+
+    # Upsert or remove birthday
+    if new_month and new_day:
+        upsert_birthday(db, contact.family_id, new_name, new_month, new_day)
+    else:
+        # Remove birthday entry if birthday fields were cleared
+        db.query(FamilyBirthday).filter(
+            FamilyBirthday.family_id == contact.family_id,
+            FamilyBirthday.person_name == new_name,
+        ).delete()
+
+    db.commit()
+    db.refresh(contact)
+    cache.invalidate_pattern(f"tribu:dashboard:{contact.family_id}:*")
+    return contact
+
+
+@router.delete(
+    "/{contact_id}",
+    responses={**CRUD_RESPONSES},
+    summary="Delete a contact",
+    description="Delete a contact and its associated birthday entry. Adult only. Scope: `contacts:write`.",
+    response_description="Deletion confirmed",
+)
+def delete_contact(
+    contact_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("contacts:write"),
+):
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    ensure_adult(db, user.id, contact.family_id)
+
+    # Remove associated birthday entry
+    db.query(FamilyBirthday).filter(
+        FamilyBirthday.family_id == contact.family_id,
+        FamilyBirthday.person_name == contact.full_name,
+    ).delete()
+
+    db.delete(contact)
+    db.commit()
+    cache.invalidate_pattern(f"tribu:dashboard:{contact.family_id}:*")
+    return {"status": "ok"}
 
 
 @router.get(

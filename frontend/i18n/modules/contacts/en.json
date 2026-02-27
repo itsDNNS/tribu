@@ -9,5 +9,20 @@
   "module.contacts.export_error": "Export failed",
   "module.contacts.import_warnings": "Warnings",
   "module.contacts.row": "Row",
-  "module.contacts.import_cta": "Import contacts in Settings"
+  "module.contacts.import_cta": "Import contacts in Settings",
+  "module.contacts.add": "Add Contact",
+  "module.contacts.edit": "Edit Contact",
+  "module.contacts.created": "Contact created",
+  "module.contacts.updated": "Contact updated",
+  "module.contacts.deleted": "Contact deleted",
+  "module.contacts.delete_confirm": "Are you sure you want to delete this contact?",
+  "module.contacts.name_required": "Name is required",
+  "module.contacts.form.name": "Name",
+  "module.contacts.form.email": "Email",
+  "module.contacts.form.phone": "Phone",
+  "module.contacts.form.birthday": "Birthday",
+  "module.contacts.form.month": "Month",
+  "module.contacts.form.day": "Day",
+  "module.contacts.save": "Save",
+  "module.contacts.delete": "Delete"
 }

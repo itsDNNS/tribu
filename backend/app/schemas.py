@@ -425,6 +425,15 @@ class ContactResponse(BaseModel):
     birthday_day: Optional[int] = Field(None, description="Birthday day (1-31)")
 
 
+class ContactUpdate(BaseModel):
+    """Update an existing contact (partial update). Birthday entry is auto-updated/removed."""
+    full_name: Optional[str] = Field(None, description="Contact's full name")
+    email: Optional[str] = Field(None, description="Email address")
+    phone: Optional[str] = Field(None, description="Phone number")
+    birthday_month: Optional[int] = Field(None, description="Birthday month (1-12)")
+    birthday_day: Optional[int] = Field(None, description="Birthday day (1-31)")
+
+
 class ContactsCsvImport(BaseModel):
     """Import contacts from CSV text."""
     family_id: int = Field(..., description="Target family ID")

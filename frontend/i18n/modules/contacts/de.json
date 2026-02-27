@@ -9,5 +9,20 @@
   "module.contacts.export_error": "Export fehlgeschlagen",
   "module.contacts.import_warnings": "Hinweise",
   "module.contacts.row": "Zeile",
-  "module.contacts.import_cta": "Kontakte in den Einstellungen importieren"
+  "module.contacts.import_cta": "Kontakte in den Einstellungen importieren",
+  "module.contacts.add": "Kontakt hinzufügen",
+  "module.contacts.edit": "Kontakt bearbeiten",
+  "module.contacts.created": "Kontakt erstellt",
+  "module.contacts.updated": "Kontakt aktualisiert",
+  "module.contacts.deleted": "Kontakt gelöscht",
+  "module.contacts.delete_confirm": "Kontakt wirklich löschen?",
+  "module.contacts.name_required": "Name ist erforderlich",
+  "module.contacts.form.name": "Name",
+  "module.contacts.form.email": "E-Mail",
+  "module.contacts.form.phone": "Telefon",
+  "module.contacts.form.birthday": "Geburtstag",
+  "module.contacts.form.month": "Monat",
+  "module.contacts.form.day": "Tag",
+  "module.contacts.save": "Speichern",
+  "module.contacts.delete": "Löschen"
 }
