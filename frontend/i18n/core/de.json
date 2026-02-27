@@ -101,6 +101,8 @@
   "aria.auth_mode": "Anmeldemodus",
   "aria.previous_month": "Vorheriger Monat",
   "aria.next_month": "Nächster Monat",
+  "aria.previous_week": "Vorherige Woche",
+  "aria.next_week": "Nächste Woche",
   "aria.delete_event": "Termin löschen: {title}",
   "aria.events": "{count} Termine",
   "aria.mark_task": "Aufgabe erledigen: {title}",

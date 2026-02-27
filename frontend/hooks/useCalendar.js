@@ -10,9 +10,10 @@ export function useCalendar() {
   const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary, lang, messages } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
-  const [calendarView, setCalendarView] = useState('month');
+  const [calendarView, setCalendarViewRaw] = useState('month');
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [weekAnchor, setWeekAnchor] = useState(() => new Date());
 
   // Event form
   const [title, setTitle] = useState('');
@@ -35,6 +36,13 @@ export function useCalendar() {
   const [birthdayDay, setBirthdayDay] = useState('');
 
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
+
+  const setCalendarView = useCallback((view) => {
+    if (view === 'week') {
+      setWeekAnchor(selectedDate ? new Date(selectedDate) : new Date());
+    }
+    setCalendarViewRaw(view);
+  }, [selectedDate]);
 
   const monthLabel = useMemo(
     () => calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
@@ -60,6 +68,19 @@ export function useCalendar() {
     if (!familyId || demoMode) return;
     loadEventsForRange();
   }, [calendarMonth, familyId, demoMode, loadEventsForRange]);
+
+  // Sync calendarMonth when weekAnchor crosses month boundary (to load events)
+  useEffect(() => {
+    if (calendarView !== 'week') return;
+    setCalendarMonth((prev) => {
+      const y = weekAnchor.getFullYear();
+      const m = weekAnchor.getMonth();
+      if (prev.getFullYear() !== y || prev.getMonth() !== m) {
+        return new Date(y, m, 1);
+      }
+      return prev;
+    });
+  }, [weekAnchor, calendarView]);
 
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
@@ -96,7 +117,7 @@ export function useCalendar() {
   }, [calendarMonth, events]);
 
   const weekInfo = useMemo(() => {
-    const ref = selectedDate || new Date();
+    const ref = weekAnchor;
     const current = new Date(ref);
     const day = (current.getDay() + 6) % 7;
     const weekStart = new Date(current);
@@ -120,8 +141,39 @@ export function useCalendar() {
       return dt >= weekStart && dt < weekEnd;
     });
 
-    return { weekStart, weekEnd, weekNumber, weekEvents };
-  }, [events, selectedDate]);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      const dayEvents = events.filter((ev) => {
+        const dt = new Date(ev.starts_at);
+        return dt.getFullYear() === date.getFullYear() && dt.getMonth() === date.getMonth() && dt.getDate() === date.getDate();
+      }).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+      days.push({ date, dayEvents });
+    }
+
+    return { weekStart, weekEnd, weekNumber, weekEvents, days };
+  }, [events, weekAnchor]);
+
+  const prevWeek = useCallback(() => {
+    setWeekAnchor((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 7);
+      return d;
+    });
+  }, []);
+
+  const nextWeek = useCallback(() => {
+    setWeekAnchor((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 7);
+      return d;
+    });
+  }, []);
+
+  const goToCurrentWeek = useCallback(() => {
+    setWeekAnchor(new Date());
+  }, []);
 
   async function createEvent(e) {
     e.preventDefault();
@@ -235,6 +287,7 @@ export function useCalendar() {
     birthdayMonth, setBirthdayMonth,
     birthdayDay, setBirthdayDay,
     monthLabel, selectedDayEvents, monthCells, weekInfo,
+    prevWeek, nextWeek, goToCurrentWeek,
     createEvent, deleteEvent, performDelete, addBirthday, loadEventsForRange,
   };
 }

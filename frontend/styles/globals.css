@@ -253,6 +253,9 @@
 }
 [data-theme="light"] .day-event-card { background: rgba(0, 0, 0, 0.02); }
 [data-theme="light"] .day-event-card:hover { background: rgba(0, 0, 0, 0.04); }
+[data-theme="light"] .week-day-header { background: rgba(0, 0, 0, 0.02); }
+[data-theme="light"] .week-day-header:hover { background: rgba(0, 0, 0, 0.04); }
+[data-theme="light"] .week-day-header.week-day-selected { background: rgba(124, 58, 237, 0.06); }
 
 [data-theme="light"] .tasks-filter-tabs { background: rgba(0, 0, 0, 0.03); }
 [data-theme="light"] .tasks-filter-btn.active {
@@ -645,6 +648,18 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .day-event-card:hover { background: rgba(255,255,255,0.05); }
 .quick-add-form { display: grid; gap: var(--space-sm); }
 
+/* Week View */
+.week-view { display: grid; gap: var(--space-sm); }
+.week-day { border-radius: var(--radius-sm); background: var(--glass-bg); border: 1px solid var(--glass-border); overflow: hidden; backdrop-filter: blur(var(--glass-blur)); }
+.week-day-today { border-left: 3px solid var(--amethyst); }
+.week-day-header { display: flex; align-items: center; gap: var(--space-sm); width: 100%; padding: 12px var(--space-md); background: rgba(255,255,255,0.03); border: none; border-bottom: 1px solid var(--glass-border); font-family: inherit; font-size: 0.88rem; font-weight: 600; color: var(--text-primary); cursor: pointer; text-align: left; transition: all 0.2s; }
+.week-day-header:hover { background: rgba(255,255,255,0.06); }
+.week-day-header.week-day-selected { background: rgba(124, 58, 237, 0.08); }
+.week-day-today .week-day-header { color: var(--amethyst); }
+.week-day-today-badge { font-size: 0.68rem; font-weight: 500; padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(124, 58, 237, 0.12); color: var(--amethyst); text-transform: uppercase; letter-spacing: 0.04em; }
+.week-day-events { padding: var(--space-sm) var(--space-md); display: grid; gap: var(--space-xs); }
+.week-day-empty { color: var(--text-muted); font-size: 0.82rem; padding: var(--space-xs) 0; }
+
 /* ═══════════════════════════════════════════
    TASKS VIEW
    ═══════════════════════════════════════════ */
@@ -911,7 +926,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .shopping-list-delete:focus-visible,
 .shopping-item-delete:focus-visible,
 .theme-item:focus-visible,
-.quick-add-btn:focus-visible {
+.quick-add-btn:focus-visible,
+.week-day-header:focus-visible {
   outline: 2px solid var(--amethyst);
   outline-offset: 2px;
 }

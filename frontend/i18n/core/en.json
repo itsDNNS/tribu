@@ -101,6 +101,8 @@
   "aria.auth_mode": "Authentication mode",
   "aria.previous_month": "Previous month",
   "aria.next_month": "Next month",
+  "aria.previous_week": "Previous week",
+  "aria.next_week": "Next week",
   "aria.delete_event": "Delete event: {title}",
   "aria.events": "{count} events",
   "aria.mark_task": "Mark task: {title}",

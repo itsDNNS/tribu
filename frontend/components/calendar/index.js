@@ -71,6 +71,26 @@ export default function CalendarView() {
 
       {cal.calendarView === 'week' && (
         <div className="calendar-controls">
+          <div className="calendar-nav">
+            <button
+              className="calendar-nav-btn"
+              onClick={cal.prevWeek}
+              aria-label={t(messages, 'aria.previous_week')}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="calendar-month-label" aria-live="polite">
+              {t(messages, 'module.calendar.cw')} {cal.weekInfo.weekNumber}: {cal.weekInfo.weekStart.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })} – {new Date(cal.weekInfo.weekEnd.getTime() - 1).toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })}
+            </div>
+            <button
+              className="calendar-nav-btn"
+              onClick={cal.nextWeek}
+              aria-label={t(messages, 'aria.next_week')}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+          <button className="today-btn" onClick={cal.goToCurrentWeek}>{t(messages, 'module.calendar.today')}</button>
           <div className="calendar-view-toggle">
             <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>{t(messages, 'module.calendar.month')}</button>
             <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>{t(messages, 'module.calendar.week')}</button>
@@ -205,22 +225,38 @@ export default function CalendarView() {
           )}
         </div>
       ) : (
-        <div className="glass" style={{ padding: 'var(--space-lg)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
-            <strong>{t(messages, 'module.calendar.cw')} {cal.weekInfo.weekNumber}</strong>
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              {cal.weekInfo.weekStart.toLocaleDateString(locale)} {t(messages, 'module.calendar.to')} {new Date(cal.weekInfo.weekEnd.getTime() - 1).toLocaleDateString(locale)}
-            </span>
-          </div>
-
-          <div className="day-detail-events">
-            {cal.weekInfo.weekEvents.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.calendar.no_events_week')}</div>
-            )}
-            {cal.weekInfo.weekEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} members={members} />
-            ))}
-          </div>
+        <div className="week-view">
+          {cal.weekInfo.days.map((dayInfo, i) => {
+            const isDayToday = dayInfo.date.toDateString() === today.toDateString();
+            const isSelected = cal.selectedDate && dayInfo.date.toDateString() === cal.selectedDate.toDateString();
+            return (
+              <div key={i} className={`week-day${isDayToday ? ' week-day-today' : ''}`}>
+                <button
+                  type="button"
+                  className={`week-day-header${isSelected ? ' week-day-selected' : ''}`}
+                  onClick={() => {
+                    cal.setSelectedDate(dayInfo.date);
+                    const local = new Date(dayInfo.date.getFullYear(), dayInfo.date.getMonth(), dayInfo.date.getDate(), 9, 0);
+                    const offset = local.getTimezoneOffset();
+                    const localIso = new Date(local.getTime() - offset * 60000).toISOString().slice(0, 16);
+                    cal.setStartsAt(localIso);
+                  }}
+                >
+                  {dayInfo.date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })}
+                  {isDayToday && <span className="week-day-today-badge">{t(messages, 'module.calendar.today')}</span>}
+                </button>
+                <div className="week-day-events">
+                  {dayInfo.dayEvents.length === 0 ? (
+                    <div className="week-day-empty">{t(messages, 'module.calendar.no_events_day')}</div>
+                  ) : (
+                    dayInfo.dayEvents.map((ev, j) => (
+                      <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={j} messages={messages} onDelete={isChild ? null : cal.deleteEvent} members={members} />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
