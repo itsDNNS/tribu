@@ -349,5 +349,21 @@
   "error.CONTACT_NOT_FOUND": "Kontakt nicht gefunden",
   "error.CSV_MISSING_COLUMN": "CSV benötigt mindestens die Spalte full_name",
   "error.NOTIFICATION_NOT_FOUND": "Benachrichtigung nicht gefunden",
-  "error.UNKNOWN_NAV_KEYS": "Unbekannte Navigations-Schlüssel: {keys}"
+  "error.UNKNOWN_NAV_KEYS": "Unbekannte Navigations-Schlüssel: {keys}",
+  "landing.hero_title": "Tribu",
+  "landing.hero_subtitle": "Familien-Chaos in planbare Tage verwandeln.",
+  "landing.cta_demo": "Demo ausprobieren",
+  "landing.cta_login": "Anmelden",
+  "landing.feat_calendar": "Kalender",
+  "landing.feat_calendar_desc": "Gemeinsamer Familienkalender mit Terminen, Erinnerungen und wiederkehrenden Events.",
+  "landing.feat_tasks": "Aufgaben",
+  "landing.feat_tasks_desc": "To-do-Listen für die ganze Familie. Zuweisen, priorisieren und gemeinsam abhaken.",
+  "landing.feat_shopping": "Einkaufen",
+  "landing.feat_shopping_desc": "Geteilte Einkaufslisten, die sich in Echtzeit auf allen Geräten synchronisieren.",
+  "landing.feat_notifications": "Benachrichtigungen",
+  "landing.feat_notifications_desc": "Immer auf dem Laufenden mit Erinnerungen für Termine, Geburtstage und Aufgaben.",
+  "landing.trust_selfhosted": "Self-Hosted",
+  "landing.trust_privacy": "Datenschutz zuerst",
+  "landing.trust_opensource": "Open Source",
+  "landing.footer_tagline": "Organisiere deine Familie, auf deine Art."
 }

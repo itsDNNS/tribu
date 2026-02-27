@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShieldCheck, Users, Play, Globe } from 'lucide-react';
+import { Users, Play, Globe, CalendarDays, CheckSquare, ShoppingCart, Bell, Server, Lock, Github } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { errorText } from '../lib/helpers';
@@ -33,8 +33,15 @@ export default function AuthPage() {
     setLoggedIn(true);
   }
 
+  const features = [
+    { icon: CalendarDays, title: t(messages, 'landing.feat_calendar'), desc: t(messages, 'landing.feat_calendar_desc'), glow: 'glow-purple' },
+    { icon: CheckSquare, title: t(messages, 'landing.feat_tasks'), desc: t(messages, 'landing.feat_tasks_desc'), glow: 'glow-blue' },
+    { icon: ShoppingCart, title: t(messages, 'landing.feat_shopping'), desc: t(messages, 'landing.feat_shopping_desc'), glow: 'glow-amber' },
+    { icon: Bell, title: t(messages, 'landing.feat_notifications'), desc: t(messages, 'landing.feat_notifications_desc'), glow: 'glow-emerald' },
+  ];
+
   return (
-    <div className="auth-page">
+    <div className="landing-page">
       <div className="setup-lang-toggle">
         <Globe size={14} />
         <select
@@ -47,15 +54,56 @@ export default function AuthPage() {
           ))}
         </select>
       </div>
-      <div className="auth-container">
-        <div className="auth-brand">
-          <div className="auth-logo">
-            <Users size={32} color="white" aria-hidden="true" />
-          </div>
-          <h1>Tribu</h1>
-          <p>{t(messages, 'tagline')}</p>
-        </div>
 
+      {/* Hero */}
+      <section className="landing-hero">
+        <div className="auth-logo">
+          <Users size={32} color="white" aria-hidden="true" />
+        </div>
+        <h1>{t(messages, 'landing.hero_title')}</h1>
+        <p className="landing-hero-subtitle">{t(messages, 'landing.hero_subtitle')}</p>
+        <div className="landing-hero-ctas">
+          <button className="btn-primary" type="button" onClick={enterDemo}>
+            <Play size={16} aria-hidden="true" />
+            {t(messages, 'landing.cta_demo')}
+          </button>
+          <a className="btn-ghost" href="#auth">
+            {t(messages, 'landing.cta_login')} ↓
+          </a>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="landing-features">
+        {features.map((f, i) => (
+          <div key={i} className={`landing-feature-card glass ${f.glow}`} style={{ animationDelay: `${i * 0.1}s` }}>
+            <div className="landing-feature-icon">
+              <f.icon size={24} aria-hidden="true" />
+            </div>
+            <h3>{f.title}</h3>
+            <p>{f.desc}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* Trust Badges */}
+      <section className="landing-trust">
+        <div className="landing-trust-badge">
+          <Server size={16} aria-hidden="true" />
+          {t(messages, 'landing.trust_selfhosted')}
+        </div>
+        <div className="landing-trust-badge">
+          <Lock size={16} aria-hidden="true" />
+          {t(messages, 'landing.trust_privacy')}
+        </div>
+        <div className="landing-trust-badge">
+          <Github size={16} aria-hidden="true" />
+          {t(messages, 'landing.trust_opensource')}
+        </div>
+      </section>
+
+      {/* Auth Section */}
+      <section className="landing-auth" id="auth">
         <div className="auth-card glass glow-purple">
           <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
             <button
@@ -119,21 +167,26 @@ export default function AuthPage() {
             </div>
           )}
 
-          <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
-
           {msg && <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
+
+          <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
 
           <button className="btn-demo" type="button" onClick={enterDemo}>
             <Play size={15} aria-hidden="true" />
             {t(messages, 'demo_try')}
           </button>
         </div>
+      </section>
 
-        <div className="auth-footer">
-          <ShieldCheck size={14} aria-hidden="true" />
-          {t(messages, 'auth_footer')}
-        </div>
-      </div>
+      {/* Footer */}
+      <footer className="landing-footer">
+        <a href="https://github.com/itsDNNS/tribu" target="_blank" rel="noopener noreferrer" className="landing-footer-link">
+          <Github size={14} aria-hidden="true" />
+          GitHub
+        </a>
+        <span className="landing-footer-dot">·</span>
+        <span>{t(messages, 'landing.footer_tagline')}</span>
+      </footer>
     </div>
   );
 }

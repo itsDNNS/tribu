@@ -349,5 +349,21 @@
   "error.CONTACT_NOT_FOUND": "Contact not found",
   "error.CSV_MISSING_COLUMN": "CSV requires at least the column full_name",
   "error.NOTIFICATION_NOT_FOUND": "Notification not found",
-  "error.UNKNOWN_NAV_KEYS": "Unknown nav keys: {keys}"
+  "error.UNKNOWN_NAV_KEYS": "Unknown nav keys: {keys}",
+  "landing.hero_title": "Tribu",
+  "landing.hero_subtitle": "Turn family chaos into plannable days.",
+  "landing.cta_demo": "Try demo",
+  "landing.cta_login": "Sign in",
+  "landing.feat_calendar": "Calendar",
+  "landing.feat_calendar_desc": "Shared family calendar with events, reminders, and recurring appointments.",
+  "landing.feat_tasks": "Tasks",
+  "landing.feat_tasks_desc": "To-do lists for the whole family. Assign, prioritize, and track together.",
+  "landing.feat_shopping": "Shopping",
+  "landing.feat_shopping_desc": "Shared shopping lists that sync in real-time across all devices.",
+  "landing.feat_notifications": "Notifications",
+  "landing.feat_notifications_desc": "Stay in the loop with reminders for events, birthdays, and tasks.",
+  "landing.trust_selfhosted": "Self-Hosted",
+  "landing.trust_privacy": "Privacy-First",
+  "landing.trust_opensource": "Open Source",
+  "landing.footer_tagline": "Organize your family, your way."
 }
