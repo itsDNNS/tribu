@@ -46,7 +46,7 @@ export default function BackupSection() {
     if (ok) {
       setConfig(data);
     } else {
-      toastError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
     }
     setSaving(false);
   }
@@ -55,7 +55,7 @@ export default function BackupSection() {
     setCreating(true);
     const { ok, data } = await api.apiTriggerBackup();
     if (!ok) {
-      toastError(errorText(data?.detail, 'Backup failed'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
     }
     await loadConfig();
     await loadBackups();
@@ -78,7 +78,7 @@ export default function BackupSection() {
     if (!confirm(t(messages, 'backup_delete_confirm'))) return;
     const { ok, data } = await api.apiDeleteBackup(filename);
     if (!ok) {
-      toastError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
     }
     await loadBackups();
   }

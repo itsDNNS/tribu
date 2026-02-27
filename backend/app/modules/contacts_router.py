@@ -12,6 +12,7 @@ from app.core.vcf_utils import contacts_to_vcf
 from app.database import get_db
 from app.models import Contact, FamilyBirthday, User
 from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ErrorResponse, ContactCreate, ContactResponse, ContactUpdate, ContactsCsvImport
+from app.core.errors import error_detail, CONTACT_NOT_FOUND, CSV_MISSING_COLUMN
 
 router = APIRouter(prefix="/contacts", tags=["contacts"], responses={**AUTH_RESPONSES})
 
@@ -96,7 +97,7 @@ def update_contact(
 ):
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
     if not contact:
-        raise HTTPException(status_code=404, detail="Contact not found")
+        raise HTTPException(status_code=404, detail=error_detail(CONTACT_NOT_FOUND))
     ensure_adult(db, user.id, contact.family_id)
 
     old_name = contact.full_name
@@ -148,7 +149,7 @@ def delete_contact(
 ):
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
     if not contact:
-        raise HTTPException(status_code=404, detail="Contact not found")
+        raise HTTPException(status_code=404, detail=error_detail(CONTACT_NOT_FOUND))
     ensure_adult(db, user.id, contact.family_id)
 
     # Remove associated birthday entry
@@ -230,7 +231,7 @@ def import_contacts_csv(
     reader = csv.DictReader(io.StringIO(payload.csv_text))
     required = {"full_name"}
     if not required.issubset(set(reader.fieldnames or [])):
-        raise HTTPException(status_code=400, detail="CSV braucht mindestens die Spalte full_name")
+        raise HTTPException(status_code=400, detail=error_detail(CSV_MISSING_COLUMN))
 
     MAX_ROWS = 500
     created = 0

@@ -12,6 +12,7 @@ from app.core.push import get_vapid_public_key
 from app.database import get_db
 from app.models import Notification, NotificationPreference, PushSubscription, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushSubscriptionCreate, PushUnsubscribe
+from app.core.errors import error_detail, NOTIFICATION_NOT_FOUND
 
 router = APIRouter(prefix="/notifications", tags=["notifications"], responses={**AUTH_RESPONSES})
 
@@ -62,7 +63,7 @@ def unread_count(user: User = Depends(current_user), db: Session = Depends(get_d
 def mark_read(notification_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
     notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
     if not notif:
-        raise HTTPException(status_code=404, detail="Notification not found")
+        raise HTTPException(status_code=404, detail=error_detail(NOTIFICATION_NOT_FOUND))
     notif.read = True
     db.commit()
     cache.invalidate(f"tribu:notif_count:{user.id}")
@@ -92,7 +93,7 @@ def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_
 def delete_notification(notification_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
     notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
     if not notif:
-        raise HTTPException(status_code=404, detail="Notification not found")
+        raise HTTPException(status_code=404, detail=error_detail(NOTIFICATION_NOT_FOUND))
     db.delete(notif)
     db.commit()
     cache.invalidate(f"tribu:notif_count:{user.id}")

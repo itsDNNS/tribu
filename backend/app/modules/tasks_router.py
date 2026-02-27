@@ -10,6 +10,7 @@ from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Membership, Task, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
+from app.core.errors import error_detail, TASK_NOT_FOUND, INVALID_STATUS, INVALID_PRIORITY, INVALID_RECURRENCE, ASSIGNEE_NOT_FAMILY_MEMBER, ADULT_REQUIRED
 
 router = APIRouter(prefix="/tasks", tags=["tasks"], responses={**AUTH_RESPONSES})
 
@@ -53,7 +54,7 @@ def list_tasks(
         base = base.filter(Task.assigned_to_user_id == user.id)
     if status is not None:
         if status not in VALID_STATUSES:
-            raise HTTPException(status_code=400, detail=f"Ungültiger Status: {status}")
+            raise HTTPException(status_code=400, detail=error_detail(INVALID_STATUS, status=status))
         base = base.filter(Task.status == status)
     total = base.count()
     items = base.order_by(Task.created_at.desc()).offset(offset).limit(limit).all()
@@ -76,16 +77,16 @@ def create_task(
     ensure_adult(db, user.id, payload.family_id)
 
     if payload.priority not in VALID_PRIORITIES:
-        raise HTTPException(status_code=400, detail=f"Ungültige Priorität: {payload.priority}")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_PRIORITY, priority=payload.priority))
     if payload.recurrence is not None and payload.recurrence not in VALID_RECURRENCES:
-        raise HTTPException(status_code=400, detail=f"Ungültige Wiederholung: {payload.recurrence}")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
     if payload.assigned_to_user_id is not None:
         member = db.query(Membership).filter(
             Membership.user_id == payload.assigned_to_user_id,
             Membership.family_id == payload.family_id,
         ).first()
         if not member:
-            raise HTTPException(status_code=400, detail="Zugewiesener Benutzer ist kein Familienmitglied")
+            raise HTTPException(status_code=400, detail=error_detail(ASSIGNEE_NOT_FAMILY_MEMBER))
 
     task = Task(
         family_id=payload.family_id,
@@ -120,32 +121,32 @@ def update_task(
 ):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
-        raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(TASK_NOT_FOUND))
 
     membership = ensure_family_membership(db, user.id, task.family_id)
     if not membership.is_adult:
         if task.assigned_to_user_id != user.id:
-            raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
+            raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
         fields = payload.model_dump(exclude_unset=True)
         if set(fields.keys()) - {"status"}:
-            raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
+            raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
 
     if payload.priority is not None:
         if payload.priority not in VALID_PRIORITIES:
-            raise HTTPException(status_code=400, detail=f"Ungültige Priorität: {payload.priority}")
+            raise HTTPException(status_code=400, detail=error_detail(INVALID_PRIORITY, priority=payload.priority))
         task.priority = payload.priority
     if payload.status is not None:
         if payload.status not in VALID_STATUSES:
-            raise HTTPException(status_code=400, detail=f"Ungültiger Status: {payload.status}")
+            raise HTTPException(status_code=400, detail=error_detail(INVALID_STATUS, status=payload.status))
     if payload.recurrence is not None and payload.recurrence not in VALID_RECURRENCES:
-        raise HTTPException(status_code=400, detail=f"Ungültige Wiederholung: {payload.recurrence}")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
     if payload.assigned_to_user_id is not None:
         member = db.query(Membership).filter(
             Membership.user_id == payload.assigned_to_user_id,
             Membership.family_id == task.family_id,
         ).first()
         if not member:
-            raise HTTPException(status_code=400, detail="Zugewiesener Benutzer ist kein Familienmitglied")
+            raise HTTPException(status_code=400, detail=error_detail(ASSIGNEE_NOT_FAMILY_MEMBER))
 
     if payload.title is not None:
         task.title = payload.title
@@ -199,7 +200,7 @@ def delete_task(
 ):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
-        raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(TASK_NOT_FOUND))
 
     ensure_adult(db, user.id, task.family_id)
     db.delete(task)

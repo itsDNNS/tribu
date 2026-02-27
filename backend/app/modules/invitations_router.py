@@ -20,6 +20,7 @@ from app.schemas import (
     InviteInfoResponse, RegisterWithInviteRequest,
 )
 from app.security import create_access_token, hash_password
+from app.core.errors import error_detail, INVALID_ROLE, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, ADMIN_REQUIRED
 
 from fastapi.responses import JSONResponse
 
@@ -84,7 +85,7 @@ def create_invitation(
     ensure_family_admin(db, user.id, family_id)
 
     if payload.role_preset not in ("admin", "member"):
-        raise HTTPException(status_code=400, detail="Role must be admin or member")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_ROLE))
 
     token = secrets.token_urlsafe(32)
     expires_at = datetime.utcnow() + timedelta(days=payload.expires_in_days)
@@ -156,7 +157,7 @@ def revoke_invitation(
         .first()
     )
     if not invitation:
-        raise HTTPException(status_code=404, detail="Einladung nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(INVITATION_NOT_FOUND))
 
     invitation.revoked = True
     _audit(db, family_id, user.id, "invite_revoked",
@@ -225,19 +226,19 @@ def register_with_invite(
         .first()
     )
     if not invitation:
-        raise HTTPException(status_code=400, detail="Ungültiger Einladungslink")
+        raise HTTPException(status_code=400, detail=error_detail(INVITATION_INVALID))
 
     now = datetime.utcnow()
     if invitation.revoked:
-        raise HTTPException(status_code=400, detail="Einladung wurde widerrufen")
+        raise HTTPException(status_code=400, detail=error_detail(INVITATION_REVOKED))
     if invitation.expires_at <= now:
-        raise HTTPException(status_code=400, detail="Einladung ist abgelaufen")
+        raise HTTPException(status_code=400, detail=error_detail(INVITATION_EXPIRED))
     if invitation.max_uses is not None and invitation.use_count >= invitation.max_uses:
-        raise HTTPException(status_code=400, detail="Einladung wurde bereits vollständig genutzt")
+        raise HTTPException(status_code=400, detail=error_detail(INVITATION_FULLY_USED))
 
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:
-        raise HTTPException(status_code=400, detail="E-Mail existiert bereits")
+        raise HTTPException(status_code=400, detail=error_detail(EMAIL_ALREADY_EXISTS))
 
     user = User(
         email=payload.email.lower(),
@@ -312,7 +313,7 @@ def set_base_url(
         Membership.user_id == user.id, Membership.role == "admin"
     ).all()
     if not memberships:
-        raise HTTPException(status_code=403, detail="Admin-Berechtigung erforderlich")
+        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
 
     row = db.query(SystemSetting).filter(SystemSetting.key == "base_url").first()
     if row:

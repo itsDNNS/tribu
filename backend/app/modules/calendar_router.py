@@ -13,6 +13,7 @@ from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, Membership, Notification, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, PaginatedCalendarEvents
+from app.core.errors import error_detail, EVENT_NOT_FOUND, END_BEFORE_START, INVALID_RECURRENCE
 
 router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})
 
@@ -171,10 +172,10 @@ def create_calendar_event(
     starts_at = to_utc_naive(payload.starts_at)
     ends_at = to_utc_naive(payload.ends_at)
     if ends_at and ends_at < starts_at:
-        raise HTTPException(status_code=400, detail="Ende muss nach dem Start liegen")
+        raise HTTPException(status_code=400, detail=error_detail(END_BEFORE_START))
 
     if payload.recurrence is not None and payload.recurrence not in VALID_RECURRENCES:
-        raise HTTPException(status_code=400, detail=f"Ungueltige Wiederholung: {payload.recurrence}")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
 
     recurrence_end = to_utc_naive(payload.recurrence_end) if payload.recurrence_end else None
 
@@ -218,7 +219,7 @@ def update_calendar_event(
 ):
     event = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
     if not event:
-        raise HTTPException(status_code=404, detail="Termin nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(EVENT_NOT_FOUND))
 
     ensure_adult(db, user.id, event.family_id)
 
@@ -238,7 +239,7 @@ def update_calendar_event(
             event.recurrence = None
             event.recurrence_end = None
         elif payload.recurrence not in VALID_RECURRENCES:
-            raise HTTPException(status_code=400, detail=f"Ungueltige Wiederholung: {payload.recurrence}")
+            raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
         else:
             event.recurrence = payload.recurrence
     if payload.recurrence_end is not None:
@@ -251,7 +252,7 @@ def update_calendar_event(
             _create_assignment_notifications(db, event, user.id)
 
     if event.ends_at and event.ends_at < event.starts_at:
-        raise HTTPException(status_code=400, detail="Ende muss nach dem Start liegen")
+        raise HTTPException(status_code=400, detail=error_detail(END_BEFORE_START))
 
     db.commit()
     db.refresh(event)
@@ -275,7 +276,7 @@ def delete_calendar_event(
 ):
     event = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
     if not event:
-        raise HTTPException(status_code=404, detail="Termin nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(EVENT_NOT_FOUND))
 
     ensure_adult(db, user.id, event.family_id)
 

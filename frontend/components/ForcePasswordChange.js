@@ -20,7 +20,7 @@ export default function ForcePasswordChange() {
     setSubmitting(true);
     const { ok, data } = await api.apiChangePassword(oldPassword, newPassword);
     if (!ok) {
-      setError(errorText(data?.detail, 'Failed'));
+      setError(errorText(data?.detail, t(messages, 'toast.password_change_failed'), messages));
       setSubmitting(false);
       return;
     }

@@ -39,7 +39,7 @@ export default function InvitePage() {
       display_name: displayName,
     });
     setSubmitting(false);
-    if (!ok) return setMsg(errorText(data?.detail, 'Registration failed'));
+    if (!ok) return setMsg(errorText(data?.detail, t(messages, 'toast.registration_failed'), messages));
     setLoggedIn(true);
     router.push('/');
   }

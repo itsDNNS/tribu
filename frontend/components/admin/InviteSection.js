@@ -54,7 +54,7 @@ export default function InviteSection() {
     if (maxUses) payload.max_uses = parseInt(maxUses);
     const { ok, data } = await api.apiCreateInvitation(familyId, payload);
     if (!ok) {
-      toastError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
     }
     setCreatedUrl(data.invite_url);
@@ -70,7 +70,7 @@ export default function InviteSection() {
     if (!confirm(t(messages, 'invite_revoke_confirm'))) return;
     const { ok, data } = await api.apiRevokeInvitation(familyId, inviteId);
     if (!ok) {
-      toastError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
     }
     await loadInvites();

@@ -23,10 +23,23 @@ export function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-export function errorText(detail, fallback) {
+export function errorText(detail, fallback, messages) {
   if (!detail) return fallback;
   if (typeof detail === 'string') return detail;
+  if (typeof detail === 'object' && detail.code && messages) {
+    let msg = messages[`error.${detail.code}`];
+    if (msg) {
+      if (detail.params) {
+        for (const [k, v] of Object.entries(detail.params)) {
+          msg = msg.replace(`{${k}}`, v);
+        }
+      }
+      return msg;
+    }
+    if (detail.message) return detail.message;
+  }
   if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg;
   if (typeof detail === 'object' && detail.msg) return detail.msg;
+  if (typeof detail === 'object' && detail.message) return detail.message;
   try { return JSON.stringify(detail); } catch { return fallback; }
 }

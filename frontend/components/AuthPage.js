@@ -21,7 +21,7 @@ export default function AuthPage() {
     e.preventDefault();
     setMsg('');
     const { ok, data } = await api.apiLogin(email, password);
-    if (!ok) { setMsg(errorText(data?.detail, 'Login failed')); toastError(errorText(data?.detail, 'Login failed')); return; }
+    if (!ok) { setMsg(errorText(data?.detail, t(messages, 'toast.login_failed'), messages)); toastError(errorText(data?.detail, t(messages, 'toast.login_failed'), messages)); return; }
     setLoggedIn(true);
   }
 
@@ -29,7 +29,7 @@ export default function AuthPage() {
     e.preventDefault();
     setMsg('');
     const { ok, data } = await api.apiRegister(email, password, displayName, familyName);
-    if (!ok) { setMsg(errorText(data?.detail, 'Registration failed')); toastError(errorText(data?.detail, 'Registration failed')); return; }
+    if (!ok) { setMsg(errorText(data?.detail, t(messages, 'toast.registration_failed'), messages)); toastError(errorText(data?.detail, t(messages, 'toast.registration_failed'), messages)); return; }
     setLoggedIn(true);
   }
 

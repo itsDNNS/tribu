@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models import AuditLog, Family, Membership, User
 from app.schemas import AUTH_RESPONSES, ADMIN_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, ErrorResponse, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
+from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF
 
 router = APIRouter(prefix="/families", tags=["families"], responses={**AUTH_RESPONSES})
 
@@ -109,18 +110,18 @@ def set_member_color(
         Membership.user_id == user.id,
     ).first()
     if not membership:
-        raise HTTPException(status_code=404, detail="Not a member of this family")
+        raise HTTPException(status_code=404, detail=error_detail(NOT_A_MEMBER))
 
     if payload.color is not None:
         if payload.color not in ALLOWED_COLORS:
-            raise HTTPException(status_code=400, detail="Color not in allowed palette")
+            raise HTTPException(status_code=400, detail=error_detail(COLOR_NOT_ALLOWED))
         taken = db.query(Membership).filter(
             Membership.family_id == family_id,
             Membership.color == payload.color,
             Membership.user_id != user.id,
         ).first()
         if taken:
-            raise HTTPException(status_code=409, detail="Color already taken by another member")
+            raise HTTPException(status_code=409, detail=error_detail(COLOR_ALREADY_TAKEN))
 
     membership.color = payload.color
     db.commit()
@@ -146,13 +147,13 @@ def create_member(
     ensure_family_admin(db, user.id, family_id)
 
     if payload.role not in ("admin", "member"):
-        raise HTTPException(status_code=400, detail="Role must be admin or member")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_ROLE))
     if payload.role == "admin" and not payload.is_adult:
-        raise HTTPException(status_code=400, detail="Only adults can be admin")
+        raise HTTPException(status_code=400, detail=error_detail(ONLY_ADULTS_ADMIN))
 
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:
-        raise HTTPException(status_code=409, detail="Email already in use")
+        raise HTTPException(status_code=409, detail=error_detail(EMAIL_ALREADY_EXISTS))
 
     temp_password = generate_temp_password()
 
@@ -210,10 +211,10 @@ def update_member_adult(
         Membership.user_id == target_user_id,
     ).first()
     if not membership:
-        raise HTTPException(status_code=404, detail="Mitglied nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
 
     if not payload.is_adult and target_user_id == user.id:
-        raise HTTPException(status_code=400, detail="Cannot change own adult status")
+        raise HTTPException(status_code=400, detail=error_detail(CANNOT_CHANGE_OWN_ADULT))
 
     membership.is_adult = payload.is_adult
     if not payload.is_adult and membership.role == "admin":
@@ -248,16 +249,16 @@ def update_member_role(
         Membership.user_id == target_user_id,
     ).first()
     if not membership:
-        raise HTTPException(status_code=404, detail="Mitglied nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
 
     if payload.role not in ["admin", "member"]:
-        raise HTTPException(status_code=400, detail="Rolle muss admin oder member sein")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_ROLE))
 
     if payload.role == "member" and target_user_id == user.id:
-        raise HTTPException(status_code=400, detail="Cannot demote yourself")
+        raise HTTPException(status_code=400, detail=error_detail(CANNOT_DEMOTE_SELF))
 
     if payload.role == "admin" and not membership.is_adult:
-        raise HTTPException(status_code=400, detail="Nur Erwachsene können Admin werden")
+        raise HTTPException(status_code=400, detail=error_detail(ONLY_ADULTS_ADMIN))
 
     old_role = membership.role
     membership.role = payload.role
@@ -287,18 +288,18 @@ def reset_member_password(
     ensure_family_admin(db, user.id, family_id)
 
     if target_user_id == user.id:
-        raise HTTPException(status_code=400, detail="Cannot reset your own password here")
+        raise HTTPException(status_code=400, detail=error_detail(CANNOT_RESET_OWN_PASSWORD))
 
     membership = db.query(Membership).filter(
         Membership.family_id == family_id,
         Membership.user_id == target_user_id,
     ).first()
     if not membership:
-        raise HTTPException(status_code=404, detail="Member not found")
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
 
     target_user = db.query(User).filter(User.id == target_user_id).first()
     if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=error_detail(USER_NOT_FOUND))
 
     temp_password = generate_temp_password()
     target_user.password_hash = hash_password(temp_password)
@@ -329,14 +330,14 @@ def remove_member(
     ensure_family_admin(db, user.id, family_id)
 
     if target_user_id == user.id:
-        raise HTTPException(status_code=400, detail="Cannot remove yourself")
+        raise HTTPException(status_code=400, detail=error_detail(CANNOT_REMOVE_SELF))
 
     membership = db.query(Membership).filter(
         Membership.family_id == family_id,
         Membership.user_id == target_user_id,
     ).first()
     if not membership:
-        raise HTTPException(status_code=404, detail="Member not found")
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
 
     target_user = db.query(User).filter(User.id == target_user_id).first()
     display_name = target_user.display_name if target_user else None

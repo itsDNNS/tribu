@@ -62,7 +62,7 @@ export function useContacts() {
       setContacts((prev) => [...prev, newContact].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'de')));
     } else {
       const { ok, data } = await api.apiCreateContact(payload);
-      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error')));
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadContacts();
       await loadDashboard();
     }
@@ -93,7 +93,7 @@ export function useContacts() {
       );
     } else {
       const { ok, data } = await api.apiUpdateContact(editingContact.id, payload);
-      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error')));
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadContacts();
       await loadDashboard();
     }

@@ -12,6 +12,7 @@ import os
 
 from app.core.deps import current_user
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
+from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT
 from app.database import get_db, SessionLocal
 from app.models import Family, Membership, SystemSetting, User
 from app.modules.birthdays_router import router as birthdays_router
@@ -74,11 +75,15 @@ curl -H "Authorization: Bearer tribu_pat_abc123..." \\
 
 ## Error Format
 
-All errors return JSON with a `detail` field:
+All errors return JSON with a structured `detail` field:
 
 ```json
-{"detail": "Human-readable error message"}
+{"detail": {"code": "MEMBER_NOT_FOUND", "message": "Member not found", "params": {}}}
 ```
+
+The `code` field is a stable identifier for client-side i18n. The `message` field
+provides a human-readable English fallback. The optional `params` field contains
+interpolation values (e.g. `{"status": "invalid"}`).
 
 Common HTTP status codes: `400` (bad request), `401` (not authenticated),
 `403` (forbidden), `404` (not found), `409` (conflict), `422` (validation error),
@@ -184,7 +189,7 @@ def health():
 def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:
-        raise HTTPException(status_code=400, detail="E-Mail existiert bereits")
+        raise HTTPException(status_code=400, detail=error_detail(EMAIL_ALREADY_EXISTS))
 
     user = User(
         email=payload.email.lower(),
@@ -227,7 +232,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Ungültige Zugangsdaten")
+        raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
 
     if needs_rehash(user.password_hash):
         user.password_hash = hash_password(payload.password)
@@ -282,7 +287,7 @@ def change_password(
     db: Session = Depends(get_db),
 ):
     if not verify_password(payload.old_password, user.password_hash):
-        raise HTTPException(status_code=400, detail="Old password is incorrect")
+        raise HTTPException(status_code=400, detail=error_detail(OLD_PASSWORD_INCORRECT))
     user.password_hash = hash_password(payload.new_password)
     user.must_change_password = False
     db.commit()

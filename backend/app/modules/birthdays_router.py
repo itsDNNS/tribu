@@ -7,6 +7,7 @@ from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import FamilyBirthday, User
 from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ErrorResponse, BirthdayCreate, BirthdayUpdate, BirthdayResponse
+from app.core.errors import error_detail, BIRTHDAY_NOT_FOUND, INVALID_MONTH, INVALID_DAY
 
 router = APIRouter(prefix="/birthdays", tags=["birthdays"], responses={**AUTH_RESPONSES})
 
@@ -44,9 +45,9 @@ def create_birthday(
     ensure_family_membership(db, user.id, payload.family_id)
 
     if payload.month < 1 or payload.month > 12:
-        raise HTTPException(status_code=400, detail="Monat muss zwischen 1 und 12 liegen")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_MONTH))
     if payload.day < 1 or payload.day > 31:
-        raise HTTPException(status_code=400, detail="Tag muss zwischen 1 und 31 liegen")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_DAY))
 
     birthday = FamilyBirthday(
         family_id=payload.family_id,
@@ -78,18 +79,18 @@ def update_birthday(
 ):
     birthday = db.query(FamilyBirthday).filter(FamilyBirthday.id == birthday_id).first()
     if not birthday:
-        raise HTTPException(status_code=404, detail="Birthday not found")
+        raise HTTPException(status_code=404, detail=error_detail(BIRTHDAY_NOT_FOUND))
     ensure_family_membership(db, user.id, birthday.family_id)
 
     if payload.person_name is not None:
         birthday.person_name = payload.person_name
     if payload.month is not None:
         if payload.month < 1 or payload.month > 12:
-            raise HTTPException(status_code=400, detail="Monat muss zwischen 1 und 12 liegen")
+            raise HTTPException(status_code=400, detail=error_detail(INVALID_MONTH))
         birthday.month = payload.month
     if payload.day is not None:
         if payload.day < 1 or payload.day > 31:
-            raise HTTPException(status_code=400, detail="Tag muss zwischen 1 und 31 liegen")
+            raise HTTPException(status_code=400, detail=error_detail(INVALID_DAY))
         birthday.day = payload.day
 
     db.commit()
@@ -113,7 +114,7 @@ def delete_birthday(
 ):
     birthday = db.query(FamilyBirthday).filter(FamilyBirthday.id == birthday_id).first()
     if not birthday:
-        raise HTTPException(status_code=404, detail="Birthday not found")
+        raise HTTPException(status_code=404, detail=error_detail(BIRTHDAY_NOT_FOUND))
     ensure_family_membership(db, user.id, birthday.family_id)
 
     family_id = birthday.family_id

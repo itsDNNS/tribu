@@ -6,6 +6,7 @@ from app.core.scopes import VALID_SCOPES, require_scope
 from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, PATCreate, PATCreatedResponse, PATResponse
+from app.core.errors import error_detail, ADULT_REQUIRED, INVALID_SCOPES, TOKEN_LIMIT_REACHED, API_TOKEN_NOT_FOUND, API_TOKEN_NO_ACCESS
 from app.security import generate_pat
 
 router = APIRouter(prefix="/tokens", tags=["tokens"], responses={**AUTH_RESPONSES})
@@ -18,7 +19,7 @@ def _ensure_user_is_adult(db: Session, user_id: int):
         Membership.user_id == user_id, Membership.is_adult == True,
     ).first()
     if not adult:
-        raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
+        raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
 
 
 @router.get(
@@ -58,11 +59,11 @@ def create_token(
     _ensure_user_is_adult(db, user.id)
     invalid = set(payload.scopes) - VALID_SCOPES
     if invalid:
-        raise HTTPException(status_code=400, detail=f"Ungültige Scopes: {', '.join(sorted(invalid))}")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_SCOPES, scopes=', '.join(sorted(invalid))))
 
     count = db.query(PersonalAccessToken).filter(PersonalAccessToken.user_id == user.id).count()
     if count >= MAX_TOKENS_PER_USER:
-        raise HTTPException(status_code=400, detail=f"Maximum {MAX_TOKENS_PER_USER} Tokens erreicht")
+        raise HTTPException(status_code=400, detail=error_detail(TOKEN_LIMIT_REACHED, limit=MAX_TOKENS_PER_USER))
 
     plain, token_hash = generate_pat()
     scopes_str = ",".join(sorted(payload.scopes))
@@ -97,9 +98,9 @@ def revoke_token(
     _ensure_user_is_adult(db, user.id)
     pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.id == token_id).first()
     if not pat:
-        raise HTTPException(status_code=404, detail="Token nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(API_TOKEN_NOT_FOUND))
     if pat.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Kein Zugriff auf dieses Token")
+        raise HTTPException(status_code=403, detail=error_detail(API_TOKEN_NO_ACCESS))
 
     db.delete(pat)
     db.commit()
