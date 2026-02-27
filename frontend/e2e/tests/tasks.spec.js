@@ -75,9 +75,10 @@ test.describe('Tasks', () => {
       await page.locator('.tasks-filter-tabs').waitFor({ timeout: 10000 });
     }
 
-    // "All" tab
+    // "All" tab — wait for both tasks to confirm data is loaded
     await page.locator('.tasks-filter-btn', { hasText: 'All' }).click();
-    await expect(page.getByText('Still Open')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Still Open')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Already Done')).toBeVisible({ timeout: 5000 });
 
     // "Open" tab
     await page.locator('.tasks-filter-btn', { hasText: 'Open' }).click();
