@@ -9,6 +9,7 @@ from app.core.backup import restore_backup, validate_backup
 from app.database import get_db, engine
 from app.models import User
 from app.schemas import CONFLICT_RESPONSE, ErrorResponse, SetupStatusResponse, RestoreResponse
+from app.core.errors import error_detail, SETUP_ALREADY_COMPLETED, INVALID_FILE_FORMAT, RESTORE_IN_PROGRESS, RESTORE_FAILED
 
 router = APIRouter(prefix="/setup", tags=["setup"])
 
@@ -46,13 +47,13 @@ def setup_restore(
     db: Session = Depends(get_db),
 ):
     if not _needs_setup(db):
-        raise HTTPException(status_code=403, detail="Setup already completed")
+        raise HTTPException(status_code=403, detail=error_detail(SETUP_ALREADY_COMPLETED))
 
     if not file.filename or not file.filename.endswith(".tar.gz"):
-        raise HTTPException(status_code=400, detail="File must be a .tar.gz archive")
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_FILE_FORMAT))
 
     if not _restore_lock.acquire(blocking=False):
-        raise HTTPException(status_code=409, detail="Restore already in progress")
+        raise HTTPException(status_code=409, detail=error_detail(RESTORE_IN_PROGRESS))
 
     try:
         with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tmp:
@@ -72,9 +73,9 @@ def setup_restore(
             created_at=meta.get("created_at"),
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=error_detail(RESTORE_FAILED, reason=str(e)))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Restore failed: {e}")
+        raise HTTPException(status_code=500, detail=error_detail(RESTORE_FAILED, reason=str(e)))
     finally:
         _restore_lock.release()
         try:

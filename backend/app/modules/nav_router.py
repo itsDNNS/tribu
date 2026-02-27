@@ -6,6 +6,7 @@ from app.core.deps import current_user
 from app.database import get_db
 from app.models import User, UserNavOrder
 from app.schemas import AUTH_RESPONSES, ErrorResponse, NavOrderResponse, NavOrderUpdate
+from app.core.errors import error_detail, UNKNOWN_NAV_KEYS
 
 router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})
 
@@ -40,7 +41,7 @@ def get_nav_order(user: User = Depends(current_user), db: Session = Depends(get_
 def update_nav_order(payload: NavOrderUpdate, user: User = Depends(current_user), db: Session = Depends(get_db)):
     invalid = [k for k in payload.nav_order if k not in KNOWN_KEYS]
     if invalid:
-        raise HTTPException(status_code=422, detail=f"Unknown nav keys: {', '.join(invalid)}")
+        raise HTTPException(status_code=422, detail=error_detail(UNKNOWN_NAV_KEYS, keys=', '.join(invalid)))
 
     row = db.query(UserNavOrder).filter(UserNavOrder.user_id == user.id).first()
     if row:

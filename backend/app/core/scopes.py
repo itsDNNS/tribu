@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, Request, status
+from app.core.errors import error_detail, INSUFFICIENT_SCOPE
 
 SCOPE_DESCRIPTIONS: dict[str, str] = {
     "*": "Full access to all resources (wildcard)",
@@ -39,6 +40,6 @@ def require_scope(scope: str):
         if not has_scope(pat_scopes, scope):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Token fehlt Berechtigung: {scope}",
+                detail=error_detail(INSUFFICIENT_SCOPE, scope=scope),
             )
     return Depends(_check)

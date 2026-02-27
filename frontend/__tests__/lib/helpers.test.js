@@ -47,4 +47,36 @@ describe('errorText', () => {
   it('stringifies unknown objects', () => {
     expect(errorText({ code: 42 }, 'fallback')).toBe('{"code":42}');
   });
+
+  it('returns localized message for structured error with matching code', () => {
+    const messages = { 'error.MEMBER_NOT_FOUND': 'Member not found' };
+    const detail = { code: 'MEMBER_NOT_FOUND', message: 'Mitglied nicht gefunden' };
+    expect(errorText(detail, 'fallback', messages)).toBe('Member not found');
+  });
+
+  it('interpolates params in localized message', () => {
+    const messages = { 'error.INVALID_STATUS': 'Invalid status: {status}' };
+    const detail = { code: 'INVALID_STATUS', message: 'Invalid status: foo', params: { status: 'foo' } };
+    expect(errorText(detail, 'fallback', messages)).toBe('Invalid status: foo');
+  });
+
+  it('falls back to detail.message when code not in messages', () => {
+    const messages = {};
+    const detail = { code: 'UNKNOWN_CODE', message: 'Some error' };
+    expect(errorText(detail, 'fallback', messages)).toBe('Some error');
+  });
+
+  it('falls back to detail.message when no messages dict provided', () => {
+    const detail = { code: 'MEMBER_NOT_FOUND', message: 'Member not found' };
+    expect(errorText(detail, 'fallback')).toBe('Member not found');
+  });
+
+  it('returns message from object without code', () => {
+    expect(errorText({ message: 'plain error' }, 'fallback')).toBe('plain error');
+  });
+
+  it('backward compat: 2-arg call still works', () => {
+    expect(errorText('direct string', 'fallback')).toBe('direct string');
+    expect(errorText(null, 'fallback')).toBe('fallback');
+  });
 });

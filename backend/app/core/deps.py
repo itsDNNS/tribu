@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
 from app.security import decode_token, hash_pat, is_pat
 from app.core.scopes import parse_scopes
+from app.core.errors import error_detail, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED, USER_NOT_FOUND, NO_FAMILY_ACCESS, ADULT_REQUIRED, ADMIN_REQUIRED
 
 security = HTTPBearer(
     auto_error=False,
@@ -32,14 +33,14 @@ def _resolve_user(request: Request, token_str: str, db: Session) -> User:
         token_hash = hash_pat(token_str)
         pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.token_hash == token_hash).first()
         if not pat:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
         if pat.expires_at and pat.expires_at < datetime.utcnow():
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token abgelaufen")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(TOKEN_EXPIRED))
         pat.last_used_at = datetime.utcnow()
         db.commit()
         user = db.query(User).filter(User.id == pat.user_id).first()
         if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Benutzer nicht gefunden")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(USER_NOT_FOUND))
         request.state.pat_scopes = parse_scopes(pat.scopes)
         return user
 
@@ -47,11 +48,11 @@ def _resolve_user(request: Request, token_str: str, db: Session) -> User:
         payload = decode_token(token_str)
         user_id = int(payload.get("sub"))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Benutzer nicht gefunden")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(USER_NOT_FOUND))
     request.state.pat_scopes = None
     return user
 
@@ -65,7 +66,7 @@ def current_user(
     if not token and creds:
         token = creds.credentials
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(UNAUTHENTICATED))
 
     return _resolve_user(request, token, db)
 
@@ -83,7 +84,7 @@ def current_user_via_token_param(
     if not token_str and token:
         token_str = token
     if not token_str:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(UNAUTHENTICATED))
 
     return _resolve_user(request, token_str, db)
 
@@ -102,21 +103,21 @@ def ensure_family_membership(db: Session, user_id: int, family_id: int):
         Membership.family_id == family_id,
     ).first()
     if not membership:
-        raise HTTPException(status_code=403, detail="Kein Zugriff auf diese Familie")
+        raise HTTPException(status_code=403, detail=error_detail(NO_FAMILY_ACCESS))
     return membership
 
 
 def ensure_adult(db: Session, user_id: int, family_id: int):
     membership = ensure_family_membership(db, user_id, family_id)
     if not membership.is_adult:
-        raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
+        raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
     return membership
 
 
 def ensure_family_admin(db: Session, user_id: int, family_id: int):
     membership = ensure_family_membership(db, user_id, family_id)
     if membership.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin Rolle erforderlich")
+        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
     return membership
 
 

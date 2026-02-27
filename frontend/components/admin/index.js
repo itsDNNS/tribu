@@ -26,7 +26,7 @@ export default function AdminView() {
     if (!confirm(t(messages, 'remove_member_confirm'))) return;
     const { ok, data } = await api.apiRemoveMember(familyId, userId);
     if (!ok) {
-      toastError(errorText(data?.detail, 'Failed to remove member'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
     }
     await loadMembers();
@@ -35,7 +35,7 @@ export default function AdminView() {
   async function handleSetAdult(userId, isAdult) {
     const { ok, data } = await api.apiSetAdult(familyId, userId, isAdult);
     if (!ok) {
-      toastError(errorText(data?.detail, 'Failed'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
     }
     const member = members.find((m) => m.user_id === userId);
@@ -48,7 +48,7 @@ export default function AdminView() {
   async function handleSetRole(userId, role) {
     const { ok, data } = await api.apiSetRole(familyId, userId, role);
     if (!ok) {
-      toastError(errorText(data?.detail, 'Failed to set role'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
     }
     await loadMembers();
@@ -64,7 +64,7 @@ export default function AdminView() {
       is_adult: newIsAdult,
     });
     if (!ok) {
-      toastError(errorText(data?.detail, 'Failed to create member'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       setCreating('');
       return;
     }
@@ -82,7 +82,7 @@ export default function AdminView() {
   async function handleResetPassword(userId) {
     const { ok, data } = await api.apiResetMemberPassword(familyId, userId);
     if (!ok) {
-      toastError(errorText(data?.detail, 'Failed to reset password'));
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
     }
     setCreatedPassword(data.temporary_password);

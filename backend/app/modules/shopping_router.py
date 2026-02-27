@@ -25,6 +25,7 @@ from app.schemas import (
     ShoppingListCreate,
     ShoppingListResponse,
 )
+from app.core.errors import error_detail, SHOPPING_LIST_NOT_FOUND, SHOPPING_ITEM_NOT_FOUND, ADULT_REQUIRED
 
 router = APIRouter(prefix="/shopping", tags=["shopping"], responses={**AUTH_RESPONSES})
 
@@ -106,7 +107,7 @@ def delete_list(
 ):
     sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
     if not sl:
-        raise HTTPException(status_code=404, detail="Liste nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
     family_id = sl.family_id
     ensure_adult(db, user.id, family_id)
     db.delete(sl)
@@ -134,7 +135,7 @@ def get_items(
 ):
     sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
     if not sl:
-        raise HTTPException(status_code=404, detail="Liste nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
     ensure_family_membership(db, user.id, sl.family_id)
     items = (
         db.query(ShoppingItem)
@@ -162,7 +163,7 @@ def add_item(
 ):
     sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
     if not sl:
-        raise HTTPException(status_code=404, detail="Liste nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
     ensure_adult(db, user.id, sl.family_id)
     item = ShoppingItem(
         list_id=list_id,
@@ -194,13 +195,13 @@ def update_item(
 ):
     item = db.query(ShoppingItem).filter(ShoppingItem.id == item_id).first()
     if not item:
-        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_ITEM_NOT_FOUND))
     sl = db.query(ShoppingList).filter(ShoppingList.id == item.list_id).first()
     membership = ensure_family_membership(db, user.id, sl.family_id)
     if not membership.is_adult:
         fields = payload.model_dump(exclude_unset=True)
         if set(fields.keys()) - {"checked"}:
-            raise HTTPException(status_code=403, detail="Erwachsenen-Berechtigung erforderlich")
+            raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
 
     if payload.name is not None:
         item.name = payload.name
@@ -231,7 +232,7 @@ def delete_item(
 ):
     item = db.query(ShoppingItem).filter(ShoppingItem.id == item_id).first()
     if not item:
-        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_ITEM_NOT_FOUND))
     sl = db.query(ShoppingList).filter(ShoppingList.id == item.list_id).first()
     ensure_adult(db, user.id, sl.family_id)
     list_id = item.list_id
@@ -256,7 +257,7 @@ def clear_checked(
 ):
     sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
     if not sl:
-        raise HTTPException(status_code=404, detail="Liste nicht gefunden")
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
     ensure_adult(db, user.id, sl.family_id)
     deleted = db.query(ShoppingItem).filter(
         ShoppingItem.list_id == list_id,

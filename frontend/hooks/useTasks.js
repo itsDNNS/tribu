@@ -39,7 +39,7 @@ export function useTasks() {
       setTasks((prev) => [newTask, ...prev]);
     } else {
       const { ok, data } = await api.apiCreateTask(payload);
-      if (!ok) return toastError(errorText(data?.detail, 'Failed to create task'));
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadTasks();
     }
     setTaskTitle(''); setTaskDesc(''); setTaskDueDate(''); setTaskPriority('normal'); setTaskRecurrence(''); setTaskAssignee('');

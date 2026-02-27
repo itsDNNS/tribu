@@ -145,7 +145,7 @@ export function useCalendar() {
       }));
     } else {
       const { ok, data } = await api.apiCreateEvent(payload);
-      if (!ok) return toastError(errorText(data?.detail, 'Failed to create event'));
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
     setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
@@ -179,7 +179,7 @@ export function useCalendar() {
       }));
     } else {
       const { ok, data } = await api.apiDeleteEvent(eventId, occurrenceDate);
-      if (!ok) return toastError(errorText(data?.detail, 'Failed to delete event'));
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
     setDeleteConfirm(null);
@@ -212,7 +212,7 @@ export function useCalendar() {
         family_id: Number(familyId), person_name: birthdayName,
         month: Number(birthdayMonth), day: Number(birthdayDay),
       });
-      if (!ok) return toastError(errorText(data?.detail, 'Failed to save birthday'));
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadDashboard();
     }
     setBirthdayName(''); setBirthdayMonth(''); setBirthdayDay('');

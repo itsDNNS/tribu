@@ -12,6 +12,7 @@ from app.core.scheduler import configure_backup_schedule
 from app.database import get_db
 from app.models import Membership, SystemSetting, User
 from app.schemas import ADMIN_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, BackupConfigResponse, BackupConfigUpdate, BackupEntry, BackupSchedule
+from app.core.errors import error_detail, ADMIN_REQUIRED, BACKUP_NOT_FOUND, BACKUP_FAILED
 
 router = APIRouter(prefix="/admin/backup", tags=["backup"], responses={**ADMIN_RESPONSES})
 
@@ -25,7 +26,7 @@ def _require_admin(user: User, db: Session):
         Membership.role == "admin",
     ).first()
     if not membership:
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
 
 
 def _get_setting(db: Session, key: str, default: str = "") -> str:
@@ -107,7 +108,7 @@ def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get
         _set_setting(db, "backup_last_timestamp", datetime.utcnow().isoformat())
         _set_setting(db, "backup_last_status", "failed")
         db.commit()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=error_detail(BACKUP_FAILED, reason=str(e)))
 
 
 @router.get(
@@ -134,7 +135,7 @@ def download_backup(filename: str, user: User = Depends(current_user), db: Sessi
     _require_admin(user, db)
     path = get_backup_path(BACKUP_DIR, filename)
     if not path:
-        raise HTTPException(status_code=404, detail="Backup not found")
+        raise HTTPException(status_code=404, detail=error_detail(BACKUP_NOT_FOUND))
     return FileResponse(path, media_type="application/gzip", filename=filename)
 
 
@@ -148,5 +149,5 @@ def download_backup(filename: str, user: User = Depends(current_user), db: Sessi
 def delete_single_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
     _require_admin(user, db)
     if not delete_backup(BACKUP_DIR, filename):
-        raise HTTPException(status_code=404, detail="Backup not found")
+        raise HTTPException(status_code=404, detail=error_detail(BACKUP_NOT_FOUND))
     return {"status": "ok"}

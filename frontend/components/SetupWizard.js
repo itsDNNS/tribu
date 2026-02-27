@@ -73,7 +73,7 @@ export default function SetupWizard() {
     setMsg('');
     const { ok, data } = await api.apiRestoreBackup(restoreFile);
     setSubmitting(false);
-    if (!ok) return setMsg(errorText(data?.detail, t(messages, 'setup_restore_failed')));
+    if (!ok) return setMsg(errorText(data?.detail, t(messages, 'setup_restore_failed'), messages));
     setRestoreMeta(data);
   };
 
@@ -84,7 +84,7 @@ export default function SetupWizard() {
     setSubmitting(true);
     const { ok, data } = await api.apiRegister(email, password, displayName, familyName);
     setSubmitting(false);
-    if (!ok) return setMsg(errorText(data?.detail, t(messages, 'setup_admin_failed')));
+    if (!ok) return setMsg(errorText(data?.detail, t(messages, 'setup_admin_failed'), messages));
     nextStep();
   };
 

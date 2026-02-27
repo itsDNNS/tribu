@@ -58,7 +58,7 @@ export function useBirthdays() {
       setBirthdays((prev) => [...prev, newBirthday].sort((a, b) => a.month - b.month || a.day - b.day));
     } else {
       const { ok, data } = await api.apiAddBirthday(payload);
-      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error')));
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadBirthdays();
       await loadDashboard();
     }
@@ -91,7 +91,7 @@ export function useBirthdays() {
       );
     } else {
       const { ok, data } = await api.apiUpdateBirthday(editingBirthday.id, payload);
-      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error')));
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadBirthdays();
       await loadDashboard();
     }
