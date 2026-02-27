@@ -86,9 +86,10 @@ class MeResponse(BaseModel):
     display_name: str = Field(..., description="Display name")
     profile_image: Optional[str] = Field(None, description="Base64-encoded profile image or null")
     must_change_password: bool = Field(False, description="True if user must change their temporary password")
+    has_completed_onboarding: bool = Field(True, description="True if user has completed the onboarding wizard")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"user_id": 1, "email": "anna@example.com", "display_name": "Anna", "profile_image": None, "must_change_password": False}]
+        "examples": [{"user_id": 1, "email": "anna@example.com", "display_name": "Anna", "profile_image": None, "must_change_password": False, "has_completed_onboarding": True}]
     })
 
 

@@ -5,7 +5,7 @@ import { buildUi } from '../lib/styles';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
 
-export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'contacts', 'birthdays', 'notifications', 'settings', 'admin'];
+export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'contacts', 'notifications', 'settings', 'admin'];
 
 const AppContext = createContext(null);
 

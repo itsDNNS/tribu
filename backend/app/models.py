@@ -15,6 +15,7 @@ class User(Base):
     display_name = Column(String, nullable=False)
     profile_image = Column(String, nullable=True)
     must_change_password = Column(Boolean, nullable=False, default=False, server_default="false")
+    has_completed_onboarding = Column(Boolean, nullable=False, default=False, server_default="false")
 
     memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
     personal_access_tokens = relationship("PersonalAccessToken", back_populates="user", cascade="all, delete-orphan")

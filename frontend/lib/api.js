@@ -57,6 +57,10 @@ export function apiChangePassword(old_password, new_password) {
   return patch('/auth/me/password', { old_password, new_password });
 }
 
+export function apiCompleteOnboarding() {
+  return post('/auth/me/complete-onboarding');
+}
+
 // Families
 export function apiGetMyFamilies() {
   return request('/families/me');

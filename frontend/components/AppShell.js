@@ -1,24 +1,24 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Bell, Cake, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal } from 'lucide-react';
+import { Bell, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import DashboardView from './DashboardView';
 import CalendarView from './calendar';
 import ContactsView from './ContactsView';
-import BirthdaysView from './BirthdaysView';
+
 import TasksView from './TasksView';
 import ShoppingView from './ShoppingView';
 import SettingsView from './settings';
 import AdminView from './admin';
 import NotificationCenter from './NotificationCenter';
 import ForcePasswordChange from './ForcePasswordChange';
+import OnboardingWizard from './OnboardingWizard';
 
 const views = {
   dashboard: DashboardView,
   calendar: CalendarView,
   shopping: ShoppingView,
   contacts: ContactsView,
-  birthdays: BirthdaysView,
   tasks: TasksView,
   notifications: NotificationCenter,
   settings: SettingsView,
@@ -70,7 +70,6 @@ export default function AppShell() {
     shopping: { key: 'shopping', icon: ShoppingCart, label: t(messages, 'module.shopping.name'), mobileLabel: t(messages, 'module.shopping.name'), badge: totalUnchecked || null },
     tasks: { key: 'tasks', icon: CheckSquare, label: t(messages, 'module.tasks.name'), mobileLabel: t(messages, 'module.tasks.name'), badge: openTaskCount || null },
     contacts: { key: 'contacts', icon: BookUser, label: t(messages, 'contacts'), mobileLabel: t(messages, 'contacts') },
-    birthdays: { key: 'birthdays', icon: Cake, label: t(messages, 'module.birthdays.name'), mobileLabel: t(messages, 'module.birthdays.name') },
     notifications: { key: 'notifications', icon: Bell, label: t(messages, 'notifications'), mobileLabel: t(messages, 'notifications'), badge: unreadCount || null },
     settings: { key: 'settings', icon: Settings, label: t(messages, 'settings'), mobileLabel: t(messages, 'settings') },
     admin: { key: 'admin', icon: Shield, label: t(messages, 'admin'), mobileLabel: t(messages, 'admin') },
@@ -264,7 +263,7 @@ export default function AppShell() {
         )}
 
         <div className="view-enter">
-          {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : <ActiveComponent />}
+          {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : <ActiveComponent />}
         </div>
       </main>
 

@@ -195,6 +195,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
         email=payload.email.lower(),
         password_hash=hash_password(payload.password),
         display_name=payload.display_name,
+        has_completed_onboarding=True,
     )
     db.add(user)
     db.flush()
@@ -270,7 +271,7 @@ def logout():
     response_description="User profile",
 )
 def me(user: User = Depends(current_user), _scope=require_scope("profile:read")):
-    return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image, must_change_password=user.must_change_password)
+    return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image, must_change_password=user.must_change_password, has_completed_onboarding=user.has_completed_onboarding)
 
 
 @app.patch(
@@ -309,6 +310,24 @@ def update_profile_image(
     _scope=require_scope("profile:write"),
 ):
     user.profile_image = payload.profile_image
+    db.commit()
+    return {"status": "ok"}
+
+
+@app.post(
+    "/auth/me/complete-onboarding",
+    tags=["auth"],
+    summary="Complete onboarding",
+    description="Mark the onboarding wizard as completed for the current user. Scope: `profile:write`.",
+    responses={**AUTH_RESPONSES},
+    response_description="Onboarding completed",
+)
+def complete_onboarding(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
+):
+    user.has_completed_onboarding = True
     db.commit()
     return {"status": "ok"}
 
