@@ -221,11 +221,11 @@ export default function CalendarView() {
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.color')}</div>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         <button type="button" onClick={() => cal.setColor('')}
-                          style={{ width: 22, height: 22, borderRadius: '50%', border: !cal.color ? '2px solid var(--text)' : '2px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer' }}
+                          style={{ width: 22, height: 22, borderRadius: '50%', border: !cal.color ? '2px solid var(--text-primary)' : '2px solid var(--glass-border)', background: 'var(--void-surface)', cursor: 'pointer' }}
                           aria-label={t(messages, 'module.calendar.color_none')} />
                         {COLOR_PALETTE.slice(0, 8).map(c => (
                           <button type="button" key={c} onClick={() => cal.setColor(c)}
-                            style={{ width: 22, height: 22, borderRadius: '50%', border: cal.color === c ? '2px solid var(--text)' : '2px solid transparent', background: c, cursor: 'pointer' }}
+                            style={{ width: 22, height: 22, borderRadius: '50%', border: cal.color === c ? '2px solid var(--text-primary)' : '2px solid transparent', background: c, cursor: 'pointer' }}
                             aria-label={c} />
                         ))}
                       </div>
@@ -322,11 +322,11 @@ export default function CalendarView() {
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.color')}</div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   <button type="button" onClick={() => cal.setColor('')}
-                    style={{ width: 22, height: 22, borderRadius: '50%', border: !cal.color ? '2px solid var(--text)' : '2px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer' }}
+                    style={{ width: 22, height: 22, borderRadius: '50%', border: !cal.color ? '2px solid var(--text-primary)' : '2px solid var(--glass-border)', background: 'var(--void-surface)', cursor: 'pointer' }}
                     aria-label={t(messages, 'module.calendar.color_none')} />
                   {COLOR_PALETTE.slice(0, 8).map(c => (
                     <button type="button" key={c} onClick={() => cal.setColor(c)}
-                      style={{ width: 22, height: 22, borderRadius: '50%', border: cal.color === c ? '2px solid var(--text)' : '2px solid transparent', background: c, cursor: 'pointer' }}
+                      style={{ width: 22, height: 22, borderRadius: '50%', border: cal.color === c ? '2px solid var(--text-primary)' : '2px solid transparent', background: c, cursor: 'pointer' }}
                       aria-label={c} />
                   ))}
                 </div>
