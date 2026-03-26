@@ -36,5 +36,8 @@
   "module.calendar.import_cta": "Noch keine Termine? ICS in den Einstellungen importieren.",
   "module.calendar.assign_to": "Zuweisen an",
   "module.calendar.assign_all": "Alle",
-  "module.calendar.event_assigned": "Du wurdest getaggt in: {title}"
+  "module.calendar.event_assigned": "Du wurdest getaggt in: {title}",
+  "module.calendar.color": "Terminfarbe",
+  "module.calendar.color_none": "Keine Farbe",
+  "module.calendar.category": "Kategorie"
 }

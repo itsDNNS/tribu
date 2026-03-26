@@ -239,6 +239,8 @@ class CalendarEventCreate(BaseModel):
     recurrence: Optional[str] = Field(None, description="Recurrence rule: 'daily', 'weekly', 'biweekly', 'monthly', or 'yearly'")
     recurrence_end: Optional[datetime] = Field(None, description="End date for recurrence (null = indefinite)")
     assigned_to: Optional[Union[list[int], str]] = Field(None, description="Assigned members: null (nobody), 'all' (whole family), or list of user IDs")
+    color: Optional[str] = Field(None, description="Event color as hex string (e.g. '#7c3aed')")
+    category: Optional[str] = Field(None, description="Event category label")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"family_id": 1, "title": "Family Dinner", "starts_at": "2026-03-01T18:00:00", "ends_at": "2026-03-01T20:00:00", "all_day": False, "recurrence": "weekly", "recurrence_end": "2026-06-01T00:00:00", "assigned_to": [1, 3]}]
@@ -255,6 +257,8 @@ class CalendarEventUpdate(BaseModel):
     recurrence: Optional[str] = Field(None, description="Recurrence rule: 'daily', 'weekly', 'biweekly', 'monthly', 'yearly', or null to remove")
     recurrence_end: Optional[datetime] = Field(None, description="End date for recurrence")
     assigned_to: Optional[Union[list[int], str]] = Field(None, description="Assigned members: null (nobody), 'all' (whole family), or list of user IDs")
+    color: Optional[str] = Field(None, description="Event color as hex string")
+    category: Optional[str] = Field(None, description="Event category label")
 
 
 class CalendarEventResponse(BaseModel):
@@ -273,6 +277,8 @@ class CalendarEventResponse(BaseModel):
     is_recurring: bool = Field(False, description="True if this is a generated occurrence of a recurring event")
     occurrence_date: Optional[str] = Field(None, description="Date of this specific occurrence (YYYY-MM-DD)")
     assigned_to: Optional[Union[list[int], str]] = Field(None, description="Assigned members: null, 'all', or list of user IDs")
+    color: Optional[str] = Field(None, description="Event color as hex string")
+    category: Optional[str] = Field(None, description="Event category label")
     created_by_user_id: Optional[int] = Field(None, description="User who created the event")
     created_at: datetime = Field(..., description="Creation timestamp")
 

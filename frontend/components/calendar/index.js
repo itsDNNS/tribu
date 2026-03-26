@@ -3,7 +3,7 @@ import { useApp } from '../../contexts/AppContext';
 import { useCalendar } from '../../hooks/useCalendar';
 import { t } from '../../lib/i18n';
 import { RECURRENCE_OPTIONS, DeleteRecurringDialog, AssignChips, EventCard } from './CalendarHelpers';
-import { getMemberColor } from '../../lib/member-colors';
+import { getMemberColor, COLOR_PALETTE } from '../../lib/member-colors';
 
 export default function CalendarView() {
   const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild, members } = useApp();
@@ -149,8 +149,8 @@ export default function CalendarView() {
                         <span className="calendar-day-num">{c.day}</span>
                         {c.count > 0 && (
                           <div className="calendar-day-dots" aria-hidden="true">
-                            {Array.from({ length: Math.min(c.count, 3) }).map((_, di) => (
-                              <div key={di} className="calendar-day-dot" style={{ background: getMemberColor(null, di) }} />
+                            {(c.events || []).slice(0, 3).map((ev, di) => (
+                              <div key={di} className="calendar-day-dot" style={{ background: ev.color || getMemberColor(null, di) }} />
                             ))}
                           </div>
                         )}
@@ -217,6 +217,19 @@ export default function CalendarView() {
                         <AssignChips members={members} assignedTo={cal.assignedTo} setAssignedTo={cal.setAssignedTo} messages={messages} />
                       </div>
                     )}
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.color')}</div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        <button type="button" onClick={() => cal.setColor('')}
+                          style={{ width: 22, height: 22, borderRadius: '50%', border: !cal.color ? '2px solid var(--text-primary)' : '2px solid var(--glass-border)', background: 'var(--void-surface)', cursor: 'pointer' }}
+                          aria-label={t(messages, 'module.calendar.color_none')} />
+                        {COLOR_PALETTE.slice(0, 8).map(c => (
+                          <button type="button" key={c} onClick={() => cal.setColor(c)}
+                            style={{ width: 22, height: 22, borderRadius: '50%', border: cal.color === c ? '2px solid var(--text-primary)' : '2px solid transparent', background: c, cursor: 'pointer' }}
+                            aria-label={c} />
+                        ))}
+                      </div>
+                    </div>
                     <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
                   </form>
                 </>
@@ -305,6 +318,19 @@ export default function CalendarView() {
                   <AssignChips members={members} assignedTo={cal.assignedTo} setAssignedTo={cal.setAssignedTo} messages={messages} />
                 </div>
               )}
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.color')}</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <button type="button" onClick={() => cal.setColor('')}
+                    style={{ width: 22, height: 22, borderRadius: '50%', border: !cal.color ? '2px solid var(--text-primary)' : '2px solid var(--glass-border)', background: 'var(--void-surface)', cursor: 'pointer' }}
+                    aria-label={t(messages, 'module.calendar.color_none')} />
+                  {COLOR_PALETTE.slice(0, 8).map(c => (
+                    <button type="button" key={c} onClick={() => cal.setColor(c)}
+                      style={{ width: 22, height: 22, borderRadius: '50%', border: cal.color === c ? '2px solid var(--text-primary)' : '2px solid transparent', background: c, cursor: 'pointer' }}
+                      aria-label={c} />
+                  ))}
+                </div>
+              </div>
               <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
             </form>
           )}

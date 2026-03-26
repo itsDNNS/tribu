@@ -27,6 +27,10 @@ export function useCalendar() {
   // Assigned members
   const [assignedTo, setAssignedTo] = useState([]);
 
+  // Color and category
+  const [color, setColor] = useState('');
+  const [category, setCategory] = useState('');
+
   // Delete confirmation for recurring events
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -100,18 +104,19 @@ export function useCalendar() {
     const lastDay = new Date(y, m + 1, 0).getDate();
     const startOffset = (first.getDay() + 6) % 7;
 
-    const eventCount = {};
+    const dayEvents = {};
     for (const ev of events) {
       const d = new Date(ev.starts_at);
       if (d.getFullYear() === y && d.getMonth() === m) {
         const day = d.getDate();
-        eventCount[day] = (eventCount[day] || 0) + 1;
+        if (!dayEvents[day]) dayEvents[day] = [];
+        dayEvents[day].push(ev);
       }
     }
 
     const cells = [];
     for (let i = 0; i < startOffset; i += 1) cells.push({ empty: true });
-    for (let d = 1; d <= lastDay; d += 1) cells.push({ day: d, count: eventCount[d] || 0 });
+    for (let d = 1; d <= lastDay; d += 1) cells.push({ day: d, count: (dayEvents[d] || []).length, events: dayEvents[d] || [] });
     while (cells.length % 7 !== 0) cells.push({ empty: true });
     return cells;
   }, [calendarMonth, events]);
@@ -184,6 +189,8 @@ export function useCalendar() {
       recurrence: recurrence || null,
       recurrence_end: recurrenceEnd ? new Date(recurrenceEnd).toISOString() : null,
       assigned_to: assignedPayload,
+      color: color || null,
+      category: category || null,
     };
     if (demoMode) {
       const newEvent = { id: Date.now(), ...payload, is_recurring: !!recurrence, occurrence_date: null };
@@ -201,7 +208,7 @@ export function useCalendar() {
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
     setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
-    setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]);
+    setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]); setColor(''); setCategory('');
     const msg = t(messages, 'toast.event_created');
     toastSuccess(msg);
     announce(msg);
@@ -282,6 +289,8 @@ export function useCalendar() {
     recurrence, setRecurrence,
     recurrenceEnd, setRecurrenceEnd,
     assignedTo, setAssignedTo,
+    color, setColor,
+    category, setCategory,
     deleteConfirm, setDeleteConfirm,
     birthdayName, setBirthdayName,
     birthdayMonth, setBirthdayMonth,

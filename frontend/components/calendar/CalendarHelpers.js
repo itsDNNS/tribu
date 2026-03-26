@@ -148,7 +148,7 @@ export function AssignedBadges({ assignedTo, members }) {
 
 export function EventCard({ ev, index, messages, onDelete, members }) {
   return (
-    <div className="day-event-card" style={{ borderColor: getMemberColor(null, index) }}>
+    <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index) }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 500, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
           {ev.title}

@@ -95,7 +95,7 @@ export default function DashboardView() {
             {summary.next_events?.slice(0, 4).map((ev, i) => (
               <div key={ev.id} className="event-item">
                 <div className="event-time">{new Date(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</div>
-                <div className="event-dot" style={{ background: getMemberColor(null, i) }} aria-hidden="true" />
+                <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">
                   <div className="event-title">{ev.title}</div>
                   <div className="event-meta">{prettyDate(ev.starts_at, lang)}</div>
