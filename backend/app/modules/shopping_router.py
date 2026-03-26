@@ -1,4 +1,6 @@
-from datetime import UTC, datetime
+from datetime import datetime
+
+from app.core.utils import utcnow
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -209,7 +211,7 @@ def update_item(
         item.spec = payload.spec
     if payload.checked is not None:
         item.checked = payload.checked
-        item.checked_at = datetime.now(UTC) if payload.checked else None
+        item.checked_at = utcnow() if payload.checked else None
 
     db.commit()
     db.refresh(item)

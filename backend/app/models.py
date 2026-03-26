@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from app.core.utils import utcnow
+
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON
 from sqlalchemy.orm import relationship
 
@@ -65,7 +67,7 @@ class CalendarEvent(Base):
     excluded_dates = Column(JSON, nullable=True)
     assigned_to = Column(JSON, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     family = relationship("Family", back_populates="calendar_events")
 
@@ -78,7 +80,7 @@ class FamilyBirthday(Base):
     person_name = Column(String, nullable=False)
     month = Column(Integer, nullable=False)
     day = Column(Integer, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     family = relationship("Family", back_populates="birthdays")
 
@@ -96,7 +98,7 @@ class Task(Base):
     recurrence = Column(String, nullable=True)
     assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
     completed_at = Column(DateTime, nullable=True)
 
     family = relationship("Family", back_populates="tasks")
@@ -112,7 +114,7 @@ class Contact(Base):
     phone = Column(String, nullable=True)
     birthday_month = Column(Integer, nullable=True)
     birthday_day = Column(Integer, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
 
 class PersonalAccessToken(Base):

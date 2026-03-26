@@ -1,4 +1,6 @@
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
+
+from app.core.utils import utcnow
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -30,7 +32,7 @@ def dashboard_summary(
     ensure_family_membership(db, user.id, family_id)
 
     def _load():
-        now = datetime.now(UTC)
+        now = utcnow()
         range_end = now + timedelta(days=14)
 
         non_recurring = (
