@@ -386,5 +386,16 @@
   "landing.trust_selfhosted": "Self-Hosted",
   "landing.trust_privacy": "Privacy-First",
   "landing.trust_opensource": "Open Source",
-  "landing.footer_tagline": "Organize your family, your way."
+  "landing.footer_tagline": "Organize your family, your way.",
+  "danger_zone": "Danger Zone",
+  "leave_family": "Leave Family",
+  "leave_family_desc": "Leave this family. Your data in this family will be removed.",
+  "leave_family_confirm": "Are you sure you want to leave this family? This cannot be undone.",
+  "leave_family_last_admin": "You are the only admin. Transfer admin role to another member first.",
+  "delete_account": "Delete Account",
+  "delete_account_desc": "Permanently delete your account and all associated data.",
+  "delete_account_confirm": "Type DELETE to confirm permanent account deletion.",
+  "delete_account_placeholder": "Type DELETE",
+  "account_deleted": "Account deleted successfully.",
+  "left_family": "You have left the family."
 }

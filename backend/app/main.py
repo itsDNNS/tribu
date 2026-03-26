@@ -12,9 +12,9 @@ import os
 
 from app.core.deps import current_user
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
-from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT
+from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION
 from app.database import get_db, SessionLocal
-from app.models import Family, Membership, SystemSetting, User
+from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingItem, ShoppingList, SystemSetting, Task, User
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
@@ -33,8 +33,9 @@ from app.core.scheduler import configure_backup_schedule, start_notification_job
 from app.core import ws_broadcast
 from app.schemas import (
     AUTH_RESPONSES, CONFLICT_RESPONSE, ErrorResponse,
-    ChangePasswordRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest,
+    ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest,
 )
+from app.core import cache
 from app.security import create_access_token, hash_password, needs_rehash, verify_password
 from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE, VERSION
 
@@ -330,6 +331,132 @@ def complete_onboarding(
     user.has_completed_onboarding = True
     db.commit()
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Leave family / Delete account
+# ---------------------------------------------------------------------------
+
+@app.post(
+    "/auth/me/leave-family",
+    tags=["auth"],
+    summary="Leave a family",
+    description="Leave a family. If you are the last admin, you must transfer the admin role first. If you are the last member, the family is deleted. Scope: `profile:write`.",
+    responses={**AUTH_RESPONSES, 400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
+    response_description="Left the family",
+)
+def leave_family(
+    payload: LeaveFamilyRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
+):
+    membership = db.query(Membership).filter(
+        Membership.user_id == user.id,
+        Membership.family_id == payload.family_id,
+    ).with_for_update().first()
+    if not membership:
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
+
+    if membership.role == "admin":
+        other_admins = db.query(Membership).filter(
+            Membership.family_id == payload.family_id,
+            Membership.role == "admin",
+            Membership.user_id != user.id,
+        ).with_for_update().count()
+        if other_admins == 0:
+            remaining_members = db.query(Membership).filter(
+                Membership.family_id == payload.family_id,
+                Membership.user_id != user.id,
+            ).count()
+            if remaining_members > 0:
+                raise HTTPException(status_code=400, detail=error_detail(LAST_ADMIN))
+
+    # NULL out references to this user in the family being left
+    fid = payload.family_id
+    db.query(CalendarEvent).filter(CalendarEvent.family_id == fid, CalendarEvent.created_by_user_id == user.id).update({"created_by_user_id": None})
+    db.query(Task).filter(Task.family_id == fid, Task.assigned_to_user_id == user.id).update({"assigned_to_user_id": None})
+    db.query(Task).filter(Task.family_id == fid, Task.created_by_user_id == user.id).update({"created_by_user_id": None})
+    db.query(ShoppingList).filter(ShoppingList.family_id == fid, ShoppingList.created_by_user_id == user.id).update({"created_by_user_id": None})
+    db.query(AuditLog).filter(AuditLog.family_id == fid, AuditLog.admin_user_id == user.id).update({"admin_user_id": None})
+
+    db.delete(membership)
+    db.flush()
+
+    family_members = db.query(Membership).filter(Membership.family_id == fid).count()
+    family_deleted = False
+    if family_members == 0:
+        family = db.query(Family).filter(Family.id == fid).first()
+        if family:
+            db.delete(family)
+            family_deleted = True
+
+    user_memberships = db.query(Membership).filter(Membership.user_id == user.id).count()
+    user_deleted = False
+    if user_memberships == 0:
+        db.delete(user)
+        user_deleted = True
+
+    db.commit()
+    cache.invalidate(f"tribu:members:{fid}")
+    cache.invalidate_pattern("tribu:families:*")
+    return {"status": "ok", "family_deleted": family_deleted, "user_deleted": user_deleted}
+
+
+@app.delete(
+    "/auth/me",
+    tags=["auth"],
+    summary="Delete own account",
+    description="Permanently delete your account and all associated data. Requires typing 'DELETE' to confirm. If you are the last admin of a family with other members, you must transfer admin first. Scope: `profile:write`.",
+    responses={**AUTH_RESPONSES, 400: {"model": ErrorResponse}},
+    response_description="Account deleted",
+)
+def delete_account(
+    payload: DeleteAccountRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
+):
+    if payload.confirmation != "DELETE":
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_CONFIRMATION))
+
+    memberships = db.query(Membership).filter(Membership.user_id == user.id).with_for_update().all()
+    family_ids = []
+    for m in memberships:
+        if m.role == "admin":
+            other_admins = db.query(Membership).filter(
+                Membership.family_id == m.family_id,
+                Membership.role == "admin",
+                Membership.user_id != user.id,
+            ).with_for_update().count()
+            other_members = db.query(Membership).filter(
+                Membership.family_id == m.family_id,
+                Membership.user_id != user.id,
+            ).count()
+            if other_admins == 0 and other_members > 0:
+                raise HTTPException(status_code=400, detail=error_detail(LAST_ADMIN))
+        family_ids.append(m.family_id)
+
+    for m in memberships:
+        db.delete(m)
+    db.flush()
+
+    families_deleted = []
+    for fid in family_ids:
+        remaining = db.query(Membership).filter(Membership.family_id == fid).count()
+        if remaining == 0:
+            family = db.query(Family).filter(Family.id == fid).first()
+            if family:
+                db.delete(family)
+                families_deleted.append(fid)
+
+    db.delete(user)
+    db.commit()
+
+    for fid in family_ids:
+        cache.invalidate(f"tribu:members:{fid}")
+    cache.invalidate_pattern("tribu:families:*")
+    return {"status": "ok", "families_deleted": families_deleted}
 
 
 # ---------------------------------------------------------------------------

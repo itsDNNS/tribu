@@ -386,5 +386,16 @@
   "landing.trust_selfhosted": "Self-Hosted",
   "landing.trust_privacy": "Datenschutz zuerst",
   "landing.trust_opensource": "Open Source",
-  "landing.footer_tagline": "Organisiere deine Familie, auf deine Art."
+  "landing.footer_tagline": "Organisiere deine Familie, auf deine Art.",
+  "danger_zone": "Gefahrenzone",
+  "leave_family": "Familie verlassen",
+  "leave_family_desc": "Verlasse diese Familie. Deine Daten in dieser Familie werden entfernt.",
+  "leave_family_confirm": "Bist du sicher, dass du diese Familie verlassen willst? Das kann nicht rückgängig gemacht werden.",
+  "leave_family_last_admin": "Du bist der einzige Admin. Übertrage die Admin-Rolle zuerst an ein anderes Mitglied.",
+  "delete_account": "Konto löschen",
+  "delete_account_desc": "Lösche dein Konto und alle zugehörigen Daten dauerhaft.",
+  "delete_account_confirm": "Gib DELETE ein, um die dauerhafte Kontolöschung zu bestätigen.",
+  "delete_account_placeholder": "DELETE eingeben",
+  "account_deleted": "Konto erfolgreich gelöscht.",
+  "left_family": "Du hast die Familie verlassen."
 }
