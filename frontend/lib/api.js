@@ -418,3 +418,7 @@ export function connectNotificationStream(onMessage, { lastEventId = 0 } = {}) {
   });
   return es;
 }
+
+export function apiSearch(familyId, query) {
+  return request(`/search?family_id=${familyId}&q=${encodeURIComponent(query)}`);
+}
