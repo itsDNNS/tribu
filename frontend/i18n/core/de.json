@@ -401,5 +401,11 @@
   "delete_account_confirm": "Gib DELETE ein, um die dauerhafte Kontolöschung zu bestätigen.",
   "delete_account_placeholder": "DELETE eingeben",
   "account_deleted": "Konto erfolgreich gelöscht.",
-  "left_family": "Du hast die Familie verlassen."
+  "left_family": "Du hast die Familie verlassen.",
+  "pwa.offline": "Du bist offline - gespeicherte Daten werden angezeigt",
+  "pwa.back_online": "Wieder online",
+  "pwa.update_available": "Neue Version verfügbar",
+  "pwa.update_action": "Aktualisieren",
+  "pwa.install_prompt": "Tribu installieren für schnellen Zugriff",
+  "pwa.install_action": "Installieren"
 }

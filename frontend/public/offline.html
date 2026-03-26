@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tribu - Offline</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #06080f; color: #e8edff; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+  .container { text-align: center; max-width: 380px; }
+  .icon { font-size: 48px; margin-bottom: 16px; }
+  h1 { font-size: 1.3rem; margin-bottom: 8px; }
+  p { color: #8b92b0; font-size: 0.9rem; line-height: 1.5; }
+  button { margin-top: 20px; padding: 10px 24px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
+  button:active { opacity: 0.8; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="icon" aria-hidden="true">&#9729;</div>
+  <h1>You're offline</h1>
+  <p>Previously visited pages are still available. Check your connection and try again.</p>
+  <button onclick="location.reload()">Try again</button>
+</div>
+</body>
+</html>
