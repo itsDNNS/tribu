@@ -1,6 +1,6 @@
 """ICS (RFC 5545) import/export utilities for Tribu calendar events."""
 
-from datetime import datetime, date, timedelta
+from datetime import UTC, datetime, date, timedelta
 
 from icalendar import Calendar, Event, vDate, vDatetime, vRecur
 
@@ -62,7 +62,7 @@ def events_to_ics(events, calendar_name="Tribu") -> str:
                 except (ValueError, TypeError):
                     pass
 
-        dtstamp = ev.created_at if ev.created_at else datetime.utcnow()
+        dtstamp = ev.created_at if ev.created_at else datetime.now(UTC)
         vevent.add("dtstamp", dtstamp)
 
         cal.add_component(vevent)

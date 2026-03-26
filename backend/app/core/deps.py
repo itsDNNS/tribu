@@ -34,9 +34,9 @@ def _resolve_user(request: Request, token_str: str, db: Session) -> User:
         pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.token_hash == token_hash).first()
         if not pat:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
-        if pat.expires_at and pat.expires_at < datetime.utcnow():
+        if pat.expires_at and pat.expires_at < datetime.now(UTC):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(TOKEN_EXPIRED))
-        pat.last_used_at = datetime.utcnow()
+        pat.last_used_at = datetime.now(UTC)
         db.commit()
         user = db.query(User).filter(User.id == pat.user_id).first()
         if not user:

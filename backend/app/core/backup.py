@@ -3,7 +3,7 @@ import os
 import subprocess
 import tarfile
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -59,7 +59,7 @@ def _get_pg_version(db_params: dict) -> str:
 
 def create_backup(db_url: str, backup_dir: str) -> str:
     db = _parse_db_url(db_url)
-    timestamp = datetime.utcnow().strftime("%Y-%m-%d-%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S")
     archive_name = f"tribu-backup-{timestamp}.tar.gz"
     archive_path = os.path.join(backup_dir, archive_name)
 
@@ -87,7 +87,7 @@ def create_backup(db_url: str, backup_dir: str) -> str:
             "backup_version": 1,
             "alembic_revision": alembic_rev,
             "pg_version": pg_version,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         meta_path = os.path.join(tmpdir, "metadata.json")
         with open(meta_path, "w") as f:

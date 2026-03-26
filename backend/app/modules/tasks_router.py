@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
@@ -20,7 +20,7 @@ VALID_RECURRENCES = {"daily", "weekly", "monthly", "yearly"}
 
 
 def _compute_next_due(current_due: Optional[datetime], recurrence: str) -> datetime:
-    base = current_due if current_due else datetime.utcnow()
+    base = current_due if current_due else datetime.now(UTC)
     if recurrence == "daily":
         return base + timedelta(days=1)
     if recurrence == "weekly":
@@ -164,7 +164,7 @@ def update_task(
     if payload.status is not None:
         task.status = payload.status
         if payload.status == "done":
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(UTC)
             if task.recurrence:
                 next_task = Task(
                     family_id=task.family_id,
