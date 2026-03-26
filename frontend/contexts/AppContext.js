@@ -158,9 +158,8 @@ function AppOrchestrator({ children }) {
   // Persist theme
   useEffect(() => {
     window.localStorage.setItem('tribu_theme', ui.theme);
-    const themeConfig = ui.tokens;
     document.documentElement.setAttribute('data-theme', ui.theme);
-  }, [ui.theme, ui.tokens]);
+  }, [ui.theme]);
 
   // Persist lang
   useEffect(() => {
