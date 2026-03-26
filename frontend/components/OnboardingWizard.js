@@ -18,6 +18,7 @@ export default function OnboardingWizard() {
   const {
     messages, me, setMe, families, familyId, members,
     lang, setLang, availableLanguages, profileImage, setProfileImage,
+    loadBirthdays, loadDashboard,
   } = useApp();
 
   const [step, setStep] = useState(0);
@@ -26,8 +27,11 @@ export default function OnboardingWizard() {
   const [tourIndex, setTourIndex] = useState(0);
   const [birthdayMonth, setBirthdayMonth] = useState('');
   const [birthdayDay, setBirthdayDay] = useState('');
-  const touchStartX = useRef(null);
+  const [birthdaySaved, setBirthdaySaved] = useState(false);
+  const touchStart = useRef(null);
   const fileInputRef = useRef(null);
+
+  const maxDay = birthdayMonth ? new Date(2000, Number(birthdayMonth), 0).getDate() : 31;
 
   const currentStep = STEPS[step];
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
@@ -41,24 +45,22 @@ export default function OnboardingWizard() {
   const nextStep = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const prevStep = () => setStep((s) => Math.max(s - 1, 0));
 
-  const saveColor = async () => {
-    if (!selectedColor || !familyId) return;
-    setSaving(true);
-    await api.apiSetMemberColor(familyId, selectedColor);
-    setSaving(false);
-  };
-
   const handleNext = async () => {
     if (currentStep === 'profile') {
       setSaving(true);
-      if (selectedColor) await saveColor();
-      if (birthdayMonth && birthdayDay && familyId) {
-        await api.apiAddBirthday({
+      if (selectedColor) {
+        const { ok } = await api.apiSetMemberColor(familyId, selectedColor);
+        if (!ok) { setSaving(false); return; }
+      }
+      if (birthdayMonth && birthdayDay && familyId && !birthdaySaved) {
+        const day = Math.min(Number(birthdayDay), maxDay);
+        const { ok } = await api.apiAddBirthday({
           family_id: Number(familyId),
           person_name: me?.display_name || '',
           month: Number(birthdayMonth),
-          day: Number(birthdayDay),
+          day,
         });
+        if (ok) setBirthdaySaved(true);
       }
       setSaving(false);
     }
@@ -68,6 +70,9 @@ export default function OnboardingWizard() {
   const finish = async () => {
     setSaving(true);
     await api.apiCompleteOnboarding();
+    if (familyId) {
+      await Promise.all([loadBirthdays(familyId), loadDashboard(familyId)]);
+    }
     setMe((prev) => ({ ...prev, has_completed_onboarding: true }));
     setSaving(false);
   };
@@ -81,7 +86,7 @@ export default function OnboardingWizard() {
 
   const onProfileImage = useCallback((e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || file.size > 5 * 1024 * 1024) return;
     const reader = new FileReader();
     reader.onload = async () => {
       const value = String(reader.result || '');
@@ -96,14 +101,17 @@ export default function OnboardingWizard() {
   }, []);
 
   const onTouchStart = useCallback((e) => {
-    touchStartX.current = e.touches[0].clientX;
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }, []);
 
   const onTouchEnd = useCallback((e) => {
-    if (touchStartX.current === null) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) onTourSwipe(diff > 0 ? 1 : -1);
-    touchStartX.current = null;
+    if (!touchStart.current) return;
+    const dx = touchStart.current.x - e.changedTouches[0].clientX;
+    const dy = touchStart.current.y - e.changedTouches[0].clientY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      onTourSwipe(dx > 0 ? 1 : -1);
+    }
+    touchStart.current = null;
   }, [onTourSwipe]);
 
   const langToggle = (
@@ -173,6 +181,7 @@ export default function OnboardingWizard() {
                 <div
                   className="onboarding-avatar-wrapper"
                   onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
                   role="button"
                   tabIndex={0}
                   aria-label={t(messages, 'onboarding.upload_photo')}
@@ -245,12 +254,12 @@ export default function OnboardingWizard() {
                   </select>
                   <select
                     className="form-input"
-                    value={birthdayDay}
+                    value={Number(birthdayDay) > maxDay ? '' : birthdayDay}
                     onChange={(e) => setBirthdayDay(e.target.value)}
                     style={{ width: 80 }}
                   >
                     <option value="">{t(messages, 'day')}</option>
-                    {Array.from({ length: 31 }, (_, i) => (
+                    {Array.from({ length: maxDay }, (_, i) => (
                       <option key={i + 1} value={i + 1}>{i + 1}</option>
                     ))}
                   </select>
@@ -300,7 +309,7 @@ export default function OnboardingWizard() {
                     key={i}
                     className={`onboarding-tour-dot${i === tourIndex ? ' active' : ''}`}
                     onClick={() => setTourIndex(i)}
-                    aria-label={`Slide ${i + 1}`}
+                    aria-label={`${i + 1} / ${TOUR_FEATURES.length}`}
                   />
                 ))}
               </div>
