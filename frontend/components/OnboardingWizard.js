@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Users, CalendarDays, ShoppingCart, CheckSquare, CheckCircle, Globe } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { Users, CalendarDays, ShoppingCart, CheckSquare, Bell, CheckCircle, Globe, Camera } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { COLOR_PALETTE } from '../lib/member-colors';
@@ -11,17 +11,27 @@ const TOUR_FEATURES = [
   { icon: CalendarDays, titleKey: 'onboarding.tour_calendar', descKey: 'onboarding.tour_calendar_desc' },
   { icon: ShoppingCart, titleKey: 'onboarding.tour_shopping', descKey: 'onboarding.tour_shopping_desc' },
   { icon: CheckSquare, titleKey: 'onboarding.tour_tasks', descKey: 'onboarding.tour_tasks_desc' },
+  { icon: Bell, titleKey: 'onboarding.tour_notifications', descKey: 'onboarding.tour_notifications_desc' },
 ];
 
 export default function OnboardingWizard() {
   const {
     messages, me, setMe, families, familyId, members,
-    lang, setLang, availableLanguages,
+    lang, setLang, availableLanguages, profileImage, setProfileImage,
+    loadBirthdays, loadDashboard,
   } = useApp();
 
   const [step, setStep] = useState(0);
   const [selectedColor, setSelectedColor] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [tourIndex, setTourIndex] = useState(0);
+  const [birthdayMonth, setBirthdayMonth] = useState('');
+  const [birthdayDay, setBirthdayDay] = useState('');
+  const [birthdaySaved, setBirthdaySaved] = useState(false);
+  const touchStart = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const maxDay = birthdayMonth ? new Date(2000, Number(birthdayMonth), 0).getDate() : 31;
 
   const currentStep = STEPS[step];
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
@@ -35,16 +45,24 @@ export default function OnboardingWizard() {
   const nextStep = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const prevStep = () => setStep((s) => Math.max(s - 1, 0));
 
-  const saveColor = async () => {
-    if (!selectedColor || !familyId) return;
-    setSaving(true);
-    await api.apiSetMemberColor(familyId, selectedColor);
-    setSaving(false);
-  };
-
   const handleNext = async () => {
-    if (currentStep === 'profile' && selectedColor) {
-      await saveColor();
+    if (currentStep === 'profile') {
+      setSaving(true);
+      if (selectedColor) {
+        const { ok } = await api.apiSetMemberColor(familyId, selectedColor);
+        if (!ok) { setSaving(false); return; }
+      }
+      if (birthdayMonth && birthdayDay && familyId && !birthdaySaved) {
+        const day = Math.min(Number(birthdayDay), maxDay);
+        const { ok } = await api.apiAddBirthday({
+          family_id: Number(familyId),
+          person_name: me?.display_name || '',
+          month: Number(birthdayMonth),
+          day,
+        });
+        if (ok) setBirthdaySaved(true);
+      }
+      setSaving(false);
     }
     nextStep();
   };
@@ -52,6 +70,9 @@ export default function OnboardingWizard() {
   const finish = async () => {
     setSaving(true);
     await api.apiCompleteOnboarding();
+    if (familyId) {
+      await Promise.all([loadBirthdays(familyId), loadDashboard(familyId)]);
+    }
     setMe((prev) => ({ ...prev, has_completed_onboarding: true }));
     setSaving(false);
   };
@@ -62,6 +83,36 @@ export default function OnboardingWizard() {
     setMe((prev) => ({ ...prev, has_completed_onboarding: true }));
     setSaving(false);
   };
+
+  const onProfileImage = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file || file.size > 5 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const value = String(reader.result || '');
+      setProfileImage(value);
+      await api.apiUpdateProfileImage(value);
+    };
+    reader.readAsDataURL(file);
+  }, [setProfileImage]);
+
+  const onTourSwipe = useCallback((dir) => {
+    setTourIndex((i) => Math.max(0, Math.min(TOUR_FEATURES.length - 1, i + dir)));
+  }, []);
+
+  const onTouchStart = useCallback((e) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+
+  const onTouchEnd = useCallback((e) => {
+    if (!touchStart.current) return;
+    const dx = touchStart.current.x - e.changedTouches[0].clientX;
+    const dy = touchStart.current.y - e.changedTouches[0].clientY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      onTourSwipe(dx > 0 ? 1 : -1);
+    }
+    touchStart.current = null;
+  }, [onTourSwipe]);
 
   const langToggle = (
     <div className="setup-lang-toggle">
@@ -124,6 +175,40 @@ export default function OnboardingWizard() {
               <h2 style={{ textAlign: 'center', margin: '0 0 16px', fontSize: '1.2rem' }}>
                 {t(messages, 'onboarding.profile_title')}
               </h2>
+
+              {/* Profile image */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <div
+                  className="onboarding-avatar-wrapper"
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t(messages, 'onboarding.upload_photo')}
+                >
+                  {profileImage ? (
+                    <img src={profileImage} alt="" className="onboarding-avatar-img" />
+                  ) : (
+                    <div className="onboarding-avatar-placeholder">
+                      {(me?.display_name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="onboarding-avatar-overlay">
+                    <Camera size={18} />
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={onProfileImage}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+              </div>
+              <p style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                {t(messages, 'onboarding.upload_photo')}
+              </p>
+
               <div className="form-field" style={{ marginBottom: 16 }}>
                 <label htmlFor="onboarding-name">{t(messages, 'your_name')}</label>
                 <input
@@ -153,6 +238,34 @@ export default function OnboardingWizard() {
                   })}
                 </div>
               </div>
+              <div className="form-field" style={{ marginBottom: 20 }}>
+                <label>{t(messages, 'onboarding.your_birthday')}</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select
+                    className="form-input"
+                    value={birthdayMonth}
+                    onChange={(e) => setBirthdayMonth(e.target.value)}
+                    style={{ flex: 1 }}
+                  >
+                    <option value="">{t(messages, 'month')}</option>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>{new Date(2000, i).toLocaleString(lang, { month: 'long' })}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="form-input"
+                    value={Number(birthdayDay) > maxDay ? '' : birthdayDay}
+                    onChange={(e) => setBirthdayDay(e.target.value)}
+                    style={{ width: 80 }}
+                  >
+                    <option value="">{t(messages, 'day')}</option>
+                    {Array.from({ length: maxDay }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>{i + 1}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn-secondary" style={{ flex: 1 }} onClick={prevStep}>
                   {t(messages, 'onboarding.back')}
@@ -170,17 +283,34 @@ export default function OnboardingWizard() {
           {/* Step 3: Tour */}
           {currentStep === 'tour' && (
             <div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-                {TOUR_FEATURES.map((feat) => (
-                  <div key={feat.titleKey} className="onboarding-feature-card">
-                    <div className="onboarding-feature-icon">
-                      <feat.icon size={24} />
+              <div
+                className="onboarding-tour-carousel"
+                onTouchStart={onTouchStart}
+                onTouchEnd={onTouchEnd}
+              >
+                <div
+                  className="onboarding-tour-track"
+                  style={{ transform: `translateX(-${tourIndex * 100}%)` }}
+                >
+                  {TOUR_FEATURES.map((feat) => (
+                    <div key={feat.titleKey} className="onboarding-tour-slide">
+                      <div className="onboarding-feature-icon" style={{ width: 56, height: 56, margin: '0 auto 12px' }}>
+                        <feat.icon size={28} />
+                      </div>
+                      <div style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: 4 }}>{t(messages, feat.titleKey)}</div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>{t(messages, feat.descKey)}</div>
                     </div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{t(messages, feat.titleKey)}</div>
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{t(messages, feat.descKey)}</div>
-                    </div>
-                  </div>
+                  ))}
+                </div>
+              </div>
+              <div className="onboarding-tour-dots" style={{ display: 'flex', justifyContent: 'center', gap: 6, margin: '12px 0 20px' }}>
+                {TOUR_FEATURES.map((_, i) => (
+                  <button
+                    key={i}
+                    className={`onboarding-tour-dot${i === tourIndex ? ' active' : ''}`}
+                    onClick={() => setTourIndex(i)}
+                    aria-label={`${i + 1} / ${TOUR_FEATURES.length}`}
+                  />
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
