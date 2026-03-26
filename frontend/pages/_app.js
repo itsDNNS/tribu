@@ -1,8 +1,9 @@
-import { Component as ReactComponent, useEffect } from 'react';
+import { Component as ReactComponent } from 'react';
 import Head from 'next/head';
 import { AppProvider } from '../contexts/AppContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import { ToastContainer } from '../components/Toast';
+import { PWABanners } from '../components/PWABanners';
 import '../styles/globals.css';
 
 class ErrorBoundary extends ReactComponent {
@@ -28,12 +29,6 @@ class ErrorBoundary extends ReactComponent {
 }
 
 export default function TribuApp({ Component, pageProps }) {
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
-  }, []);
-
   return (
     <ErrorBoundary>
       <AppProvider>
@@ -44,6 +39,7 @@ export default function TribuApp({ Component, pageProps }) {
           <a href="#main-content" className="skip-link">Skip to main content</a>
           <div className="mesh-bg" aria-hidden="true" />
           <div className="grain" aria-hidden="true" />
+          <PWABanners />
           <Component {...pageProps} />
           <ToastContainer />
         </ToastProvider>

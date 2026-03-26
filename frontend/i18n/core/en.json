@@ -401,5 +401,11 @@
   "delete_account_confirm": "Type DELETE to confirm permanent account deletion.",
   "delete_account_placeholder": "Type DELETE",
   "account_deleted": "Account deleted successfully.",
-  "left_family": "You have left the family."
+  "left_family": "You have left the family.",
+  "pwa.offline": "You're offline - showing cached data",
+  "pwa.back_online": "Back online",
+  "pwa.update_available": "New version available",
+  "pwa.update_action": "Update",
+  "pwa.install_prompt": "Install Tribu for quick access",
+  "pwa.install_action": "Install"
 }
