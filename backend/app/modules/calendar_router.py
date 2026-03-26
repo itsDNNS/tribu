@@ -189,6 +189,8 @@ def create_calendar_event(
         recurrence=payload.recurrence,
         recurrence_end=recurrence_end,
         assigned_to=payload.assigned_to,
+        color=payload.color,
+        category=payload.category,
         created_by_user_id=user.id,
     )
     db.add(event)
@@ -250,6 +252,10 @@ def update_calendar_event(
         event.assigned_to = payload.assigned_to
         if payload.assigned_to != old_assigned:
             _create_assignment_notifications(db, event, user.id)
+    if payload.color is not None:
+        event.color = payload.color or None
+    if payload.category is not None:
+        event.category = payload.category or None
 
     if event.ends_at and event.ends_at < event.starts_at:
         raise HTTPException(status_code=400, detail=error_detail(END_BEFORE_START))

@@ -36,5 +36,8 @@
   "module.calendar.import_cta": "No events yet? Import ICS in Settings.",
   "module.calendar.assign_to": "Assign to",
   "module.calendar.assign_all": "Everyone",
-  "module.calendar.event_assigned": "You were tagged in: {title}"
+  "module.calendar.event_assigned": "You were tagged in: {title}",
+  "module.calendar.color": "Event color",
+  "module.calendar.color_none": "No color",
+  "module.calendar.category": "Category"
 }
