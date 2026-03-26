@@ -9,7 +9,7 @@ const MODULE_META = {
   tasks: { icon: CheckSquare, label: 'module.tasks.name', view: 'tasks' },
   shopping: { icon: ShoppingCart, label: 'module.shopping.name', view: 'shopping' },
   contacts: { icon: Users, label: 'module.contacts.name', view: 'contacts' },
-  birthdays: { icon: Cake, label: 'module.calendar.name', view: 'calendar' },
+  birthdays: { icon: Cake, label: 'module.birthdays.name', view: 'calendar' },
 };
 
 export default function SearchOverlay({ open, onClose }) {
@@ -28,6 +28,7 @@ export default function SearchOverlay({ open, onClose }) {
     if (!open) {
       setQuery('');
       setResults(null);
+      setLoading(false);
       reqIdRef.current++;
     }
   }, [open]);
