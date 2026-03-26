@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { buildMessages, listLanguages } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 import { buildUi } from '../lib/styles';
@@ -132,6 +132,9 @@ export function AppProvider({ children }) {
     if (ok) {
       setNotifications(data);
       setUnreadCount(data.filter((n) => !n.read).length);
+      if (data.length) {
+        lastEventIdRef.current = Math.max(lastEventIdRef.current, data[0].id);
+      }
     }
   }, [demoMode]);
 
@@ -272,28 +275,74 @@ export function AppProvider({ children }) {
     return () => navigator.serviceWorker.removeEventListener('message', handler);
   }, []);
 
-  // Notification polling — separate effect to avoid race conditions with bootstrap
+  // SSE real-time notifications with polling fallback
+  const lastEventIdRef = useRef(0);
+
   useEffect(() => {
     if (!loggedIn || demoMode) return;
 
     let cancelled = false;
+    let es = null;
+    let reconnectTimer = null;
     let pollInterval = null;
+    let backoff = 1000;
 
     (async () => {
-      const { ok, data } = await api.apiGetUnreadCount();
-      if (!cancelled && ok) setUnreadCount(data.count);
+      // Seed lastEventId from the newest existing notification to avoid
+      // re-delivering old notifications on the first SSE connect
+      const { ok: countOk, data: countData } = await api.apiGetUnreadCount();
+      if (!cancelled && countOk) setUnreadCount(countData.count);
+
+      const { ok: listOk, data: listData } = await api.apiGetNotifications(1, 0);
+      if (!cancelled && listOk && listData?.length) {
+        lastEventIdRef.current = listData[0].id;
+      }
+
+      if (!cancelled) connect();
     })();
 
-    pollInterval = setInterval(async () => {
-      const { ok, data } = await api.apiGetUnreadCount();
-      if (!cancelled && ok) setUnreadCount(data.count);
-    }, 30000);
+    function connect() {
+      if (cancelled) return;
+      es = api.connectNotificationStream((notif) => {
+        if (cancelled) return;
+        if (notif.id <= lastEventIdRef.current) return;
+        lastEventIdRef.current = notif.id;
+        setNotifications(prev => [notif, ...prev]);
+        if (!notif.read) setUnreadCount(c => c + 1);
+      }, { lastEventId: lastEventIdRef.current });
+
+      es.onopen = () => {
+        backoff = 1000;
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+      };
+
+      es.onerror = () => {
+        es.close();
+        // Polling fallback: refresh both badge count and notification list
+        if (!pollInterval && !cancelled) {
+          pollInterval = setInterval(async () => {
+            const { ok, data } = await api.apiGetUnreadCount();
+            if (!cancelled && ok) setUnreadCount(data.count);
+            if (!cancelled) await loadNotifications();
+          }, 30000);
+        }
+        clearTimeout(reconnectTimer);
+        const delay = backoff;
+        backoff = Math.min(backoff * 2, 30000);
+        reconnectTimer = setTimeout(() => connect(), delay);
+      };
+    }
 
     return () => {
       cancelled = true;
-      clearInterval(pollInterval);
+      if (es) es.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, [loggedIn, demoMode]);
+  }, [loggedIn, demoMode, loadNotifications]);
 
   const value = {
     loading,

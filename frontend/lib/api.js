@@ -405,13 +405,16 @@ export function apiSetBaseUrl(base_url) {
   });
 }
 
-export function connectNotificationStream(onMessage) {
-  const es = new EventSource(`${API}/notifications/stream`, { withCredentials: true });
-  es.onmessage = (event) => {
+export function connectNotificationStream(onMessage, { lastEventId = 0 } = {}) {
+  const url = lastEventId
+    ? `${API}/notifications/stream?lastEventId=${lastEventId}`
+    : `${API}/notifications/stream`;
+  const es = new EventSource(url, { withCredentials: true });
+  es.addEventListener('notification_new', (event) => {
     try {
       const data = JSON.parse(event.data);
       onMessage(data);
     } catch {}
-  };
+  });
   return es;
 }
