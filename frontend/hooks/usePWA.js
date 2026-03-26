@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * PWA lifecycle hook: offline detection, install prompt, and SW update.
@@ -14,12 +14,13 @@ export function usePWA() {
   // Offline / online detection
   useEffect(() => {
     setIsOffline(!navigator.onLine);
+    let backOnlineTimer;
 
     const goOffline = () => setIsOffline(true);
     const goOnline = () => {
       setIsOffline(false);
       setShowBackOnline(true);
-      setTimeout(() => setShowBackOnline(false), 3000);
+      backOnlineTimer = setTimeout(() => setShowBackOnline(false), 3000);
     };
 
     window.addEventListener('offline', goOffline);
@@ -27,6 +28,7 @@ export function usePWA() {
     return () => {
       window.removeEventListener('offline', goOffline);
       window.removeEventListener('online', goOnline);
+      clearTimeout(backOnlineTimer);
     };
   }, []);
 
@@ -67,14 +69,15 @@ export function usePWA() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
+    let updateFoundHandler;
+
     navigator.serviceWorker.register('/sw.js').then((registration) => {
-      // Check if an update is already waiting
       if (registration.waiting) {
         waitingWorkerRef.current = registration.waiting;
         setUpdateAvailable(true);
       }
 
-      registration.addEventListener('updatefound', () => {
+      updateFoundHandler = () => {
         const newWorker = registration.installing;
         if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
@@ -83,17 +86,22 @@ export function usePWA() {
             setUpdateAvailable(true);
           }
         });
-      });
+      };
+      registration.addEventListener('updatefound', updateFoundHandler);
     }).catch(() => {});
 
-    // Reload when the new SW takes control
     let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
+    const onControllerChange = () => {
       if (!refreshing) {
         refreshing = true;
         window.location.reload();
       }
-    });
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+    };
   }, []);
 
   const applyUpdate = useCallback(() => {
@@ -102,8 +110,10 @@ export function usePWA() {
     }
   }, []);
 
-  const installDismissed = typeof window !== 'undefined'
-    && localStorage.getItem('tribu_install_dismissed') === '1';
+  const installDismissed = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('tribu_install_dismissed') === '1';
+  }, []);
 
   return {
     isOffline,
