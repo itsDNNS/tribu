@@ -326,9 +326,10 @@ export function AppProvider({ children }) {
           pollInterval = setInterval(async () => {
             const { ok, data } = await api.apiGetUnreadCount();
             if (!cancelled && ok) setUnreadCount(data.count);
-            await loadNotifications();
+            if (!cancelled) await loadNotifications();
           }, 30000);
         }
+        clearTimeout(reconnectTimer);
         const delay = backoff;
         backoff = Math.min(backoff * 2, 30000);
         reconnectTimer = setTimeout(() => connect(), delay);
