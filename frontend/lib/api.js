@@ -23,8 +23,13 @@ function patch(path, body) {
   });
 }
 
-function del(path) {
-  return request(path, { method: 'DELETE' });
+function del(path, body) {
+  const opts = { method: 'DELETE' };
+  if (body) {
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  }
+  return request(path, opts);
 }
 
 // Health
@@ -59,6 +64,14 @@ export function apiChangePassword(old_password, new_password) {
 
 export function apiCompleteOnboarding() {
   return post('/auth/me/complete-onboarding');
+}
+
+export function apiLeaveFamily(family_id) {
+  return post('/auth/me/leave-family', { family_id });
+}
+
+export function apiDeleteAccount(confirmation) {
+  return del('/auth/me', { confirmation });
 }
 
 // Families

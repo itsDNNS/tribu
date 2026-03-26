@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Palette, Globe, Check } from 'lucide-react';
+import { User, Palette, Globe, Check, AlertTriangle, LogOut, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { t, languageCompleteness } from '../../lib/i18n';
@@ -20,6 +20,10 @@ export default function AccountTab() {
   const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers } = useApp();
   const { success: toastSuccess } = useToast();
   const [colorSaving, setColorSaving] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
   const currentMember = members.find((m) => m.user_id === me?.user_id);
   const myColor = currentMember?.color || null;
@@ -190,6 +194,112 @@ export default function AccountTab() {
               );
             })}
           </div>
+        </div>
+      </div>
+      {/* Danger Zone */}
+      <div className="settings-section glass" style={{ borderColor: 'var(--error, #ef4444)', borderWidth: 1, borderStyle: 'solid' }}>
+        <div className="settings-section-title" style={{ color: 'var(--error, #ef4444)' }}>
+          <AlertTriangle size={16} /> {t(messages, 'danger_zone')}
+        </div>
+
+        {/* Leave Family */}
+        <div style={{ marginBottom: 'var(--space-lg)' }}>
+          <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{t(messages, 'leave_family')}</div>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-sm)' }}>
+            {t(messages, 'leave_family_desc')}
+          </div>
+          {!showLeaveConfirm ? (
+            <button
+              className="btn btn-outline"
+              style={{ color: 'var(--error, #ef4444)', borderColor: 'var(--error, #ef4444)' }}
+              onClick={() => setShowLeaveConfirm(true)}
+            >
+              <LogOut size={14} /> {t(messages, 'leave_family')}
+            </button>
+          ) : (
+            <div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--error, #ef4444)', marginBottom: 'var(--space-sm)' }}>
+                {t(messages, 'leave_family_confirm')}
+              </p>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <button
+                  className="btn btn-danger"
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    const { ok, data } = await api.apiLeaveFamily(familyId);
+                    setActionLoading(false);
+                    if (ok) {
+                      toastSuccess(t(messages, 'left_family'));
+                      window.location.reload();
+                    } else if (data?.detail?.code === 'LAST_ADMIN') {
+                      toastSuccess(t(messages, 'leave_family_last_admin'));
+                      setShowLeaveConfirm(false);
+                    }
+                  }}
+                >
+                  {t(messages, 'leave_family')}
+                </button>
+                <button className="btn btn-outline" onClick={() => setShowLeaveConfirm(false)}>
+                  {t(messages, 'cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Delete Account */}
+        <div>
+          <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{t(messages, 'delete_account')}</div>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-sm)' }}>
+            {t(messages, 'delete_account_desc')}
+          </div>
+          {!showDeleteConfirm ? (
+            <button
+              className="btn btn-outline"
+              style={{ color: 'var(--error, #ef4444)', borderColor: 'var(--error, #ef4444)' }}
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 size={14} /> {t(messages, 'delete_account')}
+            </button>
+          ) : (
+            <div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--error, #ef4444)', marginBottom: 'var(--space-sm)' }}>
+                {t(messages, 'delete_account_confirm')}
+              </p>
+              <input
+                type="text"
+                className="input"
+                placeholder={t(messages, 'delete_account_placeholder')}
+                value={deleteInput}
+                onChange={(e) => setDeleteInput(e.target.value)}
+                style={{ marginBottom: 'var(--space-sm)', maxWidth: 200 }}
+              />
+              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <button
+                  className="btn btn-danger"
+                  disabled={deleteInput !== 'DELETE' || actionLoading}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    const { ok, data } = await api.apiDeleteAccount('DELETE');
+                    setActionLoading(false);
+                    if (ok) {
+                      window.location.href = '/';
+                    } else if (data?.detail?.code === 'LAST_ADMIN') {
+                      toastSuccess(t(messages, 'leave_family_last_admin'));
+                      setShowDeleteConfirm(false);
+                      setDeleteInput('');
+                    }
+                  }}
+                >
+                  {t(messages, 'delete_account')}
+                </button>
+                <button className="btn btn-outline" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(''); }}>
+                  {t(messages, 'cancel')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

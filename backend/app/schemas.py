@@ -98,6 +98,16 @@ class ProfileImageUpdate(BaseModel):
     profile_image: str = Field(..., description="Base64-encoded image data")
 
 
+class LeaveFamilyRequest(BaseModel):
+    """Leave a family."""
+    family_id: int = Field(..., description="ID of the family to leave")
+
+
+class DeleteAccountRequest(BaseModel):
+    """Delete own account. Requires typing 'DELETE' to confirm."""
+    confirmation: str = Field(..., description="Must be exactly 'DELETE'")
+
+
 class ChangePasswordRequest(BaseModel):
     """Change the current user's password."""
     old_password: str = Field(..., description="Current password")
