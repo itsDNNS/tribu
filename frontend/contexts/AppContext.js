@@ -284,10 +284,18 @@ export function AppProvider({ children }) {
     let pollInterval = null;
     let backoff = 1000;
 
-    // Initial count fetch for fast badge display
     (async () => {
-      const { ok, data } = await api.apiGetUnreadCount();
-      if (!cancelled && ok) setUnreadCount(data.count);
+      // Seed lastEventId from the newest existing notification to avoid
+      // re-delivering old notifications on the first SSE connect
+      const { ok: countOk, data: countData } = await api.apiGetUnreadCount();
+      if (!cancelled && countOk) setUnreadCount(countData.count);
+
+      const { ok: listOk, data: listData } = await api.apiGetNotifications(1, 0);
+      if (!cancelled && listOk && listData?.length) {
+        lastEventIdRef.current = listData[0].id;
+      }
+
+      if (!cancelled) connect();
     })();
 
     function connect() {
@@ -295,13 +303,15 @@ export function AppProvider({ children }) {
       es = api.connectNotificationStream((notif) => {
         if (cancelled) return;
         lastEventIdRef.current = notif.id;
-        setNotifications(prev => [notif, ...prev]);
+        setNotifications(prev => {
+          if (prev.some(n => n.id === notif.id)) return prev;
+          return [notif, ...prev];
+        });
         setUnreadCount(c => c + 1);
       }, { lastEventId: lastEventIdRef.current });
 
       es.onopen = () => {
         backoff = 1000;
-        // SSE connected, stop polling fallback
         if (pollInterval) {
           clearInterval(pollInterval);
           pollInterval = null;
@@ -310,21 +320,19 @@ export function AppProvider({ children }) {
 
       es.onerror = () => {
         es.close();
-        // Start polling fallback while SSE is down
+        // Polling fallback: refresh both badge count and notification list
         if (!pollInterval && !cancelled) {
           pollInterval = setInterval(async () => {
             const { ok, data } = await api.apiGetUnreadCount();
             if (!cancelled && ok) setUnreadCount(data.count);
+            await loadNotifications();
           }, 30000);
         }
-        // Reconnect with exponential backoff (cap 30s)
         const delay = backoff;
         backoff = Math.min(backoff * 2, 30000);
         reconnectTimer = setTimeout(() => connect(), delay);
       };
     }
-
-    connect();
 
     return () => {
       cancelled = true;
