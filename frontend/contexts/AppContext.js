@@ -22,7 +22,7 @@ function AppOrchestrator({ children }) {
 
   const { loggedIn, demoMode, me, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
   const { familyId, setFamilyId, families, setFamilies, setMyFamilyRole, setMyFamilyIsAdult, loadMembers, setMembers } = family;
-  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount } = data;
+  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setContacts, setBirthdays, setSummary } = data;
   const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, setIsMobile, setNavOrder, lang, messages } = ui;
 
   // Wrap data loaders to inject familyId default and skip in demo mode
@@ -97,25 +97,26 @@ function AppOrchestrator({ children }) {
     setMyFamilyRole(demo.families[0].role);
     setMyFamilyIsAdult(true);
     setMembers(demo.members);
-    data.setEvents(demo.events);
-    data.setTasks(demo.tasks);
-    data.setShoppingLists(demo.shoppingLists);
-    data.setContacts(demo.contacts);
-    data.setBirthdays(demo.birthdays);
-    data.setSummary(demo.summary);
+    setEvents(demo.events);
+    setTasks(demo.tasks);
+    setShoppingLists(demo.shoppingLists);
+    setContacts(demo.contacts);
+    setBirthdays(demo.birthdays);
+    setSummary(demo.summary);
     setLoggedIn(true);
     setLoading(false);
-  }, [lang, setDemoMode, setMe, setFamilies, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult, setMembers, data, setLoggedIn, setLoading]);
+  }, [lang, setDemoMode, setMe, setFamilies, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult, setMembers, setEvents, setTasks, setShoppingLists, setContacts, setBirthdays, setSummary, setLoggedIn, setLoading]);
 
   const logout = useCallback(async () => {
     await auth.logout();
     resetData();
-    family.setFamilies([]);
-    family.setMembers([]);
-    family.setMyFamilyRole('member');
-    family.setMyFamilyIsAdult(true);
+    setFamilies([]);
+    setFamilyId('1');
+    setMembers([]);
+    setMyFamilyRole('member');
+    setMyFamilyIsAdult(true);
     setNavOrder(DEFAULT_NAV_ORDER);
-  }, [auth, resetData, family, setNavOrder]);
+  }, [auth.logout, resetData, setFamilies, setFamilyId, setMembers, setMyFamilyRole, setMyFamilyIsAdult, setNavOrder]);
 
   // Init: localStorage, resize, auto-login
   useEffect(() => {
