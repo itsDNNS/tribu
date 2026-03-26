@@ -318,10 +318,9 @@ export function AppProvider({ children }) {
           }, 30000);
         }
         // Reconnect with exponential backoff (cap 30s)
-        reconnectTimer = setTimeout(() => {
-          backoff = Math.min(backoff * 2, 30000);
-          connect();
-        }, backoff);
+        const delay = backoff;
+        backoff = Math.min(backoff * 2, 30000);
+        reconnectTimer = setTimeout(() => connect(), delay);
       };
     }
 

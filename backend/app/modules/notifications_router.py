@@ -132,6 +132,7 @@ async def notification_stream(
                         last_id = notif.id
                 finally:
                     db.close()
+                yield ": keepalive\n\n"
                 await asyncio.sleep(5)
         except asyncio.CancelledError:
             return
