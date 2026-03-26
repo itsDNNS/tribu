@@ -83,6 +83,8 @@ def _event_to_dict(event) -> dict:
         "recurrence": event.recurrence,
         "recurrence_end": event.recurrence_end,
         "assigned_to": event.assigned_to,
+        "color": event.color,
+        "category": event.category,
         "created_by_user_id": event.created_by_user_id,
         "created_at": event.created_at,
     }
