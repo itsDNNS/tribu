@@ -28,6 +28,7 @@ CANNOT_CHANGE_OWN_ADULT = "CANNOT_CHANGE_OWN_ADULT"
 CANNOT_REMOVE_SELF = "CANNOT_REMOVE_SELF"
 CANNOT_RESET_OWN_PASSWORD = "CANNOT_RESET_OWN_PASSWORD"
 LAST_ADMIN = "LAST_ADMIN"
+INVALID_CONFIRMATION = "INVALID_CONFIRMATION"
 COLOR_NOT_ALLOWED = "COLOR_NOT_ALLOWED"
 COLOR_ALREADY_TAKEN = "COLOR_ALREADY_TAKEN"
 
@@ -105,6 +106,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     CANNOT_CHANGE_OWN_ADULT: "Cannot change own adult status",
     CANNOT_REMOVE_SELF: "Cannot remove yourself",
     LAST_ADMIN: "Cannot leave: you are the only admin. Transfer admin role first",
+    INVALID_CONFIRMATION: "Type DELETE to confirm account deletion",
     CANNOT_RESET_OWN_PASSWORD: "Cannot reset your own password here",
     COLOR_NOT_ALLOWED: "Color not in allowed palette",
     COLOR_ALREADY_TAKEN: "Color already taken by another member",

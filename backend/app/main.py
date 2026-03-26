@@ -12,9 +12,9 @@ import os
 
 from app.core.deps import current_user
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
-from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND
+from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION
 from app.database import get_db, SessionLocal
-from app.models import Family, Membership, SystemSetting, User
+from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingItem, ShoppingList, SystemSetting, Task, User
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
@@ -354,7 +354,7 @@ def leave_family(
     membership = db.query(Membership).filter(
         Membership.user_id == user.id,
         Membership.family_id == payload.family_id,
-    ).first()
+    ).with_for_update().first()
     if not membership:
         raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
 
@@ -363,7 +363,7 @@ def leave_family(
             Membership.family_id == payload.family_id,
             Membership.role == "admin",
             Membership.user_id != user.id,
-        ).count()
+        ).with_for_update().count()
         if other_admins == 0:
             remaining_members = db.query(Membership).filter(
                 Membership.family_id == payload.family_id,
@@ -372,13 +372,21 @@ def leave_family(
             if remaining_members > 0:
                 raise HTTPException(status_code=400, detail=error_detail(LAST_ADMIN))
 
+    # NULL out references to this user in the family being left
+    fid = payload.family_id
+    db.query(CalendarEvent).filter(CalendarEvent.family_id == fid, CalendarEvent.created_by_user_id == user.id).update({"created_by_user_id": None})
+    db.query(Task).filter(Task.family_id == fid, Task.assigned_to_user_id == user.id).update({"assigned_to_user_id": None})
+    db.query(Task).filter(Task.family_id == fid, Task.created_by_user_id == user.id).update({"created_by_user_id": None})
+    db.query(ShoppingList).filter(ShoppingList.family_id == fid, ShoppingList.created_by_user_id == user.id).update({"created_by_user_id": None})
+    db.query(AuditLog).filter(AuditLog.family_id == fid, AuditLog.admin_user_id == user.id).update({"admin_user_id": None})
+
     db.delete(membership)
     db.flush()
 
-    family_members = db.query(Membership).filter(Membership.family_id == payload.family_id).count()
+    family_members = db.query(Membership).filter(Membership.family_id == fid).count()
     family_deleted = False
     if family_members == 0:
-        family = db.query(Family).filter(Family.id == payload.family_id).first()
+        family = db.query(Family).filter(Family.id == fid).first()
         if family:
             db.delete(family)
             family_deleted = True
@@ -390,7 +398,7 @@ def leave_family(
         user_deleted = True
 
     db.commit()
-    cache.invalidate(f"tribu:members:{payload.family_id}")
+    cache.invalidate(f"tribu:members:{fid}")
     cache.invalidate_pattern("tribu:families:*")
     return {"status": "ok", "family_deleted": family_deleted, "user_deleted": user_deleted}
 
@@ -410,9 +418,9 @@ def delete_account(
     _scope=require_scope("profile:write"),
 ):
     if payload.confirmation != "DELETE":
-        raise HTTPException(status_code=400, detail=error_detail("INVALID_CONFIRMATION"))
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_CONFIRMATION))
 
-    memberships = db.query(Membership).filter(Membership.user_id == user.id).all()
+    memberships = db.query(Membership).filter(Membership.user_id == user.id).with_for_update().all()
     family_ids = []
     for m in memberships:
         if m.role == "admin":
@@ -420,7 +428,7 @@ def delete_account(
                 Membership.family_id == m.family_id,
                 Membership.role == "admin",
                 Membership.user_id != user.id,
-            ).count()
+            ).with_for_update().count()
             other_members = db.query(Membership).filter(
                 Membership.family_id == m.family_id,
                 Membership.user_id != user.id,

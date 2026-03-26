@@ -17,8 +17,8 @@ const THEME_PREVIEWS = {
 };
 
 export default function AccountTab() {
-  const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers } = useApp();
-  const { success: toastSuccess } = useToast();
+  const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers, logout } = useApp();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [colorSaving, setColorSaving] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -231,9 +231,16 @@ export default function AccountTab() {
                     setActionLoading(false);
                     if (ok) {
                       toastSuccess(t(messages, 'left_family'));
-                      window.location.reload();
+                      if (data?.user_deleted) {
+                        window.location.href = '/';
+                      } else {
+                        window.location.reload();
+                      }
                     } else if (data?.detail?.code === 'LAST_ADMIN') {
-                      toastSuccess(t(messages, 'leave_family_last_admin'));
+                      toastError(t(messages, 'leave_family_last_admin'));
+                      setShowLeaveConfirm(false);
+                    } else {
+                      toastError(data?.detail?.message || 'Failed to leave family');
                       setShowLeaveConfirm(false);
                     }
                   }}
@@ -284,9 +291,14 @@ export default function AccountTab() {
                     const { ok, data } = await api.apiDeleteAccount('DELETE');
                     setActionLoading(false);
                     if (ok) {
-                      window.location.href = '/';
+                      toastSuccess(t(messages, 'account_deleted'));
+                      await logout();
                     } else if (data?.detail?.code === 'LAST_ADMIN') {
-                      toastSuccess(t(messages, 'leave_family_last_admin'));
+                      toastError(t(messages, 'leave_family_last_admin'));
+                      setShowDeleteConfirm(false);
+                      setDeleteInput('');
+                    } else {
+                      toastError(data?.detail?.message || 'Failed to delete account');
                       setShowDeleteConfirm(false);
                       setDeleteInput('');
                     }
