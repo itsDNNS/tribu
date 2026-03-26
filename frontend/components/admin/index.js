@@ -228,9 +228,10 @@ export default function AdminView() {
 
 function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPassword, onRemoveMember }) {
   const { adults, children } = useMemo(() => {
+    const roleRank = (r) => r === 'owner' ? 0 : r === 'admin' ? 1 : 2;
     const sorted = [...members].sort((a, b) => {
-      if (a.role === 'owner' || a.role === 'admin') return -1;
-      if (b.role === 'owner' || b.role === 'admin') return 1;
+      const rankDiff = roleRank(a.role) - roleRank(b.role);
+      if (rankDiff !== 0) return rankDiff;
       return (a.display_name || '').localeCompare(b.display_name || '');
     });
     return {
