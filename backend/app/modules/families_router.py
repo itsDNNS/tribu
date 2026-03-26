@@ -339,7 +339,7 @@ def remove_member(
     if not membership:
         raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
 
-    target_user = db.query(User).filter(User.id == target_user_id).first()
+    target_user = db.query(User).filter(User.id == target_user_id).with_for_update().first()
     display_name = target_user.display_name if target_user else None
 
     _audit(db, family_id, user.id, "member_removed", target_user_id=target_user_id,
