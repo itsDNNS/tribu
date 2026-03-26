@@ -24,10 +24,11 @@ def global_search(
     q: str = Query(..., min_length=1, max_length=200),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
-    _scope=require_scope("family:read"),
+    _scope=require_scope("families:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
-    pattern = f"%{q}%"
+    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    pattern = f"%{escaped}%"
     results = {}
 
     # Calendar events

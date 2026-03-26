@@ -59,6 +59,18 @@ export default function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const overflowRef = useRef(null);
 
+  // Ctrl+K / Cmd+K keyboard shortcut for search
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const ActiveComponent = views[activeView] || DashboardView;
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
   const openTaskCount = tasks.filter((tk) => tk.status === 'open').length;
@@ -162,6 +174,11 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-content">
+          <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--glass-border)', border: 'none', borderRadius: 8, color: 'var(--text-muted)', fontSize: '0.82rem', cursor: 'pointer', marginBottom: 12 }}>
+            <Search size={14} />
+            {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
+            {!collapsed && <kbd style={{ marginLeft: 'auto', fontSize: '0.65rem', opacity: 0.6, background: 'var(--void-surface)', padding: '2px 5px', borderRadius: 4 }}>⌘K</kbd>}
+          </button>
           {!collapsed && currentFamily && (
             <div className="family-switcher">
               <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{currentFamily.family_name}</span>

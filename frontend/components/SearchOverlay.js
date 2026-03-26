@@ -19,6 +19,7 @@ export default function SearchOverlay({ open, onClose }) {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
   const debounceRef = useRef(null);
+  const reqIdRef = useRef(0);
 
   useEffect(() => {
     if (open && inputRef.current) {
@@ -27,6 +28,7 @@ export default function SearchOverlay({ open, onClose }) {
     if (!open) {
       setQuery('');
       setResults(null);
+      reqIdRef.current++;
     }
   }, [open]);
 
@@ -35,8 +37,10 @@ export default function SearchOverlay({ open, onClose }) {
       setResults(null);
       return;
     }
+    const id = ++reqIdRef.current;
     setLoading(true);
     const { ok, data } = await api.apiSearch(familyId, q);
+    if (id !== reqIdRef.current) return;
     if (ok) setResults(data);
     setLoading(false);
   }, [familyId]);
