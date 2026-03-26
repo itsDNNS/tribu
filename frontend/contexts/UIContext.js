@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { buildMessages, listLanguages } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 import { buildUi } from '../lib/styles';
@@ -16,10 +16,10 @@ export function UIProvider({ children }) {
   const [navOrder, setNavOrder] = useState(DEFAULT_NAV_ORDER);
   const [loading, setLoading] = useState(true);
 
-  const setActiveView = (view) => {
+  const setActiveView = useCallback((view) => {
     sessionStorage.setItem('tribu_view', view);
     setActiveViewRaw(view);
-  };
+  }, []);
 
   const messages = useMemo(() => buildMessages(lang), [lang]);
   const themeConfig = useMemo(() => getTheme(theme), [theme]);

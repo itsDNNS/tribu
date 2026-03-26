@@ -22,22 +22,44 @@ function AppOrchestrator({ children }) {
 
   const { loggedIn, demoMode, me, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
   const { familyId, setFamilyId, families, setFamilies, setMyFamilyRole, setMyFamilyIsAdult, loadMembers, setMembers } = family;
-  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications, loadNavOrder, resetData, lastEventIdRef, setNotifications, setUnreadCount } = data;
+  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount } = data;
   const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, setIsMobile, setNavOrder, lang, messages } = ui;
 
   // Wrap data loaders to inject familyId default and skip in demo mode
-  const wrapLoader = (loader) => useCallback(async (fid = familyId) => {
+  const loadDashboardWrapped = useCallback(async (fid = familyId) => {
     if (demoMode) return;
-    return loader(fid);
-  }, [familyId, demoMode, loader]);
+    return loadDashboard(fid);
+  }, [familyId, demoMode, loadDashboard]);
 
-  const loadDashboardWrapped = wrapLoader(loadDashboard);
-  const loadEventsWrapped = wrapLoader(loadEvents);
-  const loadMembersWrapped = wrapLoader(loadMembers);
-  const loadContactsWrapped = wrapLoader(loadContacts);
-  const loadBirthdaysWrapped = wrapLoader(loadBirthdays);
-  const loadTasksWrapped = wrapLoader(loadTasks);
-  const loadShoppingListsWrapped = wrapLoader(loadShoppingLists);
+  const loadEventsWrapped = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    return loadEvents(fid);
+  }, [familyId, demoMode, loadEvents]);
+
+  const loadMembersWrapped = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    return loadMembers(fid);
+  }, [familyId, demoMode, loadMembers]);
+
+  const loadContactsWrapped = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    return loadContacts(fid);
+  }, [familyId, demoMode, loadContacts]);
+
+  const loadBirthdaysWrapped = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    return loadBirthdays(fid);
+  }, [familyId, demoMode, loadBirthdays]);
+
+  const loadTasksWrapped = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    return loadTasks(fid);
+  }, [familyId, demoMode, loadTasks]);
+
+  const loadShoppingListsWrapped = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    return loadShoppingLists(fid);
+  }, [familyId, demoMode, loadShoppingLists]);
 
   const loadNotificationsWrapped = useCallback(async () => {
     if (demoMode) return;
@@ -88,9 +110,12 @@ function AppOrchestrator({ children }) {
   const logout = useCallback(async () => {
     await auth.logout();
     resetData();
-    setNavOrder(DEFAULT_NAV_ORDER);
+    family.setFamilies([]);
+    family.setMembers([]);
+    family.setMyFamilyRole('member');
     family.setMyFamilyIsAdult(true);
-  }, [auth, resetData, setNavOrder, family]);
+    setNavOrder(DEFAULT_NAV_ORDER);
+  }, [auth, resetData, family, setNavOrder]);
 
   // Init: localStorage, resize, auto-login
   useEffect(() => {
