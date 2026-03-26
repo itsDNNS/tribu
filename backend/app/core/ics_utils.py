@@ -2,6 +2,8 @@
 
 from datetime import datetime, date, timedelta
 
+from app.core.utils import utcnow
+
 from icalendar import Calendar, Event, vDate, vDatetime, vRecur
 
 RECURRENCE_MAP = {
@@ -62,7 +64,7 @@ def events_to_ics(events, calendar_name="Tribu") -> str:
                 except (ValueError, TypeError):
                     pass
 
-        dtstamp = ev.created_at if ev.created_at else datetime.utcnow()
+        dtstamp = ev.created_at if ev.created_at else utcnow()
         vevent.add("dtstamp", dtstamp)
 
         cal.add_component(vevent)

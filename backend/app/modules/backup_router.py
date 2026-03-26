@@ -2,6 +2,8 @@ import json
 import os
 from datetime import datetime
 
+from app.core.utils import utcnow
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -38,9 +40,9 @@ def _set_setting(db: Session, key: str, value: str):
     row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
     if row:
         row.value = value
-        row.updated_at = datetime.utcnow()
+        row.updated_at = utcnow()
     else:
-        row = SystemSetting(key=key, value=value, updated_at=datetime.utcnow())
+        row = SystemSetting(key=key, value=value, updated_at=utcnow())
         db.add(row)
     db.flush()
 
@@ -100,12 +102,12 @@ def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get
         filename = create_backup(DATABASE_URL, BACKUP_DIR)
         retention = int(_get_setting(db, "backup_retention", "7"))
         enforce_retention(BACKUP_DIR, retention)
-        _set_setting(db, "backup_last_timestamp", datetime.utcnow().isoformat())
+        _set_setting(db, "backup_last_timestamp", utcnow().isoformat())
         _set_setting(db, "backup_last_status", "success")
         db.commit()
         return {"status": "ok", "filename": filename}
     except Exception as e:
-        _set_setting(db, "backup_last_timestamp", datetime.utcnow().isoformat())
+        _set_setting(db, "backup_last_timestamp", utcnow().isoformat())
         _set_setting(db, "backup_last_status", "failed")
         db.commit()
         raise HTTPException(status_code=500, detail=error_detail(BACKUP_FAILED, reason=str(e)))

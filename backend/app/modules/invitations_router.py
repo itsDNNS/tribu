@@ -2,6 +2,8 @@ import os
 import secrets
 from datetime import datetime, timedelta
 
+from app.core.utils import utcnow
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from slowapi import Limiter
@@ -88,7 +90,7 @@ def create_invitation(
         raise HTTPException(status_code=400, detail=error_detail(INVALID_ROLE))
 
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(days=payload.expires_in_days)
+    expires_at = utcnow() + timedelta(days=payload.expires_in_days)
 
     invitation = FamilyInvitation(
         family_id=family_id,
@@ -188,7 +190,7 @@ def get_invite_info(
     if not invitation:
         return InviteInfoResponse(family_name="", valid=False, role_preset="member", is_adult_preset=False)
 
-    now = datetime.utcnow()
+    now = utcnow()
     valid = (
         not invitation.revoked
         and invitation.expires_at > now
@@ -228,7 +230,7 @@ def register_with_invite(
     if not invitation:
         raise HTTPException(status_code=400, detail=error_detail(INVITATION_INVALID))
 
-    now = datetime.utcnow()
+    now = utcnow()
     if invitation.revoked:
         raise HTTPException(status_code=400, detail=error_detail(INVITATION_REVOKED))
     if invitation.expires_at <= now:

@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime, timedelta, date
 
+from app.core.utils import utcnow
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
@@ -95,7 +97,7 @@ def _check_notifications():
 
     db = SessionLocal()
     try:
-        now = datetime.utcnow()
+        now = utcnow()
         today = now.date()
         tomorrow = today + timedelta(days=1)
 
