@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { buildMessages, listLanguages } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 import { buildUi } from '../lib/styles';
@@ -272,26 +272,66 @@ export function AppProvider({ children }) {
     return () => navigator.serviceWorker.removeEventListener('message', handler);
   }, []);
 
-  // Notification polling — separate effect to avoid race conditions with bootstrap
+  // SSE real-time notifications with polling fallback
+  const lastEventIdRef = useRef(0);
+
   useEffect(() => {
     if (!loggedIn || demoMode) return;
 
     let cancelled = false;
+    let es = null;
+    let reconnectTimer = null;
     let pollInterval = null;
+    let backoff = 1000;
 
+    // Initial count fetch for fast badge display
     (async () => {
       const { ok, data } = await api.apiGetUnreadCount();
       if (!cancelled && ok) setUnreadCount(data.count);
     })();
 
-    pollInterval = setInterval(async () => {
-      const { ok, data } = await api.apiGetUnreadCount();
-      if (!cancelled && ok) setUnreadCount(data.count);
-    }, 30000);
+    function connect() {
+      if (cancelled) return;
+      es = api.connectNotificationStream((notif) => {
+        if (cancelled) return;
+        lastEventIdRef.current = notif.id;
+        setNotifications(prev => [notif, ...prev]);
+        setUnreadCount(c => c + 1);
+      }, { lastEventId: lastEventIdRef.current });
+
+      es.onopen = () => {
+        backoff = 1000;
+        // SSE connected, stop polling fallback
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+      };
+
+      es.onerror = () => {
+        es.close();
+        // Start polling fallback while SSE is down
+        if (!pollInterval && !cancelled) {
+          pollInterval = setInterval(async () => {
+            const { ok, data } = await api.apiGetUnreadCount();
+            if (!cancelled && ok) setUnreadCount(data.count);
+          }, 30000);
+        }
+        // Reconnect with exponential backoff (cap 30s)
+        reconnectTimer = setTimeout(() => {
+          backoff = Math.min(backoff * 2, 30000);
+          connect();
+        }, backoff);
+      };
+    }
+
+    connect();
 
     return () => {
       cancelled = true;
-      clearInterval(pollInterval);
+      if (es) es.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [loggedIn, demoMode]);
 

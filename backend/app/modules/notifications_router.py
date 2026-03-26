@@ -106,13 +106,16 @@ def delete_notification(notification_id: int, user: User = Depends(current_user)
     description="Server-Sent Events stream that pushes new notifications in real time. The connection polls every 5 seconds and emits `data:` frames as JSON.",
     response_description="SSE event stream (text/event-stream)",
 )
-async def notification_stream(user: User = Depends(current_user)):
+async def notification_stream(
+    user: User = Depends(current_user),
+    last_event_id: int = Query(0, alias="lastEventId"),
+):
     user_id = user.id
 
     async def event_generator():
         from app.database import SessionLocal
 
-        last_id = 0
+        last_id = last_event_id
         try:
             while True:
                 db = SessionLocal()
@@ -125,7 +128,7 @@ async def notification_stream(user: User = Depends(current_user)):
                     )
                     for notif in query:
                         data = NotificationResponse.model_validate(notif).model_dump_json()
-                        yield f"data: {data}\n\n"
+                        yield f"id: {notif.id}\nevent: notification_new\ndata: {data}\n\n"
                         last_id = notif.id
                 finally:
                     db.close()
