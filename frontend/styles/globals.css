@@ -527,6 +527,11 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* ═══════════════════════════════════════════
+   MEMBER GROUPS
+   ═══════════════════════════════════════════ */
+.member-group-header { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: var(--space-md) 0 var(--space-xs); }
+
+/* ═══════════════════════════════════════════
    SIDEBAR (DOCSight-style collapsible)
    ═══════════════════════════════════════════ */
 .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); height: 100vh; position: fixed; left: 0; top: 0; z-index: 30; display: flex; flex-direction: column; background: rgba(10, 13, 24, 0.85); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border-right: 1px solid var(--glass-border); transition: width 0.25s ease, min-width 0.25s ease; overflow: visible; }

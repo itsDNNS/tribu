@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Check, Copy, X, KeyRound } from 'lucide-react';
+import { useMemo } from 'react';
+import { Plus, Check, Copy, X, KeyRound, Shield } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
@@ -151,33 +152,7 @@ export default function AdminView() {
         </div>
       )}
 
-      <div className="settings-grid">
-        {members.map((m) => (
-          <div key={m.user_id} className="glass-sm settings-section">
-            <div className="profile-row">
-              <div className="sidebar-user-avatar">{m.display_name?.[0] || '?'}</div>
-              <div className="profile-info">
-                <div className="profile-name">{m.display_name}</div>
-                <div className="profile-email">{m.email}</div>
-                <span className="profile-role">{m.role} · {m.is_adult ? t(messages, 'adult') : t(messages, 'child')}</span>
-              </div>
-            </div>
-            <div className="admin-actions">
-              {m.user_id === me?.user_id ? (
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{t(messages, 'admin_self_hint')}</span>
-              ) : (
-                <>
-                  <button className="btn-ghost" onClick={() => handleSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
-                  <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
-                  <button className="btn-ghost" onClick={() => handleSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
-                  <button className="btn-ghost" onClick={() => handleResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>
-                  <button className="btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => handleRemoveMember(m.user_id)}><X size={13} /> {t(messages, 'remove_member')}</button>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      <MemberGroups members={members} me={me} messages={messages} onSetAdult={handleSetAdult} onSetRole={handleSetRole} onResetPassword={handleResetPassword} onRemoveMember={handleRemoveMember} />
 
       {/* Add Member */}
       {!demoMode && (
@@ -248,5 +223,67 @@ export default function AdminView() {
       <BackupSection />
       <AuditLogSection />
     </div>
+  );
+}
+
+function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPassword, onRemoveMember }) {
+  const { adults, children } = useMemo(() => {
+    const roleRank = (r) => r === 'owner' ? 0 : r === 'admin' ? 1 : 2;
+    const sorted = [...members].sort((a, b) => {
+      const rankDiff = roleRank(a.role) - roleRank(b.role);
+      if (rankDiff !== 0) return rankDiff;
+      return (a.display_name || '').localeCompare(b.display_name || '');
+    });
+    return {
+      adults: sorted.filter(m => m.is_adult),
+      children: sorted.filter(m => !m.is_adult),
+    };
+  }, [members]);
+
+  const renderMember = (m) => (
+    <div key={m.user_id} className="glass-sm settings-section">
+      <div className="profile-row">
+        <div className="sidebar-user-avatar">{m.display_name?.[0] || '?'}</div>
+        <div className="profile-info">
+          <div className="profile-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {m.display_name}
+            {(m.role === 'admin' || m.role === 'owner') && (
+              <Shield size={13} style={{ color: 'var(--amethyst)' }} aria-label={m.role} />
+            )}
+          </div>
+          <div className="profile-email">{m.email}</div>
+        </div>
+      </div>
+      <div className="admin-actions">
+        {m.user_id === me?.user_id ? (
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{t(messages, 'admin_self_hint')}</span>
+        ) : (
+          <>
+            <button className="btn-ghost" onClick={() => onSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
+            <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
+            <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
+            <button className="btn-ghost" onClick={() => onResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>
+            <button className="btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => onRemoveMember(m.user_id)}><X size={13} /> {t(messages, 'remove_member')}</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {adults.length > 0 && (
+        <>
+          <div className="member-group-header">{t(messages, 'member_group_adults')} ({adults.length})</div>
+          <div className="settings-grid">{adults.map(renderMember)}</div>
+        </>
+      )}
+      {children.length > 0 && (
+        <>
+          <div className="member-group-header">{t(messages, 'member_group_children')} ({children.length})</div>
+          <div className="settings-grid">{children.map(renderMember)}</div>
+        </>
+      )}
+    </>
   );
 }

@@ -402,6 +402,8 @@
   "delete_account_placeholder": "DELETE eingeben",
   "account_deleted": "Konto erfolgreich gelöscht.",
   "left_family": "Du hast die Familie verlassen.",
+  "member_group_adults": "Erwachsene",
+  "member_group_children": "Kinder",
   "search.title": "Suche",
   "search.placeholder": "Termine, Aufgaben, Kontakte suchen...",
   "search.searching": "Suche...",
