@@ -132,6 +132,9 @@ export function AppProvider({ children }) {
     if (ok) {
       setNotifications(data);
       setUnreadCount(data.filter((n) => !n.read).length);
+      if (data.length) {
+        lastEventIdRef.current = Math.max(lastEventIdRef.current, data[0].id);
+      }
     }
   }, [demoMode]);
 
@@ -302,12 +305,10 @@ export function AppProvider({ children }) {
       if (cancelled) return;
       es = api.connectNotificationStream((notif) => {
         if (cancelled) return;
+        if (notif.id <= lastEventIdRef.current) return;
         lastEventIdRef.current = notif.id;
-        setNotifications(prev => {
-          if (prev.some(n => n.id === notif.id)) return prev;
-          return [notif, ...prev];
-        });
-        setUnreadCount(c => c + 1);
+        setNotifications(prev => [notif, ...prev]);
+        if (!notif.read) setUnreadCount(c => c + 1);
       }, { lastEventId: lastEventIdRef.current });
 
       es.onopen = () => {
@@ -340,7 +341,7 @@ export function AppProvider({ children }) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [loggedIn, demoMode]);
+  }, [loggedIn, demoMode, loadNotifications]);
 
   const value = {
     loading,
