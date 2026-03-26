@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Bell, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal } from 'lucide-react';
+import { Bell, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal, Search } from 'lucide-react';
+import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import DashboardView from './DashboardView';
@@ -55,7 +56,20 @@ export default function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const overflowRef = useRef(null);
+
+  // Ctrl+K / Cmd+K keyboard shortcut for search
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const ActiveComponent = views[activeView] || DashboardView;
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
@@ -160,6 +174,11 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-content">
+          <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--glass-border)', border: 'none', borderRadius: 8, color: 'var(--text-muted)', fontSize: '0.82rem', cursor: 'pointer', marginBottom: 12 }}>
+            <Search size={14} />
+            {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
+            {!collapsed && <kbd style={{ marginLeft: 'auto', fontSize: '0.65rem', opacity: 0.6, background: 'var(--void-surface)', padding: '2px 5px', borderRadius: 4 }}>⌘K</kbd>}
+          </button>
           {!collapsed && currentFamily && (
             <div className="family-switcher">
               <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{currentFamily.family_name}</span>
@@ -242,6 +261,9 @@ export default function AppShell() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button className="sidebar-logout" onClick={() => setSearchOpen(true)} aria-label={t(messages, 'search.title')}>
+                <Search size={18} />
+              </button>
               <button
                 className="sidebar-logout"
                 onClick={() => navigate('notifications')}
@@ -316,6 +338,7 @@ export default function AppShell() {
 
       {/* Live region for screen reader announcements */}
       <div id="a11y-announcer" className="sr-only" aria-live="polite" aria-atomic="true" />
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }
