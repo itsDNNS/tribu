@@ -339,16 +339,24 @@ def remove_member(
     if not membership:
         raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
 
-    target_user = db.query(User).filter(User.id == target_user_id).first()
+    target_user = db.query(User).filter(User.id == target_user_id).with_for_update().first()
     display_name = target_user.display_name if target_user else None
 
     _audit(db, family_id, user.id, "member_removed", target_user_id=target_user_id,
            details={"display_name": display_name, "role": membership.role})
     db.delete(membership)
+    db.flush()
+
+    remaining = db.query(Membership).filter(Membership.user_id == target_user_id).count()
+    user_deleted = False
+    if remaining == 0 and target_user:
+        db.delete(target_user)
+        user_deleted = True
+
     db.commit()
     cache.invalidate(f"tribu:members:{family_id}")
     cache.invalidate_pattern("tribu:families:*")
-    return {"status": "ok", "user_id": target_user_id}
+    return {"status": "ok", "user_id": target_user_id, "user_deleted": user_deleted}
 
 
 @router.get(
