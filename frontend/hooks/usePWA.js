@@ -70,8 +70,11 @@ export function usePWA() {
     if (!('serviceWorker' in navigator)) return;
 
     let updateFoundHandler;
+    let reg = null;
 
     navigator.serviceWorker.register('/sw.js').then((registration) => {
+      reg = registration;
+
       if (registration.waiting) {
         waitingWorkerRef.current = registration.waiting;
         setUpdateAvailable(true);
@@ -101,6 +104,9 @@ export function usePWA() {
 
     return () => {
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+      if (reg && updateFoundHandler) {
+        reg.removeEventListener('updatefound', updateFoundHandler);
+      }
     };
   }, []);
 
