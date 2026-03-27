@@ -61,6 +61,8 @@ export default function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const overflowRef = useRef(null);
+  const bellBtnRef = useRef(null);
+  const notifPanelRef = useRef(null);
 
   // Ctrl+K / Cmd+K keyboard shortcut for search
   useEffect(() => {
@@ -139,14 +141,20 @@ export default function AppShell() {
     if (!mobileOpen && !overflowOpen && !notifPanelOpen) return;
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
+        if (notifPanelOpen) { closeNotifPanel(); return; }
         setMobileOpen(false);
         setOverflowOpen(false);
-        setNotifPanelOpen(false);
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [mobileOpen, overflowOpen, notifPanelOpen]);
+
+  function closeNotifPanel() {
+    setNotifPanelOpen(false);
+    bellBtnRef.current?.focus();
+  }
+
 
   const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}${isMobile && mobileOpen ? ' mobile-open' : ''}`;
 
@@ -286,6 +294,7 @@ export default function AppShell() {
                 <Search size={18} />
               </button>
               <button
+                ref={bellBtnRef}
                 className="sidebar-action-btn"
                 onClick={() => { setNotifPanelOpen(prev => !prev); setOverflowOpen(false); }}
                 aria-label={t(messages, 'notifications')}
@@ -360,9 +369,19 @@ export default function AppShell() {
       {/* Notification panel */}
       {notifPanelOpen && (
         <>
-          <div className="notif-panel-backdrop" onClick={() => setNotifPanelOpen(false)} />
-          <div className="notif-panel" role="dialog" aria-modal="true" aria-label={t(messages, 'notifications')}>
-            <NotificationCenter onClose={() => setNotifPanelOpen(false)} />
+          <div className="notif-panel-backdrop" onClick={closeNotifPanel} />
+          <div ref={notifPanelRef} className="notif-panel" role="dialog" aria-modal="true" aria-label={t(messages, 'notifications')}
+            onKeyDown={(e) => {
+              if (e.key !== 'Tab' || !notifPanelRef.current) return;
+              const focusable = notifPanelRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+              if (focusable.length === 0) return;
+              const first = focusable[0];
+              const last = focusable[focusable.length - 1];
+              if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+              else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+            }}
+          >
+            <NotificationCenter onClose={closeNotifPanel} />
           </div>
         </>
       )}
