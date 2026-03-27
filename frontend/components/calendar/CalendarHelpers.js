@@ -27,33 +27,26 @@ export function DeleteRecurringDialog({ event, messages, onDeleteThis, onDeleteA
 
   return (
     <div
+      className="cal-dialog-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-recurring-title"
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
-      }}
     >
-      <div className="glass" style={{
-        padding: 'var(--space-xl)', maxWidth: 380, width: '90%',
-        display: 'flex', flexDirection: 'column', gap: 'var(--space-md)',
-      }}>
-        <div id="delete-recurring-title" style={{ fontWeight: 600, fontSize: '1rem' }}>
+      <div className="cal-dialog">
+        <div id="delete-recurring-title" className="cal-dialog-title">
           {t(messages, 'module.calendar.delete_recurring_question')}
         </div>
-        <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+        <div className="cal-dialog-subtitle">
           {event.title}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button ref={firstBtnRef} className="btn-sm" onClick={onDeleteThis} style={{ width: '100%' }}>
+        <div className="cal-dialog-actions">
+          <button ref={firstBtnRef} className="btn-sm" onClick={onDeleteThis}>
             {t(messages, 'module.calendar.delete_this_only')}
           </button>
-          <button className="btn-sm" onClick={onDeleteAll} style={{ width: '100%', background: 'var(--danger, #e53e3e)', color: '#fff' }}>
+          <button className="btn-sm cal-dialog-delete-all" onClick={onDeleteAll}>
             {t(messages, 'module.calendar.delete_all')}
           </button>
-          <button className="btn-sm" onClick={onCancel} style={{ width: '100%', background: 'transparent', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }}>
+          <button className="btn-sm cal-dialog-cancel" onClick={onCancel}>
             {t(messages, 'cancel')}
           </button>
         </div>
@@ -75,16 +68,11 @@ export function AssignChips({ members, assignedTo, setAssignedTo, messages }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+    <div className="assign-chips">
       <button
         type="button"
+        className={`assign-chip${assignedTo.includes('all') ? ' assign-chip-active' : ''}`}
         onClick={() => toggle('all')}
-        style={{
-          padding: '4px 10px', borderRadius: 999, fontSize: '0.78rem', cursor: 'pointer',
-          border: assignedTo.includes('all') ? '1.5px solid var(--amethyst)' : '1.5px solid var(--border-color, rgba(255,255,255,0.15))',
-          background: assignedTo.includes('all') ? 'var(--amethyst)' : 'transparent',
-          color: assignedTo.includes('all') ? '#fff' : 'var(--text-secondary)',
-        }}
       >
         {t(messages, 'module.calendar.assign_all')}
       </button>
@@ -95,13 +83,9 @@ export function AssignChips({ members, assignedTo, setAssignedTo, messages }) {
           <button
             key={m.user_id}
             type="button"
+            className={`assign-chip${selected ? ' assign-chip-active' : ''}`}
             onClick={() => toggle(m.user_id)}
-            style={{
-              padding: '4px 10px', borderRadius: 999, fontSize: '0.78rem', cursor: 'pointer',
-              border: `1.5px solid ${color}`,
-              background: selected ? color : 'transparent',
-              color: selected ? '#fff' : 'var(--text-secondary)',
-            }}
+            style={{ borderColor: color, ...(selected && { background: color }) }}
           >
             {m.display_name}
           </button>
@@ -125,18 +109,15 @@ export function AssignedBadges({ assignedTo, members }) {
   if (badgeMembers.length === 0) return null;
 
   return (
-    <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
+    <div className="assigned-badges">
       {badgeMembers.map((m, i) => {
         const initials = m.display_name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
         return (
           <span
             key={m.user_id}
+            className="assigned-badge"
             title={m.display_name}
-            style={{
-              width: 20, height: 20, borderRadius: '50%', fontSize: '0.6rem', fontWeight: 600,
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: getMemberColor(m, i), color: '#fff',
-            }}
+            style={{ background: getMemberColor(m, i) }}
           >
             {initials}
           </span>
@@ -150,24 +131,22 @@ export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onE
   return (
     <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index), cursor: onEdit && !ev._isBirthday ? 'pointer' : undefined }} onClick={() => onEdit && !ev._isBirthday && onEdit(ev)}>
       <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 500, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="event-card-title">
           {ev._isBirthday && <Cake size={14} style={{ color: '#f43f5e', flexShrink: 0 }} aria-hidden="true" />}
           {ev.title}
           {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />}
         </div>
-        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, lang, timeFormat)}</div>
+        <div className="event-card-meta">{prettyDate(ev.starts_at, lang, timeFormat)}</div>
         {members && <AssignedBadges assignedTo={ev.assigned_to} members={members} />}
       </div>
       {onEdit && !ev._isBirthday && !ev.is_recurring && (
-        <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(ev); }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
+        <button type="button" className="event-card-action" onClick={(e) => { e.stopPropagation(); onEdit(ev); }}
           aria-label={t(messages, 'aria.edit_event').replace('{title}', ev.title)}>
           <Pencil size={14} />
         </button>
       )}
       {onDelete && !ev._isBirthday && (
-        <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
+        <button type="button" className="event-card-action" onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
           aria-label={t(messages, 'aria.delete_event').replace('{title}', ev.title)}>
           <Trash2 size={14} />
         </button>

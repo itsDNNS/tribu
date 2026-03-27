@@ -41,5 +41,6 @@
   "module.calendar.color_none": "Keine Farbe",
   "module.calendar.category": "Kategorie",
   "module.calendar.edit_event": "Termin bearbeiten",
-  "module.calendar.description": "Beschreibung"
+  "module.calendar.description": "Beschreibung",
+  "module.calendar.onboard_text": "Importiere deinen bestehenden Kalender, um direkt loszulegen."
 }
