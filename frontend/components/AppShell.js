@@ -28,7 +28,7 @@ const views = {
 
 import { getMemberColor } from '../lib/member-colors';
 
-const SYSTEM_KEYS = new Set(['notifications', 'settings', 'admin']);
+const PINNED_BOTTOM_KEYS = new Set(['settings', 'admin']);
 const MAX_BOTTOM_NAV = 5;
 
 function DashboardSkeleton() {
@@ -89,17 +89,24 @@ export default function AppShell() {
     admin: { key: 'admin', icon: Shield, label: t(messages, 'admin'), mobileLabel: t(messages, 'admin') },
   }), [messages, totalUnchecked, openTaskCount, unreadCount]);
 
-  // Ordered items based on custom nav order, filtering admin for non-admins and unknown keys
+  // Split items: sortable nav items vs pinned bottom items (settings, admin)
   const orderedItems = useMemo(() => {
     return navOrder
-      .filter((key) => key in itemRegistry && (key !== 'admin' || isAdmin))
+      .filter((key) => key in itemRegistry && !PINNED_BOTTOM_KEYS.has(key) && (key !== 'admin' || isAdmin))
       .map((key) => itemRegistry[key]);
   }, [navOrder, itemRegistry, isAdmin]);
 
-  // Mobile bottom nav: max 5 items, with overflow
-  const hasOverflow = orderedItems.length > MAX_BOTTOM_NAV;
+  const pinnedItems = useMemo(() => {
+    const items = [];
+    if (itemRegistry.settings) items.push(itemRegistry.settings);
+    if (isAdmin && itemRegistry.admin) items.push(itemRegistry.admin);
+    return items;
+  }, [itemRegistry, isAdmin]);
+
+  // Mobile bottom nav: sortable items only, pinned items always in overflow
+  const hasOverflow = orderedItems.length > MAX_BOTTOM_NAV || pinnedItems.length > 0;
   const visibleItems = hasOverflow ? orderedItems.slice(0, MAX_BOTTOM_NAV - 1) : orderedItems.slice(0, MAX_BOTTOM_NAV);
-  const overflowItems = hasOverflow ? orderedItems.slice(MAX_BOTTOM_NAV - 1) : [];
+  const overflowItems = hasOverflow ? [...orderedItems.slice(MAX_BOTTOM_NAV - 1), ...pinnedItems] : [];
   const activeInOverflow = overflowItems.some((item) => item.key === activeView);
 
   const navigate = useCallback((key) => {
@@ -136,8 +143,7 @@ export default function AppShell() {
 
   const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}${isMobile && mobileOpen ? ' mobile-open' : ''}`;
 
-  // Sidebar: find index of first system key to insert divider
-  const firstSystemIndex = orderedItems.findIndex((item) => SYSTEM_KEYS.has(item.key));
+  // No system divider needed - pinned items render below the spacer
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 2 }}>
@@ -194,8 +200,26 @@ export default function AppShell() {
           )}
 
           <nav className="nav-section" aria-label={t(messages, 'aria.main_navigation')}>
-            {orderedItems.map((item, i) => {
-              const btn = (
+            {orderedItems.map((item) => (
+              <button
+                key={item.key}
+                className={`nav-item${activeView === item.key ? ' active' : ''}`}
+                onClick={() => navigate(item.key)}
+                data-tooltip={item.label}
+                aria-current={activeView === item.key ? 'page' : undefined}
+              >
+                <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
+                {!collapsed && <span className="nav-label">{item.label}</span>}
+                {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
+              </button>
+            ))}
+          </nav>
+
+          <div style={{ flex: 1 }} />
+
+          {pinnedItems.length > 0 && (
+            <nav className="nav-section" aria-label="System">
+              {pinnedItems.map((item) => (
                 <button
                   key={item.key}
                   className={`nav-item${activeView === item.key ? ' active' : ''}`}
@@ -205,20 +229,10 @@ export default function AppShell() {
                 >
                   <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
                   {!collapsed && <span className="nav-label">{item.label}</span>}
-                  {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
                 </button>
-              );
-              if (i === firstSystemIndex && firstSystemIndex > 0) {
-                return [
-                  <div key="__system-divider" className="nav-section-label">{!collapsed ? 'System' : ''}</div>,
-                  btn,
-                ];
-              }
-              return btn;
-            })}
-          </nav>
-
-          <div style={{ flex: 1 }} />
+              ))}
+            </nav>
+          )}
 
           <div className="sidebar-divider" />
 
