@@ -20,10 +20,10 @@ export default function NotificationCenter({ onClose } = {}) {
     loadNotifications();
   }, [loadNotifications]);
 
-  // Focus close button when panel opens
+  // Focus close button once when panel opens (empty deps to avoid re-steal)
   useEffect(() => {
     if (onClose) closeBtnRef.current?.focus();
-  }, [onClose]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleMarkRead(notif) {
     if (notif.read) return;
@@ -133,6 +133,9 @@ export default function NotificationCenter({ onClose } = {}) {
                   key={notif.id}
                   className={`notif-item${notif.read ? ' notif-item-read' : ' notif-item-unread'}`}
                   onClick={() => handleClick(notif)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(notif); } }}
                 >
                   <div className={`notif-icon${!notif.read ? ' notif-icon-unread' : ''}`}>
                     <Icon size={18} />
