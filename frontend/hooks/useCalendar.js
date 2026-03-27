@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
-import { errorText, toIsoOrNull, parseUtc } from '../lib/helpers';
+import { errorText, toIsoOrNull, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
@@ -115,7 +115,7 @@ export function useCalendar() {
     const m = selectedDate.getMonth();
     const d = selectedDate.getDate();
     return allEvents.filter((ev) => {
-      const dt = parseUtc(ev.starts_at);
+      const dt = parseDate(ev.starts_at);
       return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d;
     });
   }, [allEvents, selectedDate]);
@@ -129,7 +129,7 @@ export function useCalendar() {
 
     const dayEvents = {};
     for (const ev of allEvents) {
-      const d = parseUtc(ev.starts_at);
+      const d = parseDate(ev.starts_at);
       if (d.getFullYear() === y && d.getMonth() === m) {
         const day = d.getDate();
         if (!dayEvents[day]) dayEvents[day] = [];
@@ -165,7 +165,7 @@ export function useCalendar() {
     const weekNumber = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
 
     const weekEvents = allEvents.filter((ev) => {
-      const dt = parseUtc(ev.starts_at);
+      const dt = parseDate(ev.starts_at);
       return dt >= weekStart && dt < weekEnd;
     });
 
@@ -174,7 +174,7 @@ export function useCalendar() {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + i);
       const dayEvents = allEvents.filter((ev) => {
-        const dt = parseUtc(ev.starts_at);
+        const dt = parseDate(ev.starts_at);
         return dt.getFullYear() === date.getFullYear() && dt.getMonth() === date.getMonth() && dt.getDate() === date.getDate();
       }).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
       days.push({ date, dayEvents });
@@ -210,7 +210,7 @@ export function useCalendar() {
       family_id: Number(familyId), title, description: description || null,
       starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
       recurrence: recurrence || null,
-      recurrence_end: recurrenceEnd ? new Date(recurrenceEnd).toISOString() : null,
+      recurrence_end: toIsoOrNull(recurrenceEnd),
       assigned_to: assignedPayload,
       color: color || null,
       category: category || null,
@@ -221,7 +221,7 @@ export function useCalendar() {
       setSummary((prev) => ({
         ...prev,
         next_events: [...(prev.next_events || []), newEvent]
-          .filter((ev) => parseUtc(ev.starts_at) >= new Date())
+          .filter((ev) => parseDate(ev.starts_at) >= new Date())
           .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
           .slice(0, 5),
       }));

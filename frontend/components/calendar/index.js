@@ -137,10 +137,10 @@ export default function CalendarView() {
                       const picked = new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth(), c.day);
                       cal.setSelectedDate(picked);
                       if (!cal.startsAt) {
-                        const local = new Date(picked.getFullYear(), picked.getMonth(), picked.getDate(), 9, 0);
-                        const offset = local.getTimezoneOffset();
-                        const localIso = new Date(local.getTime() - offset * 60000).toISOString().slice(0, 16);
-                        cal.setStartsAt(localIso);
+                        const y = picked.getFullYear();
+                        const m = String(picked.getMonth() + 1).padStart(2, '0');
+                        const d = String(picked.getDate()).padStart(2, '0');
+                        cal.setStartsAt(`${y}-${m}-${d}T09:00`);
                       }
                     }}
                   >
