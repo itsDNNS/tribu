@@ -10,7 +10,7 @@ from app.core.errors import error_detail, UNKNOWN_NAV_KEYS
 
 router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})
 
-DEFAULT_NAV_ORDER = ["dashboard", "calendar", "shopping", "tasks", "contacts", "notifications", "settings"]
+DEFAULT_NAV_ORDER = ["dashboard", "calendar", "shopping", "tasks", "contacts", "notifications", "settings", "admin"]
 KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "contacts", "notifications", "settings", "admin"}
 
 

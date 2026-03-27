@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigation, ChevronUp, ChevronDown, Check, CalendarDays, CheckSquare, LayoutDashboard, Settings, Shield, BookUser, ShoppingCart, Bell } from 'lucide-react';
+import { Navigation, ChevronUp, ChevronDown, Check, CalendarDays, CheckSquare, LayoutDashboard, BookUser, ShoppingCart, Bell } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
@@ -11,16 +11,16 @@ const NAV_ITEM_META = {
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
   contacts: { icon: BookUser, labelKey: 'contacts' },
   notifications: { icon: Bell, labelKey: 'notifications' },
-  settings: { icon: Settings, labelKey: 'settings' },
-  admin: { icon: Shield, labelKey: 'admin' },
 };
+
+const PINNED_KEYS = new Set(['settings', 'admin']);
 
 export default function NavigationTab() {
   const { messages, isAdmin, demoMode, navOrder, setNavOrder } = useApp();
-  const [localNavOrder, setLocalNavOrder] = useState(navOrder);
+  const [localNavOrder, setLocalNavOrder] = useState(() => navOrder.filter(k => !PINNED_KEYS.has(k)));
   const [navSaved, setNavSaved] = useState(false);
 
-  useEffect(() => { setLocalNavOrder(navOrder); }, [navOrder]);
+  useEffect(() => { setLocalNavOrder(navOrder.filter(k => !PINNED_KEYS.has(k))); }, [navOrder]);
 
   function moveNavItem(index, direction) {
     const newOrder = [...localNavOrder];
@@ -31,19 +31,21 @@ export default function NavigationTab() {
   }
 
   async function handleSaveNavOrder() {
+    const fullOrder = [...localNavOrder, 'settings', ...(isAdmin ? ['admin'] : [])];
     if (demoMode) {
-      setNavOrder(localNavOrder);
+      setNavOrder(fullOrder);
     } else {
-      const res = await api.apiUpdateNavOrder(localNavOrder);
+      const res = await api.apiUpdateNavOrder(fullOrder);
       if (!res.ok) return;
-      setNavOrder(localNavOrder);
+      setNavOrder(fullOrder);
     }
     setNavSaved(true);
     setTimeout(() => setNavSaved(false), 2000);
   }
 
   function handleResetNavOrder() {
-    setLocalNavOrder(DEFAULT_NAV_ORDER);
+    const sortable = DEFAULT_NAV_ORDER.filter(k => !PINNED_KEYS.has(k));
+    setLocalNavOrder(sortable);
     if (demoMode) {
       setNavOrder(DEFAULT_NAV_ORDER);
     }
