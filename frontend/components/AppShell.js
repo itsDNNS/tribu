@@ -59,6 +59,7 @@ export default function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const overflowRef = useRef(null);
 
   // Ctrl+K / Cmd+K keyboard shortcut for search
@@ -286,7 +287,7 @@ export default function AppShell() {
               </button>
               <button
                 className="sidebar-action-btn"
-                onClick={() => navigate('notifications')}
+                onClick={() => setNotifPanelOpen(prev => !prev)}
                 aria-label={t(messages, 'notifications')}
                 style={{ position: 'relative' }}
               >
@@ -354,6 +355,16 @@ export default function AppShell() {
             )}
           </div>
         </nav>
+      )}
+
+      {/* Notification panel */}
+      {notifPanelOpen && (
+        <>
+          <div className="notif-panel-backdrop" onClick={() => setNotifPanelOpen(false)} />
+          <div className="notif-panel">
+            <NotificationCenter onClose={() => setNotifPanelOpen(false)} />
+          </div>
+        </>
       )}
 
       {/* Live region for screen reader announcements */}

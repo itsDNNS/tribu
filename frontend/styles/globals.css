@@ -875,6 +875,14 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 [data-theme="light"] .notif-item { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 [data-theme="light"] .notif-empty { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 
+/* ─── Notification Panel ─── */
+.notif-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 100; }
+.notif-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 380px; max-width: 100vw; background: var(--void-deep); border-left: 1px solid var(--glass-border); z-index: 101; overflow-y: auto; padding: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-sm); animation: notifSlideIn 0.25s var(--ease-out-expo); }
+@keyframes notifSlideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.notif-panel-header { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.notif-panel-title { font-size: 1.1rem; font-weight: 600; flex: 1; }
+[data-theme="light"] .notif-panel { background: var(--void); border-color: rgba(0, 0, 0, 0.06); }
+
 /* ═══════════════════════════════════════════
    TASKS VIEW
    ═══════════════════════════════════════════ */
@@ -1341,6 +1349,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .rewards-balances { margin-left: calc(-1 * var(--space-md)); margin-right: calc(-1 * var(--space-md)); padding-left: var(--space-md); padding-right: var(--space-md); }
   .cal-fab { bottom: calc(88px + env(safe-area-inset-bottom)); right: var(--space-md); }
   .cal-form-row { grid-template-columns: 1fr; }
+  .notif-panel { width: 100vw; top: auto; bottom: 0; max-height: 80vh; border-left: none; border-top: 1px solid var(--glass-border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom)); animation-name: notifSlideUp; }
+  @keyframes notifSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 }
 
 /* ─── Setup Wizard ─── */
