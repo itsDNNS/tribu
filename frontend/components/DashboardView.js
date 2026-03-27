@@ -104,7 +104,14 @@ export default function DashboardView() {
                 <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">
                   <div className="event-title">{ev.title}</div>
-                  <div className="event-meta">{prettyDate(ev.starts_at, lang, timeFormat)}</div>
+                  <div className="event-meta">
+                    {prettyDate(ev.starts_at, lang, timeFormat)}
+                    {ev.assigned_to && ev.assigned_to !== 'all' && Array.isArray(ev.assigned_to) && (() => {
+                      const names = ev.assigned_to.map(uid => members.find(m => m.user_id === Number(uid))?.display_name).filter(Boolean);
+                      return names.length > 0 ? <span style={{ marginLeft: 6, color: 'var(--amethyst)' }}>{names.join(', ')}</span> : null;
+                    })()}
+                    {ev.assigned_to === 'all' && <span style={{ marginLeft: 6, color: 'var(--amethyst)' }}>{t(messages, 'module.calendar.assign_all')}</span>}
+                  </div>
                 </div>
               </div>
             ))}
