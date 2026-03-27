@@ -225,6 +225,10 @@
 
 [data-theme="light"] .birthday-item { background: rgba(0, 0, 0, 0.015); }
 [data-theme="light"] .btn-ghost.rewards-pending { background: transparent; border-color: transparent; }
+[data-theme="light"] .rewards-tabs { background: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .rewards-tab.active { background: var(--void-elevated); }
+[data-theme="light"] .rewards-row-pending { background: rgba(245, 158, 11, 0.06); }
+[data-theme="light"] .rewards-progress-bar { background: rgba(0, 0, 0, 0.06); }
 
 [data-theme="light"] .calendar-nav-btn {
   background: rgba(0, 0, 0, 0.03);
@@ -678,6 +682,71 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .rewards-child-name { flex: 1; }
 .rewards-child-balance { font-weight: 600; }
 .rewards-pending { display: flex; align-items: center; gap: var(--space-xs); margin-top: var(--space-sm); font-size: 0.78rem; color: var(--warning); padding: 8px 12px; min-height: 44px; background: transparent; border-color: transparent; }
+
+/* ─── Rewards View ─── */
+.rewards-header-currency { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+.rewards-tabs { display: flex; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 3px; gap: 2px; margin-bottom: var(--space-lg); }
+.rewards-tab { padding: 7px 14px; border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+.rewards-tab.active { background: var(--void-elevated); color: var(--text-primary); }
+.rewards-tab-badge { background: var(--warning); color: #fff; border-radius: 8px; padding: 1px 6px; font-size: 0.7rem; font-weight: 600; }
+.rewards-section-title { font-size: 0.88rem; font-weight: 600; margin-bottom: var(--space-sm); margin-top: var(--space-lg); }
+.rewards-section-title:first-child { margin-top: 0; }
+.rewards-balances { display: flex; gap: var(--space-sm); overflow-x: auto; padding-bottom: var(--space-sm); margin-bottom: var(--space-md); scrollbar-width: none; }
+.rewards-balances::-webkit-scrollbar { display: none; }
+.rewards-balance-card { display: flex; align-items: center; gap: var(--space-sm); padding: 10px 14px; border-radius: var(--radius-sm); min-width: 160px; flex-shrink: 0; }
+.rewards-balance-card-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.rewards-balance-card-avatar-fallback { width: 28px; height: 28px; border-radius: 50%; font-size: 0.7rem; }
+.rewards-balance-card-name { font-weight: 500; font-size: 0.82rem; }
+.rewards-balance-card-value { font-weight: 700; }
+.rewards-row { display: flex; align-items: center; gap: var(--space-sm); padding: 8px 12px; margin-bottom: 4px; border-radius: var(--space-sm); font-size: 0.85rem; }
+.rewards-row-title { flex: 1; }
+.rewards-row-value { font-weight: 600; }
+.rewards-row-meta { font-size: 0.75rem; color: var(--text-muted); }
+.rewards-row-earn { border-left: 3px solid var(--success); }
+.rewards-row-spend { border-left: 3px solid var(--amethyst); }
+.rewards-row-pending { border-left: 3px solid var(--warning); background: rgba(245, 158, 11, 0.04); }
+.rewards-row-task { border-left: 3px solid var(--sapphire); }
+.rewards-row-top { border-radius: var(--space-sm) var(--space-sm) 0 0; margin-bottom: 0; }
+.rewards-row-bottom { border-radius: 0 0 var(--space-sm) var(--space-sm); border-top: 1px solid var(--glass-border); }
+.rewards-action { min-width: 44px; min-height: 44px; padding: 8px; display: inline-flex; align-items: center; justify-content: center; }
+.rewards-action-confirm { color: var(--success); }
+.rewards-action-reject { color: var(--danger); }
+.rewards-action-delete { color: var(--danger); }
+.rewards-earn-form { display: flex; gap: var(--space-sm); flex-wrap: wrap; align-items: end; }
+.rewards-earn-form .form-input { min-width: 0; }
+.rewards-earn-select { flex: 1; min-width: 120px; }
+.rewards-earn-amount { width: 70px; }
+.rewards-earn-note { flex: 2; min-width: 120px; }
+.rewards-add-form { display: flex; gap: var(--space-sm); margin-top: var(--space-sm); }
+.rewards-add-name { flex: 1; }
+.rewards-add-amount { width: 70px; }
+.rewards-hero { text-align: center; padding: var(--space-xl); margin-bottom: var(--space-lg); border-radius: var(--radius-lg); }
+.rewards-hero-value { font-size: 3rem; font-weight: 700; }
+.rewards-hero-label { color: var(--text-muted); font-size: 0.85rem; margin-top: var(--space-xs); }
+.rewards-hero-pending { color: var(--warning); font-size: 0.78rem; margin-top: var(--space-xs); }
+.rewards-progress { margin-top: var(--space-md); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm); background: rgba(255,255,255,0.03); }
+.rewards-progress-label { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 6px; }
+.rewards-progress-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.rewards-progress-fill { height: 100%; background: var(--grad-primary); border-radius: 3px; transition: width 0.4s var(--ease-out-expo); }
+.rewards-progress-info { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+.rewards-catalog-item { display: flex; align-items: center; gap: 12px; }
+.rewards-catalog-item-locked { opacity: 0.5; }
+.rewards-empty { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: var(--space-xl) var(--space-md); }
+.rewards-setup { max-width: 460px; margin: 2em auto; padding: var(--space-lg); }
+.rewards-setup-title { margin-bottom: var(--space-md); }
+.rewards-setup-grid { display: grid; gap: var(--space-sm); }
+.rewards-setup-option { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: none; cursor: pointer; border-radius: var(--radius-sm); text-align: left; transition: all 0.2s; }
+.rewards-setup-option:disabled { opacity: 0.5; cursor: not-allowed; }
+.rewards-setup-option-name { font-weight: 600; font-size: 0.95rem; }
+.rewards-history-back { margin-bottom: var(--space-md); font-size: 0.82rem; }
+.rewards-history-row { font-size: 0.82rem; }
+.rewards-history-date { color: var(--text-muted); min-width: 70px; }
+.rewards-history-member { min-width: 80px; }
+.rewards-history-status { font-size: 0.7rem; }
+.rewards-history-status-pending { color: var(--warning); }
+.rewards-history-status-confirmed { color: var(--success); }
+.rewards-history-status-rejected { color: var(--danger); }
+.rewards-history-link { margin-top: var(--space-lg); text-align: center; }
 
 /* ═══════════════════════════════════════════
    CALENDAR
