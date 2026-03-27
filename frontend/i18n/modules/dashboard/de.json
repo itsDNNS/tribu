@@ -15,5 +15,10 @@
   "module.dashboard.tasks_done": "Aufgaben erledigt",
   "module.dashboard.open_tasks": "Offene Aufgaben",
   "module.dashboard.all": "Alle →",
-  "module.dashboard.days": "Tage"
+  "module.dashboard.days": "Tage",
+  "module.dashboard.empty_events": "Keine Termine heute",
+  "module.dashboard.empty_events_action": "Termin erstellen",
+  "module.dashboard.empty_tasks": "Alles erledigt!",
+  "module.dashboard.empty_tasks_action": "Aufgabe erstellen",
+  "module.dashboard.empty_birthdays": "Keine Geburtstage in den nächsten 4 Wochen"
 }

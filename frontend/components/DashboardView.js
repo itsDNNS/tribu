@@ -64,7 +64,10 @@ export default function DashboardView() {
           </div>
           <div className="event-list">
             {summary.next_events?.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'no_upcoming_events')}</div>
+              <div className="bento-empty">
+                <span>{t(messages, 'module.dashboard.empty_events')}</span>
+                <button className="bento-empty-action" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.empty_events_action')}</button>
+              </div>
             )}
             {summary.next_events?.slice(0, 4).map((ev, i) => (
               <div key={ev.id} className="event-item">
@@ -111,7 +114,10 @@ export default function DashboardView() {
           </div>
           <div className="task-preview-list">
             {openTasks.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.tasks.no_tasks')}</div>
+              <div className="bento-empty">
+                <span>{t(messages, 'module.dashboard.empty_tasks')}</span>
+                <button className="bento-empty-action" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.empty_tasks_action')}</button>
+              </div>
             )}
             {openTasks.slice(0, 5).map((task, i) => {
               const assignee = members.find((m) => m.user_id === task.assigned_to_user_id);
@@ -140,7 +146,7 @@ export default function DashboardView() {
           </div>
           <div className="birthday-list">
             {summary.upcoming_birthdays?.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'no_upcoming_birthdays')}</div>
+              <div className="bento-empty">{t(messages, 'module.dashboard.empty_birthdays')}</div>
             )}
             {summary.upcoming_birthdays?.slice(0, 3).map((b, i) => {
               const c = b.days_until <= 3

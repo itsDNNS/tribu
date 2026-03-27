@@ -15,5 +15,10 @@
   "module.dashboard.tasks_done": "Tasks completed",
   "module.dashboard.open_tasks": "Open tasks",
   "module.dashboard.all": "All →",
-  "module.dashboard.days": "days"
+  "module.dashboard.days": "days",
+  "module.dashboard.empty_events": "No events today",
+  "module.dashboard.empty_events_action": "Create event",
+  "module.dashboard.empty_tasks": "All done!",
+  "module.dashboard.empty_tasks_action": "Create task",
+  "module.dashboard.empty_birthdays": "No birthdays in the next 4 weeks"
 }
