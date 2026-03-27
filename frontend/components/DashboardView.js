@@ -118,7 +118,6 @@ export default function DashboardView() {
               const priorityColor = task.priority === 'high' ? 'var(--danger)' : task.priority === 'normal' ? 'var(--amethyst)' : 'var(--sapphire)';
               return (
                 <div key={task.id} className="task-preview-item">
-                  <div className="task-check" aria-hidden="true" />
                   <div className="task-preview-info">
                     <div className="task-preview-title">{task.title}</div>
                   </div>
@@ -144,15 +143,14 @@ export default function DashboardView() {
               <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'no_upcoming_birthdays')}</div>
             )}
             {summary.upcoming_birthdays?.slice(0, 3).map((b, i) => {
-              const colors = [
-                { bg: 'rgba(244,63,94,0.12)', color: '#fb7185' },
-                { bg: 'rgba(245,158,11,0.12)', color: '#fbbf24' },
-                { bg: 'rgba(59,130,246,0.12)', color: '#60a5fa' },
-              ];
-              const c = colors[i % colors.length];
+              const c = b.days_until <= 3
+                ? { bg: 'rgba(239,68,68,0.12)', color: 'var(--danger)' }
+                : b.days_until <= 7
+                ? { bg: 'rgba(245,158,11,0.12)', color: 'var(--warning)' }
+                : { bg: 'rgba(120,130,180,0.08)', color: 'var(--text-muted)' };
               return (
                 <div key={i} className="birthday-item">
-                  <div className="birthday-avatar" aria-hidden="true">🎂</div>
+                  <div className="birthday-avatar" style={{ background: c.bg }} aria-hidden="true"><Cake size={16} style={{ color: c.color }} /></div>
                   <div className="birthday-info">
                     <div className="birthday-name">{b.person_name}</div>
                     <div className="birthday-date">{b.occurs_on}</div>
