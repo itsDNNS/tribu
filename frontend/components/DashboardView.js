@@ -99,7 +99,7 @@ export default function DashboardView() {
                 <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">
                   <div className="event-title">{ev.title}</div>
-                  <div className="event-meta">{prettyDate(ev.starts_at, lang)}</div>
+                  <div className="event-meta">{prettyDate(ev.starts_at, lang, timeFormat)}</div>
                 </div>
               </div>
             ))}

@@ -130,12 +130,16 @@ export default function AdminView() {
       {/* Time Format Toggle */}
       <div className="glass-sm settings-section" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', marginBottom: 'var(--space-md)' }}>
         <span style={{ fontSize: '0.85rem', fontWeight: 500, flex: 1 }}>{t(messages, 'time_format')}</span>
-        <button className={`btn-ghost${timeFormat === '24h' ? ' active' : ''}`} onClick={async () => { await api.apiSetTimeFormat('24h'); setTimeFormat('24h'); }}
-          style={{ padding: '4px 12px', borderRadius: 6, background: timeFormat === '24h' ? 'var(--amethyst)' : undefined, color: timeFormat === '24h' ? '#fff' : undefined }}>
+        <button className={`btn-ghost${timeFormat === '24h' ? ' active' : ''}`} onClick={async () => {
+          const { ok } = await api.apiSetTimeFormat('24h');
+          if (ok) setTimeFormat('24h'); else toastError(t(messages, 'toast.error'));
+        }} style={{ padding: '4px 12px', borderRadius: 6, background: timeFormat === '24h' ? 'var(--amethyst)' : undefined, color: timeFormat === '24h' ? '#fff' : undefined }}>
           24h
         </button>
-        <button className={`btn-ghost${timeFormat === '12h' ? ' active' : ''}`} onClick={async () => { await api.apiSetTimeFormat('12h'); setTimeFormat('12h'); }}
-          style={{ padding: '4px 12px', borderRadius: 6, background: timeFormat === '12h' ? 'var(--amethyst)' : undefined, color: timeFormat === '12h' ? '#fff' : undefined }}>
+        <button className={`btn-ghost${timeFormat === '12h' ? ' active' : ''}`} onClick={async () => {
+          const { ok } = await api.apiSetTimeFormat('12h');
+          if (ok) setTimeFormat('12h'); else toastError(t(messages, 'toast.error'));
+        }} style={{ padding: '4px 12px', borderRadius: 6, background: timeFormat === '12h' ? 'var(--amethyst)' : undefined, color: timeFormat === '12h' ? '#fff' : undefined }}>
           12h
         </button>
       </div>

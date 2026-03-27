@@ -341,7 +341,7 @@ def set_time_format(payload: dict, user: User = Depends(current_user), db: Sessi
         raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
     fmt = payload.get("time_format", "24h")
     if fmt not in ("12h", "24h"):
-        raise HTTPException(status_code=400, detail="time_format must be '12h' or '24h'")
+        raise HTTPException(status_code=400, detail=error_detail("INVALID_TIME_FORMAT"))
     row = db.query(SystemSetting).filter(SystemSetting.key == "time_format").first()
     if row:
         row.value = fmt
