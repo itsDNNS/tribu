@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useCalendar } from '../../hooks/useCalendar';
 import { t } from '../../lib/i18n';
-import { RECURRENCE_OPTIONS, DeleteRecurringDialog, AssignChips, EventCard } from './CalendarHelpers';
-import { getMemberColor, COLOR_PALETTE } from '../../lib/member-colors';
+import { DeleteRecurringDialog, EventCard } from './CalendarHelpers';
+import { getMemberColor } from '../../lib/member-colors';
+import DayDetailPanel from './DayDetailPanel';
 
 export default function CalendarView() {
   const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild, members, timeFormat } = useApp();
@@ -163,95 +164,8 @@ export default function CalendarView() {
           </div>
 
           {/* Day Detail Panel */}
-          {!isMobile && cal.selectedDate && (
-            <div className="day-detail-panel">
-              <div className="day-detail-date">
-                {cal.selectedDate.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
-              </div>
-              <div className="day-detail-weekday">
-                {cal.selectedDate.toLocaleDateString(locale, { weekday: 'long' })}
-              </div>
-
-              <div className="day-detail-events">
-                {cal.selectedDayEvents.length === 0 && (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                    {t(messages, 'module.calendar.no_events_day')}
-                    {events.length === 0 && !demoMode && (
-                      <div style={{ marginTop: 'var(--space-sm)' }}>
-                        <button
-                          type="button"
-                          onClick={() => setActiveView('settings')}
-                          style={{ background: 'none', border: 'none', color: 'var(--amethyst)', cursor: 'pointer', fontSize: '0.85rem', padding: 0 }}
-                        >
-                          {t(messages, 'module.calendar.import_cta')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {cal.selectedDayEvents.map((ev, i) => (
-                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} lang={lang} timeFormat={timeFormat} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
-                ))}
-              </div>
-
-              {/* Edit form */}
-              {cal.editingEvent && (
-                <form onSubmit={cal.saveEdit} className="glass-sm" style={{ padding: 12, marginBottom: 12, borderRadius: 10, display: 'grid', gap: 8 }}>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--amethyst)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.edit_event')}</div>
-                  <input className="form-input" value={cal.editTitle} onChange={e => cal.setEditTitle(e.target.value)} required />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <input className="form-input" type="datetime-local" value={cal.editStartsAt} onChange={e => cal.setEditStartsAt(e.target.value)} required style={{ fontSize: '0.82rem' }} />
-                    <input className="form-input" type="datetime-local" value={cal.editEndsAt} onChange={e => cal.setEditEndsAt(e.target.value)} style={{ fontSize: '0.82rem' }} />
-                  </div>
-                  <input className="form-input" value={cal.editDescription} onChange={e => cal.setEditDescription(e.target.value)} placeholder={t(messages, 'module.calendar.description')} />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn-sm" type="submit">{t(messages, 'save')}</button>
-                    <button className="btn-ghost" type="button" onClick={cal.cancelEdit}>{t(messages, 'cancel')}</button>
-                  </div>
-                </form>
-              )}
-
-              {!isChild && !cal.editingEvent && (
-                <>
-                  <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.quick_add')}</div>
-                  <form onSubmit={cal.createEvent} className="quick-add-form">
-                    <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required style={{ fontSize: '0.88rem', padding: '12px 14px' }} />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
-                      <input className="form-input" type="datetime-local" value={cal.endsAt} onChange={(e) => cal.setEndsAt(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
-                    </div>
-                    <select className="form-input" value={cal.recurrence} onChange={(e) => cal.setRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
-                      {RECURRENCE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
-                      ))}
-                    </select>
-                    {cal.recurrence && (
-                      <input className="form-input" type="date" value={cal.recurrenceEnd} onChange={(e) => cal.setRecurrenceEnd(e.target.value)} placeholder={t(messages, 'module.calendar.repeat_until')} style={{ fontSize: '0.82rem', padding: '10px 12px' }} />
-                    )}
-                    {members.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.assign_to')}</div>
-                        <AssignChips members={members} assignedTo={cal.assignedTo} setAssignedTo={cal.setAssignedTo} messages={messages} />
-                      </div>
-                    )}
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.color')}</div>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        <button type="button" onClick={() => cal.setColor('')}
-                          style={{ width: 22, height: 22, borderRadius: '50%', border: !cal.color ? '2px solid var(--text-primary)' : '2px solid var(--glass-border)', background: 'var(--void-surface)', cursor: 'pointer' }}
-                          aria-label={t(messages, 'module.calendar.color_none')} />
-                        {COLOR_PALETTE.slice(0, 8).map(c => (
-                          <button type="button" key={c} onClick={() => cal.setColor(c)}
-                            style={{ width: 22, height: 22, borderRadius: '50%', border: cal.color === c ? '2px solid var(--text-primary)' : '2px solid transparent', background: c, cursor: 'pointer' }}
-                            aria-label={c} />
-                        ))}
-                      </div>
-                    </div>
-                    <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
-                  </form>
-                </>
-              )}
-            </div>
+          {!isMobile && (
+            <DayDetailPanel cal={cal} locale={locale} messages={messages} lang={lang} timeFormat={timeFormat} events={events} members={members} isChild={isChild} demoMode={demoMode} setActiveView={setActiveView} />
           )}
         </div>
       ) : (
@@ -292,80 +206,7 @@ export default function CalendarView() {
 
       {/* Selected date details on mobile */}
       {isMobile && cal.calendarView === 'month' && cal.selectedDate && (
-        <div className="day-detail-panel" style={{ marginTop: 'var(--space-md)' }}>
-          <div className="day-detail-date">
-            {cal.selectedDate.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
-          </div>
-          <div className="day-detail-weekday">
-            {cal.selectedDate.toLocaleDateString(locale, { weekday: 'long' })}
-          </div>
-          <div className="day-detail-events">
-            {cal.selectedDayEvents.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                {t(messages, 'module.calendar.no_events')}
-                {events.length === 0 && !demoMode && (
-                  <div style={{ marginTop: 'var(--space-sm)' }}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveView('settings')}
-                      style={{ background: 'none', border: 'none', color: 'var(--amethyst)', cursor: 'pointer', fontSize: '0.85rem', padding: 0 }}
-                    >
-                      {t(messages, 'module.calendar.import_cta')}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            {cal.selectedDayEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} lang={lang} timeFormat={timeFormat} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
-            ))}
-          </div>
-          {/* Mobile edit form */}
-          {cal.editingEvent && (
-            <form onSubmit={cal.saveEdit} className="glass-sm" style={{ padding: 12, marginBottom: 12, borderRadius: 10, display: 'grid', gap: 8 }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--amethyst)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.edit_event')}</div>
-              <input className="form-input" value={cal.editTitle} onChange={e => cal.setEditTitle(e.target.value)} required />
-              <input className="form-input" type="datetime-local" value={cal.editStartsAt} onChange={e => cal.setEditStartsAt(e.target.value)} required style={{ fontSize: '0.82rem' }} />
-              <input className="form-input" type="datetime-local" value={cal.editEndsAt} onChange={e => cal.setEditEndsAt(e.target.value)} style={{ fontSize: '0.82rem' }} />
-              <input className="form-input" value={cal.editDescription} onChange={e => cal.setEditDescription(e.target.value)} placeholder={t(messages, 'module.calendar.description')} />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn-sm" type="submit">{t(messages, 'save')}</button>
-                <button className="btn-ghost" type="button" onClick={cal.cancelEdit}>{t(messages, 'cancel')}</button>
-              </div>
-            </form>
-          )}
-          {!isChild && !cal.editingEvent && (
-            <form onSubmit={cal.createEvent} className="quick-add-form">
-              <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required />
-              <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required />
-              <select className="form-input" value={cal.recurrence} onChange={(e) => cal.setRecurrence(e.target.value)} style={{ fontSize: '0.82rem', padding: '10px 12px' }}>
-                {RECURRENCE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
-                ))}
-              </select>
-              {members.length > 0 && (
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.assign_to')}</div>
-                  <AssignChips members={members} assignedTo={cal.assignedTo} setAssignedTo={cal.setAssignedTo} messages={messages} />
-                </div>
-              )}
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t(messages, 'module.calendar.color')}</div>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  <button type="button" onClick={() => cal.setColor('')}
-                    style={{ width: 22, height: 22, borderRadius: '50%', border: !cal.color ? '2px solid var(--text-primary)' : '2px solid var(--glass-border)', background: 'var(--void-surface)', cursor: 'pointer' }}
-                    aria-label={t(messages, 'module.calendar.color_none')} />
-                  {COLOR_PALETTE.slice(0, 8).map(c => (
-                    <button type="button" key={c} onClick={() => cal.setColor(c)}
-                      style={{ width: 22, height: 22, borderRadius: '50%', border: cal.color === c ? '2px solid var(--text-primary)' : '2px solid transparent', background: c, cursor: 'pointer' }}
-                      aria-label={c} />
-                  ))}
-                </div>
-              </div>
-              <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
-            </form>
-          )}
-        </div>
+        <DayDetailPanel cal={cal} locale={locale} messages={messages} lang={lang} timeFormat={timeFormat} events={events} members={members} isChild={isChild} demoMode={demoMode} setActiveView={setActiveView} isMobile />
       )}
 
       {/* Birthday form in week view */}
