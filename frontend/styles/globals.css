@@ -193,6 +193,7 @@
   background: rgba(0, 0, 0, 0.04);
   border-color: rgba(0, 0, 0, 0.06);
 }
+[data-theme="light"] .bento-card { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 [data-theme="light"] .bento-card:hover {
   border-color: rgba(0, 0, 0, 0.1);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 12px 32px -6px rgba(0, 0, 0, 0.08);
@@ -604,8 +605,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    BENTO GRID (Dashboard)
    ═══════════════════════════════════════════ */
 .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--space-md); row-gap: var(--space-lg); }
-.bento-card { padding: var(--space-lg); transition: all 0.3s var(--ease-out-expo); }
-.bento-card:hover { transform: translateY(-2px); border-color: rgba(120, 130, 180, 0.2); }
+.bento-card { padding: var(--space-lg); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); transition: all 0.2s; }
+.bento-card:hover { border-color: rgba(120, 130, 180, 0.2); }
 .bento-welcome { grid-column: span 8; }
 .bento-stats { grid-column: span 4; }
 .bento-events { grid-column: span 7; }

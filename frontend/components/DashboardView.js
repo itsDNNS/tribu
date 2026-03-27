@@ -51,9 +51,9 @@ export default function DashboardView() {
         <div className="view-date">{todayStr}</div>
       </div>
 
-      <div className="bento-grid stagger">
+      <div className="bento-grid">
         {/* Welcome Card */}
-        <div className="bento-card bento-welcome glass glow-purple" role="region" aria-label={t(messages, 'aria.welcome')}>
+        <div className="bento-card bento-welcome" role="region" aria-label={t(messages, 'aria.welcome')}>
           <div className="welcome-row">
             <div className="welcome-avatar">{initials}</div>
             <div className="welcome-text">
@@ -69,7 +69,7 @@ export default function DashboardView() {
         </div>
 
         {/* Stats Card */}
-        <div className="bento-card bento-stats glass" role="region" aria-label={t(messages, 'module.dashboard.family')}>
+        <div className="bento-card bento-stats" role="region" aria-label={t(messages, 'module.dashboard.family')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><BarChart3 size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.family')}</h2>
           </div>
@@ -90,7 +90,7 @@ export default function DashboardView() {
         </div>
 
         {/* Events Card */}
-        <div className="bento-card bento-events glass glow-blue" role="region" aria-label={t(messages, 'next_events')}>
+        <div className="bento-card bento-events" role="region" aria-label={t(messages, 'next_events')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><CalendarClock size={16} aria-hidden="true" /> {t(messages, 'next_events')}</h2>
             <button className="bento-more" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.all')}</button>
@@ -116,7 +116,7 @@ export default function DashboardView() {
         </div>
 
         {/* Tasks Card */}
-        <div className="bento-card bento-tasks glass" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
+        <div className="bento-card bento-tasks" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><ListChecks size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.open_tasks')}</h2>
             <button className="bento-more" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.all')}</button>
@@ -147,7 +147,7 @@ export default function DashboardView() {
         </div>
 
         {/* Birthdays Card */}
-        <div className="bento-card bento-birthdays glass glow-rose" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
+        <div className="bento-card bento-birthdays" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><Cake size={16} aria-hidden="true" /> {t(messages, 'upcoming_birthdays_4w')}</h2>
           </div>
