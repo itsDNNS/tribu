@@ -157,7 +157,7 @@ export function EventCard({ ev, index, messages, onDelete, members }) {
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, messages)}</div>
         {members && <AssignedBadges assignedTo={ev.assigned_to} members={members} />}
       </div>
-      {onDelete && (
+      {onDelete && !ev._isBirthday && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(ev); }}

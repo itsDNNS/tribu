@@ -7,7 +7,7 @@ import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
 export function useCalendar() {
-  const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary, lang, messages } = useApp();
+  const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary, lang, messages, members } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [calendarView, setCalendarViewRaw] = useState('month');
@@ -91,11 +91,34 @@ export function useCalendar() {
     const y = selectedDate.getFullYear();
     const m = selectedDate.getMonth();
     const d = selectedDate.getDate();
-    return events.filter((ev) => {
+    return allEvents.filter((ev) => {
       const dt = new Date(ev.starts_at);
       return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d;
     });
-  }, [events, selectedDate]);
+  }, [allEvents, selectedDate]);
+
+  // Merge real events with synthetic member birthday events
+  const allEvents = useMemo(() => {
+    const birthdayEvents = [];
+    const currentYear = new Date().getFullYear();
+    for (const m of members) {
+      if (!m.date_of_birth) continue;
+      const [y, mo, d] = m.date_of_birth.split('-').map(Number);
+      const age = currentYear - y;
+      const startsAt = new Date(currentYear, mo - 1, d, 0, 0, 0).toISOString();
+      birthdayEvents.push({
+        id: `bday-${m.user_id}`,
+        title: `🎂 ${m.display_name}` + (age > 0 ? ` (${age})` : ''),
+        starts_at: startsAt,
+        ends_at: null,
+        all_day: true,
+        color: '#f43f5e',
+        is_recurring: false,
+        _isBirthday: true,
+      });
+    }
+    return [...events, ...birthdayEvents];
+  }, [events, members]);
 
   const monthCells = useMemo(() => {
     const y = calendarMonth.getFullYear();
@@ -105,7 +128,7 @@ export function useCalendar() {
     const startOffset = (first.getDay() + 6) % 7;
 
     const dayEvents = {};
-    for (const ev of events) {
+    for (const ev of allEvents) {
       const d = new Date(ev.starts_at);
       if (d.getFullYear() === y && d.getMonth() === m) {
         const day = d.getDate();
@@ -119,7 +142,7 @@ export function useCalendar() {
     for (let d = 1; d <= lastDay; d += 1) cells.push({ day: d, count: (dayEvents[d] || []).length, events: dayEvents[d] || [] });
     while (cells.length % 7 !== 0) cells.push({ empty: true });
     return cells;
-  }, [calendarMonth, events]);
+  }, [calendarMonth, allEvents]);
 
   const weekInfo = useMemo(() => {
     const ref = weekAnchor;
@@ -141,7 +164,7 @@ export function useCalendar() {
     const diffMs = weekStart - firstWeekStart;
     const weekNumber = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
 
-    const weekEvents = events.filter((ev) => {
+    const weekEvents = allEvents.filter((ev) => {
       const dt = new Date(ev.starts_at);
       return dt >= weekStart && dt < weekEnd;
     });
@@ -150,7 +173,7 @@ export function useCalendar() {
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + i);
-      const dayEvents = events.filter((ev) => {
+      const dayEvents = allEvents.filter((ev) => {
         const dt = new Date(ev.starts_at);
         return dt.getFullYear() === date.getFullYear() && dt.getMonth() === date.getMonth() && dt.getDate() === date.getDate();
       }).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
@@ -158,7 +181,7 @@ export function useCalendar() {
     }
 
     return { weekStart, weekEnd, weekNumber, weekEvents, days };
-  }, [events, weekAnchor]);
+  }, [allEvents, weekAnchor]);
 
   const prevWeek = useCallback(() => {
     setWeekAnchor((prev) => {
