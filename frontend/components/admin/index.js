@@ -234,7 +234,9 @@ export default function AdminView() {
 
 function getAge(dateOfBirth) {
   if (!dateOfBirth) return null;
-  const dob = new Date(dateOfBirth);
+  // Parse as YYYY-MM-DD to avoid timezone offset issues
+  const [y, m, d] = dateOfBirth.split('-').map(Number);
+  const dob = new Date(y, m - 1, d);
   const now = new Date();
   let age = now.getFullYear() - dob.getFullYear();
   if (now.getMonth() < dob.getMonth() || (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate())) age--;
@@ -278,10 +280,10 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
         ) : (
           <>
             <button className="btn-ghost" onClick={() => onSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
-            {m.role !== 'owner' && m.role !== 'admin' && <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>}
-            {m.role !== 'owner' && m.role !== 'member' && <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>}
+            {m.role === 'member' && <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>}
+            {m.role === 'admin' && <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>}
             <input type="date" className="form-input" style={{ width: 'auto', padding: '4px 8px', fontSize: '0.78rem' }}
-              value={m.date_of_birth ? m.date_of_birth.split('T')[0] : ''}
+              value={m.date_of_birth || ''}
               onChange={(e) => onSetBirthdate(m.user_id, e.target.value || null)}
               aria-label={t(messages, 'birthdate')} />
             <button className="btn-ghost" onClick={() => onResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>

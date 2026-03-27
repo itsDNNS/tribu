@@ -26,7 +26,7 @@ def _column_exists(table_name: str, column_name: str) -> bool:
 
 def upgrade() -> None:
     if not _column_exists("memberships", "date_of_birth"):
-        op.add_column("memberships", sa.Column("date_of_birth", sa.DateTime, nullable=True))
+        op.add_column("memberships", sa.Column("date_of_birth", sa.Date, nullable=True))
 
 
 def downgrade() -> None:

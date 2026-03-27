@@ -7,7 +7,7 @@ from app.core.deps import current_user, ensure_family_admin, ensure_family_membe
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import AuditLog, Family, Membership, User
-from app.schemas import AUTH_RESPONSES, ADMIN_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, ErrorResponse, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
+from app.schemas import AUTH_RESPONSES, ADMIN_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, ErrorResponse, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
 from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF
 
@@ -238,7 +238,7 @@ def update_member_adult(
 def update_member_birthdate(
     family_id: int,
     target_user_id: int,
-    payload: dict,
+    payload: MemberBirthdateUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
     _scope=require_scope("families:write"),
@@ -250,12 +250,10 @@ def update_member_birthdate(
     ).first()
     if not membership:
         raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
-    from datetime import datetime as dt
-    raw = payload.get("date_of_birth")
-    membership.date_of_birth = dt.fromisoformat(raw) if raw else None
+    membership.date_of_birth = payload.date_of_birth
     db.commit()
     cache.invalidate(f"tribu:members:{family_id}")
-    return {"status": "ok", "user_id": target_user_id, "date_of_birth": membership.date_of_birth.isoformat() if membership.date_of_birth else None}
+    return {"status": "ok", "user_id": target_user_id, "date_of_birth": str(membership.date_of_birth) if membership.date_of_birth else None}
 
 
 @router.patch(
