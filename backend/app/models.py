@@ -2,7 +2,7 @@ from datetime import datetime
 
 from app.core.utils import utcnow
 
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON
+from sqlalchemy import Column, Date, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -48,6 +48,7 @@ class Membership(Base):
     role = Column(String, nullable=False, default="member")
     is_adult = Column(Boolean, nullable=False, default=False)
     color = Column(String, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
 
     user = relationship("User", back_populates="memberships")
     family = relationship("Family", back_populates="memberships")

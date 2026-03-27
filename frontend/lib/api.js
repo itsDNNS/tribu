@@ -424,6 +424,10 @@ export function apiSearch(familyId, query) {
 }
 
 // Rewards
+export function apiSetMemberBirthdate(familyId, userId, dateOfBirth) {
+  return patch(`/families/${familyId}/members/${userId}/birthdate`, { date_of_birth: dateOfBirth });
+}
+
 export function apiGetRewardCurrency(familyId) { return request(`/rewards/currency?family_id=${familyId}`); }
 export function apiCreateRewardCurrency(payload) { return post('/rewards/currency', payload); }
 export function apiUpdateRewardCurrency(id, payload) { return patch(`/rewards/currency/${id}`, payload); }
