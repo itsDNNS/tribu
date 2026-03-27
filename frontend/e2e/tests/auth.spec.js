@@ -58,6 +58,6 @@ test.describe('Authentication', () => {
     await page.locator('#login-password').fill('Wrong1234');
     await page.locator('#panel-login button[type="submit"]').click();
 
-    await expect(page.locator('#panel-login [role="alert"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('p[role="alert"]')).toBeVisible({ timeout: 10000 });
   });
 });
