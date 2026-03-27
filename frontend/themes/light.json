@@ -6,7 +6,7 @@
   "description": "Warm and inviting",
   "dataTheme": "light",
   "tokens": {
-    "bg": "#f8f6f3",
+    "bg": "#f0ecf8",
     "surface": "#ffffff",
     "text": "#1a1520",
     "muted": "#9b93a8",

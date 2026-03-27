@@ -11,7 +11,7 @@ const THEME_DESCS = {
   de: { light: 'Warm und einladend', dark: 'Dezent und dunkel', 'midnight-glass': 'Glassmorphism, tiefes Violett' },
 };
 const THEME_PREVIEWS = {
-  light: { bg: '#f8f6f3', surface: '#ffffff', accent: '#7c3aed' },
+  light: { bg: '#f0ecf8', surface: '#faf9fd', accent: '#7c3aed' },
   dark: { bg: '#0f172a', surface: '#1e293b', accent: '#7c3aed' },
   'midnight-glass': { bg: '#06080f', surface: '#111628', accent: '#7c3aed' },
 };
