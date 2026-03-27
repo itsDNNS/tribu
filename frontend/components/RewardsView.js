@@ -3,16 +3,17 @@ import { Gift, Plus, Star, Check, X, Award, ArrowUpCircle, ArrowDownCircle, Gem,
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { useRewards } from '../hooks/useRewards';
+import { CurrencyIcon } from '../lib/currency-icons';
 import { t } from '../lib/i18n';
 import { errorText, parseDate } from '../lib/helpers';
 import * as api from '../lib/api';
 
 const CURRENCY_PRESETS = [
-  { name: 'Stars', icon: '⭐', Icon: Star, color: '#f59e0b' },
-  { name: 'Gems', icon: '💎', Icon: Gem, color: '#7c3aed' },
-  { name: 'Hearts', icon: '❤️', Icon: Heart, color: '#f43f5e' },
-  { name: 'Bolts', icon: '⚡', Icon: Zap, color: '#06b6d4' },
-  { name: 'Trophies', icon: '🏆', Icon: Trophy, color: '#f59e0b' },
+  { name: 'Stars', icon: 'star', Icon: Star, color: '#f59e0b' },
+  { name: 'Gems', icon: 'gem', Icon: Gem, color: '#7c3aed' },
+  { name: 'Hearts', icon: 'heart', Icon: Heart, color: '#f43f5e' },
+  { name: 'Bolts', icon: 'zap', Icon: Zap, color: '#06b6d4' },
+  { name: 'Trophies', icon: 'trophy', Icon: Trophy, color: '#f59e0b' },
 ];
 
 export default function RewardsView() {
@@ -82,7 +83,7 @@ export default function RewardsView() {
                 setCreatingCurrency(false);
               }}>
                 <p.Icon size={24} style={{ color: p.color, flexShrink: 0 }} />
-                <div className="rewards-setup-option-name">{p.icon} {p.name}</div>
+                <div className="rewards-setup-option-name">{p.name}</div>
               </button>
             ))}
           </div>
@@ -108,7 +109,7 @@ export default function RewardsView() {
         <div className="view-header"><h1><Gift size={22} /> {t(messages, 'module.rewards.name')}</h1></div>
         {rw.myBalance && (
           <div className="glass glow-purple rewards-hero">
-            <div className="rewards-hero-value">{rw.currency.icon} {rw.myBalance.balance}</div>
+            <div className="rewards-hero-value"><CurrencyIcon icon={rw.currency.icon} />{rw.myBalance.balance}</div>
             <div className="rewards-hero-label">{rw.currency.name}</div>
             {rw.myBalance.pending > 0 && <div className="rewards-hero-pending">{t(messages, 'module.rewards.pending').replace('{count}', rw.myBalance.pending)}</div>}
           </div>
@@ -130,7 +131,7 @@ export default function RewardsView() {
                 <div className="rewards-progress-fill" style={{ width: `${pct}%` }} />
               </div>
               <div className="rewards-progress-info">
-                <span>{rw.myBalance.balance} / {target.cost} {rw.currency.icon}</span>
+                <span>{rw.myBalance.balance} / {target.cost} <CurrencyIcon icon={rw.currency.icon} /></span>
                 <span>{t(messages, 'module.rewards.progress_remaining').replace('{count}', remaining)}</span>
               </div>
             </div>
@@ -143,7 +144,7 @@ export default function RewardsView() {
               <div key={tk.id} className="glass-sm rewards-row rewards-row-task">
                 <CheckSquare size={14} style={{ color: 'var(--amethyst)' }} />
                 <span className="rewards-row-title">{tk.title}</span>
-                <span className="rewards-row-value">+{tk.token_reward_amount} {rw.currency.icon}</span>
+                <span className="rewards-row-value">+{tk.token_reward_amount} <CurrencyIcon icon={rw.currency.icon} /></span>
               </div>
             ))}
           </>
@@ -158,7 +159,7 @@ export default function RewardsView() {
                 <Award size={18} style={{ color: 'var(--amethyst)', flexShrink: 0 }} />
                 <div className="rewards-row-title">
                   <div className="rewards-balance-card-name">{r.name}</div>
-                  <div className="rewards-row-meta">{r.cost} {rw.currency.icon}</div>
+                  <div className="rewards-row-meta">{r.cost} <CurrencyIcon icon={rw.currency.icon} /></div>
                 </div>
                 <button className="btn-sm" disabled={!canAfford} onClick={() => rw.redeem(r)}>{t(messages, 'module.rewards.redeem')}</button>
               </div>
@@ -173,7 +174,7 @@ export default function RewardsView() {
   return (
     <div className="view-content">
       <div className="view-header">
-        <h1><Gift size={22} /> {t(messages, 'module.rewards.name')} <span className="rewards-header-currency">{rw.currency.icon} {rw.currency.name}</span></h1>
+        <h1><Gift size={22} /> {t(messages, 'module.rewards.name')} <span className="rewards-header-currency"><CurrencyIcon icon={rw.currency.icon} />{rw.currency.name}</span></h1>
       </div>
 
       {/* Tabs - history demoted to link */}
@@ -203,7 +204,7 @@ export default function RewardsView() {
                   )}
                   <div>
                     <div className="rewards-balance-card-name">{b.display_name}</div>
-                    <div className="rewards-balance-card-value">{rw.currency.icon} {b.balance}</div>
+                    <div className="rewards-balance-card-value"><CurrencyIcon icon={rw.currency.icon} />{b.balance}</div>
                   </div>
                 </div>
               );
@@ -225,13 +226,13 @@ export default function RewardsView() {
                       </button>
                       <span className="rewards-row-title">{tk.title}</span>
                       {assignee && <span className="rewards-row-meta">{assignee.display_name}</span>}
-                      <span className="rewards-row-value">+{tk.token_reward_amount} {rw.currency.icon}</span>
+                      <span className="rewards-row-value">+{tk.token_reward_amount} <CurrencyIcon icon={rw.currency.icon} /></span>
                     </div>
                     {isConfirming && (
                       <div className="glass-sm rewards-row rewards-row-bottom">
                         <span className="rewards-row-meta">{assignee?.display_name || '?'}</span>
                         <input type="number" className="form-input rewards-earn-amount" min={1} value={confirmAmount} onChange={e => setConfirmAmount(Number(e.target.value))} />
-                        <span>{rw.currency.icon}</span>
+                        <CurrencyIcon icon={rw.currency.icon} />
                         <button className="btn-sm" onClick={handleEarnForTask}><Check size={14} /></button>
                         <button className="btn-ghost rewards-action" onClick={() => setConfirmingTask(null)}><X size={14} /></button>
                       </div>
@@ -263,7 +264,7 @@ export default function RewardsView() {
                 return (
                   <div key={tx.id} className="glass-sm rewards-row rewards-row-pending">
                     <Award size={14} style={{ color: 'var(--warning)' }} />
-                    <span className="rewards-row-title">{memberName}: {tx.kind === 'earn' ? '+' : '-'}{tx.amount} {rw.currency.icon} {tx.note && `(${tx.note})`}</span>
+                    <span className="rewards-row-title">{memberName}: {tx.kind === 'earn' ? '+' : '-'}{tx.amount} <CurrencyIcon icon={rw.currency.icon} />{tx.note && `(${tx.note})`}</span>
                     <button className="btn-ghost rewards-action rewards-action-confirm" onClick={() => rw.confirmTxn(tx.id)}><Check size={16} /></button>
                     <button className="btn-ghost rewards-action rewards-action-reject" onClick={() => rw.rejectTxn(tx.id)}><X size={16} /></button>
                   </div>
@@ -291,7 +292,7 @@ export default function RewardsView() {
             <div key={r.id} className="glass-sm rewards-row rewards-row-earn">
               <Star size={14} style={{ color: 'var(--amethyst)' }} />
               <span className="rewards-row-title">{r.name}</span>
-              <span className="rewards-row-value">+{r.amount} {rw.currency.icon}</span>
+              <span className="rewards-row-value">+{r.amount} <CurrencyIcon icon={rw.currency.icon} /></span>
               <button className="btn-ghost rewards-action rewards-action-delete" onClick={() => rw.deleteRule(r.id)}><X size={14} /></button>
             </div>
           ))}
@@ -307,7 +308,7 @@ export default function RewardsView() {
             <div key={r.id} className="glass-sm rewards-row rewards-row-spend">
               <Award size={14} style={{ color: 'var(--amethyst)' }} />
               <span className="rewards-row-title">{r.name}</span>
-              <span className="rewards-row-value">{r.cost} {rw.currency.icon}</span>
+              <span className="rewards-row-value">{r.cost} <CurrencyIcon icon={rw.currency.icon} /></span>
               <button className="btn-ghost rewards-action rewards-action-delete" onClick={() => rw.deleteReward(r.id)}><X size={14} /></button>
             </div>
           ))}
@@ -332,7 +333,7 @@ export default function RewardsView() {
                 <span className="rewards-history-date">{date}</span>
                 <span className="rewards-history-member">{memberName}</span>
                 <span className="rewards-row-title">{tx.note || tx.kind}</span>
-                <span className="rewards-row-value">{tx.kind === 'earn' ? '+' : '-'}{tx.amount} {rw.currency.icon}</span>
+                <span className="rewards-row-value">{tx.kind === 'earn' ? '+' : '-'}{tx.amount} <CurrencyIcon icon={rw.currency.icon} /></span>
                 <span className={`rewards-history-status rewards-history-status-${tx.status}`}>{tx.status}</span>
               </div>
             );
