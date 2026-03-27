@@ -107,7 +107,7 @@ export default function DashboardView() {
                   <div className="event-meta">
                     {prettyDate(ev.starts_at, lang, timeFormat)}
                     {ev.assigned_to && ev.assigned_to !== 'all' && Array.isArray(ev.assigned_to) && (() => {
-                      const names = ev.assigned_to.map(uid => members.find(m => m.user_id === uid)?.display_name).filter(Boolean);
+                      const names = ev.assigned_to.map(uid => members.find(m => m.user_id === Number(uid))?.display_name).filter(Boolean);
                       return names.length > 0 ? <span style={{ marginLeft: 6, color: 'var(--amethyst)' }}>{names.join(', ')}</span> : null;
                     })()}
                     {ev.assigned_to === 'all' && <span style={{ marginLeft: 6, color: 'var(--amethyst)' }}>{t(messages, 'module.calendar.assign_all')}</span>}
