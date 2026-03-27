@@ -580,6 +580,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .sidebar-logout:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
 .sidebar-action-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
 .sidebar-action-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.sidebar-badge { position: absolute; top: -4px; right: -4px; background: var(--danger); color: white; font-size: 0.6rem; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 4px; font-family: 'JetBrains Mono', monospace; line-height: 1; }
 
 /* ─── Collapsed state ─── */
 .sidebar.collapsed { width: var(--sidebar-collapsed); min-width: var(--sidebar-collapsed); }

@@ -302,7 +302,7 @@ export default function AppShell() {
               >
                 <Bell size={18} />
                 {unreadCount > 0 && (
-                  <span className="bottom-nav-badge" style={{ position: 'absolute', top: -4, right: -4 }}>
+                  <span className="sidebar-badge">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
