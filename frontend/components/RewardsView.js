@@ -8,11 +8,11 @@ import { errorText, parseDate } from '../lib/helpers';
 import * as api from '../lib/api';
 
 const CURRENCY_PRESETS = [
-  { name: 'Stars', icon: '\u2b50', Icon: Star, color: '#f59e0b' },
-  { name: 'Gems', icon: '\ud83d\udc8e', Icon: Gem, color: '#7c3aed' },
-  { name: 'Hearts', icon: '\u2764\ufe0f', Icon: Heart, color: '#f43f5e' },
-  { name: 'Bolts', icon: '\u26a1', Icon: Zap, color: '#06b6d4' },
-  { name: 'Trophies', icon: '\ud83c\udfc6', Icon: Trophy, color: '#f59e0b' },
+  { name: 'Stars', icon: '⭐', Icon: Star, color: '#f59e0b' },
+  { name: 'Gems', icon: '💎', Icon: Gem, color: '#7c3aed' },
+  { name: 'Hearts', icon: '❤️', Icon: Heart, color: '#f43f5e' },
+  { name: 'Bolts', icon: '⚡', Icon: Zap, color: '#06b6d4' },
+  { name: 'Trophies', icon: '🏆', Icon: Trophy, color: '#f59e0b' },
 ];
 
 export default function RewardsView() {
