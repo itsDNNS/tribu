@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Gift, Plus, Star, Check, X, Award, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Gift, Plus, Star, Check, X, Award, ArrowUpCircle, ArrowDownCircle, Gem, Zap, Heart, Trophy } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { t } from '../lib/i18n';
@@ -119,18 +119,36 @@ export default function RewardsView() {
     await loadAll();
   }
 
+  const CURRENCY_PRESETS = [
+    { name: 'Stars', icon: '⭐', Icon: Star, color: '#f59e0b' },
+    { name: 'Gems', icon: '💎', Icon: Gem, color: '#7c3aed' },
+    { name: 'Hearts', icon: '❤️', Icon: Heart, color: '#f43f5e' },
+    { name: 'Bolts', icon: '⚡', Icon: Zap, color: '#06b6d4' },
+    { name: 'Trophies', icon: '🏆', Icon: Trophy, color: '#f59e0b' },
+  ];
+
   // ── No currency setup ──
   if (!currency && !isChild) {
     return (
       <div className="view-content">
         <div className="view-header"><h1><Gift size={22} /> {t(messages, 'module.rewards.name')}</h1></div>
-        <div className="glass settings-section" style={{ maxWidth: 400, margin: '2em auto', padding: 24 }}>
-          <h3 style={{ marginBottom: 12 }}>{t(messages, 'module.rewards.currency_setup')}</h3>
-          <form onSubmit={createCurrency} style={{ display: 'grid', gap: 10 }}>
-            <input className="form-input" value={currName} onChange={e => setCurrName(e.target.value)} placeholder={t(messages, 'module.rewards.currency_name')} required />
-            <input className="form-input" value={currIcon} onChange={e => setCurrIcon(e.target.value)} placeholder={t(messages, 'module.rewards.currency_icon')} maxLength={10} />
-            <button className="btn-primary" type="submit">{t(messages, 'module.rewards.create_currency')}</button>
-          </form>
+        <div className="glass settings-section" style={{ maxWidth: 460, margin: '2em auto', padding: 24 }}>
+          <h3 style={{ marginBottom: 16 }}>{t(messages, 'module.rewards.currency_setup')}</h3>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {CURRENCY_PRESETS.map(p => (
+              <button key={p.name} className="glass-sm" onClick={async () => {
+                setCurrName(p.name); setCurrIcon(p.icon);
+                const { ok, data } = await api.apiCreateRewardCurrency({ family_id: Number(familyId), name: p.name, icon: p.icon });
+                if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+                await loadAll();
+              }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', border: 'none', cursor: 'pointer', borderRadius: 10, textAlign: 'left' }}>
+                <p.Icon size={24} style={{ color: p.color, flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{p.icon} {p.name}</div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );

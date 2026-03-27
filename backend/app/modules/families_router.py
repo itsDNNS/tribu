@@ -231,7 +231,7 @@ def update_member_adult(
 @router.patch(
     "/{family_id}/members/{target_user_id}/birthdate",
     summary="Update member date of birth",
-    description="Set or clear a member's date of birth. Admin role required. Scope: `families:write`.",
+    description="Set or clear a member's date of birth. Self-update or admin role required. Scope: `families:write`.",
     response_description="Updated birthdate",
     responses={**NOT_FOUND_RESPONSE},
 )
@@ -243,7 +243,11 @@ def update_member_birthdate(
     db: Session = Depends(get_db),
     _scope=require_scope("families:write"),
 ):
-    ensure_family_admin(db, user.id, family_id)
+    # Allow self-update or admin
+    if target_user_id != user.id:
+        ensure_family_admin(db, user.id, family_id)
+    else:
+        ensure_family_membership(db, user.id, family_id)
     membership = db.query(Membership).filter(
         Membership.family_id == family_id,
         Membership.user_id == target_user_id,

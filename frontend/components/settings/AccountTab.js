@@ -68,6 +68,22 @@ export default function AccountTab() {
         </div>
         <div style={{ marginTop: 'var(--space-md)' }}>
           <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 'var(--space-sm)' }}>
+            {t(messages, 'birthdate')}
+          </label>
+          <input
+            type="date"
+            className="form-input"
+            value={currentMember?.date_of_birth || ''}
+            onChange={async (e) => {
+              const val = e.target.value || null;
+              await api.apiSetMemberBirthdate(familyId, me?.user_id, val);
+              await loadMembers();
+            }}
+            style={{ maxWidth: 200 }}
+          />
+        </div>
+        <div style={{ marginTop: 'var(--space-md)' }}>
+          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 'var(--space-sm)' }}>
             {t(messages, 'personal_color')}
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
