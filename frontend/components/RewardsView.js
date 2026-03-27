@@ -16,7 +16,7 @@ const CURRENCY_PRESETS = [
 ];
 
 export default function RewardsView() {
-  const { familyId, messages, members, me, isChild, isAdmin, demoMode, tasks, setActiveView } = useApp();
+  const { familyId, messages, members, me, isChild, isAdmin, demoMode, tasks, setActiveView, loadTasks } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const rw = useRewards();
 
@@ -41,25 +41,22 @@ export default function RewardsView() {
   const rewardTasks = (tasks || []).filter(tk => tk.status === 'open' && tk.token_reward_amount > 0);
 
   async function handleTaskComplete(task) {
-    // Mark task done
     const { ok } = await api.apiUpdateTask(task.id, { status: 'done' });
     if (!ok) return;
-    // Auto-earn if no confirmation required
     if (!task.token_require_confirmation && rw.currency) {
       await rw.earnTokens(task.assigned_to_user_id || me?.user_id, task.token_reward_amount, `Task: ${task.title}`);
     }
     setConfirmingTask(null);
-    // Refresh tasks
-    const { loadTasks } = await import('../contexts/AppContext').then(m => ({ loadTasks: null }));
-    // Simple reload via setActiveView trick - actually just refresh
-    window.dispatchEvent(new Event('tribu:refresh-tasks'));
+    if (loadTasks) await loadTasks();
   }
 
   async function handleEarnForTask() {
     if (!confirmingTask || !rw.currency) return;
-    await api.apiUpdateTask(confirmingTask.id, { status: 'done' });
+    const { ok } = await api.apiUpdateTask(confirmingTask.id, { status: 'done' });
+    if (!ok) return;
     await rw.earnTokens(confirmingTask.assigned_to_user_id || me?.user_id, confirmAmount, `Task: ${confirmingTask.title}`);
     setConfirmingTask(null);
+    if (loadTasks) await loadTasks();
   }
 
   async function handleEarn(e) {

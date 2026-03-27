@@ -606,7 +606,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-events { grid-column: span 5; }
 .bento-tasks { grid-column: span 4; }
 .bento-birthdays { grid-column: span 3; }
-.bento-rewards { grid-column: span 3; }
+.bento-rewards { grid-column: span 9; }
 .bento-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md); }
 .bento-card-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
 .bento-more { background: none; border: none; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 0.78rem; padding: 4px 10px; border-radius: var(--radius-pill); transition: all 0.2s; }

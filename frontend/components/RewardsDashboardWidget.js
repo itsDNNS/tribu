@@ -4,10 +4,9 @@ import { useRewards } from '../hooks/useRewards';
 import { t } from '../lib/i18n';
 
 export default function RewardsDashboardWidget() {
-  const { messages, isChild, members, me, setActiveView } = useApp();
+  const { messages, isChild, members, setActiveView } = useApp();
   const rw = useRewards();
 
-  if (!rw.currency) return null;
   if (rw.loading) {
     return (
       <div className="bento-card bento-rewards glass glow-amber">
@@ -19,6 +18,8 @@ export default function RewardsDashboardWidget() {
       </div>
     );
   }
+
+  if (!rw.currency) return null;
 
   // Child: own balance + best affordable reward
   if (isChild) {

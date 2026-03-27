@@ -139,9 +139,6 @@ export default function DashboardView() {
           </div>
         </div>
 
-        {/* Rewards Widget */}
-        <RewardsDashboardWidget />
-
         {/* Birthdays Card */}
         <div className="bento-card bento-birthdays glass glow-rose" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
           <div className="bento-card-header">
@@ -173,6 +170,9 @@ export default function DashboardView() {
             })}
           </div>
         </div>
+
+        {/* Rewards Widget */}
+        <RewardsDashboardWidget />
       </div>
     </div>
   );
