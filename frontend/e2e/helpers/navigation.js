@@ -9,8 +9,9 @@ const MOBILE_ALIASES = {
  * On mobile: uses bottom-nav items or the "More" overflow popup
  */
 async function navigateTo(page, viewName) {
-  await page.waitForLoadState('domcontentloaded');
-  const isMobile = await page.evaluate(() => window.innerWidth < 768);
+  await page.waitForLoadState('networkidle').catch(() => {});
+  const viewport = page.viewportSize();
+  const isMobile = viewport ? viewport.width < 768 : false;
 
   if (!isMobile) {
     // Desktop sidebar: use the viewName directly (e.g. "Dashboard", "Calendar")
