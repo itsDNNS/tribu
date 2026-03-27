@@ -3,6 +3,7 @@ import { Bell, CalendarDays, CheckSquare, Gift, LayoutDashboard, Settings, Shiel
 import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
+import { announce } from '../lib/announce';
 import DashboardView from './DashboardView';
 import CalendarView from './calendar';
 import ContactsView from './ContactsView';
@@ -117,7 +118,9 @@ export default function AppShell() {
     setActiveView(key);
     setOverflowOpen(false);
     if (isMobile) setMobileOpen(false);
-  }, [setActiveView, isMobile]);
+    const item = itemRegistry[key];
+    if (item) announce(item.label);
+  }, [setActiveView, isMobile, itemRegistry]);
 
   // Close overflow popover on outside click
   useEffect(() => {

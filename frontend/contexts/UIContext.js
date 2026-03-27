@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { buildMessages, listLanguages } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 import { buildUi } from '../lib/styles';
@@ -17,6 +17,15 @@ export function UIProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const setActiveView = useCallback((view) => {
+    sessionStorage.setItem('tribu_view', view);
+    setActiveViewRaw(view);
+    if (typeof window !== 'undefined') {
+      history.pushState(null, '', `#${view}`);
+    }
+  }, []);
+
+  // Restore view without creating a history entry (for init/popstate)
+  const restoreView = useCallback((view) => {
     sessionStorage.setItem('tribu_view', view);
     setActiveViewRaw(view);
     if (typeof window !== 'undefined') {
@@ -39,7 +48,7 @@ export function UIProvider({ children }) {
     availableThemes,
     availableLanguages,
     ui,
-    activeView, setActiveView,
+    activeView, setActiveView, restoreView,
     isMobile, setIsMobile,
     navOrder, setNavOrder,
     loading, setLoading,
