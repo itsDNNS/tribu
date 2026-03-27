@@ -239,7 +239,7 @@ export default function RewardsView() {
                 {member?.profile_image ? (
                   <img src={member.profile_image} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
                 ) : (
-                  <div className="sidebar-user-avatar">{(b.display_name || '?')[0].toUpperCase()}</div>
+                  <div className="sidebar-user-avatar" style={{ width: 36, height: 36, borderRadius: '50%' }}>{(b.display_name || '?')[0].toUpperCase()}</div>
                 )}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 500 }}>{b.display_name}</div>

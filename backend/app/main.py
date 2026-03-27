@@ -314,6 +314,10 @@ def update_profile_image(
 ):
     user.profile_image = payload.profile_image
     db.commit()
+    # Invalidate members cache so other family members see the new image
+    family_ids = [m.family_id for m in db.query(Membership).filter(Membership.user_id == user.id).all()]
+    for fid in family_ids:
+        cache.invalidate(f"tribu:members:{fid}")
     return {"status": "ok"}
 
 
