@@ -14,9 +14,8 @@ function getGreeting(messages) {
 }
 
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, setActiveView, messages, lang, timeFormat } = useApp();
+  const { summary, me, members, tasks, events, setActiveView, messages, lang, timeFormat, isChild } = useApp();
 
-  const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
   const openTasks = tasks.filter((t) => t.status === 'open');
   const doneTasks = tasks.filter((t) => t.status === 'done');
   const donePercent = tasks.length > 0 ? Math.round((doneTasks.length / tasks.length) * 100) : 0;
@@ -45,31 +44,53 @@ export default function DashboardView() {
     <div>
       <div className="view-header">
         <div>
-          <h1 className="view-title">{t(messages, 'dashboard')}</h1>
-          <div className="view-subtitle">{t(messages, 'important_first')}</div>
+          <h1 className="view-title">{getGreeting(messages)}, {me?.display_name || 'User'}</h1>
+          <div className="view-subtitle">{summaryText}</div>
         </div>
-        <div className="view-date">{todayStr}</div>
+        <div className="dashboard-header-actions">
+          {!isChild && (
+            <>
+              <button className="btn-ghost btn-icon" onClick={() => setActiveView('calendar')} aria-label={t(messages, 'module.dashboard.quick_event')}><Plus size={16} aria-hidden="true" /></button>
+              <button className="btn-ghost btn-icon" onClick={() => setActiveView('tasks')} aria-label={t(messages, 'module.dashboard.quick_task')}><CheckSquare size={16} aria-hidden="true" /></button>
+              <button className="btn-ghost btn-icon" onClick={() => setActiveView('contacts')} aria-label={t(messages, 'module.dashboard.quick_contact')}><UserPlus size={16} aria-hidden="true" /></button>
+            </>
+          )}
+          <div className="view-date">{todayStr}</div>
+        </div>
       </div>
 
-      <div className="bento-grid stagger">
-        {/* Welcome Card */}
-        <div className="bento-card bento-welcome glass glow-purple" role="region" aria-label={t(messages, 'aria.welcome')}>
-          <div className="welcome-row">
-            <div className="welcome-avatar">{initials}</div>
-            <div className="welcome-text">
-              <h2>{getGreeting(messages)}, {me?.display_name || 'User'}</h2>
-              <p>{summaryText}</p>
-            </div>
+      <div className="bento-grid">
+        {/* Events Card */}
+        <div className="bento-card bento-events" role="region" aria-label={t(messages, 'next_events')}>
+          <div className="bento-card-header">
+            <h2 className="bento-card-title"><CalendarClock size={16} aria-hidden="true" /> {t(messages, 'next_events')}</h2>
+            <button className="bento-more" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.all')}</button>
           </div>
-          <div className="welcome-actions">
-            <button className="btn-ghost" onClick={() => setActiveView('calendar')}><Plus size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_event')}</button>
-            <button className="btn-ghost" onClick={() => setActiveView('tasks')}><CheckSquare size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_task')}</button>
-            <button className="btn-ghost" onClick={() => setActiveView('contacts')}><UserPlus size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_contact')}</button>
+          <div className="event-list">
+            {summary.next_events?.length === 0 && (
+              <div className="bento-empty">
+                <span>{t(messages, 'module.dashboard.empty_events')}</span>
+                {!isChild && <button className="bento-empty-action" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.empty_events_action')}</button>}
+              </div>
+            )}
+            {summary.next_events?.slice(0, 4).map((ev, i) => (
+              <div key={ev.id} className="event-item">
+                <div className="event-time">{parseDate(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}</div>
+                <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
+                <div className="event-info">
+                  <div className="event-title">{ev.title}</div>
+                  <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {prettyDate(ev.starts_at, lang, timeFormat)}
+                    <AssignedBadges assignedTo={ev.assigned_to} members={members} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Stats Card */}
-        <div className="bento-card bento-stats glass" role="region" aria-label={t(messages, 'module.dashboard.family')}>
+        <div className="bento-card bento-stats" role="region" aria-label={t(messages, 'module.dashboard.family')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><BarChart3 size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.family')}</h2>
           </div>
@@ -89,48 +110,24 @@ export default function DashboardView() {
           </div>
         </div>
 
-        {/* Events Card */}
-        <div className="bento-card bento-events glass glow-blue" role="region" aria-label={t(messages, 'next_events')}>
-          <div className="bento-card-header">
-            <h2 className="bento-card-title"><CalendarClock size={16} aria-hidden="true" /> {t(messages, 'next_events')}</h2>
-            <button className="bento-more" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.all')}</button>
-          </div>
-          <div className="event-list">
-            {summary.next_events?.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'no_upcoming_events')}</div>
-            )}
-            {summary.next_events?.slice(0, 4).map((ev, i) => (
-              <div key={ev.id} className="event-item">
-                <div className="event-time">{parseDate(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}</div>
-                <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
-                <div className="event-info">
-                  <div className="event-title">{ev.title}</div>
-                  <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {prettyDate(ev.starts_at, lang, timeFormat)}
-                    <AssignedBadges assignedTo={ev.assigned_to} members={members} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Tasks Card */}
-        <div className="bento-card bento-tasks glass" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
+        <div className="bento-card bento-tasks" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><ListChecks size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.open_tasks')}</h2>
             <button className="bento-more" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.all')}</button>
           </div>
           <div className="task-preview-list">
             {openTasks.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'module.tasks.no_tasks')}</div>
+              <div className="bento-empty">
+                <span>{tasks.length > 0 ? t(messages, 'module.dashboard.empty_tasks') : t(messages, 'module.tasks.no_tasks')}</span>
+                {!isChild && <button className="bento-empty-action" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.empty_tasks_action')}</button>}
+              </div>
             )}
             {openTasks.slice(0, 5).map((task, i) => {
               const assignee = members.find((m) => m.user_id === task.assigned_to_user_id);
               const priorityColor = task.priority === 'high' ? 'var(--danger)' : task.priority === 'normal' ? 'var(--amethyst)' : 'var(--sapphire)';
               return (
                 <div key={task.id} className="task-preview-item">
-                  <div className="task-check" aria-hidden="true" />
                   <div className="task-preview-info">
                     <div className="task-preview-title">{task.title}</div>
                   </div>
@@ -147,24 +144,23 @@ export default function DashboardView() {
         </div>
 
         {/* Birthdays Card */}
-        <div className="bento-card bento-birthdays glass glow-rose" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
+        <div className="bento-card bento-birthdays" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><Cake size={16} aria-hidden="true" /> {t(messages, 'upcoming_birthdays_4w')}</h2>
           </div>
           <div className="birthday-list">
             {summary.upcoming_birthdays?.length === 0 && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{t(messages, 'no_upcoming_birthdays')}</div>
+              <div className="bento-empty">{t(messages, 'module.dashboard.empty_birthdays')}</div>
             )}
             {summary.upcoming_birthdays?.slice(0, 3).map((b, i) => {
-              const colors = [
-                { bg: 'rgba(244,63,94,0.12)', color: '#fb7185' },
-                { bg: 'rgba(245,158,11,0.12)', color: '#fbbf24' },
-                { bg: 'rgba(59,130,246,0.12)', color: '#60a5fa' },
-              ];
-              const c = colors[i % colors.length];
+              const c = b.days_until <= 3
+                ? { bg: 'rgba(239,68,68,0.12)', color: 'var(--danger)' }
+                : b.days_until <= 7
+                ? { bg: 'rgba(245,158,11,0.12)', color: 'var(--warning)' }
+                : { bg: 'rgba(120,130,180,0.08)', color: 'var(--text-muted)' };
               return (
                 <div key={i} className="birthday-item">
-                  <div className="birthday-avatar" aria-hidden="true">🎂</div>
+                  <div className="birthday-avatar" style={{ background: c.bg }} aria-hidden="true"><Cake size={16} style={{ color: c.color }} /></div>
                   <div className="birthday-info">
                     <div className="birthday-name">{b.person_name}</div>
                     <div className="birthday-date">{b.occurs_on}</div>

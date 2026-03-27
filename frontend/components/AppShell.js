@@ -44,11 +44,10 @@ function DashboardSkeleton() {
         </div>
       </div>
       <div className="bento-grid">
-        <div className="bento-welcome glass skeleton skeleton-card" style={{ minHeight: 140 }} />
-        <div className="bento-stats glass skeleton skeleton-card" style={{ minHeight: 140 }} />
-        <div className="bento-events glass skeleton skeleton-card" style={{ minHeight: 180 }} />
-        <div className="bento-tasks glass skeleton skeleton-card" style={{ minHeight: 180 }} />
-        <div className="bento-birthdays glass skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-events skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-stats skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-tasks skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-birthdays skeleton skeleton-card" style={{ minHeight: 180 }} />
       </div>
     </div>
   );
