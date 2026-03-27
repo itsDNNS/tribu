@@ -26,7 +26,8 @@ test.describe('Authentication', () => {
 
   test('logout', async ({ authedPage: page }) => {
     // On mobile, the sidebar logout is hidden; use the mobile-header one
-    const isMobile = await page.evaluate(() => window.innerWidth < 768);
+    const viewport = page.viewportSize();
+    const isMobile = viewport ? viewport.width < 768 : false;
     if (isMobile) {
       await page.locator('.mobile-header [aria-label="Log out"]').click();
     } else {

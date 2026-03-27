@@ -41,6 +41,7 @@ async function loginAsUser(page, user) {
 
   await page.goto('/');
   await page.locator('#main-content').waitFor({ timeout: 15000 });
+  await page.waitForTimeout(500);
 }
 
 module.exports = { createTestUser, loginAsUser };

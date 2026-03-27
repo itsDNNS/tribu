@@ -49,6 +49,7 @@ const test = base.extend({
     }
     await page.goto('/');
     await page.locator('#main-content').waitFor({ timeout: 15000 });
+    await page.waitForTimeout(500);
     await use(page);
   },
 
