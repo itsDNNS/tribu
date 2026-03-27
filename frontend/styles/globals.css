@@ -686,7 +686,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 /* ─── Rewards View ─── */
 .rewards-header-currency { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
 .rewards-tabs { display: flex; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 3px; gap: 2px; margin-bottom: var(--space-lg); }
-.rewards-tab { padding: 7px 14px; border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+.rewards-tab { padding: 7px 14px; border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
 .rewards-tab.active { background: var(--void-elevated); color: var(--text-primary); }
 .rewards-tab-badge { background: var(--warning); color: #fff; border-radius: 8px; padding: 1px 6px; font-size: 0.7rem; font-weight: 600; }
 .rewards-section-title { font-size: 0.88rem; font-weight: 600; margin-bottom: var(--space-sm); margin-top: var(--space-lg); }
