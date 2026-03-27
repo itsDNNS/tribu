@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Repeat, Trash2 } from 'lucide-react';
+import { Cake, Repeat, Trash2 } from 'lucide-react';
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
@@ -151,13 +151,14 @@ export function EventCard({ ev, index, messages, onDelete, members }) {
     <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index) }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 500, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {ev._isBirthday && <Cake size={14} style={{ color: '#f43f5e', flexShrink: 0 }} aria-hidden="true" />}
           {ev.title}
           {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />}
         </div>
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, messages)}</div>
         {members && <AssignedBadges assignedTo={ev.assigned_to} members={members} />}
       </div>
-      {onDelete && (
+      {onDelete && !ev._isBirthday && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
