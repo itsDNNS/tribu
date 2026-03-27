@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Cake, Repeat, Trash2 } from 'lucide-react';
+import { Cake, Pencil, Repeat, Trash2 } from 'lucide-react';
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
@@ -146,9 +146,9 @@ export function AssignedBadges({ assignedTo, members }) {
   );
 }
 
-export function EventCard({ ev, index, messages, onDelete, members }) {
+export function EventCard({ ev, index, messages, onDelete, onEdit, members }) {
   return (
-    <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index) }}>
+    <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index), cursor: onEdit && !ev._isBirthday ? 'pointer' : undefined }} onClick={() => onEdit && !ev._isBirthday && onEdit(ev)}>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 500, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
           {ev._isBirthday && <Cake size={14} style={{ color: '#f43f5e', flexShrink: 0 }} aria-hidden="true" />}
@@ -158,13 +158,17 @@ export function EventCard({ ev, index, messages, onDelete, members }) {
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, messages)}</div>
         {members && <AssignedBadges assignedTo={ev.assigned_to} members={members} />}
       </div>
-      {onDelete && !ev._isBirthday && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
+      {onEdit && !ev._isBirthday && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(ev); }}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
-          aria-label={t(messages, 'aria.delete_event').replace('{title}', ev.title)}
-        >
+          aria-label="Edit">
+          <Pencil size={14} />
+        </button>
+      )}
+      {onDelete && !ev._isBirthday && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
+          aria-label={t(messages, 'aria.delete_event').replace('{title}', ev.title)}>
           <Trash2 size={14} />
         </button>
       )}
