@@ -44,5 +44,9 @@
   "module.rewards.tasks_with_reward": "Tasks with rewards",
   "module.rewards.history_link": "Show history",
   "module.rewards.earn_quick": "Quick award",
-  "module.rewards.widget_pending": "{count} to confirm"
+  "module.rewards.widget_pending": "{count} to confirm",
+  "module.rewards.progress_toward": "Next goal: {name}",
+  "module.rewards.progress_remaining": "{count} more to go",
+  "module.rewards.no_rules": "No earning rules set up yet.",
+  "module.rewards.no_rewards": "No rewards in the catalog yet."
 }

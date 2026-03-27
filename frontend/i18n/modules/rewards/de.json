@@ -44,5 +44,9 @@
   "module.rewards.tasks_with_reward": "Aufgaben mit Belohnung",
   "module.rewards.history_link": "Verlauf anzeigen",
   "module.rewards.earn_quick": "Schnell vergeben",
-  "module.rewards.widget_pending": "{count} zur Bestätigung"
+  "module.rewards.widget_pending": "{count} zur Bestätigung",
+  "module.rewards.progress_toward": "Nächstes Ziel: {name}",
+  "module.rewards.progress_remaining": "noch {count}",
+  "module.rewards.no_rules": "Noch keine Verdienst-Regeln angelegt.",
+  "module.rewards.no_rewards": "Noch keine Belohnungen im Katalog."
 }
