@@ -1,4 +1,4 @@
-import { CalendarClock, ListChecks, Cake, BarChart3, Users, Calendar, CheckCircle, Plus, CheckSquare, UserPlus, Clock } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, BarChart3, Users, Calendar, CheckCircle, Plus, CheckSquare, UserPlus } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -130,9 +130,7 @@ export default function DashboardView() {
               const priorityColor = task.priority === 'high' ? 'var(--danger)' : task.priority === 'normal' ? 'var(--amethyst)' : 'var(--sapphire)';
               return (
                 <div key={task.id} className="task-preview-item">
-                  <div className="task-check">
-                    <CheckSquare size={12} style={{ opacity: 0 }} aria-hidden="true" />
-                  </div>
+                  <div className="task-check" aria-hidden="true" />
                   <div className="task-preview-info">
                     <div className="task-preview-title">{task.title}</div>
                   </div>
