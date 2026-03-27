@@ -232,16 +232,23 @@ export default function RewardsView() {
         <>
           <h3 style={{ marginBottom: 8 }}>{t(messages, 'module.rewards.balances_title')}</h3>
           <div className="settings-grid">
-            {balances.map(b => (
+            {balances.map(b => {
+              const member = members.find(m => m.user_id === b.user_id);
+              return (
               <div key={b.user_id} className="glass-sm settings-section" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="sidebar-user-avatar">{(b.display_name || '?')[0].toUpperCase()}</div>
+                {member?.profile_image ? (
+                  <img src={member.profile_image} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  <div className="sidebar-user-avatar" style={{ width: 36, height: 36, borderRadius: '50%' }}>{(b.display_name || '?')[0].toUpperCase()}</div>
+                )}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 500 }}>{b.display_name}</div>
                   {b.pending > 0 && <div style={{ fontSize: '0.72rem', color: 'var(--warning)' }}>{t(messages, 'module.rewards.pending').replace('{count}', b.pending)}</div>}
                 </div>
                 <div style={{ fontWeight: 700, fontSize: '1.2rem' }}>{currency.icon} {b.balance}</div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Award tokens */}

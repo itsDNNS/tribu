@@ -78,6 +78,7 @@ def family_members(
                 is_adult=m.is_adult,
                 color=m.color,
                 date_of_birth=m.date_of_birth,
+                profile_image=m.user.profile_image,
             ).model_dump()
             for m in memberships
             if m.user
