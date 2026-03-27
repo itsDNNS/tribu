@@ -265,6 +265,8 @@
 [data-theme="light"] .calendar-grid-wrapper { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 [data-theme="light"] .day-detail-panel { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 [data-theme="light"] .cal-form-panel { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .cal-dialog { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .event-card-action:hover { background: rgba(0, 0, 0, 0.04); }
 
 [data-theme="light"] .tasks-filter-tabs { background: rgba(0, 0, 0, 0.03); }
 [data-theme="light"] .tasks-filter-btn.active {
@@ -800,6 +802,39 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .week-day-today-badge { font-size: 0.68rem; font-weight: 500; padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(124, 58, 237, 0.12); color: var(--amethyst); text-transform: uppercase; letter-spacing: 0.04em; }
 .week-day-events { padding: var(--space-sm) var(--space-md); display: grid; gap: var(--space-xs); }
 .week-day-empty { color: var(--text-muted); font-size: 0.82rem; padding: var(--space-xs) 0; }
+
+/* ─── Calendar Helpers ─── */
+.cal-dialog-backdrop { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); }
+.cal-dialog { padding: var(--space-xl); max-width: 380px; width: 90%; display: flex; flex-direction: column; gap: var(--space-md); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
+.cal-dialog-title { font-weight: 600; font-size: 1rem; }
+.cal-dialog-subtitle { font-size: 0.88rem; color: var(--text-secondary); }
+.cal-dialog-actions { display: flex; flex-direction: column; gap: var(--space-sm); }
+.cal-dialog-actions .btn-sm { width: 100%; }
+.cal-dialog-delete-all { background: var(--danger); color: #fff; }
+.cal-dialog-cancel { background: transparent; border: 1px solid var(--glass-border); }
+
+.assign-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.assign-chip { padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; cursor: pointer; border: 1.5px solid var(--glass-border); background: transparent; color: var(--text-secondary); font-family: inherit; transition: all 0.2s; min-height: 32px; }
+.assign-chip-active { background: var(--amethyst); border-color: var(--amethyst); color: #fff; }
+
+.assigned-badges { display: flex; gap: 3px; margin-top: 2px; }
+.assigned-badge { width: 20px; height: 20px; border-radius: 50%; font-size: 0.6rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; color: #fff; }
+
+.event-card-title { font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
+.event-card-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+.event-card-action { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 8px; flex-shrink: 0; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); transition: all 0.2s; }
+.event-card-action:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+
+.color-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+.color-swatch { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; transition: all 0.15s; }
+.color-swatch-active { border-color: var(--text-primary); }
+.color-swatch-none { background: var(--void-surface); border-color: var(--glass-border); }
+.color-swatch-none.color-swatch-active { border-color: var(--text-primary); }
+
+.cal-form-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+.cal-form-section-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.cal-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+.cal-form-actions { display: flex; gap: var(--space-sm); }
 
 /* ═══════════════════════════════════════════
    TASKS VIEW
