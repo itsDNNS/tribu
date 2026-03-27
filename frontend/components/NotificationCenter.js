@@ -133,7 +133,6 @@ export default function NotificationCenter({ onClose } = {}) {
                   key={notif.id}
                   className={`notif-item${notif.read ? ' notif-item-read' : ' notif-item-unread'}`}
                   onClick={() => handleClick(notif)}
-                  role="button"
                   tabIndex={0}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); handleClick(notif); } }}
                 >
