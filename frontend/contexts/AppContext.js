@@ -23,7 +23,7 @@ function AppOrchestrator({ children }) {
   const { loggedIn, demoMode, me, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
   const { familyId, setFamilyId, families, setFamilies, setMyFamilyRole, setMyFamilyIsAdult, loadMembers, setMembers } = family;
   const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setContacts, setBirthdays, setSummary } = data;
-  const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, setIsMobile, setNavOrder, lang, messages } = ui;
+  const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, restoreView, setIsMobile, setNavOrder, lang, messages } = ui;
 
   // Wrap data loaders to inject familyId default and skip in demo mode
   const loadDashboardWrapped = useCallback(async (fid = familyId) => {
@@ -132,8 +132,20 @@ function AppOrchestrator({ children }) {
       setLang(match || 'en');
     }
     setProfileImage('');
-    const savedView = sessionStorage.getItem('tribu_view');
-    if (savedView) setActiveViewUI(savedView);
+    // Hash takes priority (bookmarkable URLs), then sessionStorage
+    const VALID_VIEWS = new Set(DEFAULT_NAV_ORDER);
+    const rawHash = window.location.hash?.slice(1);
+    const hashView = rawHash && VALID_VIEWS.has(rawHash) ? rawHash : null;
+    const storedView = sessionStorage.getItem('tribu_view');
+    const savedView = hashView ?? (storedView && VALID_VIEWS.has(storedView) ? storedView : null);
+    if (savedView) restoreView(savedView);
+
+    // Listen for browser back/forward
+    const onPopState = () => {
+      const v = window.location.hash?.slice(1);
+      if (v && VALID_VIEWS.has(v)) restoreView(v);
+    };
+    window.addEventListener('popstate', onPopState);
 
     const onResize = () => setIsMobile(window.innerWidth < 768);
     onResize();
@@ -151,7 +163,10 @@ function AppOrchestrator({ children }) {
       }
     });
 
-    return () => window.removeEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('popstate', onPopState);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -171,9 +186,9 @@ function AppOrchestrator({ children }) {
   useEffect(() => {
     if (!loggedIn || demoMode) return;
 
-    // Clear landing page hash fragment (e.g. #auth) after login
-    if (window.location.hash) {
-      history.replaceState(null, '', window.location.pathname);
+    // Clear landing page hash (only #auth, not navigation hashes)
+    if (window.location.hash === '#auth') {
+      history.replaceState(null, '', '#dashboard');
     }
 
     (async () => {
