@@ -29,6 +29,6 @@ test.describe('Dashboard', () => {
 
     // Contact → Contacts (third icon button)
     await page.locator('.dashboard-header-actions .btn-icon').nth(2).click();
-    await expect(page.locator('#main-content')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.contacts-grid')).toBeVisible({ timeout: 10000 });
   });
 });

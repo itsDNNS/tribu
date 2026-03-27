@@ -14,7 +14,7 @@ function getGreeting(messages) {
 }
 
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, setActiveView, messages, lang, timeFormat } = useApp();
+  const { summary, me, members, tasks, events, setActiveView, messages, lang, timeFormat, isChild } = useApp();
 
   const openTasks = tasks.filter((t) => t.status === 'open');
   const doneTasks = tasks.filter((t) => t.status === 'done');
@@ -48,9 +48,13 @@ export default function DashboardView() {
           <div className="view-subtitle">{summaryText}</div>
         </div>
         <div className="dashboard-header-actions">
-          <button className="btn-ghost btn-icon" onClick={() => setActiveView('calendar')} aria-label={t(messages, 'module.dashboard.quick_event')}><Plus size={16} aria-hidden="true" /></button>
-          <button className="btn-ghost btn-icon" onClick={() => setActiveView('tasks')} aria-label={t(messages, 'module.dashboard.quick_task')}><CheckSquare size={16} aria-hidden="true" /></button>
-          <button className="btn-ghost btn-icon" onClick={() => setActiveView('contacts')} aria-label={t(messages, 'module.dashboard.quick_contact')}><UserPlus size={16} aria-hidden="true" /></button>
+          {!isChild && (
+            <>
+              <button className="btn-ghost btn-icon" onClick={() => setActiveView('calendar')} aria-label={t(messages, 'module.dashboard.quick_event')}><Plus size={16} aria-hidden="true" /></button>
+              <button className="btn-ghost btn-icon" onClick={() => setActiveView('tasks')} aria-label={t(messages, 'module.dashboard.quick_task')}><CheckSquare size={16} aria-hidden="true" /></button>
+              <button className="btn-ghost btn-icon" onClick={() => setActiveView('contacts')} aria-label={t(messages, 'module.dashboard.quick_contact')}><UserPlus size={16} aria-hidden="true" /></button>
+            </>
+          )}
           <div className="view-date">{todayStr}</div>
         </div>
       </div>
@@ -66,7 +70,7 @@ export default function DashboardView() {
             {summary.next_events?.length === 0 && (
               <div className="bento-empty">
                 <span>{t(messages, 'module.dashboard.empty_events')}</span>
-                <button className="bento-empty-action" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.empty_events_action')}</button>
+                {!isChild && <button className="bento-empty-action" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.empty_events_action')}</button>}
               </div>
             )}
             {summary.next_events?.slice(0, 4).map((ev, i) => (
@@ -116,7 +120,7 @@ export default function DashboardView() {
             {openTasks.length === 0 && (
               <div className="bento-empty">
                 <span>{tasks.length > 0 ? t(messages, 'module.dashboard.empty_tasks') : t(messages, 'module.tasks.no_tasks')}</span>
-                <button className="bento-empty-action" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.empty_tasks_action')}</button>
+                {!isChild && <button className="bento-empty-action" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.empty_tasks_action')}</button>}
               </div>
             )}
             {openTasks.slice(0, 5).map((task, i) => {
