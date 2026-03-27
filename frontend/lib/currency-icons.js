@@ -10,5 +10,5 @@ const ICON_MAP = {
 
 export function CurrencyIcon({ icon, size = '1em', className }) {
   const Icon = ICON_MAP[icon] || Coins;
-  return <Icon size={size} className={className} />;
+  return <Icon size={size} className={className} aria-hidden="true" />;
 }
