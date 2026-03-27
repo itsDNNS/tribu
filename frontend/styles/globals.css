@@ -268,6 +268,7 @@
 [data-theme="light"] .cal-edit-form { background: rgba(0, 0, 0, 0.02); }
 [data-theme="light"] .cal-dialog { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 [data-theme="light"] .event-card-action:hover { background: rgba(0, 0, 0, 0.04); }
+[data-theme="light"] .cal-onboard { background: rgba(124, 58, 237, 0.04); border-color: rgba(124, 58, 237, 0.08); }
 
 [data-theme="light"] .tasks-filter-tabs { background: rgba(0, 0, 0, 0.03); }
 [data-theme="light"] .tasks-filter-btn.active {
@@ -837,7 +838,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .cal-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
 .cal-form-actions { display: flex; gap: var(--space-sm); }
 .cal-empty-day { color: var(--text-muted); font-size: 0.88rem; }
-.cal-import-cta { margin-top: var(--space-sm); }
+.cal-onboard { margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.06); border: 1px solid rgba(124, 58, 237, 0.12); }
+.cal-onboard-text { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: var(--space-sm); }
 .cal-edit-form { padding: 12px; margin-bottom: 12px; border-radius: var(--radius-sm); display: grid; gap: var(--space-sm); background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); }
 .cal-form-datetime { font-size: 0.82rem; }
 .cal-form-input-lg { font-size: 0.88rem; padding: 12px 14px; }

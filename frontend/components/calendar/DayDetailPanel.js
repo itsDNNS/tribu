@@ -20,10 +20,11 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
       <div className="day-detail-events">
         {cal.selectedDayEvents.length === 0 && (
           <div className="cal-empty-day">
-            {t(messages, 'module.calendar.no_events_day')}
+            <span>{t(messages, 'module.calendar.no_events_day')}</span>
             {events.length === 0 && !demoMode && (
-              <div className="cal-import-cta">
-                <button type="button" className="bento-empty-action" onClick={() => setActiveView('settings')}>
+              <div className="cal-onboard">
+                <p className="cal-onboard-text">{t(messages, 'module.calendar.onboard_text')}</p>
+                <button type="button" className="btn-ghost" onClick={() => setActiveView('settings')}>
                   {t(messages, 'module.calendar.import_cta')}
                 </button>
               </div>
