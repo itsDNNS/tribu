@@ -135,7 +135,7 @@ export default function NotificationCenter({ onClose } = {}) {
                   onClick={() => handleClick(notif)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(notif); } }}
+                  onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); handleClick(notif); } }}
                 >
                   <div className={`notif-icon${!notif.read ? ' notif-icon-unread' : ''}`}>
                     <Icon size={18} />
