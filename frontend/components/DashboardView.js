@@ -16,7 +16,6 @@ function getGreeting(messages) {
 export default function DashboardView() {
   const { summary, me, members, tasks, events, setActiveView, messages, lang, timeFormat } = useApp();
 
-  const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
   const openTasks = tasks.filter((t) => t.status === 'open');
   const doneTasks = tasks.filter((t) => t.status === 'done');
   const donePercent = tasks.length > 0 ? Math.round((doneTasks.length / tasks.length) * 100) : 0;
@@ -45,50 +44,18 @@ export default function DashboardView() {
     <div>
       <div className="view-header">
         <div>
-          <h1 className="view-title">{t(messages, 'dashboard')}</h1>
-          <div className="view-subtitle">{t(messages, 'important_first')}</div>
+          <h1 className="view-title">{getGreeting(messages)}, {me?.display_name || 'User'}</h1>
+          <div className="view-subtitle">{summaryText}</div>
         </div>
-        <div className="view-date">{todayStr}</div>
+        <div className="dashboard-header-actions">
+          <button className="btn-ghost btn-icon" onClick={() => setActiveView('calendar')} aria-label={t(messages, 'module.dashboard.quick_event')}><Plus size={16} aria-hidden="true" /></button>
+          <button className="btn-ghost btn-icon" onClick={() => setActiveView('tasks')} aria-label={t(messages, 'module.dashboard.quick_task')}><CheckSquare size={16} aria-hidden="true" /></button>
+          <button className="btn-ghost btn-icon" onClick={() => setActiveView('contacts')} aria-label={t(messages, 'module.dashboard.quick_contact')}><UserPlus size={16} aria-hidden="true" /></button>
+          <div className="view-date">{todayStr}</div>
+        </div>
       </div>
 
       <div className="bento-grid">
-        {/* Welcome Card */}
-        <div className="bento-card bento-welcome" role="region" aria-label={t(messages, 'aria.welcome')}>
-          <div className="welcome-row">
-            <div className="welcome-avatar">{initials}</div>
-            <div className="welcome-text">
-              <h2>{getGreeting(messages)}, {me?.display_name || 'User'}</h2>
-              <p>{summaryText}</p>
-            </div>
-          </div>
-          <div className="welcome-actions">
-            <button className="btn-ghost" onClick={() => setActiveView('calendar')}><Plus size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_event')}</button>
-            <button className="btn-ghost" onClick={() => setActiveView('tasks')}><CheckSquare size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_task')}</button>
-            <button className="btn-ghost" onClick={() => setActiveView('contacts')}><UserPlus size={15} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_contact')}</button>
-          </div>
-        </div>
-
-        {/* Stats Card */}
-        <div className="bento-card bento-stats" role="region" aria-label={t(messages, 'module.dashboard.family')}>
-          <div className="bento-card-header">
-            <h2 className="bento-card-title"><BarChart3 size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.family')}</h2>
-          </div>
-          <div className="stat-grid">
-            <div className="stat-item stat-item-link" onClick={() => setActiveView('admin')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('admin')}>
-              <div className="stat-icon" style={{ background: 'rgba(124,58,237,0.12)' }}><Users size={18} style={{ color: 'var(--amethyst)' }} aria-hidden="true" /></div>
-              <div><div className="stat-value">{members.length}</div><div className="stat-label">{t(messages, 'module.dashboard.members')}</div></div>
-            </div>
-            <div className="stat-item stat-item-link" onClick={() => setActiveView('calendar')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('calendar')}>
-              <div className="stat-icon" style={{ background: 'rgba(59,130,246,0.12)' }}><Calendar size={18} style={{ color: 'var(--sapphire)' }} aria-hidden="true" /></div>
-              <div><div className="stat-value">{events.length}</div><div className="stat-label">{t(messages, 'module.dashboard.events_count')}</div></div>
-            </div>
-            <div className="stat-item stat-item-link" onClick={() => setActiveView('tasks')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('tasks')}>
-              <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)' }}><CheckCircle size={18} style={{ color: 'var(--success)' }} aria-hidden="true" /></div>
-              <div><div className="stat-value">{donePercent}%</div><div className="stat-label">{t(messages, 'module.dashboard.tasks_done')}</div></div>
-            </div>
-          </div>
-        </div>
-
         {/* Events Card */}
         <div className="bento-card bento-events" role="region" aria-label={t(messages, 'next_events')}>
           <div className="bento-card-header">
@@ -112,6 +79,27 @@ export default function DashboardView() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Stats Card */}
+        <div className="bento-card bento-stats" role="region" aria-label={t(messages, 'module.dashboard.family')}>
+          <div className="bento-card-header">
+            <h2 className="bento-card-title"><BarChart3 size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.family')}</h2>
+          </div>
+          <div className="stat-grid">
+            <div className="stat-item stat-item-link" onClick={() => setActiveView('admin')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('admin')}>
+              <div className="stat-icon" style={{ background: 'rgba(124,58,237,0.12)' }}><Users size={18} style={{ color: 'var(--amethyst)' }} aria-hidden="true" /></div>
+              <div><div className="stat-value">{members.length}</div><div className="stat-label">{t(messages, 'module.dashboard.members')}</div></div>
+            </div>
+            <div className="stat-item stat-item-link" onClick={() => setActiveView('calendar')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('calendar')}>
+              <div className="stat-icon" style={{ background: 'rgba(59,130,246,0.12)' }}><Calendar size={18} style={{ color: 'var(--sapphire)' }} aria-hidden="true" /></div>
+              <div><div className="stat-value">{events.length}</div><div className="stat-label">{t(messages, 'module.dashboard.events_count')}</div></div>
+            </div>
+            <div className="stat-item stat-item-link" onClick={() => setActiveView('tasks')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('tasks')}>
+              <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)' }}><CheckCircle size={18} style={{ color: 'var(--success)' }} aria-hidden="true" /></div>
+              <div><div className="stat-value">{donePercent}%</div><div className="stat-label">{t(messages, 'module.dashboard.tasks_done')}</div></div>
+            </div>
           </div>
         </div>
 
