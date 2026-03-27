@@ -100,13 +100,13 @@ export default function CalendarView() {
 
       {cal.calendarView === 'month' ? (
         <div className={isMobile ? '' : 'calendar-layout'}>
-          <div className="glass calendar-grid-wrapper">
-            <div className="calendar-weekdays" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          <div className="calendar-grid-wrapper">
+            <div className="calendar-weekdays">
               {weekdays.map((d) => (
                 <div key={d} className="calendar-weekday">{d}</div>
               ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+            <div className="calendar-days-grid">
               {cal.monthCells.map((c, idx) => {
                 const isSelectedDay = !c.empty && cal.selectedDate
                   && cal.selectedDate.getFullYear() === cal.calendarMonth.getFullYear()
@@ -164,7 +164,7 @@ export default function CalendarView() {
 
           {/* Day Detail Panel */}
           {!isMobile && cal.selectedDate && (
-            <div className="glass day-detail-panel">
+            <div className="day-detail-panel">
               <div className="day-detail-date">
                 {cal.selectedDate.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
               </div>
@@ -292,7 +292,7 @@ export default function CalendarView() {
 
       {/* Selected date details on mobile */}
       {isMobile && cal.calendarView === 'month' && cal.selectedDate && (
-        <div className="glass" style={{ padding: 'var(--space-lg)', marginTop: 'var(--space-md)' }}>
+        <div className="day-detail-panel" style={{ marginTop: 'var(--space-md)' }}>
           <div className="day-detail-date">
             {cal.selectedDate.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
           </div>
@@ -370,7 +370,7 @@ export default function CalendarView() {
 
       {/* Birthday form in week view */}
       {cal.calendarView === 'week' && !isChild && (
-        <div className="glass" style={{ padding: 'var(--space-lg)', marginTop: 'var(--space-md)' }}>
+        <div className="cal-form-panel" style={{ marginTop: 'var(--space-md)' }}>
           <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-md)' }}>{t(messages, 'create_birthday')}</div>
           <form onSubmit={cal.addBirthday} className="quick-add-form">
             <input className="form-input" placeholder={t(messages, 'name')} value={cal.birthdayName} onChange={(e) => cal.setBirthdayName(e.target.value)} required />
