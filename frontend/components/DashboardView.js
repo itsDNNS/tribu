@@ -115,7 +115,7 @@ export default function DashboardView() {
           <div className="task-preview-list">
             {openTasks.length === 0 && (
               <div className="bento-empty">
-                <span>{t(messages, 'module.dashboard.empty_tasks')}</span>
+                <span>{tasks.length > 0 ? t(messages, 'module.dashboard.empty_tasks') : t(messages, 'module.tasks.no_tasks')}</span>
                 <button className="bento-empty-action" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.empty_tasks_action')}</button>
               </div>
             )}
