@@ -109,7 +109,7 @@ export default function RewardsView() {
         <div className="view-header"><h1><Gift size={22} /> {t(messages, 'module.rewards.name')}</h1></div>
         {rw.myBalance && (
           <div className="glass glow-purple rewards-hero">
-            <div className="rewards-hero-value"><CurrencyIcon icon={rw.currency.icon} />{rw.myBalance.balance}</div>
+            <div className="rewards-hero-value"><CurrencyIcon icon={rw.currency.icon} /> {rw.myBalance.balance}</div>
             <div className="rewards-hero-label">{rw.currency.name}</div>
             {rw.myBalance.pending > 0 && <div className="rewards-hero-pending">{t(messages, 'module.rewards.pending').replace('{count}', rw.myBalance.pending)}</div>}
           </div>
@@ -174,7 +174,7 @@ export default function RewardsView() {
   return (
     <div className="view-content">
       <div className="view-header">
-        <h1><Gift size={22} /> {t(messages, 'module.rewards.name')} <span className="rewards-header-currency"><CurrencyIcon icon={rw.currency.icon} />{rw.currency.name}</span></h1>
+        <h1><Gift size={22} /> {t(messages, 'module.rewards.name')} <span className="rewards-header-currency"><CurrencyIcon icon={rw.currency.icon} /> {rw.currency.name}</span></h1>
       </div>
 
       {/* Tabs - history demoted to link */}
@@ -204,7 +204,7 @@ export default function RewardsView() {
                   )}
                   <div>
                     <div className="rewards-balance-card-name">{b.display_name}</div>
-                    <div className="rewards-balance-card-value"><CurrencyIcon icon={rw.currency.icon} />{b.balance}</div>
+                    <div className="rewards-balance-card-value"><CurrencyIcon icon={rw.currency.icon} /> {b.balance}</div>
                   </div>
                 </div>
               );
@@ -264,7 +264,7 @@ export default function RewardsView() {
                 return (
                   <div key={tx.id} className="glass-sm rewards-row rewards-row-pending">
                     <Award size={14} style={{ color: 'var(--warning)' }} />
-                    <span className="rewards-row-title">{memberName}: {tx.kind === 'earn' ? '+' : '-'}{tx.amount} <CurrencyIcon icon={rw.currency.icon} />{tx.note && `(${tx.note})`}</span>
+                    <span className="rewards-row-title">{memberName}: {tx.kind === 'earn' ? '+' : '-'}{tx.amount} <CurrencyIcon icon={rw.currency.icon} /> {tx.note && `(${tx.note})`}</span>
                     <button className="btn-ghost rewards-action rewards-action-confirm" onClick={() => rw.confirmTxn(tx.id)}><Check size={16} /></button>
                     <button className="btn-ghost rewards-action rewards-action-reject" onClick={() => rw.rejectTxn(tx.id)}><X size={16} /></button>
                   </div>
