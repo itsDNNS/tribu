@@ -133,8 +133,11 @@ function AppOrchestrator({ children }) {
     }
     setProfileImage('');
     // Hash takes priority (bookmarkable URLs), then sessionStorage
-    const hashView = window.location.hash?.slice(1);
-    const savedView = hashView || sessionStorage.getItem('tribu_view');
+    const VALID_VIEWS = new Set(DEFAULT_NAV_ORDER);
+    const rawHash = window.location.hash?.slice(1);
+    const hashView = rawHash && VALID_VIEWS.has(rawHash) ? rawHash : null;
+    const storedView = sessionStorage.getItem('tribu_view');
+    const savedView = hashView ?? (storedView && VALID_VIEWS.has(storedView) ? storedView : null);
     if (savedView) setActiveViewUI(savedView);
 
     const onResize = () => setIsMobile(window.innerWidth < 768);
