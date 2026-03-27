@@ -3,6 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
+import RewardsDashboardWidget from './RewardsDashboardWidget';
 
 function getGreeting(messages) {
   const h = new Date().getHours();
@@ -169,6 +170,9 @@ export default function DashboardView() {
             })}
           </div>
         </div>
+
+        {/* Rewards Widget */}
+        <RewardsDashboardWidget />
       </div>
     </div>
   );

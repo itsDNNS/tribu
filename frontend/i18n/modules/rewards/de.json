@@ -40,5 +40,9 @@
   "module.rewards.toast.earned": "Tokens vergeben!",
   "module.rewards.toast.redeemed": "Belohnung eingelöst!",
   "module.rewards.toast.confirmed": "Bestätigt",
-  "module.rewards.toast.rejected": "Abgelehnt"
+  "module.rewards.toast.rejected": "Abgelehnt",
+  "module.rewards.tasks_with_reward": "Aufgaben mit Belohnung",
+  "module.rewards.history_link": "Verlauf anzeigen",
+  "module.rewards.earn_quick": "Schnell vergeben",
+  "module.rewards.widget_pending": "{count} zur Bestätigung"
 }

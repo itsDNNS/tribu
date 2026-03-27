@@ -40,5 +40,9 @@
   "module.rewards.toast.earned": "Tokens awarded!",
   "module.rewards.toast.redeemed": "Reward redeemed!",
   "module.rewards.toast.confirmed": "Confirmed",
-  "module.rewards.toast.rejected": "Rejected"
+  "module.rewards.toast.rejected": "Rejected",
+  "module.rewards.tasks_with_reward": "Tasks with rewards",
+  "module.rewards.history_link": "Show history",
+  "module.rewards.earn_quick": "Quick award",
+  "module.rewards.widget_pending": "{count} to confirm"
 }
