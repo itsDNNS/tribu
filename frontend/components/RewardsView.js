@@ -28,6 +28,7 @@ export default function RewardsView() {
   const [earnUserId, setEarnUserId] = useState('');
   const [earnAmount, setEarnAmount] = useState(1);
   const [earnNote, setEarnNote] = useState('');
+  const [creatingCurrency, setCreatingCurrency] = useState(false);
 
   const loadAll = useCallback(async () => {
     if (demoMode) return;
@@ -136,12 +137,14 @@ export default function RewardsView() {
           <h3 style={{ marginBottom: 16 }}>{t(messages, 'module.rewards.currency_setup')}</h3>
           <div style={{ display: 'grid', gap: 8 }}>
             {CURRENCY_PRESETS.map(p => (
-              <button key={p.name} className="glass-sm" onClick={async () => {
-                setCurrName(p.name); setCurrIcon(p.icon);
+              <button key={p.name} className="glass-sm" disabled={creatingCurrency} onClick={async () => {
+                if (creatingCurrency) return;
+                setCreatingCurrency(true);
                 const { ok, data } = await api.apiCreateRewardCurrency({ family_id: Number(familyId), name: p.name, icon: p.icon });
+                setCreatingCurrency(false);
                 if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
                 await loadAll();
-              }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', border: 'none', cursor: 'pointer', borderRadius: 10, textAlign: 'left' }}>
+              }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', border: 'none', cursor: 'pointer', borderRadius: 10, textAlign: 'left', opacity: creatingCurrency ? 0.5 : 1 }}>
                 <p.Icon size={24} style={{ color: p.color, flexShrink: 0 }} />
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{p.icon} {p.name}</div>

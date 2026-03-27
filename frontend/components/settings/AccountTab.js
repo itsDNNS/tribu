@@ -76,7 +76,9 @@ export default function AccountTab() {
             value={currentMember?.date_of_birth || ''}
             onChange={async (e) => {
               const val = e.target.value || null;
-              await api.apiSetMemberBirthdate(familyId, me?.user_id, val);
+              if (val && !/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+              const { ok, data } = await api.apiSetMemberBirthdate(familyId, me?.user_id, val);
+              if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
               await loadMembers();
             }}
             style={{ maxWidth: 200 }}
