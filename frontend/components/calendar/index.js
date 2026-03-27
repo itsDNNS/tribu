@@ -224,12 +224,16 @@ export default function CalendarView() {
         </div>
       )}
 
-      {!isChild && (
+      {!isChild && !cal.editingEvent && (
         <button
           className="cal-fab"
           onClick={() => {
+            // Switch to month view if in week view (create form lives in day detail panel)
+            if (cal.calendarView === 'week') {
+              cal.setCalendarView('month');
+            }
+            const now = new Date();
             if (!cal.selectedDate) {
-              const now = new Date();
               cal.setSelectedDate(now);
               cal.setCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
               const y = now.getFullYear();
@@ -237,11 +241,11 @@ export default function CalendarView() {
               const d = String(now.getDate()).padStart(2, '0');
               cal.setStartsAt(`${y}-${m}-${d}T09:00`);
             }
-            // Scroll to create form
             setTimeout(() => {
-              document.querySelector('.quick-add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              document.querySelector('.quick-add-form input')?.focus();
-            }, 100);
+              const form = document.querySelector('.day-detail-panel .quick-add-form');
+              form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              form?.querySelector('input')?.focus();
+            }, 150);
           }}
           aria-label={t(messages, 'create_event')}
         >
