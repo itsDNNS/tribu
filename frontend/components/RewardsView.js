@@ -94,24 +94,28 @@ export default function RewardsView() {
   }
 
   async function confirmTxn(id) {
-    await api.apiConfirmTransaction(id);
+    const { ok, data } = await api.apiConfirmTransaction(id);
+    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
     toastSuccess(t(messages, 'module.rewards.toast.confirmed'));
     await loadAll();
   }
 
   async function rejectTxn(id) {
-    await api.apiRejectTransaction(id);
+    const { ok, data } = await api.apiRejectTransaction(id);
+    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
     toastSuccess(t(messages, 'module.rewards.toast.rejected'));
     await loadAll();
   }
 
   async function deleteRule(id) {
-    await api.apiDeleteEarningRule(id);
+    const { ok, data } = await api.apiDeleteEarningRule(id);
+    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
     await loadAll();
   }
 
   async function deleteReward(id) {
-    await api.apiDeleteReward(id);
+    const { ok, data } = await api.apiDeleteReward(id);
+    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
     await loadAll();
   }
 
@@ -170,7 +174,7 @@ export default function RewardsView() {
           })}
         </div>
         <h3 style={{ margin: '16px 0 8px' }}>{t(messages, 'module.rewards.transactions')}</h3>
-        {transactions.filter(tx => tx.user_id === me?.user_id).slice(0, 20).map(tx => (
+        {transactions.slice(0, 20).map(tx => (
           <div key={tx.id} className="glass-sm" style={{ display: 'flex', gap: 8, padding: '8px 12px', marginBottom: 4, borderRadius: 8, fontSize: '0.82rem', alignItems: 'center' }}>
             {tx.kind === 'earn' ? <ArrowUpCircle size={14} style={{ color: 'var(--success)' }} /> : <ArrowDownCircle size={14} style={{ color: 'var(--danger)' }} />}
             <span style={{ flex: 1 }}>{tx.note || tx.kind}</span>

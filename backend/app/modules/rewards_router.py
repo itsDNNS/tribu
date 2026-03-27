@@ -35,18 +35,44 @@ def _get_currency_or_404(db: Session, family_id: int) -> RewardCurrency:
     return currency
 
 
-def _compute_balance(db: Session, family_id: int, user_id: int) -> int:
-    result = db.query(
-        func.coalesce(
-            func.sum(case((TokenTransaction.kind == "earn", TokenTransaction.amount), else_=-TokenTransaction.amount)),
-            0,
-        )
-    ).filter(
-        TokenTransaction.family_id == family_id,
-        TokenTransaction.user_id == user_id,
-        TokenTransaction.status == "confirmed",
-    ).scalar()
+def _compute_balance(db: Session, family_id: int, user_id: int, include_pending_redeems: bool = False) -> int:
+    """Compute token balance. If include_pending_redeems=True, also subtract pending redemptions."""
+    statuses = ["confirmed"]
+    if include_pending_redeems:
+        # Include pending redeems so they count against available balance
+        result = db.query(
+            func.coalesce(
+                func.sum(case(
+                    (TokenTransaction.kind == "earn", case((TokenTransaction.status == "confirmed", TokenTransaction.amount), else_=0)),
+                    else_=case((TokenTransaction.status.in_(["confirmed", "pending"]), -TokenTransaction.amount), else_=0),
+                )),
+                0,
+            )
+        ).filter(
+            TokenTransaction.family_id == family_id,
+            TokenTransaction.user_id == user_id,
+        ).scalar()
+    else:
+        result = db.query(
+            func.coalesce(
+                func.sum(case((TokenTransaction.kind == "earn", TokenTransaction.amount), else_=-TokenTransaction.amount)),
+                0,
+            )
+        ).filter(
+            TokenTransaction.family_id == family_id,
+            TokenTransaction.user_id == user_id,
+            TokenTransaction.status == "confirmed",
+        ).scalar()
     return int(result)
+
+
+def _verify_currency_belongs_to_family(db: Session, currency_id: int, family_id: int) -> RewardCurrency:
+    currency = db.query(RewardCurrency).filter(
+        RewardCurrency.id == currency_id, RewardCurrency.family_id == family_id,
+    ).first()
+    if not currency:
+        raise HTTPException(status_code=404, detail=error_detail(REWARD_CURRENCY_NOT_FOUND))
+    return currency
 
 
 def _invalidate_balance(family_id: int, user_id: int):
@@ -144,6 +170,7 @@ def create_rule(
     _scope=require_scope("rewards:write"),
 ):
     ensure_adult(db, user.id, payload.family_id)
+    _verify_currency_belongs_to_family(db, payload.currency_id, payload.family_id)
     rule = EarningRule(
         family_id=payload.family_id, currency_id=payload.currency_id,
         name=payload.name, amount=payload.amount,
@@ -216,6 +243,7 @@ def create_reward(
     _scope=require_scope("rewards:write"),
 ):
     ensure_adult(db, user.id, payload.family_id)
+    _verify_currency_belongs_to_family(db, payload.currency_id, payload.family_id)
     reward = Reward(
         family_id=payload.family_id, currency_id=payload.currency_id,
         name=payload.name, cost=payload.cost, icon=payload.icon,
@@ -300,6 +328,7 @@ def earn_tokens(
     _scope=require_scope("rewards:write"),
 ):
     ensure_adult(db, user.id, payload.family_id)
+    _verify_currency_belongs_to_family(db, payload.currency_id, payload.family_id)
     # Verify target is a family member
     target_membership = db.query(Membership).filter(
         Membership.user_id == payload.target_user_id,
@@ -336,7 +365,12 @@ def redeem_reward(
     if not reward.is_active:
         raise HTTPException(status_code=400, detail=error_detail(REWARD_INACTIVE))
 
-    balance = _compute_balance(db, payload.family_id, user.id)
+    # Lock membership row to serialize concurrent redeems
+    db.query(Membership).filter(
+        Membership.user_id == user.id, Membership.family_id == payload.family_id,
+    ).with_for_update().first()
+
+    balance = _compute_balance(db, payload.family_id, user.id, include_pending_redeems=True)
     if balance < reward.cost:
         raise HTTPException(status_code=400, detail=error_detail(INSUFFICIENT_BALANCE))
 
