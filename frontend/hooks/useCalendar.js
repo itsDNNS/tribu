@@ -86,28 +86,17 @@ export function useCalendar() {
     });
   }, [weekAnchor, calendarView]);
 
-  const selectedDayEvents = useMemo(() => {
-    if (!selectedDate) return [];
-    const y = selectedDate.getFullYear();
-    const m = selectedDate.getMonth();
-    const d = selectedDate.getDate();
-    return allEvents.filter((ev) => {
-      const dt = new Date(ev.starts_at);
-      return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d;
-    });
-  }, [allEvents, selectedDate]);
-
-  // Merge real events with synthetic member birthday events
+  // Merge real events with synthetic member birthday events for the viewed year
   const allEvents = useMemo(() => {
     const birthdayEvents = [];
-    const currentYear = new Date().getFullYear();
+    const viewYear = calendarMonth.getFullYear();
     for (const m of members) {
       if (!m.date_of_birth) continue;
       const [y, mo, d] = m.date_of_birth.split('-').map(Number);
-      const age = currentYear - y;
-      const startsAt = new Date(currentYear, mo - 1, d, 0, 0, 0).toISOString();
+      const age = viewYear - y;
+      const startsAt = new Date(viewYear, mo - 1, d, 0, 0, 0).toISOString();
       birthdayEvents.push({
-        id: `bday-${m.user_id}`,
+        id: `bday-${m.user_id}-${viewYear}`,
         title: `🎂 ${m.display_name}` + (age > 0 ? ` (${age})` : ''),
         starts_at: startsAt,
         ends_at: null,
@@ -118,7 +107,18 @@ export function useCalendar() {
       });
     }
     return [...events, ...birthdayEvents];
-  }, [events, members]);
+  }, [events, members, calendarMonth]);
+
+  const selectedDayEvents = useMemo(() => {
+    if (!selectedDate) return [];
+    const y = selectedDate.getFullYear();
+    const m = selectedDate.getMonth();
+    const d = selectedDate.getDate();
+    return allEvents.filter((ev) => {
+      const dt = new Date(ev.starts_at);
+      return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d;
+    });
+  }, [allEvents, selectedDate]);
 
   const monthCells = useMemo(() => {
     const y = calendarMonth.getFullYear();
@@ -238,6 +238,7 @@ export function useCalendar() {
   }
 
   async function deleteEvent(ev) {
+    if (ev._isBirthday) return;
     if (ev.is_recurring) {
       setDeleteConfirm(ev);
       return;
