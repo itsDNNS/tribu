@@ -8,7 +8,12 @@ const ICON_MAP = {
   trophy: Trophy,
 };
 
-export function CurrencyIcon({ icon, size = '1em', className }) {
+export function CurrencyIcon({ icon, size = '1em', className, label }) {
   const Icon = ICON_MAP[icon] || Coins;
-  return <Icon size={size} className={className} aria-hidden="true" />;
+  return (
+    <>
+      <Icon size={size} className={className} aria-hidden="true" />
+      {label && <span className="sr-only">{label}</span>}
+    </>
+  );
 }

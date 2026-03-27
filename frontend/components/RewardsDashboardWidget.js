@@ -35,7 +35,7 @@ export default function RewardsDashboardWidget() {
         </div>
         {rw.myBalance && (
           <div className="rewards-balance">
-            <div className="rewards-balance-value"><CurrencyIcon icon={rw.currency.icon} /> {rw.myBalance.balance}</div>
+            <div className="rewards-balance-value"><CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {rw.myBalance.balance}</div>
             <div className="rewards-balance-label">{rw.currency.name}</div>
           </div>
         )}
@@ -43,7 +43,7 @@ export default function RewardsDashboardWidget() {
           <div className="rewards-next">
             <Award size={14} style={{ color: 'var(--amethyst)', flexShrink: 0 }} />
             <span className="rewards-next-name">{nextReward.name}</span>
-            <span className="rewards-next-cost">{nextReward.cost} <CurrencyIcon icon={rw.currency.icon} /></span>
+            <span className="rewards-next-cost">{nextReward.cost} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></span>
           </div>
         )}
       </div>
@@ -74,7 +74,7 @@ export default function RewardsDashboardWidget() {
                   <div className="sidebar-user-avatar rewards-child-avatar-fallback">{(b.display_name || '?')[0].toUpperCase()}</div>
                 )}
                 <span className="rewards-child-name">{b.display_name}</span>
-                <span className="rewards-child-balance"><CurrencyIcon icon={rw.currency.icon} /> {b.balance}</span>
+                <span className="rewards-child-balance"><CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {b.balance}</span>
               </div>
             );
           })}
