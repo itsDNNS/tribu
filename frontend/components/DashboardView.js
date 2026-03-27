@@ -3,6 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
+import RewardsDashboardWidget from './RewardsDashboardWidget';
 
 function getGreeting(messages) {
   const h = new Date().getHours();
@@ -137,6 +138,9 @@ export default function DashboardView() {
             })}
           </div>
         </div>
+
+        {/* Rewards Widget */}
+        <RewardsDashboardWidget />
 
         {/* Birthdays Card */}
         <div className="bento-card bento-birthdays glass glow-rose" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
