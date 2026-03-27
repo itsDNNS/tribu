@@ -606,8 +606,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-stats { grid-column: span 4; }
 .bento-events { grid-column: span 7; }
 .bento-tasks { grid-column: span 5; }
-.bento-birthdays { grid-column: span 5; order: 2; }
-.bento-rewards { grid-column: span 7; order: 1; }
+.bento-birthdays { grid-column: span 5; }
+.bento-rewards { grid-column: span 7; }
 .bento-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md); }
 .bento-card-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
 .bento-more { background: none; border: none; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 0.78rem; padding: 4px 10px; border-radius: var(--radius-pill); transition: all 0.2s; }
@@ -1170,7 +1170,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .mobile-header { display: flex; }
   .bottom-nav { display: block; }
   .bento-grid { grid-template-columns: 1fr; row-gap: var(--space-md); }
-  .bento-welcome, .bento-stats, .bento-events, .bento-tasks, .bento-birthdays, .bento-rewards { grid-column: span 1; order: unset; }
+  .bento-welcome, .bento-stats, .bento-events, .bento-tasks, .bento-birthdays, .bento-rewards { grid-column: span 1; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .view-header { flex-direction: column; align-items: flex-start; }
   .tasks-toolbar { flex-direction: column; align-items: flex-start; }
