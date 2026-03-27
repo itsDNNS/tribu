@@ -190,11 +190,28 @@ export default function CalendarView() {
                   </div>
                 )}
                 {cal.selectedDayEvents.map((ev, i) => (
-                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} members={members} />
+                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
                 ))}
               </div>
 
-              {!isChild && (
+              {/* Edit form */}
+              {cal.editingEvent && (
+                <form onSubmit={cal.saveEdit} className="glass-sm" style={{ padding: 12, marginBottom: 12, borderRadius: 10, display: 'grid', gap: 8 }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--amethyst)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.edit_event')}</div>
+                  <input className="form-input" value={cal.editTitle} onChange={e => cal.setEditTitle(e.target.value)} required />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <input className="form-input" type="datetime-local" value={cal.editStartsAt} onChange={e => cal.setEditStartsAt(e.target.value)} required style={{ fontSize: '0.82rem' }} />
+                    <input className="form-input" type="datetime-local" value={cal.editEndsAt} onChange={e => cal.setEditEndsAt(e.target.value)} style={{ fontSize: '0.82rem' }} />
+                  </div>
+                  <input className="form-input" value={cal.editDescription} onChange={e => cal.setEditDescription(e.target.value)} placeholder={t(messages, 'module.calendar.description')} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-sm" type="submit">{t(messages, 'save')}</button>
+                    <button className="btn-ghost" type="button" onClick={cal.cancelEdit}>{t(messages, 'cancel')}</button>
+                  </div>
+                </form>
+              )}
+
+              {!isChild && !cal.editingEvent && (
                 <>
                   <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.quick_add')}</div>
                   <form onSubmit={cal.createEvent} className="quick-add-form">
@@ -263,7 +280,7 @@ export default function CalendarView() {
                     <div className="week-day-empty">{t(messages, 'module.calendar.no_events_day')}</div>
                   ) : (
                     dayInfo.dayEvents.map((ev, j) => (
-                      <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={j} messages={messages} onDelete={isChild ? null : cal.deleteEvent} members={members} />
+                      <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={j} messages={messages} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
                     ))
                   )}
                 </div>
@@ -300,10 +317,24 @@ export default function CalendarView() {
               </div>
             )}
             {cal.selectedDayEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} members={members} />
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
             ))}
           </div>
-          {!isChild && (
+          {/* Mobile edit form */}
+          {cal.editingEvent && (
+            <form onSubmit={cal.saveEdit} className="glass-sm" style={{ padding: 12, marginBottom: 12, borderRadius: 10, display: 'grid', gap: 8 }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--amethyst)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(messages, 'module.calendar.edit_event')}</div>
+              <input className="form-input" value={cal.editTitle} onChange={e => cal.setEditTitle(e.target.value)} required />
+              <input className="form-input" type="datetime-local" value={cal.editStartsAt} onChange={e => cal.setEditStartsAt(e.target.value)} required style={{ fontSize: '0.82rem' }} />
+              <input className="form-input" type="datetime-local" value={cal.editEndsAt} onChange={e => cal.setEditEndsAt(e.target.value)} style={{ fontSize: '0.82rem' }} />
+              <input className="form-input" value={cal.editDescription} onChange={e => cal.setEditDescription(e.target.value)} placeholder={t(messages, 'module.calendar.description')} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn-sm" type="submit">{t(messages, 'save')}</button>
+                <button className="btn-ghost" type="button" onClick={cal.cancelEdit}>{t(messages, 'cancel')}</button>
+              </div>
+            </form>
+          )}
+          {!isChild && !cal.editingEvent && (
             <form onSubmit={cal.createEvent} className="quick-add-form">
               <input className="form-input" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={(e) => cal.setTitle(e.target.value)} required />
               <input className="form-input" type="datetime-local" value={cal.startsAt} onChange={(e) => cal.setStartsAt(e.target.value)} required />

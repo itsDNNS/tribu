@@ -31,6 +31,14 @@ export function useCalendar() {
   const [color, setColor] = useState('');
   const [category, setCategory] = useState('');
 
+  // Edit state
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editStartsAt, setEditStartsAt] = useState('');
+  const [editEndsAt, setEditEndsAt] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editAllDay, setEditAllDay] = useState(false);
+
   // Delete confirmation for recurring events
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -237,6 +245,44 @@ export function useCalendar() {
     announce(msg);
   }
 
+  function startEdit(ev) {
+    if (ev._isBirthday || ev.is_recurring) return;
+    setEditingEvent(ev);
+    setEditTitle(ev.title || '');
+    // Convert stored datetime to datetime-local format
+    const sa = ev.starts_at ? String(ev.starts_at).slice(0, 16) : '';
+    setEditStartsAt(sa);
+    const ea = ev.ends_at ? String(ev.ends_at).slice(0, 16) : '';
+    setEditEndsAt(ea);
+    setEditDescription(ev.description || '');
+    setEditAllDay(ev.all_day || false);
+  }
+
+  function cancelEdit() {
+    setEditingEvent(null);
+  }
+
+  async function saveEdit(e) {
+    if (e) e.preventDefault();
+    if (!editingEvent) return;
+    const payload = {
+      title: editTitle,
+      starts_at: toIsoOrNull(editStartsAt),
+      ends_at: toIsoOrNull(editEndsAt),
+      description: editDescription || null,
+      all_day: editAllDay,
+    };
+    if (demoMode) {
+      setEvents(prev => prev.map(ev => ev.id === editingEvent.id ? { ...ev, ...payload } : ev));
+    } else {
+      const { ok, data } = await api.apiUpdateEvent(editingEvent.id, payload);
+      if (!ok) { toastError(errorText(data?.detail, t(messages, 'toast.error'), messages)); return; }
+      await Promise.all([loadEventsForRange(), loadDashboard()]);
+    }
+    setEditingEvent(null);
+    toastSuccess(t(messages, 'toast.event_updated'));
+  }
+
   async function deleteEvent(ev) {
     if (ev._isBirthday) return;
     if (ev.is_recurring) {
@@ -322,5 +368,9 @@ export function useCalendar() {
     monthLabel, selectedDayEvents, monthCells, weekInfo,
     prevWeek, nextWeek, goToCurrentWeek,
     createEvent, deleteEvent, performDelete, addBirthday, loadEventsForRange,
+    editingEvent, startEdit, cancelEdit, saveEdit,
+    editTitle, setEditTitle, editStartsAt, setEditStartsAt,
+    editEndsAt, setEditEndsAt, editDescription, setEditDescription,
+    editAllDay, setEditAllDay,
   };
 }
