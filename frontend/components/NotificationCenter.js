@@ -50,6 +50,30 @@ export default function NotificationCenter() {
     if (notif.link) setActiveView(notif.link);
   }
 
+  // Group notifications by time period
+  const groups = (() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+
+    const today = [];
+    const yesterday = [];
+    const older = [];
+
+    notifications.forEach(n => {
+      const d = new Date(n.created_at);
+      if (d >= todayStart) today.push(n);
+      else if (d >= yesterdayStart) yesterday.push(n);
+      else older.push(n);
+    });
+
+    const result = [];
+    if (today.length) result.push({ label: t(messages, 'notifications_group_today'), items: today });
+    if (yesterday.length) result.push({ label: t(messages, 'notifications_group_yesterday'), items: yesterday });
+    if (older.length) result.push({ label: t(messages, 'notifications_group_older'), items: older });
+    return result;
+  })();
+
   return (
     <div>
       <div className="view-header">
@@ -76,42 +100,47 @@ export default function NotificationCenter() {
           </div>
         )}
 
-        {notifications.map((notif) => {
-          const Icon = TYPE_ICONS[notif.type] || Bell;
-          return (
-            <div
-              key={notif.id}
-              className={`notif-item${notif.read ? ' notif-item-read' : ' notif-item-unread'}`}
-              onClick={() => handleClick(notif)}
-            >
-              <div className={`notif-icon${!notif.read ? ' notif-icon-unread' : ''}`}>
-                <Icon size={18} />
-              </div>
-              <div className="notif-content">
-                <div className="notif-header">
-                  <div className={`notif-title${!notif.read ? ' notif-title-unread' : ''}`}>
-                    {notif.title}
+        {groups.map(group => (
+          <div key={group.label}>
+            <div className="notif-group-header">{group.label}</div>
+            {group.items.map(notif => {
+              const Icon = TYPE_ICONS[notif.type] || Bell;
+              return (
+                <div
+                  key={notif.id}
+                  className={`notif-item${notif.read ? ' notif-item-read' : ' notif-item-unread'}`}
+                  onClick={() => handleClick(notif)}
+                >
+                  <div className={`notif-icon${!notif.read ? ' notif-icon-unread' : ''}`}>
+                    <Icon size={18} />
                   </div>
-                  <span className="notif-time">
-                    {timeAgo(notif.created_at, lang)}
-                  </span>
+                  <div className="notif-content">
+                    <div className="notif-header">
+                      <div className={`notif-title${!notif.read ? ' notif-title-unread' : ''}`}>
+                        {notif.title}
+                      </div>
+                      <span className="notif-time">
+                        {timeAgo(notif.created_at, lang)}
+                      </span>
+                    </div>
+                    {notif.body && (
+                      <div className="notif-body">
+                        {notif.body}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="btn-ghost notif-delete"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(notif.id); }}
+                    aria-label={t(messages, 'aria.delete_notification')}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                {notif.body && (
-                  <div className="notif-body">
-                    {notif.body}
-                  </div>
-                )}
-              </div>
-              <button
-                className="btn-ghost notif-delete"
-                onClick={(e) => { e.stopPropagation(); handleDelete(notif.id); }}
-                aria-label={t(messages, 'aria.delete_notification')}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );

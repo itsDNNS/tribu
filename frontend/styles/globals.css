@@ -869,6 +869,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .notif-delete { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 8px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); }
 .notif-empty { padding: var(--space-xl); text-align: center; color: var(--text-muted); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
 .notif-empty-icon { margin-bottom: var(--space-sm); opacity: 0.4; }
+.notif-group-header { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; padding: var(--space-sm) 0; margin-top: var(--space-sm); }
+.notif-group-header:first-child { margin-top: 0; }
 
 [data-theme="light"] .notif-item { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 [data-theme="light"] .notif-empty { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
