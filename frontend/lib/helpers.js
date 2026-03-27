@@ -19,12 +19,13 @@ export function parseDate(value) {
   return new Date(String(value));
 }
 
-export function prettyDate(value, lang = 'en') {
+export function prettyDate(value, lang = 'en', timeFormat = '24h') {
   if (!value) return '-';
   const d = parseDate(value);
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   return d.toLocaleString(locale, {
-    weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+    weekday: 'short', day: '2-digit', month: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h',
   });
 }
 

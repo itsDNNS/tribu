@@ -405,6 +405,11 @@ export function apiSetBaseUrl(base_url) {
   });
 }
 
+export function apiGetTimeFormat() { return request('/admin/settings/time-format'); }
+export function apiSetTimeFormat(time_format) {
+  return request('/admin/settings/time-format', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time_format }) });
+}
+
 export function connectNotificationStream(onMessage, { lastEventId = 0 } = {}) {
   const url = lastEventId
     ? `${API}/notifications/stream?lastEventId=${lastEventId}`

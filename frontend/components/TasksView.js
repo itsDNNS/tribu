@@ -6,7 +6,7 @@ import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
 
 export default function TasksView() {
-  const { familyId, families, members, messages, lang, isMobile, isChild } = useApp();
+  const { familyId, families, members, messages, lang, isMobile, isChild, timeFormat } = useApp();
   const tk = useTasks();
 
   return (
@@ -122,7 +122,7 @@ export default function TasksView() {
                       {task.due_date && (
                         <span className={`task-due${isOverdue ? ' overdue' : ''}`}>
                           <Clock size={12} aria-hidden="true" />
-                          {prettyDate(task.due_date, lang)}
+                          {prettyDate(task.due_date, lang, timeFormat)}
                         </span>
                       )}
                     </div>

@@ -146,7 +146,7 @@ export function AssignedBadges({ assignedTo, members }) {
   );
 }
 
-export function EventCard({ ev, index, messages, onDelete, onEdit, members }) {
+export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onEdit, members }) {
   return (
     <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index), cursor: onEdit && !ev._isBirthday ? 'pointer' : undefined }} onClick={() => onEdit && !ev._isBirthday && onEdit(ev)}>
       <div style={{ flex: 1 }}>
@@ -155,7 +155,7 @@ export function EventCard({ ev, index, messages, onDelete, onEdit, members }) {
           {ev.title}
           {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />}
         </div>
-        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, messages)}</div>
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, lang, timeFormat)}</div>
         {members && <AssignedBadges assignedTo={ev.assigned_to} members={members} />}
       </div>
       {onEdit && !ev._isBirthday && !ev.is_recurring && (

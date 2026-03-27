@@ -6,7 +6,7 @@ import { RECURRENCE_OPTIONS, DeleteRecurringDialog, AssignChips, EventCard } fro
 import { getMemberColor, COLOR_PALETTE } from '../../lib/member-colors';
 
 export default function CalendarView() {
-  const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild, members } = useApp();
+  const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild, members, timeFormat } = useApp();
   const cal = useCalendar();
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const weekdays = t(messages, 'module.calendar.weekdays').split(',');
@@ -190,7 +190,7 @@ export default function CalendarView() {
                   </div>
                 )}
                 {cal.selectedDayEvents.map((ev, i) => (
-                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
+                  <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} lang={lang} timeFormat={timeFormat} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
                 ))}
               </div>
 
@@ -280,7 +280,7 @@ export default function CalendarView() {
                     <div className="week-day-empty">{t(messages, 'module.calendar.no_events_day')}</div>
                   ) : (
                     dayInfo.dayEvents.map((ev, j) => (
-                      <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={j} messages={messages} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
+                      <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={j} messages={messages} lang={lang} timeFormat={timeFormat} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
                     ))
                   )}
                 </div>
@@ -317,7 +317,7 @@ export default function CalendarView() {
               </div>
             )}
             {cal.selectedDayEvents.map((ev, i) => (
-              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
+              <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={i} messages={messages} lang={lang} timeFormat={timeFormat} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
             ))}
           </div>
           {/* Mobile edit form */}

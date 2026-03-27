@@ -11,8 +11,8 @@ import BackupSection from './BackupSection';
 import AuditLogSection from './AuditLogSection';
 
 export default function AdminView() {
-  const { familyId, members, messages, loadMembers, me, demoMode } = useApp();
-  const { error: toastError, info: toastInfo } = useToast();
+  const { familyId, members, messages, loadMembers, me, demoMode, timeFormat, setTimeFormat } = useApp();
+  const { error: toastError, info: toastInfo, success: toastSuccess } = useToast();
   const [showAddMember, setShowAddMember] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
@@ -127,6 +127,23 @@ export default function AdminView() {
           <h1 className="view-title">{t(messages, 'admin_members')}</h1>
         </div>
       </div>
+      {/* Time Format Toggle */}
+      <div className="glass-sm settings-section" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', marginBottom: 'var(--space-md)' }}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 500, flex: 1 }}>{t(messages, 'time_format')}</span>
+        <button className={`btn-ghost${timeFormat === '24h' ? ' active' : ''}`} onClick={async () => {
+          const { ok } = await api.apiSetTimeFormat('24h');
+          if (ok) setTimeFormat('24h'); else toastError(t(messages, 'toast.error'));
+        }} style={{ padding: '4px 12px', borderRadius: 6, background: timeFormat === '24h' ? 'var(--amethyst)' : undefined, color: timeFormat === '24h' ? '#fff' : undefined }}>
+          24h
+        </button>
+        <button className={`btn-ghost${timeFormat === '12h' ? ' active' : ''}`} onClick={async () => {
+          const { ok } = await api.apiSetTimeFormat('12h');
+          if (ok) setTimeFormat('12h'); else toastError(t(messages, 'toast.error'));
+        }} style={{ padding: '4px 12px', borderRadius: 6, background: timeFormat === '12h' ? 'var(--amethyst)' : undefined, color: timeFormat === '12h' ? '#fff' : undefined }}>
+          12h
+        </button>
+      </div>
+
       {/* Member Created Banner */}
       {createdPassword && (
         <div style={{

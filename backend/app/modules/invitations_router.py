@@ -324,3 +324,28 @@ def set_base_url(
         db.add(SystemSetting(key="base_url", value=payload.base_url))
     db.commit()
     return {"status": "ok", "base_url": payload.base_url}
+
+
+@settings_router.get("/time-format")
+def get_time_format(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    row = db.query(SystemSetting).filter(SystemSetting.key == "time_format").first()
+    return {"time_format": row.value if row else "24h"}
+
+
+@settings_router.put("/time-format")
+def set_time_format(payload: dict, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    memberships = db.query(Membership).filter(
+        Membership.user_id == user.id, Membership.role == "admin"
+    ).all()
+    if not memberships:
+        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
+    fmt = payload.get("time_format", "24h")
+    if fmt not in ("12h", "24h"):
+        raise HTTPException(status_code=400, detail=error_detail("INVALID_TIME_FORMAT"))
+    row = db.query(SystemSetting).filter(SystemSetting.key == "time_format").first()
+    if row:
+        row.value = fmt
+    else:
+        db.add(SystemSetting(key="time_format", value=fmt))
+    db.commit()
+    return {"status": "ok", "time_format": fmt}

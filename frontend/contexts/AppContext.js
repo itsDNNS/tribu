@@ -23,7 +23,7 @@ function AppOrchestrator({ children }) {
   const { loggedIn, demoMode, me, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
   const { familyId, setFamilyId, families, setFamilies, setMyFamilyRole, setMyFamilyIsAdult, loadMembers, setMembers } = family;
   const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setContacts, setBirthdays, setSummary } = data;
-  const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, restoreView, setIsMobile, setNavOrder, lang, messages } = ui;
+  const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, restoreView, setIsMobile, setNavOrder, setTimeFormat, lang, messages } = ui;
 
   // Wrap data loaders to inject familyId default and skip in demo mode
   const loadDashboardWrapped = useCallback(async (fid = familyId) => {
@@ -207,6 +207,9 @@ function AppOrchestrator({ children }) {
         setMyFamilyRole(famData[0].role);
         setMyFamilyIsAdult(famData[0].is_adult);
         await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadNavOrderWrapped()]);
+        // Load time format setting
+        const { ok: tfOk, data: tfData } = await api.apiGetTimeFormat();
+        if (tfOk && tfData?.time_format) setTimeFormat(tfData.time_format);
       }
 
       setLoading(false);
