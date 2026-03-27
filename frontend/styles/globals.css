@@ -1170,6 +1170,12 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .bottom-nav { display: block; }
   .bento-grid { grid-template-columns: 1fr; row-gap: var(--space-md); }
   .bento-welcome, .bento-stats, .bento-events, .bento-tasks, .bento-rewards, .bento-birthdays { grid-column: span 1; }
+  .bento-welcome { order: 1; }
+  .bento-stats { order: 2; }
+  .bento-events { order: 3; }
+  .bento-tasks { order: 4; }
+  .bento-birthdays { order: 5; }
+  .bento-rewards { order: 6; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .view-header { flex-direction: column; align-items: flex-start; }
   .tasks-toolbar { flex-direction: column; align-items: flex-start; }
