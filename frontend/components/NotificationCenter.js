@@ -84,10 +84,10 @@ export default function NotificationCenter() {
         )}
       </div>
 
-      <div className="stagger" style={{ display: 'grid', gap: 'var(--space-sm)' }}>
+      <div className="stagger notif-list">
         {notifications.length === 0 && (
-          <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <Bell size={32} style={{ marginBottom: 'var(--space-sm)', opacity: 0.4 }} />
+          <div className="notif-empty">
+            <Bell size={32} className="notif-empty-icon" />
             <p>{t(messages, 'notifications_empty')}</p>
           </div>
         )}
@@ -97,43 +97,34 @@ export default function NotificationCenter() {
           return (
             <div
               key={notif.id}
-              className="glass-sm"
-              style={{
-                padding: 'var(--space-md)',
-                cursor: 'pointer',
-                opacity: notif.read ? 0.7 : 1,
-                borderLeft: notif.read ? 'none' : '3px solid var(--amethyst)',
-              }}
+              className={`notif-item${notif.read ? ' notif-item-read' : ' notif-item-unread'}`}
               onClick={() => handleClick(notif)}
             >
-              <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'flex-start' }}>
-                <div style={{ flexShrink: 0, marginTop: 2 }}>
-                  <Icon size={18} style={{ color: notif.read ? 'var(--text-muted)' : 'var(--amethyst)' }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-sm)' }}>
-                    <div style={{ fontWeight: notif.read ? 400 : 600, fontSize: '0.92rem' }}>
-                      {notif.title}
-                    </div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-                      {timeAgo(notif.created_at, lang)}
-                    </span>
-                  </div>
-                  {notif.body && (
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                      {notif.body}
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="btn-ghost"
-                  style={{ flexShrink: 0, padding: '4px', color: 'var(--text-muted)' }}
-                  onClick={(e) => { e.stopPropagation(); handleDelete(notif.id); }}
-                  aria-label={t(messages, 'aria.delete_notification')}
-                >
-                  <Trash2 size={14} />
-                </button>
+              <div className={`notif-icon${!notif.read ? ' notif-icon-unread' : ''}`}>
+                <Icon size={18} />
               </div>
+              <div className="notif-content">
+                <div className="notif-header">
+                  <div className={`notif-title${!notif.read ? ' notif-title-unread' : ''}`}>
+                    {notif.title}
+                  </div>
+                  <span className="notif-time">
+                    {timeAgo(notif.created_at, lang)}
+                  </span>
+                </div>
+                {notif.body && (
+                  <div className="notif-body">
+                    {notif.body}
+                  </div>
+                )}
+              </div>
+              <button
+                className="btn-ghost notif-delete"
+                onClick={(e) => { e.stopPropagation(); handleDelete(notif.id); }}
+                aria-label={t(messages, 'aria.delete_notification')}
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           );
         })}
