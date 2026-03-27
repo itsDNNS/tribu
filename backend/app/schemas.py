@@ -147,6 +147,7 @@ class FamilyMemberResponse(BaseModel):
     role: str = Field(..., description="Role: 'admin' or 'member'")
     is_adult: bool = Field(..., description="Whether this member is an adult")
     color: Optional[str] = Field(None, description="Personal color hex code")
+    date_of_birth: Optional[datetime] = Field(None, description="Date of birth")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"user_id": 2, "display_name": "Max", "email": "max@example.com", "role": "member", "is_adult": True, "color": "#7c3aed"}]

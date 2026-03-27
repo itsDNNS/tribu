@@ -48,6 +48,7 @@ class Membership(Base):
     role = Column(String, nullable=False, default="member")
     is_adult = Column(Boolean, nullable=False, default=False)
     color = Column(String, nullable=True)
+    date_of_birth = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="memberships")
     family = relationship("Family", back_populates="memberships")

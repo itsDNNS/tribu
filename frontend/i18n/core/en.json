@@ -404,6 +404,8 @@
   "left_family": "You have left the family.",
   "member_group_adults": "Adults",
   "member_group_children": "Children",
+  "years_old": "years old",
+  "birthdate": "Date of birth",
   "search.title": "Search",
   "search.placeholder": "Search events, tasks, contacts...",
   "search.searching": "Searching...",

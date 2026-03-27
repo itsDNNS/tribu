@@ -46,6 +46,12 @@ export default function AdminView() {
     await loadMembers();
   }
 
+  async function handleSetBirthdate(userId, dateOfBirth) {
+    const { ok, data } = await api.apiSetMemberBirthdate(familyId, userId, dateOfBirth);
+    if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+    await loadMembers();
+  }
+
   async function handleSetRole(userId, role) {
     const { ok, data } = await api.apiSetRole(familyId, userId, role);
     if (!ok) {
@@ -152,7 +158,7 @@ export default function AdminView() {
         </div>
       )}
 
-      <MemberGroups members={members} me={me} messages={messages} onSetAdult={handleSetAdult} onSetRole={handleSetRole} onResetPassword={handleResetPassword} onRemoveMember={handleRemoveMember} />
+      <MemberGroups members={members} me={me} messages={messages} onSetAdult={handleSetAdult} onSetRole={handleSetRole} onResetPassword={handleResetPassword} onRemoveMember={handleRemoveMember} onSetBirthdate={handleSetBirthdate} />
 
       {/* Add Member */}
       {!demoMode && (
@@ -226,7 +232,16 @@ export default function AdminView() {
   );
 }
 
-function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPassword, onRemoveMember }) {
+function getAge(dateOfBirth) {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  if (now.getMonth() < dob.getMonth() || (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate())) age--;
+  return age;
+}
+
+function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPassword, onRemoveMember, onSetBirthdate }) {
   const { adults, children } = useMemo(() => {
     const roleRank = (r) => r === 'owner' ? 0 : r === 'admin' ? 1 : 2;
     const sorted = [...members].sort((a, b) => {
@@ -251,7 +266,10 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
               <Shield size={13} style={{ color: 'var(--amethyst)' }} aria-label={m.role} />
             )}
           </div>
-          <div className="profile-email">{m.email}</div>
+          <div className="profile-email">
+            {m.email}
+            {m.date_of_birth && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: 'var(--text-muted)' }}>({getAge(m.date_of_birth)} {t(messages, 'years_old')})</span>}
+          </div>
         </div>
       </div>
       <div className="admin-actions">
@@ -260,8 +278,12 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
         ) : (
           <>
             <button className="btn-ghost" onClick={() => onSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
-            <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>
-            <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>
+            {m.role !== 'owner' && m.role !== 'admin' && <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>}
+            {m.role !== 'owner' && m.role !== 'member' && <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>}
+            <input type="date" className="form-input" style={{ width: 'auto', padding: '4px 8px', fontSize: '0.78rem' }}
+              value={m.date_of_birth ? m.date_of_birth.split('T')[0] : ''}
+              onChange={(e) => onSetBirthdate(m.user_id, e.target.value || null)}
+              aria-label={t(messages, 'birthdate')} />
             <button className="btn-ghost" onClick={() => onResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>
             <button className="btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => onRemoveMember(m.user_id)}><X size={13} /> {t(messages, 'remove_member')}</button>
           </>

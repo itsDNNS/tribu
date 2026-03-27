@@ -77,6 +77,7 @@ def family_members(
                 role=m.role,
                 is_adult=m.is_adult,
                 color=m.color,
+                date_of_birth=m.date_of_birth,
             ).model_dump()
             for m in memberships
             if m.user
@@ -225,6 +226,36 @@ def update_member_adult(
     cache.invalidate(f"tribu:members:{family_id}")
     cache.invalidate_pattern("tribu:families:*")
     return {"status": "ok", "user_id": target_user_id, "is_adult": membership.is_adult, "role": membership.role}
+
+
+@router.patch(
+    "/{family_id}/members/{target_user_id}/birthdate",
+    summary="Update member date of birth",
+    description="Set or clear a member's date of birth. Admin role required. Scope: `families:write`.",
+    response_description="Updated birthdate",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def update_member_birthdate(
+    family_id: int,
+    target_user_id: int,
+    payload: dict,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+    membership = db.query(Membership).filter(
+        Membership.family_id == family_id,
+        Membership.user_id == target_user_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
+    from datetime import datetime as dt
+    raw = payload.get("date_of_birth")
+    membership.date_of_birth = dt.fromisoformat(raw) if raw else None
+    db.commit()
+    cache.invalidate(f"tribu:members:{family_id}")
+    return {"status": "ok", "user_id": target_user_id, "date_of_birth": membership.date_of_birth.isoformat() if membership.date_of_birth else None}
 
 
 @router.patch(
