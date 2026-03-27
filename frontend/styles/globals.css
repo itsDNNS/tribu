@@ -1122,6 +1122,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    ═══════════════════════════════════════════ */
 .sidebar-toggle:focus-visible,
 .sidebar-logout:focus-visible,
+.sidebar-action-btn:focus-visible,
 .calendar-nav-btn:focus-visible,
 .today-btn:focus-visible,
 .calendar-view-btn:focus-visible,

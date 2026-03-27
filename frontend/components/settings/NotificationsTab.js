@@ -39,8 +39,8 @@ export default function NotificationsTab() {
   }
 
   return (
-    <div className="settings-grid stagger">
-      <div className="settings-section glass">
+    <div className="settings-grid">
+      <div className="settings-section">
         <div className="settings-section-title"><Bell size={16} /> {t(messages, 'notification_settings')}</div>
         <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>

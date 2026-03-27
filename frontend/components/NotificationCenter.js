@@ -3,6 +3,7 @@ import { Bell, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck } from 'lucid
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
+import { timeAgo } from '../lib/helpers';
 
 const TYPE_ICONS = {
   event_reminder: CalendarDays,
@@ -10,23 +11,6 @@ const TYPE_ICONS = {
   birthday: Cake,
   system: Bell,
 };
-
-function timeAgo(dateStr, lang) {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diff = Math.floor((now - date) / 1000);
-  if (diff < 60) return lang === 'de' ? 'Gerade eben' : 'Just now';
-  if (diff < 3600) {
-    const m = Math.floor(diff / 60);
-    return lang === 'de' ? `vor ${m} Min.` : `${m}m ago`;
-  }
-  if (diff < 86400) {
-    const h = Math.floor(diff / 3600);
-    return lang === 'de' ? `vor ${h} Std.` : `${h}h ago`;
-  }
-  const d = Math.floor(diff / 86400);
-  return lang === 'de' ? `vor ${d} Tag${d > 1 ? 'en' : ''}` : `${d}d ago`;
-}
 
 export default function NotificationCenter() {
   const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView } = useApp();

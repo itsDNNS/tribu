@@ -281,11 +281,11 @@ export default function AppShell() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button className="sidebar-logout" onClick={() => setSearchOpen(true)} aria-label={t(messages, 'search.title')}>
+              <button className="sidebar-action-btn" onClick={() => setSearchOpen(true)} aria-label={t(messages, 'search.title')}>
                 <Search size={18} />
               </button>
               <button
-                className="sidebar-logout"
+                className="sidebar-action-btn"
                 onClick={() => navigate('notifications')}
                 aria-label={t(messages, 'notifications')}
                 style={{ position: 'relative' }}
