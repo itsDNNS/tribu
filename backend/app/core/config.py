@@ -2,7 +2,7 @@ import os
 
 from app.security import JWT_EXPIRE_HOURS
 
-VERSION = "1.0.0"
+VERSION = os.getenv("APP_VERSION", "dev")
 
 COOKIE_NAME = "tribu_token"
 COOKIE_MAX_AGE = JWT_EXPIRE_HOURS * 3600
