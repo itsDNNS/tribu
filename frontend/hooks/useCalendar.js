@@ -97,7 +97,7 @@ export function useCalendar() {
       const startsAt = new Date(viewYear, mo - 1, d, 0, 0, 0).toISOString();
       birthdayEvents.push({
         id: `bday-${m.user_id}-${viewYear}`,
-        title: `🎂 ${m.display_name}` + (age > 0 ? ` (${age})` : ''),
+        title: m.display_name + (age > 0 ? ` (${age})` : ''),
         starts_at: startsAt,
         ends_at: null,
         all_day: true,
