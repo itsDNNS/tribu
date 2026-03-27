@@ -4,7 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { useRewards } from '../hooks/useRewards';
 import { t } from '../lib/i18n';
-import { errorText } from '../lib/helpers';
+import { errorText, parseDate } from '../lib/helpers';
 import * as api from '../lib/api';
 
 const CURRENCY_PRESETS = [
@@ -300,7 +300,7 @@ export default function RewardsView() {
           <button className="btn-ghost" onClick={() => setTab('overview')} style={{ marginBottom: 12, fontSize: '0.82rem' }}>&larr; {t(messages, 'module.rewards.tab_overview')}</button>
           {rw.transactions.map(tx => {
             const memberName = members.find(m => m.user_id === tx.user_id)?.display_name || '?';
-            const date = new Date(tx.created_at).toLocaleDateString();
+            const date = parseDate(tx.created_at).toLocaleDateString();
             return (
               <div key={tx.id} className="glass-sm" style={{ display: 'flex', gap: 8, padding: '8px 12px', marginBottom: 4, borderRadius: 8, fontSize: '0.82rem', alignItems: 'center' }}>
                 {tx.kind === 'earn' ? <ArrowUpCircle size={14} style={{ color: 'var(--success)' }} /> : <ArrowDownCircle size={14} style={{ color: 'var(--danger)' }} />}

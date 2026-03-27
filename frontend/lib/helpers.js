@@ -1,11 +1,27 @@
 export function toIsoOrNull(localValue) {
   if (!localValue) return null;
-  return new Date(localValue).toISOString();
+  // datetime-local inputs return "YYYY-MM-DDTHH:mm" in local time.
+  // Send as-is without UTC conversion - the backend stores naive local time.
+  const s = String(localValue);
+  // Already has seconds or Z? Return as-is.
+  if (s.length > 16) return s;
+  // Add seconds for consistency
+  return s + ':00';
+}
+
+/**
+ * Parse a datetime string from the API.
+ * Backend stores naive local time (no timezone).
+ * Browsers interpret strings without Z as local time, which is correct here.
+ */
+export function parseDate(value) {
+  if (!value) return null;
+  return new Date(String(value));
 }
 
 export function prettyDate(value, lang = 'en') {
   if (!value) return '-';
-  const d = new Date(value);
+  const d = parseDate(value);
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   return d.toLocaleString(locale, {
     weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
