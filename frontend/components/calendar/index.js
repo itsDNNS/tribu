@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useCalendar } from '../../hooks/useCalendar';
 import { t } from '../../lib/i18n';
@@ -212,16 +212,41 @@ export default function CalendarView() {
       {/* Birthday form in week view */}
       {cal.calendarView === 'week' && !isChild && (
         <div className="cal-form-panel" style={{ marginTop: 'var(--space-md)' }}>
-          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-md)' }}>{t(messages, 'create_birthday')}</div>
+          <div className="cal-form-section-title">{t(messages, 'create_birthday')}</div>
           <form onSubmit={cal.addBirthday} className="quick-add-form">
             <input className="form-input" placeholder={t(messages, 'name')} value={cal.birthdayName} onChange={(e) => cal.setBirthdayName(e.target.value)} required />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div className="cal-form-row">
               <input className="form-input" type="number" min="1" max="12" placeholder={t(messages, 'month')} value={cal.birthdayMonth} onChange={(e) => cal.setBirthdayMonth(e.target.value)} required />
               <input className="form-input" type="number" min="1" max="31" placeholder={t(messages, 'day')} value={cal.birthdayDay} onChange={(e) => cal.setBirthdayDay(e.target.value)} required />
             </div>
             <button className="btn-sm" type="submit">{t(messages, 'save_birthday')}</button>
           </form>
         </div>
+      )}
+
+      {!isChild && (
+        <button
+          className="cal-fab"
+          onClick={() => {
+            if (!cal.selectedDate) {
+              const now = new Date();
+              cal.setSelectedDate(now);
+              cal.setCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+              const y = now.getFullYear();
+              const m = String(now.getMonth() + 1).padStart(2, '0');
+              const d = String(now.getDate()).padStart(2, '0');
+              cal.setStartsAt(`${y}-${m}-${d}T09:00`);
+            }
+            // Scroll to create form
+            setTimeout(() => {
+              document.querySelector('.quick-add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              document.querySelector('.quick-add-form input')?.focus();
+            }, 100);
+          }}
+          aria-label={t(messages, 'create_event')}
+        >
+          <Plus size={22} />
+        </button>
       )}
     </div>
   );

@@ -833,7 +833,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .color-swatch-none.color-swatch-active { border-color: var(--text-primary); }
 
 .cal-form-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
-.cal-form-section-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.cal-form-section-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-md); }
 .cal-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
 .cal-form-actions { display: flex; gap: var(--space-sm); }
 .cal-empty-day { color: var(--text-muted); font-size: 0.88rem; }
@@ -841,6 +841,11 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .cal-edit-form { padding: 12px; margin-bottom: 12px; border-radius: var(--radius-sm); display: grid; gap: var(--space-sm); background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); }
 .cal-form-datetime { font-size: 0.82rem; }
 .cal-form-input-lg { font-size: 0.88rem; padding: 12px 14px; }
+
+/* ─── Calendar FAB ─── */
+.cal-fab { position: fixed; bottom: var(--space-xl); right: var(--space-xl); width: 56px; height: 56px; border-radius: 50%; background: var(--amethyst); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px -4px rgba(124, 58, 237, 0.4); transition: all 0.2s; z-index: 50; }
+.cal-fab:hover { transform: scale(1.05); box-shadow: 0 6px 24px -4px rgba(124, 58, 237, 0.5); }
+.cal-fab:active { transform: scale(0.95); }
 
 /* ═══════════════════════════════════════════
    TASKS VIEW
@@ -1113,9 +1118,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .shopping-item-delete:focus-visible,
 .theme-item:focus-visible,
 .quick-add-btn:focus-visible,
-.week-day-header:focus-visible {
+.week-day-header:focus-visible,
+.cal-fab:focus-visible {
   outline: 2px solid var(--amethyst);
-  outline-offset: 2px;
+  outline-offset: 4px;
 }
 
 .calendar-day:focus-visible:not(.empty) {
@@ -1304,6 +1310,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .rewards-earn-form { flex-direction: column; }
   .rewards-earn-select, .rewards-earn-amount, .rewards-earn-note { width: 100%; min-width: 0; flex: unset; }
   .rewards-balances { margin-left: calc(-1 * var(--space-md)); margin-right: calc(-1 * var(--space-md)); padding-left: var(--space-md); padding-right: var(--space-md); }
+  .cal-fab { bottom: calc(88px + env(safe-area-inset-bottom)); right: var(--space-md); }
 }
 
 /* ─── Setup Wizard ─── */
