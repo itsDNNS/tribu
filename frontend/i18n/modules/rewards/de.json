@@ -4,7 +4,7 @@
   "module.rewards.pending": "{count} ausstehend",
   "module.rewards.currency_setup": "Belohnungs-Währung einrichten",
   "module.rewards.currency_name": "Währungsname",
-  "module.rewards.currency_icon": "Symbol (Emoji)",
+  "module.rewards.currency_icon": "Symbol",
   "module.rewards.create_currency": "Währung erstellen",
   "module.rewards.earning_rules": "Verdienst-Regeln",
   "module.rewards.add_rule": "Regel hinzufügen",
@@ -15,7 +15,7 @@
   "module.rewards.add_reward": "Belohnung hinzufügen",
   "module.rewards.reward_name": "Belohnungsname",
   "module.rewards.reward_cost": "Kosten",
-  "module.rewards.reward_icon": "Symbol (Emoji)",
+  "module.rewards.reward_icon": "Symbol",
   "module.rewards.redeem": "Einlösen",
   "module.rewards.redeem_confirm": "\"{name}\" für {cost} {currency} einlösen?",
   "module.rewards.cant_afford": "Nicht genug {currency}",
@@ -44,5 +44,9 @@
   "module.rewards.tasks_with_reward": "Aufgaben mit Belohnung",
   "module.rewards.history_link": "Verlauf anzeigen",
   "module.rewards.earn_quick": "Schnell vergeben",
-  "module.rewards.widget_pending": "{count} zur Bestätigung"
+  "module.rewards.widget_pending": "{count} zur Bestätigung",
+  "module.rewards.progress_toward": "Nächstes Ziel: {name}",
+  "module.rewards.progress_remaining": "noch {count}",
+  "module.rewards.no_rules": "Noch keine Verdienst-Regeln angelegt.",
+  "module.rewards.no_rewards": "Noch keine Belohnungen im Katalog."
 }

@@ -267,7 +267,7 @@ class RewardCurrency(Base):
     id = Column(Integer, primary_key=True, index=True)
     family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String(50), nullable=False)
-    icon = Column(String(10), nullable=False, server_default="⭐")
+    icon = Column(String(10), nullable=False, server_default="star")
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     family = relationship("Family", back_populates="reward_currency")

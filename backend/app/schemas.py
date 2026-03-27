@@ -754,13 +754,13 @@ class RewardCurrencyCreate(BaseModel):
     """Create the family reward currency."""
     family_id: int = Field(..., description="Family ID")
     name: str = Field(min_length=1, max_length=50, description="Currency name (e.g. Stars, Coins)")
-    icon: str = Field(default="⭐", max_length=10, description="Emoji icon")
+    icon: str = Field(default="star", pattern=r"^(star|gem|heart|zap|trophy)$", description="Lucide icon name")
 
 
 class RewardCurrencyUpdate(BaseModel):
     """Update reward currency."""
     name: Optional[str] = Field(None, min_length=1, max_length=50, description="Currency name")
-    icon: Optional[str] = Field(None, max_length=10, description="Emoji icon")
+    icon: Optional[str] = Field(None, pattern=r"^(star|gem|heart|zap|trophy)$", description="Lucide icon name")
 
 
 class RewardCurrencyResponse(BaseModel):
