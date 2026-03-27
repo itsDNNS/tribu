@@ -158,10 +158,10 @@ export function EventCard({ ev, index, messages, onDelete, onEdit, members }) {
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{prettyDate(ev.starts_at, messages)}</div>
         {members && <AssignedBadges assignedTo={ev.assigned_to} members={members} />}
       </div>
-      {onEdit && !ev._isBirthday && (
+      {onEdit && !ev._isBirthday && !ev.is_recurring && (
         <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(ev); }}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
-          aria-label="Edit">
+          aria-label={t(messages, 'aria.edit_event').replace('{title}', ev.title)}>
           <Pencil size={14} />
         </button>
       )}

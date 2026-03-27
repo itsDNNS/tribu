@@ -105,6 +105,7 @@
   "aria.next_month": "Next month",
   "aria.previous_week": "Previous week",
   "aria.next_week": "Next week",
+  "aria.edit_event": "Edit event: {title}",
   "aria.delete_event": "Delete event: {title}",
   "aria.events": "{count} events",
   "aria.mark_task": "Mark task: {title}",

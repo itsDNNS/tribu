@@ -246,7 +246,7 @@ export function useCalendar() {
   }
 
   function startEdit(ev) {
-    if (ev._isBirthday) return;
+    if (ev._isBirthday || ev.is_recurring) return;
     setEditingEvent(ev);
     setEditTitle(ev.title || '');
     // Convert stored datetime to datetime-local format
