@@ -85,6 +85,17 @@ NOTIFICATION_NOT_FOUND = "NOTIFICATION_NOT_FOUND"
 # ── Navigation ────────────────────────────────────────────────
 UNKNOWN_NAV_KEYS = "UNKNOWN_NAV_KEYS"
 
+# ── Rewards ──────────────────────────────────────────────────
+REWARD_CURRENCY_NOT_FOUND = "REWARD_CURRENCY_NOT_FOUND"
+REWARD_CURRENCY_ALREADY_EXISTS = "REWARD_CURRENCY_ALREADY_EXISTS"
+EARNING_RULE_NOT_FOUND = "EARNING_RULE_NOT_FOUND"
+REWARD_NOT_FOUND = "REWARD_NOT_FOUND"
+REWARD_TRANSACTION_NOT_FOUND = "REWARD_TRANSACTION_NOT_FOUND"
+REWARD_TRANSACTION_NOT_PENDING = "REWARD_TRANSACTION_NOT_PENDING"
+REWARD_TARGET_NOT_MEMBER = "REWARD_TARGET_NOT_MEMBER"
+INSUFFICIENT_BALANCE = "INSUFFICIENT_BALANCE"
+REWARD_INACTIVE = "REWARD_INACTIVE"
+
 
 _DEFAULT_MESSAGES: dict[str, str] = {
     INVALID_TOKEN: "Invalid token",
@@ -141,6 +152,15 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     CSV_MISSING_COLUMN: "CSV requires at least the column full_name",
     NOTIFICATION_NOT_FOUND: "Notification not found",
     UNKNOWN_NAV_KEYS: "Unknown nav keys: {keys}",
+    REWARD_CURRENCY_NOT_FOUND: "Reward currency not found",
+    REWARD_CURRENCY_ALREADY_EXISTS: "This family already has a reward currency",
+    EARNING_RULE_NOT_FOUND: "Earning rule not found",
+    REWARD_NOT_FOUND: "Reward not found",
+    REWARD_TRANSACTION_NOT_FOUND: "Transaction not found",
+    REWARD_TRANSACTION_NOT_PENDING: "Transaction is not in pending state",
+    REWARD_TARGET_NOT_MEMBER: "Target user is not a family member",
+    INSUFFICIENT_BALANCE: "Insufficient token balance",
+    REWARD_INACTIVE: "This reward is no longer available",
 }
 
 

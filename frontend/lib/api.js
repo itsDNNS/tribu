@@ -422,3 +422,27 @@ export function connectNotificationStream(onMessage, { lastEventId = 0 } = {}) {
 export function apiSearch(familyId, query) {
   return request(`/search?family_id=${familyId}&q=${encodeURIComponent(query)}`);
 }
+
+// Rewards
+export function apiGetRewardCurrency(familyId) { return request(`/rewards/currency?family_id=${familyId}`); }
+export function apiCreateRewardCurrency(payload) { return post('/rewards/currency', payload); }
+export function apiUpdateRewardCurrency(id, payload) { return patch(`/rewards/currency/${id}`, payload); }
+export function apiDeleteRewardCurrency(id) { return del(`/rewards/currency/${id}`); }
+export function apiGetEarningRules(familyId) { return request(`/rewards/rules?family_id=${familyId}`); }
+export function apiCreateEarningRule(payload) { return post('/rewards/rules', payload); }
+export function apiUpdateEarningRule(id, payload) { return patch(`/rewards/rules/${id}`, payload); }
+export function apiDeleteEarningRule(id) { return del(`/rewards/rules/${id}`); }
+export function apiGetRewardCatalog(familyId) { return request(`/rewards/catalog?family_id=${familyId}`); }
+export function apiCreateReward(payload) { return post('/rewards/catalog', payload); }
+export function apiUpdateReward(id, payload) { return patch(`/rewards/catalog/${id}`, payload); }
+export function apiDeleteReward(id) { return del(`/rewards/catalog/${id}`); }
+export function apiGetRewardTransactions(familyId, userId, limit = 50, offset = 0) {
+  let url = `/rewards/transactions?family_id=${familyId}&limit=${limit}&offset=${offset}`;
+  if (userId) url += `&user_id=${userId}`;
+  return request(url);
+}
+export function apiEarnTokens(payload) { return post('/rewards/transactions/earn', payload); }
+export function apiRedeemReward(payload) { return post('/rewards/transactions/redeem', payload); }
+export function apiConfirmTransaction(id) { return patch(`/rewards/transactions/${id}/confirm`, {}); }
+export function apiRejectTransaction(id) { return patch(`/rewards/transactions/${id}/reject`, {}); }
+export function apiGetRewardBalances(familyId) { return request(`/rewards/balances?family_id=${familyId}`); }

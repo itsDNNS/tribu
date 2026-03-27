@@ -99,6 +99,8 @@ def create_task(
         recurrence=payload.recurrence,
         assigned_to_user_id=payload.assigned_to_user_id,
         created_by_user_id=user.id,
+        token_reward_amount=payload.token_reward_amount,
+        token_require_confirmation=payload.token_require_confirmation,
     )
     db.add(task)
     db.commit()
@@ -160,6 +162,10 @@ def update_task(
         task.recurrence = payload.recurrence
     if payload.assigned_to_user_id is not None:
         task.assigned_to_user_id = payload.assigned_to_user_id
+    if payload.token_reward_amount is not None:
+        task.token_reward_amount = payload.token_reward_amount or None
+    if payload.token_require_confirmation is not None:
+        task.token_require_confirmation = payload.token_require_confirmation
 
     # Recurring logic: when completing a recurring task, create next instance
     next_task = None
@@ -167,6 +173,22 @@ def update_task(
         task.status = payload.status
         if payload.status == "done":
             task.completed_at = utcnow()
+            # Auto-credit tokens on task completion
+            if task.token_reward_amount and task.assigned_to_user_id:
+                from app.models import RewardCurrency, TokenTransaction as TknTxn
+                currency = db.query(RewardCurrency).filter(RewardCurrency.family_id == task.family_id).first()
+                if currency:
+                    auto_confirm = not task.token_require_confirmation
+                    txn = TknTxn(
+                        family_id=task.family_id, currency_id=currency.id,
+                        user_id=task.assigned_to_user_id, kind="earn",
+                        amount=task.token_reward_amount,
+                        status="confirmed" if auto_confirm else "pending",
+                        source_task_id=task.id,
+                        confirmed_by_user_id=user.id if auto_confirm else None,
+                        confirmed_at=utcnow() if auto_confirm else None,
+                    )
+                    db.add(txn)
             if task.recurrence:
                 next_task = Task(
                     family_id=task.family_id,
@@ -177,6 +199,8 @@ def update_task(
                     recurrence=task.recurrence,
                     assigned_to_user_id=task.assigned_to_user_id,
                     created_by_user_id=task.created_by_user_id,
+                    token_reward_amount=task.token_reward_amount,
+                    token_require_confirmation=task.token_require_confirmation,
                 )
                 db.add(next_task)
 

@@ -310,6 +310,8 @@ class TaskCreate(BaseModel):
     due_date: Optional[datetime] = Field(None, description="Due date (ISO 8601)")
     recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'biweekly', 'monthly', or 'yearly'")
     assigned_to_user_id: Optional[int] = Field(None, description="User ID to assign the task to")
+    token_reward_amount: Optional[int] = Field(None, ge=0, description="Tokens awarded on completion")
+    token_require_confirmation: bool = Field(True, description="Require adult confirmation before awarding tokens")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"family_id": 1, "title": "Buy groceries", "priority": "high", "due_date": "2026-03-01T10:00:00", "recurrence": "weekly"}]
@@ -325,6 +327,8 @@ class TaskUpdate(BaseModel):
     due_date: Optional[datetime] = Field(None, description="Due date")
     recurrence: Optional[str] = Field(None, description="Recurrence rule")
     assigned_to_user_id: Optional[int] = Field(None, description="Assigned user ID")
+    token_reward_amount: Optional[int] = Field(None, ge=0, description="Tokens awarded on completion")
+    token_require_confirmation: Optional[bool] = Field(None, description="Require adult confirmation")
 
 
 class TaskResponse(BaseModel):
@@ -343,6 +347,8 @@ class TaskResponse(BaseModel):
     created_by_user_id: Optional[int] = Field(None, description="Creator user ID")
     created_at: datetime = Field(..., description="Creation timestamp")
     completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
+    token_reward_amount: Optional[int] = Field(None, description="Tokens awarded on completion")
+    token_require_confirmation: bool = Field(True, description="Require adult confirmation")
 
 
 class PaginatedTasks(BaseModel):
@@ -731,3 +737,149 @@ class RestoreResponse(BaseModel):
 class BaseUrlUpdate(BaseModel):
     """Update the instance base URL (used for generating invitation links)."""
     base_url: str = Field("", description="Base URL (e.g. 'https://tribu.example.com'). Empty to auto-detect.")
+
+
+# ---------------------------------------------------------------------------
+# Rewards
+# ---------------------------------------------------------------------------
+
+class RewardCurrencyCreate(BaseModel):
+    """Create the family reward currency."""
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(min_length=1, max_length=50, description="Currency name (e.g. Stars, Coins)")
+    icon: str = Field(default="⭐", max_length=10, description="Emoji icon")
+
+
+class RewardCurrencyUpdate(BaseModel):
+    """Update reward currency."""
+    name: Optional[str] = Field(None, min_length=1, max_length=50, description="Currency name")
+    icon: Optional[str] = Field(None, max_length=10, description="Emoji icon")
+
+
+class RewardCurrencyResponse(BaseModel):
+    """Reward currency details."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    family_id: int
+    name: str
+    icon: str
+    created_at: datetime
+
+
+class EarningRuleCreate(BaseModel):
+    """Create an earning rule."""
+    family_id: int = Field(..., description="Family ID")
+    currency_id: int = Field(..., description="Currency ID")
+    name: str = Field(min_length=1, max_length=100, description="Activity name")
+    amount: int = Field(ge=1, le=10000, description="Tokens earned")
+    require_confirmation: bool = Field(True, description="Require adult confirmation")
+
+
+class EarningRuleUpdate(BaseModel):
+    """Update an earning rule."""
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    amount: Optional[int] = Field(None, ge=1, le=10000)
+    require_confirmation: Optional[bool] = None
+
+
+class EarningRuleResponse(BaseModel):
+    """Earning rule details."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    family_id: int
+    currency_id: int
+    name: str
+    amount: int
+    require_confirmation: bool
+    created_at: datetime
+
+
+class RewardItemCreate(BaseModel):
+    """Create a reward catalog item."""
+    family_id: int = Field(..., description="Family ID")
+    currency_id: int = Field(..., description="Currency ID")
+    name: str = Field(min_length=1, max_length=100, description="Reward name")
+    cost: int = Field(ge=1, le=100000, description="Token cost")
+    icon: Optional[str] = Field(None, max_length=10, description="Emoji icon")
+
+
+class RewardItemUpdate(BaseModel):
+    """Update a reward catalog item."""
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    cost: Optional[int] = Field(None, ge=1, le=100000)
+    icon: Optional[str] = Field(None, max_length=10)
+    is_active: Optional[bool] = None
+
+
+class RewardItemResponse(BaseModel):
+    """Reward catalog item details."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    family_id: int
+    currency_id: int
+    name: str
+    cost: int
+    icon: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+
+class ManualEarnRequest(BaseModel):
+    """Award tokens to a member."""
+    family_id: int
+    currency_id: int
+    target_user_id: int = Field(..., description="User who earns tokens")
+    amount: int = Field(ge=1, le=10000)
+    note: Optional[str] = Field(None, max_length=200)
+    source_rule_id: Optional[int] = None
+
+
+class RedeemRequest(BaseModel):
+    """Redeem a reward."""
+    family_id: int
+    reward_id: int
+    note: Optional[str] = Field(None, max_length=200)
+
+
+class TokenTransactionResponse(BaseModel):
+    """Token transaction details."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    family_id: int
+    currency_id: int
+    user_id: int
+    kind: str
+    amount: int
+    status: str
+    note: Optional[str]
+    source_task_id: Optional[int]
+    source_reward_id: Optional[int]
+    source_rule_id: Optional[int]
+    confirmed_by_user_id: Optional[int]
+    confirmed_at: Optional[datetime]
+    created_at: datetime
+
+
+class PaginatedTransactions(BaseModel):
+    """Paginated token transactions."""
+    items: list[TokenTransactionResponse]
+    total: int
+    offset: int
+    limit: int
+
+
+class MemberBalance(BaseModel):
+    """Single member token balance."""
+    user_id: int
+    display_name: str
+    balance: int
+    pending: int
+
+
+class BalancesResponse(BaseModel):
+    """Family token balances."""
+    family_id: int
+    currency_id: int
+    currency_name: str
+    currency_icon: str
+    balances: list[MemberBalance]
