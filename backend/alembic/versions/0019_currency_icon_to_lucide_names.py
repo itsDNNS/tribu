@@ -15,11 +15,11 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 EMOJI_TO_NAME = {
-    "\u2b50": "star",       # ⭐
-    "\ud83d\udc8e": "gem",  # 💎
-    "\u2764\ufe0f": "heart",# ❤️
-    "\u26a1": "zap",        # ⚡
-    "\ud83c\udfc6": "trophy",# 🏆
+    "\u2b50": "star",
+    "\U0001f48e": "gem",
+    "\u2764\ufe0f": "heart",
+    "\u26a1": "zap",
+    "\U0001f3c6": "trophy",
 }
 
 
@@ -43,5 +43,6 @@ def downgrade() -> None:
             {"name": name, "emoji": emoji},
         )
     conn.execute(
-        sa.text("ALTER TABLE reward_currencies ALTER COLUMN icon SET DEFAULT '\u2b50'"),
+        sa.text("ALTER TABLE reward_currencies ALTER COLUMN icon SET DEFAULT :default"),
+            {"default": "\u2b50"},
     )

@@ -754,7 +754,7 @@ class RewardCurrencyCreate(BaseModel):
     """Create the family reward currency."""
     family_id: int = Field(..., description="Family ID")
     name: str = Field(min_length=1, max_length=50, description="Currency name (e.g. Stars, Coins)")
-    icon: str = Field(default="⭐", max_length=10, description="Emoji icon")
+    icon: str = Field(default="star", max_length=10, description="Lucide icon name")
 
 
 class RewardCurrencyUpdate(BaseModel):
