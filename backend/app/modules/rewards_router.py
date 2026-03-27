@@ -17,8 +17,9 @@ from app.schemas import (
     RewardItemCreate, RewardItemResponse, RewardItemUpdate,
     TokenTransactionResponse,
 )
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE
 from app.core.errors import (
-    AUTH_RESPONSES, NOT_FOUND_RESPONSE, error_detail,
+    error_detail,
     REWARD_CURRENCY_NOT_FOUND, REWARD_CURRENCY_ALREADY_EXISTS,
     EARNING_RULE_NOT_FOUND, REWARD_NOT_FOUND,
     REWARD_TRANSACTION_NOT_FOUND, REWARD_TRANSACTION_NOT_PENDING,
