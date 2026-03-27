@@ -1313,6 +1313,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .rewards-earn-select, .rewards-earn-amount, .rewards-earn-note { width: 100%; min-width: 0; flex: unset; }
   .rewards-balances { margin-left: calc(-1 * var(--space-md)); margin-right: calc(-1 * var(--space-md)); padding-left: var(--space-md); padding-right: var(--space-md); }
   .cal-fab { bottom: calc(88px + env(safe-area-inset-bottom)); right: var(--space-md); }
+  .cal-form-row { grid-template-columns: 1fr; }
 }
 
 /* ─── Setup Wizard ─── */
