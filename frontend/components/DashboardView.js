@@ -23,7 +23,12 @@ export default function DashboardView() {
   const todayStr = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   const summaryText = (() => {
-    const evCount = summary.next_events?.length || 0;
+    const now = new Date();
+    const todayEvents = (summary.next_events || []).filter(ev => {
+      const d = parseDate(ev.starts_at);
+      return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    });
+    const evCount = todayEvents.length;
     let s = evCount > 0
       ? t(messages, 'module.dashboard.summary_events').replace('{count}', evCount)
       : t(messages, 'module.dashboard.summary_no_events');
