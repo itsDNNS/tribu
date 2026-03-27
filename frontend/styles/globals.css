@@ -1257,6 +1257,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .view-title { font-size: 1.3rem; }
   .calendar-month-label { min-width: auto; }
   .quick-add-bar { flex-wrap: wrap; }
+  .rewards-earn-form { flex-direction: column; }
+  .rewards-earn-select, .rewards-earn-amount, .rewards-earn-note { width: 100%; min-width: 0; flex: unset; }
+  .rewards-balances { margin-left: calc(-1 * var(--space-md)); margin-right: calc(-1 * var(--space-md)); padding-left: var(--space-md); padding-right: var(--space-md); }
 }
 
 /* ─── Setup Wizard ─── */
