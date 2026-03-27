@@ -19,6 +19,9 @@ export function UIProvider({ children }) {
   const setActiveView = useCallback((view) => {
     sessionStorage.setItem('tribu_view', view);
     setActiveViewRaw(view);
+    if (typeof window !== 'undefined') {
+      history.replaceState(null, '', `#${view}`);
+    }
   }, []);
 
   const messages = useMemo(() => buildMessages(lang), [lang]);

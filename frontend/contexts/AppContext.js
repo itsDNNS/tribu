@@ -132,7 +132,9 @@ function AppOrchestrator({ children }) {
       setLang(match || 'en');
     }
     setProfileImage('');
-    const savedView = sessionStorage.getItem('tribu_view');
+    // Hash takes priority (bookmarkable URLs), then sessionStorage
+    const hashView = window.location.hash?.slice(1);
+    const savedView = hashView || sessionStorage.getItem('tribu_view');
     if (savedView) setActiveViewUI(savedView);
 
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -171,9 +173,9 @@ function AppOrchestrator({ children }) {
   useEffect(() => {
     if (!loggedIn || demoMode) return;
 
-    // Clear landing page hash fragment (e.g. #auth) after login
-    if (window.location.hash) {
-      history.replaceState(null, '', window.location.pathname);
+    // Clear landing page hash (only #auth, not navigation hashes)
+    if (window.location.hash === '#auth') {
+      history.replaceState(null, '', '#dashboard');
     }
 
     (async () => {
