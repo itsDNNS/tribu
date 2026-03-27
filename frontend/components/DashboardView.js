@@ -13,7 +13,7 @@ function getGreeting(messages) {
 }
 
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, setActiveView, messages, lang } = useApp();
+  const { summary, me, members, tasks, events, setActiveView, messages, lang, timeFormat } = useApp();
 
   const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
   const openTasks = tasks.filter((t) => t.status === 'open');
@@ -95,7 +95,7 @@ export default function DashboardView() {
             )}
             {summary.next_events?.slice(0, 4).map((ev, i) => (
               <div key={ev.id} className="event-item">
-                <div className="event-time">{parseDate(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</div>
+                <div className="event-time">{parseDate(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}</div>
                 <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">
                   <div className="event-title">{ev.title}</div>

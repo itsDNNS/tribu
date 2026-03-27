@@ -15,6 +15,7 @@ export function UIProvider({ children }) {
   const [isMobile, setIsMobile] = useState(false);
   const [navOrder, setNavOrder] = useState(DEFAULT_NAV_ORDER);
   const [loading, setLoading] = useState(true);
+  const [timeFormat, setTimeFormat] = useState('24h');
 
   const setActiveView = useCallback((view) => {
     sessionStorage.setItem('tribu_view', view);
@@ -52,6 +53,7 @@ export function UIProvider({ children }) {
     isMobile, setIsMobile,
     navOrder, setNavOrder,
     loading, setLoading,
+    timeFormat, setTimeFormat,
   };
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
