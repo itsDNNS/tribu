@@ -3,6 +3,9 @@ const MOBILE_ALIASES = {
   Dashboard: 'Home',
 };
 
+// Items pinned to overflow on mobile - skip bottom-nav check
+const ALWAYS_OVERFLOW = new Set(['Settings', 'Admin']);
+
 /**
  * Navigate to a view in the app.
  * On desktop: clicks sidebar .nav-item
@@ -24,14 +27,16 @@ async function navigateTo(page, viewName) {
   // Mobile: resolve alias (e.g. "Dashboard" → "Home")
   const mobileName = MOBILE_ALIASES[viewName] || viewName;
 
-  // Try bottom-nav first
-  const bottomNavItem = page.locator('.bottom-nav-item', { hasText: mobileName });
-  if (await bottomNavItem.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await bottomNavItem.click();
-    return;
+  // Skip bottom-nav check for items that are always in overflow
+  if (!ALWAYS_OVERFLOW.has(viewName)) {
+    const bottomNavItem = page.locator('.bottom-nav-item', { hasText: mobileName });
+    if (await bottomNavItem.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await bottomNavItem.click();
+      return;
+    }
   }
 
-  // Not in bottom nav → open "More" overflow, then click the item
+  // Open "More" overflow, then click the item
   const moreBtn = page.locator('.bottom-nav-item', { hasText: 'More' })
     .or(page.locator('.bottom-nav .bottom-nav-overflow > button'));
   await moreBtn.first().click();

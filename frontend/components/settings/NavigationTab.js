@@ -31,7 +31,7 @@ export default function NavigationTab() {
   }
 
   async function handleSaveNavOrder() {
-    const fullOrder = [...localNavOrder, 'settings', 'admin'];
+    const fullOrder = [...localNavOrder, 'settings', ...(isAdmin ? ['admin'] : [])];
     if (demoMode) {
       setNavOrder(fullOrder);
     } else {

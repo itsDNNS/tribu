@@ -103,10 +103,11 @@ export default function AppShell() {
     return items;
   }, [itemRegistry, isAdmin]);
 
-  // Mobile bottom nav: sortable items only, pinned items always in overflow
-  const hasOverflow = orderedItems.length > MAX_BOTTOM_NAV || pinnedItems.length > 0;
-  const visibleItems = hasOverflow ? orderedItems.slice(0, MAX_BOTTOM_NAV - 1) : orderedItems.slice(0, MAX_BOTTOM_NAV);
-  const overflowItems = hasOverflow ? [...orderedItems.slice(MAX_BOTTOM_NAV - 1), ...pinnedItems] : [];
+  // Mobile bottom nav: pinned items (settings/admin) always in overflow
+  const hasOverflow = pinnedItems.length > 0 || orderedItems.length > MAX_BOTTOM_NAV;
+  const maxVisible = hasOverflow ? MAX_BOTTOM_NAV - 1 : MAX_BOTTOM_NAV;
+  const visibleItems = orderedItems.slice(0, maxVisible);
+  const overflowItems = [...orderedItems.slice(maxVisible), ...pinnedItems];
   const activeInOverflow = overflowItems.some((item) => item.key === activeView);
 
   const navigate = useCallback((key) => {
