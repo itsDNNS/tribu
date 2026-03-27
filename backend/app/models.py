@@ -35,6 +35,7 @@ class Family(Base):
     tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
     shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
     invitations = relationship("FamilyInvitation", back_populates="family", cascade="all, delete-orphan")
+    reward_currency = relationship("RewardCurrency", back_populates="family", uselist=False, cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -102,6 +103,8 @@ class Task(Base):
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
     completed_at = Column(DateTime, nullable=True)
+    token_reward_amount = Column(Integer, nullable=True)
+    token_require_confirmation = Column(Boolean, nullable=False, default=True, server_default="true")
 
     family = relationship("Family", back_populates="tasks")
 
@@ -252,3 +255,78 @@ class SystemSetting(Base):
     key = Column(String, primary_key=True)
     value = Column(Text, nullable=False)
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+# ── Reward System ─────────────────────────────────────────
+
+
+class RewardCurrency(Base):
+    __tablename__ = "reward_currencies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(50), nullable=False)
+    icon = Column(String(10), nullable=False, server_default="⭐")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    family = relationship("Family", back_populates="reward_currency")
+    earning_rules = relationship("EarningRule", back_populates="currency", cascade="all, delete-orphan")
+    rewards = relationship("Reward", back_populates="currency", cascade="all, delete-orphan")
+    transactions = relationship("TokenTransaction", back_populates="currency", cascade="all, delete-orphan")
+
+
+class EarningRule(Base):
+    __tablename__ = "earning_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    currency_id = Column(Integer, ForeignKey("reward_currencies.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    amount = Column(Integer, nullable=False)
+    require_confirmation = Column(Boolean, nullable=False, default=True, server_default="true")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    family = relationship("Family")
+    currency = relationship("RewardCurrency", back_populates="earning_rules")
+
+
+class Reward(Base):
+    __tablename__ = "rewards"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    currency_id = Column(Integer, ForeignKey("reward_currencies.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    cost = Column(Integer, nullable=False)
+    icon = Column(String(10), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    family = relationship("Family")
+    currency = relationship("RewardCurrency", back_populates="rewards")
+
+
+class TokenTransaction(Base):
+    __tablename__ = "token_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    currency_id = Column(Integer, ForeignKey("reward_currencies.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String(10), nullable=False)
+    amount = Column(Integer, nullable=False)
+    status = Column(String(10), nullable=False, default="confirmed", server_default="confirmed")
+    note = Column(String(200), nullable=True)
+    source_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    source_reward_id = Column(Integer, ForeignKey("rewards.id", ondelete="SET NULL"), nullable=True)
+    source_rule_id = Column(Integer, ForeignKey("earning_rules.id", ondelete="SET NULL"), nullable=True)
+    confirmed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    family = relationship("Family")
+    currency = relationship("RewardCurrency", back_populates="transactions")
+    user = relationship("User", foreign_keys=[user_id])
+    confirmed_by = relationship("User", foreign_keys=[confirmed_by_user_id])
+    source_task = relationship("Task", foreign_keys=[source_task_id])
+    source_reward = relationship("Reward", foreign_keys=[source_reward_id])
