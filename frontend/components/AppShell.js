@@ -287,7 +287,7 @@ export default function AppShell() {
               </button>
               <button
                 className="sidebar-action-btn"
-                onClick={() => setNotifPanelOpen(prev => !prev)}
+                onClick={() => { setNotifPanelOpen(prev => !prev); setOverflowOpen(false); }}
                 aria-label={t(messages, 'notifications')}
                 style={{ position: 'relative' }}
               >

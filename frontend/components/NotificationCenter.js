@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Bell, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
@@ -14,10 +14,16 @@ const TYPE_ICONS = {
 
 export default function NotificationCenter({ onClose } = {}) {
   const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView } = useApp();
+  const closeBtnRef = useRef(null);
 
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+
+  // Focus close button when panel opens
+  useEffect(() => {
+    if (onClose) closeBtnRef.current?.focus();
+  }, [onClose]);
 
   async function handleMarkRead(notif) {
     if (notif.read) return;
@@ -87,7 +93,7 @@ export default function NotificationCenter({ onClose } = {}) {
               <CheckCheck size={14} /> {t(messages, 'notifications_mark_all_read')}
             </button>
           )}
-          <button className="btn-ghost notif-delete" onClick={onClose} aria-label={t(messages, 'close')}>
+          <button ref={closeBtnRef} className="btn-ghost notif-delete" onClick={onClose} aria-label={t(messages, 'close')}>
             <X size={16} />
           </button>
         </div>
