@@ -598,15 +598,15 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 /* ═══════════════════════════════════════════
    BENTO GRID (Dashboard)
    ═══════════════════════════════════════════ */
-.bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--space-md); }
+.bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--space-md); row-gap: var(--space-lg); }
 .bento-card { padding: var(--space-lg); transition: all 0.3s var(--ease-out-expo); }
 .bento-card:hover { transform: translateY(-2px); border-color: rgba(120, 130, 180, 0.2); }
 .bento-welcome { grid-column: span 8; }
 .bento-stats { grid-column: span 4; }
-.bento-events { grid-column: span 5; }
-.bento-tasks { grid-column: span 4; }
-.bento-birthdays { grid-column: span 3; }
-.bento-rewards { grid-column: span 9; }
+.bento-events { grid-column: span 7; }
+.bento-tasks { grid-column: span 5; }
+.bento-rewards { grid-column: span 7; }
+.bento-birthdays { grid-column: span 5; }
 .bento-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md); }
 .bento-card-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
 .bento-more { background: none; border: none; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 0.78rem; padding: 4px 10px; border-radius: var(--radius-pill); transition: all 0.2s; }
@@ -618,7 +618,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .welcome-avatar::after { content: ''; position: absolute; bottom: -2px; right: -2px; width: 16px; height: 16px; background: var(--success); border-radius: 50%; border: 3px solid var(--void-surface); }
 .welcome-text h2 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
 .welcome-text p { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
-.welcome-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-md); }
+.welcome-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-lg); }
 .admin-error { color: var(--danger); margin-bottom: var(--space-md); }
 .admin-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-md); }
 
@@ -662,6 +662,21 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .birthday-name { font-weight: 500; font-size: 0.88rem; }
 .birthday-date { font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
 .birthday-countdown { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; padding: 3px 8px; border-radius: var(--radius-pill); font-weight: 500; }
+
+/* ─── Rewards Widget ─── */
+.rewards-balance { text-align: center; padding: var(--space-sm) 0; }
+.rewards-balance-value { font-size: 2rem; font-weight: 700; }
+.rewards-balance-label { font-size: 0.75rem; color: var(--text-muted); }
+.rewards-next { display: flex; align-items: center; gap: var(--space-sm); font-size: 0.8rem; margin-top: var(--space-xs); padding: 6px var(--space-sm); background: var(--glass-border); border-radius: var(--space-sm); }
+.rewards-next-name { flex: 1; }
+.rewards-next-cost { font-weight: 600; }
+.rewards-child-list { display: grid; gap: 6px; }
+.rewards-child-row { display: flex; align-items: center; gap: var(--space-sm); font-size: 0.82rem; }
+.rewards-child-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.rewards-child-avatar-fallback { width: 24px; height: 24px; border-radius: 50%; font-size: 0.6rem; }
+.rewards-child-name { flex: 1; }
+.rewards-child-balance { font-weight: 600; }
+.rewards-pending { display: flex; align-items: center; gap: var(--space-xs); margin-top: var(--space-sm); font-size: 0.78rem; color: var(--warning); padding: 0; }
 
 /* ═══════════════════════════════════════════
    CALENDAR
@@ -1142,8 +1157,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .bento-stats { grid-column: span 12; }
   .bento-events { grid-column: span 6; }
   .bento-tasks { grid-column: span 6; }
-  .bento-birthdays { grid-column: span 12; }
   .bento-rewards { grid-column: span 6; }
+  .bento-birthdays { grid-column: span 6; }
   .calendar-layout { grid-template-columns: 1fr; }
 }
 
@@ -1153,8 +1168,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .main-content { margin-left: 0; width: 100%; padding: var(--space-md); padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
   .mobile-header { display: flex; }
   .bottom-nav { display: block; }
-  .bento-grid { grid-template-columns: 1fr; }
-  .bento-welcome, .bento-stats, .bento-events, .bento-tasks, .bento-birthdays, .bento-rewards { grid-column: span 1; }
+  .bento-grid { grid-template-columns: 1fr; row-gap: var(--space-md); }
+  .bento-welcome, .bento-stats, .bento-events, .bento-tasks, .bento-rewards, .bento-birthdays { grid-column: span 1; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .view-header { flex-direction: column; align-items: flex-start; }
   .tasks-toolbar { flex-direction: column; align-items: flex-start; }
