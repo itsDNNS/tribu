@@ -171,6 +171,11 @@ function AppOrchestrator({ children }) {
   useEffect(() => {
     if (!loggedIn || demoMode) return;
 
+    // Clear landing page hash fragment (e.g. #auth) after login
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+
     (async () => {
       setLoading(true);
       const { ok: meOk, data: meData } = await api.apiGetMe();
