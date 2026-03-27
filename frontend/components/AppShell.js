@@ -134,19 +134,19 @@ export default function AppShell() {
     return () => document.removeEventListener('pointerdown', handleClick);
   }, [overflowOpen]);
 
-  // Escape key closes mobile sidebar and overflow
+  // Escape key closes mobile sidebar, overflow, and notification panel
   useEffect(() => {
-    if (!isMobile) return;
-    if (!mobileOpen && !overflowOpen) return;
+    if (!mobileOpen && !overflowOpen && !notifPanelOpen) return;
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
         setMobileOpen(false);
         setOverflowOpen(false);
+        setNotifPanelOpen(false);
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isMobile, mobileOpen, overflowOpen]);
+  }, [mobileOpen, overflowOpen, notifPanelOpen]);
 
   const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}${isMobile && mobileOpen ? ' mobile-open' : ''}`;
 
@@ -361,7 +361,7 @@ export default function AppShell() {
       {notifPanelOpen && (
         <>
           <div className="notif-panel-backdrop" onClick={() => setNotifPanelOpen(false)} />
-          <div className="notif-panel">
+          <div className="notif-panel" role="dialog" aria-modal="true" aria-label={t(messages, 'notifications')}>
             <NotificationCenter onClose={() => setNotifPanelOpen(false)} />
           </div>
         </>

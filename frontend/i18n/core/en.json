@@ -95,6 +95,7 @@
   "token_full_access": "Full access",
   "token_limit_reached": "Token limit reached (max 25)",
   "cancel": "Cancel",
+  "close": "Close",
   "aria.expand_sidebar": "Expand sidebar",
   "aria.collapse_sidebar": "Collapse sidebar",
   "aria.main_navigation": "Main navigation",
