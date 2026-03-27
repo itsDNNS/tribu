@@ -1,6 +1,6 @@
 import { CalendarClock, ListChecks, Cake, BarChart3, Users, Calendar, CheckCircle, Plus, CheckSquare, UserPlus, Clock } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { prettyDate } from '../lib/helpers';
+import { prettyDate, parseUtc } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
@@ -95,7 +95,7 @@ export default function DashboardView() {
             )}
             {summary.next_events?.slice(0, 4).map((ev, i) => (
               <div key={ev.id} className="event-item">
-                <div className="event-time">{new Date(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</div>
+                <div className="event-time">{parseUtc(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</div>
                 <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">
                   <div className="event-title">{ev.title}</div>

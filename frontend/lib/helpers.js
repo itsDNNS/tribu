@@ -3,9 +3,19 @@ export function toIsoOrNull(localValue) {
   return new Date(localValue).toISOString();
 }
 
+/**
+ * Parse a date string from the API as UTC.
+ * The backend stores naive UTC datetimes without a Z suffix.
+ */
+export function parseUtc(value) {
+  if (!value) return null;
+  const s = String(value);
+  return new Date(s.endsWith('Z') || s.includes('+') ? s : s + 'Z');
+}
+
 export function prettyDate(value, lang = 'en') {
   if (!value) return '-';
-  const d = new Date(value);
+  const d = parseUtc(value);
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   return d.toLocaleString(locale, {
     weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
