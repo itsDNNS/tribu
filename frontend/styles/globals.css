@@ -1630,3 +1630,54 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .landing-trust { flex-direction: column; align-items: center; }
   .landing-auth { padding: var(--space-xl) var(--space-md); }
 }
+
+/* ─── Settings: Data ─── */
+.set-data-section-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; margin-bottom: var(--space-md); }
+.set-data-block { margin-bottom: var(--space-lg); }
+.set-data-sub-heading { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-sm); }
+.set-data-sub-heading--block { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-sm); display: block; }
+.set-data-btn-row { display: flex; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.set-data-msg { margin-bottom: var(--space-sm); font-size: 0.88rem; }
+.set-data-warning { margin-bottom: var(--space-sm); font-size: 0.82rem; color: var(--warning, #f6ad55); }
+.set-data-warning-list { margin: 4px 0 0 16px; padding: 0; }
+.set-data-form-hint { color: var(--text-muted); font-size: 0.82rem; }
+.set-data-file-input { padding: 10px 12px; }
+.set-data-textarea-ics { min-height: 100px; }
+.set-data-textarea-csv { min-height: 120px; }
+.set-data-sub-grid { display: grid; gap: var(--space-md); }
+.set-data-flex-row { display: flex; gap: var(--space-sm); align-items: center; }
+.set-data-flex-grow { flex: 1; }
+.set-data-no-shrink { flex-shrink: 0; }
+.set-data-hints-btn { font-size: 0.85rem; }
+.set-data-hints-content { margin-top: var(--space-sm); display: grid; gap: var(--space-md); font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+.set-data-hint-para { margin: 4px 0 0; }
+.set-data-hint-para--flush { margin: 0; }
+.set-data-muted-info { color: var(--text-muted); font-size: 0.85rem; margin-bottom: var(--space-sm); }
+
+/* ─── Settings: API Tokens ─── */
+.set-token-section-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; margin-bottom: var(--space-md); }
+.set-token-banner { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: var(--space-md); margin-bottom: var(--space-md); }
+.set-token-banner-header { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-sm); }
+.set-token-banner-title { font-weight: 600; font-size: 0.88rem; }
+.set-token-banner-warning { color: var(--warning); font-size: 0.82rem; margin-bottom: var(--space-sm); }
+.set-token-banner-row { display: flex; gap: var(--space-sm); align-items: center; }
+.set-token-no-shrink { flex-shrink: 0; }
+.set-token-dismiss { background: none; border: none; color: var(--text-muted); cursor: pointer; margin-top: var(--space-sm); font-size: 0.78rem; }
+.set-token-empty { color: var(--text-muted); font-size: 0.85rem; font-style: italic; }
+.set-token-item { margin-bottom: var(--space-sm); }
+.set-token-item-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.set-token-name { font-weight: 600; font-size: 0.92rem; }
+.set-token-scopes { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+.set-token-meta { display: flex; gap: var(--space-md); margin-top: 6px; font-size: 0.75rem; color: var(--text-muted); }
+.set-token-revoke { color: var(--danger); flex-shrink: 0; }
+.set-token-create-form { margin-top: var(--space-md); }
+.set-token-form-grid { display: grid; gap: var(--space-md); }
+.set-token-scope-check { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; margin-bottom: 8px; }
+.set-token-scope-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+.set-token-scope-module { font-size: 0.82rem; }
+.set-token-scope-label { font-weight: 500; margin-bottom: 4px; color: var(--text-secondary); }
+.set-token-scope-action { display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 2px; }
+.set-token-expiry-row { display: flex; gap: var(--space-sm); align-items: center; }
+.set-token-expiry-input { flex: 1; }
+.set-token-actions { display: flex; gap: var(--space-sm); }
+.set-token-add-btn { margin-top: var(--space-sm); }
