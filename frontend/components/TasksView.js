@@ -8,7 +8,7 @@ import { getMemberColor } from '../lib/member-colors';
 import ConfirmDialog from './ConfirmDialog';
 
 export default function TasksView() {
-  const { familyId, families, members, messages, lang, isChild, timeFormat } = useApp();
+  const { familyId, families, members, messages, lang, isChild, timeFormat, tasks } = useApp();
   const tk = useTasks();
   const [showFormDetails, setShowFormDetails] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -40,7 +40,7 @@ export default function TasksView() {
           {/* Quick Add */}
           {!isChild && (
             <>
-              <form onSubmit={(e) => { tk.createTask(e); setShowFormDetails(false); }} className="quick-add-bar">
+              <form onSubmit={tk.createTask} className="quick-add-bar">
                 <input
                   className="quick-add-input"
                   placeholder={t(messages, 'module.tasks.title') || 'Neue Aufgabe hinzufügen...'}
@@ -53,13 +53,13 @@ export default function TasksView() {
                 </button>
               </form>
 
-              <button type="button" className="task-form-toggle" onClick={() => setShowFormDetails(prev => !prev)}>
+              <button type="button" className="task-form-toggle" onClick={() => setShowFormDetails(prev => !prev)} aria-expanded={showFormDetails} aria-controls="task-form-details">
                 <ChevronDown size={14} className={showFormDetails ? 'task-form-toggle-open' : ''} />
                 {t(messages, showFormDetails ? 'module.tasks.less_options' : 'module.tasks.more_options')}
               </button>
 
               {showFormDetails && (
-                <div className="task-form-fields">
+                <div id="task-form-details" className="task-form-fields">
                   <textarea
                     className="form-input task-form-desc"
                     placeholder={t(messages, 'module.tasks.description')}
@@ -107,7 +107,7 @@ export default function TasksView() {
             {tk.filteredTasks.length === 0 && (
               <div className="tasks-empty">
                 <span>{t(messages, 'module.tasks.no_tasks')}</span>
-                {!isChild && (
+                {!isChild && tasks.length === 0 && (
                   <button className="bento-empty-action" onClick={() => document.querySelector('.quick-add-input')?.focus()}>
                     {t(messages, 'module.tasks.add_first')}
                   </button>
