@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
+import ConfirmDialog from '../ConfirmDialog';
 
 export default function InviteSection() {
   const { familyId, messages, demoMode } = useApp();
@@ -17,6 +18,7 @@ export default function InviteSection() {
   const [maxUses, setMaxUses] = useState('');
   const [createdUrl, setCreatedUrl] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Base URL settings
   const [baseUrl, setBaseUrl] = useState('');
@@ -67,13 +69,20 @@ export default function InviteSection() {
   }
 
   async function handleRevoke(inviteId) {
-    if (!confirm(t(messages, 'invite_revoke_confirm'))) return;
-    const { ok, data } = await api.apiRevokeInvitation(familyId, inviteId);
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      return;
-    }
-    await loadInvites();
+    setConfirmAction({
+      title: t(messages, 'invite_revoke'),
+      message: t(messages, 'invite_revoke_confirm'),
+      danger: true,
+      action: async () => {
+        const { ok, data } = await api.apiRevokeInvitation(familyId, inviteId);
+        if (!ok) {
+          toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        } else {
+          await loadInvites();
+        }
+        setConfirmAction(null);
+      },
+    });
   }
 
   async function handleSaveBaseUrl() {
@@ -114,17 +123,27 @@ export default function InviteSection() {
 
   return (
     <>
-      <div className="view-header" style={{ marginTop: '2rem' }}>
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmDanger={confirmAction.danger}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+          messages={messages}
+        />
+      )}
+      <div className="view-header adm-section-header">
         <div>
           <h1 className="view-title">{t(messages, 'invite_title')}</h1>
         </div>
       </div>
       {/* Base URL setting */}
       {!demoMode && (
-        <div className="glass-sm settings-section" style={{ marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <span style={{ fontWeight: 500 }}>{t(messages, 'base_url_title')}</span>
-            <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t(messages, 'base_url_hint')}</small>
+        <div className="settings-section adm-section-gap">
+          <div className="adm-col-layout">
+            <span className="adm-field-title">{t(messages, 'base_url_title')}</span>
+            <small className="adm-field-hint">{t(messages, 'base_url_hint')}</small>
             <input
               className="form-input"
               type="url"
@@ -133,14 +152,14 @@ export default function InviteSection() {
               onChange={(e) => setBaseUrl(e.target.value)}
             />
             {baseUrlEnv && (
-              <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+              <small className="adm-field-hint-sm">
                 {t(messages, 'base_url_env')}: {baseUrlEnv}
               </small>
             )}
-            <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+            <small className="adm-field-hint-sm">
               {t(messages, 'base_url_effective')}: {baseUrlEffective}
             </small>
-            <button className="btn-primary" onClick={handleSaveBaseUrl} style={{ alignSelf: 'flex-start' }}>
+            <button className="btn-primary adm-self-start" onClick={handleSaveBaseUrl}>
               {t(messages, 'base_url_save')}
             </button>
           </div>
@@ -149,52 +168,43 @@ export default function InviteSection() {
 
       {/* Created URL banner */}
       {createdUrl && (
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.1)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          padding: 'var(--space-md)',
-          marginBottom: 'var(--space-md)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
-            <Check size={16} style={{ color: 'var(--success)' }} />
-            <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{t(messages, 'invite_link_created')}</span>
+        <div className="adm-success-banner">
+          <div className="adm-banner-header">
+            <Check size={16} className="adm-icon-success" />
+            <span className="adm-banner-title">{t(messages, 'invite_link_created')}</span>
           </div>
-          <p style={{ color: 'var(--warning)', fontSize: '0.82rem', marginBottom: 'var(--space-sm)' }}>
+          <p className="adm-banner-warning">
             {t(messages, 'invite_link_hint')}
           </p>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
-            <code className="token-display" style={{ wordBreak: 'break-all' }}>{createdUrl}</code>
-            <button className="btn-ghost" onClick={handleCopyUrl} style={{ flexShrink: 0 }}>
+          <div className="adm-banner-row">
+            <code className="token-display">{createdUrl}</code>
+            <button className="btn-ghost adm-banner-no-shrink" onClick={handleCopyUrl}>
               {copied ? <><Check size={14} /> {t(messages, 'invite_copied')}</> : <><Copy size={14} /> {t(messages, 'invite_copy')}</>}
             </button>
           </div>
           <button
+            className="adm-banner-dismiss"
             onClick={() => { setCreatedUrl(null); setCopied(false); }}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginTop: 'var(--space-sm)', fontSize: '0.78rem' }}
           >
-            <X size={12} style={{ verticalAlign: 'middle' }} /> Dismiss
+            <X size={12} className="adm-icon-middle" /> {t(messages, 'dismiss')}
           </button>
         </div>
       )}
 
       {/* Invite list */}
-      <div className="glass-sm settings-section" style={{ marginBottom: '1rem' }}>
-        {invites.length === 0 && <p style={{ opacity: 0.6 }}>{t(messages, 'invite_no_invites')}</p>}
+      <div className="settings-section adm-section-gap">
+        {invites.length === 0 && <p className="adm-empty">{t(messages, 'invite_no_invites')}</p>}
         {invites.map((inv) => {
           const status = inviteStatus(inv);
           return (
-            <div key={inv.id} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0.5rem 0', borderTop: '1px solid var(--glass-border, rgba(255,255,255,0.08))',
-            }}>
+            <div key={inv.id} className="adm-list-item">
               <div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <Link size={14} style={{ opacity: 0.5 }} />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{inv.role_preset}</span>
-                  <span style={{ fontSize: '0.78rem', color: status.color, fontWeight: 600 }}>{status.label}</span>
+                <div className="adm-list-item-header">
+                  <Link size={14} className="adm-list-item-icon" />
+                  <span className="adm-list-item-role">{inv.role_preset}</span>
+                  <span className="adm-list-item-status" style={{ color: status.color }}>{status.label}</span>
                 </div>
-                <div style={{ fontSize: '0.78rem', opacity: 0.6, marginTop: 2 }}>
+                <div className="adm-list-item-meta">
                   {inv.max_uses
                     ? t(messages, 'invite_uses').replace('{count}', inv.use_count).replace('{max}', inv.max_uses)
                     : t(messages, 'invite_uses_unlimited').replace('{count}', inv.use_count)
@@ -203,7 +213,7 @@ export default function InviteSection() {
                 </div>
               </div>
               {!inv.revoked && new Date(inv.expires_at) > new Date() && (
-                <button className="btn-ghost" onClick={() => handleRevoke(inv.id)} style={{ color: 'var(--danger)' }}>
+                <button className="btn-ghost adm-revoke-btn" onClick={() => handleRevoke(inv.id)}>
                   <Trash2 size={14} /> {t(messages, 'invite_revoke')}
                 </button>
               )}
@@ -214,10 +224,10 @@ export default function InviteSection() {
 
       {/* Create invite form */}
       {!demoMode && (
-        <div style={{ marginBottom: '1rem' }}>
+        <div className="adm-section-gap">
           {showCreate ? (
             <form onSubmit={handleCreate}>
-              <div className="glass-sm settings-section" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
+              <div className="settings-section adm-form-grid">
                 <div className="form-field">
                   <label>{t(messages, 'invite_role')}</label>
                   <select className="form-input" value={rolePreset} onChange={(e) => setRolePreset(e.target.value)}>
@@ -225,19 +235,19 @@ export default function InviteSection() {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
+                <label className="set-checkbox-label">
                   <input type="checkbox" checked={isAdultPreset} onChange={(e) => setIsAdultPreset(e.target.checked)} />
                   {t(messages, 'invite_is_adult')}
                 </label>
                 <div className="form-field">
                   <label>{t(messages, 'invite_expiry_days')}</label>
-                  <input className="form-input" type="number" min={1} max={90} value={expiryDays} onChange={(e) => setExpiryDays(parseInt(e.target.value) || 7)} style={{ width: '5rem' }} />
+                  <input className="form-input adm-input-narrow" type="number" min={1} max={90} value={expiryDays} onChange={(e) => setExpiryDays(parseInt(e.target.value) || 7)} />
                 </div>
                 <div className="form-field">
                   <label>{t(messages, 'invite_max_uses')}</label>
-                  <input className="form-input" type="number" min={1} max={1000} value={maxUses} onChange={(e) => setMaxUses(e.target.value)} style={{ width: '5rem' }} placeholder="-" />
+                  <input className="form-input adm-input-narrow" type="number" min={1} max={1000} value={maxUses} onChange={(e) => setMaxUses(e.target.value)} placeholder="-" />
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <div className="set-btn-row">
                   <button type="submit" className="btn-sm">
                     <Link size={14} /> {t(messages, 'invite_create')}
                   </button>

@@ -4,6 +4,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
+import ConfirmDialog from '../ConfirmDialog';
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -20,6 +21,7 @@ export default function BackupSection() {
   const [retention, setRetention] = useState(7);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const loadConfig = useCallback(async () => {
     const { ok, data } = await api.apiGetBackupConfig();
@@ -75,12 +77,20 @@ export default function BackupSection() {
   }
 
   async function handleDelete(filename) {
-    if (!confirm(t(messages, 'backup_delete_confirm'))) return;
-    const { ok, data } = await api.apiDeleteBackup(filename);
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-    }
-    await loadBackups();
+    setConfirmAction({
+      title: t(messages, 'backup_delete'),
+      message: t(messages, 'backup_delete_confirm'),
+      danger: true,
+      action: async () => {
+        const { ok, data } = await api.apiDeleteBackup(filename);
+        if (!ok) {
+          toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        } else {
+          await loadBackups();
+        }
+        setConfirmAction(null);
+      },
+    });
   }
 
   const scheduleOptions = [
@@ -92,20 +102,29 @@ export default function BackupSection() {
 
   return (
     <>
-      <div className="view-header" style={{ marginTop: '2rem' }}>
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmDanger={confirmAction.danger}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+          messages={messages}
+        />
+      )}
+      <div className="view-header adm-section-header">
         <div>
           <h1 className="view-title">{t(messages, 'backup_title')}</h1>
         </div>
       </div>
-      <div className="glass-sm settings-section" style={{ marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="settings-section adm-section-gap">
+        <div className="adm-col-layout-lg">
           <label>
-            <span style={{ fontWeight: 500 }}>{t(messages, 'backup_schedule')}</span>
+            <span className="adm-field-title">{t(messages, 'backup_schedule')}</span>
             <select
-              className="form-input"
+              className="form-input adm-select-block"
               value={schedule}
               onChange={(e) => setSchedule(e.target.value)}
-              style={{ display: 'block', marginTop: '0.25rem' }}
             >
               {scheduleOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -113,17 +132,16 @@ export default function BackupSection() {
             </select>
           </label>
           <label>
-            <span style={{ fontWeight: 500 }}>{t(messages, 'backup_retention')}</span>
+            <span className="adm-field-title">{t(messages, 'backup_retention')}</span>
             <input
-              className="form-input"
+              className="form-input adm-input-block"
               type="number"
               min={1}
               max={100}
               value={retention}
               onChange={(e) => setRetention(parseInt(e.target.value) || 1)}
-              style={{ display: 'block', width: '5rem', marginTop: '0.25rem' }}
             />
-            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{t(messages, 'backup_retention_hint')}</span>
+            <span className="adm-retention-hint">{t(messages, 'backup_retention_hint')}</span>
           </label>
           <div>
             <button className="btn-primary" onClick={handleSaveConfig} disabled={saving}>
@@ -131,38 +149,35 @@ export default function BackupSection() {
             </button>
           </div>
           {config?.last_backup && (
-            <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+            <div className="adm-backup-last">
               {t(messages, 'backup_last')}: {new Date(config.last_backup).toLocaleString()}
               {config.last_backup_status && ` (${config.last_backup_status})`}
             </div>
           )}
-          <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>
+          <div className="adm-backup-volume">
             {t(messages, 'backup_volume_hint')}
           </div>
         </div>
       </div>
 
-      <div className="glass-sm settings-section">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-          <span style={{ fontWeight: 500 }}>{t(messages, 'backup_list')}</span>
+      <div className="settings-section">
+        <div className="adm-backup-header">
+          <span className="adm-field-title">{t(messages, 'backup_list')}</span>
           <button className="btn-primary" onClick={handleTrigger} disabled={creating}>
             {creating ? t(messages, 'backup_creating') : t(messages, 'backup_now')}
           </button>
         </div>
-        {backups.length === 0 && <p style={{ opacity: 0.6 }}>{t(messages, 'backup_no_backups')}</p>}
+        {backups.length === 0 && <p className="adm-empty">{t(messages, 'backup_no_backups')}</p>}
         {backups.map((b) => (
-          <div key={b.filename} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '0.5rem 0', borderTop: '1px solid var(--glass-border, rgba(255,255,255,0.08))',
-          }}>
+          <div key={b.filename} className="adm-list-item">
             <div>
-              <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{b.filename}</div>
-              <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>
+              <div className="adm-backup-filename">{b.filename}</div>
+              <div className="adm-backup-meta">
                 {new Date(b.created_at).toLocaleString()} &middot; {formatBytes(b.size_bytes)}
                 {b.alembic_revision && ` · rev ${b.alembic_revision}`}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="adm-btn-row">
               <button className="btn-ghost" onClick={() => handleDownload(b.filename)}>
                 {t(messages, 'backup_download')}
               </button>

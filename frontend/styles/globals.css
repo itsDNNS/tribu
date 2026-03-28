@@ -641,8 +641,69 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-empty-action:hover { opacity: 0.7; }
 
 
+/* ─── Admin ─── */
 .admin-error { color: var(--danger); margin-bottom: var(--space-md); }
 .admin-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-md); }
+.admin-time-toggle { display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md); }
+.admin-time-label { font-weight: 500; font-size: 0.88rem; }
+
+/* Admin: success banner (password created, invite link) */
+.adm-success-banner { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: var(--space-md); margin-bottom: var(--space-md); }
+.adm-banner-header { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-sm); }
+.adm-banner-title { font-weight: 600; font-size: 0.88rem; }
+.adm-banner-warning { color: var(--warning); font-size: 0.82rem; margin-bottom: var(--space-sm); }
+.adm-banner-row { display: flex; gap: var(--space-sm); align-items: center; }
+.adm-banner-no-shrink { flex-shrink: 0; }
+.adm-banner-dismiss { background: none; border: none; color: var(--text-muted); cursor: pointer; margin-top: var(--space-sm); font-size: 0.78rem; }
+.adm-icon-success { color: var(--success); }
+.adm-icon-middle { vertical-align: middle; }
+.adm-icon-shield { color: var(--amethyst); }
+
+/* Admin: add-member / invite create form */
+.adm-add-wrapper { margin-top: var(--space-md); }
+.adm-form-grid { padding: var(--space-md); display: grid; gap: var(--space-md); }
+.adm-form-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; }
+
+/* Admin: member card */
+.adm-profile-name { display: flex; align-items: center; gap: 6px; }
+.adm-age { margin-left: 8px; font-size: 0.75rem; color: var(--text-muted); }
+.adm-self-hint { font-size: 0.82rem; color: var(--text-muted); font-style: italic; }
+.adm-birthdate-input { width: auto; padding: 4px 8px; font-size: 0.78rem; }
+
+/* Admin: invite section */
+.adm-section-header { margin-top: 2rem; }
+.adm-section-gap { margin-bottom: 1rem; }
+.adm-col-layout { display: flex; flex-direction: column; gap: 0.5rem; }
+.adm-col-layout-lg { display: flex; flex-direction: column; gap: 0.75rem; }
+.adm-field-title { font-weight: 500; }
+.adm-field-hint { color: var(--text-muted); font-size: 0.8rem; }
+.adm-field-hint-sm { color: var(--text-muted); font-size: 0.78rem; }
+.adm-self-start { align-self: flex-start; }
+.adm-empty { opacity: 0.6; }
+.adm-input-narrow { width: 5rem; }
+.adm-select-block { display: block; margin-top: 0.25rem; }
+.adm-input-block { display: block; width: 5rem; margin-top: 0.25rem; }
+
+/* Admin: list items (invites, backups) */
+.adm-list-item { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-top: 1px solid var(--glass-border, rgba(255,255,255,0.08)); }
+.adm-list-item-header { display: flex; gap: 0.5rem; align-items: center; }
+.adm-list-item-icon { opacity: 0.5; }
+.adm-list-item-role { font-size: 0.85rem; font-weight: 500; }
+.adm-list-item-status { font-size: 0.78rem; font-weight: 600; }
+.adm-list-item-meta { font-size: 0.78rem; opacity: 0.6; margin-top: 2px; }
+.adm-revoke-btn { color: var(--danger); }
+
+/* Admin: backup section */
+.adm-backup-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
+.adm-backup-filename { font-weight: 500; font-size: 0.9rem; }
+.adm-backup-meta { font-size: 0.8rem; opacity: 0.6; }
+.adm-backup-last { font-size: 0.85rem; opacity: 0.8; }
+.adm-backup-volume { font-size: 0.8rem; opacity: 0.6; }
+.adm-retention-hint { font-size: 0.8rem; opacity: 0.7; }
+.adm-btn-row { display: flex; gap: 0.5rem; }
+
+/* Admin: audit log */
+.adm-load-more { margin-top: var(--space-sm); }
 
 /* ─── Stats ─── */
 .stat-grid { display: grid; gap: var(--space-sm); }

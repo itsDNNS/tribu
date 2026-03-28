@@ -49,15 +49,15 @@ export default function AuditLogSection() {
 
   return (
     <>
-      <div className="view-header" style={{ marginTop: '2rem' }}>
+      <div className="view-header adm-section-header">
         <div>
           <h1 className="view-title">{t(messages, 'audit_log_title')}</h1>
         </div>
       </div>
 
-      <div className="glass-sm settings-section">
+      <div className="settings-section">
         {entries.length === 0 && !loading && (
-          <p style={{ opacity: 0.6 }}>{t(messages, 'audit_log_empty')}</p>
+          <p className="adm-empty">{t(messages, 'audit_log_empty')}</p>
         )}
         {entries.map((e) => (
           <div key={e.id} className="audit-entry">
@@ -78,10 +78,9 @@ export default function AuditLogSection() {
         ))}
         {entries.length < total && (
           <button
-            className="btn-ghost"
+            className="btn-ghost adm-load-more"
             onClick={() => load(entries.length)}
             disabled={loading}
-            style={{ marginTop: 'var(--space-sm)' }}
           >
             {t(messages, 'audit_log_load_more')}
           </button>
