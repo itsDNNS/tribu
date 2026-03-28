@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, UserPlus, X, Trash2, Cake } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
@@ -33,239 +33,14 @@ function daysUntilBirthday(month, day) {
   return Math.round((next - today) / (1000 * 60 * 60 * 24));
 }
 
-function ContactFormModal({ hook, messages, isEditing }) {
-  const overlayRef = useRef(null);
-  const nameRef = useRef(null);
-
-  useEffect(() => {
-    nameRef.current?.focus();
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') hook.resetForm();
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [hook]);
-
-  function handleOverlayClick(e) {
-    if (e.target === overlayRef.current) hook.resetForm();
-  }
-
-  return createPortal(
-    <div
-      ref={overlayRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="contact-form-title"
-      className="contact-modal-overlay"
-      onClick={handleOverlayClick}
-    >
-      <div className="glass contact-modal-panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
-          <h2 id="contact-form-title" style={{ fontWeight: 600, fontSize: '1.1rem', margin: 0 }}>
-            {t(messages, isEditing ? 'module.contacts.edit' : 'module.contacts.add')}
-          </h2>
-          <button type="button" onClick={hook.resetForm} className="btn-ghost" style={{ padding: 6, minHeight: 'auto' }} aria-label={t(messages, 'module.contacts.close')}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <form onSubmit={isEditing ? hook.updateContact : hook.createContact} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          <div className="form-field">
-            <label htmlFor="contact-name">{t(messages, 'module.contacts.form.name')} *</label>
-            <input
-              ref={nameRef}
-              id="contact-name"
-              className="form-input"
-              style={{ width: '100%' }}
-              value={hook.contactName}
-              onChange={(e) => hook.setContactName(e.target.value)}
-              required
-              autoComplete="name"
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="contact-email">{t(messages, 'module.contacts.form.email')}</label>
-            <input
-              id="contact-email"
-              type="email"
-              className="form-input"
-              style={{ width: '100%' }}
-              value={hook.contactEmail}
-              onChange={(e) => hook.setContactEmail(e.target.value)}
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="contact-phone">{t(messages, 'module.contacts.form.phone')}</label>
-            <input
-              id="contact-phone"
-              type="tel"
-              className="form-input"
-              style={{ width: '100%' }}
-              value={hook.contactPhone}
-              onChange={(e) => hook.setContactPhone(e.target.value)}
-              autoComplete="tel"
-            />
-          </div>
-
-          <div className="form-field">
-            <label>{t(messages, 'module.contacts.form.birthday')}</label>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              <select
-                className="form-input"
-                style={{ flex: 1 }}
-                value={hook.contactBirthdayMonth}
-                onChange={(e) => hook.setContactBirthdayMonth(e.target.value)}
-                aria-label={t(messages, 'module.contacts.form.month')}
-              >
-                <option value="">{t(messages, 'module.contacts.form.month')}</option>
-                {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <select
-                className="form-input"
-                style={{ flex: 1 }}
-                value={hook.contactBirthdayDay}
-                onChange={(e) => hook.setContactBirthdayDay(e.target.value)}
-                aria-label={t(messages, 'module.contacts.form.day')}
-              >
-                <option value="">{t(messages, 'module.contacts.form.day')}</option>
-                {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end', marginTop: 'var(--space-sm)' }}>
-            {isEditing && (
-              <ContactDeleteButton hook={hook} messages={messages} />
-            )}
-            <button type="button" className="btn-ghost" onClick={hook.resetForm}>
-              {t(messages, 'cancel')}
-            </button>
-            <button type="submit" className="btn-primary">
-              {t(messages, 'module.contacts.save')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-function BirthdayFormModal({ hook, messages, isEditing, lang }) {
-  const overlayRef = useRef(null);
-  const nameRef = useRef(null);
-
-  useEffect(() => {
-    nameRef.current?.focus();
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') hook.resetForm();
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [hook]);
-
-  function handleOverlayClick(e) {
-    if (e.target === overlayRef.current) hook.resetForm();
-  }
-
-  const monthNames = MONTH_NAMES[lang] || MONTH_NAMES.en;
-
-  return createPortal(
-    <div
-      ref={overlayRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="birthday-form-title"
-      className="contact-modal-overlay"
-      onClick={handleOverlayClick}
-    >
-      <div className="glass contact-modal-panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
-          <h2 id="birthday-form-title" style={{ fontWeight: 600, fontSize: '1.1rem', margin: 0 }}>
-            {t(messages, isEditing ? 'module.birthdays.edit' : 'module.birthdays.add')}
-          </h2>
-          <button type="button" onClick={hook.resetForm} className="btn-ghost" style={{ padding: 6, minHeight: 'auto' }} aria-label={t(messages, 'module.birthdays.close')}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <form onSubmit={isEditing ? hook.updateBirthday : hook.createBirthday} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          <div className="form-field">
-            <label htmlFor="birthday-name">{t(messages, 'module.birthdays.form.name')} *</label>
-            <input
-              ref={nameRef}
-              id="birthday-name"
-              className="form-input"
-              style={{ width: '100%' }}
-              value={hook.personName}
-              onChange={(e) => hook.setPersonName(e.target.value)}
-              required
-              autoComplete="name"
-            />
-          </div>
-
-          <div className="form-field">
-            <label>{t(messages, 'module.birthdays.form.date')} *</label>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              <select
-                className="form-input"
-                style={{ flex: 1 }}
-                value={hook.birthdayMonth}
-                onChange={(e) => hook.setBirthdayMonth(e.target.value)}
-                aria-label={t(messages, 'module.birthdays.form.month')}
-                required
-              >
-                <option value="">{t(messages, 'module.birthdays.form.month')}</option>
-                {MONTHS.map((m) => <option key={m} value={m}>{monthNames[m - 1]}</option>)}
-              </select>
-              <select
-                className="form-input"
-                style={{ flex: 1 }}
-                value={hook.birthdayDay}
-                onChange={(e) => hook.setBirthdayDay(e.target.value)}
-                aria-label={t(messages, 'module.birthdays.form.day')}
-                required
-              >
-                <option value="">{t(messages, 'module.birthdays.form.day')}</option>
-                {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end', marginTop: 'var(--space-sm)' }}>
-            {isEditing && (
-              <BirthdayDeleteButton hook={hook} messages={messages} />
-            )}
-            <button type="button" className="btn-ghost" onClick={hook.resetForm}>
-              {t(messages, 'cancel')}
-            </button>
-            <button type="submit" className="btn-primary">
-              {t(messages, 'module.birthdays.save')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-function ContactDeleteButton({ hook, messages }) {
-  const [confirming, setConfirming] = React.useState(false);
+function DeleteButton({ onDelete, label, messages }) {
+  const [confirming, setConfirming] = useState(false);
 
   if (confirming) {
     return (
-      <div style={{ display: 'flex', gap: 'var(--space-xs)', marginRight: 'auto' }}>
-        <button
-          type="button"
-          className="btn-ghost"
-          style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
-          onClick={() => hook.deleteContact(hook.editingContact)}
-        >
-          <Trash2 size={14} /> {t(messages, 'module.contacts.delete')}
+      <div className="modal-delete-confirm">
+        <button type="button" className="btn-ghost modal-delete-danger" onClick={onDelete}>
+          <Trash2 size={14} /> {label}
         </button>
         <button type="button" className="btn-ghost" onClick={() => setConfirming(false)}>
           {t(messages, 'cancel')}
@@ -275,49 +50,56 @@ function ContactDeleteButton({ hook, messages }) {
   }
 
   return (
-    <button
-      type="button"
-      className="btn-ghost contact-delete-btn"
-      style={{ marginRight: 'auto' }}
-      onClick={() => setConfirming(true)}
-      aria-label={t(messages, 'delete')}
-    >
+    <button type="button" className="btn-ghost contact-delete-btn modal-delete-trigger" onClick={() => setConfirming(true)} aria-label={t(messages, 'delete')}>
       <Trash2 size={14} />
     </button>
   );
 }
 
-function BirthdayDeleteButton({ hook, messages }) {
-  const [confirming, setConfirming] = React.useState(false);
+function FormModal({ id, title, onClose, onSubmit, isEditing, saveKey, deleteButton, messages, children }) {
+  const overlayRef = useRef(null);
+  const panelRef = useRef(null);
+  const firstInputRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
-  if (confirming) {
-    return (
-      <div style={{ display: 'flex', gap: 'var(--space-xs)', marginRight: 'auto' }}>
-        <button
-          type="button"
-          className="btn-ghost"
-          style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
-          onClick={() => hook.deleteBirthday(hook.editingBirthday)}
-        >
-          <Trash2 size={14} /> {t(messages, 'module.birthdays.delete')}
-        </button>
-        <button type="button" className="btn-ghost" onClick={() => setConfirming(false)}>
-          {t(messages, 'cancel')}
-        </button>
+  useEffect(() => {
+    firstInputRef.current?.focus();
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') { onCloseRef.current(); return; }
+      if (e.key === 'Tab' && panelRef.current) {
+        const focusable = panelRef.current.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return createPortal(
+    <div ref={overlayRef} className="contact-modal-overlay" onClick={(e) => e.target === overlayRef.current && onClose()}>
+      <div ref={panelRef} className="contact-modal-panel" role="dialog" aria-modal="true" aria-labelledby={id}>
+        <div className="modal-header">
+          <h2 id={id} className="modal-title">{title}</h2>
+          <button type="button" onClick={onClose} className="btn-ghost modal-close" aria-label={t(messages, 'close')}>
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={onSubmit} className="modal-form">
+          {typeof children === 'function' ? children(firstInputRef) : children}
+          <div className="modal-actions">
+            {deleteButton}
+            <button type="button" className="btn-ghost" onClick={onClose}>{t(messages, 'cancel')}</button>
+            <button type="submit" className="btn-primary">{t(messages, saveKey)}</button>
+          </div>
+        </form>
       </div>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      className="btn-ghost contact-delete-btn"
-      style={{ marginRight: 'auto' }}
-      onClick={() => setConfirming(true)}
-      aria-label={t(messages, 'delete')}
-    >
-      <Trash2 size={14} />
-    </button>
+    </div>,
+    document.body
   );
 }
 
@@ -375,7 +157,7 @@ export default function ContactsView() {
       </div>
 
       {activeTab === 'contacts' ? (
-        <div className="contacts-grid stagger">
+        <div className="contacts-grid">
           {contactsHook.contacts.length > 0 ? (
             Array.from(
               [...contactsHook.contacts].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'de')).reduce((map, c) => {
@@ -385,14 +167,14 @@ export default function ContactsView() {
                 return map;
               }, new Map())
             ).map(([letter, group]) => (
-              <React.Fragment key={letter}>
+              <Fragment key={letter}>
                 <div className="contacts-section-letter">{letter}</div>
                 {group.map((c) => {
                   const initials = (c.full_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
                   return (
                     <div
                       key={c.id}
-                      className={`contact-card glass-sm${canEdit ? ' contact-card-clickable' : ''}`}
+                      className={`contact-card${canEdit ? ' contact-card-clickable' : ''}`}
                       onClick={canEdit ? () => contactsHook.openEdit(c) : undefined}
                       role={canEdit ? 'button' : undefined}
                       tabIndex={canEdit ? 0 : undefined}
@@ -408,20 +190,20 @@ export default function ContactsView() {
                         )}
                         {c.birthday_month && c.birthday_day && (
                           <div className="contact-birthday">
-                            🎂 {c.birthday_day}.{c.birthday_month}.
+                            <Cake size={12} aria-hidden="true" /> {c.birthday_day}.{c.birthday_month}.
                           </div>
                         )}
                       </div>
                     </div>
                   );
                 })}
-              </React.Fragment>
+              </Fragment>
             ))
           ) : (
-            <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', gridColumn: '1 / -1' }}>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t(messages, 'module.contacts.no_contacts')}</div>
+            <div className="contacts-empty">
+              <div className="contacts-empty-text">{t(messages, 'module.contacts.no_contacts')}</div>
               {!demoMode && !isChild && (
-                <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'center', marginTop: 'var(--space-md)' }}>
+                <div className="contacts-empty-actions">
                   <button className="btn-primary" onClick={contactsHook.openCreate}>
                     <Plus size={15} /> {t(messages, 'module.contacts.add')}
                   </button>
@@ -434,10 +216,10 @@ export default function ContactsView() {
           )}
         </div>
       ) : (
-        <div className="birthdays-grid stagger">
+        <div className="birthdays-grid">
           {birthdaysHook.birthdays.length > 0 ? (
             Array.from(grouped).map(([month, items]) => (
-              <React.Fragment key={month}>
+              <Fragment key={month}>
                 <div className="birthdays-section-month">{monthNames[month - 1]}</div>
                 {items.map((b) => {
                   const days = daysUntilBirthday(b.month, b.day);
@@ -446,7 +228,7 @@ export default function ContactsView() {
                   return (
                     <div
                       key={b.id}
-                      className={`birthday-card glass-sm${canEdit ? ' birthday-card-clickable' : ''}`}
+                      className={`birthday-card${canEdit ? ' birthday-card-clickable' : ''}`}
                       onClick={canEdit ? () => birthdaysHook.openEdit(b) : undefined}
                       role={canEdit ? 'button' : undefined}
                       tabIndex={canEdit ? 0 : undefined}
@@ -457,7 +239,7 @@ export default function ContactsView() {
                       </div>
                       <div className="birthday-info">
                         <div className="birthday-name">{b.person_name}</div>
-                        <div className="birthday-date">🎂 {dateStr}</div>
+                        <div className="birthday-date"><Cake size={12} aria-hidden="true" /> {dateStr}</div>
                       </div>
                       <div className={`birthday-countdown${days === 0 ? ' birthday-today' : ''}`}>
                         {days === 0
@@ -467,13 +249,13 @@ export default function ContactsView() {
                     </div>
                   );
                 })}
-              </React.Fragment>
+              </Fragment>
             ))
           ) : (
-            <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', gridColumn: '1 / -1' }}>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t(messages, 'module.birthdays.no_birthdays')}</div>
+            <div className="contacts-empty">
+              <div className="contacts-empty-text">{t(messages, 'module.birthdays.no_birthdays')}</div>
               {!demoMode && !isChild && (
-                <div style={{ marginTop: 'var(--space-md)' }}>
+                <div className="contacts-empty-actions">
                   <button className="btn-primary" onClick={birthdaysHook.openCreate}>
                     <Plus size={15} /> {t(messages, 'module.birthdays.add')}
                   </button>
@@ -485,20 +267,88 @@ export default function ContactsView() {
       )}
 
       {contactsHook.showForm && (
-        <ContactFormModal
-          hook={contactsHook}
-          messages={messages}
+        <FormModal
+          id="contact-form-title"
+          title={t(messages, contactsHook.editingContact ? 'module.contacts.edit' : 'module.contacts.add')}
+          onClose={contactsHook.resetForm}
+          onSubmit={contactsHook.editingContact ? contactsHook.updateContact : contactsHook.createContact}
           isEditing={!!contactsHook.editingContact}
-        />
+          saveKey="module.contacts.save"
+          deleteButton={contactsHook.editingContact && (
+            <DeleteButton onDelete={() => contactsHook.deleteContact(contactsHook.editingContact)} label={t(messages, 'module.contacts.delete')} messages={messages} />
+          )}
+          messages={messages}
+        >
+          {(firstInputRef) => (
+            <>
+              <div className="form-field">
+                <label htmlFor="contact-name">{t(messages, 'module.contacts.form.name')} *</label>
+                <input ref={firstInputRef} id="contact-name" className="form-input" value={contactsHook.contactName} onChange={(e) => contactsHook.setContactName(e.target.value)} required autoComplete="name" />
+              </div>
+              <div className="form-field">
+                <label htmlFor="contact-email">{t(messages, 'module.contacts.form.email')}</label>
+                <input id="contact-email" type="email" className="form-input" value={contactsHook.contactEmail} onChange={(e) => contactsHook.setContactEmail(e.target.value)} autoComplete="email" />
+              </div>
+              <div className="form-field">
+                <label htmlFor="contact-phone">{t(messages, 'module.contacts.form.phone')}</label>
+                <input id="contact-phone" type="tel" className="form-input" value={contactsHook.contactPhone} onChange={(e) => contactsHook.setContactPhone(e.target.value)} autoComplete="tel" />
+              </div>
+              <div className="form-field">
+                <label>{t(messages, 'module.contacts.form.birthday')}</label>
+                <div className="modal-date-row">
+                  <select className="form-input" value={contactsHook.contactBirthdayMonth} onChange={(e) => contactsHook.setContactBirthdayMonth(e.target.value)} aria-label={t(messages, 'module.contacts.form.month')}>
+                    <option value="">{t(messages, 'module.contacts.form.month')}</option>
+                    {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select className="form-input" value={contactsHook.contactBirthdayDay} onChange={(e) => contactsHook.setContactBirthdayDay(e.target.value)} aria-label={t(messages, 'module.contacts.form.day')}>
+                    <option value="">{t(messages, 'module.contacts.form.day')}</option>
+                    {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+        </FormModal>
       )}
 
       {birthdaysHook.showForm && (
-        <BirthdayFormModal
-          hook={birthdaysHook}
-          messages={messages}
+        <FormModal
+          id="birthday-form-title"
+          title={t(messages, birthdaysHook.editingBirthday ? 'module.birthdays.edit' : 'module.birthdays.add')}
+          onClose={birthdaysHook.resetForm}
+          onSubmit={birthdaysHook.editingBirthday ? birthdaysHook.updateBirthday : birthdaysHook.createBirthday}
           isEditing={!!birthdaysHook.editingBirthday}
-          lang={lang}
-        />
+          saveKey="module.birthdays.save"
+          deleteButton={birthdaysHook.editingBirthday && (
+            <DeleteButton onDelete={() => birthdaysHook.deleteBirthday(birthdaysHook.editingBirthday)} label={t(messages, 'module.birthdays.delete')} messages={messages} />
+          )}
+          messages={messages}
+        >
+          {(firstInputRef) => {
+            const monthNames = MONTH_NAMES[lang] || MONTH_NAMES.en;
+            return (
+              <>
+                <div className="form-field">
+                  <label htmlFor="birthday-name">{t(messages, 'module.birthdays.form.name')} *</label>
+                  <input ref={firstInputRef} id="birthday-name" className="form-input" value={birthdaysHook.personName} onChange={(e) => birthdaysHook.setPersonName(e.target.value)} required autoComplete="name" />
+                </div>
+                <div className="form-field">
+                  <label>{t(messages, 'module.birthdays.form.date')} *</label>
+                  <div className="modal-date-row">
+                    <select className="form-input" value={birthdaysHook.birthdayMonth} onChange={(e) => birthdaysHook.setBirthdayMonth(e.target.value)} aria-label={t(messages, 'module.birthdays.form.month')} required>
+                      <option value="">{t(messages, 'module.birthdays.form.month')}</option>
+                      {MONTHS.map((m) => <option key={m} value={m}>{monthNames[m - 1]}</option>)}
+                    </select>
+                    <select className="form-input" value={birthdaysHook.birthdayDay} onChange={(e) => birthdaysHook.setBirthdayDay(e.target.value)} aria-label={t(messages, 'module.birthdays.form.day')} required>
+                      <option value="">{t(messages, 'module.birthdays.form.day')}</option>
+                      {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </>
+            );
+          }}
+        </FormModal>
       )}
     </div>
   );
