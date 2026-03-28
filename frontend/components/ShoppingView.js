@@ -71,7 +71,7 @@ export default function ShoppingView() {
           {sh.shoppingLists.map((list) => (
             <button
               key={list.id}
-              className={`shopping-list-card glass${list.id === sh.activeListId ? ' active' : ''}`}
+              className={`shopping-list-card${list.id === sh.activeListId ? ' active' : ''}`}
               onClick={() => sh.setActiveListId(list.id)}
             >
               <div className="shopping-list-name">{list.name}</div>
@@ -94,14 +94,13 @@ export default function ShoppingView() {
             sh.showCreateList ? (
               <form onSubmit={sh.createList} className="shopping-new-list-form">
                 <input
-                  className="form-input"
+                  className="form-input shopping-new-list-input"
                   placeholder={t(messages, 'module.shopping.list_name_placeholder')}
                   value={sh.newListName}
                   onChange={(e) => sh.setNewListName(e.target.value)}
                   autoFocus
-                  style={{ fontSize: '0.88rem', padding: '10px 14px' }}
                 />
-                <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
+                <div className="shopping-new-list-actions">
                   <button className="btn-sm" type="submit"><Plus size={16} /></button>
                   <button className="btn-ghost" type="button" onClick={() => sh.setShowCreateList(false)}>
                     <X size={16} />
@@ -123,7 +122,7 @@ export default function ShoppingView() {
         {/* Items Panel */}
         <div className="shopping-items-panel">
           {sh.activeList ? (
-            <div className="glass" style={{ overflow: 'hidden' }}>
+            <div className="shopping-items-wrapper">
               {/* Quick-Add Bar */}
               {!isChild && (
                 <form onSubmit={sh.addItem} className="quick-add-bar">
@@ -141,7 +140,6 @@ export default function ShoppingView() {
                     placeholder={t(messages, 'module.shopping.item_spec_placeholder')}
                     value={sh.newItemSpec}
                     onChange={(e) => sh.setNewItemSpec(e.target.value)}
-                    style={{ maxWidth: isMobile ? '100%' : 180 }}
                   />
                   <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_item')}>
                     <Plus size={22} />
@@ -150,11 +148,9 @@ export default function ShoppingView() {
               )}
 
               {/* Unchecked Items */}
-              <div className="shopping-items-list stagger">
+              <div className="shopping-items-list">
                 {sh.uncheckedItems.length === 0 && sh.checkedItems.length === 0 && (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', padding: 'var(--space-md)' }}>
-                    {t(messages, 'module.shopping.no_items')}
-                  </div>
+                  <div className="shopping-empty">{t(messages, 'module.shopping.no_items')}</div>
                 )}
                 {sh.uncheckedItems.map((item) => (
                   <ShoppingItem
@@ -186,8 +182,8 @@ export default function ShoppingView() {
                       />
                     ))}
                     {!isChild && (
-                      <div style={{ padding: '0 var(--space-md) var(--space-md)' }}>
-                        <button className="btn-ghost" onClick={sh.clearChecked} style={{ width: '100%', justifyContent: 'center' }}>
+                      <div className="shopping-clear-wrapper">
+                        <button className="btn-ghost shopping-clear-btn" onClick={sh.clearChecked}>
                           <Trash2 size={14} aria-hidden="true" />
                           {t(messages, 'module.shopping.clear_checked')}
                         </button>
@@ -198,9 +194,9 @@ export default function ShoppingView() {
               </div>
             </div>
           ) : (
-            <div className="glass" style={{ padding: 'var(--space-xl)', textAlign: 'center' }}>
-              <ShoppingCart size={48} style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-md)' }} aria-hidden="true" />
-              <p style={{ color: 'var(--text-muted)' }}>{t(messages, 'module.shopping.no_lists')}</p>
+            <div className="shopping-no-lists">
+              <ShoppingCart size={48} className="shopping-no-lists-icon" aria-hidden="true" />
+              <p>{t(messages, 'module.shopping.no_lists')}</p>
             </div>
           )}
         </div>
