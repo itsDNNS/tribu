@@ -1107,6 +1107,61 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .lang-btn.active { background: var(--amethyst); color: white; border-color: var(--amethyst); }
 .token-display { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: var(--radius-sm); word-break: break-all; flex: 1; display: block; }
 
+/* ─── Settings: Account ─── */
+.profile-avatar-img { object-fit: cover; }
+.set-field-group { margin-top: var(--space-md); }
+.set-label { font-size: 0.82rem; color: var(--text-secondary); display: block; margin-bottom: var(--space-sm); }
+.set-file-input { font-size: 0.88rem; }
+.set-input-narrow { max-width: 200px; }
+.set-color-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.set-color-swatch { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; position: relative; }
+.set-color-taken-label { font-size: 0.65rem; font-weight: 700; color: #fff; }
+.set-subheading { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-sm); }
+.set-danger-section { border-color: var(--error, #ef4444); }
+.set-danger-title { color: var(--error, #ef4444); }
+.set-danger-block { margin-bottom: var(--space-lg); }
+.set-danger-heading { font-size: 0.88rem; font-weight: 600; }
+.set-danger-desc { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: var(--space-sm); }
+.set-danger-confirm { font-size: 0.85rem; color: var(--error, #ef4444); margin-bottom: var(--space-sm); }
+.set-btn-row { display: flex; gap: var(--space-sm); }
+.btn-outline-danger { color: var(--error, #ef4444); border-color: var(--error, #ef4444); }
+.set-delete-input { margin-bottom: var(--space-sm); max-width: 200px; }
+
+/* ─── Settings: Notifications ─── */
+.set-notif-grid { display: grid; gap: var(--space-md); }
+.set-checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; }
+.set-input-time { max-width: 140px; }
+.set-time-row { display: flex; gap: var(--space-sm); align-items: center; }
+.set-separator { color: var(--text-muted); }
+.set-save-btn { justify-self: start; }
+.set-push-section { border-top: 1px solid var(--border); padding-top: var(--space-md); margin-top: var(--space-sm); }
+.set-push-header { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-sm); }
+.set-push-title { font-weight: 600; font-size: 0.88rem; }
+.set-push-status { display: flex; align-items: center; gap: var(--space-sm); }
+.set-push-enabled { font-size: 0.85rem; color: var(--success); }
+.set-push-disable { font-size: 0.82rem; }
+.set-push-blocked { font-size: 0.78rem; color: var(--warning); margin-top: var(--space-sm); }
+
+/* NavigationTab */
+.set-nav-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; margin-bottom: var(--space-md); }
+.set-nav-list { display: grid; gap: 2px; }
+.set-nav-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: var(--radius-sm); transition: all 0.15s; }
+.set-nav-item-icon { color: var(--text-muted); flex-shrink: 0; }
+.set-nav-item-label { flex: 1; font-size: 0.9rem; font-weight: 500; }
+.set-nav-item-badge { font-size: 0.68rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+.set-nav-btn { padding: 4px 6px; min-height: 32px; border: none; background: none; }
+.set-nav-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-md); }
+
+/* AboutTab */
+.set-about-desc { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; }
+.set-about-desc-mb { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin-bottom: var(--space-md); }
+.set-about-version { margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--text-secondary); }
+.set-about-uptodate { margin-left: var(--space-sm); color: var(--accent); }
+.set-about-update { margin-left: var(--space-sm); }
+.set-about-link { color: var(--accent); }
+.set-about-support-links { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.set-about-support-btn { text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
+
 /* ═══════════════════════════════════════════
    MOBILE
    ═══════════════════════════════════════════ */

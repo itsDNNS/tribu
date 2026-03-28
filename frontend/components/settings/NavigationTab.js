@@ -55,10 +55,10 @@ export default function NavigationTab() {
     <div className="settings-grid">
       <div className="settings-section">
         <div className="settings-section-title"><Navigation size={16} /> {t(messages, 'nav_order_title')}</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
+        <p className="set-nav-desc">
           {t(messages, 'nav_order_desc')}
         </p>
-        <div style={{ display: 'grid', gap: '2px' }}>
+        <div className="set-nav-list">
           {localNavOrder.map((key, i) => {
             const meta = NAV_ITEM_META[key];
             if (!meta) return null;
@@ -68,25 +68,19 @@ export default function NavigationTab() {
             return (
               <div
                 key={key}
+                className="set-nav-item"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-sm)',
                   borderLeft: `3px solid ${isVisible ? 'var(--amethyst)' : 'transparent'}`,
                   background: isVisible ? 'rgba(124, 58, 237, 0.04)' : 'transparent',
-                  transition: 'all 0.15s',
                 }}
               >
-                <Icon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />
-                <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>{t(messages, meta.labelKey)}</span>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
+                <Icon size={18} className="set-nav-item-icon" aria-hidden="true" />
+                <span className="set-nav-item-label">{t(messages, meta.labelKey)}</span>
+                <span className="set-nav-item-badge">
                   {isVisible ? t(messages, 'nav_visible') : t(messages, 'nav_overflow')}
                 </span>
                 <button
-                  className="btn-ghost"
-                  style={{ padding: '4px 6px', minHeight: 32, border: 'none', background: 'none' }}
+                  className="btn-ghost set-nav-btn"
                   onClick={() => moveNavItem(i, -1)}
                   disabled={i === 0}
                   aria-label={`Move ${t(messages, meta.labelKey)} up`}
@@ -94,8 +88,7 @@ export default function NavigationTab() {
                   <ChevronUp size={16} />
                 </button>
                 <button
-                  className="btn-ghost"
-                  style={{ padding: '4px 6px', minHeight: 32, border: 'none', background: 'none' }}
+                  className="btn-ghost set-nav-btn"
                   onClick={() => moveNavItem(i, 1)}
                   disabled={i === localNavOrder.length - 1}
                   aria-label={`Move ${t(messages, meta.labelKey)} down`}
@@ -106,7 +99,7 @@ export default function NavigationTab() {
             );
           })}
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+        <div className="set-nav-actions">
           <button className="btn-sm" onClick={handleSaveNavOrder}>
             {navSaved ? <><Check size={14} /> {t(messages, 'nav_saved')}</> : t(messages, 'nav_save')}
           </button>

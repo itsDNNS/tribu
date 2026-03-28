@@ -50,19 +50,19 @@ export default function AboutTab() {
       {/* Privacy */}
       <div className="settings-section">
         <div className="settings-section-title"><ShieldCheck size={16} /> {t(messages, 'privacy')}</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+        <p className="set-about-desc">
           {t(messages, 'privacy_note')}
         </p>
         {version && (
-          <div style={{ marginTop: 'var(--space-md)', paddingTop: 'var(--space-sm)', borderTop: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+          <div className="set-about-version">
             <span>{t(messages, 'version')}: v{version}</span>
             {isAdmin && updateInfo === 'up_to_date' && (
-              <span style={{ marginLeft: 'var(--space-sm)', color: 'var(--accent)' }}>— {t(messages, 'up_to_date')}</span>
+              <span className="set-about-uptodate">— {t(messages, 'up_to_date')}</span>
             )}
             {isAdmin && updateInfo && updateInfo !== 'up_to_date' && (
-              <span style={{ marginLeft: 'var(--space-sm)' }}>
+              <span className="set-about-update">
                 — {t(messages, 'update_available').replace('{version}', updateInfo.version)}{' '}
-                <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+                <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" className="set-about-link">
                   {t(messages, 'view_release')}
                 </a>
               </span>
@@ -74,16 +74,15 @@ export default function AboutTab() {
       {/* About & Support */}
       <div className="settings-section">
         <div className="settings-section-title"><Heart size={16} /> {t(messages, 'about_support')}</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 'var(--space-md)' }}>
+        <p className="set-about-desc-mb">
           {t(messages, 'about_support_desc')}
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
+        <div className="set-about-support-links">
           <a
             href="https://ko-fi.com/itsdnns"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-ghost"
-            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className="btn-ghost set-about-support-btn"
           >
             <Heart size={14} /> {t(messages, 'donate')} <ExternalLink size={12} />
           </a>
@@ -91,8 +90,7 @@ export default function AboutTab() {
             href={`https://github.com/itsDNNS/tribu/issues/new?labels=bug&title=&body=${encodeURIComponent(`**Tribu Version:** ${version || 'unknown'}\n**Browser:** ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}\n\n**Describe the bug:**\n\n`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-ghost"
-            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className="btn-ghost set-about-support-btn"
           >
             <Bug size={14} /> {t(messages, 'report_bug')} <ExternalLink size={12} />
           </a>
