@@ -95,6 +95,7 @@
   "token_full_access": "Vollzugriff",
   "token_limit_reached": "Token-Limit erreicht (max. 25)",
   "cancel": "Abbrechen",
+  "confirm": "Bestätigen",
   "close": "Schließen",
   "aria.expand_sidebar": "Seitenleiste aufklappen",
   "aria.collapse_sidebar": "Seitenleiste einklappen",
