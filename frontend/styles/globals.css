@@ -929,7 +929,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .task-form-input { font-size: 0.82rem; padding: 10px 12px; }
 .task-delete-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; flex-shrink: 0; }
 .task-delete-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
-.tasks-empty { color: var(--text-muted); font-size: 0.88rem; padding: 0 var(--space-md); }
+.tasks-empty { color: var(--text-muted); font-size: 0.88rem; padding: 0 var(--space-md); display: flex; align-items: center; gap: var(--space-sm); }
+.task-form-toggle { display: flex; align-items: center; gap: var(--space-xs); background: none; border: none; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 0.78rem; padding: 4px var(--space-md) var(--space-sm); transition: color 0.2s; }
+.task-form-toggle:hover { color: var(--text-primary); }
+.task-form-toggle-open { transform: rotate(180deg); transition: transform 0.2s; }
 [data-theme="light"] .tasks-wrapper { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 
 /* ═══════════════════════════════════════════

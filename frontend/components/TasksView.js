@@ -1,16 +1,31 @@
-import { Plus, Clock, Check, X } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Clock, Check, X, ChevronDown } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function TasksView() {
   const { familyId, families, members, messages, lang, isChild, timeFormat } = useApp();
   const tk = useTasks();
+  const [showFormDetails, setShowFormDetails] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   return (
     <div>
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmDanger={confirmAction.danger}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+          messages={messages}
+        />
+      )}
+
       <div className="view-header">
         <div>
           <h1 className="view-title">{t(messages, 'module.tasks.name')}</h1>
@@ -25,7 +40,7 @@ export default function TasksView() {
           {/* Quick Add */}
           {!isChild && (
             <>
-              <form onSubmit={tk.createTask} className="quick-add-bar">
+              <form onSubmit={(e) => { tk.createTask(e); setShowFormDetails(false); }} className="quick-add-bar">
                 <input
                   className="quick-add-input"
                   placeholder={t(messages, 'module.tasks.title') || 'Neue Aufgabe hinzufügen...'}
@@ -38,36 +53,42 @@ export default function TasksView() {
                 </button>
               </form>
 
-              {/* Expanded form fields */}
-              <div className="task-form-fields">
-                <textarea
-                  className="form-input task-form-desc"
-                  placeholder={t(messages, 'module.tasks.description')}
-                  value={tk.taskDesc}
-                  onChange={(e) => tk.setTaskDesc(e.target.value)}
-                />
-                <div className="task-form-grid">
-                  <input className="form-input task-form-input" type="datetime-local" value={tk.taskDueDate} onChange={(e) => tk.setTaskDueDate(e.target.value)} />
-                  <select className="form-input task-form-input" value={tk.taskPriority} onChange={(e) => tk.setTaskPriority(e.target.value)}>
-                    <option value="low">{t(messages, 'module.tasks.priority.low')}</option>
-                    <option value="normal">{t(messages, 'module.tasks.priority.normal')}</option>
-                    <option value="high">{t(messages, 'module.tasks.priority.high')}</option>
-                  </select>
-                  <select className="form-input task-form-input" value={tk.taskRecurrence} onChange={(e) => tk.setTaskRecurrence(e.target.value)}>
-                    <option value="">{t(messages, 'module.tasks.recurrence.none')}</option>
-                    <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
-                    <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
-                    <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
-                    <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
-                  </select>
-                  <select className="form-input task-form-input" value={tk.taskAssignee} onChange={(e) => tk.setTaskAssignee(e.target.value)}>
-                    <option value="">{t(messages, 'module.tasks.unassigned')}</option>
-                    {members.map((m) => (
-                      <option key={m.user_id} value={String(m.user_id)}>{m.display_name}</option>
-                    ))}
-                  </select>
+              <button type="button" className="task-form-toggle" onClick={() => setShowFormDetails(prev => !prev)}>
+                <ChevronDown size={14} className={showFormDetails ? 'task-form-toggle-open' : ''} />
+                {t(messages, showFormDetails ? 'module.tasks.less_options' : 'module.tasks.more_options')}
+              </button>
+
+              {showFormDetails && (
+                <div className="task-form-fields">
+                  <textarea
+                    className="form-input task-form-desc"
+                    placeholder={t(messages, 'module.tasks.description')}
+                    value={tk.taskDesc}
+                    onChange={(e) => tk.setTaskDesc(e.target.value)}
+                  />
+                  <div className="task-form-grid">
+                    <input className="form-input task-form-input" type="datetime-local" value={tk.taskDueDate} onChange={(e) => tk.setTaskDueDate(e.target.value)} />
+                    <select className="form-input task-form-input" value={tk.taskPriority} onChange={(e) => tk.setTaskPriority(e.target.value)}>
+                      <option value="low">{t(messages, 'module.tasks.priority.low')}</option>
+                      <option value="normal">{t(messages, 'module.tasks.priority.normal')}</option>
+                      <option value="high">{t(messages, 'module.tasks.priority.high')}</option>
+                    </select>
+                    <select className="form-input task-form-input" value={tk.taskRecurrence} onChange={(e) => tk.setTaskRecurrence(e.target.value)}>
+                      <option value="">{t(messages, 'module.tasks.recurrence.none')}</option>
+                      <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
+                      <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
+                      <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
+                      <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
+                    </select>
+                    <select className="form-input task-form-input" value={tk.taskAssignee} onChange={(e) => tk.setTaskAssignee(e.target.value)}>
+                      <option value="">{t(messages, 'module.tasks.unassigned')}</option>
+                      {members.map((m) => (
+                        <option key={m.user_id} value={String(m.user_id)}>{m.display_name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 
@@ -84,7 +105,14 @@ export default function TasksView() {
           {/* Task List */}
           <div className="tasks-list">
             {tk.filteredTasks.length === 0 && (
-              <div className="tasks-empty">{t(messages, 'module.tasks.no_tasks')}</div>
+              <div className="tasks-empty">
+                <span>{t(messages, 'module.tasks.no_tasks')}</span>
+                {!isChild && (
+                  <button className="bento-empty-action" onClick={() => document.querySelector('.quick-add-input')?.focus()}>
+                    {t(messages, 'module.tasks.add_first')}
+                  </button>
+                )}
+              </div>
             )}
             {tk.filteredTasks.map((task) => {
               const isOverdue = task.due_date && task.status === 'open' && new Date(task.due_date) < new Date();
@@ -134,7 +162,12 @@ export default function TasksView() {
                   {!isChild && (
                     <button
                       className="task-delete-btn"
-                      onClick={() => tk.deleteTask(task.id)}
+                      onClick={() => setConfirmAction({
+                        title: t(messages, 'module.tasks.delete_task'),
+                        message: t(messages, 'module.tasks.delete_confirm').replace('{title}', task.title),
+                        danger: true,
+                        action: () => { tk.deleteTask(task.id); setConfirmAction(null); },
+                      })}
                       aria-label={t(messages, 'aria.delete_task').replace('{title}', task.title)}
                     >
                       <X size={16} />

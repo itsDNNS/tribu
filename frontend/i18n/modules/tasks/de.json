@@ -22,5 +22,10 @@
   "module.tasks.created": "Aufgabe erstellt",
   "module.tasks.deleted": "Aufgabe gelöscht",
   "module.tasks.unassigned": "Nicht zugewiesen",
-  "module.tasks.overdue": "Überfällig"
+  "module.tasks.overdue": "Überfällig",
+  "module.tasks.more_options": "Mehr Optionen",
+  "module.tasks.less_options": "Weniger Optionen",
+  "module.tasks.delete_task": "Aufgabe löschen",
+  "module.tasks.delete_confirm": "Aufgabe \"{title}\" wirklich löschen?",
+  "module.tasks.add_first": "Erste Aufgabe erstellen"
 }
