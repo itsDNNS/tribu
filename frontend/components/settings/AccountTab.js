@@ -44,13 +44,13 @@ export default function AccountTab() {
   }
 
   return (
-    <div className="settings-grid stagger">
+    <div className="settings-grid">
       {/* Profile */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><User size={16} /> {t(messages, 'profile')}</div>
         <div className="profile-row">
           {profileImage ? (
-            <img src={profileImage} alt="" className="profile-avatar" style={{ objectFit: 'cover' }} />
+            <img src={profileImage} alt="" className="profile-avatar profile-avatar-img" />
           ) : (
             <div className="profile-avatar">{initials}</div>
           )}
@@ -60,19 +60,19 @@ export default function AccountTab() {
             <div className="profile-role">{isAdmin ? 'Admin' : isChild ? t(messages, 'child') : t(messages, 'member')}</div>
           </div>
         </div>
-        <div style={{ marginTop: 'var(--space-md)' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 'var(--space-sm)' }}>
+        <div className="set-field-group">
+          <label className="set-label">
             {t(messages, 'profile_image')}
           </label>
-          <input type="file" accept="image/*" onChange={onProfileImage} style={{ fontSize: '0.88rem' }} />
+          <input type="file" accept="image/*" onChange={onProfileImage} className="set-file-input" />
         </div>
-        <div style={{ marginTop: 'var(--space-md)' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 'var(--space-sm)' }}>
+        <div className="set-field-group">
+          <label className="set-label">
             {t(messages, 'birthdate')}
           </label>
           <input
             type="date"
-            className="form-input"
+            className="form-input set-input-narrow"
             value={currentMember?.date_of_birth || ''}
             onChange={async (e) => {
               const val = e.target.value || null;
@@ -81,14 +81,13 @@ export default function AccountTab() {
               if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
               await loadMembers();
             }}
-            style={{ maxWidth: 200 }}
           />
         </div>
-        <div style={{ marginTop: 'var(--space-md)' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 'var(--space-sm)' }}>
+        <div className="set-field-group">
+          <label className="set-label">
             {t(messages, 'personal_color')}
           </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="set-color-grid">
             {COLOR_PALETTE.map((c) => {
               const owner = members.find((m) => m.color === c && m.user_id !== me?.user_id);
               const isMine = myColor === c;
@@ -97,6 +96,7 @@ export default function AccountTab() {
                 <button
                   key={c}
                   type="button"
+                  className="set-color-swatch"
                   disabled={taken || colorSaving}
                   title={taken ? t(messages, 'color_taken_by').replace('{name}', owner.display_name) : undefined}
                   onClick={async () => {
@@ -110,14 +110,13 @@ export default function AccountTab() {
                     setColorSaving(false);
                   }}
                   style={{
-                    width: 32, height: 32, borderRadius: '50%', border: isMine ? '2.5px solid var(--text-primary)' : '2px solid transparent',
+                    border: isMine ? '2.5px solid var(--text-primary)' : '2px solid transparent',
                     background: c, cursor: taken ? 'not-allowed' : 'pointer', opacity: taken ? 0.4 : 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative',
                   }}
                 >
                   {isMine && <Check size={16} color="#fff" />}
                   {taken && (
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>
+                    <span className="set-color-taken-label">
                       {(owner.display_name || '?').charAt(0).toUpperCase()}
                     </span>
                   )}
@@ -129,7 +128,7 @@ export default function AccountTab() {
       </div>
 
       {/* Theme */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><Palette size={16} /> {t(messages, 'theme')}</div>
         <div className="theme-grid">
           {availableThemes.map((th) => {
@@ -156,13 +155,13 @@ export default function AccountTab() {
             );
           })}
         </div>
-        <div style={{ marginTop: 'var(--space-md)' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)' }}>
+        <div className="set-field-group">
+          <div className="set-subheading">
             {t(messages, 'installed_themes')}
           </div>
           <div className="pack-list">
             {availableThemes.map((th) => (
-              <div key={th.key} className="pack-card glass-sm">
+              <div key={th.key} className="pack-card settings-subsection">
                 <div className="pack-card-header">
                   <span className="pack-card-name">{th.name}</span>
                   {theme === th.key && <span className="pack-badge">{t(messages, 'pack_active')}</span>}
@@ -178,21 +177,21 @@ export default function AccountTab() {
       </div>
 
       {/* Language */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><Globe size={16} /> {t(messages, 'language')}</div>
         <div className="lang-toggle">
           <button className={`lang-btn${lang === 'de' ? ' active' : ''}`} onClick={() => setLang('de')}>Deutsch</button>
           <button className={`lang-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')}>English</button>
         </div>
-        <div style={{ marginTop: 'var(--space-md)' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)' }}>
+        <div className="set-field-group">
+          <div className="set-subheading">
             {t(messages, 'installed_languages')}
           </div>
           <div className="pack-list">
             {availableLanguages.map((l) => {
               const comp = languageCompleteness(l.key);
               return (
-                <div key={l.key} className="pack-card glass-sm">
+                <div key={l.key} className="pack-card settings-subsection">
                   <div className="pack-card-header">
                     <span className="pack-card-name">{l.nativeName}</span>
                     {lang === l.key && <span className="pack-badge">{t(messages, 'pack_active')}</span>}
@@ -215,31 +214,30 @@ export default function AccountTab() {
         </div>
       </div>
       {/* Danger Zone */}
-      <div className="settings-section glass" style={{ borderColor: 'var(--error, #ef4444)', borderWidth: 1, borderStyle: 'solid' }}>
-        <div className="settings-section-title" style={{ color: 'var(--error, #ef4444)' }}>
+      <div className="settings-section set-danger-section">
+        <div className="settings-section-title set-danger-title">
           <AlertTriangle size={16} /> {t(messages, 'danger_zone')}
         </div>
 
         {/* Leave Family */}
-        <div style={{ marginBottom: 'var(--space-lg)' }}>
-          <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{t(messages, 'leave_family')}</div>
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-sm)' }}>
+        <div className="set-danger-block">
+          <div className="set-danger-heading">{t(messages, 'leave_family')}</div>
+          <div className="set-danger-desc">
             {t(messages, 'leave_family_desc')}
           </div>
           {!showLeaveConfirm ? (
             <button
-              className="btn btn-outline"
-              style={{ color: 'var(--error, #ef4444)', borderColor: 'var(--error, #ef4444)' }}
+              className="btn btn-outline btn-outline-danger"
               onClick={() => setShowLeaveConfirm(true)}
             >
               <LogOut size={14} /> {t(messages, 'leave_family')}
             </button>
           ) : (
             <div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--error, #ef4444)', marginBottom: 'var(--space-sm)' }}>
+              <p className="set-danger-confirm">
                 {t(messages, 'leave_family_confirm')}
               </p>
-              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <div className="set-btn-row">
                 <button
                   className="btn btn-danger"
                   disabled={actionLoading}
@@ -275,32 +273,30 @@ export default function AccountTab() {
 
         {/* Delete Account */}
         <div>
-          <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{t(messages, 'delete_account')}</div>
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-sm)' }}>
+          <div className="set-danger-heading">{t(messages, 'delete_account')}</div>
+          <div className="set-danger-desc">
             {t(messages, 'delete_account_desc')}
           </div>
           {!showDeleteConfirm ? (
             <button
-              className="btn btn-outline"
-              style={{ color: 'var(--error, #ef4444)', borderColor: 'var(--error, #ef4444)' }}
+              className="btn btn-outline btn-outline-danger"
               onClick={() => setShowDeleteConfirm(true)}
             >
               <Trash2 size={14} /> {t(messages, 'delete_account')}
             </button>
           ) : (
             <div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--error, #ef4444)', marginBottom: 'var(--space-sm)' }}>
+              <p className="set-danger-confirm">
                 {t(messages, 'delete_account_confirm')}
               </p>
               <input
                 type="text"
-                className="input"
+                className="input set-delete-input"
                 placeholder={t(messages, 'delete_account_placeholder')}
                 value={deleteInput}
                 onChange={(e) => setDeleteInput(e.target.value)}
-                style={{ marginBottom: 'var(--space-sm)', maxWidth: 200 }}
               />
-              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <div className="set-btn-row">
                 <button
                   className="btn btn-danger"
                   disabled={deleteInput !== 'DELETE' || actionLoading}

@@ -100,67 +100,60 @@ export default function ApiTokensTab() {
   }
 
   return (
-    <div className="settings-grid stagger">
-      <div className="settings-section glass">
+    <div className="settings-grid">
+      <div className="settings-section">
         <div className="settings-section-title"><Key size={16} /> {t(messages, 'api_tokens')}</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
+        <p className="set-token-section-desc">
           {t(messages, 'api_tokens_desc')}
         </p>
 
         {/* Token Created Banner */}
         {createdToken && (
-          <div style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: 'var(--radius-sm)',
-            padding: 'var(--space-md)',
-            marginBottom: 'var(--space-md)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
-              <Check size={16} style={{ color: 'var(--success)' }} />
-              <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{t(messages, 'token_created')}</span>
+          <div className="set-token-banner">
+            <div className="set-token-banner-header">
+              <Check size={16} className="set-token-banner-icon" />
+              <span className="set-token-banner-title">{t(messages, 'token_created')}</span>
             </div>
-            <p style={{ color: 'var(--warning)', fontSize: '0.82rem', marginBottom: 'var(--space-sm)' }}>
+            <p className="set-token-banner-warning">
               {t(messages, 'token_created_warning')}
             </p>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+            <div className="set-token-banner-row">
               <code className="token-display">{createdToken}</code>
-              <button className="btn-ghost" onClick={handleCopy} style={{ flexShrink: 0 }}>
+              <button className="btn-ghost set-token-no-shrink" onClick={handleCopy}>
                 {copied ? <><Check size={14} /> {t(messages, 'token_copied')}</> : <><Copy size={14} /> {t(messages, 'token_copy')}</>}
               </button>
             </div>
             <button
+              className="set-token-dismiss"
               onClick={() => { setCreatedToken(null); setCopied(false); }}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginTop: 'var(--space-sm)', fontSize: '0.78rem' }}
             >
-              <X size={12} style={{ verticalAlign: 'middle' }} /> Dismiss
+              <X size={12} className="set-token-dismiss-icon" /> Dismiss
             </button>
           </div>
         )}
 
         {/* Token List */}
         {tokens.length === 0 && !showCreate && (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+          <p className="set-token-empty">
             {t(messages, 'token_no_tokens')}
           </p>
         )}
 
         {tokens.map((tk) => (
-          <div key={tk.id} className="glass-sm" style={{ padding: 'var(--space-md)', marginBottom: 'var(--space-sm)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div key={tk.id} className="settings-subsection set-token-item">
+            <div className="set-token-item-row">
               <div>
-                <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{tk.name}</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                <div className="set-token-name">{tk.name}</div>
+                <div className="set-token-scopes">
                   {formatScopes(tk.scopes)}
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <div className="set-token-meta">
                   <span>{t(messages, 'token_last_used')}: {tk.last_used_at ? formatDate(tk.last_used_at) : t(messages, 'token_never_used')}</span>
                   {tk.expires_at && <span>{t(messages, 'token_expires')}: {formatDate(tk.expires_at)}</span>}
                 </div>
               </div>
               <button
-                className="btn-ghost"
-                style={{ color: 'var(--danger)', flexShrink: 0 }}
+                className="btn-ghost set-token-revoke"
                 onClick={() => handleRevoke(tk.id)}
               >
                 <Trash2 size={14} /> {t(messages, 'token_revoke')}
@@ -171,8 +164,8 @@ export default function ApiTokensTab() {
 
         {/* Create Form */}
         {showCreate ? (
-          <form onSubmit={handleCreateToken} style={{ marginTop: 'var(--space-md)' }}>
-            <div className="glass-sm" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
+          <form onSubmit={handleCreateToken} className="set-token-create-form">
+            <div className="settings-subsection set-token-form-grid">
               <div className="form-field">
                 <label>{t(messages, 'token_name')}</label>
                 <input
@@ -187,17 +180,17 @@ export default function ApiTokensTab() {
 
               <div className="form-field">
                 <label>{t(messages, 'token_scopes')}</label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', marginBottom: '8px' }}>
+                <label className="set-token-scope-check">
                   <input type="checkbox" checked={isFullAccess} onChange={e => toggleFullAccess(e.target.checked)} />
                   {t(messages, 'token_full_access')}
                 </label>
                 {!isFullAccess && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '6px' }}>
+                  <div className="set-token-scope-grid">
                     {SCOPE_MODULES.map(mod => (
-                      <div key={mod.key} style={{ fontSize: '0.82rem' }}>
-                        <div style={{ fontWeight: 500, marginBottom: '4px', color: 'var(--text-secondary)' }}>{mod.label}</div>
+                      <div key={mod.key} className="set-token-scope-module">
+                        <div className="set-token-scope-label">{mod.label}</div>
                         {['read', 'write'].map(action => (
-                          <label key={action} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginBottom: '2px' }}>
+                          <label key={action} className="set-token-scope-action">
                             <input
                               type="checkbox"
                               checked={newScopes.includes(`${mod.key}:${action}`)}
@@ -214,14 +207,13 @@ export default function ApiTokensTab() {
 
               <div className="form-field">
                 <label>{t(messages, 'token_expiry')}</label>
-                <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+                <div className="set-token-expiry-row">
                   <input
-                    className="form-input"
+                    className="form-input set-token-expiry-input"
                     type="date"
                     value={newExpiry}
                     onChange={e => setNewExpiry(e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
-                    style={{ flex: 1 }}
                   />
                   {newExpiry && (
                     <button type="button" className="btn-ghost" onClick={() => setNewExpiry('')}>
@@ -231,7 +223,7 @@ export default function ApiTokensTab() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <div className="set-token-actions">
                 <button type="submit" className="btn-sm" disabled={!newName.trim()}>
                   <Plus size={14} /> {t(messages, 'create_token')}
                 </button>
@@ -243,10 +235,9 @@ export default function ApiTokensTab() {
           </form>
         ) : (
           <button
-            className="btn-ghost"
+            className="btn-ghost set-token-add-btn"
             onClick={() => setShowCreate(true)}
             disabled={tokens.length >= 25}
-            style={{ marginTop: 'var(--space-sm)' }}
           >
             <Plus size={14} /> {tokens.length >= 25 ? t(messages, 'token_limit_reached') : t(messages, 'create_token')}
           </button>
