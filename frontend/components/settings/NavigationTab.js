@@ -52,8 +52,8 @@ export default function NavigationTab() {
   }
 
   return (
-    <div className="settings-grid stagger">
-      <div className="settings-section glass">
+    <div className="settings-grid">
+      <div className="settings-section">
         <div className="settings-section-title"><Navigation size={16} /> {t(messages, 'nav_order_title')}</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
           {t(messages, 'nav_order_desc')}

@@ -46,9 +46,9 @@ export default function AboutTab() {
   }, [isAdmin]);
 
   return (
-    <div className="settings-grid stagger">
+    <div className="settings-grid">
       {/* Privacy */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><ShieldCheck size={16} /> {t(messages, 'privacy')}</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
           {t(messages, 'privacy_note')}
@@ -72,7 +72,7 @@ export default function AboutTab() {
       </div>
 
       {/* About & Support */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><Heart size={16} /> {t(messages, 'about_support')}</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 'var(--space-md)' }}>
           {t(messages, 'about_support_desc')}

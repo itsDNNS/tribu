@@ -44,9 +44,9 @@ export default function AccountTab() {
   }
 
   return (
-    <div className="settings-grid stagger">
+    <div className="settings-grid">
       {/* Profile */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><User size={16} /> {t(messages, 'profile')}</div>
         <div className="profile-row">
           {profileImage ? (
@@ -129,7 +129,7 @@ export default function AccountTab() {
       </div>
 
       {/* Theme */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><Palette size={16} /> {t(messages, 'theme')}</div>
         <div className="theme-grid">
           {availableThemes.map((th) => {
@@ -162,7 +162,7 @@ export default function AccountTab() {
           </div>
           <div className="pack-list">
             {availableThemes.map((th) => (
-              <div key={th.key} className="pack-card glass-sm">
+              <div key={th.key} className="pack-card settings-subsection">
                 <div className="pack-card-header">
                   <span className="pack-card-name">{th.name}</span>
                   {theme === th.key && <span className="pack-badge">{t(messages, 'pack_active')}</span>}
@@ -178,7 +178,7 @@ export default function AccountTab() {
       </div>
 
       {/* Language */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><Globe size={16} /> {t(messages, 'language')}</div>
         <div className="lang-toggle">
           <button className={`lang-btn${lang === 'de' ? ' active' : ''}`} onClick={() => setLang('de')}>Deutsch</button>
@@ -192,7 +192,7 @@ export default function AccountTab() {
             {availableLanguages.map((l) => {
               const comp = languageCompleteness(l.key);
               return (
-                <div key={l.key} className="pack-card glass-sm">
+                <div key={l.key} className="pack-card settings-subsection">
                   <div className="pack-card-header">
                     <span className="pack-card-name">{l.nativeName}</span>
                     {lang === l.key && <span className="pack-badge">{t(messages, 'pack_active')}</span>}
@@ -215,7 +215,7 @@ export default function AccountTab() {
         </div>
       </div>
       {/* Danger Zone */}
-      <div className="settings-section glass" style={{ borderColor: 'var(--error, #ef4444)', borderWidth: 1, borderStyle: 'solid' }}>
+      <div className="settings-section" style={{ borderColor: 'var(--error, #ef4444)' }}>
         <div className="settings-section-title" style={{ color: 'var(--error, #ef4444)' }}>
           <AlertTriangle size={16} /> {t(messages, 'danger_zone')}
         </div>

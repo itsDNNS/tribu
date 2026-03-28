@@ -100,8 +100,8 @@ export default function ApiTokensTab() {
   }
 
   return (
-    <div className="settings-grid stagger">
-      <div className="settings-section glass">
+    <div className="settings-grid">
+      <div className="settings-section">
         <div className="settings-section-title"><Key size={16} /> {t(messages, 'api_tokens')}</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
           {t(messages, 'api_tokens_desc')}
@@ -146,7 +146,7 @@ export default function ApiTokensTab() {
         )}
 
         {tokens.map((tk) => (
-          <div key={tk.id} className="glass-sm" style={{ padding: 'var(--space-md)', marginBottom: 'var(--space-sm)' }}>
+          <div key={tk.id} className="settings-subsection" style={{ marginBottom: 'var(--space-sm)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{tk.name}</div>
@@ -172,7 +172,7 @@ export default function ApiTokensTab() {
         {/* Create Form */}
         {showCreate ? (
           <form onSubmit={handleCreateToken} style={{ marginTop: 'var(--space-md)' }}>
-            <div className="glass-sm" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
+            <div className="settings-subsection" style={{ display: 'grid', gap: 'var(--space-md)' }}>
               <div className="form-field">
                 <label>{t(messages, 'token_name')}</label>
                 <input

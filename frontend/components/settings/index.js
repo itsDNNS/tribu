@@ -57,8 +57,8 @@ export default function SettingsView() {
         <div className="settings-mobile-list">
           {groups.map((group, gi) => (
             <div key={group.label}>
-              {gi > 0 && <div style={{ height: 1, background: 'var(--border)', margin: 'var(--space-sm) 0' }} />}
-              <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '12px 16px 4px' }}>
+              {gi > 0 && <div className="settings-divider" />}
+              <div className="settings-mobile-group">
                 {t(messages, `settings_group_${group.label}`)}
               </div>
               {group.tabs.map(tab => {
@@ -103,7 +103,7 @@ export default function SettingsView() {
         <nav className="settings-sidebar">
           {groups.map((group, gi) => (
             <div key={group.label}>
-              {gi > 0 && <div style={{ height: 1, background: 'var(--border)', margin: 'var(--space-sm) 0' }} />}
+              {gi > 0 && <div className="settings-divider" />}
               <div className="settings-sidebar-group">
                 {t(messages, `settings_group_${group.label}`)}
               </div>

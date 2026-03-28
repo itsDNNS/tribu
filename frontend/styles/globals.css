@@ -1080,8 +1080,13 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 }
 /* Section cards */
 .settings-grid { display: grid; gap: var(--space-md); max-width: 640px; }
-.settings-section { padding: var(--space-lg); }
+.settings-section { padding: var(--space-lg); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
 .settings-section-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-md); display: flex; align-items: center; gap: 8px; }
+.settings-divider { height: 1px; background: var(--glass-border); margin: var(--space-sm) 0; }
+.settings-mobile-group { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 16px 4px; }
+.settings-subsection { background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); }
+[data-theme="light"] .settings-section { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .settings-subsection { background: rgba(0, 0, 0, 0.02); border-color: rgba(0, 0, 0, 0.04); }
 .profile-row { display: flex; align-items: center; gap: var(--space-md); }
 .profile-avatar { width: 56px; height: 56px; border-radius: 16px; background: var(--grad-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.3rem; color: white; flex-shrink: 0; }
 .profile-info { flex: 1; }

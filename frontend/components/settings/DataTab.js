@@ -107,9 +107,9 @@ export default function DataTab() {
   }
 
   return (
-    <div className="settings-grid stagger">
+    <div className="settings-grid">
       {/* Data Management */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><Database size={16} /> {t(messages, 'data_management')}</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
           {t(messages, 'data_management_desc')}
@@ -130,7 +130,7 @@ export default function DataTab() {
             </button>
           </div>
           {showCalImport && (
-            <div className="glass-sm" style={{ padding: 'var(--space-md)' }}>
+            <div className="settings-subsection">
               {calMsg && (
                 <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: calErrors.length === 0 && calMsg.includes(t(messages, 'module.calendar.import_success').split('{')[0]) ? 'var(--success)' : 'var(--danger)' }}>
                   {calMsg}
@@ -179,7 +179,7 @@ export default function DataTab() {
             </button>
           </div>
           {showContactsImport && (
-            <div className="glass-sm" style={{ padding: 'var(--space-md)' }}>
+            <div className="settings-subsection">
               {contactsMsg && (
                 <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: contactsMsg.includes(t(messages, 'module.contacts.import_success')) ? 'var(--success)' : 'var(--danger)' }}>
                   {contactsMsg}
@@ -214,7 +214,7 @@ export default function DataTab() {
       </div>
 
       {/* Subscriptions */}
-      <div className="settings-section glass">
+      <div className="settings-section">
         <div className="settings-section-title"><Rss size={16} /> {t(messages, 'subscriptions')}</div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
           {t(messages, 'subscriptions_desc')}
@@ -255,7 +255,7 @@ export default function DataTab() {
                 {t(messages, 'sub_setup_hints')}
               </button>
               {subShowHints && (
-                <div className="glass-sm" style={{ padding: 'var(--space-md)', marginTop: 'var(--space-sm)', display: 'grid', gap: 'var(--space-md)', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                <div className="settings-subsection" style={{ marginTop: 'var(--space-sm)', display: 'grid', gap: 'var(--space-md)', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   <div>
                     <strong>{t(messages, 'sub_setup_android_title')}</strong>
                     <p style={{ margin: '4px 0 0' }}>{t(messages, 'sub_setup_android')}</p>
