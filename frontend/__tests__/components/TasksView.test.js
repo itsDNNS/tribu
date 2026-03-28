@@ -113,9 +113,12 @@ describe('TasksView', () => {
 
   it('renders delete buttons', () => {
     const { container } = render(<TasksView />);
-    const deleteButtons = container.querySelectorAll('.sidebar-logout');
+    const deleteButtons = container.querySelectorAll('.task-delete-btn');
     expect(deleteButtons).toHaveLength(2);
+    // Delete now opens a ConfirmDialog; clicking the delete button sets confirmAction state
     fireEvent.click(deleteButtons[0]);
-    expect(mockDeleteTask).toHaveBeenCalledWith(1);
+    // ConfirmDialog should now be rendered
+    const confirmBtn = container.querySelector('.cal-dialog .btn-sm');
+    expect(confirmBtn).toBeTruthy();
   });
 });
