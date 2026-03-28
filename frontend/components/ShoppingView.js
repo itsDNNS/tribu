@@ -105,6 +105,11 @@ export default function ShoppingView() {
                   <X size={14} />
                 </button>
               )}
+              {list.item_count > 0 && (
+                <div className="shopping-list-progress" aria-hidden="true">
+                  <div className="shopping-list-progress-fill" style={{ width: `${Math.round((list.checked_count / list.item_count) * 100)}%` }} />
+                </div>
+              )}
             </button>
           ))}
 
@@ -168,7 +173,14 @@ export default function ShoppingView() {
               {/* Unchecked Items */}
               <div className="shopping-items-list">
                 {sh.uncheckedItems.length === 0 && sh.checkedItems.length === 0 && (
-                  <div className="shopping-empty">{t(messages, 'module.shopping.no_items')}</div>
+                  <div className="shopping-empty">
+                    <span>{t(messages, 'module.shopping.no_items')}</span>
+                    {!isChild && (
+                      <button className="bento-empty-action" onClick={() => sh.itemInputRef.current?.focus()}>
+                        {t(messages, 'module.shopping.add_first_item')}
+                      </button>
+                    )}
+                  </div>
                 )}
                 {sh.uncheckedItems.map((item) => (
                   <ShoppingItem

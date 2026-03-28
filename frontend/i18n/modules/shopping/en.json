@@ -18,5 +18,6 @@
   "module.shopping.clear_checked": "Clear checked",
   "module.shopping.clear_checked_confirm": "Remove all checked items?",
   "module.shopping.new_list": "New list",
-  "module.shopping.added_by": "Added by"
+  "module.shopping.added_by": "Added by",
+  "module.shopping.add_first_item": "Add first item"
 }

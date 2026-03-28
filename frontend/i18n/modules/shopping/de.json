@@ -18,5 +18,6 @@
   "module.shopping.clear_checked": "Erledigte löschen",
   "module.shopping.clear_checked_confirm": "Alle erledigten Artikel entfernen?",
   "module.shopping.new_list": "Neue Liste",
-  "module.shopping.added_by": "Hinzugefügt von"
+  "module.shopping.added_by": "Hinzugefügt von",
+  "module.shopping.add_first_item": "Ersten Artikel hinzufugen"
 }
