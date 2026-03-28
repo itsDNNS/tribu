@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
-import { Bell, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Bell, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
+import { timeAgo } from '../lib/helpers';
 
 const TYPE_ICONS = {
   event_reminder: CalendarDays,
@@ -11,29 +12,18 @@ const TYPE_ICONS = {
   system: Bell,
 };
 
-function timeAgo(dateStr, lang) {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diff = Math.floor((now - date) / 1000);
-  if (diff < 60) return lang === 'de' ? 'Gerade eben' : 'Just now';
-  if (diff < 3600) {
-    const m = Math.floor(diff / 60);
-    return lang === 'de' ? `vor ${m} Min.` : `${m}m ago`;
-  }
-  if (diff < 86400) {
-    const h = Math.floor(diff / 3600);
-    return lang === 'de' ? `vor ${h} Std.` : `${h}h ago`;
-  }
-  const d = Math.floor(diff / 86400);
-  return lang === 'de' ? `vor ${d} Tag${d > 1 ? 'en' : ''}` : `${d}d ago`;
-}
-
-export default function NotificationCenter() {
+export default function NotificationCenter({ onClose } = {}) {
   const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView } = useApp();
+  const closeBtnRef = useRef(null);
 
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+
+  // Focus close button once when panel opens (empty deps to avoid re-steal)
+  useEffect(() => {
+    if (onClose) closeBtnRef.current?.focus();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleMarkRead(notif) {
     if (notif.read) return;
@@ -63,80 +53,119 @@ export default function NotificationCenter() {
 
   function handleClick(notif) {
     handleMarkRead(notif);
-    if (notif.link) setActiveView(notif.link);
+    if (notif.link) {
+      if (onClose) onClose();
+      setActiveView(notif.link);
+    }
   }
+
+  // Group notifications by time period
+  const groups = (() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+
+    const today = [];
+    const yesterday = [];
+    const older = [];
+
+    notifications.forEach(n => {
+      const d = new Date(n.created_at);
+      if (d >= todayStart) today.push(n);
+      else if (d >= yesterdayStart) yesterday.push(n);
+      else older.push(n);
+    });
+
+    const result = [];
+    if (today.length) result.push({ label: t(messages, 'notifications_group_today'), items: today });
+    if (yesterday.length) result.push({ label: t(messages, 'notifications_group_yesterday'), items: yesterday });
+    if (older.length) result.push({ label: t(messages, 'notifications_group_older'), items: older });
+    return result;
+  })();
 
   return (
     <div>
-      <div className="view-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'notifications')}</h1>
-          <div className="view-subtitle">
-            {unreadCount > 0
-              ? `${unreadCount} ${t(messages, 'notifications_unread')}`
-              : t(messages, 'notifications_all_read')}
-          </div>
-        </div>
-        {unreadCount > 0 && (
-          <button className="btn-ghost" onClick={handleMarkAllRead}>
-            <CheckCheck size={16} /> {t(messages, 'notifications_mark_all_read')}
+      {onClose ? (
+        <div className="notif-panel-header">
+          <h2 className="notif-panel-title">{t(messages, 'notifications')}</h2>
+          {unreadCount > 0 && (
+            <button className="bento-empty-action" onClick={handleMarkAllRead}>
+              <CheckCheck size={14} /> {t(messages, 'notifications_mark_all_read')}
+            </button>
+          )}
+          <button ref={closeBtnRef} className="btn-ghost notif-delete" onClick={onClose} aria-label={t(messages, 'close')}>
+            <X size={16} />
           </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="view-header">
+          <div>
+            <h1 className="view-title">{t(messages, 'notifications')}</h1>
+            <div className="view-subtitle">
+              {unreadCount > 0
+                ? `${unreadCount} ${t(messages, 'notifications_unread')}`
+                : t(messages, 'notifications_all_read')}
+            </div>
+          </div>
+          {unreadCount > 0 && (
+            <button className="btn-ghost" onClick={handleMarkAllRead}>
+              <CheckCheck size={16} /> {t(messages, 'notifications_mark_all_read')}
+            </button>
+          )}
+        </div>
+      )}
 
-      <div className="stagger" style={{ display: 'grid', gap: 'var(--space-sm)' }}>
+      <div className="stagger notif-list">
         {notifications.length === 0 && (
-          <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <Bell size={32} style={{ marginBottom: 'var(--space-sm)', opacity: 0.4 }} />
+          <div className="notif-empty">
+            <Bell size={32} className="notif-empty-icon" />
             <p>{t(messages, 'notifications_empty')}</p>
           </div>
         )}
 
-        {notifications.map((notif) => {
-          const Icon = TYPE_ICONS[notif.type] || Bell;
-          return (
-            <div
-              key={notif.id}
-              className="glass-sm"
-              style={{
-                padding: 'var(--space-md)',
-                cursor: 'pointer',
-                opacity: notif.read ? 0.7 : 1,
-                borderLeft: notif.read ? 'none' : '3px solid var(--amethyst)',
-              }}
-              onClick={() => handleClick(notif)}
-            >
-              <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'flex-start' }}>
-                <div style={{ flexShrink: 0, marginTop: 2 }}>
-                  <Icon size={18} style={{ color: notif.read ? 'var(--text-muted)' : 'var(--amethyst)' }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-sm)' }}>
-                    <div style={{ fontWeight: notif.read ? 400 : 600, fontSize: '0.92rem' }}>
-                      {notif.title}
-                    </div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-                      {timeAgo(notif.created_at, lang)}
-                    </span>
-                  </div>
-                  {notif.body && (
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                      {notif.body}
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="btn-ghost"
-                  style={{ flexShrink: 0, padding: '4px', color: 'var(--text-muted)' }}
-                  onClick={(e) => { e.stopPropagation(); handleDelete(notif.id); }}
-                  aria-label={t(messages, 'aria.delete_notification')}
+        {groups.map(group => (
+          <div key={group.label}>
+            <div className="notif-group-header">{group.label}</div>
+            {group.items.map(notif => {
+              const Icon = TYPE_ICONS[notif.type] || Bell;
+              return (
+                <div
+                  key={notif.id}
+                  className={`notif-item${notif.read ? ' notif-item-read' : ' notif-item-unread'}`}
+                  onClick={() => handleClick(notif)}
+                  tabIndex={0}
+                  onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); handleClick(notif); } }}
                 >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
+                  <div className={`notif-icon${!notif.read ? ' notif-icon-unread' : ''}`}>
+                    <Icon size={18} />
+                  </div>
+                  <div className="notif-content">
+                    <div className="notif-header">
+                      <div className={`notif-title${!notif.read ? ' notif-title-unread' : ''}`}>
+                        {notif.title}
+                      </div>
+                      <span className="notif-time">
+                        {timeAgo(notif.created_at, lang)}
+                      </span>
+                    </div>
+                    {notif.body && (
+                      <div className="notif-body">
+                        {notif.body}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="btn-ghost notif-delete"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(notif.id); }}
+                    aria-label={t(messages, 'aria.delete_notification')}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -59,7 +59,10 @@ export default function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const overflowRef = useRef(null);
+  const bellBtnRef = useRef(null);
+  const notifPanelRef = useRef(null);
 
   // Ctrl+K / Cmd+K keyboard shortcut for search
   useEffect(() => {
@@ -133,19 +136,25 @@ export default function AppShell() {
     return () => document.removeEventListener('pointerdown', handleClick);
   }, [overflowOpen]);
 
-  // Escape key closes mobile sidebar and overflow
+  // Escape key closes mobile sidebar, overflow, and notification panel
   useEffect(() => {
-    if (!isMobile) return;
-    if (!mobileOpen && !overflowOpen) return;
+    if (!mobileOpen && !overflowOpen && !notifPanelOpen) return;
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
+        if (notifPanelOpen) { closeNotifPanel(); return; }
         setMobileOpen(false);
         setOverflowOpen(false);
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isMobile, mobileOpen, overflowOpen]);
+  }, [mobileOpen, overflowOpen, notifPanelOpen]);
+
+  function closeNotifPanel() {
+    setNotifPanelOpen(false);
+    bellBtnRef.current?.focus();
+  }
+
 
   const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}${isMobile && mobileOpen ? ' mobile-open' : ''}`;
 
@@ -281,18 +290,19 @@ export default function AppShell() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button className="sidebar-logout" onClick={() => setSearchOpen(true)} aria-label={t(messages, 'search.title')}>
+              <button className="sidebar-action-btn" onClick={() => setSearchOpen(true)} aria-label={t(messages, 'search.title')}>
                 <Search size={18} />
               </button>
               <button
-                className="sidebar-logout"
-                onClick={() => navigate('notifications')}
+                ref={bellBtnRef}
+                className="sidebar-action-btn"
+                onClick={() => { setNotifPanelOpen(prev => !prev); setOverflowOpen(false); }}
                 aria-label={t(messages, 'notifications')}
                 style={{ position: 'relative' }}
               >
                 <Bell size={18} />
                 {unreadCount > 0 && (
-                  <span className="bottom-nav-badge" style={{ position: 'absolute', top: -4, right: -4 }}>
+                  <span className="sidebar-badge">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -354,6 +364,26 @@ export default function AppShell() {
             )}
           </div>
         </nav>
+      )}
+
+      {/* Notification panel */}
+      {notifPanelOpen && (
+        <>
+          <div className="notif-panel-backdrop" onClick={closeNotifPanel} />
+          <div ref={notifPanelRef} className="notif-panel" role="dialog" aria-modal="true" aria-label={t(messages, 'notifications')}
+            onKeyDown={(e) => {
+              if (e.key !== 'Tab' || !notifPanelRef.current) return;
+              const focusable = notifPanelRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+              if (focusable.length === 0) return;
+              const first = focusable[0];
+              const last = focusable[focusable.length - 1];
+              if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+              else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+            }}
+          >
+            <NotificationCenter onClose={closeNotifPanel} />
+          </div>
+        </>
       )}
 
       {/* Live region for screen reader announcements */}
