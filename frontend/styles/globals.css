@@ -888,7 +888,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    TASKS VIEW
    ═══════════════════════════════════════════ */
 .tasks-layout { display: grid; gap: var(--space-md); }
-.tasks-toolbar { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; }
+.tasks-toolbar { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; padding: 0 var(--space-md); }
 .tasks-filter-tabs { display: flex; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 3px; }
 .tasks-filter-btn { padding: 8px 16px; border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
 .tasks-filter-btn.active { background: var(--void-elevated); color: var(--text-primary); }
@@ -899,8 +899,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .quick-add-input:focus-visible { border-color: var(--amethyst); box-shadow: 0 0 0 3px var(--amethyst-glow); outline: 2px solid var(--amethyst); outline-offset: 2px; }
 .quick-add-btn { width: 48px; height: 48px; background: var(--grad-primary); border: none; border-radius: var(--radius-sm); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
 .quick-add-btn:hover { box-shadow: 0 4px 16px -4px var(--amethyst-glow); transform: translateY(-1px); }
-.tasks-list { display: grid; gap: var(--space-sm); padding: 0 var(--space-md) var(--space-md); }
-.task-card { display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: var(--radius-md); background: rgba(255,255,255,0.02); border: 1px solid transparent; transition: all 0.25s var(--ease-out-expo); cursor: pointer; }
+.tasks-list { display: grid; gap: var(--space-sm); padding: 0 var(--space-md) var(--space-md); margin-top: var(--space-md); }
+.task-card { display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: var(--radius-md); background: rgba(255,255,255,0.02); border: 1px solid transparent; transition: all 0.25s var(--ease-out-expo); }
 .task-card:hover { background: rgba(255,255,255,0.04); border-color: var(--glass-border); }
 .task-card.overdue { border-left: 3px solid var(--danger); }
 .task-card.done { opacity: 0.5; }
@@ -922,6 +922,18 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .task-due { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
 .task-due.overdue { color: var(--danger); }
 .task-assignee { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 600; color: white; flex-shrink: 0; margin-left: auto; }
+.tasks-wrapper { background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); overflow: hidden; }
+.task-form-fields { padding: 0 var(--space-md) var(--space-sm); display: grid; gap: var(--space-sm); }
+.task-form-desc { font-size: 0.88rem; padding: 10px 14px; min-height: 60px; resize: vertical; }
+.task-form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm); }
+.task-form-input { font-size: 0.82rem; padding: 10px 12px; }
+.task-delete-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; flex-shrink: 0; }
+.task-delete-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+.tasks-empty { color: var(--text-muted); font-size: 0.88rem; padding: 0 var(--space-md); display: flex; align-items: center; gap: var(--space-sm); }
+.task-form-toggle { display: flex; align-items: center; gap: var(--space-xs); background: none; border: none; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 0.78rem; padding: 4px var(--space-md) var(--space-sm); transition: color 0.2s; }
+.task-form-toggle:hover { color: var(--text-primary); }
+.task-form-toggle-open { transform: rotate(180deg); transition: transform 0.2s; }
+[data-theme="light"] .tasks-wrapper { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 
 /* ═══════════════════════════════════════════
    SHOPPING
@@ -1163,6 +1175,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .lang-btn:focus-visible,
 .bento-more:focus-visible,
 .task-checkbox:focus-visible,
+.task-delete-btn:focus-visible,
+.task-form-toggle:focus-visible,
 .shopping-check:focus-visible,
 .mobile-hamburger:focus-visible,
 .shopping-list-card:focus-visible,
@@ -1346,6 +1360,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .view-header { flex-direction: column; align-items: flex-start; }
   .tasks-toolbar { flex-direction: column; align-items: flex-start; }
   .tasks-count { margin-left: 0; }
+  .task-form-grid { grid-template-columns: 1fr; }
   .calendar-controls { flex-wrap: wrap; }
   .calendar-view-toggle { margin-left: 0; }
   .birthday-list { grid-template-columns: 1fr; }

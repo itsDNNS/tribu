@@ -22,5 +22,10 @@
   "module.tasks.created": "Task created",
   "module.tasks.deleted": "Task deleted",
   "module.tasks.unassigned": "Unassigned",
-  "module.tasks.overdue": "Overdue"
+  "module.tasks.overdue": "Overdue",
+  "module.tasks.more_options": "More options",
+  "module.tasks.less_options": "Less options",
+  "module.tasks.delete_task": "Delete task",
+  "module.tasks.delete_confirm": "Delete task \"{title}\"?",
+  "module.tasks.add_first": "Create first task"
 }
