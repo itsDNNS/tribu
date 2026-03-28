@@ -163,31 +163,25 @@ export default function AdminView() {
 
       {/* Member Created Banner */}
       {createdPassword && (
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.1)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          padding: 'var(--space-md)',
-          marginBottom: 'var(--space-md)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
-            <Check size={16} style={{ color: 'var(--success)' }} />
-            <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{t(messages, passwordBannerType === 'reset' ? 'password_was_reset' : 'member_created')}</span>
+        <div className="adm-success-banner">
+          <div className="adm-banner-header">
+            <Check size={16} className="adm-icon-success" />
+            <span className="adm-banner-title">{t(messages, passwordBannerType === 'reset' ? 'password_was_reset' : 'member_created')}</span>
           </div>
-          <p style={{ color: 'var(--warning)', fontSize: '0.82rem', marginBottom: 'var(--space-sm)' }}>
+          <p className="adm-banner-warning">
             {t(messages, 'member_created_warning')}
           </p>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+          <div className="adm-banner-row">
             <code className="token-display">{createdPassword}</code>
-            <button className="btn-ghost" onClick={handleCopyPassword} style={{ flexShrink: 0 }}>
+            <button className="btn-ghost adm-banner-no-shrink" onClick={handleCopyPassword}>
               {copied ? <><Check size={14} /> {t(messages, 'token_copied')}</> : <><Copy size={14} /> {t(messages, 'token_copy')}</>}
             </button>
           </div>
           <button
+            className="adm-banner-dismiss"
             onClick={() => { setCreatedPassword(null); setCopied(false); }}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginTop: 'var(--space-sm)', fontSize: '0.78rem' }}
           >
-            <X size={12} style={{ verticalAlign: 'middle' }} /> {t(messages, 'dismiss')}
+            <X size={12} className="adm-icon-middle" /> {t(messages, 'dismiss')}
           </button>
         </div>
       )}
@@ -196,11 +190,11 @@ export default function AdminView() {
 
       {/* Add Member */}
       {!demoMode && (
-        <div style={{ marginTop: 'var(--space-md)' }}>
+        <div className="adm-add-wrapper">
           {showAddMember ? (
             <form onSubmit={handleCreateMember}>
-              <div className="settings-section" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+              <div className="settings-section adm-form-grid">
+                <p className="adm-form-desc">
                   {t(messages, 'add_member_desc')}
                 </p>
                 <div className="form-field">
@@ -233,7 +227,7 @@ export default function AdminView() {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
+                <label className="set-checkbox-label">
                   <input
                     type="checkbox"
                     checked={newIsAdult}
@@ -241,7 +235,7 @@ export default function AdminView() {
                   />
                   {t(messages, 'member_is_adult')}
                 </label>
-                <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <div className="set-btn-row">
                   <button type="submit" className="btn-sm" disabled={!newEmail.trim() || !newName.trim() || creating === 'loading'}>
                     <Plus size={14} /> {t(messages, 'add_member')}
                   </button>
@@ -296,27 +290,27 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
       <div className="profile-row">
         <div className="sidebar-user-avatar">{m.display_name?.[0] || '?'}</div>
         <div className="profile-info">
-          <div className="profile-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="profile-name adm-profile-name">
             {m.display_name}
             {(m.role === 'admin' || m.role === 'owner') && (
-              <Shield size={13} style={{ color: 'var(--amethyst)' }} aria-label={m.role} />
+              <Shield size={13} className="adm-icon-shield" aria-label={m.role} />
             )}
           </div>
           <div className="profile-email">
             {m.email}
-            {m.date_of_birth && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: 'var(--text-muted)' }}>({getAge(m.date_of_birth)} {t(messages, 'years_old')})</span>}
+            {m.date_of_birth && <span className="adm-age">({getAge(m.date_of_birth)} {t(messages, 'years_old')})</span>}
           </div>
         </div>
       </div>
       <div className="admin-actions">
         {m.user_id === me?.user_id ? (
-          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{t(messages, 'admin_self_hint')}</span>
+          <span className="adm-self-hint">{t(messages, 'admin_self_hint')}</span>
         ) : (
           <>
             <button className="btn-ghost" onClick={() => onSetAdult(m.user_id, !m.is_adult)}>{m.is_adult ? t(messages, 'set_child') : t(messages, 'set_adult')}</button>
             {m.role === 'member' && <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'admin')}>{t(messages, 'make_admin')}</button>}
             {m.role === 'admin' && <button className="btn-ghost" onClick={() => onSetRole(m.user_id, 'member')}>{t(messages, 'make_member')}</button>}
-            <input type="date" className="form-input" style={{ width: 'auto', padding: '4px 8px', fontSize: '0.78rem' }}
+            <input type="date" className="form-input adm-birthdate-input"
               value={m.date_of_birth || ''}
               onChange={(e) => onSetBirthdate(m.user_id, e.target.value || null)}
               aria-label={t(messages, 'birthdate')} />
