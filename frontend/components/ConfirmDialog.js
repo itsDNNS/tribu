@@ -6,11 +6,14 @@ export default function ConfirmDialog({ title, message, confirmLabel, confirmDan
   const confirmBtnRef = useRef(null);
   const previousFocusRef = useRef(null);
 
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
+
   useEffect(() => {
     previousFocusRef.current = document.activeElement;
     confirmBtnRef.current?.focus();
     function handleKeyDown(e) {
-      if (e.key === 'Escape') { onCancel(); return; }
+      if (e.key === 'Escape') { onCancelRef.current(); return; }
       if (e.key === 'Tab' && dialogRef.current) {
         const focusable = dialogRef.current.querySelectorAll('button');
         if (focusable.length === 0) return;
@@ -25,13 +28,13 @@ export default function ConfirmDialog({ title, message, confirmLabel, confirmDan
       document.removeEventListener('keydown', handleKeyDown);
       previousFocusRef.current?.focus();
     };
-  }, [onCancel]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="cal-dialog-backdrop" onClick={onCancel}>
-      <div ref={dialogRef} className="cal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} className="cal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby={message ? 'confirm-dialog-desc' : undefined} onClick={e => e.stopPropagation()}>
         <div id="confirm-dialog-title" className="cal-dialog-title">{title}</div>
-        {message && <div className="cal-dialog-subtitle">{message}</div>}
+        {message && <div id="confirm-dialog-desc" className="cal-dialog-subtitle">{message}</div>}
         <div className="cal-dialog-actions">
           <button ref={confirmBtnRef} className={`btn-sm${confirmDanger ? ' cal-dialog-delete-all' : ''}`} onClick={onConfirm}>
             {confirmLabel || t(messages, 'confirm')}
