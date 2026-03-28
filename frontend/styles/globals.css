@@ -918,10 +918,6 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .cal-form-datetime { font-size: 0.82rem; }
 .cal-form-input-lg { font-size: 0.88rem; padding: 12px 14px; }
 
-/* ─── Calendar FAB ─── */
-.cal-fab { position: fixed; bottom: var(--space-xl); right: var(--space-xl); width: 56px; height: 56px; border-radius: 50%; background: var(--amethyst); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px -4px rgba(124, 58, 237, 0.4); transition: all 0.2s; z-index: 50; }
-.cal-fab:hover { transform: scale(1.05); box-shadow: 0 6px 24px -4px rgba(124, 58, 237, 0.5); }
-.cal-fab:active { transform: scale(0.95); }
 
 /* ─── Notifications ─── */
 .notif-list { display: grid; gap: var(--space-sm); }
@@ -1329,10 +1325,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .theme-item:focus-visible,
 .quick-add-btn:focus-visible,
 .week-day-header:focus-visible,
-.cal-fab:focus-visible {
-  outline: 2px solid var(--amethyst);
-  outline-offset: 4px;
-}
+
 
 .calendar-day:focus-visible:not(.empty) {
   outline: 2px solid var(--amethyst);
@@ -1522,7 +1515,6 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .rewards-earn-select, .rewards-earn-amount, .rewards-earn-note { width: 100%; min-width: 0; flex: unset; }
   .rewards-balances { margin-left: calc(-1 * var(--space-md)); margin-right: calc(-1 * var(--space-md)); padding-left: var(--space-md); padding-right: var(--space-md); }
   .calendar-day { aspect-ratio: 1; min-height: 44px; }
-  .cal-fab { bottom: calc(88px + env(safe-area-inset-bottom)); right: var(--space-md); }
   .cal-form-row { grid-template-columns: 1fr; }
   .notif-panel { width: 100vw; top: auto; bottom: 0; max-height: 80vh; border-left: none; border-top: 1px solid var(--glass-border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom)); animation-name: notifSlideUp; }
   @keyframes notifSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
