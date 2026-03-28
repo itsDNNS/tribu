@@ -53,7 +53,7 @@ export default function TasksView() {
                 </button>
               </form>
 
-              <button type="button" className="task-form-toggle" onClick={() => setShowFormDetails(prev => !prev)} aria-expanded={showFormDetails} aria-controls="task-form-details">
+              <button type="button" className="task-form-toggle" onClick={() => setShowFormDetails(prev => !prev)} aria-expanded={showFormDetails} aria-controls={showFormDetails ? 'task-form-details' : undefined}>
                 <ChevronDown size={14} className={showFormDetails ? 'task-form-toggle-open' : ''} />
                 {t(messages, showFormDetails ? 'module.tasks.less_options' : 'module.tasks.more_options')}
               </button>

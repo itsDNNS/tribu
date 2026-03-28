@@ -1176,6 +1176,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-more:focus-visible,
 .task-checkbox:focus-visible,
 .task-delete-btn:focus-visible,
+.task-form-toggle:focus-visible,
 .shopping-check:focus-visible,
 .mobile-hamburger:focus-visible,
 .shopping-list-card:focus-visible,
