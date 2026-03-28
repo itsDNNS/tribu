@@ -26,11 +26,11 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/screenshot-dark.png" alt="Dashboard - Dark theme" width="100%" />
+  <img src="docs/assets/screenshot-light.png" alt="Dashboard - Morning Mist theme" width="100%" />
 </p>
 
 <p align="center">
-  <em>Content-first dashboard -- today's events, tasks, birthdays, and rewards at a glance</em>
+  <em>Morning Mist theme -- content-first dashboard with events, tasks, and birthdays at a glance</em>
 </p>
 
 <details>
