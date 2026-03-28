@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Self-hosted family organizer to tame the everyday chaos.</strong><br>
-  Calendars, tasks, shopping lists, contacts, birthdays &mdash; one place, your server, your data.
+  Calendars, tasks, shopping lists, contacts, birthdays -- one place, your server, your data.
 </p>
 
 <p align="center">
@@ -26,11 +26,11 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/screenshot-dark.png" alt="Dashboard - Midnight Glass theme" width="100%" />
+  <img src="docs/assets/screenshot-dark.png" alt="Dashboard - Dark theme" width="100%" />
 </p>
 
 <p align="center">
-  <em>Midnight Glass theme &mdash; glassmorphism, bento grid dashboard, mesh background</em>
+  <em>Content-first dashboard -- today's events, tasks, birthdays, and rewards at a glance</em>
 </p>
 
 <details>
@@ -42,13 +42,21 @@
 
 <img src="docs/assets/screenshot-light.png" alt="Dashboard - Morning Mist theme" width="100%" />
 
-**Calendar with day-detail panel**
+**Calendar with day-detail panel and create FAB**
 
 <img src="docs/assets/screenshot-calendar.png" alt="Calendar view" width="100%" />
 
-**Tasks with priorities, assignees, and overdue tracking**
+**Tasks with collapsible form, priorities, and assignees**
 
 <img src="docs/assets/screenshot-tasks.png" alt="Tasks view" width="100%" />
+
+**Shopping with real-time sync and progress bars**
+
+<img src="docs/assets/screenshot-shopping.png" alt="Shopping view" width="100%" />
+
+**Rewards system with child progress tracking**
+
+<img src="docs/assets/screenshot-rewards.png" alt="Rewards view" width="100%" />
 
 **Login page**
 
@@ -70,24 +78,26 @@ See the [Wiki](https://github.com/itsDNNS/tribu/wiki) for screenshots of every v
 
 Most family organizer apps lock your data in their cloud and charge monthly fees. Tribu runs on your own hardware, gives you full control, and costs nothing.
 
-- **Privacy first** &mdash; all data stays on your server, no third-party services
-- **Modular** &mdash; each feature is an isolated plugin, extend what you need
-- **Beautiful** &mdash; three polished themes with glassmorphism, animations, and responsive design
-- **Bilingual** &mdash; German and English out of the box, lazy-loaded per module
-- **Try before you install** &mdash; interactive demo mode with realistic sample data, no backend needed
+- **Privacy first** -- all data stays on your server, no third-party services
+- **Modular** -- each feature is an isolated plugin, extend what you need
+- **Clean design** -- content-first UI with solid cards, consistent spacing, and proper accessibility
+- **Bilingual** -- German and English out of the box, lazy-loaded per module
+- **Try before you install** -- interactive demo mode with realistic sample data, no backend needed
 
 ## Features
 
 | | |
 |---|---|
-| **Dashboard** | Bento grid with today's events, open tasks, birthday countdowns, and family stats |
-| **Calendar** | Month/week view, event dots, day-detail panel, recurring events, ICS import/export |
-| **Tasks** | Priorities, due dates, assignees, recurring tasks, overdue tracking |
-| **Shopping** | Multiple lists, tap-to-toggle items, real-time sync via WebSocket |
-| **Contacts** | Card grid with colored avatars, CSV import/export, birthday extraction |
-| **Birthdays** | 4-week lookahead with countdown, auto-synced from contacts |
-| **Notifications** | In-app feed with event reminders, overdue tasks, and birthday alerts |
-| **Themes** | Morning Mist (light), Dark, Midnight Glass (glassmorphism) |
+| **Dashboard** | Today's events, open tasks, birthday countdowns, family stats, and quick actions |
+| **Calendar** | Month/week view, event dots, day-detail panel, recurring events, ICS import/export, create FAB |
+| **Tasks** | Priorities, due dates, assignees, recurring tasks, collapsible create form, overdue tracking |
+| **Shopping** | Multiple lists, tap-to-toggle with check animation, progress bars, real-time WebSocket sync |
+| **Contacts** | Alphabetical card grid, colored avatars, CSV import/export, birthday extraction |
+| **Birthdays** | 4-week lookahead with proximity-based countdown colors, auto-synced from contacts |
+| **Rewards** | Family token economy with earning rules, reward catalog, child progress bars, Lucide icons |
+| **Notifications** | Slide-in panel with time grouping (today/yesterday/older), event reminders, overdue alerts |
+| **Search** | Global search across events, tasks, shopping, contacts, and birthdays (Cmd+K) |
+| **Themes** | Morning Mist (light) and Dark |
 | **i18n** | English and German out of the box, lazy-loaded per module |
 | **Demo mode** | Try the full UI with realistic sample data, no server setup required |
 | **Security** | httpOnly cookies, rate limiting, scoped PATs, non-root containers |
