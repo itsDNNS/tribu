@@ -829,7 +829,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 /* ═══════════════════════════════════════════
    CALENDAR
    ═══════════════════════════════════════════ */
-.calendar-layout { display: grid; grid-template-columns: 1fr 360px; gap: var(--space-md); }
+.calendar-layout { display: grid; grid-template-columns: 1fr 360px; gap: var(--space-md); max-width: 1400px; }
 .calendar-controls { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-lg); }
 .calendar-nav { display: flex; align-items: center; gap: var(--space-xs); }
 .calendar-nav-btn { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: var(--text-primary); width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
@@ -845,7 +845,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .calendar-weekday { text-align: center; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 0; }
 .calendar-week-num { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; opacity: 0.5; }
 .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.calendar-day { aspect-ratio: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; transition: all 0.2s; position: relative; border: 1px solid transparent; gap: 4px; background: transparent; color: var(--text-primary); font-family: inherit; }
+.calendar-day { min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; transition: all 0.2s; position: relative; border: 1px solid transparent; gap: 4px; background: transparent; color: var(--text-primary); font-family: inherit; }
 .calendar-day:hover:not(.empty) { background: rgba(255,255,255,0.04); border-color: var(--glass-border); }
 .calendar-day.today { background: rgba(124, 58, 237, 0.12); border-color: var(--amethyst); }
 .calendar-day.today .calendar-day-num { color: var(--amethyst); font-weight: 700; }
@@ -856,13 +856,14 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .calendar-day-num { font-size: 0.88rem; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
 .calendar-day-dots { display: flex; gap: 3px; min-height: 6px; }
 .calendar-day-dot { width: 5px; height: 5px; border-radius: 50%; }
-.day-detail-panel { padding: var(--space-lg); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
+.day-detail-panel { padding: var(--space-lg); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); align-self: start; }
 .day-detail-date { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--space-xs); }
 .day-detail-weekday { color: var(--text-muted); font-size: 0.82rem; margin-bottom: var(--space-lg); }
 .day-detail-events { display: grid; gap: var(--space-sm); margin-bottom: var(--space-lg); }
 .day-event-card { display: flex; gap: 10px; padding: 12px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.03); border-left: 3px solid; transition: all 0.2s; }
 .day-event-card:hover { background: rgba(255,255,255,0.05); }
 .quick-add-form { display: grid; gap: var(--space-sm); }
+.quick-add-form .form-input, .quick-add-form select, .cal-edit-form .form-input { width: 100%; min-width: 0; }
 .cal-form-panel { padding: var(--space-lg); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
 .calendar-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 
@@ -1520,6 +1521,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .rewards-earn-form { flex-direction: column; }
   .rewards-earn-select, .rewards-earn-amount, .rewards-earn-note { width: 100%; min-width: 0; flex: unset; }
   .rewards-balances { margin-left: calc(-1 * var(--space-md)); margin-right: calc(-1 * var(--space-md)); padding-left: var(--space-md); padding-right: var(--space-md); }
+  .calendar-day { aspect-ratio: 1; min-height: 44px; }
   .cal-fab { bottom: calc(88px + env(safe-area-inset-bottom)); right: var(--space-md); }
   .cal-form-row { grid-template-columns: 1fr; }
   .notif-panel { width: 100vw; top: auto; bottom: 0; max-height: 80vh; border-left: none; border-top: 1px solid var(--glass-border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom)); animation-name: notifSlideUp; }
