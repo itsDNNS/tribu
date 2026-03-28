@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Plus, Check, Trash2, X, ShoppingCart } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useShopping } from '../hooks/useShopping';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
+import ConfirmDialog from './ConfirmDialog';
 
 function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) {
   const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
@@ -53,9 +55,20 @@ function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) 
 export default function ShoppingView() {
   const { familyId, families, members, messages, isMobile, isChild } = useApp();
   const sh = useShopping();
+  const [confirmAction, setConfirmAction] = useState(null);
 
   return (
     <div>
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmDanger={confirmAction.danger}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+          messages={messages}
+        />
+      )}
       <div className="view-header">
         <div>
           <h1 className="view-title">{t(messages, 'module.shopping.name')}</h1>
@@ -81,7 +94,12 @@ export default function ShoppingView() {
               {list.id === sh.activeListId && !isChild && (
                 <button
                   className="shopping-list-delete"
-                  onClick={(e) => { e.stopPropagation(); sh.deleteList(list.id); }}
+                  onClick={(e) => { e.stopPropagation(); setConfirmAction({
+                    title: t(messages, 'module.shopping.delete_list'),
+                    message: t(messages, 'module.shopping.delete_list_confirm'),
+                    danger: true,
+                    action: () => { sh.deleteList(list.id); setConfirmAction(null); },
+                  }); }}
                   aria-label={t(messages, 'aria.delete_list').replace('{name}', list.name)}
                 >
                   <X size={14} />
@@ -183,7 +201,12 @@ export default function ShoppingView() {
                     ))}
                     {!isChild && (
                       <div className="shopping-clear-wrapper">
-                        <button className="btn-ghost shopping-clear-btn" onClick={sh.clearChecked}>
+                        <button className="btn-ghost shopping-clear-btn" onClick={() => setConfirmAction({
+                        title: t(messages, 'module.shopping.clear_checked'),
+                        message: t(messages, 'module.shopping.clear_checked_confirm'),
+                        danger: true,
+                        action: () => { sh.clearChecked(); setConfirmAction(null); },
+                      })}>
                           <Trash2 size={14} aria-hidden="true" />
                           {t(messages, 'module.shopping.clear_checked')}
                         </button>

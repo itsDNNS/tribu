@@ -153,7 +153,6 @@ export function useShopping() {
   }
 
   async function deleteList(id) {
-    if (!confirm(t(messages, 'module.shopping.delete_list_confirm'))) return;
     if (demoMode) {
       setShoppingLists((prev) => prev.filter((l) => l.id !== id));
     } else {
@@ -262,7 +261,6 @@ export function useShopping() {
 
   async function clearChecked() {
     if (!activeListId) return;
-    if (!confirm(t(messages, 'module.shopping.clear_checked_confirm'))) return;
     if (demoMode) {
       setItems((prev) => prev.filter((i) => !i.checked));
       setShoppingLists((prev) =>
