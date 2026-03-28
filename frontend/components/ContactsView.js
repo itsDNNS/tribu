@@ -60,11 +60,13 @@ function FormModal({ id, title, onClose, onSubmit, isEditing, saveKey, deleteBut
   const overlayRef = useRef(null);
   const panelRef = useRef(null);
   const firstInputRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     firstInputRef.current?.focus();
     function handleKeyDown(e) {
-      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'Escape') { onCloseRef.current(); return; }
       if (e.key === 'Tab' && panelRef.current) {
         const focusable = panelRef.current.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
         if (focusable.length === 0) return;
@@ -76,7 +78,7 @@ function FormModal({ id, title, onClose, onSubmit, isEditing, saveKey, deleteBut
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return createPortal(
     <div ref={overlayRef} className="contact-modal-overlay" onClick={(e) => e.target === overlayRef.current && onClose()}>
