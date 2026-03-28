@@ -65,9 +65,9 @@ test.describe('Shopping', () => {
 
     await page.getByText('Delete This List').click();
 
-    // deleteList() uses window.confirm() — accept it
-    page.once('dialog', (dialog) => dialog.accept());
+    // deleteList() now uses ConfirmDialog — click the confirm button
     await page.locator('[aria-label="Delete list: Delete This List"]').click();
+    await page.locator('.cal-dialog .btn-sm').first().click();
 
     await expect(page.getByText('Delete This List')).not.toBeVisible({ timeout: 10000 });
   });

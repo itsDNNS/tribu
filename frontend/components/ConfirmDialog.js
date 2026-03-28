@@ -4,8 +4,10 @@ import { t } from '../lib/i18n';
 export default function ConfirmDialog({ title, message, confirmLabel, confirmDanger, onConfirm, onCancel, messages }) {
   const dialogRef = useRef(null);
   const confirmBtnRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   useEffect(() => {
+    previousFocusRef.current = document.activeElement;
     confirmBtnRef.current?.focus();
     function handleKeyDown(e) {
       if (e.key === 'Escape') { onCancel(); return; }
@@ -19,7 +21,10 @@ export default function ConfirmDialog({ title, message, confirmLabel, confirmDan
       }
     }
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
   }, [onCancel]);
 
   return (
