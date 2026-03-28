@@ -297,6 +297,13 @@
   border: 2px dashed rgba(0, 0, 0, 0.12);
 }
 
+[data-theme="light"] .contact-card { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .birthday-card { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .contacts-empty { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .contacts-tab-toggle { background: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .contacts-tab-btn.active { background: var(--void-elevated); }
+[data-theme="light"] .contact-modal-panel { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
+
 [data-theme="light"] .theme-item-inactive {
   background: rgba(0, 0, 0, 0.02);
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -1001,8 +1008,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    ═══════════════════════════════════════════ */
 .contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: var(--space-md); }
 .contacts-section-letter { grid-column: 1 / -1; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding-top: var(--space-md); }
-.contact-card { padding: var(--space-lg); display: flex; align-items: center; gap: var(--space-md); transition: all 0.2s; }
-.contact-card:hover { transform: translateY(-2px); }
+.contact-card { padding: var(--space-lg); display: flex; align-items: center; gap: var(--space-md); transition: all 0.2s; background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
+.contact-card:hover { border-color: rgba(120, 130, 180, 0.2); }
 .contact-avatar { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.1rem; color: white; flex-shrink: 0; }
 .contact-info { flex: 1; min-width: 0; }
 .contact-name { font-weight: 600; font-size: 0.95rem; }
@@ -1010,12 +1017,12 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .contact-birthday { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
 .contact-card-clickable { cursor: pointer; }
 .contact-card-clickable:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
-.contacts-tab-toggle { display: flex; gap: var(--space-xs); margin-bottom: var(--space-lg); }
-.contacts-tab-btn { padding: 6px 16px; border-radius: var(--radius-pill); font-size: 0.85rem; font-weight: 500; background: transparent; border: 1px solid var(--glass-border); color: var(--text-secondary); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
-.contacts-tab-btn:hover { background: rgba(124, 58, 237, 0.06); color: var(--text-primary); }
-.contacts-tab-btn.active { background: var(--amethyst); color: white; border-color: var(--amethyst); }
-.contact-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-.contact-modal-panel { padding: var(--space-xl); max-width: 440px; width: 90%; }
+.contacts-tab-toggle { display: flex; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 3px; gap: 2px; margin-bottom: var(--space-lg); }
+.contacts-tab-btn { padding: 7px 16px; border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; min-height: 44px; }
+.contacts-tab-btn:hover { color: var(--text-primary); }
+.contacts-tab-btn.active { background: var(--void-elevated); color: var(--text-primary); }
+.contact-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); }
+.contact-modal-panel { padding: var(--space-xl); max-width: 440px; width: 90%; background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
 .contact-delete-btn { color: var(--text-muted); }
 .contact-delete-btn:hover { color: var(--danger); border-color: var(--danger); }
 
@@ -1024,8 +1031,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    ═══════════════════════════════════════════ */
 .birthdays-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: var(--space-md); }
 .birthdays-section-month { grid-column: 1 / -1; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.04em; padding-top: var(--space-md); }
-.birthday-card { padding: var(--space-lg); display: flex; align-items: center; gap: var(--space-md); transition: all 0.2s; }
-.birthday-card:hover { transform: translateY(-2px); }
+.birthday-card { padding: var(--space-lg); display: flex; align-items: center; gap: var(--space-md); transition: all 0.2s; background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
+.birthday-card:hover { border-color: rgba(120, 130, 180, 0.2); }
 .birthday-avatar { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.1rem; color: white; flex-shrink: 0; }
 .birthday-info { flex: 1; min-width: 0; }
 .birthday-name { font-weight: 600; font-size: 0.95rem; }
@@ -1034,6 +1041,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .birthday-card-clickable:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
 .birthday-countdown { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; padding: 4px 10px; border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.08); }
 .birthday-today { color: var(--success); background: rgba(16, 185, 129, 0.1); font-weight: 600; }
+.contacts-empty { padding: var(--space-xl); text-align: center; grid-column: 1 / -1; color: var(--text-muted); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
+.contacts-empty-text { font-size: 0.95rem; }
+.contacts-empty-actions { display: flex; gap: var(--space-sm); justify-content: center; margin-top: var(--space-md); }
 
 /* ═══════════════════════════════════════════
    SETTINGS

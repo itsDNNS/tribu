@@ -59,7 +59,7 @@ function ContactFormModal({ hook, messages, isEditing }) {
       className="contact-modal-overlay"
       onClick={handleOverlayClick}
     >
-      <div className="glass contact-modal-panel">
+      <div className="contact-modal-panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
           <h2 id="contact-form-title" style={{ fontWeight: 600, fontSize: '1.1rem', margin: 0 }}>
             {t(messages, isEditing ? 'module.contacts.edit' : 'module.contacts.add')}
@@ -182,7 +182,7 @@ function BirthdayFormModal({ hook, messages, isEditing, lang }) {
       className="contact-modal-overlay"
       onClick={handleOverlayClick}
     >
-      <div className="glass contact-modal-panel">
+      <div className="contact-modal-panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
           <h2 id="birthday-form-title" style={{ fontWeight: 600, fontSize: '1.1rem', margin: 0 }}>
             {t(messages, isEditing ? 'module.birthdays.edit' : 'module.birthdays.add')}
@@ -375,7 +375,7 @@ export default function ContactsView() {
       </div>
 
       {activeTab === 'contacts' ? (
-        <div className="contacts-grid stagger">
+        <div className="contacts-grid">
           {contactsHook.contacts.length > 0 ? (
             Array.from(
               [...contactsHook.contacts].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'de')).reduce((map, c) => {
@@ -392,7 +392,7 @@ export default function ContactsView() {
                   return (
                     <div
                       key={c.id}
-                      className={`contact-card glass-sm${canEdit ? ' contact-card-clickable' : ''}`}
+                      className={`contact-card${canEdit ? ' contact-card-clickable' : ''}`}
                       onClick={canEdit ? () => contactsHook.openEdit(c) : undefined}
                       role={canEdit ? 'button' : undefined}
                       tabIndex={canEdit ? 0 : undefined}
@@ -408,7 +408,7 @@ export default function ContactsView() {
                         )}
                         {c.birthday_month && c.birthday_day && (
                           <div className="contact-birthday">
-                            🎂 {c.birthday_day}.{c.birthday_month}.
+                            <Cake size={12} aria-hidden="true" /> {c.birthday_day}.{c.birthday_month}.
                           </div>
                         )}
                       </div>
@@ -418,10 +418,10 @@ export default function ContactsView() {
               </React.Fragment>
             ))
           ) : (
-            <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', gridColumn: '1 / -1' }}>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t(messages, 'module.contacts.no_contacts')}</div>
+            <div className="contacts-empty">
+              <div className="contacts-empty-text">{t(messages, 'module.contacts.no_contacts')}</div>
               {!demoMode && !isChild && (
-                <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'center', marginTop: 'var(--space-md)' }}>
+                <div className="contacts-empty-actions">
                   <button className="btn-primary" onClick={contactsHook.openCreate}>
                     <Plus size={15} /> {t(messages, 'module.contacts.add')}
                   </button>
@@ -434,7 +434,7 @@ export default function ContactsView() {
           )}
         </div>
       ) : (
-        <div className="birthdays-grid stagger">
+        <div className="birthdays-grid">
           {birthdaysHook.birthdays.length > 0 ? (
             Array.from(grouped).map(([month, items]) => (
               <React.Fragment key={month}>
@@ -446,7 +446,7 @@ export default function ContactsView() {
                   return (
                     <div
                       key={b.id}
-                      className={`birthday-card glass-sm${canEdit ? ' birthday-card-clickable' : ''}`}
+                      className={`birthday-card${canEdit ? ' birthday-card-clickable' : ''}`}
                       onClick={canEdit ? () => birthdaysHook.openEdit(b) : undefined}
                       role={canEdit ? 'button' : undefined}
                       tabIndex={canEdit ? 0 : undefined}
@@ -457,7 +457,7 @@ export default function ContactsView() {
                       </div>
                       <div className="birthday-info">
                         <div className="birthday-name">{b.person_name}</div>
-                        <div className="birthday-date">🎂 {dateStr}</div>
+                        <div className="birthday-date"><Cake size={12} aria-hidden="true" /> {dateStr}</div>
                       </div>
                       <div className={`birthday-countdown${days === 0 ? ' birthday-today' : ''}`}>
                         {days === 0
@@ -470,10 +470,10 @@ export default function ContactsView() {
               </React.Fragment>
             ))
           ) : (
-            <div className="glass-sm" style={{ padding: 'var(--space-xl)', textAlign: 'center', gridColumn: '1 / -1' }}>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t(messages, 'module.birthdays.no_birthdays')}</div>
+            <div className="contacts-empty">
+              <div className="contacts-empty-text">{t(messages, 'module.birthdays.no_birthdays')}</div>
               {!demoMode && !isChild && (
-                <div style={{ marginTop: 'var(--space-md)' }}>
+                <div className="contacts-empty-actions">
                   <button className="btn-primary" onClick={birthdaysHook.openCreate}>
                     <Plus size={15} /> {t(messages, 'module.birthdays.add')}
                   </button>
