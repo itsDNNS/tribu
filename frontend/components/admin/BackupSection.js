@@ -4,6 +4,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
+import ConfirmDialog from '../ConfirmDialog';
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -20,6 +21,7 @@ export default function BackupSection() {
   const [retention, setRetention] = useState(7);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const loadConfig = useCallback(async () => {
     const { ok, data } = await api.apiGetBackupConfig();
@@ -75,12 +77,20 @@ export default function BackupSection() {
   }
 
   async function handleDelete(filename) {
-    if (!confirm(t(messages, 'backup_delete_confirm'))) return;
-    const { ok, data } = await api.apiDeleteBackup(filename);
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-    }
-    await loadBackups();
+    setConfirmAction({
+      title: t(messages, 'backup_delete'),
+      message: t(messages, 'backup_delete_confirm'),
+      danger: true,
+      action: async () => {
+        const { ok, data } = await api.apiDeleteBackup(filename);
+        if (!ok) {
+          toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        } else {
+          await loadBackups();
+        }
+        setConfirmAction(null);
+      },
+    });
   }
 
   const scheduleOptions = [
@@ -92,12 +102,22 @@ export default function BackupSection() {
 
   return (
     <>
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmDanger={confirmAction.danger}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+          messages={messages}
+        />
+      )}
       <div className="view-header" style={{ marginTop: '2rem' }}>
         <div>
           <h1 className="view-title">{t(messages, 'backup_title')}</h1>
         </div>
       </div>
-      <div className="glass-sm settings-section" style={{ marginBottom: '1rem' }}>
+      <div className="settings-section" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <label>
             <span style={{ fontWeight: 500 }}>{t(messages, 'backup_schedule')}</span>
@@ -142,7 +162,7 @@ export default function BackupSection() {
         </div>
       </div>
 
-      <div className="glass-sm settings-section">
+      <div className="settings-section">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
           <span style={{ fontWeight: 500 }}>{t(messages, 'backup_list')}</span>
           <button className="btn-primary" onClick={handleTrigger} disabled={creating}>

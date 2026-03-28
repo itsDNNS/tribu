@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
+import ConfirmDialog from '../ConfirmDialog';
 import InviteSection from './InviteSection';
 import BackupSection from './BackupSection';
 import AuditLogSection from './AuditLogSection';
@@ -22,15 +23,23 @@ export default function AdminView() {
   const [passwordBannerType, setPasswordBannerType] = useState('created');
   const [copied, setCopied] = useState(false);
   const [creating, setCreating] = useState('');
+  const [confirmAction, setConfirmAction] = useState(null);
 
   async function handleRemoveMember(userId) {
-    if (!confirm(t(messages, 'remove_member_confirm'))) return;
-    const { ok, data } = await api.apiRemoveMember(familyId, userId);
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      return;
-    }
-    await loadMembers();
+    setConfirmAction({
+      title: t(messages, 'remove_member'),
+      message: t(messages, 'remove_member_confirm'),
+      danger: true,
+      action: async () => {
+        const { ok, data } = await api.apiRemoveMember(familyId, userId);
+        if (!ok) {
+          toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        } else {
+          await loadMembers();
+        }
+        setConfirmAction(null);
+      },
+    });
   }
 
   async function handleSetAdult(userId, isAdult) {
@@ -122,26 +131,34 @@ export default function AdminView() {
 
   return (
     <div className="view-enter">
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmDanger={confirmAction.danger}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+          messages={messages}
+        />
+      )}
       <div className="view-header">
         <div>
           <h1 className="view-title">{t(messages, 'admin_members')}</h1>
         </div>
       </div>
       {/* Time Format Toggle */}
-      <div className="glass-sm settings-section" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', marginBottom: 'var(--space-md)' }}>
-        <span style={{ fontSize: '0.85rem', fontWeight: 500, flex: 1 }}>{t(messages, 'time_format')}</span>
-        <button className={`btn-ghost${timeFormat === '24h' ? ' active' : ''}`} onClick={async () => {
-          const { ok } = await api.apiSetTimeFormat('24h');
-          if (ok) setTimeFormat('24h'); else toastError(t(messages, 'toast.error'));
-        }} style={{ padding: '4px 12px', borderRadius: 6, background: timeFormat === '24h' ? 'var(--amethyst)' : undefined, color: timeFormat === '24h' ? '#fff' : undefined }}>
-          24h
-        </button>
-        <button className={`btn-ghost${timeFormat === '12h' ? ' active' : ''}`} onClick={async () => {
-          const { ok } = await api.apiSetTimeFormat('12h');
-          if (ok) setTimeFormat('12h'); else toastError(t(messages, 'toast.error'));
-        }} style={{ padding: '4px 12px', borderRadius: 6, background: timeFormat === '12h' ? 'var(--amethyst)' : undefined, color: timeFormat === '12h' ? '#fff' : undefined }}>
-          12h
-        </button>
+      <div className="admin-time-toggle">
+        <span className="admin-time-label">{t(messages, 'time_format')}</span>
+        <div className="rewards-tabs">
+          <button className={`rewards-tab${timeFormat === '24h' ? ' active' : ''}`} onClick={async () => {
+            const { ok } = await api.apiSetTimeFormat('24h');
+            if (ok) setTimeFormat('24h'); else toastError(t(messages, 'toast.error'));
+          }}>24h</button>
+          <button className={`rewards-tab${timeFormat === '12h' ? ' active' : ''}`} onClick={async () => {
+            const { ok } = await api.apiSetTimeFormat('12h');
+            if (ok) setTimeFormat('12h'); else toastError(t(messages, 'toast.error'));
+          }}>12h</button>
+        </div>
       </div>
 
       {/* Member Created Banner */}
@@ -170,7 +187,7 @@ export default function AdminView() {
             onClick={() => { setCreatedPassword(null); setCopied(false); }}
             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginTop: 'var(--space-sm)', fontSize: '0.78rem' }}
           >
-            <X size={12} style={{ verticalAlign: 'middle' }} /> Dismiss
+            <X size={12} style={{ verticalAlign: 'middle' }} /> {t(messages, 'dismiss')}
           </button>
         </div>
       )}
@@ -182,7 +199,7 @@ export default function AdminView() {
         <div style={{ marginTop: 'var(--space-md)' }}>
           {showAddMember ? (
             <form onSubmit={handleCreateMember}>
-              <div className="glass-sm settings-section" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
+              <div className="settings-section" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
                   {t(messages, 'add_member_desc')}
                 </p>
@@ -275,7 +292,7 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
   }, [members]);
 
   const renderMember = (m) => (
-    <div key={m.user_id} className="glass-sm settings-section">
+    <div key={m.user_id} className="settings-section">
       <div className="profile-row">
         <div className="sidebar-user-avatar">{m.display_name?.[0] || '?'}</div>
         <div className="profile-info">
@@ -304,7 +321,7 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
               onChange={(e) => onSetBirthdate(m.user_id, e.target.value || null)}
               aria-label={t(messages, 'birthdate')} />
             <button className="btn-ghost" onClick={() => onResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>
-            <button className="btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => onRemoveMember(m.user_id)}><X size={13} /> {t(messages, 'remove_member')}</button>
+            <button className="btn-ghost btn-outline-danger" onClick={() => onRemoveMember(m.user_id)}><X size={13} /> {t(messages, 'remove_member')}</button>
           </>
         )}
       </div>

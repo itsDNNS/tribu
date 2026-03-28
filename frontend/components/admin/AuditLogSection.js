@@ -55,7 +55,7 @@ export default function AuditLogSection() {
         </div>
       </div>
 
-      <div className="glass-sm settings-section">
+      <div className="settings-section">
         {entries.length === 0 && !loading && (
           <p style={{ opacity: 0.6 }}>{t(messages, 'audit_log_empty')}</p>
         )}

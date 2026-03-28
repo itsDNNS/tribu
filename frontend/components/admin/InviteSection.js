@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
+import ConfirmDialog from '../ConfirmDialog';
 
 export default function InviteSection() {
   const { familyId, messages, demoMode } = useApp();
@@ -17,6 +18,7 @@ export default function InviteSection() {
   const [maxUses, setMaxUses] = useState('');
   const [createdUrl, setCreatedUrl] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Base URL settings
   const [baseUrl, setBaseUrl] = useState('');
@@ -67,13 +69,20 @@ export default function InviteSection() {
   }
 
   async function handleRevoke(inviteId) {
-    if (!confirm(t(messages, 'invite_revoke_confirm'))) return;
-    const { ok, data } = await api.apiRevokeInvitation(familyId, inviteId);
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      return;
-    }
-    await loadInvites();
+    setConfirmAction({
+      title: t(messages, 'invite_revoke'),
+      message: t(messages, 'invite_revoke_confirm'),
+      danger: true,
+      action: async () => {
+        const { ok, data } = await api.apiRevokeInvitation(familyId, inviteId);
+        if (!ok) {
+          toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        } else {
+          await loadInvites();
+        }
+        setConfirmAction(null);
+      },
+    });
   }
 
   async function handleSaveBaseUrl() {
@@ -114,6 +123,16 @@ export default function InviteSection() {
 
   return (
     <>
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          confirmDanger={confirmAction.danger}
+          onConfirm={confirmAction.action}
+          onCancel={() => setConfirmAction(null)}
+          messages={messages}
+        />
+      )}
       <div className="view-header" style={{ marginTop: '2rem' }}>
         <div>
           <h1 className="view-title">{t(messages, 'invite_title')}</h1>
@@ -121,7 +140,7 @@ export default function InviteSection() {
       </div>
       {/* Base URL setting */}
       {!demoMode && (
-        <div className="glass-sm settings-section" style={{ marginBottom: '1rem' }}>
+        <div className="settings-section" style={{ marginBottom: '1rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <span style={{ fontWeight: 500 }}>{t(messages, 'base_url_title')}</span>
             <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t(messages, 'base_url_hint')}</small>
@@ -173,13 +192,13 @@ export default function InviteSection() {
             onClick={() => { setCreatedUrl(null); setCopied(false); }}
             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginTop: 'var(--space-sm)', fontSize: '0.78rem' }}
           >
-            <X size={12} style={{ verticalAlign: 'middle' }} /> Dismiss
+            <X size={12} style={{ verticalAlign: 'middle' }} /> {t(messages, 'dismiss')}
           </button>
         </div>
       )}
 
       {/* Invite list */}
-      <div className="glass-sm settings-section" style={{ marginBottom: '1rem' }}>
+      <div className="settings-section" style={{ marginBottom: '1rem' }}>
         {invites.length === 0 && <p style={{ opacity: 0.6 }}>{t(messages, 'invite_no_invites')}</p>}
         {invites.map((inv) => {
           const status = inviteStatus(inv);
@@ -217,7 +236,7 @@ export default function InviteSection() {
         <div style={{ marginBottom: '1rem' }}>
           {showCreate ? (
             <form onSubmit={handleCreate}>
-              <div className="glass-sm settings-section" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
+              <div className="settings-section" style={{ padding: 'var(--space-md)', display: 'grid', gap: 'var(--space-md)' }}>
                 <div className="form-field">
                   <label>{t(messages, 'invite_role')}</label>
                   <select className="form-input" value={rolePreset} onChange={(e) => setRolePreset(e.target.value)}>
