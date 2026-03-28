@@ -1681,3 +1681,5 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .set-token-expiry-input { flex: 1; }
 .set-token-actions { display: flex; gap: var(--space-sm); }
 .set-token-add-btn { margin-top: var(--space-sm); }
+.set-token-banner-icon { color: var(--success); }
+.set-token-dismiss-icon { vertical-align: middle; }

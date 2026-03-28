@@ -111,16 +111,16 @@ export default function DataTab() {
       {/* Data Management */}
       <div className="settings-section">
         <div className="settings-section-title"><Database size={16} /> {t(messages, 'data_management')}</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
+        <p className="set-data-section-desc">
           {t(messages, 'data_management_desc')}
         </p>
 
         {/* Calendar (ICS) */}
-        <div style={{ marginBottom: 'var(--space-lg)' }}>
-          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)' }}>
+        <div className="set-data-block">
+          <div className="set-data-sub-heading">
             {t(messages, 'calendar')} (ICS)
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+          <div className="set-data-btn-row">
             <button className="btn-ghost" onClick={handleExportIcs}>
               <Download size={15} /> {t(messages, 'module.calendar.export')}
             </button>
@@ -132,14 +132,14 @@ export default function DataTab() {
           {showCalImport && (
             <div className="settings-subsection">
               {calMsg && (
-                <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: calErrors.length === 0 && calMsg.includes(t(messages, 'module.calendar.import_success').split('{')[0]) ? 'var(--success)' : 'var(--danger)' }}>
+                <p className="set-data-msg" style={{ color: calErrors.length === 0 && calMsg.includes(t(messages, 'module.calendar.import_success').split('{')[0]) ? 'var(--success)' : 'var(--danger)' }}>
                   {calMsg}
                 </p>
               )}
               {calErrors.length > 0 && (
-                <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.82rem', color: 'var(--warning, #f6ad55)' }}>
+                <div className="set-data-warning">
                   <strong>{t(messages, 'module.calendar.import_warnings')}:</strong>
-                  <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                  <ul className="set-data-warning-list">
                     {calErrors.map((err, i) => (
                       <li key={i}>#{err.index} {err.summary ? `"${err.summary}"` : ''}: {err.error}</li>
                     ))}
@@ -147,11 +147,10 @@ export default function DataTab() {
                 </div>
               )}
               <form onSubmit={handleImportIcs} className="quick-add-form">
-                <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t(messages, 'module.calendar.import_hint')}</label>
-                <input type="file" accept=".ics" onChange={handleIcsFile} className="form-input" style={{ padding: '10px 12px' }} />
+                <label className="set-data-form-hint">{t(messages, 'module.calendar.import_hint')}</label>
+                <input type="file" accept=".ics" onChange={handleIcsFile} className="form-input set-data-file-input" />
                 <textarea
-                  className="form-input"
-                  style={{ minHeight: 100 }}
+                  className="form-input set-data-textarea-ics"
                   value={icsText}
                   onChange={(e) => setIcsText(e.target.value)}
                   placeholder={t(messages, 'module.calendar.import_placeholder')}
@@ -166,10 +165,10 @@ export default function DataTab() {
 
         {/* Contacts (CSV) */}
         <div>
-          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)' }}>
+          <div className="set-data-sub-heading">
             {t(messages, 'contacts')} (CSV)
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+          <div className="set-data-btn-row">
             <button className="btn-ghost" onClick={handleExportCsv}>
               <Download size={15} /> {t(messages, 'module.contacts.export')}
             </button>
@@ -181,14 +180,14 @@ export default function DataTab() {
           {showContactsImport && (
             <div className="settings-subsection">
               {contactsMsg && (
-                <p style={{ marginBottom: 'var(--space-sm)', fontSize: '0.88rem', color: contactsMsg.includes(t(messages, 'module.contacts.import_success')) ? 'var(--success)' : 'var(--danger)' }}>
+                <p className="set-data-msg" style={{ color: contactsMsg.includes(t(messages, 'module.contacts.import_success')) ? 'var(--success)' : 'var(--danger)' }}>
                   {contactsMsg}
                 </p>
               )}
               {rowErrors.length > 0 && (
-                <div style={{ marginBottom: 'var(--space-sm)', fontSize: '0.82rem', color: 'var(--warning, #f6ad55)' }}>
+                <div className="set-data-warning">
                   <strong>{t(messages, 'module.contacts.import_warnings')}:</strong>
-                  <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                  <ul className="set-data-warning-list">
                     {rowErrors.map((re, i) => (
                       <li key={i}>{t(messages, 'module.contacts.row')} {re.row} ({re.name}): {re.errors.join(', ')}</li>
                     ))}
@@ -196,10 +195,9 @@ export default function DataTab() {
                 </div>
               )}
               <form onSubmit={handleImportCsv} className="quick-add-form">
-                <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t(messages, 'contacts_csv_hint')}</label>
+                <label className="set-data-form-hint">{t(messages, 'contacts_csv_hint')}</label>
                 <textarea
-                  className="form-input"
-                  style={{ minHeight: 120 }}
+                  className="form-input set-data-textarea-csv"
                   value={csvText}
                   onChange={(e) => setCsvText(e.target.value)}
                   placeholder={t(messages, 'contacts_csv_hint')}
@@ -216,20 +214,20 @@ export default function DataTab() {
       {/* Subscriptions */}
       <div className="settings-section">
         <div className="settings-section-title"><Rss size={16} /> {t(messages, 'subscriptions')}</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 'var(--space-md)' }}>
+        <p className="set-data-section-desc">
           {t(messages, 'subscriptions_desc')}
         </p>
 
         {subToken ? (
-          <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+          <div className="set-data-sub-grid">
             {/* Calendar Feed URL */}
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)', display: 'block' }}>
+              <label className="set-data-sub-heading--block">
                 {t(messages, 'sub_calendar_feed')}
               </label>
-              <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
-                <code className="token-display" style={{ flex: 1 }}>{subCalendarUrl}</code>
-                <button className="btn-ghost" onClick={() => handleCopySubUrl(subCalendarUrl, 'calendar')} style={{ flexShrink: 0 }}>
+              <div className="set-data-flex-row">
+                <code className="token-display set-data-flex-grow">{subCalendarUrl}</code>
+                <button className="btn-ghost set-data-no-shrink" onClick={() => handleCopySubUrl(subCalendarUrl, 'calendar')}>
                   {subCopiedCal ? <><Check size={14} /> {t(messages, 'sub_copied')}</> : <><Copy size={14} /> {t(messages, 'sub_copy')}</>}
                 </button>
               </div>
@@ -237,12 +235,12 @@ export default function DataTab() {
 
             {/* Contacts Feed URL */}
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-sm)', display: 'block' }}>
+              <label className="set-data-sub-heading--block">
                 {t(messages, 'sub_contacts_feed')}
               </label>
-              <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
-                <code className="token-display" style={{ flex: 1 }}>{subContactsUrl}</code>
-                <button className="btn-ghost" onClick={() => handleCopySubUrl(subContactsUrl, 'contacts')} style={{ flexShrink: 0 }}>
+              <div className="set-data-flex-row">
+                <code className="token-display set-data-flex-grow">{subContactsUrl}</code>
+                <button className="btn-ghost set-data-no-shrink" onClick={() => handleCopySubUrl(subContactsUrl, 'contacts')}>
                   {subCopiedContacts ? <><Check size={14} /> {t(messages, 'sub_copied')}</> : <><Copy size={14} /> {t(messages, 'sub_copy')}</>}
                 </button>
               </div>
@@ -250,22 +248,22 @@ export default function DataTab() {
 
             {/* Setup Hints */}
             <div>
-              <button className="btn-ghost" onClick={() => setSubShowHints(!subShowHints)} style={{ fontSize: '0.85rem' }}>
+              <button className="btn-ghost set-data-hints-btn" onClick={() => setSubShowHints(!subShowHints)}>
                 {subShowHints ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                 {t(messages, 'sub_setup_hints')}
               </button>
               {subShowHints && (
-                <div className="settings-subsection" style={{ marginTop: 'var(--space-sm)', display: 'grid', gap: 'var(--space-md)', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                <div className="settings-subsection set-data-hints-content">
                   <div>
                     <strong>{t(messages, 'sub_setup_android_title')}</strong>
-                    <p style={{ margin: '4px 0 0' }}>{t(messages, 'sub_setup_android')}</p>
+                    <p className="set-data-hint-para">{t(messages, 'sub_setup_android')}</p>
                   </div>
                   <div>
                     <strong>{t(messages, 'sub_setup_ios_title')}</strong>
-                    <p style={{ margin: '4px 0 0' }}>{t(messages, 'sub_setup_ios')}</p>
+                    <p className="set-data-hint-para">{t(messages, 'sub_setup_ios')}</p>
                   </div>
                   <div>
-                    <p style={{ margin: 0 }}>{t(messages, 'sub_setup_contacts_hint')}</p>
+                    <p className="set-data-hint-para--flush">{t(messages, 'sub_setup_contacts_hint')}</p>
                   </div>
                 </div>
               )}
@@ -273,7 +271,7 @@ export default function DataTab() {
           </div>
         ) : (
           <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 'var(--space-sm)' }}>
+            <p className="set-data-muted-info">
               {t(messages, 'sub_token_missing')}
             </p>
             <button className="btn-sm" onClick={handleCreateSubToken} disabled={subCreating}>
