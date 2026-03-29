@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMemo } from 'react';
-import { Plus, Check, Copy, X, KeyRound, Shield } from 'lucide-react';
+import { Plus, Check, Copy, X, KeyRound, Shield, ImageIcon } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import MemberAvatar from '../MemberAvatar';
 import { useToast } from '../../contexts/ToastContext';
@@ -54,6 +54,18 @@ export default function AdminView() {
       toastInfo(t(messages, 'admin_demoted'));
     }
     await loadMembers();
+  }
+
+  async function handleSetAvatar(userId, e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const { ok, data } = await api.apiSetMemberAvatar(familyId, userId, reader.result);
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      await loadMembers();
+    };
+    reader.readAsDataURL(file);
   }
 
   async function handleSetBirthdate(userId, dateOfBirth) {
@@ -187,7 +199,7 @@ export default function AdminView() {
         </div>
       )}
 
-      <MemberGroups members={members} me={me} messages={messages} onSetAdult={handleSetAdult} onSetRole={handleSetRole} onResetPassword={handleResetPassword} onRemoveMember={handleRemoveMember} onSetBirthdate={handleSetBirthdate} />
+      <MemberGroups members={members} me={me} messages={messages} onSetAdult={handleSetAdult} onSetRole={handleSetRole} onResetPassword={handleResetPassword} onRemoveMember={handleRemoveMember} onSetBirthdate={handleSetBirthdate} onSetAvatar={handleSetAvatar} />
 
       {/* Add Member */}
       {!demoMode && (
@@ -272,7 +284,7 @@ function getAge(dateOfBirth) {
   return age;
 }
 
-function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPassword, onRemoveMember, onSetBirthdate }) {
+function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPassword, onRemoveMember, onSetBirthdate, onSetAvatar }) {
   const { adults, children } = useMemo(() => {
     const roleRank = (r) => r === 'owner' ? 0 : r === 'admin' ? 1 : 2;
     const sorted = [...members].sort((a, b) => {
@@ -315,6 +327,10 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
               value={m.date_of_birth || ''}
               onChange={(e) => onSetBirthdate(m.user_id, e.target.value || null)}
               aria-label={t(messages, 'birthdate')} />
+            <label className="btn-ghost" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <ImageIcon size={13} /> {t(messages, 'set_avatar')}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => onSetAvatar(m.user_id, e)} />
+            </label>
             <button className="btn-ghost" onClick={() => onResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>
             <button className="btn-ghost btn-outline-danger" onClick={() => onRemoveMember(m.user_id)}><X size={13} /> {t(messages, 'remove_member')}</button>
           </>

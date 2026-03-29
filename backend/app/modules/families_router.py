@@ -262,6 +262,35 @@ def update_member_birthdate(
 
 
 @router.patch(
+    "/{family_id}/members/{target_user_id}/avatar",
+    summary="Set member profile image",
+    description="Upload a profile image for a family member. Admin role required. Scope: `families:write`.",
+    response_description="Avatar updated",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def update_member_avatar(
+    family_id: int,
+    target_user_id: int,
+    payload: dict,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+    membership = db.query(Membership).filter(
+        Membership.family_id == family_id,
+        Membership.user_id == target_user_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
+    target_user = db.query(User).filter(User.id == target_user_id).first()
+    target_user.profile_image = payload.get("profile_image")
+    db.commit()
+    cache.invalidate(f"tribu:members:{family_id}")
+    return {"status": "ok"}
+
+
+@router.patch(
     "/{family_id}/members/{target_user_id}/role",
     summary="Update member role",
     description="Change a member's role to admin or member. Only adults can be promoted to admin. Admin role required. Scope: `families:write`.",
