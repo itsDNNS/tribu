@@ -59,9 +59,14 @@ export default function AdminView() {
   async function handleSetAvatar(userId, e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      return toastError(t(messages, 'avatar_too_large'));
+    }
+    const input = e.target;
     const reader = new FileReader();
     reader.onload = async () => {
       const { ok, data } = await api.apiSetMemberAvatar(familyId, userId, reader.result);
+      input.value = '';
       if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadMembers();
     };

@@ -416,6 +416,7 @@
   "years_old": "Jahre alt",
   "birthdate": "Geburtsdatum",
   "set_avatar": "Avatar",
+  "avatar_too_large": "Bild zu groß (max. 2 MB)",
   "time_format": "Zeitformat",
   "search.title": "Suche",
   "search.placeholder": "Termine, Aufgaben, Kontakte suchen...",
