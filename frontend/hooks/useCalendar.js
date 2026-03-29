@@ -11,8 +11,19 @@ export function useCalendar() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [calendarView, setCalendarViewRaw] = useState('month');
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [selectedDate, setSelectedDate] = useState(null);
+
+  // Read and consume focus date from dashboard click (single read, shared value)
+  const _initialFocus = (() => {
+    if (typeof window === 'undefined') return null;
+    const raw = sessionStorage.getItem('tribu_calendar_focus');
+    if (!raw) return null;
+    sessionStorage.removeItem('tribu_calendar_focus');
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  })();
+
+  const [calendarMonth, setCalendarMonth] = useState(() => _initialFocus ?? new Date());
+  const [selectedDate, setSelectedDate] = useState(() => _initialFocus);
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
 
   // Event form
