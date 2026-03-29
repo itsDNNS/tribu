@@ -3,7 +3,7 @@ import { Plus, Check, Trash2, X, ShoppingCart } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useShopping } from '../hooks/useShopping';
 import { t } from '../lib/i18n';
-import { getMemberColor } from '../lib/member-colors';
+import MemberAvatar from './MemberAvatar';
 import ConfirmDialog from './ConfirmDialog';
 
 function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) {
@@ -34,11 +34,7 @@ function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) 
         <span className="shopping-item-name">{item.name}</span>
         {item.spec && <span className="shopping-spec">{item.spec}</span>}
       </div>
-      {addedBy && (
-        <div className="shopping-added-by" style={{ background: getMemberColor(addedBy, memberIdx) }}>
-          {(addedBy.display_name || '?').charAt(0).toUpperCase()}
-        </div>
-      )}
+      {addedBy && <MemberAvatar member={addedBy} index={memberIdx} size={22} />}
       {onDelete && (
         <button
           className="shopping-item-delete"

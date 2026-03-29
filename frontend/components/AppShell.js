@@ -81,7 +81,7 @@ export default function AppShell() {
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
   const openTaskCount = tasks.filter((tk) => tk.status === 'open').length;
   const totalUnchecked = shoppingLists.reduce((sum, l) => sum + (l.item_count - l.checked_count), 0);
-  const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
+
 
   // Item registry: all possible nav items keyed by their route key
   const itemRegistry = useMemo(() => ({

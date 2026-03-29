@@ -6,6 +6,7 @@ import { useRewards } from '../hooks/useRewards';
 import { CurrencyIcon } from '../lib/currency-icons';
 import { t } from '../lib/i18n';
 import { errorText, parseDate } from '../lib/helpers';
+import MemberAvatar from './MemberAvatar';
 import * as api from '../lib/api';
 
 const CURRENCY_PRESETS = [
@@ -197,11 +198,7 @@ export default function RewardsView() {
               const member = members.find(m => m.user_id === b.user_id);
               return (
                 <div key={b.user_id} className="glass-sm rewards-balance-card">
-                  {member?.profile_image ? (
-                    <img src={member.profile_image} alt="" className="rewards-balance-card-avatar" />
-                  ) : (
-                    <div className="sidebar-user-avatar rewards-balance-card-avatar-fallback">{(b.display_name || '?')[0].toUpperCase()}</div>
-                  )}
+                  <MemberAvatar member={member || { display_name: b.display_name }} index={i} size={28} />
                   <div>
                     <div className="rewards-balance-card-name">{b.display_name}</div>
                     <div className="rewards-balance-card-value"><CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {b.balance}</div>

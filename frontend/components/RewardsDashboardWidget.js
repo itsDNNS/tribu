@@ -3,6 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { useRewards } from '../hooks/useRewards';
 import { CurrencyIcon } from '../lib/currency-icons';
 import { t } from '../lib/i18n';
+import MemberAvatar from './MemberAvatar';
 
 export default function RewardsDashboardWidget() {
   const { messages, isChild, members, setActiveView } = useApp();
@@ -64,15 +65,11 @@ export default function RewardsDashboardWidget() {
       </div>
       {childBalances.length > 0 ? (
         <div className="rewards-child-list">
-          {childBalances.map(b => {
+          {childBalances.map((b, i) => {
             const member = members.find(m => m.user_id === b.user_id);
             return (
               <div key={b.user_id} className="rewards-child-row">
-                {member?.profile_image ? (
-                  <img src={member.profile_image} alt="" className="rewards-child-avatar" />
-                ) : (
-                  <div className="sidebar-user-avatar rewards-child-avatar-fallback">{(b.display_name || '?')[0].toUpperCase()}</div>
-                )}
+                <MemberAvatar member={member || { display_name: b.display_name }} index={i} size={24} />
                 <span className="rewards-child-name">{b.display_name}</span>
                 <span className="rewards-child-balance"><CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {b.balance}</span>
               </div>
