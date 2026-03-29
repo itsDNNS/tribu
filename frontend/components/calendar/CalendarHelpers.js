@@ -3,6 +3,7 @@ import { Cake, Pencil, Repeat, Trash2 } from 'lucide-react';
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
+import MemberAvatar from '../MemberAvatar';
 
 export const RECURRENCE_OPTIONS = [
   { value: '', key: 'module.calendar.no_repeat' },
@@ -110,19 +111,9 @@ export function AssignedBadges({ assignedTo, members }) {
 
   return (
     <div className="assigned-badges">
-      {badgeMembers.map((m, i) => {
-        const initials = m.display_name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-        return (
-          <span
-            key={m.user_id}
-            className="assigned-badge"
-            title={m.display_name}
-            style={{ background: getMemberColor(m, i) }}
-          >
-            {initials}
-          </span>
-        );
-      })}
+      {badgeMembers.map((m, i) => (
+        <MemberAvatar key={m.user_id} member={m} index={i} size={20} />
+      ))}
     </div>
   );
 }

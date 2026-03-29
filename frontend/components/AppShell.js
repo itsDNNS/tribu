@@ -4,6 +4,7 @@ import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
+import MemberAvatar from './MemberAvatar';
 import DashboardView from './DashboardView';
 import CalendarView from './calendar';
 import ContactsView from './ContactsView';
@@ -54,7 +55,7 @@ function DashboardSkeleton() {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, tasks, shoppingLists, unreadCount, logout, demoMode, loading, navOrder } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, tasks, shoppingLists, unreadCount, logout, demoMode, loading, navOrder, profileImage } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -80,7 +81,7 @@ export default function AppShell() {
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
   const openTaskCount = tasks.filter((tk) => tk.status === 'open').length;
   const totalUnchecked = shoppingLists.reduce((sum, l) => sum + (l.item_count - l.checked_count), 0);
-  const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
+
 
   // Item registry: all possible nav items keyed by their route key
   const itemRegistry = useMemo(() => ({
@@ -205,9 +206,7 @@ export default function AppShell() {
               <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{currentFamily.family_name}</span>
               <div className="family-avatars">
                 {members.slice(0, 4).map((m, i) => (
-                  <div key={m.user_id} className="family-avatar-mini" style={{ background: getMemberColor(m, i) }}>
-                    {(m.display_name || '?').charAt(0).toUpperCase()}
-                  </div>
+                  <MemberAvatar key={m.user_id} member={m} index={i} size={24} />
                 ))}
               </div>
               <ChevronDown size={16} style={{ color: 'var(--text-muted)', marginLeft: 4 }} aria-hidden="true" />
@@ -252,7 +251,7 @@ export default function AppShell() {
           <div className="sidebar-divider" />
 
           <div className="sidebar-user">
-            <div className="sidebar-user-avatar">{initials}</div>
+            <MemberAvatar member={members.find(m => m.user_id === me?.user_id) || { display_name: me?.display_name, profile_image: profileImage }} size={36} />
             {!collapsed && (
               <div className="sidebar-user-info">
                 <div className="sidebar-user-name">{me?.display_name || 'User'}</div>

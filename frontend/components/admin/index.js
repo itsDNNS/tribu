@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMemo } from 'react';
 import { Plus, Check, Copy, X, KeyRound, Shield } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import MemberAvatar from '../MemberAvatar';
 import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
@@ -288,7 +289,7 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
   const renderMember = (m) => (
     <div key={m.user_id} className="settings-section">
       <div className="profile-row">
-        <div className="sidebar-user-avatar">{m.display_name?.[0] || '?'}</div>
+        <MemberAvatar member={m} size={36} />
         <div className="profile-info">
           <div className="profile-name adm-profile-name">
             {m.display_name}
