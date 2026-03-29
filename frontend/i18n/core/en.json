@@ -415,6 +415,8 @@
   "member_group_children": "Children",
   "years_old": "years old",
   "birthdate": "Date of birth",
+  "set_avatar": "Avatar",
+  "avatar_too_large": "Image too large (max 2 MB)",
   "time_format": "Time format",
   "search.title": "Search",
   "search.placeholder": "Search events, tasks, contacts...",

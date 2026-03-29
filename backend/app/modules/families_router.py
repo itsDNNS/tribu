@@ -7,7 +7,7 @@ from app.core.deps import current_user, ensure_family_admin, ensure_family_membe
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import AuditLog, Family, Membership, User
-from app.schemas import AUTH_RESPONSES, ADMIN_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, ErrorResponse, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ResetPasswordResponse
+from app.schemas import AUTH_RESPONSES, ADMIN_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, ErrorResponse, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
 from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF
 
@@ -259,6 +259,40 @@ def update_member_birthdate(
     db.commit()
     cache.invalidate(f"tribu:members:{family_id}")
     return {"status": "ok", "user_id": target_user_id, "date_of_birth": str(membership.date_of_birth) if membership.date_of_birth else None}
+
+
+@router.patch(
+    "/{family_id}/members/{target_user_id}/avatar",
+    summary="Set member profile image",
+    description="Upload a profile image for a family member. Admin role required. Scope: `families:write`.",
+    response_description="Avatar updated",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def update_member_avatar(
+    family_id: int,
+    target_user_id: int,
+    payload: ProfileImageUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+    membership = db.query(Membership).filter(
+        Membership.family_id == family_id,
+        Membership.user_id == target_user_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
+    target_user = db.query(User).filter(User.id == target_user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail=error_detail(USER_NOT_FOUND))
+    target_user.profile_image = payload.profile_image
+    db.commit()
+    # Invalidate cache for all families this user belongs to
+    family_ids = [m.family_id for m in db.query(Membership).filter(Membership.user_id == target_user_id).all()]
+    for fid in family_ids:
+        cache.invalidate(f"tribu:members:{fid}")
+    return {"status": "ok"}
 
 
 @router.patch(

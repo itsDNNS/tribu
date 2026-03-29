@@ -429,6 +429,10 @@ export function apiSearch(familyId, query) {
 }
 
 // Rewards
+export function apiSetMemberAvatar(familyId, userId, profileImage) {
+  return patch(`/families/${familyId}/members/${userId}/avatar`, { profile_image: profileImage });
+}
+
 export function apiSetMemberBirthdate(familyId, userId, dateOfBirth) {
   return patch(`/families/${familyId}/members/${userId}/birthdate`, { date_of_birth: dateOfBirth });
 }
