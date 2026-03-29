@@ -73,12 +73,14 @@ export default function DashboardView() {
                 {!isChild && <button className="bento-empty-action" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.empty_events_action')}</button>}
               </div>
             )}
-            {summary.next_events?.slice(0, 4).map((ev, i) => (
-              <div key={ev.id} className="event-item" style={{ cursor: 'pointer' }} onClick={() => {
+            {summary.next_events?.slice(0, 4).map((ev, i) => {
+              const goToEvent = () => {
                 const d = parseDate(ev.starts_at);
                 if (d) sessionStorage.setItem('tribu_calendar_focus', d.toISOString());
                 setActiveView('calendar');
-              }} role="link" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') { const d = parseDate(ev.starts_at); if (d) sessionStorage.setItem('tribu_calendar_focus', d.toISOString()); setActiveView('calendar'); } }}>
+              };
+              return (
+              <div key={ev.id} className="event-item" style={{ cursor: 'pointer' }} onClick={goToEvent} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToEvent(); } }}>
                 <div className="event-time">{parseDate(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}</div>
                 <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">
@@ -89,7 +91,8 @@ export default function DashboardView() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
