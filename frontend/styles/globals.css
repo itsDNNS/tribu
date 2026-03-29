@@ -643,7 +643,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 
 /* ─── Admin ─── */
 .admin-error { color: var(--danger); margin-bottom: var(--space-md); }
-.admin-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-md); }
+.admin-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-md); }
 .admin-time-toggle { display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md); }
 .admin-time-label { font-weight: 500; font-size: 0.88rem; }
 
