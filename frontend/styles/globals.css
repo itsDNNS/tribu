@@ -668,7 +668,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .adm-profile-name { display: flex; align-items: center; gap: 6px; }
 .adm-age { margin-left: 8px; font-size: 0.75rem; color: var(--text-muted); }
 .adm-self-hint { font-size: 0.82rem; color: var(--text-muted); font-style: italic; }
-.adm-birthdate-input { width: auto; padding: 4px 8px; font-size: 0.78rem; }
+.adm-birthdate-input { width: auto; min-width: 140px; padding: 4px 8px; font-size: 0.78rem; }
 
 /* Admin: invite section */
 .adm-section-header { margin-top: 2rem; }
@@ -700,7 +700,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .adm-backup-last { font-size: 0.85rem; opacity: 0.8; }
 .adm-backup-volume { font-size: 0.8rem; opacity: 0.6; }
 .adm-retention-hint { font-size: 0.8rem; opacity: 0.7; }
-.adm-btn-row { display: flex; gap: 0.5rem; }
+.adm-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
 /* Admin: audit log */
 .adm-load-more { margin-top: var(--space-sm); }
