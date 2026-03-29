@@ -74,7 +74,11 @@ export default function DashboardView() {
               </div>
             )}
             {summary.next_events?.slice(0, 4).map((ev, i) => (
-              <div key={ev.id} className="event-item">
+              <div key={ev.id} className="event-item" style={{ cursor: 'pointer' }} onClick={() => {
+                const d = parseDate(ev.starts_at);
+                if (d) sessionStorage.setItem('tribu_calendar_focus', d.toISOString());
+                setActiveView('calendar');
+              }} role="link" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') { const d = parseDate(ev.starts_at); if (d) sessionStorage.setItem('tribu_calendar_focus', d.toISOString()); setActiveView('calendar'); } }}>
                 <div className="event-time">{parseDate(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}</div>
                 <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">

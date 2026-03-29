@@ -11,8 +11,15 @@ export function useCalendar() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [calendarView, setCalendarViewRaw] = useState('month');
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const focus = typeof window !== 'undefined' && sessionStorage.getItem('tribu_calendar_focus');
+    return focus ? new Date(focus) : new Date();
+  });
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const focus = typeof window !== 'undefined' && sessionStorage.getItem('tribu_calendar_focus');
+    if (focus) { sessionStorage.removeItem('tribu_calendar_focus'); return new Date(focus); }
+    return null;
+  });
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
 
   // Event form
