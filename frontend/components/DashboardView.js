@@ -3,6 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
+import MemberAvatar from './MemberAvatar';
 import { AssignedBadges } from './calendar/CalendarHelpers';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
 
@@ -139,11 +140,7 @@ export default function DashboardView() {
                     <div className="task-preview-title">{task.title}</div>
                   </div>
                   <div className="task-priority-dot" style={{ background: priorityColor }} aria-hidden="true" />
-                  {assignee && (
-                    <div className="task-assignee-mini" style={{ background: getMemberColor(assignee, members.indexOf(assignee)) }}>
-                      {(assignee.display_name || '?').charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  {assignee && <MemberAvatar member={assignee} index={members.indexOf(assignee)} size={22} />}
                 </div>
               );
             })}

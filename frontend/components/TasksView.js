@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
+import MemberAvatar from './MemberAvatar';
 import { getMemberColor } from '../lib/member-colors';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -153,11 +154,7 @@ export default function TasksView() {
                     </div>
                   </div>
 
-                  {assignee && (
-                    <div className="task-assignee" style={{ background: getMemberColor(assignee, assigneeIndex) }}>
-                      {(assignee.display_name || '?').charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  {assignee && <MemberAvatar member={assignee} index={assigneeIndex} size={24} />}
 
                   {!isChild && (
                     <button
