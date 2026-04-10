@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.backup import restore_backup, validate_backup
 from app.database import get_db, engine
 from app.models import User
-from app.schemas import CONFLICT_RESPONSE, ErrorResponse, SetupStatusResponse, RestoreResponse
+from app.schemas import CONFLICT_RESPONSE, SetupStatusResponse, RestoreResponse
 from app.core.errors import error_detail, SETUP_ALREADY_COMPLETED, INVALID_FILE_FORMAT, RESTORE_IN_PROGRESS, RESTORE_FAILED
 
 router = APIRouter(prefix="/setup", tags=["setup"])

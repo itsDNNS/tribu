@@ -5,7 +5,7 @@ from app.core import cache
 from app.core.deps import current_user
 from app.database import get_db
 from app.models import User, UserNavOrder
-from app.schemas import AUTH_RESPONSES, ErrorResponse, NavOrderResponse, NavOrderUpdate
+from app.schemas import AUTH_RESPONSES, NavOrderResponse, NavOrderUpdate
 from app.core.errors import error_detail, UNKNOWN_NAV_KEYS
 
 router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})

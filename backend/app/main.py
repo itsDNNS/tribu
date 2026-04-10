@@ -8,13 +8,12 @@ from slowapi.extension import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
-import os
 
 from app.core.deps import current_user
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION
 from app.database import get_db, SessionLocal
-from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingItem, ShoppingList, SystemSetting, Task, User
+from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, SystemSetting, Task, User
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router

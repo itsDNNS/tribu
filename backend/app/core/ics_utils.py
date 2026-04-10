@@ -4,7 +4,7 @@ from datetime import datetime, date, timedelta
 
 from app.core.utils import utcnow
 
-from icalendar import Calendar, Event, vDate, vDatetime, vRecur
+from icalendar import Calendar, Event
 
 RECURRENCE_MAP = {
     "daily": "DAILY",

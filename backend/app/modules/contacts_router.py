@@ -11,7 +11,7 @@ from app.core.scopes import require_scope
 from app.core.vcf_utils import contacts_to_vcf
 from app.database import get_db
 from app.models import Contact, FamilyBirthday, User
-from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ErrorResponse, ContactCreate, ContactResponse, ContactUpdate, ContactsCsvImport
+from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ContactCreate, ContactResponse, ContactUpdate, ContactsCsvImport
 from app.core.errors import error_detail, CONTACT_NOT_FOUND, CSV_MISSING_COLUMN
 
 router = APIRouter(prefix="/contacts", tags=["contacts"], responses={**AUTH_RESPONSES})

@@ -1,6 +1,4 @@
 import asyncio
-import json
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -11,7 +9,7 @@ from app.core.deps import current_user
 from app.core.push import get_vapid_public_key
 from app.database import get_db
 from app.models import Notification, NotificationPreference, PushSubscription, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushSubscriptionCreate, PushUnsubscribe
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushSubscriptionCreate, PushUnsubscribe
 from app.core.errors import error_detail, NOTIFICATION_NOT_FOUND
 
 router = APIRouter(prefix="/notifications", tags=["notifications"], responses={**AUTH_RESPONSES})

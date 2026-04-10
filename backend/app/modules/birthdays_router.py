@@ -6,7 +6,7 @@ from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import FamilyBirthday, User
-from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ErrorResponse, BirthdayCreate, BirthdayUpdate, BirthdayResponse
+from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, BirthdayCreate, BirthdayUpdate, BirthdayResponse
 from app.core.errors import error_detail, BIRTHDAY_NOT_FOUND, INVALID_MONTH, INVALID_DAY
 
 router = APIRouter(prefix="/birthdays", tags=["birthdays"], responses={**AUTH_RESPONSES})

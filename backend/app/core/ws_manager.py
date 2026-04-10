@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from starlette.websockets import WebSocket, WebSocketState
 
