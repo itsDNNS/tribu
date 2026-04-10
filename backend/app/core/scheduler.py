@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 
 from app.core.utils import utcnow
 

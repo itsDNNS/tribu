@@ -38,7 +38,6 @@ def _get_currency_or_404(db: Session, family_id: int) -> RewardCurrency:
 
 def _compute_balance(db: Session, family_id: int, user_id: int, include_pending_redeems: bool = False) -> int:
     """Compute token balance. If include_pending_redeems=True, also subtract pending redemptions."""
-    statuses = ["confirmed"]
     if include_pending_redeems:
         # Include pending redeems so they count against available balance
         result = db.query(

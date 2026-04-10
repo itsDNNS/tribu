@@ -1,6 +1,4 @@
-import json
 import os
-from datetime import datetime
 
 from app.core.utils import utcnow
 
@@ -13,7 +11,7 @@ from app.core.deps import current_user
 from app.core.scheduler import configure_backup_schedule
 from app.database import get_db
 from app.models import Membership, SystemSetting, User
-from app.schemas import ADMIN_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, BackupConfigResponse, BackupConfigUpdate, BackupEntry, BackupSchedule
+from app.schemas import ADMIN_RESPONSES, NOT_FOUND_RESPONSE, BackupConfigResponse, BackupConfigUpdate, BackupEntry
 from app.core.errors import error_detail, ADMIN_REQUIRED, BACKUP_NOT_FOUND, BACKUP_FAILED
 
 router = APIRouter(prefix="/admin/backup", tags=["backup"], responses={**ADMIN_RESPONSES})

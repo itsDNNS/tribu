@@ -5,7 +5,7 @@ from app.core.deps import current_user
 from app.core.scopes import VALID_SCOPES, require_scope
 from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, PATCreate, PATCreatedResponse, PATResponse
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, PATCreate, PATCreatedResponse, PATResponse
 from app.core.errors import error_detail, ADULT_REQUIRED, INVALID_SCOPES, TOKEN_LIMIT_REACHED, API_TOKEN_NOT_FOUND, API_TOKEN_NO_ACCESS
 from app.security import generate_pat
 

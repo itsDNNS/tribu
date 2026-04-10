@@ -439,15 +439,11 @@ export function apiSetMemberBirthdate(familyId, userId, dateOfBirth) {
 
 export function apiGetRewardCurrency(familyId) { return request(`/rewards/currency?family_id=${familyId}`); }
 export function apiCreateRewardCurrency(payload) { return post('/rewards/currency', payload); }
-export function apiUpdateRewardCurrency(id, payload) { return patch(`/rewards/currency/${id}`, payload); }
-export function apiDeleteRewardCurrency(id) { return del(`/rewards/currency/${id}`); }
 export function apiGetEarningRules(familyId) { return request(`/rewards/rules?family_id=${familyId}`); }
 export function apiCreateEarningRule(payload) { return post('/rewards/rules', payload); }
-export function apiUpdateEarningRule(id, payload) { return patch(`/rewards/rules/${id}`, payload); }
 export function apiDeleteEarningRule(id) { return del(`/rewards/rules/${id}`); }
 export function apiGetRewardCatalog(familyId) { return request(`/rewards/catalog?family_id=${familyId}`); }
 export function apiCreateReward(payload) { return post('/rewards/catalog', payload); }
-export function apiUpdateReward(id, payload) { return patch(`/rewards/catalog/${id}`, payload); }
 export function apiDeleteReward(id) { return del(`/rewards/catalog/${id}`); }
 export function apiGetRewardTransactions(familyId, userId, limit = 50, offset = 0) {
   let url = `/rewards/transactions?family_id=${familyId}&limit=${limit}&offset=${offset}`;

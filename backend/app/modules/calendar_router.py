@@ -12,7 +12,7 @@ from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, Membership, Notification, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, PaginatedCalendarEvents
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, PaginatedCalendarEvents
 from app.core.errors import error_detail, EVENT_NOT_FOUND, END_BEFORE_START, INVALID_RECURRENCE
 
 router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})

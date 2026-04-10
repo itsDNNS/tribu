@@ -5,7 +5,7 @@ export const COLOR_PALETTE = [
   '#14b8a6', '#f97316', '#6366f1',
 ];
 
-export const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
+const MEMBER_COLORS = ['var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)'];
 
 export function getMemberColor(member, index) {
   if (member?.color) return member.color;

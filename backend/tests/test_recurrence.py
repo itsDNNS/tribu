@@ -3,7 +3,6 @@
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
-import pytest
 
 from app.core.recurrence import _next_occurrence, expand_event
 

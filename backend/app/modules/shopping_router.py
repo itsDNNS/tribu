@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from app.core.utils import utcnow
 
@@ -20,7 +19,6 @@ from app.core.ws_broadcast import (
 from app.schemas import (
     AUTH_RESPONSES,
     NOT_FOUND_RESPONSE,
-    ErrorResponse,
     ShoppingItemCreate,
     ShoppingItemResponse,
     ShoppingItemUpdate,

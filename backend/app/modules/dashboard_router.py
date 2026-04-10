@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from app.core.utils import utcnow
 
@@ -11,7 +11,7 @@ from app.core.recurrence import expand_event
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, FamilyBirthday, User
-from app.schemas import AUTH_RESPONSES, ErrorResponse, CalendarEventResponse, DashboardSummary, UpcomingBirthday
+from app.schemas import AUTH_RESPONSES, CalendarEventResponse, DashboardSummary
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"], responses={**AUTH_RESPONSES})
 

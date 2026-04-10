@@ -1,4 +1,4 @@
-export const styles = {
+const styles = {
   page: { minHeight: '100vh', padding: 12 },
   hero: { background: 'linear-gradient(135deg, #111827 0%, #4c1d95 100%)', color: '#fff', padding: 20, borderRadius: 14, maxWidth: 900, margin: '0 auto' },
   cardNarrow: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: 14, maxWidth: 420, width: '100%', boxSizing: 'border-box', margin: '12px auto' },
@@ -14,20 +14,6 @@ export const styles = {
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 },
 };
 
-export function navBtn(active, tokens) {
-  return {
-    border: active ? `1px solid ${tokens.primary}` : `1px solid ${tokens.border}`,
-    background: active ? tokens.sidebarActive : tokens.sidebar,
-    color: tokens.text,
-    borderRadius: 10,
-    padding: '10px 12px',
-    cursor: 'pointer',
-    textAlign: 'left',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-  };
-}
 
 export function buildUi(tokens) {
   return {

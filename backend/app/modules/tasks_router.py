@@ -11,7 +11,7 @@ from app.core.deps import current_user, ensure_adult, ensure_family_membership, 
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Membership, Task, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, ErrorResponse, PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
 from app.core.errors import error_detail, TASK_NOT_FOUND, INVALID_STATUS, INVALID_PRIORITY, INVALID_RECURRENCE, ASSIGNEE_NOT_FAMILY_MEMBER, ADULT_REQUIRED
 
 router = APIRouter(prefix="/tasks", tags=["tasks"], responses={**AUTH_RESPONSES})

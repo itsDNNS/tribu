@@ -1,9 +1,8 @@
 """Tests for ICS import/export utilities."""
 
-from datetime import datetime, date
+from datetime import datetime
 from types import SimpleNamespace
 
-import pytest
 
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 
