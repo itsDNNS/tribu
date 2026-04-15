@@ -51,18 +51,10 @@ function DisplayModeRootFlag() {
     };
 
     applyDisplayMode();
-    if (displayModeQuery.addEventListener) {
-      displayModeQuery.addEventListener('change', applyDisplayMode);
-    } else if (displayModeQuery.addListener) {
-      displayModeQuery.addListener(applyDisplayMode);
-    }
+    displayModeQuery.addEventListener('change', applyDisplayMode);
 
     return () => {
-      if (displayModeQuery.removeEventListener) {
-        displayModeQuery.removeEventListener('change', applyDisplayMode);
-      } else if (displayModeQuery.removeListener) {
-        displayModeQuery.removeListener(applyDisplayMode);
-      }
+      displayModeQuery.removeEventListener('change', applyDisplayMode);
       delete document.documentElement.dataset.displayMode;
     };
   }, []);

@@ -8,7 +8,7 @@ from app.core import cache
 from app.core.deps import current_user
 from app.core.scopes import require_scope
 from app.core.push import get_vapid_public_key
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models import Notification, NotificationPreference, PushSubscription, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushSubscriptionCreate, PushUnsubscribe
 from app.core.errors import error_detail, NOTIFICATION_NOT_FOUND
@@ -114,8 +114,6 @@ async def notification_stream(
     user_id = user.id
 
     async def event_generator():
-        from app.database import SessionLocal
-
         last_id = last_event_id
         try:
             while True:

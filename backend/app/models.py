@@ -1,5 +1,5 @@
 
-from app.core.utils import utcnow
+from app.core.clock import utcnow
 
 from sqlalchemy import Column, Date, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON
 from sqlalchemy.orm import relationship

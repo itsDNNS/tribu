@@ -4,6 +4,8 @@ import os
 
 from sqlalchemy.orm import Session
 
+from app.models import PushSubscription
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,8 +26,6 @@ def send_push_for_user(db: Session, user_id: int, title: str, body: str, url: st
     except ImportError:
         logger.warning("pywebpush not installed, skipping push notification")
         return
-
-    from app.models import PushSubscription
 
     subscriptions = db.query(PushSubscription).filter(PushSubscription.user_id == user_id).all()
     if not subscriptions:

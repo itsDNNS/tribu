@@ -2,7 +2,7 @@ import os
 import secrets
 from datetime import timedelta
 
-from app.core.utils import utcnow
+from app.core.utils import utcnow, audit_log as _audit, ensure_any_admin, get_setting, set_setting
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -13,15 +13,13 @@ from app.core.deps import current_user, ensure_family_admin
 from app.core.scopes import require_scope
 from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE
 from app.database import get_db
-from app.models import (
-    AuditLog, Family, FamilyInvitation, Membership, SystemSetting, User,
-)
+from app.models import Family, FamilyInvitation, User
 from app.schemas import (
     AUTH_RESPONSES, NOT_FOUND_RESPONSE, BaseUrlUpdate, InvitationCreate, InvitationResponse,
     InviteInfoResponse, RegisterWithInviteRequest,
 )
 from app.security import create_access_token, hash_password
-from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, ADMIN_REQUIRED
+from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS
 
 from fastapi.responses import JSONResponse
 
@@ -34,15 +32,10 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/families", tags=["invitations"], responses={**AUTH_RESPONSES})
 
 
-def _audit(db, family_id, admin_id, action, target_user_id=None, details=None):
-    db.add(AuditLog(family_id=family_id, admin_user_id=admin_id, action=action,
-                     target_user_id=target_user_id, details=details))
-
-
 def _get_base_url(db: Session, request: Request) -> str:
-    row = db.query(SystemSetting).filter(SystemSetting.key == "base_url").first()
-    if row and row.value:
-        return row.value.rstrip("/")
+    saved = get_setting(db, "base_url")
+    if saved:
+        return saved.rstrip("/")
     env_val = os.getenv("BASE_URL", "")
     if env_val:
         return env_val.rstrip("/")
@@ -300,13 +293,8 @@ def get_base_url(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:read"),
 ):
-    memberships = db.query(Membership).filter(
-        Membership.user_id == user.id, Membership.role == "admin"
-    ).all()
-    if not memberships:
-        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
-    row = db.query(SystemSetting).filter(SystemSetting.key == "base_url").first()
-    saved = row.value if row else ""
+    ensure_any_admin(db, user.id)
+    saved = get_setting(db, "base_url")
     env_val = os.getenv("BASE_URL", "")
     effective = _get_base_url(db, request)
     return {"saved": saved, "env": env_val, "effective": effective}
@@ -324,47 +312,24 @@ def set_base_url(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
 ):
-    # Only allow admins of at least one family
-    memberships = db.query(Membership).filter(
-        Membership.user_id == user.id, Membership.role == "admin"
-    ).all()
-    if not memberships:
-        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
-
-    row = db.query(SystemSetting).filter(SystemSetting.key == "base_url").first()
-    if row:
-        row.value = payload.base_url
-    else:
-        db.add(SystemSetting(key="base_url", value=payload.base_url))
+    ensure_any_admin(db, user.id)
+    set_setting(db, "base_url", payload.base_url)
     db.commit()
     return {"status": "ok", "base_url": payload.base_url}
 
 
 @settings_router.get("/time-format")
 def get_time_format(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
-    memberships = db.query(Membership).filter(
-        Membership.user_id == user.id, Membership.role == "admin"
-    ).all()
-    if not memberships:
-        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
-    row = db.query(SystemSetting).filter(SystemSetting.key == "time_format").first()
-    return {"time_format": row.value if row else "24h"}
+    ensure_any_admin(db, user.id)
+    return {"time_format": get_setting(db, "time_format", "24h")}
 
 
 @settings_router.put("/time-format")
 def set_time_format(payload: dict, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
-    memberships = db.query(Membership).filter(
-        Membership.user_id == user.id, Membership.role == "admin"
-    ).all()
-    if not memberships:
-        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
+    ensure_any_admin(db, user.id)
     fmt = payload.get("time_format", "24h")
     if fmt not in ("12h", "24h"):
         raise HTTPException(status_code=400, detail=error_detail("INVALID_TIME_FORMAT"))
-    row = db.query(SystemSetting).filter(SystemSetting.key == "time_format").first()
-    if row:
-        row.value = fmt
-    else:
-        db.add(SystemSetting(key="time_format", value=fmt))
+    set_setting(db, "time_format", fmt)
     db.commit()
     return {"status": "ok", "time_format": fmt}

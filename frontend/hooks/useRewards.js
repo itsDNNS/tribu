@@ -40,31 +40,36 @@ export function useRewards() {
   const pendingTxns = transactions.filter(tx => tx.status === 'pending');
   const pendingCount = pendingTxns.length;
 
+  /** Show a translated error toast from an API response detail. */
+  function showError(detail) {
+    toastError(errorText(detail, t(messages, 'toast.error'), messages));
+  }
+
   async function earnTokens(userId, amount, note, ruleId) {
     if (!currency) return;
     const { ok, data } = await api.apiEarnTokens({ family_id: Number(familyId), currency_id: currency.id, target_user_id: userId, amount, note: note || null, source_rule_id: ruleId || null });
-    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+    if (!ok) return showError(data?.detail);
     toastSuccess(t(messages, 'module.rewards.toast.earned'));
     await loadAll();
   }
 
   async function redeem(reward) {
     const { ok, data } = await api.apiRedeemReward({ family_id: Number(familyId), reward_id: reward.id });
-    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+    if (!ok) return showError(data?.detail);
     toastSuccess(t(messages, 'module.rewards.toast.redeemed'));
     await loadAll();
   }
 
   async function confirmTxn(id) {
     const { ok, data } = await api.apiConfirmTransaction(id);
-    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+    if (!ok) return showError(data?.detail);
     toastSuccess(t(messages, 'module.rewards.toast.confirmed'));
     await loadAll();
   }
 
   async function rejectTxn(id) {
     const { ok, data } = await api.apiRejectTransaction(id);
-    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+    if (!ok) return showError(data?.detail);
     toastSuccess(t(messages, 'module.rewards.toast.rejected'));
     await loadAll();
   }
@@ -72,32 +77,32 @@ export function useRewards() {
   async function createRule(name, amount) {
     if (!currency) return;
     const { ok, data } = await api.apiCreateEarningRule({ family_id: Number(familyId), currency_id: currency.id, name, amount });
-    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+    if (!ok) return showError(data?.detail);
     await loadAll();
   }
 
   async function deleteRule(id) {
     const { ok, data } = await api.apiDeleteEarningRule(id);
-    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+    if (!ok) return showError(data?.detail);
     await loadAll();
   }
 
   async function createReward(name, cost, icon) {
     if (!currency) return;
     const { ok, data } = await api.apiCreateReward({ family_id: Number(familyId), currency_id: currency.id, name, cost, icon });
-    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+    if (!ok) return showError(data?.detail);
     await loadAll();
   }
 
   async function deleteReward(id) {
     const { ok, data } = await api.apiDeleteReward(id);
-    if (!ok) return toastError(errorText(data?.detail, 'Error', messages));
+    if (!ok) return showError(data?.detail);
     await loadAll();
   }
 
   async function createCurrency(name, icon) {
     const { ok, data } = await api.apiCreateRewardCurrency({ family_id: Number(familyId), name, icon });
-    if (!ok) { toastError(errorText(data?.detail, 'Error', messages)); return false; }
+    if (!ok) { showError(data?.detail); return false; }
     await loadAll();
     return true;
   }

@@ -73,12 +73,6 @@ class LoginRequest(BaseModel):
     })
 
 
-class TokenResponse(BaseModel):
-    """JWT token returned after successful login (also set as httpOnly cookie)."""
-    access_token: str = Field(..., description="JWT access token")
-    token_type: str = Field("bearer", description="Always 'bearer'")
-
-
 class MeResponse(BaseModel):
     """Current authenticated user profile."""
     user_id: int = Field(..., description="User ID")

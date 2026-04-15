@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload, aliased
 from app.core import cache
 from app.core.deps import current_user, ensure_family_admin, ensure_family_membership
 from app.core.scopes import require_scope
+from app.core.utils import audit_log as _audit
 from app.database import get_db
 from app.models import AuditLog, Membership, User
 from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
@@ -12,11 +13,6 @@ from app.security import generate_temp_password, hash_password
 from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF
 
 router = APIRouter(prefix="/families", tags=["families"], responses={**AUTH_RESPONSES})
-
-
-def _audit(db, family_id, admin_id, action, target_user_id=None, details=None):
-    db.add(AuditLog(family_id=family_id, admin_user_id=admin_id, action=action,
-                     target_user_id=target_user_id, details=details))
 
 
 @router.get(
@@ -244,7 +240,6 @@ def update_member_birthdate(
     db: Session = Depends(get_db),
     _scope=require_scope("families:write"),
 ):
-    # Allow self-update or admin
     if target_user_id != user.id:
         ensure_family_admin(db, user.id, family_id)
     else:

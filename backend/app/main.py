@@ -1,3 +1,7 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -13,7 +17,7 @@ from app.core.deps import current_user
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION
 from app.database import get_db, SessionLocal
-from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, SystemSetting, Task, User
+from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
@@ -37,8 +41,11 @@ from app.schemas import (
     ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest,
 )
 from app.core import cache
-from app.security import create_access_token, hash_password, needs_rehash, verify_password
+from app.core.utils import get_setting
+from app.security import create_access_token, hash_password, verify_password
 from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE, VERSION
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +141,35 @@ TAG_METADATA = [
 ]
 
 # ---------------------------------------------------------------------------
+# Lifespan
+# ---------------------------------------------------------------------------
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ws_broadcast.set_event_loop(asyncio.get_running_loop())
+
+    if cache.ping():
+        logger.info("Valkey connected")
+    else:
+        logger.warning("Valkey not available - caching disabled, falling back to DB")
+
+    db = SessionLocal()
+    try:
+        schedule = get_setting(db, "backup_schedule", "off")
+        retention = int(get_setting(db, "backup_retention", "7"))
+        start_scheduler()
+        start_notification_job()
+        if schedule != "off":
+            configure_backup_schedule(schedule, BACKUP_DB_URL, BACKUP_DIR, retention)
+    finally:
+        db.close()
+
+    yield
+
+    shutdown_scheduler()
+
+
+# ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
 
@@ -146,6 +182,7 @@ app = FastAPI(
     contact={"name": "Tribu", "url": "https://github.com/itsDNNS/tribu"},
     license_info={"name": "All rights reserved"},
     openapi_tags=TAG_METADATA,
+    lifespan=lifespan,
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -236,10 +273,6 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
-
-    if needs_rehash(user.password_hash):
-        user.password_hash = hash_password(payload.password)
-        db.commit()
 
     token = create_access_token(user_id=user.id, email=user.email)
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
@@ -488,40 +521,6 @@ app.include_router(setup_router)
 app.include_router(search_router)
 app.include_router(rewards_router)
 
-
-# ---------------------------------------------------------------------------
-# Startup / Shutdown
-# ---------------------------------------------------------------------------
-
-@app.on_event("startup")
-async def startup_scheduler():
-    import asyncio
-    from app.core import cache
-
-    ws_broadcast.set_event_loop(asyncio.get_running_loop())
-
-    if cache.ping():
-        print("INFO:     Valkey connected")
-    else:
-        print("WARNING:  Valkey not available — caching disabled, falling back to DB")
-
-    db = SessionLocal()
-    try:
-        schedule_row = db.query(SystemSetting).filter(SystemSetting.key == "backup_schedule").first()
-        retention_row = db.query(SystemSetting).filter(SystemSetting.key == "backup_retention").first()
-        schedule = schedule_row.value if schedule_row else "off"
-        retention = int(retention_row.value) if retention_row else 7
-        start_scheduler()
-        start_notification_job()
-        if schedule != "off":
-            configure_backup_schedule(schedule, BACKUP_DB_URL, BACKUP_DIR, retention)
-    finally:
-        db.close()
-
-
-@app.on_event("shutdown")
-def shutdown_app_scheduler():
-    shutdown_scheduler()
 
 
 @app.get(

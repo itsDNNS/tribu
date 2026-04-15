@@ -107,7 +107,6 @@ def expand_event(
     recurrence = event.recurrence
 
     if not recurrence:
-        # Non-recurring: check if it falls in range
         if range_start and event.starts_at < range_start:
             if not event.ends_at or event.ends_at < range_start:
                 return []
@@ -117,7 +116,6 @@ def expand_event(
         base["occurrence_date"] = None
         return [base]
 
-    # Recurring event expansion
     duration = timedelta(0)
     if event.ends_at and event.starts_at:
         duration = event.ends_at - event.starts_at
@@ -125,7 +123,6 @@ def expand_event(
     excluded = set(event.excluded_dates or [])
     recurrence_end = event.recurrence_end
 
-    # Smart start: jump close to range_start
     if range_start:
         current = _smart_start(event.starts_at, range_start, recurrence)
     else:
@@ -135,16 +132,14 @@ def expand_event(
     count = 0
 
     while count < MAX_OCCURRENCES:
-        # Respect recurrence_end
         if recurrence_end and current > recurrence_end:
             break
-        # Past range_end — done
+
         if range_end and current >= range_end:
             break
 
         occurrence_date = current.strftime("%Y-%m-%d")
 
-        # Check if in range and not excluded
         in_range = True
         if range_start and current < range_start:
             in_range = False

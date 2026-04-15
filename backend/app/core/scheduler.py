@@ -1,13 +1,19 @@
 import logging
 from datetime import datetime, timedelta
 
-from app.core.utils import utcnow
-
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from app.core import cache
 from app.core.backup import create_backup, enforce_retention
+from app.core.clock import utcnow
+from app.core.push import send_push_for_user
+from app.database import SessionLocal
+from app.models import (
+    CalendarEvent, FamilyBirthday, Membership, Notification,
+    NotificationPreference, NotificationSentLog, Task,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,12 +95,6 @@ def _in_quiet_hours(quiet_start: str | None, quiet_end: str | None, now: datetim
 
 
 def _check_notifications():
-    from app.database import SessionLocal
-    from app.models import (
-        CalendarEvent, FamilyBirthday, Membership, Notification,
-        NotificationPreference, NotificationSentLog, Task,
-    )
-
     db = SessionLocal()
     try:
         now = utcnow()
@@ -137,7 +137,6 @@ def _check_notifications():
             db.add(log)
             if pref.push_enabled:
                 try:
-                    from app.core.push import send_push_for_user
                     send_push_for_user(db, uid, title, body, link)
                 except Exception:
                     logger.exception("Push notification failed for user %s", uid)
@@ -215,7 +214,6 @@ def _check_notifications():
 
         db.commit()
         # Invalidate notification count caches for affected users
-        from app.core import cache
         for uid in user_families:
             cache.invalidate(f"tribu:notif_count:{uid}")
         logger.info("Notification check completed.")

@@ -41,7 +41,6 @@ def list_calendar_events(
         range_start = to_utc_naive(range_start)
         range_end = to_utc_naive(range_end)
 
-        # Fetch: non-recurring in range + all recurring events
         non_recurring = (
             db.query(CalendarEvent)
             .filter(
@@ -76,7 +75,6 @@ def list_calendar_events(
         items = [CalendarEventResponse(**o) for o in page]
         return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
 
-    # Fallback: no range — original behavior
     base = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id)
     total = base.count()
     items = base.order_by(CalendarEvent.starts_at.asc()).offset(offset).limit(limit).all()
@@ -289,7 +287,6 @@ def delete_calendar_event(
     family_id = event.family_id
 
     if occurrence_date and event.recurrence:
-        # Add date to exclusion list instead of deleting
         excluded = list(event.excluded_dates or [])
         if occurrence_date not in excluded:
             excluded.append(occurrence_date)

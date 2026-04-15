@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.config import COOKIE_NAME
 from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
 from app.security import decode_token, hash_pat, is_pat
@@ -25,8 +26,6 @@ security = HTTPBearer(
         "is also supported and takes precedence."
     ),
 )
-
-COOKIE_NAME = "tribu_token"
 
 
 def _resolve_user(request: Request, token_str: str, db: Session) -> User:

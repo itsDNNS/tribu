@@ -3,23 +3,16 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import current_user
 from app.core.scopes import VALID_SCOPES, require_scope
+from app.core.utils import ensure_any_admin, ensure_any_adult
 from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, PATCreate, PATCreatedResponse, PATResponse
-from app.core.errors import error_detail, ADULT_REQUIRED, ADMIN_REQUIRED, INVALID_SCOPES, TOKEN_LIMIT_REACHED, API_TOKEN_NOT_FOUND, API_TOKEN_NO_ACCESS
+from app.core.errors import error_detail, INVALID_SCOPES, TOKEN_LIMIT_REACHED, API_TOKEN_NOT_FOUND, API_TOKEN_NO_ACCESS
 from app.security import generate_pat
 
 router = APIRouter(prefix="/tokens", tags=["tokens"], responses={**AUTH_RESPONSES})
 
 MAX_TOKENS_PER_USER = 25
-
-
-def _ensure_user_is_adult(db: Session, user_id: int):
-    adult = db.query(Membership).filter(
-        Membership.user_id == user_id, Membership.is_adult == True,
-    ).first()
-    if not adult:
-        raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
 
 
 @router.get(
@@ -34,7 +27,7 @@ def list_tokens(
     db: Session = Depends(get_db),
     _scope=require_scope("profile:read"),
 ):
-    _ensure_user_is_adult(db, user.id)
+    ensure_any_adult(db, user.id)
     return (
         db.query(PersonalAccessToken)
         .filter(PersonalAccessToken.user_id == user.id)
@@ -56,7 +49,7 @@ def create_token(
     db: Session = Depends(get_db),
     _scope=require_scope("profile:write"),
 ):
-    _ensure_user_is_adult(db, user.id)
+    ensure_any_adult(db, user.id)
     invalid = set(payload.scopes) - VALID_SCOPES
     if invalid:
         raise HTTPException(status_code=400, detail=error_detail(INVALID_SCOPES, scopes=', '.join(sorted(invalid))))
@@ -64,11 +57,7 @@ def create_token(
     # admin:* scopes require the user to actually be a family admin
     admin_scopes = {s for s in payload.scopes if s.startswith("admin:")}
     if admin_scopes:
-        is_admin = db.query(Membership).filter(
-            Membership.user_id == user.id, Membership.role == "admin",
-        ).first()
-        if not is_admin:
-            raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
+        ensure_any_admin(db, user.id)
 
     count = db.query(PersonalAccessToken).filter(PersonalAccessToken.user_id == user.id).count()
     if count >= MAX_TOKENS_PER_USER:
@@ -104,7 +93,7 @@ def revoke_token(
     db: Session = Depends(get_db),
     _scope=require_scope("profile:write"),
 ):
-    _ensure_user_is_adult(db, user.id)
+    ensure_any_adult(db, user.id)
     pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.id == token_id).first()
     if not pat:
         raise HTTPException(status_code=404, detail=error_detail(API_TOKEN_NOT_FOUND))

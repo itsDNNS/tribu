@@ -109,7 +109,6 @@ def update_contact(
     new_month = contact.birthday_month
     new_day = contact.birthday_day
 
-    # If the name changed, update the linked birthday entry
     if old_name != new_name:
         existing_bday = db.query(FamilyBirthday).filter(
             FamilyBirthday.family_id == contact.family_id,
@@ -118,11 +117,9 @@ def update_contact(
         if existing_bday:
             existing_bday.person_name = new_name
 
-    # Upsert or remove birthday
     if new_month and new_day:
         upsert_birthday(db, contact.family_id, new_name, new_month, new_day)
     else:
-        # Remove birthday entry if birthday fields were cleared
         db.query(FamilyBirthday).filter(
             FamilyBirthday.family_id == contact.family_id,
             FamilyBirthday.person_name == new_name,
@@ -152,7 +149,6 @@ def delete_contact(
         raise HTTPException(status_code=404, detail=error_detail(CONTACT_NOT_FOUND))
     ensure_adult(db, user.id, contact.family_id)
 
-    # Remove associated birthday entry
     db.query(FamilyBirthday).filter(
         FamilyBirthday.family_id == contact.family_id,
         FamilyBirthday.person_name == contact.full_name,

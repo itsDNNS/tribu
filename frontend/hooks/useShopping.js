@@ -20,7 +20,6 @@ export function useShopping() {
   const [showCreateList, setShowCreateList] = useState(false);
   const itemInputRef = useRef(null);
 
-  // ── WebSocket integration ──────────────────────────────
 
   const handleWsMessage = useCallback((msg) => {
     switch (msg.type) {
@@ -42,11 +41,9 @@ export function useShopping() {
         setShoppingLists((prev) =>
           prev.map((l) => {
             if (l.id !== msg.item.list_id) return l;
-            // Recalculate would need full list; just reload counts
             return l;
           }),
         );
-        // Lightweight: reload list counts in background
         loadShoppingLists();
         break;
 
@@ -82,7 +79,6 @@ export function useShopping() {
     enabled: !demoMode && !!activeListId,
   });
 
-  // ── Auto-select first list when lists change ───────────
 
   useEffect(() => {
     if (shoppingLists.length > 0 && !shoppingLists.find((l) => l.id === activeListId)) {
@@ -94,7 +90,6 @@ export function useShopping() {
     }
   }, [shoppingLists, activeListId]);
 
-  // Load items when active list changes
   useEffect(() => {
     if (!activeListId) { setItems([]); return; }
     if (demoMode) {
@@ -121,7 +116,6 @@ export function useShopping() {
     if (ok) setItems(data);
   }, [activeListId, demoMode]);
 
-  // ── List operations ────────────────────────────────────
 
   async function createList(e) {
     e.preventDefault();
@@ -165,7 +159,6 @@ export function useShopping() {
     }
   }
 
-  // ── Item operations (optimistic UI when WS connected) ──
 
   async function addItem(e) {
     e.preventDefault();
@@ -217,7 +210,6 @@ export function useShopping() {
         ),
       );
     } else {
-      // Optimistic: update local state immediately
       setItems((prev) =>
         prev.map((i) => i.id === id ? { ...i, checked: !currentChecked, checked_at: !currentChecked ? new Date().toISOString() : null } : i),
       );
@@ -245,7 +237,6 @@ export function useShopping() {
         ),
       );
     } else {
-      // Optimistic: remove from local state immediately
       const prevItems = items;
       setItems((prev) => prev.filter((i) => i.id !== id));
       const { ok } = await api.apiDeleteShoppingItem(id);
@@ -270,7 +261,6 @@ export function useShopping() {
         ),
       );
     } else {
-      // Optimistic: clear checked items locally
       const prevItems = items;
       setItems((prev) => prev.filter((i) => !i.checked));
       const { ok } = await api.apiClearCheckedItems(activeListId);

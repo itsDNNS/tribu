@@ -18,7 +18,6 @@ class ConnectionEntry:
 
 class ConnectionManager:
     def __init__(self):
-        # {list_id: {conn_id: ConnectionEntry}}
         self._lists: dict[int, dict[str, ConnectionEntry]] = {}
 
     def connect(self, list_id: int, ws: WebSocket, user_id: int, family_id: int) -> str:

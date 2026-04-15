@@ -39,7 +39,6 @@ def _get_currency_or_404(db: Session, family_id: int) -> RewardCurrency:
 def _compute_balance(db: Session, family_id: int, user_id: int, include_pending_redeems: bool = False) -> int:
     """Compute token balance. If include_pending_redeems=True, also subtract pending redemptions."""
     if include_pending_redeems:
-        # Include pending redeems so they count against available balance
         result = db.query(
             func.coalesce(
                 func.sum(case(
@@ -329,7 +328,6 @@ def earn_tokens(
 ):
     ensure_adult(db, user.id, payload.family_id)
     _verify_currency_belongs_to_family(db, payload.currency_id, payload.family_id)
-    # Verify target is a family member
     target_membership = db.query(Membership).filter(
         Membership.user_id == payload.target_user_id,
         Membership.family_id == payload.family_id,

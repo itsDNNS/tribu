@@ -293,7 +293,6 @@ function AppOrchestrator({ children }) {
     };
   }, [loggedIn, demoMode, loadNotificationsWrapped, lastEventIdRef, setNotifications, setUnreadCount]);
 
-  // Compose the value that useApp() returns — backward compatible
   const value = {
     // Auth
     ...auth,

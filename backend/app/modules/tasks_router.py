@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import current_user, ensure_adult, ensure_family_membership, to_utc_naive
 from app.core.scopes import require_scope
 from app.database import get_db
-from app.models import Membership, Task, User
+from app.models import Membership, RewardCurrency, Task, TokenTransaction, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
 from app.core.errors import error_detail, TASK_NOT_FOUND, INVALID_STATUS, INVALID_PRIORITY, INVALID_RECURRENCE, ASSIGNEE_NOT_FAMILY_MEMBER, ADULT_REQUIRED
 
@@ -167,19 +167,16 @@ def update_task(
     if payload.token_require_confirmation is not None:
         task.token_require_confirmation = payload.token_require_confirmation
 
-    # Recurring logic: when completing a recurring task, create next instance
     next_task = None
     if payload.status is not None:
         task.status = payload.status
         if payload.status == "done":
             task.completed_at = utcnow()
-            # Auto-credit tokens on task completion
             if task.token_reward_amount and task.assigned_to_user_id:
-                from app.models import RewardCurrency, TokenTransaction as TknTxn
                 currency = db.query(RewardCurrency).filter(RewardCurrency.family_id == task.family_id).first()
                 if currency:
                     auto_confirm = not task.token_require_confirmation
-                    txn = TknTxn(
+                    txn = TokenTransaction(
                         family_id=task.family_id, currency_id=currency.id,
                         user_id=task.assigned_to_user_id, kind="earn",
                         amount=task.token_reward_amount,

@@ -31,7 +31,6 @@ def global_search(
     pattern = f"%{escaped}%"
     results = {}
 
-    # Calendar events
     events = (
         db.query(CalendarEvent)
         .filter(
@@ -52,7 +51,6 @@ def global_search(
             for e in events
         ]
 
-    # Tasks
     tasks = (
         db.query(Task)
         .filter(
@@ -69,7 +67,6 @@ def global_search(
             for t in tasks
         ]
 
-    # Shopping items (join through list for family_id)
     items = (
         db.query(ShoppingItem)
         .join(ShoppingList, ShoppingItem.list_id == ShoppingList.id)
@@ -86,7 +83,6 @@ def global_search(
             for i in items
         ]
 
-    # Contacts
     contacts = (
         db.query(Contact)
         .filter(
@@ -106,7 +102,6 @@ def global_search(
             for c in contacts
         ]
 
-    # Birthdays
     birthdays = (
         db.query(FamilyBirthday)
         .filter(

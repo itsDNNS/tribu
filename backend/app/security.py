@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import os
 import secrets
@@ -25,40 +24,10 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """Verify a password against a hash. Supports both bcrypt and legacy
-    passlib pbkdf2_sha256 hashes for migration purposes."""
+    """Verify a password against a bcrypt hash."""
     if hashed.startswith("$2b$") or hashed.startswith("$2a$"):
         return bcrypt.checkpw(plain.encode(), hashed.encode())
-    if hashed.startswith("$pbkdf2-sha256$"):
-        return _verify_legacy_pbkdf2(plain, hashed)
     return False
-
-
-def needs_rehash(hashed: str) -> bool:
-    """Return True if the hash uses a legacy scheme and should be rehashed."""
-    return not hashed.startswith("$2b$")
-
-
-def _ab64_decode(data: str) -> bytes:
-    """Decode passlib's ab64 encoding (base64 with . instead of +, no padding)."""
-    data = data.replace(".", "+")
-    padding = 4 - (len(data) % 4)
-    if padding < 4:
-        data += "=" * padding
-    return base64.b64decode(data)
-
-
-def _verify_legacy_pbkdf2(plain: str, hashed: str) -> bool:
-    """Verify a passlib pbkdf2_sha256 hash without the passlib dependency.
-    Format: $pbkdf2-sha256$rounds$salt$checksum"""
-    parts = hashed.split("$")
-    if len(parts) != 5 or parts[1] != "pbkdf2-sha256":
-        return False
-    rounds = int(parts[2])
-    salt = _ab64_decode(parts[3])
-    expected = _ab64_decode(parts[4])
-    derived = hashlib.pbkdf2_hmac("sha256", plain.encode(), salt, rounds, dklen=len(expected))
-    return secrets.compare_digest(derived, expected)
 
 
 # ---------------------------------------------------------------------------

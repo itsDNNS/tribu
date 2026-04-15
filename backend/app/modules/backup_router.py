@@ -1,6 +1,6 @@
 import os
 
-from app.core.utils import utcnow
+from app.core.utils import utcnow, ensure_any_admin, get_setting, set_setting
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -11,39 +11,14 @@ from app.core.deps import current_user
 from app.core.scopes import require_scope
 from app.core.scheduler import configure_backup_schedule
 from app.database import get_db
-from app.models import Membership, SystemSetting, User
+from app.models import User
 from app.schemas import ADMIN_RESPONSES, NOT_FOUND_RESPONSE, BackupConfigResponse, BackupConfigUpdate, BackupEntry
-from app.core.errors import error_detail, ADMIN_REQUIRED, BACKUP_NOT_FOUND, BACKUP_FAILED
+from app.core.errors import error_detail, BACKUP_NOT_FOUND, BACKUP_FAILED
 
 router = APIRouter(prefix="/admin/backup", tags=["backup"], responses={**ADMIN_RESPONSES})
 
 BACKUP_DIR = os.getenv("BACKUP_DIR", "/backups")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-
-
-def _require_admin(user: User, db: Session):
-    membership = db.query(Membership).filter(
-        Membership.user_id == user.id,
-        Membership.role == "admin",
-    ).first()
-    if not membership:
-        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
-
-
-def _get_setting(db: Session, key: str, default: str = "") -> str:
-    row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
-    return row.value if row else default
-
-
-def _set_setting(db: Session, key: str, value: str):
-    row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
-    if row:
-        row.value = value
-        row.updated_at = utcnow()
-    else:
-        row = SystemSetting(key=key, value=value, updated_at=utcnow())
-        db.add(row)
-    db.flush()
 
 
 @router.get(
@@ -54,11 +29,11 @@ def _set_setting(db: Session, key: str, value: str):
     response_description="Backup configuration",
 )
 def get_config(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
-    _require_admin(user, db)
-    schedule = _get_setting(db, "backup_schedule", "off")
-    retention = _get_setting(db, "backup_retention", "7")
-    last_backup = _get_setting(db, "backup_last_timestamp", "")
-    last_status = _get_setting(db, "backup_last_status", "")
+    ensure_any_admin(db, user.id)
+    schedule = get_setting(db, "backup_schedule", "off")
+    retention = get_setting(db, "backup_retention", "7")
+    last_backup = get_setting(db, "backup_last_timestamp", "")
+    last_status = get_setting(db, "backup_last_status", "")
     return BackupConfigResponse(
         schedule=schedule,
         retention=int(retention),
@@ -80,9 +55,9 @@ def update_config(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
 ):
-    _require_admin(user, db)
-    _set_setting(db, "backup_schedule", payload.schedule.value)
-    _set_setting(db, "backup_retention", str(payload.retention))
+    ensure_any_admin(db, user.id)
+    set_setting(db, "backup_schedule", payload.schedule.value)
+    set_setting(db, "backup_retention", str(payload.retention))
     db.commit()
 
     configure_backup_schedule(payload.schedule.value, DATABASE_URL, BACKUP_DIR, payload.retention)
@@ -97,18 +72,18 @@ def update_config(
     response_description="Backup filename",
 )
 def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
-    _require_admin(user, db)
+    ensure_any_admin(db, user.id)
     try:
         filename = create_backup(DATABASE_URL, BACKUP_DIR)
-        retention = int(_get_setting(db, "backup_retention", "7"))
+        retention = int(get_setting(db, "backup_retention", "7"))
         enforce_retention(BACKUP_DIR, retention)
-        _set_setting(db, "backup_last_timestamp", utcnow().isoformat())
-        _set_setting(db, "backup_last_status", "success")
+        set_setting(db, "backup_last_timestamp", utcnow().isoformat())
+        set_setting(db, "backup_last_status", "success")
         db.commit()
         return {"status": "ok", "filename": filename}
     except Exception as e:
-        _set_setting(db, "backup_last_timestamp", utcnow().isoformat())
-        _set_setting(db, "backup_last_status", "failed")
+        set_setting(db, "backup_last_timestamp", utcnow().isoformat())
+        set_setting(db, "backup_last_status", "failed")
         db.commit()
         raise HTTPException(status_code=500, detail=error_detail(BACKUP_FAILED, reason=str(e)))
 
@@ -121,7 +96,7 @@ def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get
     response_description="List of backup entries",
 )
 def list_all_backups(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
-    _require_admin(user, db)
+    ensure_any_admin(db, user.id)
     entries = list_backups(BACKUP_DIR)
     return [BackupEntry(**e) for e in entries]
 
@@ -134,7 +109,7 @@ def list_all_backups(user: User = Depends(current_user), db: Session = Depends(g
     responses={**NOT_FOUND_RESPONSE},
 )
 def download_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
-    _require_admin(user, db)
+    ensure_any_admin(db, user.id)
     path = get_backup_path(BACKUP_DIR, filename)
     if not path:
         raise HTTPException(status_code=404, detail=error_detail(BACKUP_NOT_FOUND))
@@ -149,7 +124,7 @@ def download_backup(filename: str, user: User = Depends(current_user), db: Sessi
     responses={**NOT_FOUND_RESPONSE},
 )
 def delete_single_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
-    _require_admin(user, db)
+    ensure_any_admin(db, user.id)
     if not delete_backup(BACKUP_DIR, filename):
         raise HTTPException(status_code=404, detail=error_detail(BACKUP_NOT_FOUND))
     return {"status": "ok"}

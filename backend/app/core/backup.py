@@ -202,14 +202,12 @@ def restore_backup(archive_path: str, db_url: str) -> dict:
         env["PGPASSWORD"] = db["password"]
         pg_args = ["-h", db["host"], "-p", db["port"], "-U", db["user"]]
 
-        # Terminate existing connections
         subprocess.run(
             ["psql", *pg_args, "-d", "postgres", "-c",
              f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db['dbname']}' AND pid <> pg_backend_pid()"],
             capture_output=True, text=True, timeout=15, env=env,
         )
 
-        # Drop and recreate database
         subprocess.run(
             ["psql", *pg_args, "-d", "postgres", "-c",
              f"DROP DATABASE IF EXISTS {db['dbname']}"],
@@ -221,7 +219,6 @@ def restore_backup(archive_path: str, db_url: str) -> dict:
             capture_output=True, text=True, timeout=15, env=env, check=True,
         )
 
-        # Restore dump
         result = subprocess.run(
             ["pg_restore", "-Fc", "--no-owner", "--no-privileges",
              *pg_args, "-d", db["dbname"], dump_path],
@@ -230,7 +227,6 @@ def restore_backup(archive_path: str, db_url: str) -> dict:
         if result.returncode not in (0, 1):
             raise RuntimeError(f"pg_restore failed: {result.stderr}")
 
-        # Run alembic upgrade head to handle schema version gaps
         alembic_result = subprocess.run(
             ["alembic", "upgrade", "head"],
             capture_output=True, text=True, timeout=120, env=env,
