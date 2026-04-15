@@ -1,10 +1,22 @@
 import { Component as ReactComponent } from 'react';
+import { useEffect } from 'react';
 import Head from 'next/head';
 import { AppProvider } from '../contexts/AppContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import { ToastContainer } from '../components/Toast';
 import { PWABanners } from '../components/PWABanners';
 import '../styles/globals.css';
+
+const DISPLAY_MODE_BOOTSTRAP = `
+(() => {
+  try {
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+    document.documentElement.dataset.displayMode = isStandalone ? 'standalone' : 'browser';
+  } catch {}
+})();
+`;
 
 class ErrorBoundary extends ReactComponent {
   constructor(props) {
@@ -28,14 +40,46 @@ class ErrorBoundary extends ReactComponent {
   }
 }
 
+function DisplayModeRootFlag() {
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const displayModeQuery = window.matchMedia('(display-mode: standalone)');
+    const applyDisplayMode = () => {
+      const isStandalone = displayModeQuery.matches || window.navigator.standalone === true;
+      document.documentElement.dataset.displayMode = isStandalone ? 'standalone' : 'browser';
+    };
+
+    applyDisplayMode();
+    if (displayModeQuery.addEventListener) {
+      displayModeQuery.addEventListener('change', applyDisplayMode);
+    } else if (displayModeQuery.addListener) {
+      displayModeQuery.addListener(applyDisplayMode);
+    }
+
+    return () => {
+      if (displayModeQuery.removeEventListener) {
+        displayModeQuery.removeEventListener('change', applyDisplayMode);
+      } else if (displayModeQuery.removeListener) {
+        displayModeQuery.removeListener(applyDisplayMode);
+      }
+      delete document.documentElement.dataset.displayMode;
+    };
+  }, []);
+
+  return null;
+}
+
 export default function TribuApp({ Component, pageProps }) {
   return (
     <ErrorBoundary>
       <AppProvider>
         <ToastProvider>
           <Head>
+            <script dangerouslySetInnerHTML={{ __html: DISPLAY_MODE_BOOTSTRAP }} />
             <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
           </Head>
+          <DisplayModeRootFlag />
           <a href="#main-content" className="skip-link">Skip to main content</a>
           <div className="mesh-bg" aria-hidden="true" />
           <div className="grain" aria-hidden="true" />

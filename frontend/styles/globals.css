@@ -398,6 +398,16 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 /* ─── Grain Texture ─── */
 .grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.025; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-repeat: repeat; background-size: 256px; }
 
+/* ─── Standalone PWA hardening ─── */
+:root[data-display-mode="standalone"] .mesh-bg::before,
+:root[data-display-mode="standalone"] .mesh-bg::after {
+  animation: none;
+}
+
+:root[data-display-mode="standalone"] .grain {
+  display: none;
+}
+
 /* ─── Glass ─── */
 .glass { background: var(--glass); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); position: relative; overflow: hidden; }
 .glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(135deg, var(--glass-shine), transparent 50%); pointer-events: none; }
@@ -1382,6 +1392,21 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bottom-nav-overflow-item.active {
   color: var(--amethyst);
   background: rgba(124, 58, 237, 0.1);
+}
+
+/* ─── Standalone PWA compositing fallback ─── */
+:root[data-display-mode="standalone"] .view-enter {
+  animation: none !important;
+}
+
+:root[data-display-mode="standalone"] .glass,
+:root[data-display-mode="standalone"] .glass-sm,
+:root[data-display-mode="standalone"] .sidebar,
+:root[data-display-mode="standalone"] .bottom-nav,
+:root[data-display-mode="standalone"] .search-overlay,
+:root[data-display-mode="standalone"] .bottom-nav-overflow {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 [data-theme="light"] .bottom-nav-overflow {
