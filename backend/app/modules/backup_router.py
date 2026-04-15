@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.backup import create_backup, delete_backup, enforce_retention, get_backup_path, list_backups
 from app.core.deps import current_user
+from app.core.scopes import require_scope
 from app.core.scheduler import configure_backup_schedule
 from app.database import get_db
 from app.models import Membership, SystemSetting, User
@@ -52,7 +53,7 @@ def _set_setting(db: Session, key: str, value: str):
     description="Return current backup schedule, retention policy, and last backup status. Admin role required.",
     response_description="Backup configuration",
 )
-def get_config(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_config(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
     _require_admin(user, db)
     schedule = _get_setting(db, "backup_schedule", "off")
     retention = _get_setting(db, "backup_retention", "7")
@@ -77,6 +78,7 @@ def update_config(
     payload: BackupConfigUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("admin:write"),
 ):
     _require_admin(user, db)
     _set_setting(db, "backup_schedule", payload.schedule.value)
@@ -94,7 +96,7 @@ def update_config(
     description="Create a database backup immediately and enforce the retention policy. Admin role required.",
     response_description="Backup filename",
 )
-def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
     _require_admin(user, db)
     try:
         filename = create_backup(DATABASE_URL, BACKUP_DIR)
@@ -118,7 +120,7 @@ def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get
     description="Return metadata for all backup files on disk. Admin role required.",
     response_description="List of backup entries",
 )
-def list_all_backups(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def list_all_backups(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
     _require_admin(user, db)
     entries = list_backups(BACKUP_DIR)
     return [BackupEntry(**e) for e in entries]
@@ -131,7 +133,7 @@ def list_all_backups(user: User = Depends(current_user), db: Session = Depends(g
     response_description="Backup file download",
     responses={**NOT_FOUND_RESPONSE},
 )
-def download_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def download_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
     _require_admin(user, db)
     path = get_backup_path(BACKUP_DIR, filename)
     if not path:
@@ -146,7 +148,7 @@ def download_backup(filename: str, user: User = Depends(current_user), db: Sessi
     response_description="Deletion confirmation",
     responses={**NOT_FOUND_RESPONSE},
 )
-def delete_single_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def delete_single_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
     _require_admin(user, db)
     if not delete_backup(BACKUP_DIR, filename):
         raise HTTPException(status_code=404, detail=error_detail(BACKUP_NOT_FOUND))

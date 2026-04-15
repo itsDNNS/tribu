@@ -93,9 +93,43 @@ class MeResponse(BaseModel):
     })
 
 
+_PROFILE_IMAGE_ALLOWED_MIMES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_PROFILE_IMAGE_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+_PROFILE_IMAGE_DATA_URL_RE = re.compile(r"^data:(image/[a-z+]+);base64,(.+)$", re.DOTALL)
+
+
 class ProfileImageUpdate(BaseModel):
-    """Update profile image (base64-encoded)."""
-    profile_image: str = Field(..., description="Base64-encoded image data")
+    """Update profile image (base64 data URL)."""
+    profile_image: str = Field(..., description="Base64-encoded image data URL (data:image/...;base64,...)")
+
+    @field_validator("profile_image")
+    @classmethod
+    def validate_profile_image(cls, v: str) -> str:
+        import base64
+
+        m = _PROFILE_IMAGE_DATA_URL_RE.match(v)
+        if not m:
+            raise ValueError("Profile image must be a data URL (data:image/...;base64,...)")
+
+        mime_type = m.group(1)
+        if mime_type not in _PROFILE_IMAGE_ALLOWED_MIMES:
+            raise ValueError(f"Image type '{mime_type}' not allowed. Allowed: {', '.join(sorted(_PROFILE_IMAGE_ALLOWED_MIMES))}")
+
+        b64_data = m.group(2)
+        # Pre-decode size check: base64 encodes 3 bytes into 4 chars
+        max_b64_len = (_PROFILE_IMAGE_MAX_BYTES * 4 // 3) + 4
+        if len(b64_data) > max_b64_len:
+            raise ValueError(f"Image too large. Maximum: {_PROFILE_IMAGE_MAX_BYTES} bytes (2 MB)")
+
+        try:
+            decoded = base64.b64decode(b64_data, validate=True)
+        except Exception:
+            raise ValueError("Invalid base64 data")
+
+        if len(decoded) > _PROFILE_IMAGE_MAX_BYTES:
+            raise ValueError(f"Image too large ({len(decoded)} bytes). Maximum: {_PROFILE_IMAGE_MAX_BYTES} bytes (2 MB)")
+
+        return v
 
 
 class LeaveFamilyRequest(BaseModel):

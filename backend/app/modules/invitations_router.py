@@ -21,7 +21,7 @@ from app.schemas import (
     InviteInfoResponse, RegisterWithInviteRequest,
 )
 from app.security import create_access_token, hash_password
-from app.core.errors import error_detail, INVALID_ROLE, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, ADMIN_REQUIRED
+from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, ADMIN_REQUIRED
 
 from fastapi.responses import JSONResponse
 
@@ -87,6 +87,8 @@ def create_invitation(
 
     if payload.role_preset not in ("admin", "member"):
         raise HTTPException(status_code=400, detail=error_detail(INVALID_ROLE))
+    if payload.role_preset == "admin" and not payload.is_adult_preset:
+        raise HTTPException(status_code=400, detail=error_detail(ONLY_ADULTS_ADMIN))
 
     token = secrets.token_urlsafe(32)
     expires_at = utcnow() + timedelta(days=payload.expires_in_days)
@@ -249,11 +251,17 @@ def register_with_invite(
     db.add(user)
     db.flush()
 
+    role = invitation.role_preset
+    is_adult = invitation.is_adult_preset
+    # Defensive: enforce admin-must-be-adult even if invitation data is inconsistent
+    if role == "admin" and not is_adult:
+        role = "member"
+
     membership = Membership(
         user_id=user.id,
         family_id=invitation.family_id,
-        role=invitation.role_preset,
-        is_adult=invitation.is_adult_preset,
+        role=role,
+        is_adult=is_adult,
     )
     db.add(membership)
 
@@ -290,7 +298,13 @@ def get_base_url(
     request: Request,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("admin:read"),
 ):
+    memberships = db.query(Membership).filter(
+        Membership.user_id == user.id, Membership.role == "admin"
+    ).all()
+    if not memberships:
+        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
     row = db.query(SystemSetting).filter(SystemSetting.key == "base_url").first()
     saved = row.value if row else ""
     env_val = os.getenv("BASE_URL", "")
@@ -308,6 +322,7 @@ def set_base_url(
     payload: BaseUrlUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("admin:write"),
 ):
     # Only allow admins of at least one family
     memberships = db.query(Membership).filter(
@@ -326,13 +341,18 @@ def set_base_url(
 
 
 @settings_router.get("/time-format")
-def get_time_format(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_time_format(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
+    memberships = db.query(Membership).filter(
+        Membership.user_id == user.id, Membership.role == "admin"
+    ).all()
+    if not memberships:
+        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
     row = db.query(SystemSetting).filter(SystemSetting.key == "time_format").first()
     return {"time_format": row.value if row else "24h"}
 
 
 @settings_router.put("/time-format")
-def set_time_format(payload: dict, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def set_time_format(payload: dict, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
     memberships = db.query(Membership).filter(
         Membership.user_id == user.id, Membership.role == "admin"
     ).all()

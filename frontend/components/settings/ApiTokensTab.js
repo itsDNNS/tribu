@@ -2,21 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useFamily } from '../../contexts/FamilyContext';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
-const SCOPE_MODULES = [
-  { key: 'calendar', label: 'Calendar' },
-  { key: 'tasks', label: 'Tasks' },
-  { key: 'contacts', label: 'Contacts' },
-  { key: 'birthdays', label: 'Birthdays' },
-  { key: 'families', label: 'Families' },
-  { key: 'profile', label: 'Profile' },
-];
+const SCOPE_MODULE_KEYS_BASE = ['calendar', 'tasks', 'contacts', 'birthdays', 'families', 'profile'];
 
 export default function ApiTokensTab() {
   const { messages, lang, loggedIn, demoMode } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
+  const { isAdmin } = useFamily();
+  const scopeModuleKeys = isAdmin ? [...SCOPE_MODULE_KEYS_BASE, 'admin'] : SCOPE_MODULE_KEYS_BASE;
 
   const [tokens, setTokens] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -186,17 +182,17 @@ export default function ApiTokensTab() {
                 </label>
                 {!isFullAccess && (
                   <div className="set-token-scope-grid">
-                    {SCOPE_MODULES.map(mod => (
-                      <div key={mod.key} className="set-token-scope-module">
-                        <div className="set-token-scope-label">{mod.label}</div>
+                    {scopeModuleKeys.map(mod => (
+                      <div key={mod} className="set-token-scope-module">
+                        <div className="set-token-scope-label">{t(messages, `token_scope_${mod}`)}</div>
                         {['read', 'write'].map(action => (
                           <label key={action} className="set-token-scope-action">
                             <input
                               type="checkbox"
-                              checked={newScopes.includes(`${mod.key}:${action}`)}
-                              onChange={e => toggleModuleScope(mod.key, action, e.target.checked)}
+                              checked={newScopes.includes(`${mod}:${action}`)}
+                              onChange={e => toggleModuleScope(mod, action, e.target.checked)}
                             />
-                            {action}
+                            {t(messages, `token_action_${action}`)}
                           </label>
                         ))}
                       </div>

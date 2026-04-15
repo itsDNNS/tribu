@@ -19,6 +19,8 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "profile:write": "Update profile image, change password, manage tokens",
     "rewards:read": "View reward system data (currencies, rules, catalog, transactions, balances)",
     "rewards:write": "Manage rewards, earning rules, and transactions",
+    "admin:read": "View backup config, admin settings, and system status",
+    "admin:write": "Manage backups, update admin settings, and trigger system operations",
 }
 
 VALID_SCOPES = set(SCOPE_DESCRIPTIONS.keys())

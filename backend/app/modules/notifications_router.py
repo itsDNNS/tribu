@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core import cache
 from app.core.deps import current_user
+from app.core.scopes import require_scope
 from app.core.push import get_vapid_public_key
 from app.database import get_db
 from app.models import Notification, NotificationPreference, PushSubscription, User
@@ -27,6 +28,7 @@ def list_notifications(
     offset: int = Query(0, ge=0),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("profile:read"),
 ):
     rows = (
         db.query(Notification)
@@ -45,7 +47,7 @@ def list_notifications(
     description="Return the number of unread notifications for the current user.",
     response_description="Object with unread count",
 )
-def unread_count(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def unread_count(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:read")):
     def _load():
         return {"count": db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).count()}
     return cache.get_or_set(f"tribu:notif_count:{user.id}", 15, _load)
@@ -58,7 +60,7 @@ def unread_count(user: User = Depends(current_user), db: Session = Depends(get_d
     response_description="Confirmation",
     responses={**NOT_FOUND_RESPONSE},
 )
-def mark_read(notification_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def mark_read(notification_id: int, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:write")):
     notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
     if not notif:
         raise HTTPException(status_code=404, detail=error_detail(NOTIFICATION_NOT_FOUND))
@@ -74,7 +76,7 @@ def mark_read(notification_id: int, user: User = Depends(current_user), db: Sess
     description="Mark all unread notifications as read for the current user.",
     response_description="Confirmation",
 )
-def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:write")):
     db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).update({"read": True})
     db.commit()
     cache.invalidate(f"tribu:notif_count:{user.id}")
@@ -88,7 +90,7 @@ def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_
     response_description="Confirmation",
     responses={**NOT_FOUND_RESPONSE},
 )
-def delete_notification(notification_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def delete_notification(notification_id: int, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:write")):
     notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
     if not notif:
         raise HTTPException(status_code=404, detail=error_detail(NOTIFICATION_NOT_FOUND))
@@ -107,6 +109,7 @@ def delete_notification(notification_id: int, user: User = Depends(current_user)
 async def notification_stream(
     user: User = Depends(current_user),
     last_event_id: int = Query(0, alias="lastEventId"),
+    _scope=require_scope("profile:read"),
 ):
     user_id = user.id
 
@@ -159,6 +162,7 @@ def push_subscribe(
     payload: PushSubscriptionCreate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
 ):
     existing = db.query(PushSubscription).filter(PushSubscription.endpoint == payload.endpoint).first()
     if existing:
@@ -196,6 +200,7 @@ def push_unsubscribe(
     payload: PushUnsubscribe,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
 ):
     sub = db.query(PushSubscription).filter(
         PushSubscription.endpoint == payload.endpoint,
@@ -222,7 +227,7 @@ def push_unsubscribe(
     description="Return the current user's notification preferences (reminders, quiet hours).",
     response_description="Notification preferences",
 )
-def get_preferences(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_preferences(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:read")):
     def _load():
         pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
         if not pref:
@@ -243,6 +248,7 @@ def update_preferences(
     payload: NotificationPreferenceUpdate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
 ):
     pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
     if not pref:

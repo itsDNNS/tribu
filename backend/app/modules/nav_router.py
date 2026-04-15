@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core import cache
 from app.core.deps import current_user
+from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import User, UserNavOrder
 from app.schemas import AUTH_RESPONSES, NavOrderResponse, NavOrderUpdate
@@ -21,7 +22,7 @@ KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "rewards", "contacts
     description="Return the current user's custom navigation bar order, or the default if not set.",
     response_description="Navigation bar order",
 )
-def get_nav_order(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_nav_order(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:read")):
     def _load():
         row = db.query(UserNavOrder).filter(UserNavOrder.user_id == user.id).first()
         if not row:
@@ -38,7 +39,7 @@ def get_nav_order(user: User = Depends(current_user), db: Session = Depends(get_
     description="Save a custom navigation bar order for the current user.",
     response_description="Updated navigation bar order",
 )
-def update_nav_order(payload: NavOrderUpdate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def update_nav_order(payload: NavOrderUpdate, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:write")):
     invalid = [k for k in payload.nav_order if k not in KNOWN_KEYS]
     if invalid:
         raise HTTPException(status_code=422, detail=error_detail(UNKNOWN_NAV_KEYS, keys=', '.join(invalid)))

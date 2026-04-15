@@ -288,6 +288,7 @@ def change_password(
     payload: ChangePasswordRequest,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
 ):
     if not verify_password(payload.old_password, user.password_hash):
         raise HTTPException(status_code=400, detail=error_detail(OLD_PASSWORD_INCORRECT))
