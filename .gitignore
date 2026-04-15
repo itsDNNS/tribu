@@ -27,3 +27,6 @@ playwright-report/
 
 # OS
 .DS_Store
+
+# Graphify knowledge graph (local only)
+graphify-out/
