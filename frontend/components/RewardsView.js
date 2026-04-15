@@ -194,7 +194,7 @@ export default function RewardsView() {
           {/* Balances */}
           <h3 className="rewards-section-title">{t(messages, 'module.rewards.balances_title')}</h3>
           <div className="rewards-balances">
-            {rw.balances.map(b => {
+            {rw.balances.map((b, i) => {
               const member = members.find(m => m.user_id === b.user_id);
               return (
                 <div key={b.user_id} className="glass-sm rewards-balance-card">
