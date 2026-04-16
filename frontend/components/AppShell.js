@@ -92,12 +92,14 @@ export default function AppShell() {
     shopping: { key: 'shopping', icon: ShoppingCart, label: t(messages, 'module.shopping.name'), mobileLabel: t(messages, 'module.shopping.name'), badge: totalUnchecked || null },
     tasks: { key: 'tasks', icon: CheckSquare, label: t(messages, 'module.tasks.name'), mobileLabel: t(messages, 'module.tasks.name'), badge: openTaskCount || null },
     rewards: { key: 'rewards', icon: Gift, label: t(messages, 'module.rewards.name'), mobileLabel: t(messages, 'module.rewards.name') },
-    gifts: { key: 'gifts', icon: Sparkles, label: t(messages, 'module.gifts.name'), mobileLabel: t(messages, 'module.gifts.name') },
+    ...(isChild || demoMode ? {} : {
+      gifts: { key: 'gifts', icon: Sparkles, label: t(messages, 'module.gifts.name'), mobileLabel: t(messages, 'module.gifts.name') },
+    }),
     contacts: { key: 'contacts', icon: BookUser, label: t(messages, 'contacts'), mobileLabel: t(messages, 'contacts') },
     notifications: { key: 'notifications', icon: Bell, label: t(messages, 'notifications'), mobileLabel: t(messages, 'notifications'), badge: unreadCount || null },
     settings: { key: 'settings', icon: Settings, label: t(messages, 'settings'), mobileLabel: t(messages, 'settings') },
     admin: { key: 'admin', icon: Shield, label: t(messages, 'admin'), mobileLabel: t(messages, 'admin') },
-  }), [messages, totalUnchecked, openTaskCount, unreadCount]);
+  }), [messages, totalUnchecked, openTaskCount, unreadCount, isChild, demoMode]);
 
   // Split items: sortable nav items vs pinned bottom items (settings, admin)
   const orderedItems = useMemo(() => {

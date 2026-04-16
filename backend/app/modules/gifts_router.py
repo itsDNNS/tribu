@@ -7,6 +7,7 @@ from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.errors import (
     ADULT_REQUIRED,
     GIFT_NOT_FOUND,
+    GIFT_RECIPIENT_CONFLICT,
     GIFT_RECIPIENT_NOT_FAMILY_MEMBER,
     INVALID_GIFT_STATUS,
     INVALID_GIFT_URL,
@@ -40,6 +41,26 @@ def _require_adult_or_403(db: Session, user: User, family_id: int) -> Membership
     return membership
 
 
+def _load_gift_for_caller(db: Session, user: User, gift_id: int) -> GiftIdea:
+    """Fetch a gift and authorize the caller.
+
+    Callers outside the family see 404, not 403, so gift existence and
+    recipient membership stay private across families.
+    """
+    gift = db.query(GiftIdea).filter(GiftIdea.id == gift_id).first()
+    if not gift:
+        raise HTTPException(status_code=404, detail=error_detail(GIFT_NOT_FOUND))
+    membership = db.query(Membership).filter(
+        Membership.user_id == user.id,
+        Membership.family_id == gift.family_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail=error_detail(GIFT_NOT_FOUND))
+    if not membership.is_adult:
+        raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
+    return gift
+
+
 def _validate_url(url: Optional[str]) -> None:
     if url is None:
         return
@@ -57,6 +78,16 @@ def _validate_recipient(db: Session, family_id: int, for_user_id: Optional[int])
     ).first()
     if not member:
         raise HTTPException(status_code=400, detail=error_detail(GIFT_RECIPIENT_NOT_FAMILY_MEMBER))
+
+
+def _resolved_recipient(current_user_id: Optional[int], current_external: Optional[str],
+                        fields: dict) -> tuple[Optional[int], Optional[str]]:
+    """Return the (for_user_id, for_person_name) pair after applying the incoming patch."""
+    next_user_id = fields["for_user_id"] if "for_user_id" in fields else current_user_id
+    next_external = fields["for_person_name"] if "for_person_name" in fields else current_external
+    if next_user_id is not None and next_external:
+        raise HTTPException(status_code=400, detail=error_detail(GIFT_RECIPIENT_CONFLICT))
+    return next_user_id, next_external
 
 
 def _validate_status(status: Optional[str]) -> None:
@@ -123,6 +154,8 @@ def create_gift(
     _validate_status(payload.status)
     _validate_url(payload.url)
     _validate_recipient(db, payload.family_id, payload.for_user_id)
+    if payload.for_user_id is not None and payload.for_person_name:
+        raise HTTPException(status_code=400, detail=error_detail(GIFT_RECIPIENT_CONFLICT))
 
     gift = GiftIdea(
         family_id=payload.family_id,
@@ -165,11 +198,7 @@ def get_gift(
     db: Session = Depends(get_db),
     _scope=require_scope("gifts:read"),
 ):
-    gift = db.query(GiftIdea).filter(GiftIdea.id == gift_id).first()
-    if not gift:
-        raise HTTPException(status_code=404, detail=error_detail(GIFT_NOT_FOUND))
-    _require_adult_or_403(db, user, gift.family_id)
-    return gift
+    return _load_gift_for_caller(db, user, gift_id)
 
 
 @router.patch(
@@ -191,10 +220,7 @@ def update_gift(
     db: Session = Depends(get_db),
     _scope=require_scope("gifts:write"),
 ):
-    gift = db.query(GiftIdea).filter(GiftIdea.id == gift_id).first()
-    if not gift:
-        raise HTTPException(status_code=404, detail=error_detail(GIFT_NOT_FOUND))
-    _require_adult_or_403(db, user, gift.family_id)
+    gift = _load_gift_for_caller(db, user, gift_id)
 
     fields = payload.model_dump(exclude_unset=True)
 
@@ -204,6 +230,7 @@ def update_gift(
         _validate_url(fields["url"])
     if "for_user_id" in fields:
         _validate_recipient(db, gift.family_id, fields["for_user_id"])
+    _resolved_recipient(gift.for_user_id, gift.for_person_name, fields)
 
     for key, value in fields.items():
         if key == "current_price_cents":
@@ -241,10 +268,7 @@ def delete_gift(
     db: Session = Depends(get_db),
     _scope=require_scope("gifts:write"),
 ):
-    gift = db.query(GiftIdea).filter(GiftIdea.id == gift_id).first()
-    if not gift:
-        raise HTTPException(status_code=404, detail=error_detail(GIFT_NOT_FOUND))
-    _require_adult_or_403(db, user, gift.family_id)
+    gift = _load_gift_for_caller(db, user, gift_id)
     db.delete(gift)
     db.commit()
     return {"status": "deleted", "gift_id": gift_id}

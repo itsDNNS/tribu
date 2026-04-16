@@ -88,6 +88,7 @@ UNKNOWN_NAV_KEYS = "UNKNOWN_NAV_KEYS"
 # ── Gifts ────────────────────────────────────────────────────
 GIFT_NOT_FOUND = "GIFT_NOT_FOUND"
 GIFT_RECIPIENT_NOT_FAMILY_MEMBER = "GIFT_RECIPIENT_NOT_FAMILY_MEMBER"
+GIFT_RECIPIENT_CONFLICT = "GIFT_RECIPIENT_CONFLICT"
 INVALID_GIFT_STATUS = "INVALID_GIFT_STATUS"
 INVALID_GIFT_URL = "INVALID_GIFT_URL"
 
@@ -169,6 +170,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     REWARD_INACTIVE: "This reward is no longer available",
     GIFT_NOT_FOUND: "Gift not found",
     GIFT_RECIPIENT_NOT_FAMILY_MEMBER: "Gift recipient is not a family member",
+    GIFT_RECIPIENT_CONFLICT: "Provide either a family member or an external recipient name, not both",
     INVALID_GIFT_STATUS: "Invalid gift status: {status}",
     INVALID_GIFT_URL: "Gift URL must start with http:// or https://",
 }

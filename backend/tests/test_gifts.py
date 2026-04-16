@@ -276,6 +276,98 @@ class TestGiftValidation:
         assert "GIFT_RECIPIENT_NOT_FAMILY_MEMBER" in str(resp.json())
 
 
+class TestGiftIsolation:
+    def test_out_of_family_access_returns_404(self):
+        """Gift existence must not leak across families via 403-vs-404."""
+        token_a, family_a = _seed_adult("*", "iso_a")
+        token_b, _ = _seed_adult("*", "iso_b")
+
+        gift_id = client.post(
+            "/gifts",
+            json={"family_id": family_a, "title": "Secret"},
+            headers=_auth(token_a),
+        ).json()["id"]
+
+        resp = client.get(f"/gifts/{gift_id}", headers=_auth(token_b))
+        assert resp.status_code == 404
+        assert "GIFT_NOT_FOUND" in str(resp.json())
+
+        patch_resp = client.patch(
+            f"/gifts/{gift_id}",
+            json={"status": "ordered"},
+            headers=_auth(token_b),
+        )
+        assert patch_resp.status_code == 404
+
+        del_resp = client.delete(f"/gifts/{gift_id}", headers=_auth(token_b))
+        assert del_resp.status_code == 404
+
+
+class TestGiftRecipientExclusivity:
+    def test_create_rejects_both_recipient_fields(self):
+        token, family_id = _seed_adult("*", "excl_a")
+        resp = client.post(
+            "/gifts",
+            json={"family_id": family_id, "title": "Book", "for_person_name": "Oma"},
+            headers=_auth(token),
+        )
+        assert resp.status_code == 200
+        gift_id = resp.json()["id"]
+
+        conflict = client.patch(
+            f"/gifts/{gift_id}",
+            json={"for_user_id": None, "for_person_name": "Oma"},
+            headers=_auth(token),
+        )
+        assert conflict.status_code == 200
+
+    def test_create_with_both_fields_rejected(self):
+        token, family_id = _seed_adult("*", "excl_b")
+        resp = client.post(
+            "/gifts",
+            json={
+                "family_id": family_id,
+                "title": "Book",
+                "for_person_name": "Oma",
+            },
+            headers=_auth(token),
+        )
+        gift_id = resp.json()["id"]
+
+        # Now seed a member to try assigning both
+        db = TestSession()
+        child = User(email=f"kid-excl-{family_id}@example.com",
+                     password_hash=hash_password("password"),
+                     display_name="Kid")
+        db.add(child)
+        db.flush()
+        db.add(Membership(user_id=child.id, family_id=family_id, role="member", is_adult=False))
+        db.commit()
+        child_user_id = child.id
+        db.close()
+
+        conflict = client.patch(
+            f"/gifts/{gift_id}",
+            json={"for_user_id": child_user_id},
+            headers=_auth(token),
+        )
+        assert conflict.status_code == 400
+        assert "GIFT_RECIPIENT_CONFLICT" in str(conflict.json())
+
+        post_conflict = client.post(
+            "/gifts",
+            json={
+                "family_id": family_id,
+                "title": "Sweater",
+                "for_user_id": child_user_id,
+                "for_person_name": "Also Oma",
+            },
+            headers=_auth(token),
+        )
+        assert post_conflict.status_code == 400
+        assert "GIFT_RECIPIENT_CONFLICT" in str(post_conflict.json())
+
+
 class TestGiftListFilters:
     def test_filter_by_status_and_exclude_gifted(self):
         token, family_id = _seed_adult("*", "l")

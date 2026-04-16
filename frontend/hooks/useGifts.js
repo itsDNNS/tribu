@@ -30,7 +30,7 @@ function priceToCents(value) {
 }
 
 export function useGifts() {
-  const { familyId, messages, demoMode } = useApp();
+  const { familyId, messages, demoMode, isChild } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [gifts, setGifts] = useState([]);
@@ -42,7 +42,7 @@ export function useGifts() {
   const [editingId, setEditingId] = useState(null);
 
   const loadGifts = useCallback(async (fid = familyId) => {
-    if (!fid || demoMode) {
+    if (!fid || demoMode || isChild) {
       setGifts([]);
       return;
     }
@@ -54,7 +54,7 @@ export function useGifts() {
     });
     if (ok && data?.items) setGifts(data.items);
     setLoading(false);
-  }, [familyId, demoMode, statusFilter, recipientFilter, includeGifted]);
+  }, [familyId, demoMode, isChild, statusFilter, recipientFilter, includeGifted]);
 
   useEffect(() => {
     loadGifts();
