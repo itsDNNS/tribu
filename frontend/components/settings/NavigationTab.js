@@ -53,8 +53,7 @@ export default function NavigationTab() {
   }
 
   function handleResetNavOrder() {
-    const sortable = DEFAULT_NAV_ORDER.filter(k => !PINNED_KEYS.has(k));
-    setLocalNavOrder(sortable);
+    setLocalNavOrder(filterHidden(DEFAULT_NAV_ORDER));
     if (demoMode) {
       setNavOrder(DEFAULT_NAV_ORDER);
     }
