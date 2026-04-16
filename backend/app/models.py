@@ -330,3 +330,46 @@ class TokenTransaction(Base):
     confirmed_by = relationship("User", foreign_keys=[confirmed_by_user_id])
     source_task = relationship("Task", foreign_keys=[source_task_id])
     source_reward = relationship("Reward", foreign_keys=[source_reward_id])
+
+
+# ── Gift List ─────────────────────────────────────────────
+
+
+class GiftIdea(Base):
+    __tablename__ = "gift_ideas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    for_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    for_person_name = Column(String(120), nullable=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    url = Column(Text, nullable=True)
+    occasion = Column(String(40), nullable=True)
+    occasion_date = Column(Date, nullable=True)
+    status = Column(String(20), nullable=False, default="idea", server_default="idea")
+    notes = Column(Text, nullable=True)
+    current_price_cents = Column(Integer, nullable=True)
+    currency = Column(String(3), nullable=False, default="EUR", server_default="EUR")
+    gifted_at = Column(DateTime, nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    price_history = relationship(
+        "GiftPriceHistory",
+        back_populates="gift",
+        cascade="all, delete-orphan",
+        order_by="GiftPriceHistory.recorded_at.desc()",
+    )
+
+
+class GiftPriceHistory(Base):
+    __tablename__ = "gift_price_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    gift_id = Column(Integer, ForeignKey("gift_ideas.id", ondelete="CASCADE"), nullable=False, index=True)
+    price_cents = Column(Integer, nullable=False)
+    recorded_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    gift = relationship("GiftIdea", back_populates="price_history")

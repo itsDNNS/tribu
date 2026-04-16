@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigation, ChevronUp, ChevronDown, Check, CalendarDays, CheckSquare, LayoutDashboard, BookUser, ShoppingCart, Bell } from 'lucide-react';
+import { Navigation, ChevronUp, ChevronDown, Check, CalendarDays, CheckSquare, LayoutDashboard, BookUser, ShoppingCart, Bell, Sparkles } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
@@ -9,6 +9,7 @@ const NAV_ITEM_META = {
   calendar: { icon: CalendarDays, labelKey: 'calendar' },
   shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
+  gifts: { icon: Sparkles, labelKey: 'module.gifts.name', adultOnly: true, hideInDemo: true },
   contacts: { icon: BookUser, labelKey: 'contacts' },
   notifications: { icon: Bell, labelKey: 'notifications' },
 };
@@ -16,11 +17,19 @@ const NAV_ITEM_META = {
 const PINNED_KEYS = new Set(['settings', 'admin']);
 
 export default function NavigationTab() {
-  const { messages, isAdmin, demoMode, navOrder, setNavOrder } = useApp();
-  const [localNavOrder, setLocalNavOrder] = useState(() => navOrder.filter(k => !PINNED_KEYS.has(k)));
+  const { messages, isAdmin, isChild, demoMode, navOrder, setNavOrder } = useApp();
+  const filterHidden = (keys) => keys.filter((k) => {
+    if (PINNED_KEYS.has(k)) return false;
+    const meta = NAV_ITEM_META[k];
+    if (!meta) return true;
+    if (meta.adultOnly && isChild) return false;
+    if (meta.hideInDemo && demoMode) return false;
+    return true;
+  });
+  const [localNavOrder, setLocalNavOrder] = useState(() => filterHidden(navOrder));
   const [navSaved, setNavSaved] = useState(false);
 
-  useEffect(() => { setLocalNavOrder(navOrder.filter(k => !PINNED_KEYS.has(k))); }, [navOrder]);
+  useEffect(() => { setLocalNavOrder(filterHidden(navOrder)); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [navOrder, isChild, demoMode]);
 
   function moveNavItem(index, direction) {
     const newOrder = [...localNavOrder];
@@ -44,8 +53,7 @@ export default function NavigationTab() {
   }
 
   function handleResetNavOrder() {
-    const sortable = DEFAULT_NAV_ORDER.filter(k => !PINNED_KEYS.has(k));
-    setLocalNavOrder(sortable);
+    setLocalNavOrder(filterHidden(DEFAULT_NAV_ORDER));
     if (demoMode) {
       setNavOrder(DEFAULT_NAV_ORDER);
     }

@@ -455,3 +455,28 @@ export function apiRedeemReward(payload) { return post('/rewards/transactions/re
 export function apiConfirmTransaction(id) { return patch(`/rewards/transactions/${id}/confirm`, {}); }
 export function apiRejectTransaction(id) { return patch(`/rewards/transactions/${id}/reject`, {}); }
 export function apiGetRewardBalances(familyId) { return request(`/rewards/balances?family_id=${familyId}`); }
+
+// Gifts
+export function apiGetGifts(familyId, { status = null, forUserId = null, occasion = null, includeGifted = true } = {}) {
+  const params = new URLSearchParams({ family_id: String(familyId), include_gifted: String(includeGifted) });
+  if (status) params.set('status', status);
+  if (forUserId) params.set('for_user_id', String(forUserId));
+  if (occasion) params.set('occasion', occasion);
+  return request(`/gifts?${params.toString()}`);
+}
+
+export function apiGetGift(giftId) {
+  return request(`/gifts/${giftId}`);
+}
+
+export function apiCreateGift(payload) {
+  return post('/gifts', payload);
+}
+
+export function apiUpdateGift(giftId, payload) {
+  return patch(`/gifts/${giftId}`, payload);
+}
+
+export function apiDeleteGift(giftId) {
+  return del(`/gifts/${giftId}`);
+}
