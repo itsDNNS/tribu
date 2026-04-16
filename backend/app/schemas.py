@@ -918,3 +918,87 @@ class BalancesResponse(BaseModel):
     currency_name: str
     currency_icon: str
     balances: list[MemberBalance]
+
+
+# ---------------------------------------------------------------------------
+# Gift List
+# ---------------------------------------------------------------------------
+
+GIFT_STATUSES = ("idea", "ordered", "purchased", "gifted")
+GIFT_OCCASIONS = ("birthday", "christmas", "easter", "other")
+
+
+class GiftPriceHistoryEntry(BaseModel):
+    """Single price history entry."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    price_cents: int
+    recorded_at: datetime
+
+
+class GiftCreate(BaseModel):
+    """Create a new gift idea."""
+    family_id: int = Field(..., description="Family ID")
+    title: str = Field(min_length=1, max_length=200, description="Gift title")
+    description: Optional[str] = Field(None, description="Free-text description")
+    url: Optional[str] = Field(None, max_length=2000, description="Product link (http/https)")
+    for_user_id: Optional[int] = Field(None, description="Family member this gift is for")
+    for_person_name: Optional[str] = Field(None, max_length=120, description="External recipient (e.g. grandparent)")
+    occasion: Optional[str] = Field(None, max_length=40, description="birthday, christmas, easter, or free-text label")
+    occasion_date: Optional[date] = Field(None, description="Target date for the gift")
+    status: str = Field("idea", description="idea, ordered, purchased, or gifted")
+    notes: Optional[str] = Field(None, description="Private parent notes")
+    current_price_cents: Optional[int] = Field(None, ge=0, description="Current observed price in cents")
+    currency: str = Field("EUR", min_length=3, max_length=3, description="ISO 4217 currency code")
+
+
+class GiftUpdate(BaseModel):
+    """Update an existing gift idea (partial update)."""
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    url: Optional[str] = Field(None, max_length=2000)
+    for_user_id: Optional[int] = None
+    for_person_name: Optional[str] = Field(None, max_length=120)
+    occasion: Optional[str] = Field(None, max_length=40)
+    occasion_date: Optional[date] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    current_price_cents: Optional[int] = Field(None, ge=0)
+    currency: Optional[str] = Field(None, min_length=3, max_length=3)
+
+
+class GiftResponse(BaseModel):
+    """Gift idea with full details."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    for_user_id: Optional[int]
+    for_person_name: Optional[str]
+    title: str
+    description: Optional[str]
+    url: Optional[str]
+    occasion: Optional[str]
+    occasion_date: Optional[date]
+    status: str
+    notes: Optional[str]
+    current_price_cents: Optional[int]
+    currency: str
+    gifted_at: Optional[datetime]
+    created_by_user_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+
+
+class GiftDetailResponse(GiftResponse):
+    """Gift idea with embedded price history (most recent first)."""
+    price_history: list[GiftPriceHistoryEntry] = Field(default_factory=list)
+
+
+class PaginatedGifts(BaseModel):
+    """Paginated gift list."""
+    items: list[GiftResponse]
+    total: int
+    offset: int
+    limit: int

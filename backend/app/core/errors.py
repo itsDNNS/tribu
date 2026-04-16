@@ -85,6 +85,12 @@ NOTIFICATION_NOT_FOUND = "NOTIFICATION_NOT_FOUND"
 # ── Navigation ────────────────────────────────────────────────
 UNKNOWN_NAV_KEYS = "UNKNOWN_NAV_KEYS"
 
+# ── Gifts ────────────────────────────────────────────────────
+GIFT_NOT_FOUND = "GIFT_NOT_FOUND"
+GIFT_RECIPIENT_NOT_FAMILY_MEMBER = "GIFT_RECIPIENT_NOT_FAMILY_MEMBER"
+INVALID_GIFT_STATUS = "INVALID_GIFT_STATUS"
+INVALID_GIFT_URL = "INVALID_GIFT_URL"
+
 # ── Rewards ──────────────────────────────────────────────────
 REWARD_CURRENCY_NOT_FOUND = "REWARD_CURRENCY_NOT_FOUND"
 REWARD_CURRENCY_ALREADY_EXISTS = "REWARD_CURRENCY_ALREADY_EXISTS"
@@ -161,6 +167,10 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     REWARD_TARGET_NOT_MEMBER: "Target user is not a family member",
     INSUFFICIENT_BALANCE: "Insufficient token balance",
     REWARD_INACTIVE: "This reward is no longer available",
+    GIFT_NOT_FOUND: "Gift not found",
+    GIFT_RECIPIENT_NOT_FAMILY_MEMBER: "Gift recipient is not a family member",
+    INVALID_GIFT_STATUS: "Invalid gift status: {status}",
+    INVALID_GIFT_URL: "Gift URL must start with http:// or https://",
 }
 
 
