@@ -112,11 +112,12 @@ function GiftCard({ gift, members, messages, onEdit, onDelete, onStatusChange })
 }
 
 export default function GiftsView() {
-  const { familyId, families, members, messages, isChild } = useApp();
+  const { familyId, families, members, messages, isChild, demoMode } = useApp();
   const g = useGifts();
   const [confirmAction, setConfirmAction] = useState(null);
 
-  if (isChild) {
+  if (isChild || demoMode) {
+    const label = isChild ? 'module.gifts.adult_only' : 'module.gifts.demo_blocked';
     return (
       <div className="view">
         <div className="view-header">
@@ -124,7 +125,7 @@ export default function GiftsView() {
         </div>
         <div className="empty-state">
           <Sparkles size={32} aria-hidden="true" />
-          <p>{t(messages, 'module.gifts.adult_only')}</p>
+          <p>{t(messages, label)}</p>
         </div>
       </div>
     );
