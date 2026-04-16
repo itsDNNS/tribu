@@ -15,10 +15,12 @@ import birthdaysDe from '../i18n/modules/birthdays/de.json';
 import birthdaysEn from '../i18n/modules/birthdays/en.json';
 import rewardsDe from '../i18n/modules/rewards/de.json';
 import rewardsEn from '../i18n/modules/rewards/en.json';
+import giftsDe from '../i18n/modules/gifts/de.json';
+import giftsEn from '../i18n/modules/gifts/en.json';
 
 const moduleLocales = {
-  de: [calendarDe, dashboardDe, contactsDe, tasksDe, shoppingDe, birthdaysDe, rewardsDe],
-  en: [calendarEn, dashboardEn, contactsEn, tasksEn, shoppingEn, birthdaysEn, rewardsEn],
+  de: [calendarDe, dashboardDe, contactsDe, tasksDe, shoppingDe, birthdaysDe, rewardsDe, giftsDe],
+  en: [calendarEn, dashboardEn, contactsEn, tasksEn, shoppingEn, birthdaysEn, rewardsEn, giftsEn],
 };
 
 const coreLocales = { de: coreDe, en: coreEn };

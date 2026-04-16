@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Bell, CalendarDays, CheckSquare, Gift, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal, Search } from 'lucide-react';
+import { Bell, CalendarDays, CheckSquare, Gift, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal, Search, Sparkles } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
@@ -11,6 +11,7 @@ import ContactsView from './ContactsView';
 
 import TasksView from './TasksView';
 import RewardsView from './RewardsView';
+import GiftsView from './GiftsView';
 import ShoppingView from './ShoppingView';
 import SettingsView from './settings';
 import AdminView from './admin';
@@ -25,6 +26,7 @@ const views = {
   contacts: ContactsView,
   tasks: TasksView,
   rewards: RewardsView,
+  gifts: GiftsView,
   notifications: NotificationCenter,
   settings: SettingsView,
   admin: AdminView,
@@ -90,6 +92,7 @@ export default function AppShell() {
     shopping: { key: 'shopping', icon: ShoppingCart, label: t(messages, 'module.shopping.name'), mobileLabel: t(messages, 'module.shopping.name'), badge: totalUnchecked || null },
     tasks: { key: 'tasks', icon: CheckSquare, label: t(messages, 'module.tasks.name'), mobileLabel: t(messages, 'module.tasks.name'), badge: openTaskCount || null },
     rewards: { key: 'rewards', icon: Gift, label: t(messages, 'module.rewards.name'), mobileLabel: t(messages, 'module.rewards.name') },
+    gifts: { key: 'gifts', icon: Sparkles, label: t(messages, 'module.gifts.name'), mobileLabel: t(messages, 'module.gifts.name') },
     contacts: { key: 'contacts', icon: BookUser, label: t(messages, 'contacts'), mobileLabel: t(messages, 'contacts') },
     notifications: { key: 'notifications', icon: Bell, label: t(messages, 'notifications'), mobileLabel: t(messages, 'notifications'), badge: unreadCount || null },
     settings: { key: 'settings', icon: Settings, label: t(messages, 'settings'), mobileLabel: t(messages, 'settings') },
