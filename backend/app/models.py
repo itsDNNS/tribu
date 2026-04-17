@@ -139,6 +139,23 @@ class Contact(Base):
     birthday_month = Column(Integer, nullable=True)
     birthday_day = Column(Integer, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+        server_default=func.now(),
+    )
+    # CardDAV identity: the vCard UID the client picked plus the href
+    # path segment inside the address-book collection. Both unique per
+    # family, backfilled for legacy rows.
+    vcard_uid = Column(String(200), nullable=True)
+    dav_href = Column(String(250), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("family_id", "vcard_uid", name="uq_contacts_family_uid"),
+        UniqueConstraint("family_id", "dav_href", name="uq_contacts_family_href"),
+    )
 
 
 class PersonalAccessToken(Base):

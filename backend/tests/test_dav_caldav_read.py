@@ -122,13 +122,13 @@ class TestCalDAVRead:
         resp = _propfind(client, f"/dav/{EMAIL}/", headers=headers, depth="1")
         assert resp.status_code == 207, resp.text
         body = resp.text
-        assert f"family-{family_id}" in body
+        assert f"cal-{family_id}" in body
 
     def test_collection_exposes_both_events(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)
         headers = {"Authorization": _basic(EMAIL, token)}
-        resp = _propfind(client, f"/dav/{EMAIL}/family-{family_id}/", headers=headers, depth="1")
+        resp = _propfind(client, f"/dav/{EMAIL}/cal-{family_id}/", headers=headers, depth="1")
         assert resp.status_code == 207, resp.text
         assert "tribu-event-" in resp.text
         # exactly 2 item hrefs
@@ -142,7 +142,7 @@ class TestCalDAVRead:
         headers = {"Authorization": _basic(EMAIL, token)}
         listing = _propfind(
             client,
-            f"/dav/{EMAIL}/family-{family_id}/",
+            f"/dav/{EMAIL}/cal-{family_id}/",
             headers=headers,
             depth="1",
         )
@@ -154,7 +154,7 @@ class TestCalDAVRead:
         assert match, listing.text
         event_id = match.group(1)
         get_resp = client.get(
-            f"/dav/{EMAIL}/family-{family_id}/tribu-event-{event_id}.ics",
+            f"/dav/{EMAIL}/cal-{family_id}/tribu-event-{event_id}.ics",
             headers=headers,
         )
         assert get_resp.status_code == 200, get_resp.text
@@ -182,7 +182,7 @@ class TestCalDAVRead:
             )
             resp = client.request(
                 "PROPFIND",
-                f"/dav/{EMAIL}/family-{family_id}/",
+                f"/dav/{EMAIL}/cal-{family_id}/",
                 headers={**headers, "Depth": "0", "Content-Type": "application/xml"},
                 content=body,
             )
@@ -233,7 +233,7 @@ class TestCalDAVRead:
         )
         resp = client.request(
             "REPORT",
-            f"/dav/{EMAIL}/family-{family_id}/",
+            f"/dav/{EMAIL}/cal-{family_id}/",
             headers=headers,
             content=body,
         )
@@ -256,14 +256,14 @@ class TestCalDAVRead:
             "SUMMARY:From DAV\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
         )
         put = client.put(
-            f"/dav/{EMAIL}/family-{family_id}/from-dav.ics",
+            f"/dav/{EMAIL}/cal-{family_id}/from-dav.ics",
             headers=headers,
             content=ics,
         )
         assert put.status_code in (201, 204), put.text
         # The row should be fetchable at the same href.
         get = client.get(
-            f"/dav/{EMAIL}/family-{family_id}/from-dav.ics",
+            f"/dav/{EMAIL}/cal-{family_id}/from-dav.ics",
             headers={"Authorization": _basic(EMAIL, token)},
         )
         assert get.status_code == 200, get.text
@@ -283,33 +283,33 @@ class TestCalDAVRead:
         ics_v2 = ics_v1.replace("Original", "Renamed")
 
         put1 = client.put(
-            f"/dav/{EMAIL}/family-{family_id}/overwrite.ics",
+            f"/dav/{EMAIL}/cal-{family_id}/overwrite.ics",
             headers={**auth, "Content-Type": "text/calendar"},
             content=ics_v1,
         )
         assert put1.status_code in (201, 204)
 
         put2 = client.put(
-            f"/dav/{EMAIL}/family-{family_id}/overwrite.ics",
+            f"/dav/{EMAIL}/cal-{family_id}/overwrite.ics",
             headers={**auth, "Content-Type": "text/calendar"},
             content=ics_v2,
         )
         assert put2.status_code in (201, 204)
 
-        get = client.get(f"/dav/{EMAIL}/family-{family_id}/overwrite.ics", headers=auth)
+        get = client.get(f"/dav/{EMAIL}/cal-{family_id}/overwrite.ics", headers=auth)
         assert get.status_code == 200
         assert "Renamed" in get.text
         assert "Original" not in get.text
 
         delete = client.request(
             "DELETE",
-            f"/dav/{EMAIL}/family-{family_id}/overwrite.ics",
+            f"/dav/{EMAIL}/cal-{family_id}/overwrite.ics",
             headers=auth,
         )
         assert delete.status_code in (200, 204)
 
         get_after = client.get(
-            f"/dav/{EMAIL}/family-{family_id}/overwrite.ics",
+            f"/dav/{EMAIL}/cal-{family_id}/overwrite.ics",
             headers=auth,
         )
         assert get_after.status_code == 404
@@ -342,7 +342,7 @@ class TestCalDAVRead:
         def put(suffix: str):
             client = TestClient(app_under_test)
             return client.put(
-                f"/dav/{EMAIL}/family-{family_id}/race.ics",
+                f"/dav/{EMAIL}/cal-{family_id}/race.ics",
                 headers=headers,
                 content=make_ics(suffix),
             ).status_code
@@ -368,7 +368,7 @@ class TestCalDAVRead:
             "END:VEVENT\r\nEND:VCALENDAR\r\n"
         )
         put = client.put(
-            f"/dav/{EMAIL}/family-{family_id}/bad.ics",
+            f"/dav/{EMAIL}/cal-{family_id}/bad.ics",
             headers=headers,
             content=ics,
         )
