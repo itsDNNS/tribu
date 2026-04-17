@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import COOKIE_NAME
 from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
-from app.security import decode_token, hash_pat, is_pat
+from app.security import decode_token, hash_pat, is_pat, legacy_pat_fingerprint, pat_lookup_key, verify_pat
 from app.core.scopes import parse_scopes
 from app.core.errors import error_detail, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED, USER_NOT_FOUND, NO_FAMILY_ACCESS, ADULT_REQUIRED, ADMIN_REQUIRED
 
@@ -28,15 +28,54 @@ security = HTTPBearer(
 )
 
 
+def _find_pat(db: Session, token_str: str) -> Optional[PersonalAccessToken]:
+    """Resolve a PAT row from its plain text, preferring the bcrypt path.
+
+    New PATs are indexed by an HMAC-keyed ``token_lookup`` column.
+    Legacy rows predating the bcrypt migration still live under the
+    raw SHA-256 hex in ``token_hash``; we fall back to that lookup
+    so those rows authenticate and then get rewritten on success.
+    """
+    lookup = pat_lookup_key(token_str)
+    pat = (
+        db.query(PersonalAccessToken)
+        .filter(PersonalAccessToken.token_lookup == lookup)
+        .first()
+    )
+    if pat is not None:
+        return pat
+    legacy = legacy_pat_fingerprint(token_str)
+    return (
+        db.query(PersonalAccessToken)
+        .filter(PersonalAccessToken.token_hash == legacy)
+        .first()
+    )
+
+
+def _migrate_pat_if_legacy(pat: PersonalAccessToken, token_str: str) -> None:
+    """Rewrite a legacy SHA-256 PAT row to the bcrypt + lookup layout.
+
+    No-op for rows that are already bcrypt. The SQL UPDATE is part of
+    the same ``db.commit()`` that stamps ``last_used_at`` in the
+    caller, so this never adds a second roundtrip.
+    """
+    if pat.token_hash.startswith("$2"):
+        return
+    pat.token_hash = hash_pat(token_str)
+    pat.token_lookup = pat_lookup_key(token_str)
+
+
 def _resolve_user(request: Request, token_str: str, db: Session) -> User:
     """Resolve a user from a token string (JWT or PAT). Sets request.state.pat_scopes."""
     if is_pat(token_str):
-        token_hash = hash_pat(token_str)
-        pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.token_hash == token_hash).first()
+        pat = _find_pat(db, token_str)
         if not pat:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
         if pat.expires_at and pat.expires_at < utcnow():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(TOKEN_EXPIRED))
+        if not verify_pat(token_str, pat.token_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
+        _migrate_pat_if_legacy(pat, token_str)
         pat.last_used_at = utcnow()
         db.commit()
         user = db.query(User).filter(User.id == pat.user_id).first()
