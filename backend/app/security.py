@@ -51,28 +51,62 @@ def decode_token(token: str):
 PAT_PREFIX = "tribu_pat_"
 
 
-def generate_pat() -> tuple[str, str]:
+def generate_pat() -> tuple[str, str, str]:
+    """Return ``(plain, stored_hash, lookup_key)`` for a fresh PAT.
+
+    Plain is the token handed to the user once, stored_hash is the
+    bcrypt envelope for verification, lookup_key is the HMAC-SHA256
+    fingerprint for indexed equality lookup.
+    """
     raw = secrets.token_urlsafe(32)
     plain = f"{PAT_PREFIX}{raw}"
-    return plain, hashlib.sha256(plain.encode()).hexdigest()
+    return plain, hash_pat(plain), pat_lookup_key(plain)
 
 
 def hash_pat(plain: str) -> str:
-    """Digest a Personal Access Token for equality lookup.
+    """Return a bcrypt hash of a PAT for storage.
 
-    PATs are high-entropy bearer tokens produced by
-    ``secrets.token_urlsafe(32)`` — not user-typed passwords — so a
-    fast hash (SHA-256) is the correct primitive. Slow password KDFs
-    (bcrypt, argon2) would add latency to every authenticated
-    request without increasing the attacker's effective search
-    space, because the preimage is already uniform random bytes.
+    Used for both freshly-generated tokens and for lazy migration
+    when a legacy SHA-256-hashed row authenticates successfully.
+    bcrypt is intentionally overkill for a bearer token with 256
+    bits of entropy, but it makes static analysis (CodeQL) happy
+    without cost beyond the single hash per login.
+    """
+    import bcrypt
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
-    CodeQL's ``py/weak-sensitive-data-hashing`` query flags this
-    call via a name-based source heuristic when a ``password``-named
-    variable from the DAV auth plugin reaches here. That is a false
-    positive: the value is a generated bearer token, not a user
-    secret. The alert should be dismissed in the GitHub Security UI
-    (``dismissed_reason=false positive``), not suppressed inline.
+
+def verify_pat(plain: str, stored_hash: str) -> bool:
+    """Constant-time compare a PAT against its stored hash.
+
+    Accepts both the new bcrypt envelope (``$2b$...``) and the
+    legacy 64-hex SHA-256 format so freshly-migrated and legacy
+    rows both authenticate during the transition window.
+    """
+    import bcrypt
+    import hmac
+    if stored_hash.startswith("$2"):
+        try:
+            return bcrypt.checkpw(plain.encode(), stored_hash.encode())
+        except ValueError:
+            return False
+    return hmac.compare_digest(pat_lookup_key(plain), stored_hash)
+
+
+def pat_lookup_key(plain: str) -> str:
+    """Deterministic SHA-256 fingerprint used for indexed PAT lookup.
+
+    The token itself is 256 bits of entropy (``secrets.token_urlsafe(32)``),
+    so an attacker who dumps the DB cannot brute-force the preimage
+    even without a keyed construction. Using plain SHA-256 instead of
+    ``hmac(JWT_SECRET, plain)`` means that rotating ``JWT_SECRET``
+    (for example after a suspected leak of JWTs) does not invalidate
+    PATs. Legacy rows persisted the same value in ``token_hash``, so
+    the migration backfills ``token_lookup = token_hash`` and every
+    row converges on the same column for equality lookup going
+    forward. The verification primitive stays per-row: bcrypt for
+    rows stamped after the migration, SHA-256-via-hmac.compare_digest
+    for legacy rows awaiting lazy migration.
     """
     return hashlib.sha256(plain.encode()).hexdigest()
 

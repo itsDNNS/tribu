@@ -63,13 +63,14 @@ def create_token(
     if count >= MAX_TOKENS_PER_USER:
         raise HTTPException(status_code=400, detail=error_detail(TOKEN_LIMIT_REACHED, limit=MAX_TOKENS_PER_USER))
 
-    plain, token_hash = generate_pat()
+    plain, token_hash, lookup_key = generate_pat()
     scopes_str = ",".join(sorted(payload.scopes))
 
     pat = PersonalAccessToken(
         user_id=user.id,
         name=payload.name,
         token_hash=token_hash,
+        token_lookup=lookup_key,
         scopes=scopes_str,
         expires_at=payload.expires_at,
     )

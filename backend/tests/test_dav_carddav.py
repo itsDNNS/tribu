@@ -54,6 +54,7 @@ def seeded(app_under_test):
             user_id=user.id,
             name="carddav-pat",
             token_hash=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
+            token_lookup=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
             scopes="contacts:read,contacts:write",
         ))
         db.add(Contact(

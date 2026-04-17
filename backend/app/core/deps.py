@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import COOKIE_NAME
 from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
-from app.security import decode_token, hash_pat, is_pat
+from app.security import decode_token, hash_pat, is_pat, pat_lookup_key, verify_pat
 from app.core.scopes import parse_scopes
 from app.core.errors import error_detail, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED, USER_NOT_FOUND, NO_FAMILY_ACCESS, ADULT_REQUIRED, ADMIN_REQUIRED
 
@@ -28,15 +28,46 @@ security = HTTPBearer(
 )
 
 
+def _find_pat(db: Session, token_str: str) -> Optional[PersonalAccessToken]:
+    """Resolve a PAT row via the unified ``token_lookup`` index.
+
+    Migration 0027 backfilled ``token_lookup`` from the legacy
+    ``token_hash`` (both are SHA-256 of the plain) so a single
+    equality query finds the row regardless of whether the row's
+    ``token_hash`` is still legacy SHA-256 or the new bcrypt envelope.
+    """
+    return (
+        db.query(PersonalAccessToken)
+        .filter(PersonalAccessToken.token_lookup == pat_lookup_key(token_str))
+        .first()
+    )
+
+
+def _migrate_pat_if_legacy(pat: PersonalAccessToken, token_str: str) -> None:
+    """Rewrite a legacy SHA-256 PAT row to a bcrypt envelope.
+
+    No-op for rows already in bcrypt form. The UPDATE piggybacks on
+    the same ``db.commit()`` that stamps ``last_used_at`` in the
+    caller, so this never adds a second roundtrip. ``token_lookup``
+    stays unchanged — it already holds the SHA-256 fingerprint
+    populated by the migration.
+    """
+    if pat.token_hash.startswith("$2"):
+        return
+    pat.token_hash = hash_pat(token_str)
+
+
 def _resolve_user(request: Request, token_str: str, db: Session) -> User:
     """Resolve a user from a token string (JWT or PAT). Sets request.state.pat_scopes."""
     if is_pat(token_str):
-        token_hash = hash_pat(token_str)
-        pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.token_hash == token_hash).first()
+        pat = _find_pat(db, token_str)
         if not pat:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
         if pat.expires_at and pat.expires_at < utcnow():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(TOKEN_EXPIRED))
+        if not verify_pat(token_str, pat.token_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
+        _migrate_pat_if_legacy(pat, token_str)
         pat.last_used_at = utcnow()
         db.commit()
         user = db.query(User).filter(User.id == pat.user_id).first()

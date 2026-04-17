@@ -70,6 +70,7 @@ def _seed_adult(scopes: str, email_suffix: str = "") -> tuple[str, int]:
         user_id=user.id,
         name="gift-pat",
         token_hash=hashlib.sha256(plain.encode()).hexdigest(),
+        token_lookup=hashlib.sha256(plain.encode()).hexdigest(),
         scopes=scopes,
     ))
     db.commit()
@@ -95,6 +96,7 @@ def _seed_child_in_family(family_id: int, scopes: str) -> str:
         user_id=user.id,
         name="gift-child-pat",
         token_hash=hashlib.sha256(plain.encode()).hexdigest(),
+        token_lookup=hashlib.sha256(plain.encode()).hexdigest(),
         scopes=scopes,
     ))
     db.commit()
