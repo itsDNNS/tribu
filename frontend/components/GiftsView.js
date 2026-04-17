@@ -114,11 +114,12 @@ function GiftCard({ gift, members, messages, onEdit, onDelete, onStatusChange })
                 className="gift-status-seg-btn"
                 data-status={s}
                 aria-pressed={active}
+                aria-label={statusLabel(messages, s)}
                 onClick={() => { if (!active) onStatusChange(gift.id, s); }}
                 title={statusLabel(messages, s)}
               >
                 <Icon size={12} aria-hidden="true" />
-                <span className="gift-status-seg-label">{statusLabel(messages, s)}</span>
+                <span className="gift-status-seg-label" aria-hidden="true">{statusLabel(messages, s)}</span>
               </button>
             );
           })}
