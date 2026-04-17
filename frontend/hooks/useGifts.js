@@ -87,7 +87,7 @@ export function useGifts() {
     e.preventDefault();
     if (demoMode) {
       toastError(t(messages, 'module.gifts.demo_blocked'));
-      return;
+      return false;
     }
     const payload = {
       title: form.title.trim(),
@@ -104,17 +104,24 @@ export function useGifts() {
 
     if (editingId) {
       const { ok, data } = await api.apiUpdateGift(editingId, payload);
-      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      if (!ok) {
+        toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        return false;
+      }
       toastSuccess(t(messages, 'module.gifts.updated'));
       announce(t(messages, 'module.gifts.updated'));
     } else {
       const { ok, data } = await api.apiCreateGift({ family_id: Number(familyId), ...payload });
-      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      if (!ok) {
+        toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        return false;
+      }
       toastSuccess(t(messages, 'module.gifts.created'));
       announce(t(messages, 'module.gifts.created'));
     }
     resetForm();
     await loadGifts();
+    return true;
   }
 
   async function updateStatus(giftId, status) {

@@ -4,6 +4,8 @@
   "module.gifts.empty": "Noch keine Geschenkideen. Leg die erste an.",
   "module.gifts.loading": "Lade Geschenke...",
   "module.gifts.add": "Geschenk hinzufügen",
+  "module.gifts.edit_title": "Geschenk bearbeiten",
+  "module.gifts.occasion_aria": "Anlass wählen",
   "module.gifts.save": "Speichern",
   "module.gifts.cancel": "Abbrechen",
   "module.gifts.created": "Geschenk hinzugefügt",

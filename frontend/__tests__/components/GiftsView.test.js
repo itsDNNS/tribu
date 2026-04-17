@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import GiftsView from '../../components/GiftsView';
 
@@ -24,6 +24,9 @@ const messages = {
   'module.gifts.name': 'Geschenke',
   'module.gifts.adult_only': 'Nur für Erwachsene.',
   'module.gifts.demo_blocked': 'Im Demo nicht verfügbar.',
+  'module.gifts.add': 'Geschenk hinzufügen',
+  'module.gifts.edit_title': 'Geschenk bearbeiten',
+  'module.gifts.cancel': 'Abbrechen',
   'module.gifts.title_placeholder': 'Was schenken?',
 };
 
@@ -49,7 +52,7 @@ describe('GiftsView gating', () => {
     mockAppState = baseState({ isChild: true });
     render(<GiftsView />);
     expect(screen.getByText('Nur für Erwachsene.')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Was schenken?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Geschenk hinzufügen' })).not.toBeInTheDocument();
     expect(apiGetGifts).not.toHaveBeenCalled();
   });
 
@@ -57,14 +60,20 @@ describe('GiftsView gating', () => {
     mockAppState = baseState({ demoMode: true });
     render(<GiftsView />);
     expect(screen.getByText('Im Demo nicht verfügbar.')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Was schenken?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Geschenk hinzufügen' })).not.toBeInTheDocument();
     expect(apiGetGifts).not.toHaveBeenCalled();
   });
 
-  test('adult, non-demo user sees the form and fetches once', async () => {
+  test('adult, non-demo user sees the add button and fetches once; dialog opens on click', async () => {
     mockAppState = baseState();
     render(<GiftsView />);
-    expect(screen.getByPlaceholderText('Was schenken?')).toBeInTheDocument();
+    const addButton = screen.getByRole('button', { name: 'Geschenk hinzufügen' });
+    expect(addButton).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Was schenken?')).not.toBeInTheDocument();
     await waitFor(() => expect(apiGetGifts).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(addButton);
+    expect(screen.getByPlaceholderText('Was schenken?')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

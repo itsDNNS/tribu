@@ -4,6 +4,8 @@
   "module.gifts.empty": "No gift ideas yet. Add the first one.",
   "module.gifts.loading": "Loading gifts...",
   "module.gifts.add": "Add gift",
+  "module.gifts.edit_title": "Edit gift",
+  "module.gifts.occasion_aria": "Choose occasion",
   "module.gifts.save": "Save",
   "module.gifts.cancel": "Cancel",
   "module.gifts.created": "Gift added",
