@@ -4,11 +4,9 @@ import { useApp } from '../../contexts/AppContext';
 import { copyTextToClipboard } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 
-function buildDavUrl(email, familyId, kind) {
+function buildDavServerUrl() {
   const origin = typeof window !== 'undefined' && window.location ? window.location.origin : '';
-  const prefix = kind === 'calendar' ? 'cal' : 'book';
-  const safeEmail = encodeURIComponent(email);
-  return `${origin}/api/dav/${safeEmail}/${prefix}-${familyId}/`;
+  return `${origin}/dav/`;
 }
 
 function CopyRow({ label, value, copyAria }) {
@@ -36,6 +34,7 @@ function CopyRow({ label, value, copyAria }) {
 export default function PhoneSyncTab() {
   const { me, families, messages } = useApp();
   const email = me?.email || '';
+  const serverUrl = buildDavServerUrl();
 
   if (!email || !families.length) {
     return (
@@ -62,22 +61,23 @@ export default function PhoneSyncTab() {
 
         <div className="sync-section-heading">{t(messages, 'phone_sync_auth_heading')}</div>
         <p className="set-data-section-desc">{t(messages, 'phone_sync_auth_body')}</p>
+        <p className="set-data-section-desc">{t(messages, 'phone_sync_auth_hint')}</p>
 
-        {families.map((f) => (
-          <div key={f.family_id} className="sync-family-block">
-            <div className="sync-family-title">{f.family_name}</div>
-            <CopyRow
-              label={t(messages, 'phone_sync_calendar_label')}
-              value={buildDavUrl(email, f.family_id, 'calendar')}
-              copyAria={t(messages, 'phone_sync_copy_calendar_aria').replace('{family}', f.family_name)}
-            />
-            <CopyRow
-              label={t(messages, 'phone_sync_addressbook_label')}
-              value={buildDavUrl(email, f.family_id, 'addressbook')}
-              copyAria={t(messages, 'phone_sync_copy_addressbook_aria').replace('{family}', f.family_name)}
-            />
-          </div>
-        ))}
+        <CopyRow
+          label={t(messages, 'phone_sync_server_label')}
+          value={serverUrl}
+          copyAria={t(messages, 'phone_sync_copy_server_aria')}
+        />
+        <CopyRow
+          label={t(messages, 'phone_sync_username_label')}
+          value={email}
+          copyAria={t(messages, 'phone_sync_copy_username_aria')}
+        />
+
+        <div className="sync-family-block">
+          <div className="sync-family-title">{t(messages, 'phone_sync_available_heading')}</div>
+          <div className="set-data-section-desc">{t(messages, 'phone_sync_available_body')}</div>
+        </div>
 
         <div className="sync-section-heading">{t(messages, 'phone_sync_ios_heading')}</div>
         <ol className="sync-steps">
