@@ -4,31 +4,8 @@ import { useToast } from '../contexts/ToastContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
+import { createEmptyGiftForm } from '../lib/gifts';
 import * as api from '../lib/api';
-
-export const GIFT_STATUSES = ['idea', 'ordered', 'purchased', 'gifted'];
-export const GIFT_OCCASIONS = ['birthday', 'christmas', 'easter', 'other'];
-export const GIFT_SORT_OPTIONS = [
-  'created_desc',
-  'created_asc',
-  'occasion_date_asc',
-  'price_desc',
-  'price_asc',
-  'title_asc',
-];
-
-const EMPTY_FORM = {
-  title: '',
-  description: '',
-  url: '',
-  for_user_id: '',
-  for_person_name: '',
-  occasion: '',
-  occasion_date: '',
-  status: 'idea',
-  notes: '',
-  price_eur: '',
-};
 
 function priceToCents(value) {
   if (value === '' || value === null || value === undefined) return null;
@@ -47,7 +24,7 @@ export function useGifts() {
   const [recipientFilter, setRecipientFilter] = useState('');
   const [includeGifted, setIncludeGifted] = useState(false);
   const [sortOrder, setSortOrder] = useState('created_desc');
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => createEmptyGiftForm());
   const [editingId, setEditingId] = useState(null);
 
   const loadGifts = useCallback(async (fid = familyId) => {
@@ -73,7 +50,7 @@ export function useGifts() {
   const filteredGifts = useMemo(() => gifts, [gifts]);
 
   const resetForm = useCallback(() => {
-    setForm(EMPTY_FORM);
+    setForm(createEmptyGiftForm());
     setEditingId(null);
   }, []);
 

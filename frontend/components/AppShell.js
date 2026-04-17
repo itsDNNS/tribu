@@ -1,14 +1,14 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Bell, CalendarDays, CheckSquare, Gift, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal, Search, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { Bell, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, MoreHorizontal, Search } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
+import { isNavItemVisible, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
 import MemberAvatar from './MemberAvatar';
 import DashboardView from './DashboardView';
 import CalendarView from './calendar';
 import ContactsView from './ContactsView';
-
 import TasksView from './TasksView';
 import RewardsView from './RewardsView';
 import GiftsView from './GiftsView';
@@ -19,6 +19,7 @@ import AdminView from './admin';
 import NotificationCenter from './NotificationCenter';
 import ForcePasswordChange from './ForcePasswordChange';
 import OnboardingWizard from './OnboardingWizard';
+const MAX_BOTTOM_NAV = 5;
 
 const views = {
   dashboard: DashboardView,
@@ -33,11 +34,6 @@ const views = {
   settings: SettingsView,
   admin: AdminView,
 };
-
-import { getMemberColor } from '../lib/member-colors';
-
-const PINNED_BOTTOM_KEYS = new Set(['settings', 'admin']);
-const MAX_BOTTOM_NAV = 5;
 
 function DashboardSkeleton() {
   return (
@@ -88,30 +84,31 @@ export default function AppShell() {
 
 
   // Item registry: all possible nav items keyed by their route key
-  const itemRegistry = useMemo(() => ({
-    dashboard: { key: 'dashboard', icon: LayoutDashboard, label: t(messages, 'dashboard'), mobileLabel: 'Home' },
-    calendar: { key: 'calendar', icon: CalendarDays, label: t(messages, 'calendar'), mobileLabel: t(messages, 'calendar') },
-    shopping: { key: 'shopping', icon: ShoppingCart, label: t(messages, 'module.shopping.name'), mobileLabel: t(messages, 'module.shopping.name'), badge: totalUnchecked || null },
-    tasks: { key: 'tasks', icon: CheckSquare, label: t(messages, 'module.tasks.name'), mobileLabel: t(messages, 'module.tasks.name'), badge: openTaskCount || null },
-    ...(demoMode ? {} : {
-      meal_plans: { key: 'meal_plans', icon: UtensilsCrossed, label: t(messages, 'module.meal_plans.name'), mobileLabel: t(messages, 'module.meal_plans.name') },
-    }),
-    rewards: { key: 'rewards', icon: Gift, label: t(messages, 'module.rewards.name'), mobileLabel: t(messages, 'module.rewards.name') },
-    ...(isChild || demoMode ? {} : {
-      gifts: { key: 'gifts', icon: Sparkles, label: t(messages, 'module.gifts.name'), mobileLabel: t(messages, 'module.gifts.name') },
-    }),
-    contacts: { key: 'contacts', icon: BookUser, label: t(messages, 'contacts'), mobileLabel: t(messages, 'contacts') },
-    notifications: { key: 'notifications', icon: Bell, label: t(messages, 'notifications'), mobileLabel: t(messages, 'notifications'), badge: unreadCount || null },
-    settings: { key: 'settings', icon: Settings, label: t(messages, 'settings'), mobileLabel: t(messages, 'settings') },
-    admin: { key: 'admin', icon: Shield, label: t(messages, 'admin'), mobileLabel: t(messages, 'admin') },
-  }), [messages, totalUnchecked, openTaskCount, unreadCount, isChild, demoMode]);
+  const itemRegistry = useMemo(() => {
+    const registry = {};
+    for (const [key, meta] of Object.entries(NAV_ITEM_META)) {
+      if (!isNavItemVisible(key, { isAdmin, isChild, demoMode })) continue;
+      const label = t(messages, meta.labelKey);
+      const item = {
+        key,
+        icon: meta.icon,
+        label,
+        mobileLabel: meta.mobileLabel || label,
+      };
+      if (key === 'shopping') item.badge = totalUnchecked || null;
+      if (key === 'tasks') item.badge = openTaskCount || null;
+      if (key === 'notifications') item.badge = unreadCount || null;
+      registry[key] = item;
+    }
+    return registry;
+  }, [messages, totalUnchecked, openTaskCount, unreadCount, isAdmin, isChild, demoMode]);
 
   // Split items: sortable nav items vs pinned bottom items (settings, admin)
   const orderedItems = useMemo(() => {
     return navOrder
-      .filter((key) => key in itemRegistry && !PINNED_BOTTOM_KEYS.has(key) && (key !== 'admin' || isAdmin))
+      .filter((key) => key in itemRegistry && !PINNED_NAV_KEYS.has(key))
       .map((key) => itemRegistry[key]);
-  }, [navOrder, itemRegistry, isAdmin]);
+  }, [navOrder, itemRegistry]);
 
   const pinnedItems = useMemo(() => {
     const items = [];

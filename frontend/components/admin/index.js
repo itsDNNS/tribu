@@ -4,7 +4,7 @@ import { Plus, Check, Copy, X, KeyRound, Shield, ImageIcon } from 'lucide-react'
 import { useApp } from '../../contexts/AppContext';
 import MemberAvatar from '../MemberAvatar';
 import { useToast } from '../../contexts/ToastContext';
-import { errorText } from '../../lib/helpers';
+import { copyTextToClipboard, errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import ConfirmDialog from '../ConfirmDialog';
@@ -14,7 +14,7 @@ import AuditLogSection from './AuditLogSection';
 
 export default function AdminView() {
   const { familyId, members, messages, loadMembers, me, demoMode, timeFormat, setTimeFormat } = useApp();
-  const { error: toastError, info: toastInfo, success: toastSuccess } = useToast();
+  const { error: toastError, info: toastInfo } = useToast();
   const [showAddMember, setShowAddMember] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
@@ -123,28 +123,11 @@ export default function AdminView() {
     setPasswordBannerType('reset');
   }
 
-  function handleCopyPassword() {
+  async function handleCopyPassword() {
     if (!createdPassword) return;
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(createdPassword).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }).catch(fallbackCopy);
-    } else {
-      fallbackCopy();
-    }
-    function fallbackCopy() {
-      const ta = document.createElement('textarea');
-      ta.value = createdPassword;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    if (!await copyTextToClipboard(createdPassword)) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (

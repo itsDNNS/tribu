@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { X, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { t } from '../lib/i18n';
-import { MEAL_SLOTS } from '../hooks/useMealPlans';
+import { createEmptyMealIngredient, MEAL_SLOTS } from '../lib/meal-plans';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 
 function slotLabel(messages, slot) {
   return t(messages, `module.meal_plans.slot.${slot}`);
@@ -22,9 +23,6 @@ export default function MealPlanDialog({
 }) {
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
-  const previousFocusRef = useRef(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const [submitting, setSubmitting] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [selectedListId, setSelectedListId] = useState('');
@@ -38,40 +36,7 @@ export default function MealPlanDialog({
     }
   }, [open, shoppingLists, selectedListId]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    previousFocusRef.current = document.activeElement;
-    firstFieldRef.current?.focus();
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') {
-        onCloseRef.current();
-        return;
-      }
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll(
-          'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href]',
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      const previous = previousFocusRef.current;
-      if (previous && previous.isConnected && typeof previous.focus === 'function') {
-        previous.focus();
-      }
-    };
-  }, [open]);
+  useDialogFocusTrap({ open, containerRef: dialogRef, initialFocusRef: firstFieldRef, onClose });
 
   if (!open) return null;
 
@@ -86,7 +51,7 @@ export default function MealPlanDialog({
   function addIngredient() {
     setForm((prev) => ({
       ...prev,
-      ingredients: [...prev.ingredients, { name: '', amount: '', unit: '' }],
+      ingredients: [...prev.ingredients, createEmptyMealIngredient()],
     }));
   }
 

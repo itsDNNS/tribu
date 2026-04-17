@@ -4,12 +4,11 @@ import { useToast } from '../contexts/ToastContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
+import { createEmptyMealForm } from '../lib/meal-plans';
 import * as api from '../lib/api';
 
-export const MEAL_SLOTS = ['morning', 'noon', 'evening'];
-
 /** Return the Monday of the ISO week for a given date, in local time. */
-export function isoWeekStart(date) {
+function isoWeekStart(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   // getDay: 0 = Sunday. We want Monday as week start.
@@ -25,7 +24,7 @@ export function formatIsoDate(d) {
   return `${y}-${m}-${day}`;
 }
 
-export function addDays(date, days) {
+function addDays(date, days) {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
@@ -34,16 +33,6 @@ export function addDays(date, days) {
 export function weekDays(weekStart) {
   return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 }
-
-const EMPTY_INGREDIENT = { name: '', amount: '', unit: '' };
-
-export const EMPTY_FORM = {
-  plan_date: '',
-  slot: 'noon',
-  meal_name: '',
-  ingredients: [],
-  notes: '',
-};
 
 export function useMealPlans() {
   const { familyId, messages, demoMode } = useApp();
@@ -217,7 +206,7 @@ export function useMealPlans() {
   }
 
   function emptyFormFor(dateIso, slot) {
-    return { ...EMPTY_FORM, plan_date: dateIso, slot };
+    return createEmptyMealForm({ plan_date: dateIso, slot });
   }
 
   return {
@@ -238,6 +227,5 @@ export function useMealPlans() {
     pushToShopping,
     populateFormFromMeal,
     emptyFormFor,
-    EMPTY_INGREDIENT,
   };
 }

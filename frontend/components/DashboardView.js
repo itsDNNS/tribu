@@ -3,8 +3,8 @@ import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
+import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
-import { AssignedBadges } from './calendar/CalendarHelpers';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
 
 function getGreeting(messages) {
@@ -131,7 +131,7 @@ export default function DashboardView() {
                 {!isChild && <button className="bento-empty-action" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.empty_tasks_action')}</button>}
               </div>
             )}
-            {openTasks.slice(0, 5).map((task, i) => {
+            {openTasks.slice(0, 5).map((task) => {
               const assignee = members.find((m) => m.user_id === task.assigned_to_user_id);
               const priorityColor = task.priority === 'high' ? 'var(--danger)' : task.priority === 'normal' ? 'var(--amethyst)' : 'var(--sapphire)';
               return (

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Sparkles, ExternalLink, Edit2, Trash2, Package, ShoppingBag, Gift as GiftIcon, Plus, Users } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { useGifts, GIFT_STATUSES, GIFT_OCCASIONS, GIFT_SORT_OPTIONS } from '../hooks/useGifts';
+import { useGifts } from '../hooks/useGifts';
+import { GIFT_OCCASIONS, GIFT_SORT_OPTIONS, GIFT_STATUSES } from '../lib/gifts';
 import { t } from '../lib/i18n';
 import MemberAvatar from './MemberAvatar';
 import ConfirmDialog from './ConfirmDialog';
