@@ -78,6 +78,8 @@
   "phone_sync_auth_body": "Apps log in with a Personal Access Token. Under API Tokens, create a token with scopes calendar:read, calendar:write, contacts:read and contacts:write (or the * wildcard). Use your email as the username and the token as the password.",
   "phone_sync_calendar_label": "Calendar (CalDAV)",
   "phone_sync_addressbook_label": "Contacts (CardDAV)",
+  "phone_sync_copy_calendar_aria": "Copy calendar URL for {family}",
+  "phone_sync_copy_addressbook_aria": "Copy contacts URL for {family}",
   "phone_sync_ios_heading": "Set up on iOS",
   "phone_sync_ios_step1": "Settings > Calendar > Accounts > Add Account > Other.",
   "phone_sync_ios_step2": "Pick Add CalDAV Account and enter the calendar URL above; username is your email, password is the PAT.",

@@ -10,7 +10,7 @@ function buildDavUrl(email, familyId, kind) {
   return `${origin}/api/dav/${safeEmail}/${prefix}-${familyId}/`;
 }
 
-function CopyRow({ label, value }) {
+function CopyRow({ label, value, copyAria }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="sync-url-row">
@@ -19,15 +19,20 @@ function CopyRow({ label, value }) {
       <button
         type="button"
         className="btn-sm sync-url-copy"
-        onClick={() => {
-          if (navigator?.clipboard?.writeText) {
-            navigator.clipboard.writeText(value);
+        aria-label={copyAria}
+        onClick={async () => {
+          const write = navigator?.clipboard?.writeText;
+          if (typeof write !== "function") return;
+          try {
+            await write.call(navigator.clipboard, value);
+          } catch {
+            return;
           }
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         }}
       >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
+        {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
       </button>
     </div>
   );
@@ -69,10 +74,12 @@ export default function PhoneSyncTab() {
             <CopyRow
               label={t(messages, 'phone_sync_calendar_label')}
               value={buildDavUrl(email, f.family_id, 'calendar')}
+              copyAria={t(messages, 'phone_sync_copy_calendar_aria').replace('{family}', f.family_name)}
             />
             <CopyRow
               label={t(messages, 'phone_sync_addressbook_label')}
               value={buildDavUrl(email, f.family_id, 'addressbook')}
+              copyAria={t(messages, 'phone_sync_copy_addressbook_aria').replace('{family}', f.family_name)}
             />
           </div>
         ))}
