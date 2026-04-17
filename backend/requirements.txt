@@ -14,3 +14,5 @@ apscheduler==3.11.2
 python-multipart==0.0.26
 redis==5.2.1
 pywebpush==2.0.1
+radicale==3.7.1
+a2wsgi==1.10.7

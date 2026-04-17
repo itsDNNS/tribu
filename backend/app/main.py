@@ -528,6 +528,16 @@ app.include_router(gifts_router)
 app.include_router(meal_plans_router)
 
 
+# ---------------------------------------------------------------------------
+# CalDAV / CardDAV (Radicale, mounted as WSGI)
+# ---------------------------------------------------------------------------
+
+from a2wsgi import WSGIMiddleware  # noqa: E402
+from app.dav.app_factory import build_radicale_app  # noqa: E402
+
+app.mount("/dav", WSGIMiddleware(build_radicale_app()))
+
+
 
 @app.get(
     "/",
