@@ -151,6 +151,11 @@ class Contact(Base):
     # family, backfilled for legacy rows.
     vcard_uid = Column(String(200), nullable=True)
     dav_href = Column(String(250), nullable=True)
+    # Passthrough of the most recently uploaded VCARD so client-only
+    # fields (ORG, ADR, NOTE, secondary EMAIL/TEL) round-trip on the
+    # next GET. Tribu's own UI still renders from the structured
+    # columns above.
+    raw_vcard = Column(Text, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("family_id", "vcard_uid", name="uq_contacts_family_uid"),

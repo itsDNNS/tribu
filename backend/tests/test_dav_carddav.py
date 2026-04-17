@@ -194,6 +194,73 @@ class TestCardDAV:
         )
         assert missing.status_code == 404
 
+    def test_put_preserves_unmodeled_fields(self, app_under_test, seeded):
+        """A PUT with ORG/ADR/NOTE and multiple EMAIL must round-trip."""
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        vcard = (
+            "BEGIN:VCARD\r\nVERSION:3.0\r\n"
+            "UID:rich-roundtrip@example.com\r\n"
+            "FN:Marta Mueller\r\n"
+            "N:Mueller;Marta;;;\r\n"
+            "EMAIL;TYPE=HOME:marta@home.example\r\n"
+            "EMAIL;TYPE=WORK:marta@work.example\r\n"
+            "TEL;TYPE=CELL:+49 111 2222\r\n"
+            "ORG:Familienfest GmbH\r\n"
+            "ADR;TYPE=HOME:;;Seestrasse 1;Berlin;;12345;DE\r\n"
+            "NOTE:Lieblingskuchen: Apfelstrudel\r\n"
+            "END:VCARD\r\n"
+        )
+        put = client.put(
+            f"/dav/{EMAIL}/book-{family_id}/rich.vcf",
+            headers=auth,
+            content=vcard,
+        )
+        assert put.status_code in (201, 204), put.text
+
+        get = client.get(
+            f"/dav/{EMAIL}/book-{family_id}/rich.vcf",
+            headers={"Authorization": _basic(EMAIL, token)},
+        )
+        assert get.status_code == 200, get.text
+        body = get.text
+        for expected in ("Familienfest GmbH", "Seestrasse", "Apfelstrudel", "marta@work.example"):
+            assert expected in body, f"round-trip lost {expected!r} from body:\n{body}"
+
+    def test_put_with_duplicate_uid_on_new_href_is_rejected(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        vcard = (
+            "BEGIN:VCARD\r\nVERSION:3.0\r\n"
+            "UID:taken@example.com\r\nFN:First\r\nN:First;;;;\r\n"
+            "END:VCARD\r\n"
+        )
+        first = client.put(
+            f"/dav/{EMAIL}/book-{family_id}/first.vcf",
+            headers=auth,
+            content=vcard,
+        )
+        assert first.status_code in (201, 204), first.text
+
+        collision = client.put(
+            f"/dav/{EMAIL}/book-{family_id}/second.vcf",
+            headers=auth,
+            content=vcard,
+        )
+        # Either Radicale's own has_uid check catches it (409) or our
+        # defensive guard raises ValueError -> 400/409. Both block the
+        # silent hijack.
+        assert 400 <= collision.status_code < 500, collision.text
+
+        # First row must still be reachable unchanged.
+        still = client.get(
+            f"/dav/{EMAIL}/book-{family_id}/first.vcf",
+            headers={"Authorization": _basic(EMAIL, token)},
+        )
+        assert still.status_code == 200, still.text
+
     def test_put_invalid_vcard_is_rejected(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)

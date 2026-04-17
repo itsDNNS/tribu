@@ -226,14 +226,31 @@ class CalendarCollection(BaseCollection):
             uid = str(fields.get("title") or href)
 
         with _db() as db:
-            existing = (
+            existing_by_href = (
                 db.query(CalendarEvent)
-                .filter(CalendarEvent.family_id == self._family_id)
                 .filter(
-                    (CalendarEvent.dav_href == href) | (CalendarEvent.ical_uid == uid)
+                    CalendarEvent.family_id == self._family_id,
+                    CalendarEvent.dav_href == href,
                 )
                 .first()
             )
+            existing_by_uid = (
+                db.query(CalendarEvent)
+                .filter(
+                    CalendarEvent.family_id == self._family_id,
+                    CalendarEvent.ical_uid == uid,
+                )
+                .first()
+            )
+            # Defensive guard against silent cross-resource hijack on
+            # a UID match at a different href.
+            if existing_by_uid is not None and (
+                existing_by_href is None or existing_by_uid.id != existing_by_href.id
+            ):
+                raise ValueError(
+                    "UID already in use on another event; choose a distinct UID or PUT to the existing href"
+                )
+            existing = existing_by_href
             replaced_item: Optional["radicale_item.Item"] = None
             if existing is not None:
                 replaced_item = self._event_to_item(existing)
@@ -556,25 +573,43 @@ class AddressBookCollection(BaseCollection):
         if not uid:
             uid = fields.get("full_name") or href
 
+        raw_vcard = fields.pop("raw_vcard", None)
+
         with _db() as db:
-            existing = (
+            existing_by_href = (
                 db.query(Contact)
-                .filter(Contact.family_id == self._family_id)
-                .filter((Contact.dav_href == href) | (Contact.vcard_uid == uid))
+                .filter(Contact.family_id == self._family_id, Contact.dav_href == href)
                 .first()
             )
+            existing_by_uid = (
+                db.query(Contact)
+                .filter(Contact.family_id == self._family_id, Contact.vcard_uid == uid)
+                .first()
+            )
+            # Defensive guard against silent cross-resource hijack: a
+            # PUT whose UID already lives on a different href must be
+            # rejected, not accepted by moving the other row.
+            if existing_by_uid is not None and (
+                existing_by_href is None or existing_by_uid.id != existing_by_href.id
+            ):
+                raise ValueError(
+                    "UID already in use on another card; choose a distinct UID or PUT to the existing href"
+                )
+
             replaced_item: Optional["radicale_item.Item"] = None
-            if existing is not None:
-                replaced_item = self._contact_to_item(existing)
-                _apply_contact_fields(existing, fields)
-                existing.vcard_uid = uid
-                existing.dav_href = href
-                row = existing
+            if existing_by_href is not None:
+                replaced_item = self._contact_to_item(existing_by_href)
+                _apply_contact_fields(existing_by_href, fields)
+                existing_by_href.vcard_uid = uid
+                existing_by_href.dav_href = href
+                existing_by_href.raw_vcard = raw_vcard
+                row = existing_by_href
             else:
                 row = Contact(
                     family_id=self._family_id,
                     vcard_uid=uid,
                     dav_href=href,
+                    raw_vcard=raw_vcard,
                 )
                 _apply_contact_fields(row, fields)
                 db.add(row)
