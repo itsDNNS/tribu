@@ -13,8 +13,9 @@ import tempfile
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.vcard_utils import contact_channel_values
 from app.database import Base, SessionLocal, engine
-from app.models import Contact, Family, Membership, PersonalAccessToken, User
+from app.models import Contact, Family, FamilyBirthday, Membership, PersonalAccessToken, User
 from app.security import hash_password, PAT_PREFIX
 
 
@@ -167,6 +168,18 @@ class TestCardDAV:
         )
         assert get.status_code == 200, get.text
         assert "Tante Lisa" in get.text
+        db = SessionLocal()
+        try:
+            birthday = (
+                db.query(FamilyBirthday)
+                .filter(FamilyBirthday.family_id == family_id, FamilyBirthday.person_name == "Tante Lisa")
+                .first()
+            )
+            assert birthday is not None
+            assert birthday.month == 7
+            assert birthday.day == 12
+        finally:
+            db.close()
 
     def test_delete_removes_contact(self, app_under_test, seeded):
         token, family_id = seeded
@@ -194,6 +207,78 @@ class TestCardDAV:
             headers=auth,
         )
         assert missing.status_code == 404
+
+    def test_delete_removes_synced_birthday(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        vcard = (
+            "BEGIN:VCARD\r\nVERSION:3.0\r\n"
+            "UID:bday-delete@example.com\r\n"
+            "FN:Birthday Remove\r\nN:Remove;Birthday;;;\r\n"
+            "BDAY:--09-03\r\n"
+            "END:VCARD\r\n"
+        )
+        put = client.put(
+            f"/dav/{EMAIL}/book-{family_id}/birthday-remove.vcf",
+            headers=auth,
+            content=vcard,
+        )
+        assert put.status_code in (201, 204), put.text
+
+        delete = client.request(
+            "DELETE",
+            f"/dav/{EMAIL}/book-{family_id}/birthday-remove.vcf",
+            headers={"Authorization": _basic(EMAIL, token)},
+        )
+        assert delete.status_code in (200, 204)
+
+        db = SessionLocal()
+        try:
+            birthday = (
+                db.query(FamilyBirthday)
+                .filter(FamilyBirthday.family_id == family_id, FamilyBirthday.person_name == "Birthday Remove")
+                .first()
+            )
+            assert birthday is None
+        finally:
+            db.close()
+
+    def test_put_preserves_multiple_channel_values_in_contact_response(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        vcard = (
+            "BEGIN:VCARD\r\nVERSION:3.0\r\n"
+            "UID:multi-channel@example.com\r\n"
+            "FN:Multi Channel\r\n"
+            "N:Channel;Multi;;;\r\n"
+            "EMAIL;TYPE=HOME:first@example.com\r\n"
+            "EMAIL;TYPE=WORK:second@example.com\r\n"
+            "TEL;TYPE=CELL:+49 111 222\r\n"
+            "TEL;TYPE=HOME:+49 333 444\r\n"
+            "END:VCARD\r\n"
+        )
+        put = client.put(
+            f"/dav/{EMAIL}/book-{family_id}/multi-channel.vcf",
+            headers=auth,
+            content=vcard,
+        )
+        assert put.status_code in (201, 204), put.text
+
+        db = SessionLocal()
+        try:
+            contact = (
+                db.query(Contact)
+                .filter(Contact.family_id == family_id, Contact.full_name == "Multi Channel")
+                .first()
+            )
+            assert contact is not None
+            email_values, phone_values = contact_channel_values(contact)
+            assert email_values == ["first@example.com", "second@example.com"]
+            assert phone_values == ["+49 111 222", "+49 333 444"]
+        finally:
+            db.close()
 
     def test_put_preserves_unmodeled_fields(self, app_under_test, seeded):
         """A PUT with ORG/ADR/NOTE and multiple EMAIL must round-trip."""

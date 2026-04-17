@@ -480,6 +480,8 @@ class ContactResponse(BaseModel):
     full_name: str = Field(..., description="Full name")
     email: Optional[str] = Field(None, description="Email address")
     phone: Optional[str] = Field(None, description="Phone number")
+    email_values: list[str] = Field(default_factory=list, description="All known email addresses")
+    phone_values: list[str] = Field(default_factory=list, description="All known phone numbers")
     birthday_month: Optional[int] = Field(None, description="Birthday month (1-12)")
     birthday_day: Optional[int] = Field(None, description="Birthday day (1-31)")
 

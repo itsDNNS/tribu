@@ -6,30 +6,31 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import cache
+from app.core.contact_birthdays import delete_family_birthday, sync_contact_birthday, upsert_family_birthday
 from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
+from app.core.vcard_utils import contact_channel_values
 from app.core.vcf_utils import contacts_to_vcf
 from app.database import get_db
-from app.models import Contact, FamilyBirthday, User
+from app.models import Contact, User
 from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ContactCreate, ContactResponse, ContactUpdate, ContactsCsvImport
 from app.core.errors import error_detail, CONTACT_NOT_FOUND, CSV_MISSING_COLUMN
 
 router = APIRouter(prefix="/contacts", tags=["contacts"], responses={**AUTH_RESPONSES})
 
-
-def upsert_birthday(db: Session, family_id: int, full_name: str, month: int | None, day: int | None):
-    if not month or not day:
-        return
-    existing = db.query(FamilyBirthday).filter(
-        FamilyBirthday.family_id == family_id,
-        FamilyBirthday.person_name == full_name,
-    ).first()
-    if existing:
-        existing.month = month
-        existing.day = day
-        return
-
-    db.add(FamilyBirthday(family_id=family_id, person_name=full_name, month=month, day=day))
+def serialize_contact(contact: Contact) -> ContactResponse:
+    email_values, phone_values = contact_channel_values(contact)
+    return ContactResponse(
+        id=contact.id,
+        family_id=contact.family_id,
+        full_name=contact.full_name,
+        email=contact.email,
+        phone=contact.phone,
+        email_values=email_values,
+        phone_values=phone_values,
+        birthday_month=contact.birthday_month,
+        birthday_day=contact.birthday_day,
+    )
 
 
 @router.get(
@@ -46,7 +47,8 @@ def list_contacts(
     _scope=require_scope("contacts:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
-    return db.query(Contact).filter(Contact.family_id == family_id).order_by(Contact.full_name.asc()).all()
+    contacts = db.query(Contact).filter(Contact.family_id == family_id).order_by(Contact.full_name.asc()).all()
+    return [serialize_contact(contact) for contact in contacts]
 
 
 @router.post(
@@ -73,11 +75,11 @@ def create_contact(
         birthday_day=payload.birthday_day,
     )
     db.add(contact)
-    upsert_birthday(db, payload.family_id, payload.full_name, payload.birthday_month, payload.birthday_day)
+    upsert_family_birthday(db, payload.family_id, payload.full_name, payload.birthday_month, payload.birthday_day)
     db.commit()
     db.refresh(contact)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
-    return contact
+    return serialize_contact(contact)
 
 
 @router.patch(
@@ -109,26 +111,12 @@ def update_contact(
     new_month = contact.birthday_month
     new_day = contact.birthday_day
 
-    if old_name != new_name:
-        existing_bday = db.query(FamilyBirthday).filter(
-            FamilyBirthday.family_id == contact.family_id,
-            FamilyBirthday.person_name == old_name,
-        ).first()
-        if existing_bday:
-            existing_bday.person_name = new_name
-
-    if new_month and new_day:
-        upsert_birthday(db, contact.family_id, new_name, new_month, new_day)
-    else:
-        db.query(FamilyBirthday).filter(
-            FamilyBirthday.family_id == contact.family_id,
-            FamilyBirthday.person_name == new_name,
-        ).delete()
+    sync_contact_birthday(db, contact.family_id, old_name, new_name, new_month, new_day)
 
     db.commit()
     db.refresh(contact)
     cache.invalidate_pattern(f"tribu:dashboard:{contact.family_id}:*")
-    return contact
+    return serialize_contact(contact)
 
 
 @router.delete(
@@ -149,10 +137,7 @@ def delete_contact(
         raise HTTPException(status_code=404, detail=error_detail(CONTACT_NOT_FOUND))
     ensure_adult(db, user.id, contact.family_id)
 
-    db.query(FamilyBirthday).filter(
-        FamilyBirthday.family_id == contact.family_id,
-        FamilyBirthday.person_name == contact.full_name,
-    ).delete()
+    delete_family_birthday(db, contact.family_id, contact.full_name)
 
     db.delete(contact)
     db.commit()
@@ -281,7 +266,7 @@ def import_contacts_csv(
             birthday_day=day,
         )
         db.add(contact)
-        upsert_birthday(db, payload.family_id, name, month, day)
+        upsert_family_birthday(db, payload.family_id, name, month, day)
         created += 1
 
     db.commit()

@@ -7,7 +7,7 @@ import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
 export function useContacts() {
-  const { contacts, setContacts, familyId, messages, loadContacts, loadDashboard, demoMode } = useApp();
+  const { contacts, setContacts, familyId, messages, loadContacts, loadBirthdays, loadDashboard, demoMode } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [showForm, setShowForm] = useState(false);
@@ -64,6 +64,7 @@ export function useContacts() {
       const { ok, data } = await api.apiCreateContact(payload);
       if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadContacts();
+      await loadBirthdays();
       await loadDashboard();
     }
     resetForm();
@@ -95,6 +96,7 @@ export function useContacts() {
       const { ok, data } = await api.apiUpdateContact(editingContact.id, payload);
       if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await loadContacts();
+      await loadBirthdays();
       await loadDashboard();
     }
     resetForm();
@@ -110,6 +112,7 @@ export function useContacts() {
       const { ok } = await api.apiDeleteContact(contact.id);
       if (!ok) return toastError(t(messages, 'toast.error'));
       await loadContacts();
+      await loadBirthdays();
       await loadDashboard();
     }
     resetForm();

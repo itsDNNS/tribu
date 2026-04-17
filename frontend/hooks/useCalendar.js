@@ -7,7 +7,7 @@ import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
 export function useCalendar() {
-  const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members } = useApp();
+  const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members, birthdays } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [calendarView, setCalendarViewRaw] = useState('month');
@@ -105,28 +105,17 @@ export function useCalendar() {
     });
   }, [weekAnchor, calendarView]);
 
-  // Merge real events with synthetic member birthday events for the viewed year
+  // Merge real events with synthetic birthdays from both the birthday
+  // registry and member date-of-birth fields so imported contact
+  // birthdays show up in the calendar as well.
   const allEvents = useMemo(() => {
-    const birthdayEvents = [];
-    const viewYear = calendarMonth.getFullYear();
-    for (const m of members) {
-      if (!m.date_of_birth) continue;
-      const [y, mo, d] = m.date_of_birth.split('-').map(Number);
-      const age = viewYear - y;
-      const startsAt = new Date(viewYear, mo - 1, d, 0, 0, 0).toISOString();
-      birthdayEvents.push({
-        id: `bday-${m.user_id}-${viewYear}`,
-        title: m.display_name + (age > 0 ? ` (${age})` : ''),
-        starts_at: startsAt,
-        ends_at: null,
-        all_day: true,
-        color: '#f43f5e',
-        is_recurring: false,
-        _isBirthday: true,
-      });
-    }
+    const birthdayEvents = buildBirthdayEvents({
+      birthdays,
+      members,
+      viewYear: calendarMonth.getFullYear(),
+    });
     return [...events, ...birthdayEvents];
-  }, [events, members, calendarMonth]);
+  }, [events, birthdays, members, calendarMonth]);
 
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
@@ -384,4 +373,45 @@ export function useCalendar() {
     editEndsAt, setEditEndsAt, editDescription, setEditDescription,
     editAllDay, setEditAllDay,
   };
+}
+
+export function buildBirthdayEvents({ birthdays = [], members = [], viewYear }) {
+  const deduped = new Map();
+
+  for (const birthday of birthdays) {
+    if (!birthday?.person_name || !birthday?.month || !birthday?.day) continue;
+    const startsAt = new Date(viewYear, birthday.month - 1, birthday.day, 0, 0, 0).toISOString();
+    const key = `${birthday.person_name.toLowerCase()}|${birthday.month}|${birthday.day}`;
+    deduped.set(key, {
+      id: `birthday-${birthday.person_name}-${birthday.month}-${birthday.day}-${viewYear}`,
+      title: birthday.person_name,
+      starts_at: startsAt,
+      ends_at: null,
+      all_day: true,
+      color: '#f43f5e',
+      is_recurring: false,
+      _isBirthday: true,
+    });
+  }
+
+  for (const member of members) {
+    if (!member?.date_of_birth) continue;
+    const [year, month, day] = member.date_of_birth.split('-').map(Number);
+    if (!month || !day) continue;
+    const age = viewYear - year;
+    const startsAt = new Date(viewYear, month - 1, day, 0, 0, 0).toISOString();
+    const key = `${(member.display_name || '').toLowerCase()}|${month}|${day}`;
+    deduped.set(key, {
+      id: `birthday-member-${member.user_id}-${viewYear}`,
+      title: member.display_name + (age > 0 ? ` (${age})` : ''),
+      starts_at: startsAt,
+      ends_at: null,
+      all_day: true,
+      color: '#f43f5e',
+      is_recurring: false,
+      _isBirthday: true,
+    });
+  }
+
+  return Array.from(deduped.values());
 }

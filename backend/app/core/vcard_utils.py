@@ -39,6 +39,28 @@ def contact_to_vcard(contact: Contact) -> str:
     return _render_vcard(contact)
 
 
+def contact_channel_values(contact: Contact) -> tuple[list[str], list[str]]:
+    emails: list[str] = []
+    phones: list[str] = []
+
+    raw = getattr(contact, "raw_vcard", None)
+    if raw:
+        try:
+            card = vobject.readOne(raw)
+        except Exception:
+            card = None
+        if card is not None:
+            emails = _all_values(card, "email")
+            phones = _all_values(card, "tel")
+
+    if getattr(contact, "email", None):
+        emails = _merge_primary_value(contact.email, emails)
+    if getattr(contact, "phone", None):
+        phones = _merge_primary_value(contact.phone, phones)
+
+    return emails, phones
+
+
 def _normalize_uid_and_rev(raw: str, contact: Contact) -> str:
     """Make sure the stored UID/REV match the ORM row even after edits."""
     try:
@@ -151,6 +173,32 @@ def _first_value(card, prop_name: str) -> Optional[str]:
     if isinstance(value, str):
         return value.strip() or None
     return None
+
+
+def _all_values(card, prop_name: str) -> list[str]:
+    values: list[str] = []
+    for item in card.contents.get(prop_name, []):
+        value = item.value
+        if isinstance(value, list):
+            candidates = value
+        else:
+            candidates = [value]
+        for candidate in candidates:
+            if not isinstance(candidate, str):
+                continue
+            cleaned = candidate.strip()
+            if cleaned and cleaned not in values:
+                values.append(cleaned)
+    return values
+
+
+def _merge_primary_value(primary: str, values: list[str]) -> list[str]:
+    cleaned = primary.strip()
+    if not cleaned:
+        return values
+    if cleaned in values:
+        return [cleaned, *[value for value in values if value != cleaned]]
+    return [cleaned, *values]
 
 
 def _compose_name(n_value) -> str:

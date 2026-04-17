@@ -33,6 +33,16 @@ function daysUntilBirthday(month, day) {
   return Math.round((next - today) / (1000 * 60 * 60 * 24));
 }
 
+function contactDetails(contact) {
+  const emailValues = Array.isArray(contact.email_values) && contact.email_values.length > 0
+    ? contact.email_values
+    : contact.email ? [contact.email] : [];
+  const phoneValues = Array.isArray(contact.phone_values) && contact.phone_values.length > 0
+    ? contact.phone_values
+    : contact.phone ? [contact.phone] : [];
+  return [...emailValues, ...phoneValues];
+}
+
 function DeleteButton({ onDelete, label, messages }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -171,6 +181,7 @@ export default function ContactsView() {
                 <div className="contacts-section-letter">{letter}</div>
                 {group.map((c) => {
                   const initials = (c.full_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+                  const details = contactDetails(c);
                   return (
                     <div
                       key={c.id}
@@ -185,9 +196,9 @@ export default function ContactsView() {
                       </div>
                       <div className="contact-info">
                         <div className="contact-name">{c.full_name}</div>
-                        {(c.email || c.phone) && (
-                          <div className="contact-detail">{c.email || c.phone}</div>
-                        )}
+                        {details.map((detail) => (
+                          <div key={detail} className="contact-detail">{detail}</div>
+                        ))}
                         {c.birthday_month && c.birthday_day && (
                           <div className="contact-birthday">
                             <Cake size={12} aria-hidden="true" /> {c.birthday_day}.{c.birthday_month}.
