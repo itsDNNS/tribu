@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, ExternalLink, Edit2, Trash2, Package, ShoppingBag, Gift as GiftIcon, Plus } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { useGifts, GIFT_STATUSES } from '../hooks/useGifts';
+import { useGifts, GIFT_STATUSES, GIFT_OCCASIONS } from '../hooks/useGifts';
 import { t } from '../lib/i18n';
 import MemberAvatar from './MemberAvatar';
 import ConfirmDialog from './ConfirmDialog';
@@ -13,6 +13,8 @@ const STATUS_ICON = {
   purchased: Package,
   gifted: GiftIcon,
 };
+
+const EXAMPLE_OCCASIONS = GIFT_OCCASIONS.filter((o) => o !== 'other');
 
 function formatPrice(cents, currency) {
   if (cents == null) return '';
@@ -97,16 +99,30 @@ function GiftCard({ gift, members, messages, onEdit, onDelete, onStatusChange })
       {gift.notes && <p className="gift-card-notes">{gift.notes}</p>}
 
       <div className="gift-card-footer">
-        <select
-          className="gift-status-select"
-          value={gift.status}
-          onChange={(e) => onStatusChange(gift.id, e.target.value)}
+        <div
+          className="gift-status-seg"
+          role="group"
           aria-label={t(messages, 'module.gifts.status_aria')}
         >
-          {GIFT_STATUSES.map((s) => (
-            <option key={s} value={s}>{statusLabel(messages, s)}</option>
-          ))}
-        </select>
+          {GIFT_STATUSES.map((s) => {
+            const Icon = STATUS_ICON[s] || Sparkles;
+            const active = gift.status === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                className="gift-status-seg-btn"
+                data-status={s}
+                aria-pressed={active}
+                onClick={() => { if (!active) onStatusChange(gift.id, s); }}
+                title={statusLabel(messages, s)}
+              >
+                <Icon size={12} aria-hidden="true" />
+                <span className="gift-status-seg-label">{statusLabel(messages, s)}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -140,6 +156,12 @@ export default function GiftsView() {
     setDialogOpen(true);
   }
 
+  function openAddDialogWithOccasion(occasion) {
+    g.resetForm();
+    g.setForm((prev) => ({ ...prev, occasion }));
+    setDialogOpen(true);
+  }
+
   function openEditDialog(gift) {
     g.populateForm(gift);
     setDialogOpen(true);
@@ -153,6 +175,14 @@ export default function GiftsView() {
   async function handleSubmit(e) {
     const ok = await g.submitGift(e);
     if (ok) setDialogOpen(false);
+  }
+
+  const hasFilters = !!g.statusFilter || !!g.recipientFilter || g.includeGifted;
+
+  function clearFilters() {
+    g.setStatusFilter('');
+    g.setRecipientFilter('');
+    g.setIncludeGifted(false);
   }
 
   return (
@@ -226,12 +256,40 @@ export default function GiftsView() {
       </div>
 
       {g.loading && <p className="gift-loading">{t(messages, 'module.gifts.loading')}</p>}
-      {!g.loading && g.gifts.length === 0 && (
-        <div className="empty-state">
-          <Sparkles size={32} aria-hidden="true" />
-          <p>{t(messages, 'module.gifts.empty')}</p>
+      {!g.loading && g.gifts.length === 0 && (hasFilters ? (
+        <div className="gift-empty-filtered">
+          <Sparkles size={24} aria-hidden="true" />
+          <p>{t(messages, 'module.gifts.empty_filtered')}</p>
+          <button type="button" className="gift-empty-filtered-btn" onClick={clearFilters}>
+            {t(messages, 'module.gifts.clear_filters')}
+          </button>
         </div>
-      )}
+      ) : (
+        <div className="gift-empty-rich">
+          <span className="gift-empty-icon-wrap">
+            <GiftIcon size={36} aria-hidden="true" />
+          </span>
+          <h2 className="gift-empty-title">{t(messages, 'module.gifts.empty_title')}</h2>
+          <p className="gift-empty-body">{t(messages, 'module.gifts.empty_body')}</p>
+          <button type="button" className="btn btn-primary gift-empty-cta" onClick={openAddDialog}>
+            <Plus size={16} aria-hidden="true" />
+            {t(messages, 'module.gifts.add')}
+          </button>
+          <p className="gift-empty-chip-hint">{t(messages, 'module.gifts.empty_chip_hint')}</p>
+          <div className="gift-empty-chips">
+            {EXAMPLE_OCCASIONS.map((occ) => (
+              <button
+                key={occ}
+                type="button"
+                className="gift-empty-chip"
+                onClick={() => openAddDialogWithOccasion(occ)}
+              >
+                {occasionLabel(messages, occ)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
 
       <div className="gift-grid">
         {g.gifts.map((gift) => (

@@ -1812,6 +1812,38 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .gift-status-select { flex: 1; background: rgba(120, 130, 180, 0.05); border: 1px solid var(--glass-border); color: var(--text-primary); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.82rem; font-family: inherit; min-height: auto; cursor: pointer; }
 .gift-status-select:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
 
+/* Status segmented control */
+.gift-status-seg { display: inline-flex; flex: 1; background: rgba(120, 130, 180, 0.06); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 2px; gap: 2px; }
+.gift-status-seg-btn { flex: 1; background: transparent; border: none; color: var(--text-muted); padding: 6px 4px; font-size: 0.72rem; font-weight: 500; font-family: inherit; cursor: pointer; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; transition: all 0.15s; min-height: auto; white-space: nowrap; }
+.gift-status-seg-btn:hover:not([aria-pressed="true"]) { color: var(--text-secondary); background: rgba(120, 130, 180, 0.1); }
+.gift-status-seg-btn:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; z-index: 1; }
+.gift-status-seg-btn[aria-pressed="true"] { background: var(--gift-accent, var(--amethyst)); color: var(--text-on-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.gift-status-seg-btn[data-status="idea"][aria-pressed="true"] { background: var(--amethyst); }
+.gift-status-seg-btn[data-status="ordered"][aria-pressed="true"] { background: var(--sapphire); }
+.gift-status-seg-btn[data-status="purchased"][aria-pressed="true"] { background: var(--warning); }
+.gift-status-seg-btn[data-status="gifted"][aria-pressed="true"] { background: var(--success); }
+.gift-status-seg-label { display: inline; }
+@media (max-width: 380px) {
+  .gift-status-seg-label { display: none; }
+}
+
+/* Rich empty state */
+.gift-empty-rich { display: flex; flex-direction: column; align-items: center; gap: var(--space-md); padding: var(--space-2xl) var(--space-md); text-align: center; color: var(--text-secondary); }
+.gift-empty-icon-wrap { width: 72px; height: 72px; border-radius: var(--radius-pill); background: var(--amethyst-glow); color: var(--amethyst); display: inline-flex; align-items: center; justify-content: center; }
+.gift-empty-title { font-size: 1.2rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+.gift-empty-body { max-width: 440px; margin: 0; line-height: 1.5; font-size: 0.92rem; }
+.gift-empty-cta { margin-top: var(--space-sm); display: inline-flex; align-items: center; gap: 8px; }
+.gift-empty-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: var(--space-sm); }
+.gift-empty-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: rgba(120, 130, 180, 0.08); border: 1px solid var(--glass-border); border-radius: var(--radius-pill); font-size: 0.88rem; color: var(--text-secondary); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.gift-empty-chip:hover { background: rgba(124, 58, 237, 0.12); color: var(--text-primary); transform: translateY(-1px); border-color: rgba(124, 58, 237, 0.3); }
+.gift-empty-chip:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
+.gift-empty-chip-hint { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: var(--space-md); }
+
+/* Filtered empty state */
+.gift-empty-filtered { display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); padding: var(--space-xl) var(--space-md); text-align: center; color: var(--text-secondary); }
+.gift-empty-filtered-btn { background: transparent; border: 1px solid var(--glass-border); color: var(--text-secondary); padding: 6px 14px; border-radius: var(--radius-pill); font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.gift-empty-filtered-btn:hover { background: rgba(120, 130, 180, 0.08); color: var(--text-primary); }
+
 /* Gift dialog (wider than cal-dialog) */
 .gift-dialog { padding: var(--space-xl); max-width: 640px; width: 92%; max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-md); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
 [data-theme="light"] .gift-dialog { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
