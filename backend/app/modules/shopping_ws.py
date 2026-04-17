@@ -11,6 +11,7 @@ with ``{"type": "pong"}``.
 import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import jwt
 from sqlalchemy.orm import Session
 
 from app.core.ws_manager import manager
@@ -35,7 +36,7 @@ def _auth_and_check(ws: WebSocket, list_id: int) -> tuple[int, int] | None:
     try:
         payload = decode_token(token)
         user_id = int(payload["sub"])
-    except Exception:
+    except (jwt.PyJWTError, KeyError, TypeError, ValueError):
         return None
 
     db: Session = SessionLocal()

@@ -1,13 +1,14 @@
 import json
 import logging
 import os
-from typing import Any, Callable
+from typing import Callable, TypeVar, cast
 
 logger = logging.getLogger(__name__)
 
 REDIS_URL = os.getenv("REDIS_URL")
 
 _client = None
+T = TypeVar("T")
 
 
 def _get_client():
@@ -40,13 +41,13 @@ def ping() -> bool:
         return False
 
 
-def get_or_set(key: str, ttl: int, loader: Callable[[], Any]) -> Any:
+def get_or_set(key: str, ttl: int, loader: Callable[[], T]) -> T:
     client = _get_client()
     if client:
         try:
             cached = client.get(key)
             if cached is not None:
-                return json.loads(cached)
+                return cast(T, json.loads(cached))
         except Exception as e:
             logger.debug("Cache get failed for %s: %s", key, e)
 

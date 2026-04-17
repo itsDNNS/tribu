@@ -38,7 +38,7 @@ def _get_alembic_revision(db_params: dict) -> str:
             capture_output=True, text=True, timeout=10, env=env,
         )
         return result.stdout.strip() if result.returncode == 0 else "unknown"
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         return "unknown"
 
 
@@ -55,7 +55,7 @@ def _get_pg_version(db_params: dict) -> str:
             capture_output=True, text=True, timeout=10, env=env,
         )
         return result.stdout.strip() if result.returncode == 0 else "unknown"
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         return "unknown"
 
 
@@ -110,7 +110,7 @@ def _read_metadata(archive_path: str) -> dict:
             f = tar.extractfile(member)
             if f:
                 return json.load(f)
-    except Exception:
+    except (OSError, KeyError, tarfile.TarError, json.JSONDecodeError):
         pass
     return {}
 

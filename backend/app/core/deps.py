@@ -1,4 +1,5 @@
 from datetime import UTC, date
+import jwt
 
 from app.core.utils import utcnow
 from typing import Optional
@@ -79,7 +80,7 @@ def _resolve_user(request: Request, token_str: str, db: Session) -> User:
     try:
         payload = decode_token(token_str)
         user_id = int(payload.get("sub"))
-    except Exception:
+    except (jwt.PyJWTError, KeyError, TypeError, ValueError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
 
     user = db.query(User).filter(User.id == user_id).first()

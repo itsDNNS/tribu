@@ -25,8 +25,8 @@ from sqlalchemy.exc import IntegrityError
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.vcard_utils import contact_to_vcard, contacts_to_vcards, vcard_to_contact_dict
 from app.database import SessionLocal
-from app.dav import rights_plugin
 from app.models import CalendarEvent, Contact, Family, Membership, User
+from .rights_plugin import current_user_id
 
 
 def _db():
@@ -217,7 +217,7 @@ class CalendarCollection(BaseCollection):
         """
         ics_text = getattr(item, "text", None) or item.serialize()
         uid = getattr(item, "uid", None) or ""
-        valid, errors = ics_to_event_dicts(ics_text, self._family_id, rights_plugin.current_user_id())
+        valid, errors = ics_to_event_dicts(ics_text, self._family_id, current_user_id())
         if not valid:
             reason = errors[0]["error"] if errors else "no VEVENT"
             raise ValueError(f"VEVENT rejected: {reason}")
@@ -261,7 +261,7 @@ class CalendarCollection(BaseCollection):
             else:
                 row = CalendarEvent(
                     family_id=self._family_id,
-                    created_by_user_id=rights_plugin.current_user_id(),
+                    created_by_user_id=current_user_id(),
                     ical_uid=uid,
                     dav_href=href,
                 )

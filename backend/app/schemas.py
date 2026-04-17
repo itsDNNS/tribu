@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from typing import Optional, Union
 
+import binascii
 import re
 
 from enum import Enum
@@ -117,7 +118,7 @@ class ProfileImageUpdate(BaseModel):
 
         try:
             decoded = base64.b64decode(b64_data, validate=True)
-        except Exception:
+        except (binascii.Error, ValueError):
             raise ValueError("Invalid base64 data")
 
         if len(decoded) > _PROFILE_IMAGE_MAX_BYTES:

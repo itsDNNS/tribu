@@ -20,9 +20,9 @@ from radicale.log import logger
 from app.core.clock import utcnow
 from app.core.scopes import has_scope, parse_scopes
 from app.database import SessionLocal
-from app.dav import rights_plugin
 from app.models import PersonalAccessToken, User
 from app.security import PAT_PREFIX, hash_pat, pat_lookup_key, verify_pat
+from .rights_plugin import remember_scopes
 
 
 DAV_SCOPES = ("calendar:read", "calendar:write", "contacts:read", "contacts:write")
@@ -84,7 +84,7 @@ class Auth(BaseAuth):
             # run back-to-back on the same thread per request, so a
             # threading.local context is the narrowest handoff that
             # does not require patching Radicale's plugin contract.
-            rights_plugin.remember_scopes(user.email, user.id, granted)
+            remember_scopes(user.email, user.id, granted)
             return user.email
 
 

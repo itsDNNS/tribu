@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.deps import current_user, ensure_adult, ensure_family_membership
+from app.core.deps import current_user, ensure_family_membership
 from app.core.errors import (
     ADULT_REQUIRED,
     GIFT_NOT_FOUND,
