@@ -7,7 +7,7 @@ import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
 export function useCalendar() {
-  const { events, setEvents, familyId, loadEvents, loadDashboard, demoMode, summary, setSummary, lang, messages, members } = useApp();
+  const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [calendarView, setCalendarViewRaw] = useState('month');

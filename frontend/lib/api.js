@@ -466,10 +466,6 @@ export function apiGetGifts(familyId, { status = null, forUserId = null, occasio
   return request(`/gifts?${params.toString()}`);
 }
 
-export function apiGetGift(giftId) {
-  return request(`/gifts/${giftId}`);
-}
-
 export function apiCreateGift(payload) {
   return post('/gifts', payload);
 }

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import { createContext, useCallback, useContext, useEffect } from 'react';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -20,10 +20,10 @@ function AppOrchestrator({ children }) {
   const data = useData();
   const ui = useUI();
 
-  const { loggedIn, demoMode, me, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
+  const { loggedIn, demoMode, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
   const { familyId, setFamilyId, families, setFamilies, setMyFamilyRole, setMyFamilyIsAdult, loadMembers, setMembers } = family;
   const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setContacts, setBirthdays, setSummary } = data;
-  const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, restoreView, setIsMobile, setNavOrder, setTimeFormat, lang, messages } = ui;
+  const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, restoreView, setIsMobile, setNavOrder, setTimeFormat, lang } = ui;
 
   // Wrap data loaders to inject familyId default and skip in demo mode
   const loadDashboardWrapped = useCallback(async (fid = familyId) => {

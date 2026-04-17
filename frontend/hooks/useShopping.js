@@ -7,7 +7,7 @@ import { useWebSocket } from './useWebSocket';
 
 export function useShopping() {
   const {
-    shoppingLists, setShoppingLists, familyId, members, messages,
+    shoppingLists, setShoppingLists, familyId, messages,
     loadShoppingLists, demoMode,
   } = useApp();
   const { error: toastError } = useToast();

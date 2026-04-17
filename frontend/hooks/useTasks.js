@@ -7,7 +7,7 @@ import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
 export function useTasks() {
-  const { tasks, setTasks, familyId, members, messages, loadTasks, demoMode } = useApp();
+  const { tasks, setTasks, familyId, messages, loadTasks, demoMode } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [taskFilter, setTaskFilter] = useState('open');

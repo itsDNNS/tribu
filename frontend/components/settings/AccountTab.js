@@ -3,7 +3,7 @@ import { User, Palette, Globe, Check, AlertTriangle, LogOut, Trash2 } from 'luci
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { t, languageCompleteness } from '../../lib/i18n';
-import { COLOR_PALETTE, getMemberColor } from '../../lib/member-colors';
+import { COLOR_PALETTE } from '../../lib/member-colors';
 import * as api from '../../lib/api';
 
 const THEME_DESCS = {

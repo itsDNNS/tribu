@@ -7,7 +7,7 @@ import { getMemberColor } from '../../lib/member-colors';
 import DayDetailPanel from './DayDetailPanel';
 
 export default function CalendarView() {
-  const { familyId, families, messages, isMobile, lang, demoMode, events, switchFamily, loadEvents, loadDashboard, setActiveView, isChild, members, timeFormat } = useApp();
+  const { familyId, families, messages, isMobile, lang, demoMode, events, setActiveView, isChild, members, timeFormat } = useApp();
   const cal = useCalendar();
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const weekdays = t(messages, 'module.calendar.weekdays').split(',');
