@@ -159,11 +159,15 @@ class CalendarCollection(BaseCollection):
         return events_to_ics(events, calendar_name=self._family_name)
 
     def sync(self, old_token: str = "") -> Tuple[str, Iterable[str]]:
-        # Minimal sync support: always return the current ctag and the
-        # full item list so clients fall back to a full refresh. A
-        # real incremental sync token lands with the rest of write
-        # support in Phase B2 / D.
-        token = f"http://radicale.org/ns/sync/{self._ctag()}"
+        # Incremental sync cannot be correct yet: CalendarEvent has no
+        # ``updated_at`` column, so edits do not disturb the ctag, and
+        # there is no deletion journal to emit tombstones. Raising
+        # ValueError on a non-empty ``old_token`` makes Radicale
+        # return the ``valid-sync-token`` precondition failure, which
+        # reliably forces clients into a full-refresh cycle until
+        # Phase D lands a real modification log.
+        if old_token:
+            raise ValueError("sync-token not supported in Phase B1")
         hrefs = []
         with _db() as db:
             ids = (
@@ -173,6 +177,7 @@ class CalendarCollection(BaseCollection):
             )
         for (event_id,) in ids:
             hrefs.append(_event_href(event_id))
+        token = f"http://radicale.org/ns/sync/{self._ctag()}"
         return token, hrefs
 
     # ── writes (Phase B2) ─────────────────────────────────

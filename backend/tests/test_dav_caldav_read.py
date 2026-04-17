@@ -163,6 +163,37 @@ class TestCalDAVRead:
         # One of our seeded events must be in there
         assert ("Team sync" in get_resp.text) or ("Picnic" in get_resp.text)
 
+    def test_sync_token_refresh_is_rejected_until_phase_d(self, app_under_test, seeded):
+        """A sync-collection REPORT with an old token must force a full refresh.
+
+        Radicale converts the storage plugin's ``ValueError`` into a
+        ``valid-sync-token`` precondition failure (HTTP 403) so the
+        client re-runs without a token.
+        """
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        headers = {
+            "Authorization": _basic(EMAIL, token),
+            "Depth": "1",
+            "Content-Type": "application/xml",
+        }
+        body = (
+            '<?xml version="1.0"?>'
+            '<sync-collection xmlns="DAV:">'
+            '<sync-token>http://radicale.org/ns/sync/stale</sync-token>'
+            '<sync-level>1</sync-level>'
+            '<prop><getetag/></prop>'
+            '</sync-collection>'
+        )
+        resp = client.request(
+            "REPORT",
+            f"/dav/{EMAIL}/family-{family_id}/",
+            headers=headers,
+            content=body,
+        )
+        assert resp.status_code == 403, resp.text
+        assert "valid-sync-token" in resp.text
+
     def test_put_is_rejected_until_phase_b2(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)
