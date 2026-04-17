@@ -16,6 +16,7 @@ from radicale.app import Application
 from radicale.config import Configuration, DEFAULT_CONFIG_SCHEMA
 
 from .auth_plugin import Auth
+from .caldav_storage import Storage as CalDAVStorage
 from .rights_plugin import Rights
 
 
@@ -81,10 +82,13 @@ def _build_configuration() -> Configuration:
             "type": Rights,
         },
         "storage": {
-            "type": "multifilesystem",
+            # DB-backed storage plugin that surfaces each Tribu family
+            # the authenticated user belongs to as one CalDAV
+            # calendar collection. ``filesystem_folder`` stays set as
+            # Radicale's schema insists on a filesystem path; the
+            # plugin never writes to it.
+            "type": CalDAVStorage,
             "filesystem_folder": storage_folder,
-            # Harden file creation: new items and collection props are
-            # unreadable to group/other.
             "folder_umask": "0o077",
         },
         "logging": {
