@@ -58,6 +58,22 @@ def generate_pat() -> tuple[str, str]:
 
 
 def hash_pat(plain: str) -> str:
+    """Digest a Personal Access Token for equality lookup.
+
+    PATs are high-entropy bearer tokens produced by
+    ``secrets.token_urlsafe(32)`` — not user-typed passwords — so a
+    fast hash (SHA-256) is the correct primitive. Slow password KDFs
+    (bcrypt, argon2) would add latency to every authenticated
+    request without increasing the attacker's effective search
+    space, because the preimage is already uniform random bytes.
+
+    CodeQL's ``py/weak-sensitive-data-hashing`` query flags this
+    call via a name-based source heuristic when a ``password``-named
+    variable from the DAV auth plugin reaches here. That is a false
+    positive: the value is a generated bearer token, not a user
+    secret. The alert should be dismissed in the GitHub Security UI
+    (``dismissed_reason=false positive``), not suppressed inline.
+    """
     return hashlib.sha256(plain.encode()).hexdigest()
 
 
