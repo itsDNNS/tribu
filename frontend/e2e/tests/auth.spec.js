@@ -59,7 +59,7 @@ test.describe('Authentication', () => {
     await page.locator('#panel-login button[type="submit"]').click();
 
     await expect(
-      page.locator('#panel-login p[role="alert"]').filter({ hasText: 'Invalid credentials' }),
+      page.locator('.auth-card p[role="alert"]').filter({ hasText: 'Invalid credentials' }),
     ).toBeVisible({ timeout: 10000 });
   });
 });
