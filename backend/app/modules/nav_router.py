@@ -11,8 +11,8 @@ from app.core.errors import error_detail, UNKNOWN_NAV_KEYS
 
 router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})
 
-DEFAULT_NAV_ORDER = ["dashboard", "calendar", "shopping", "tasks", "contacts", "notifications", "settings", "admin"]
-KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "rewards", "gifts", "contacts", "notifications", "settings", "admin"}
+DEFAULT_NAV_ORDER = ["dashboard", "calendar", "shopping", "tasks", "meal_plans", "contacts", "notifications", "settings", "admin"]
+KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "rewards", "gifts", "meal_plans", "contacts", "notifications", "settings", "admin"}
 
 
 @router.get(

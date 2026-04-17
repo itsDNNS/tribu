@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigation, ChevronUp, ChevronDown, Check, CalendarDays, CheckSquare, LayoutDashboard, BookUser, ShoppingCart, Bell, Sparkles } from 'lucide-react';
+import { Navigation, ChevronUp, ChevronDown, Check, CalendarDays, CheckSquare, LayoutDashboard, BookUser, ShoppingCart, Bell, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
@@ -9,6 +9,7 @@ const NAV_ITEM_META = {
   calendar: { icon: CalendarDays, labelKey: 'calendar' },
   shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
+  meal_plans: { icon: UtensilsCrossed, labelKey: 'module.meal_plans.name', hideInDemo: true },
   gifts: { icon: Sparkles, labelKey: 'module.gifts.name', adultOnly: true, hideInDemo: true },
   contacts: { icon: BookUser, labelKey: 'contacts' },
   notifications: { icon: Bell, labelKey: 'notifications' },
