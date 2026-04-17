@@ -5,7 +5,6 @@ The critical test is that admin+non-adult combinations are rejected at creation 
 and defensively demoted at registration time.
 """
 
-from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 

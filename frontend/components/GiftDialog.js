@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { X, Cake } from 'lucide-react';
 import { t } from '../lib/i18n';
-import { GIFT_STATUSES, GIFT_OCCASIONS } from '../hooks/useGifts';
+import { GIFT_OCCASIONS, GIFT_STATUSES } from '../lib/gifts';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 
 function statusLabel(messages, status) {
   return t(messages, `module.gifts.status.${status}`);
@@ -26,44 +27,7 @@ export default function GiftDialog({
 }) {
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
-  const previousFocusRef = useRef(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-
-  useEffect(() => {
-    if (!open) return undefined;
-    previousFocusRef.current = document.activeElement;
-    firstFieldRef.current?.focus();
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') {
-        onCloseRef.current();
-        return;
-      }
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll(
-          'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href]',
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      const previous = previousFocusRef.current;
-      if (previous && previous.isConnected && typeof previous.focus === 'function') {
-        previous.focus();
-      }
-    };
-  }, [open]);
+  useDialogFocusTrap({ open, containerRef: dialogRef, initialFocusRef: firstFieldRef, onClose });
 
   if (!open) return null;
 

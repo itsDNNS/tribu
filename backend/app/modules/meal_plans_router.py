@@ -8,8 +8,9 @@ distinct previously-used ingredient names for frontend autocomplete.
 A push-to-shopping endpoint turns selected ingredients into shopping
 items, formatted as "{amount} {unit}" in the item's spec column.
 """
+from collections.abc import Mapping
 from datetime import date
-from typing import Any, Optional
+from typing import Optional, TypeAlias, TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
@@ -49,6 +50,15 @@ VALID_SLOTS = set(MEAL_SLOTS)
 
 MAX_RANGE_DAYS = 370
 
+IngredientFieldValue: TypeAlias = str | int | float | None
+RawIngredient: TypeAlias = str | IngredientItem | Mapping[str, IngredientFieldValue]
+
+
+class NormalizedIngredient(TypedDict):
+    name: str
+    amount: float | None
+    unit: str | None
+
 
 def _validate_slot(slot: Optional[str]) -> None:
     if slot is None:
@@ -74,7 +84,22 @@ def _load_for_caller(db: Session, user: User, plan_id: int) -> MealPlan:
     return plan
 
 
-def _normalize_stored_ingredients(raw: Optional[list[Any]]) -> list[dict]:
+def _normalize_amount(value: IngredientFieldValue) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _normalize_unit(value: IngredientFieldValue) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _normalize_stored_ingredients(raw: Optional[list[RawIngredient]]) -> list[NormalizedIngredient]:
     """Accept legacy list[str] payloads or the new list[dict] shape.
 
     Always returns a list of ``{"name", "amount", "unit"}`` dicts. This
@@ -85,21 +110,21 @@ def _normalize_stored_ingredients(raw: Optional[list[Any]]) -> list[dict]:
     """
     if not raw:
         return []
-    normalized: list[dict] = []
+    normalized: list[NormalizedIngredient] = []
     for entry in raw:
         if isinstance(entry, str):
             stripped = entry.strip()
             if not stripped:
                 continue
             normalized.append({"name": stripped, "amount": None, "unit": None})
-        elif isinstance(entry, dict):
+        elif isinstance(entry, Mapping):
             name = entry.get("name")
             if not isinstance(name, str) or not name.strip():
                 continue
             normalized.append({
                 "name": name.strip(),
-                "amount": entry.get("amount"),
-                "unit": (entry.get("unit") or None) if isinstance(entry.get("unit"), str) else entry.get("unit"),
+                "amount": _normalize_amount(entry.get("amount")),
+                "unit": _normalize_unit(entry.get("unit")),
             })
     return normalized
 
@@ -126,7 +151,7 @@ def _serialize(plan: MealPlan) -> MealPlanResponse:
     })
 
 
-def _sanitize_ingredients(raw: Optional[list[Any]]) -> list[dict]:
+def _sanitize_ingredients(raw: Optional[list[RawIngredient]]) -> list[NormalizedIngredient]:
     """Normalize a list of ingredient items.
 
     Strips whitespace on name and unit, drops empty names, and
@@ -138,15 +163,15 @@ def _sanitize_ingredients(raw: Optional[list[Any]]) -> list[dict]:
     if not raw:
         return []
     seen: set[str] = set()
-    cleaned: list[dict] = []
+    cleaned: list[NormalizedIngredient] = []
     for item in raw:
         if isinstance(item, IngredientItem):
             name = item.name
             amount = item.amount
             unit = item.unit
-        elif isinstance(item, dict):
+        elif isinstance(item, Mapping):
             name = item.get("name")
-            amount = item.get("amount")
+            amount = _normalize_amount(item.get("amount"))
             unit = item.get("unit")
         else:
             continue
@@ -159,10 +184,7 @@ def _sanitize_ingredients(raw: Optional[list[Any]]) -> list[dict]:
         if key in seen:
             continue
         seen.add(key)
-        unit_clean: Optional[str] = None
-        if isinstance(unit, str):
-            u = unit.strip()
-            unit_clean = u if u else None
+        unit_clean = _normalize_unit(unit)
         cleaned.append({
             "name": name,
             "amount": amount,
@@ -390,7 +412,7 @@ def add_ingredients_to_shopping(
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
 
     meal_ingredients = _normalize_stored_ingredients(plan.ingredients)
-    by_name: dict[str, dict] = {
+    by_name: dict[str, NormalizedIngredient] = {
         entry["name"].strip().lower(): entry for entry in meal_ingredients
     }
 
@@ -416,13 +438,10 @@ def add_ingredients_to_shopping(
 
     created: list[ShoppingItem] = []
     for entry in selected:
-        name = entry.get("name")
-        if not isinstance(name, str) or not name.strip():
-            continue
         item = ShoppingItem(
             list_id=shopping_list.id,
-            name=name.strip(),
-            spec=_format_spec(entry.get("amount"), entry.get("unit")),
+            name=entry["name"].strip(),
+            spec=_format_spec(entry["amount"], entry["unit"]),
             added_by_user_id=user.id,
         )
         db.add(item)

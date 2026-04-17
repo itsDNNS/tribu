@@ -11,7 +11,8 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import { useApp } from '../contexts/AppContext';
-import { useMealPlans, MEAL_SLOTS, formatIsoDate, weekDays } from '../hooks/useMealPlans';
+import { useMealPlans, formatIsoDate, weekDays } from '../hooks/useMealPlans';
+import { MEAL_SLOTS } from '../lib/meal-plans';
 import { t } from '../lib/i18n';
 import ConfirmDialog from './ConfirmDialog';
 import MealPlanDialog from './MealPlanDialog';

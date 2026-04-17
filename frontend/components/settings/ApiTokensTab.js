@@ -3,6 +3,7 @@ import { Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useFamily } from '../../contexts/FamilyContext';
+import { copyTextToClipboard } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
@@ -78,9 +79,9 @@ export default function ApiTokensTab() {
     }
   }
 
-  function handleCopy() {
+  async function handleCopy() {
     if (!createdToken) return;
-    navigator.clipboard.writeText(createdToken);
+    if (!await copyTextToClipboard(createdToken)) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

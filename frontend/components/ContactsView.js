@@ -56,7 +56,7 @@ function DeleteButton({ onDelete, label, messages }) {
   );
 }
 
-function FormModal({ id, title, onClose, onSubmit, isEditing, saveKey, deleteButton, messages, children }) {
+function FormModal({ id, title, onClose, onSubmit, saveKey, deleteButton, messages, children }) {
   const overlayRef = useRef(null);
   const panelRef = useRef(null);
   const firstInputRef = useRef(null);

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { buildMessages, listLanguages } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 import { buildUi } from '../lib/styles';

@@ -2,10 +2,14 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
+from app.core.compat import patch_asyncio_iscoroutinefunction
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+
+patch_asyncio_iscoroutinefunction()
+
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.extension import _rate_limit_exceeded_handler

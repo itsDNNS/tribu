@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Database, Rss, Download, Upload, ChevronUp, ChevronDown, Plus, Copy, Check } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { downloadBlob } from '../../lib/helpers';
+import { copyTextToClipboard, downloadBlob } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
 export default function DataTab() {
-  const { messages, familyId, loggedIn, demoMode, loadContacts, loadDashboard } = useApp();
+  const { messages, familyId, loadContacts, loadDashboard } = useApp();
   const { error: toastError } = useToast();
 
   // Data management state
@@ -42,8 +42,8 @@ export default function DataTab() {
     }
   }
 
-  function handleCopySubUrl(url, type) {
-    navigator.clipboard.writeText(url);
+  async function handleCopySubUrl(url, type) {
+    if (!await copyTextToClipboard(url)) return;
     if (type === 'calendar') {
       setSubCopiedCal(true);
       setTimeout(() => setSubCopiedCal(false), 2000);

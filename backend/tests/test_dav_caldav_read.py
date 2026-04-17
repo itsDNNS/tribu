@@ -42,7 +42,7 @@ def app_under_test(dav_storage_folder):
 
 @pytest.fixture
 def seeded(app_under_test):
-    from datetime import datetime, timedelta
+    from datetime import datetime
 
     db = SessionLocal()
     try:
@@ -169,7 +169,6 @@ class TestCalDAVRead:
         that poll CS:getctag before refetching notice the change."""
         import re
         import time
-        from datetime import datetime
 
         token, family_id = seeded
         client = TestClient(app_under_test)
@@ -322,10 +321,8 @@ class TestCalDAVRead:
         surfaces as a deterministic 4xx from the unique-constraint
         fallback path."""
         import concurrent.futures
-        import itertools
 
         token, family_id = seeded
-        base_client = TestClient(app_under_test)
         headers = {
             "Authorization": _basic(EMAIL, token),
             "Content-Type": "text/calendar",

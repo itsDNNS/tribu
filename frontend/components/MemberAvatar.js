@@ -1,13 +1,22 @@
 import { getMemberColor } from '../lib/member-colors';
 
 /**
+ * @typedef {{
+ *   display_name?: string | null,
+ *   profile_image?: string | null,
+ *   color?: string | null,
+ * }} MemberAvatarMember
+ *
+ * @typedef {{
+ *   member: MemberAvatarMember | null | undefined,
+ *   index?: number,
+ *   size?: number,
+ * }} MemberAvatarProps
+ *
  * Unified member avatar component.
  * Shows profile image if available, falls back to colored circle with initials.
  *
- * @param {object} props
- * @param {object} props.member - Member object with display_name, profile_image, color
- * @param {number} [props.index=0] - Index for color fallback
- * @param {number} [props.size=28] - Size in pixels
+ * @param {MemberAvatarProps} props
  */
 export default function MemberAvatar({ member, index = 0, size = 28 }) {
   if (!member) return null;

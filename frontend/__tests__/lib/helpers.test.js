@@ -1,4 +1,4 @@
-import { toIsoOrNull, prettyDate, errorText } from '../../lib/helpers';
+import { toIsoOrNull, prettyDate, errorText, copyTextToClipboard } from '../../lib/helpers';
 
 describe('toIsoOrNull', () => {
   it('returns null for falsy values', () => {
@@ -78,5 +78,29 @@ describe('errorText', () => {
   it('backward compat: 2-arg call still works', () => {
     expect(errorText('direct string', 'fallback')).toBe('direct string');
     expect(errorText(null, 'fallback')).toBe('fallback');
+  });
+});
+
+describe('copyTextToClipboard', () => {
+  afterEach(() => {
+    delete global.navigator;
+    jest.restoreAllMocks();
+  });
+
+  it('returns false when clipboard API is unavailable', async () => {
+    await expect(copyTextToClipboard('abc')).resolves.toBe(false);
+  });
+
+  it('writes text through navigator.clipboard when available', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    global.navigator = { clipboard: { writeText } };
+    await expect(copyTextToClipboard('abc')).resolves.toBe(true);
+    expect(writeText).toHaveBeenCalledWith('abc');
+  });
+
+  it('returns false when clipboard write rejects', async () => {
+    const writeText = jest.fn().mockRejectedValue(new Error('nope'));
+    global.navigator = { clipboard: { writeText } };
+    await expect(copyTextToClipboard('abc')).resolves.toBe(false);
   });
 });

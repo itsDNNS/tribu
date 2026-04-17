@@ -6,7 +6,7 @@ import { errorText } from '../lib/helpers';
 import * as api from '../lib/api';
 
 export function useRewards() {
-  const { familyId, members, me, isChild, demoMode, messages } = useApp();
+  const { familyId, me, demoMode, messages } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [currency, setCurrency] = useState(null);

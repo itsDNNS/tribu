@@ -1,32 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Navigation, ChevronUp, ChevronDown, Check, CalendarDays, CheckSquare, LayoutDashboard, BookUser, ShoppingCart, Bell, Sparkles, UtensilsCrossed, Gift } from 'lucide-react';
+import { Navigation, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
+import { isNavItemVisible, NAV_ITEM_META, PINNED_NAV_KEYS } from '../../lib/navigation';
 import * as api from '../../lib/api';
-
-const NAV_ITEM_META = {
-  dashboard: { icon: LayoutDashboard, labelKey: 'dashboard' },
-  calendar: { icon: CalendarDays, labelKey: 'calendar' },
-  shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
-  tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
-  meal_plans: { icon: UtensilsCrossed, labelKey: 'module.meal_plans.name', hideInDemo: true },
-  rewards: { icon: Gift, labelKey: 'module.rewards.name' },
-  gifts: { icon: Sparkles, labelKey: 'module.gifts.name', adultOnly: true, hideInDemo: true },
-  contacts: { icon: BookUser, labelKey: 'contacts' },
-  notifications: { icon: Bell, labelKey: 'notifications' },
-};
-
-const PINNED_KEYS = new Set(['settings', 'admin']);
 
 export default function NavigationTab() {
   const { messages, isAdmin, isChild, demoMode, navOrder, setNavOrder } = useApp();
   const filterHidden = (keys) => keys.filter((k) => {
-    if (PINNED_KEYS.has(k)) return false;
+    if (PINNED_NAV_KEYS.has(k)) return false;
     const meta = NAV_ITEM_META[k];
     if (!meta) return true;
-    if (meta.adultOnly && isChild) return false;
-    if (meta.hideInDemo && demoMode) return false;
-    return true;
+    return isNavItemVisible(k, { isAdmin, isChild, demoMode });
   });
   const [localNavOrder, setLocalNavOrder] = useState(() => filterHidden(navOrder));
   const [navSaved, setNavSaved] = useState(false);

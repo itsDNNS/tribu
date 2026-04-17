@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Smartphone, Copy, Check, ExternalLink } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import { copyTextToClipboard } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 
 function buildDavUrl(email, familyId, kind) {
@@ -21,13 +22,7 @@ function CopyRow({ label, value, copyAria }) {
         className="btn-sm sync-url-copy"
         aria-label={copyAria}
         onClick={async () => {
-          const write = navigator?.clipboard?.writeText;
-          if (typeof write !== "function") return;
-          try {
-            await write.call(navigator.clipboard, value);
-          } catch {
-            return;
-          }
+          if (!await copyTextToClipboard(value)) return;
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         }}

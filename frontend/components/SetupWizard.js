@@ -3,8 +3,6 @@ import { Users, ShieldCheck, Upload, CheckCircle, Globe, AlertCircle, Play } fro
 import { useApp } from '../contexts/AppContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
-import { listThemes } from '../lib/themes';
-import { listLanguages } from '../lib/i18n';
 import * as api from '../lib/api';
 
 const STEPS_FRESH = ['welcome', 'admin', 'family', 'prefs', 'done'];

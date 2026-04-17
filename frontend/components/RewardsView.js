@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Gift, Plus, Star, Check, X, Award, ArrowUpCircle, ArrowDownCircle, Gem, Zap, Heart, Trophy, Clock, CheckSquare } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { useToast } from '../contexts/ToastContext';
 import { useRewards } from '../hooks/useRewards';
 import { CurrencyIcon } from '../lib/currency-icons';
 import { t } from '../lib/i18n';
-import { errorText, parseDate } from '../lib/helpers';
+import { parseDate } from '../lib/helpers';
 import MemberAvatar from './MemberAvatar';
 import * as api from '../lib/api';
 
@@ -18,8 +17,7 @@ const CURRENCY_PRESETS = [
 ];
 
 export default function RewardsView() {
-  const { familyId, messages, members, me, isChild, isAdmin, demoMode, tasks, setActiveView, loadTasks } = useApp();
-  const { success: toastSuccess, error: toastError } = useToast();
+  const { messages, members, me, isChild, tasks, loadTasks } = useApp();
   const rw = useRewards();
 
   const [tab, setTab] = useState('overview');
@@ -41,16 +39,6 @@ export default function RewardsView() {
 
   // Tasks with token rewards (open, assigned)
   const rewardTasks = (tasks || []).filter(tk => tk.status === 'open' && tk.token_reward_amount > 0);
-
-  async function handleTaskComplete(task) {
-    const { ok } = await api.apiUpdateTask(task.id, { status: 'done' });
-    if (!ok) return;
-    if (!task.token_require_confirmation && rw.currency) {
-      await rw.earnTokens(task.assigned_to_user_id || me?.user_id, task.token_reward_amount, `Task: ${task.title}`);
-    }
-    setConfirmingTask(null);
-    if (loadTasks) await loadTasks();
-  }
 
   async function handleEarnForTask() {
     if (!confirmingTask || !rw.currency) return;

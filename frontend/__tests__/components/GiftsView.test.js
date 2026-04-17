@@ -17,7 +17,6 @@ jest.mock('../../lib/api', () => ({
   apiCreateGift: jest.fn(),
   apiUpdateGift: jest.fn(),
   apiDeleteGift: jest.fn(),
-  apiGetGift: jest.fn(),
 }));
 
 const messages = {

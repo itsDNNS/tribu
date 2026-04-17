@@ -37,7 +37,7 @@ describe('i18n no empty strings', () => {
   ];
 
   it.each(allFiles)('%s has no empty string values', (_name, locale) => {
-    for (const [key, value] of Object.entries(locale)) {
+    for (const [, value] of Object.entries(locale)) {
       expect(value.trim()).not.toBe('');
     }
   });

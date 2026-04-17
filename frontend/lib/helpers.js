@@ -40,6 +40,17 @@ export function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+export async function copyTextToClipboard(value) {
+  const write = typeof navigator !== 'undefined' ? navigator?.clipboard?.writeText : null;
+  if (typeof write !== 'function') return false;
+  try {
+    await write.call(navigator.clipboard, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function timeAgo(dateStr, lang) {
   const now = new Date();
   const date = new Date(dateStr);

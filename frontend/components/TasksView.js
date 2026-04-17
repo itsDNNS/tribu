@@ -5,7 +5,6 @@ import { useTasks } from '../hooks/useTasks';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import MemberAvatar from './MemberAvatar';
-import { getMemberColor } from '../lib/member-colors';
 import ConfirmDialog from './ConfirmDialog';
 
 export default function TasksView() {

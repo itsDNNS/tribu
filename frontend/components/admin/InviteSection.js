@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Check, Copy, X, Link, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { errorText } from '../../lib/helpers';
+import { copyTextToClipboard, errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import ConfirmDialog from '../ConfirmDialog';
@@ -93,25 +93,11 @@ export default function InviteSection() {
     }
   }
 
-  function handleCopyUrl() {
+  async function handleCopyUrl() {
     if (!createdUrl) return;
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(createdUrl).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      });
-    } else {
-      const ta = document.createElement('textarea');
-      ta.value = createdUrl;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    if (!await copyTextToClipboard(createdUrl)) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   function inviteStatus(inv) {
