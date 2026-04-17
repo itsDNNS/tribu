@@ -457,11 +457,12 @@ export function apiRejectTransaction(id) { return patch(`/rewards/transactions/$
 export function apiGetRewardBalances(familyId) { return request(`/rewards/balances?family_id=${familyId}`); }
 
 // Gifts
-export function apiGetGifts(familyId, { status = null, forUserId = null, occasion = null, includeGifted = true } = {}) {
+export function apiGetGifts(familyId, { status = null, forUserId = null, occasion = null, includeGifted = true, sort = null } = {}) {
   const params = new URLSearchParams({ family_id: String(familyId), include_gifted: String(includeGifted) });
   if (status) params.set('status', status);
   if (forUserId) params.set('for_user_id', String(forUserId));
   if (occasion) params.set('occasion', occasion);
+  if (sort) params.set('sort', sort);
   return request(`/gifts?${params.toString()}`);
 }
 

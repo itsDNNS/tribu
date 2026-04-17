@@ -1764,3 +1764,122 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .set-token-add-btn { margin-top: var(--space-sm); }
 .set-token-banner-icon { color: var(--success); }
 .set-token-dismiss-icon { vertical-align: middle; }
+
+/* ─── Gifts module ─── */
+.gift-view-header-actions { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
+
+.gift-filters { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: var(--space-lg) 0 var(--space-md); }
+.gift-filters .form-input { flex: 0 1 auto; min-width: 180px; }
+.gift-filter-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer; user-select: none; }
+.gift-filter-toggle input { accent-color: var(--amethyst); }
+
+.gift-loading { color: var(--text-muted); font-size: 0.88rem; padding: var(--space-md) 0; }
+
+.gift-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-md); }
+
+.gift-card { background: var(--glass); backdrop-filter: blur(8px) saturate(1.2); -webkit-backdrop-filter: blur(8px) saturate(1.2); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); padding-left: calc(var(--space-md) + 4px); display: flex; flex-direction: column; gap: var(--space-sm); position: relative; overflow: hidden; transition: transform 0.2s var(--ease-out-expo), box-shadow 0.2s var(--ease-out-expo); }
+.gift-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--gift-accent, var(--amethyst)); opacity: 0.9; }
+.gift-card:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.35); }
+.gift-status-idea { --gift-accent: var(--amethyst); }
+.gift-status-ordered { --gift-accent: var(--sapphire); }
+.gift-status-purchased { --gift-accent: var(--warning); }
+.gift-status-gifted { --gift-accent: var(--success); }
+
+.gift-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
+.gift-card-title-row { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.gift-status-icon { color: var(--gift-accent, var(--amethyst)); flex-shrink: 0; }
+.gift-card-title { font-size: 1rem; font-weight: 600; margin: 0; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gift-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.gift-card-action { background: transparent; border: 1px solid transparent; color: var(--text-muted); border-radius: var(--radius-sm); padding: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; min-height: auto; transition: all 0.15s; }
+.gift-card-action:hover { color: var(--text-primary); background: rgba(120, 130, 180, 0.1); border-color: var(--glass-border); }
+.gift-card-action:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
+.gift-card-action-danger:hover { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.08); }
+
+.gift-card-description { font-size: 0.88rem; color: var(--text-secondary); margin: 0; line-height: 1.4; }
+
+.gift-card-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 0.82rem; color: var(--text-secondary); }
+.gift-card-recipient { display: inline-flex; align-items: center; gap: 6px; }
+.gift-card-recipient-text { font-style: italic; color: var(--text-secondary); }
+.gift-card-occasion, .gift-card-date { padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(120, 130, 180, 0.1); font-size: 0.78rem; }
+.gift-card-price { font-family: 'JetBrains Mono', monospace; font-weight: 500; color: var(--text-primary); margin-left: auto; }
+
+.gift-card-link { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--sapphire); text-decoration: none; width: fit-content; }
+.gift-card-link:hover { text-decoration: underline; }
+
+.gift-card-notes { font-size: 0.82rem; color: var(--text-muted); margin: 0; padding: 8px 10px; border-left: 2px solid var(--glass-border); background: rgba(120, 130, 180, 0.04); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; line-height: 1.4; }
+
+.gift-card-footer { display: flex; gap: 4px; margin-top: auto; padding-top: var(--space-sm); border-top: 1px dashed var(--glass-border); }
+.gift-status-select { flex: 1; background: rgba(120, 130, 180, 0.05); border: 1px solid var(--glass-border); color: var(--text-primary); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.82rem; font-family: inherit; min-height: auto; cursor: pointer; }
+.gift-status-select:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
+
+/* Status segmented control */
+.gift-status-seg { display: inline-flex; flex: 1; background: rgba(120, 130, 180, 0.06); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 2px; gap: 2px; }
+.gift-status-seg-btn { flex: 1; background: transparent; border: none; color: var(--text-muted); padding: 6px 4px; font-size: 0.72rem; font-weight: 500; font-family: inherit; cursor: pointer; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; transition: all 0.15s; min-height: auto; white-space: nowrap; }
+.gift-status-seg-btn:hover:not([aria-pressed="true"]) { color: var(--text-secondary); background: rgba(120, 130, 180, 0.1); }
+.gift-status-seg-btn:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; z-index: 1; }
+.gift-status-seg-btn[aria-pressed="true"] { background: var(--gift-accent, var(--amethyst)); color: var(--text-on-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.gift-status-seg-btn[data-status="idea"][aria-pressed="true"] { background: var(--amethyst); }
+.gift-status-seg-btn[data-status="ordered"][aria-pressed="true"] { background: var(--sapphire); }
+.gift-status-seg-btn[data-status="purchased"][aria-pressed="true"] { background: var(--warning); }
+.gift-status-seg-btn[data-status="gifted"][aria-pressed="true"] { background: var(--success); }
+.gift-status-seg-label { display: inline; }
+@media (max-width: 380px) {
+  .gift-status-seg-label { display: none; }
+}
+
+/* Rich empty state */
+.gift-empty-rich { display: flex; flex-direction: column; align-items: center; gap: var(--space-md); padding: var(--space-2xl) var(--space-md); text-align: center; color: var(--text-secondary); }
+.gift-empty-icon-wrap { width: 72px; height: 72px; border-radius: var(--radius-pill); background: var(--amethyst-glow); color: var(--amethyst); display: inline-flex; align-items: center; justify-content: center; }
+.gift-empty-title { font-size: 1.2rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+.gift-empty-body { max-width: 440px; margin: 0; line-height: 1.5; font-size: 0.92rem; }
+.gift-empty-cta { margin-top: var(--space-sm); display: inline-flex; align-items: center; gap: 8px; }
+.gift-empty-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: var(--space-sm); }
+.gift-empty-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: rgba(120, 130, 180, 0.08); border: 1px solid var(--glass-border); border-radius: var(--radius-pill); font-size: 0.88rem; color: var(--text-secondary); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.gift-empty-chip:hover { background: rgba(124, 58, 237, 0.12); color: var(--text-primary); transform: translateY(-1px); border-color: rgba(124, 58, 237, 0.3); }
+.gift-empty-chip:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
+.gift-empty-chip-hint { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: var(--space-md); }
+
+/* Recipient group */
+.gift-group { margin-bottom: var(--space-lg); }
+.gift-group:last-child { margin-bottom: 0; }
+.gift-group-header { display: flex; align-items: center; gap: var(--space-sm); font-size: 0.82rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-sm); }
+.gift-group-count { font-weight: 500; font-size: 0.75rem; padding: 2px 10px; border-radius: var(--radius-pill); background: rgba(120, 130, 180, 0.12); color: var(--text-secondary); letter-spacing: 0; text-transform: none; }
+
+/* Birthday quick-pick inside dialog */
+.gift-birthday-picker { background: rgba(124, 58, 237, 0.06); border: 1px solid rgba(124, 58, 237, 0.2); border-radius: var(--radius-sm); padding: var(--space-sm) var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+.gift-birthday-picker-label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+.gift-birthday-picker-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.gift-birthday-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--void-elevated); border: 1px solid var(--glass-border); border-radius: var(--radius-pill); color: var(--text-primary); cursor: pointer; font-family: inherit; font-size: 0.82rem; transition: all 0.15s; min-height: auto; }
+.gift-birthday-chip:hover { border-color: rgba(124, 58, 237, 0.4); transform: translateY(-1px); background: rgba(124, 58, 237, 0.1); }
+.gift-birthday-chip:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
+.gift-birthday-chip-name { font-weight: 500; }
+.gift-birthday-chip-date { font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+/* Filtered empty state */
+.gift-empty-filtered { display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); padding: var(--space-xl) var(--space-md); text-align: center; color: var(--text-secondary); }
+.gift-empty-filtered-btn { background: transparent; border: 1px solid var(--glass-border); color: var(--text-secondary); padding: 6px 14px; border-radius: var(--radius-pill); font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.gift-empty-filtered-btn:hover { background: rgba(120, 130, 180, 0.08); color: var(--text-primary); }
+
+/* Gift dialog (wider than cal-dialog) */
+.gift-dialog { padding: var(--space-xl); max-width: 640px; width: 92%; max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-md); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
+[data-theme="light"] .gift-dialog { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
+.gift-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.gift-dialog-title { font-weight: 600; font-size: 1.1rem; margin: 0; }
+.gift-dialog-close { background: transparent; border: 1px solid transparent; color: var(--text-muted); padding: 6px; border-radius: var(--radius-sm); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; min-height: auto; }
+.gift-dialog-close:hover { color: var(--text-primary); background: rgba(120, 130, 180, 0.08); }
+.gift-dialog-close:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
+
+.gift-form { display: flex; flex-direction: column; gap: var(--space-md); }
+.gift-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); }
+.gift-form-grid .form-input { width: 100%; }
+.gift-form-row-full { grid-column: 1 / -1; }
+.gift-form-url { grid-column: 1 / -1; }
+.gift-form-notes { grid-column: 1 / -1; min-height: 80px; resize: vertical; font-family: inherit; }
+.gift-form-actions { display: flex; gap: var(--space-sm); justify-content: flex-end; margin-top: var(--space-sm); }
+
+@media (max-width: 640px) {
+  .gift-form-grid { grid-template-columns: 1fr; }
+  .gift-dialog { padding: var(--space-lg); }
+  .gift-card-price { margin-left: 0; }
+  .gift-filters .form-input { min-width: 0; flex: 1 1 100%; }
+}

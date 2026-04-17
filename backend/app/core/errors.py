@@ -91,6 +91,7 @@ GIFT_RECIPIENT_NOT_FAMILY_MEMBER = "GIFT_RECIPIENT_NOT_FAMILY_MEMBER"
 GIFT_RECIPIENT_CONFLICT = "GIFT_RECIPIENT_CONFLICT"
 INVALID_GIFT_STATUS = "INVALID_GIFT_STATUS"
 INVALID_GIFT_URL = "INVALID_GIFT_URL"
+INVALID_GIFT_SORT = "INVALID_GIFT_SORT"
 
 # ── Rewards ──────────────────────────────────────────────────
 REWARD_CURRENCY_NOT_FOUND = "REWARD_CURRENCY_NOT_FOUND"
@@ -173,6 +174,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     GIFT_RECIPIENT_CONFLICT: "Provide either a family member or an external recipient name, not both",
     INVALID_GIFT_STATUS: "Invalid gift status: {status}",
     INVALID_GIFT_URL: "Gift URL must start with http:// or https://",
+    INVALID_GIFT_SORT: "Invalid gift sort: {sort}",
 }
 
 

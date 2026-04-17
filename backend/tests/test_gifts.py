@@ -384,3 +384,101 @@ class TestGiftListFilters:
         only_gifted = client.get(f"/gifts?family_id={family_id}&status=gifted", headers=_auth(token)).json()
         assert only_gifted["total"] == 1
         assert only_gifted["items"][0]["title"] == "B"
+
+
+class TestGiftListSort:
+    def test_default_sort_is_created_desc(self):
+        token, family_id = _seed_adult("*", "sort-default")
+        first = client.post(
+            "/gifts",
+            json={"family_id": family_id, "title": "Alpha"},
+            headers=_auth(token),
+        ).json()
+        second = client.post(
+            "/gifts",
+            json={"family_id": family_id, "title": "Beta"},
+            headers=_auth(token),
+        ).json()
+        resp = client.get(f"/gifts?family_id={family_id}", headers=_auth(token)).json()
+        ids = [item["id"] for item in resp["items"]]
+        assert ids == [second["id"], first["id"]]
+
+    def test_sort_title_asc_is_case_insensitive(self):
+        token, family_id = _seed_adult("*", "sort-title")
+        for title in ("banana", "Apple", "cherry"):
+            client.post(
+                "/gifts",
+                json={"family_id": family_id, "title": title},
+                headers=_auth(token),
+            )
+        resp = client.get(
+            f"/gifts?family_id={family_id}&sort=title_asc",
+            headers=_auth(token),
+        ).json()
+        titles = [item["title"] for item in resp["items"]]
+        assert titles == ["Apple", "banana", "cherry"]
+
+    def test_sort_price_desc_places_nulls_last(self):
+        token, family_id = _seed_adult("*", "sort-price")
+        client.post(
+            "/gifts",
+            json={"family_id": family_id, "title": "Cheap", "current_price_cents": 500},
+            headers=_auth(token),
+        )
+        client.post(
+            "/gifts",
+            json={"family_id": family_id, "title": "Expensive", "current_price_cents": 9999},
+            headers=_auth(token),
+        )
+        client.post(
+            "/gifts",
+            json={"family_id": family_id, "title": "NoPrice"},
+            headers=_auth(token),
+        )
+        resp = client.get(
+            f"/gifts?family_id={family_id}&sort=price_desc",
+            headers=_auth(token),
+        ).json()
+        titles = [item["title"] for item in resp["items"]]
+        assert titles == ["Expensive", "Cheap", "NoPrice"]
+
+    def test_sort_occasion_date_asc_places_nulls_last(self):
+        token, family_id = _seed_adult("*", "sort-occdate")
+        client.post(
+            "/gifts",
+            json={
+                "family_id": family_id,
+                "title": "Christmas gift",
+                "occasion_date": "2026-12-24",
+            },
+            headers=_auth(token),
+        )
+        client.post(
+            "/gifts",
+            json={
+                "family_id": family_id,
+                "title": "Summer birthday",
+                "occasion_date": "2026-06-15",
+            },
+            headers=_auth(token),
+        )
+        client.post(
+            "/gifts",
+            json={"family_id": family_id, "title": "No date"},
+            headers=_auth(token),
+        )
+        resp = client.get(
+            f"/gifts?family_id={family_id}&sort=occasion_date_asc",
+            headers=_auth(token),
+        ).json()
+        titles = [item["title"] for item in resp["items"]]
+        assert titles == ["Summer birthday", "Christmas gift", "No date"]
+
+    def test_invalid_sort_returns_400(self):
+        token, family_id = _seed_adult("*", "sort-invalid")
+        resp = client.get(
+            f"/gifts?family_id={family_id}&sort=bogus",
+            headers=_auth(token),
+        )
+        assert resp.status_code == 400
+        assert "INVALID_GIFT_SORT" in str(resp.json())

@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Sparkles, ExternalLink, Edit2, Trash2, X, Check, Package, ShoppingBag, Gift as GiftIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Sparkles, ExternalLink, Edit2, Trash2, Package, ShoppingBag, Gift as GiftIcon, Plus, Users } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { useGifts, GIFT_STATUSES, GIFT_OCCASIONS } from '../hooks/useGifts';
+import { useGifts, GIFT_STATUSES, GIFT_OCCASIONS, GIFT_SORT_OPTIONS } from '../hooks/useGifts';
 import { t } from '../lib/i18n';
 import MemberAvatar from './MemberAvatar';
 import ConfirmDialog from './ConfirmDialog';
+import GiftDialog from './GiftDialog';
 
 const STATUS_ICON = {
   idea: Sparkles,
@@ -12,6 +13,71 @@ const STATUS_ICON = {
   purchased: Package,
   gifted: GiftIcon,
 };
+
+const EXAMPLE_OCCASIONS = GIFT_OCCASIONS.filter((o) => o !== 'other');
+
+const BIRTHDAY_LOOKAHEAD_DAYS = 90;
+const MAX_BIRTHDAY_CHIPS = 6;
+
+function nextBirthdayOccurrence(month, day) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const thisYear = new Date(today.getFullYear(), month - 1, day);
+  const target = thisYear >= today ? thisYear : new Date(today.getFullYear() + 1, month - 1, day);
+  const mm = String(target.getMonth() + 1).padStart(2, '0');
+  const dd = String(target.getDate()).padStart(2, '0');
+  const iso = `${target.getFullYear()}-${mm}-${dd}`;
+  const daysUntil = Math.round((target.getTime() - today.getTime()) / 86400000);
+  return { iso, daysUntil };
+}
+
+function computeUpcomingBirthdays(birthdays, days) {
+  if (!Array.isArray(birthdays) || birthdays.length === 0) return [];
+  return birthdays
+    .map((b) => ({ ...b, ...nextBirthdayOccurrence(b.month, b.day) }))
+    .filter((b) => b.daysUntil <= days)
+    .sort((a, b) => a.daysUntil - b.daysUntil)
+    .slice(0, MAX_BIRTHDAY_CHIPS);
+}
+
+function recipientKey(gift) {
+  if (gift.for_user_id != null) return `u:${gift.for_user_id}`;
+  if (gift.for_person_name) return `n:${gift.for_person_name.toLowerCase()}`;
+  return 'none';
+}
+
+function groupByRecipient(gifts, members, messages) {
+  const map = new Map();
+  for (const gift of gifts) {
+    const key = recipientKey(gift);
+    if (!map.has(key)) {
+      let label;
+      let avatarMember = null;
+      let memberIndex = 0;
+      if (gift.for_user_id != null) {
+        const m = members.find((mem) => mem.user_id === gift.for_user_id);
+        if (m) {
+          avatarMember = m;
+          memberIndex = members.indexOf(m);
+          label = m.display_name;
+        } else {
+          label = t(messages, 'module.gifts.recipient_unknown');
+        }
+      } else if (gift.for_person_name) {
+        label = gift.for_person_name;
+      } else {
+        label = t(messages, 'module.gifts.recipient_unassigned');
+      }
+      map.set(key, { key, label, gifts: [], avatarMember, memberIndex });
+    }
+    map.get(key).gifts.push(gift);
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.key === 'none') return 1;
+    if (b.key === 'none') return -1;
+    return a.label.localeCompare(b.label);
+  });
+}
 
 function formatPrice(cents, currency) {
   if (cents == null) return '';
@@ -96,25 +162,47 @@ function GiftCard({ gift, members, messages, onEdit, onDelete, onStatusChange })
       {gift.notes && <p className="gift-card-notes">{gift.notes}</p>}
 
       <div className="gift-card-footer">
-        <select
-          className="gift-status-select"
-          value={gift.status}
-          onChange={(e) => onStatusChange(gift.id, e.target.value)}
+        <div
+          className="gift-status-seg"
+          role="group"
           aria-label={t(messages, 'module.gifts.status_aria')}
         >
-          {GIFT_STATUSES.map((s) => (
-            <option key={s} value={s}>{statusLabel(messages, s)}</option>
-          ))}
-        </select>
+          {GIFT_STATUSES.map((s) => {
+            const Icon = STATUS_ICON[s] || Sparkles;
+            const active = gift.status === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                className="gift-status-seg-btn"
+                data-status={s}
+                aria-pressed={active}
+                aria-label={statusLabel(messages, s)}
+                onClick={() => { if (!active) onStatusChange(gift.id, s); }}
+                title={statusLabel(messages, s)}
+              >
+                <Icon size={12} aria-hidden="true" />
+                <span className="gift-status-seg-label" aria-hidden="true">{statusLabel(messages, s)}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
 export default function GiftsView() {
-  const { familyId, families, members, messages, isChild, demoMode } = useApp();
+  const { familyId, families, members, messages, isChild, demoMode, birthdays } = useApp();
   const g = useGifts();
   const [confirmAction, setConfirmAction] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [groupByRecipientEnabled, setGroupByRecipientEnabled] = useState(false);
+
+  const upcomingBirthdays = useMemo(
+    () => computeUpcomingBirthdays(birthdays, BIRTHDAY_LOOKAHEAD_DAYS),
+    [birthdays],
+  );
 
   if (isChild || demoMode) {
     const label = isChild ? 'module.gifts.adult_only' : 'module.gifts.demo_blocked';
@@ -132,8 +220,50 @@ export default function GiftsView() {
   }
 
   const currentFamilyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
-  const isEditing = g.editingId != null;
-  const adultMembers = members.filter((m) => m.is_adult !== false);
+
+  function openAddDialog() {
+    g.resetForm();
+    setDialogOpen(true);
+  }
+
+  function openAddDialogWithOccasion(occasion) {
+    g.resetForm();
+    g.setForm((prev) => ({ ...prev, occasion }));
+    setDialogOpen(true);
+  }
+
+  function prefillFromBirthday(birthday) {
+    g.setForm((prev) => ({
+      ...prev,
+      for_user_id: '',
+      for_person_name: birthday.person_name,
+      occasion: 'birthday',
+      occasion_date: birthday.iso,
+    }));
+  }
+
+  function openEditDialog(gift) {
+    g.populateForm(gift);
+    setDialogOpen(true);
+  }
+
+  function closeDialog() {
+    setDialogOpen(false);
+    g.resetForm();
+  }
+
+  async function handleSubmit(e) {
+    const ok = await g.submitGift(e);
+    if (ok) setDialogOpen(false);
+  }
+
+  const hasFilters = !!g.statusFilter || !!g.recipientFilter || g.includeGifted;
+
+  function clearFilters() {
+    g.setStatusFilter('');
+    g.setRecipientFilter('');
+    g.setIncludeGifted(false);
+  }
 
   return (
     <div>
@@ -148,104 +278,31 @@ export default function GiftsView() {
         />
       )}
 
+      <GiftDialog
+        open={dialogOpen}
+        onClose={closeDialog}
+        messages={messages}
+        members={members}
+        form={g.form}
+        setForm={g.setForm}
+        onSubmit={handleSubmit}
+        isEditing={g.editingId != null}
+        upcomingBirthdays={upcomingBirthdays}
+        onPickBirthday={prefillFromBirthday}
+      />
+
       <div className="view-header">
         <div>
           <h1 className="view-title">{t(messages, 'module.gifts.name')}</h1>
           <div className="view-subtitle">{currentFamilyName}</div>
         </div>
-      </div>
-
-      <form className="gift-form" onSubmit={g.submitGift}>
-        <div className="gift-form-grid">
-          <input
-            className="form-input"
-            placeholder={t(messages, 'module.gifts.title_placeholder')}
-            value={g.form.title}
-            onChange={(e) => g.setForm({ ...g.form, title: e.target.value })}
-            required
-            maxLength={200}
-          />
-          <select
-            className="form-input"
-            value={g.form.for_user_id}
-            onChange={(e) => g.setForm({ ...g.form, for_user_id: e.target.value, for_person_name: '' })}
-            aria-label={t(messages, 'module.gifts.recipient')}
-          >
-            <option value="">{t(messages, 'module.gifts.recipient_any')}</option>
-            {members.map((m) => (
-              <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-            ))}
-          </select>
-          <input
-            className="form-input"
-            placeholder={t(messages, 'module.gifts.external_recipient')}
-            value={g.form.for_person_name}
-            onChange={(e) => g.setForm({ ...g.form, for_person_name: e.target.value, for_user_id: '' })}
-            disabled={!!g.form.for_user_id}
-            maxLength={120}
-          />
-          <select
-            className="form-input"
-            value={g.form.occasion}
-            onChange={(e) => g.setForm({ ...g.form, occasion: e.target.value })}
-          >
-            <option value="">{t(messages, 'module.gifts.occasion_none')}</option>
-            {GIFT_OCCASIONS.map((o) => (
-              <option key={o} value={o}>{occasionLabel(messages, o)}</option>
-            ))}
-          </select>
-          <input
-            className="form-input"
-            type="date"
-            value={g.form.occasion_date}
-            onChange={(e) => g.setForm({ ...g.form, occasion_date: e.target.value })}
-            aria-label={t(messages, 'module.gifts.occasion_date')}
-          />
-          <input
-            className="form-input"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder={t(messages, 'module.gifts.price_placeholder')}
-            value={g.form.price_eur}
-            onChange={(e) => g.setForm({ ...g.form, price_eur: e.target.value })}
-          />
-          <input
-            className="form-input gift-form-url"
-            type="url"
-            placeholder={t(messages, 'module.gifts.url_placeholder')}
-            value={g.form.url}
-            onChange={(e) => g.setForm({ ...g.form, url: e.target.value })}
-          />
-          <select
-            className="form-input"
-            value={g.form.status}
-            onChange={(e) => g.setForm({ ...g.form, status: e.target.value })}
-            aria-label={t(messages, 'module.gifts.status_aria')}
-          >
-            {GIFT_STATUSES.map((s) => (
-              <option key={s} value={s}>{statusLabel(messages, s)}</option>
-            ))}
-          </select>
-          <textarea
-            className="form-input gift-form-notes"
-            placeholder={t(messages, 'module.gifts.notes_placeholder')}
-            value={g.form.notes}
-            onChange={(e) => g.setForm({ ...g.form, notes: e.target.value })}
-          />
-        </div>
-        <div className="gift-form-actions">
-          <button type="submit" className="btn btn-primary">
-            {isEditing ? t(messages, 'module.gifts.save') : t(messages, 'module.gifts.add')}
+        <div className="gift-view-header-actions">
+          <button type="button" className="btn btn-primary" onClick={openAddDialog}>
+            <Plus size={16} aria-hidden="true" />
+            {t(messages, 'module.gifts.add')}
           </button>
-          {isEditing && (
-            <button type="button" className="btn btn-secondary" onClick={g.resetForm}>
-              <X size={14} />
-              {t(messages, 'module.gifts.cancel')}
-            </button>
-          )}
         </div>
-      </form>
+      </div>
 
       <div className="gift-filters">
         <select
@@ -270,6 +327,16 @@ export default function GiftsView() {
             <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
           ))}
         </select>
+        <select
+          className="form-input"
+          value={g.sortOrder}
+          onChange={(e) => g.setSortOrder(e.target.value)}
+          aria-label={t(messages, 'module.gifts.sort_aria')}
+        >
+          {GIFT_SORT_OPTIONS.map((s) => (
+            <option key={s} value={s}>{t(messages, `module.gifts.sort.${s}`)}</option>
+          ))}
+        </select>
         <label className="gift-filter-toggle">
           <input
             type="checkbox"
@@ -278,39 +345,115 @@ export default function GiftsView() {
           />
           {t(messages, 'module.gifts.filter_include_gifted')}
         </label>
+        <label className="gift-filter-toggle">
+          <input
+            type="checkbox"
+            checked={groupByRecipientEnabled}
+            onChange={(e) => setGroupByRecipientEnabled(e.target.checked)}
+          />
+          <Users size={14} aria-hidden="true" />
+          {t(messages, 'module.gifts.group_by_recipient')}
+        </label>
       </div>
 
       {g.loading && <p className="gift-loading">{t(messages, 'module.gifts.loading')}</p>}
-      {!g.loading && g.gifts.length === 0 && (
-        <div className="empty-state">
-          <Sparkles size={32} aria-hidden="true" />
-          <p>{t(messages, 'module.gifts.empty')}</p>
+      {!g.loading && g.gifts.length === 0 && (hasFilters ? (
+        <div className="gift-empty-filtered">
+          <Sparkles size={24} aria-hidden="true" />
+          <p>{t(messages, 'module.gifts.empty_filtered')}</p>
+          <button type="button" className="gift-empty-filtered-btn" onClick={clearFilters}>
+            {t(messages, 'module.gifts.clear_filters')}
+          </button>
         </div>
-      )}
+      ) : (
+        <div className="gift-empty-rich">
+          <span className="gift-empty-icon-wrap">
+            <GiftIcon size={36} aria-hidden="true" />
+          </span>
+          <h2 className="gift-empty-title">{t(messages, 'module.gifts.empty_title')}</h2>
+          <p className="gift-empty-body">{t(messages, 'module.gifts.empty_body')}</p>
+          <button type="button" className="btn btn-primary gift-empty-cta" onClick={openAddDialog}>
+            <Plus size={16} aria-hidden="true" />
+            {t(messages, 'module.gifts.add')}
+          </button>
+          <p className="gift-empty-chip-hint">{t(messages, 'module.gifts.empty_chip_hint')}</p>
+          <div className="gift-empty-chips">
+            {EXAMPLE_OCCASIONS.map((occ) => (
+              <button
+                key={occ}
+                type="button"
+                className="gift-empty-chip"
+                onClick={() => openAddDialogWithOccasion(occ)}
+              >
+                {occasionLabel(messages, occ)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
 
-      <div className="gift-grid">
-        {g.gifts.map((gift) => (
-          <GiftCard
-            key={gift.id}
-            gift={gift}
-            members={members}
-            messages={messages}
-            onEdit={g.populateForm}
-            onStatusChange={g.updateStatus}
-            onDelete={(target) =>
-              setConfirmAction({
-                title: t(messages, 'module.gifts.delete_title'),
-                message: t(messages, 'module.gifts.delete_confirm').replace('{title}', target.title),
-                danger: true,
-                action: async () => {
-                  await g.deleteGift(target.id);
-                  setConfirmAction(null);
-                },
-              })
-            }
-          />
-        ))}
-      </div>
+      {!g.loading && g.gifts.length > 0 && (
+        groupByRecipientEnabled ? (
+          groupByRecipient(g.gifts, members, messages).map((group) => (
+            <section key={group.key} className="gift-group">
+              <header className="gift-group-header">
+                {group.avatarMember && (
+                  <MemberAvatar member={group.avatarMember} index={group.memberIndex} size={20} />
+                )}
+                <span>{group.label}</span>
+                <span className="gift-group-count">{group.gifts.length}</span>
+              </header>
+              <div className="gift-grid">
+                {group.gifts.map((gift) => (
+                  <GiftCard
+                    key={gift.id}
+                    gift={gift}
+                    members={members}
+                    messages={messages}
+                    onEdit={openEditDialog}
+                    onStatusChange={g.updateStatus}
+                    onDelete={(target) =>
+                      setConfirmAction({
+                        title: t(messages, 'module.gifts.delete_title'),
+                        message: t(messages, 'module.gifts.delete_confirm').replace('{title}', target.title),
+                        danger: true,
+                        action: async () => {
+                          await g.deleteGift(target.id);
+                          setConfirmAction(null);
+                        },
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          <div className="gift-grid">
+            {g.gifts.map((gift) => (
+              <GiftCard
+                key={gift.id}
+                gift={gift}
+                members={members}
+                messages={messages}
+                onEdit={openEditDialog}
+                onStatusChange={g.updateStatus}
+                onDelete={(target) =>
+                  setConfirmAction({
+                    title: t(messages, 'module.gifts.delete_title'),
+                    message: t(messages, 'module.gifts.delete_confirm').replace('{title}', target.title),
+                    danger: true,
+                    action: async () => {
+                      await g.deleteGift(target.id);
+                      setConfirmAction(null);
+                    },
+                  })
+                }
+              />
+            ))}
+          </div>
+        )
+      )}
     </div>
   );
 }
