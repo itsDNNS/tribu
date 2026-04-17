@@ -197,20 +197,21 @@ class CalendarCollection(BaseCollection):
     def _event_to_item(self, ev: CalendarEvent) -> "radicale_item.Item":
         ics = events_to_ics([ev], calendar_name=self._family_name)
         etag = f'"{hashlib.sha256(ics.encode("utf-8")).hexdigest()[:16]}"'
+        mtime = ev.updated_at or ev.created_at
         return radicale_item.Item(
             collection=self,
             text=ics,
             href=_event_href(ev.id),
-            last_modified=_http_last_modified(ev.created_at),
+            last_modified=_http_last_modified(mtime),
             etag=etag,
         )
 
     def _latest_change(self) -> Optional[datetime]:
         with _db() as db:
             return (
-                db.query(CalendarEvent.created_at)
+                db.query(CalendarEvent.updated_at)
                 .filter(CalendarEvent.family_id == self._family_id)
-                .order_by(CalendarEvent.created_at.desc())
+                .order_by(CalendarEvent.updated_at.desc())
                 .limit(1)
                 .scalar()
             )

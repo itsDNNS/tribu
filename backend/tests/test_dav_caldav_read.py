@@ -163,6 +163,52 @@ class TestCalDAVRead:
         # One of our seeded events must be in there
         assert ("Team sync" in get_resp.text) or ("Picnic" in get_resp.text)
 
+    def test_ctag_changes_when_event_is_edited(self, app_under_test, seeded):
+        """Editing a stored event must bump the collection ctag so clients
+        that poll CS:getctag before refetching notice the change."""
+        import re
+        import time
+        from datetime import datetime
+
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        headers = {"Authorization": _basic(EMAIL, token)}
+
+        def fetch_ctag() -> str:
+            body = (
+                '<?xml version="1.0"?>'
+                '<propfind xmlns="DAV:" xmlns:CS="http://calendarserver.org/ns/">'
+                '<prop><CS:getctag/></prop></propfind>'
+            )
+            resp = client.request(
+                "PROPFIND",
+                f"/dav/{EMAIL}/family-{family_id}/",
+                headers={**headers, "Depth": "0", "Content-Type": "application/xml"},
+                content=body,
+            )
+            assert resp.status_code == 207, resp.text
+            match = re.search(r"<CS:getctag[^>]*>([^<]+)</CS:getctag>", resp.text)
+            return match.group(1) if match else ""
+
+        ctag_before = fetch_ctag()
+        assert ctag_before, "ctag must be present"
+
+        # Edit an existing event directly and bump updated_at.
+        db = SessionLocal()
+        try:
+            ev = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).first()
+            assert ev is not None
+            time.sleep(0.01)  # make sure updated_at lands after the first ctag read
+            ev.title = ev.title + " (edited)"
+            db.commit()
+        finally:
+            db.close()
+
+        ctag_after = fetch_ctag()
+        assert ctag_after != ctag_before, (
+            f"Expected ctag to change after edit. before={ctag_before!r} after={ctag_after!r}"
+        )
+
     def test_sync_token_refresh_is_rejected_until_phase_d(self, app_under_test, seeded):
         """A sync-collection REPORT with an old token must force a full refresh.
 

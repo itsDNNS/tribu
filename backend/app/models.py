@@ -71,6 +71,13 @@ class CalendarEvent(Base):
     category = Column(String, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+        server_default=func.now(),
+    )
 
     family = relationship("Family", back_populates="calendar_events")
 
