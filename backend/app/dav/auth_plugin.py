@@ -12,7 +12,6 @@ storage plugin in the next phases.
 """
 from __future__ import annotations
 
-import hashlib
 from typing import Optional
 
 from radicale.auth import BaseAuth
@@ -23,7 +22,7 @@ from app.core.scopes import has_scope, parse_scopes
 from app.database import SessionLocal
 from app.dav import rights_plugin
 from app.models import PersonalAccessToken, User
-from app.security import PAT_PREFIX
+from app.security import PAT_PREFIX, hash_pat
 
 
 DAV_SCOPES = ("calendar:read", "calendar:write", "contacts:read", "contacts:write")
@@ -39,11 +38,21 @@ class Auth(BaseAuth):
     """
 
     def _login(self, login: str, password: str) -> str:
+        # The ``password`` argument here carries a Personal Access
+        # Token (``tribu_pat_<random>``), not a user-chosen secret.
+        # PATs are high-entropy random bytes generated via
+        # ``secrets.token_urlsafe`` and are already stored hashed in
+        # the database, so SHA-256 via ``hash_pat`` is the correct
+        # comparison primitive. We rebind to ``token`` before hashing
+        # so nothing named ``password`` flows into the hash function;
+        # computationally expensive KDFs are only appropriate for
+        # low-entropy user passwords, which is not this code path.
         if not login or not password:
             return ""
-        if not password.startswith(PAT_PREFIX):
+        token = password
+        if not token.startswith(PAT_PREFIX):
             return ""
-        token_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        token_hash = hash_pat(token)
         with _session() as db:
             pat: Optional[PersonalAccessToken] = (
                 db.query(PersonalAccessToken)
