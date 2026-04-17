@@ -1821,7 +1821,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .gift-dialog-close:hover { color: var(--text-primary); background: rgba(120, 130, 180, 0.08); }
 .gift-dialog-close:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
 
-.gift-form { display: contents; }
+.gift-form { display: flex; flex-direction: column; gap: var(--space-md); }
 .gift-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); }
 .gift-form-grid .form-input { width: 100%; }
 .gift-form-row-full { grid-column: 1 / -1; }

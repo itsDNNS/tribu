@@ -47,7 +47,10 @@ export default function GiftDialog({ open, onClose, messages, members, form, set
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      previousFocusRef.current?.focus?.();
+      const previous = previousFocusRef.current;
+      if (previous && previous.isConnected && typeof previous.focus === 'function') {
+        previous.focus();
+      }
     };
   }, [open]);
 
@@ -83,6 +86,7 @@ export default function GiftDialog({ open, onClose, messages, members, form, set
               ref={firstFieldRef}
               className="form-input gift-form-row-full"
               placeholder={t(messages, 'module.gifts.title_placeholder')}
+              aria-label={t(messages, 'module.gifts.title_aria')}
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               required
@@ -102,6 +106,7 @@ export default function GiftDialog({ open, onClose, messages, members, form, set
             <input
               className="form-input"
               placeholder={t(messages, 'module.gifts.external_recipient')}
+              aria-label={t(messages, 'module.gifts.external_recipient')}
               value={form.for_person_name}
               onChange={(e) => setForm({ ...form, for_person_name: e.target.value, for_user_id: '' })}
               disabled={!!form.for_user_id}
@@ -131,6 +136,7 @@ export default function GiftDialog({ open, onClose, messages, members, form, set
               step="0.01"
               min="0"
               placeholder={t(messages, 'module.gifts.price_placeholder')}
+              aria-label={t(messages, 'module.gifts.price_aria')}
               value={form.price_eur}
               onChange={(e) => setForm({ ...form, price_eur: e.target.value })}
             />
@@ -148,12 +154,14 @@ export default function GiftDialog({ open, onClose, messages, members, form, set
               className="form-input gift-form-url"
               type="url"
               placeholder={t(messages, 'module.gifts.url_placeholder')}
+              aria-label={t(messages, 'module.gifts.url_aria')}
               value={form.url}
               onChange={(e) => setForm({ ...form, url: e.target.value })}
             />
             <textarea
               className="form-input gift-form-notes"
               placeholder={t(messages, 'module.gifts.notes_placeholder')}
+              aria-label={t(messages, 'module.gifts.notes_aria')}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
