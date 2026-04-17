@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShieldCheck, Heart, Bug, ExternalLink } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
+import { extractReleaseVersion, hasNewerRelease } from '../../lib/version';
 import * as api from '../../lib/api';
 
 export default function AboutTab() {
@@ -17,6 +18,7 @@ export default function AboutTab() {
       setVersion(current);
 
       if (!isAdmin) return;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
       const CACHE_KEY = 'tribu_update_check';
       const CACHE_TTL = 60 * 60 * 1000;
       try {
@@ -34,8 +36,8 @@ export default function AboutTab() {
           clearTimeout(timer);
           if (cancelled || !data.tag_name) return;
           const latest = data.tag_name.replace(/^v/, '');
-          const result = latest !== current
-            ? { version: latest, url: data.html_url }
+          const result = hasNewerRelease(current, latest)
+            ? { version: extractReleaseVersion(latest) || latest, url: data.html_url }
             : 'up_to_date';
           setUpdateInfo(result);
           try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}

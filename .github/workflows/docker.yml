@@ -21,6 +21,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Derive app version
+        id: app_version
+        run: |
+          raw="$(git describe --tags --abbrev=7 --match 'v[0-9]*' --always)"
+          echo "value=${raw#v}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
 
@@ -50,7 +58,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: APP_VERSION=${{ steps.meta.outputs.version }}
+          build-args: APP_VERSION=${{ steps.app_version.outputs.value }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,scope=backend,mode=max
 
