@@ -66,6 +66,7 @@ const messages = {
   'module.meal_plans.edit_aria': 'Edit {name}',
   'module.meal_plans.ingredients_summary_one': '1 Zutat',
   'module.meal_plans.ingredients_summary': '{count} Zutaten',
+  'module.meal_plans.drag_aria': 'Ziehen {name}',
 };
 
 function baseState(overrides) {
@@ -168,6 +169,10 @@ describe('MealPlansView', () => {
       render(<MealPlansView />);
       await waitFor(() => expect(screen.getByText('Test Pasta')).toBeInTheDocument());
       expect(screen.getByText('2 Zutaten')).toBeInTheDocument();
+      // Filled cell exposes a dedicated drag handle with its own aria-label,
+      // separate from the click-to-edit button.
+      expect(screen.getByRole('button', { name: 'Ziehen Test Pasta' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Edit Test Pasta' })).toBeInTheDocument();
     } finally {
       global.Date = realDate;
     }

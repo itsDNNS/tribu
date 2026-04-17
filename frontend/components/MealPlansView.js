@@ -53,7 +53,7 @@ function isSameDay(a, b) {
 function DraggableFilledCell({ meal, onClick, messages }) {
   const draggable = useDraggable({ id: `meal:${meal.id}`, data: { mealId: meal.id } });
   const droppable = useDroppable({ id: `slot:${meal.plan_date}:${meal.slot}` });
-  const setRef = (node) => {
+  const setContainerRef = (node) => {
     draggable.setNodeRef(node);
     droppable.setNodeRef(node);
   };
@@ -65,25 +65,33 @@ function DraggableFilledCell({ meal, onClick, messages }) {
     droppable.isOver ? 'meal-grid-cell-drop-over' : '',
   ].filter(Boolean).join(' ');
   return (
-    <button
-      ref={setRef}
-      type="button"
-      className={classes}
-      onClick={() => {
-        if (draggable.isDragging) return;
-        onClick(meal);
-      }}
-      aria-label={t(messages, 'module.meal_plans.edit_aria').replace('{name}', meal.meal_name)}
-      {...draggable.listeners}
-      {...draggable.attributes}
-    >
-      <GripVertical size={12} className="meal-cell-grip" aria-hidden="true" />
-      <span className="meal-cell-title">{meal.meal_name}</span>
-      {(meal.ingredients?.length || 0) > 0 && (
-        <span className="meal-cell-meta">{ingredientsSummary(messages, meal.ingredients)}</span>
-      )}
-      <Edit2 size={12} className="meal-cell-edit-icon" aria-hidden="true" />
-    </button>
+    <div ref={setContainerRef} className={classes}>
+      <button
+        type="button"
+        className="meal-cell-edit-btn"
+        onClick={() => {
+          if (draggable.isDragging) return;
+          onClick(meal);
+        }}
+        aria-label={t(messages, 'module.meal_plans.edit_aria').replace('{name}', meal.meal_name)}
+      >
+        <span className="meal-cell-title">{meal.meal_name}</span>
+        {(meal.ingredients?.length || 0) > 0 && (
+          <span className="meal-cell-meta">{ingredientsSummary(messages, meal.ingredients)}</span>
+        )}
+        <Edit2 size={12} className="meal-cell-edit-icon" aria-hidden="true" />
+      </button>
+      <button
+        ref={draggable.setActivatorNodeRef}
+        type="button"
+        className="meal-cell-grip-btn"
+        aria-label={t(messages, 'module.meal_plans.drag_aria').replace('{name}', meal.meal_name)}
+        {...draggable.listeners}
+        {...draggable.attributes}
+      >
+        <GripVertical size={14} aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 

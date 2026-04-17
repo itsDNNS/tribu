@@ -47,6 +47,7 @@
   "module.meal_plans.edit_aria": "Mahlzeit \"{name}\" bearbeiten",
   "module.meal_plans.add_for_slot_aria": "Mahlzeit für {slot} am {date} hinzufügen",
   "module.meal_plans.push_to_shopping": "In Einkaufsliste",
+  "module.meal_plans.drag_aria": "\"{name}\" auf einen anderen Slot ziehen",
   "module.meal_plans.pushed_one": "1 Zutat auf die Einkaufsliste geschoben",
   "module.meal_plans.pushed_many": "{count} Zutaten auf die Einkaufsliste geschoben",
   "module.meal_plans.demo_blocked": "Im Demo-Modus nicht verfügbar"
