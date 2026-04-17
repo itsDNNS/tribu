@@ -66,8 +66,15 @@ def hash_pat(plain: str) -> str:
     (bcrypt, argon2) would add latency to every authenticated
     request without increasing the attacker's effective search
     space, because the preimage is already uniform random bytes.
+
+    CodeQL's ``py/weak-sensitive-data-hashing`` query flags this
+    call via a name-based source heuristic when a ``password``-named
+    variable from the DAV auth plugin reaches here. That is a false
+    positive: the value is a generated bearer token, not a user
+    secret. The alert should be dismissed in the GitHub Security UI
+    (``dismissed_reason=false positive``), not suppressed inline.
     """
-    return hashlib.sha256(plain.encode()).hexdigest()  # lgtm[py/weak-sensitive-data-hashing]
+    return hashlib.sha256(plain.encode()).hexdigest()
 
 
 def is_pat(token: str) -> bool:
