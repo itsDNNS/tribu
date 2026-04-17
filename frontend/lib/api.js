@@ -4,7 +4,7 @@ async function request(path, options = {}) {
   const res = await fetch(`${API}${path}`, { credentials: 'include', ...options });
   let data;
   try { data = await res.json(); } catch { data = null; }
-  return { ok: res.ok, data };
+  return { ok: res.ok, status: res.status, data };
 }
 
 function post(path, body) {
@@ -480,4 +480,33 @@ export function apiUpdateGift(giftId, payload) {
 
 export function apiDeleteGift(giftId) {
   return del(`/gifts/${giftId}`);
+}
+
+// Meal Plans
+export function apiListMealPlans(familyId, start, end) {
+  const params = new URLSearchParams({ family_id: String(familyId), start, end });
+  return request(`/meal-plans?${params.toString()}`);
+}
+
+export function apiListMealPlanIngredients(familyId) {
+  const params = new URLSearchParams({ family_id: String(familyId) });
+  return request(`/meal-plans/ingredients?${params.toString()}`);
+}
+
+export function apiCreateMealPlan(payload) {
+  return post('/meal-plans', payload);
+}
+
+export function apiUpdateMealPlan(planId, payload) {
+  return patch(`/meal-plans/${planId}`, payload);
+}
+
+export function apiDeleteMealPlan(planId) {
+  return del(`/meal-plans/${planId}`);
+}
+
+export function apiAddMealIngredientsToShopping(planId, shoppingListId, ingredientNames = null) {
+  const body = { shopping_list_id: shoppingListId };
+  if (ingredientNames) body.ingredient_names = ingredientNames;
+  return post(`/meal-plans/${planId}/add-to-shopping`, body);
 }

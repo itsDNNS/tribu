@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Bell, CalendarDays, CheckSquare, Gift, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal, Search, Sparkles } from 'lucide-react';
+import { Bell, CalendarDays, CheckSquare, Gift, LayoutDashboard, Settings, Shield, BookUser, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, ShoppingCart, MoreHorizontal, Search, Sparkles, UtensilsCrossed } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
@@ -12,6 +12,7 @@ import ContactsView from './ContactsView';
 import TasksView from './TasksView';
 import RewardsView from './RewardsView';
 import GiftsView from './GiftsView';
+import MealPlansView from './MealPlansView';
 import ShoppingView from './ShoppingView';
 import SettingsView from './settings';
 import AdminView from './admin';
@@ -27,6 +28,7 @@ const views = {
   tasks: TasksView,
   rewards: RewardsView,
   gifts: GiftsView,
+  meal_plans: MealPlansView,
   notifications: NotificationCenter,
   settings: SettingsView,
   admin: AdminView,
@@ -91,6 +93,9 @@ export default function AppShell() {
     calendar: { key: 'calendar', icon: CalendarDays, label: t(messages, 'calendar'), mobileLabel: t(messages, 'calendar') },
     shopping: { key: 'shopping', icon: ShoppingCart, label: t(messages, 'module.shopping.name'), mobileLabel: t(messages, 'module.shopping.name'), badge: totalUnchecked || null },
     tasks: { key: 'tasks', icon: CheckSquare, label: t(messages, 'module.tasks.name'), mobileLabel: t(messages, 'module.tasks.name'), badge: openTaskCount || null },
+    ...(demoMode ? {} : {
+      meal_plans: { key: 'meal_plans', icon: UtensilsCrossed, label: t(messages, 'module.meal_plans.name'), mobileLabel: t(messages, 'module.meal_plans.name') },
+    }),
     rewards: { key: 'rewards', icon: Gift, label: t(messages, 'module.rewards.name'), mobileLabel: t(messages, 'module.rewards.name') },
     ...(isChild || demoMode ? {} : {
       gifts: { key: 'gifts', icon: Sparkles, label: t(messages, 'module.gifts.name'), mobileLabel: t(messages, 'module.gifts.name') },

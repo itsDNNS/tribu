@@ -1002,3 +1002,75 @@ class PaginatedGifts(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+# ── Meal Plans ──────────────────────────────────────────────
+
+MEAL_SLOTS = ("morning", "noon", "evening")
+
+
+class IngredientItem(BaseModel):
+    """One line on a meal's ingredient list.
+
+    Amount and unit are both optional so a user can write a pure name
+    ("Salz") or a quantified entry ("500 g Mehl", "2 Stueck Aepfel").
+    """
+    name: str = Field(min_length=1, max_length=120, description="Ingredient name")
+    amount: Optional[float] = Field(None, ge=0, description="Optional numeric quantity")
+    unit: Optional[str] = Field(None, max_length=20, description="Optional short unit label (g, ml, Stueck, EL, ...)")
+
+
+class MealPlanBase(BaseModel):
+    plan_date: date = Field(..., description="Date the meal is planned for")
+    slot: str = Field(..., description=f"One of {', '.join(MEAL_SLOTS)}")
+    meal_name: str = Field(min_length=1, max_length=200, description="What's on the plate")
+    ingredients: list[IngredientItem] = Field(default_factory=list, description="Structured ingredient list, order preserved")
+    notes: Optional[str] = Field(None, description="Optional notes (recipe link, variation, etc.)")
+
+
+class MealPlanCreate(MealPlanBase):
+    family_id: int = Field(..., description="Family ID")
+
+
+class MealPlanUpdate(BaseModel):
+    plan_date: Optional[date] = None
+    slot: Optional[str] = None
+    meal_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    ingredients: Optional[list[IngredientItem]] = None
+    notes: Optional[str] = None
+
+
+class MealPlanResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    plan_date: date
+    slot: str
+    meal_name: str
+    ingredients: list[IngredientItem]
+    notes: Optional[str]
+    created_by_user_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+
+
+class MealPlanIngredientsResponse(BaseModel):
+    """Distinct ingredient names previously used in the family's meal plans."""
+    items: list[str]
+
+
+class MealPlanAddToShoppingRequest(BaseModel):
+    shopping_list_id: int = Field(..., description="Target shopping list ID")
+    ingredient_names: Optional[list[str]] = Field(
+        None,
+        description=(
+            "Subset of the meal's ingredient names to push. Each entry must "
+            "match the name (case-insensitive) of an ingredient already stored "
+            "on the meal. Defaults to all ingredients when omitted."
+        ),
+    )
+
+
+class MealPlanAddToShoppingResponse(BaseModel):
+    added_count: int
