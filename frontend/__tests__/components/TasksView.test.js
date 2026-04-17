@@ -84,8 +84,8 @@ describe('TasksView', () => {
   });
 
   it('shows assignee initial badge', () => {
-    const { container } = render(<TasksView />);
-    const badge = container.querySelector('.task-assignee');
+    render(<TasksView />);
+    const badge = screen.getByTitle('Max');
     expect(badge).toBeInTheDocument();
     expect(badge.textContent).toBe('M');
   });

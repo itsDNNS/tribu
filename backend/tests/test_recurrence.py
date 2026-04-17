@@ -8,7 +8,11 @@ from app.core.recurrence import _next_occurrence, expand_event
 
 
 def make_event(**kwargs):
-    """Create a mock event object with sensible defaults."""
+    """Create a mock event object with sensible defaults.
+
+    Defaults mirror every field _event_to_dict reads off a CalendarEvent
+    so SimpleNamespace stays a faithful stand-in as the model grows.
+    """
     defaults = {
         "id": 1,
         "family_id": 1,
@@ -20,6 +24,9 @@ def make_event(**kwargs):
         "recurrence": None,
         "recurrence_end": None,
         "excluded_dates": None,
+        "assigned_to": None,
+        "color": None,
+        "category": None,
         "created_by_user_id": 1,
         "created_at": datetime(2026, 1, 1),
     }
