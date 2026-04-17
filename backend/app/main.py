@@ -207,12 +207,12 @@ app.add_middleware(
 
 @app.api_route("/.well-known/caldav", methods=["GET", "HEAD", "OPTIONS", "PROPFIND"])
 def well_known_caldav():
-    return RedirectResponse(url="/dav/", status_code=308)
+    return RedirectResponse(url="/dav", status_code=308)
 
 
 @app.api_route("/.well-known/carddav", methods=["GET", "HEAD", "OPTIONS", "PROPFIND"])
 def well_known_carddav():
-    return RedirectResponse(url="/dav/", status_code=308)
+    return RedirectResponse(url="/dav", status_code=308)
 
 
 # ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ import { t } from '../../lib/i18n';
 
 function buildDavServerUrl() {
   const origin = typeof window !== 'undefined' && window.location ? window.location.origin : '';
-  return `${origin}/dav/`;
+  return `${origin}/dav`;
 }
 
 function CopyRow({ label, value, copyAria }) {

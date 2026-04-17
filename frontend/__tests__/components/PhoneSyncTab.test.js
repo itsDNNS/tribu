@@ -33,7 +33,7 @@ describe('PhoneSyncTab', () => {
 
     expect(screen.getByText('Server-URL')).toBeInTheDocument();
     expect(screen.getByText('Benutzername')).toBeInTheDocument();
-    expect(screen.getByText('http://localhost/dav/')).toBeInTheDocument();
+    expect(screen.getByText('http://localhost/dav')).toBeInTheDocument();
     expect(screen.getByText('mail@example.com')).toBeInTheDocument();
     expect(screen.queryByText(/cal-1|book-1|cal-2|book-2/)).not.toBeInTheDocument();
   });

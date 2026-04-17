@@ -58,7 +58,7 @@ test.describe('Tasks', () => {
     await page.locator('[aria-label="Delete task: Delete This Task"]').click();
     // ConfirmDialog appears - click the confirm button
     await page.locator('.cal-dialog .btn-sm').first().click();
-    await expect(page.locator('.task-card')).not.toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Delete This Task', { exact: true })).not.toBeVisible({ timeout: 10000 });
   });
 
   test('filter tabs work (All / Open / Done)', async ({ authedPage: page, apiCtx }) => {

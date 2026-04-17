@@ -124,7 +124,7 @@ class TestDavAuth:
         for path in ("/.well-known/caldav", "/.well-known/carddav"):
             resp = client.request("PROPFIND", path, follow_redirects=False)
             assert resp.status_code == 308, (path, resp.status_code, resp.text)
-            assert resp.headers["location"] == "/dav/"
+            assert resp.headers["location"] == "/dav"
 
     def test_valid_pat_without_dav_scope_is_rejected(self, app_under_test):
         """A PAT that only has shopping:read cannot unlock DAV."""
