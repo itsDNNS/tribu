@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, UtensilsCrossed, Plus, Edit2, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, UtensilsCrossed, Plus, Edit2, CalendarDays, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from '@dnd-kit/core';
 import { useApp } from '../contexts/AppContext';
 import { useMealPlans, MEAL_SLOTS, formatIsoDate, weekDays } from '../hooks/useMealPlans';
 import { t } from '../lib/i18n';
@@ -33,20 +43,81 @@ function ingredientsSummary(messages, ingredients) {
 
 function weekRangeLabel(weekStart, weekEnd) {
   const fmt = (d) => `${d.getDate()}.${d.getMonth() + 1}.`;
-  return `${fmt(weekStart)} – ${fmt(weekEnd)}${weekStart.getFullYear() === weekEnd.getFullYear() ? ` ${weekEnd.getFullYear()}` : ''}`;
+  return `${fmt(weekStart)} - ${fmt(weekEnd)}${weekStart.getFullYear() === weekEnd.getFullYear() ? ` ${weekEnd.getFullYear()}` : ''}`;
 }
 
 function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+function DraggableFilledCell({ meal, onClick, messages }) {
+  const draggable = useDraggable({ id: `meal:${meal.id}`, data: { mealId: meal.id } });
+  const droppable = useDroppable({ id: `slot:${meal.plan_date}:${meal.slot}` });
+  const setRef = (node) => {
+    draggable.setNodeRef(node);
+    droppable.setNodeRef(node);
+  };
+  const classes = [
+    'meal-grid-cell',
+    'meal-grid-cell-filled',
+    `meal-grid-slot-${meal.slot}`,
+    draggable.isDragging ? 'meal-grid-cell-dragging' : '',
+    droppable.isOver ? 'meal-grid-cell-drop-over' : '',
+  ].filter(Boolean).join(' ');
+  return (
+    <button
+      ref={setRef}
+      type="button"
+      className={classes}
+      onClick={() => {
+        if (draggable.isDragging) return;
+        onClick(meal);
+      }}
+      aria-label={t(messages, 'module.meal_plans.edit_aria').replace('{name}', meal.meal_name)}
+      {...draggable.listeners}
+      {...draggable.attributes}
+    >
+      <GripVertical size={12} className="meal-cell-grip" aria-hidden="true" />
+      <span className="meal-cell-title">{meal.meal_name}</span>
+      {(meal.ingredients?.length || 0) > 0 && (
+        <span className="meal-cell-meta">{ingredientsSummary(messages, meal.ingredients)}</span>
+      )}
+      <Edit2 size={12} className="meal-cell-edit-icon" aria-hidden="true" />
+    </button>
+  );
+}
+
+function DroppableEmptyCell({ date, slot, messages, onClick }) {
+  const iso = formatIsoDate(date);
+  const { setNodeRef, isOver } = useDroppable({ id: `slot:${iso}:${slot}` });
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      className={`meal-grid-cell meal-grid-cell-empty${isOver ? ' meal-grid-cell-drop-over' : ''}`}
+      onClick={() => onClick(date, slot)}
+      aria-label={t(messages, 'module.meal_plans.add_for_slot_aria')
+        .replace('{slot}', slotLabel(messages, slot))
+        .replace('{date}', formatDayNumber(date))}
+    >
+      <Plus size={14} aria-hidden="true" />
+    </button>
+  );
+}
+
 export default function MealPlansView() {
-  const { familyId, families, messages, demoMode } = useApp();
+  const { familyId, families, messages, demoMode, shoppingLists } = useApp();
   const hook = useMealPlans();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(hook.emptyFormFor(formatIsoDate(hook.weekStart), 'noon'));
   const [confirmAction, setConfirmAction] = useState(null);
+  const [activeDrag, setActiveDrag] = useState(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor),
+  );
 
   if (demoMode) {
     return (
@@ -106,6 +177,33 @@ export default function MealPlansView() {
     });
   }
 
+  function handleDragStart(event) {
+    const id = event.active?.data?.current?.mealId ?? null;
+    setActiveDrag(hook.meals.find((m) => m.id === id) || null);
+  }
+
+  async function handleDragEnd(event) {
+    setActiveDrag(null);
+    const { active, over } = event;
+    if (!over || !active) return;
+    const mealId = active?.data?.current?.mealId;
+    if (mealId == null) return;
+    const overId = String(over.id);
+    if (!overId.startsWith('slot:')) return;
+    const [, planDate, slot] = overId.split(':');
+    if (!planDate || !slot) return;
+    await hook.moveMeal(mealId, planDate, slot);
+  }
+
+  function handleDragCancel() {
+    setActiveDrag(null);
+  }
+
+  async function handlePushToShopping(shoppingListId, ingredientNames) {
+    if (editingId == null) return { ok: false };
+    return hook.pushToShopping(editingId, shoppingListId, ingredientNames);
+  }
+
   return (
     <div>
       {confirmAction && (
@@ -129,6 +227,8 @@ export default function MealPlansView() {
         onDelete={editingId != null ? handleDelete : null}
         isEditing={editingId != null}
         ingredientHints={hook.ingredientHints}
+        shoppingLists={shoppingLists}
+        onPushToShopping={editingId != null ? handlePushToShopping : null}
       />
 
       <div className="view-header">
@@ -177,60 +277,63 @@ export default function MealPlansView() {
 
       {hook.loading && <p className="meal-loading">{t(messages, 'module.meal_plans.loading')}</p>}
 
-      <section className="meal-grid" aria-label={t(messages, 'module.meal_plans.name')}>
-        <div className="meal-grid-corner" aria-hidden="true" />
-        {days.map((d, idx) => (
-          <div
-            key={d.toISOString()}
-            className={`meal-grid-day-header${isSameDay(d, today) ? ' meal-grid-day-today' : ''}`}
-          >
-            <span className="meal-grid-day-name">{t(messages, WEEKDAY_KEYS[idx])}</span>
-            <span className="meal-grid-day-date">{formatDayNumber(d)}</span>
-          </div>
-        ))}
-
-        {MEAL_SLOTS.map((slot) => (
-          <div key={slot} className="meal-grid-row">
-            <div className="meal-grid-slot-label">
-              {slotLabel(messages, slot)}
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <section className="meal-grid" aria-label={t(messages, 'module.meal_plans.name')}>
+          <div className="meal-grid-corner" aria-hidden="true" />
+          {days.map((d, idx) => (
+            <div
+              key={d.toISOString()}
+              className={`meal-grid-day-header${isSameDay(d, today) ? ' meal-grid-day-today' : ''}`}
+            >
+              <span className="meal-grid-day-name">{t(messages, WEEKDAY_KEYS[idx])}</span>
+              <span className="meal-grid-day-date">{formatDayNumber(d)}</span>
             </div>
-            {days.map((d) => {
-              const iso = formatIsoDate(d);
-              const meal = hook.getCell(iso, slot);
-              if (meal) {
+          ))}
+
+          {MEAL_SLOTS.map((slot) => (
+            <div key={slot} className="meal-grid-row">
+              <div className="meal-grid-slot-label">
+                {slotLabel(messages, slot)}
+              </div>
+              {days.map((d) => {
+                const iso = formatIsoDate(d);
+                const meal = hook.getCell(iso, slot);
+                if (meal) {
+                  return (
+                    <DraggableFilledCell
+                      key={`${iso}:${slot}`}
+                      meal={meal}
+                      onClick={openEdit}
+                      messages={messages}
+                    />
+                  );
+                }
                 return (
-                  <button
+                  <DroppableEmptyCell
                     key={`${iso}:${slot}`}
-                    type="button"
-                    className={`meal-grid-cell meal-grid-cell-filled meal-grid-slot-${slot}`}
-                    onClick={() => openEdit(meal)}
-                    aria-label={t(messages, 'module.meal_plans.edit_aria').replace('{name}', meal.meal_name)}
-                  >
-                    <span className="meal-cell-title">{meal.meal_name}</span>
-                    {(meal.ingredients?.length || 0) > 0 && (
-                      <span className="meal-cell-meta">{ingredientsSummary(messages, meal.ingredients)}</span>
-                    )}
-                    <Edit2 size={12} className="meal-cell-edit-icon" aria-hidden="true" />
-                  </button>
+                    date={d}
+                    slot={slot}
+                    messages={messages}
+                    onClick={openAdd}
+                  />
                 );
-              }
-              return (
-                <button
-                  key={`${iso}:${slot}`}
-                  type="button"
-                  className="meal-grid-cell meal-grid-cell-empty"
-                  onClick={() => openAdd(d, slot)}
-                  aria-label={t(messages, 'module.meal_plans.add_for_slot_aria')
-                    .replace('{slot}', slotLabel(messages, slot))
-                    .replace('{date}', formatDayNumber(d))}
-                >
-                  <Plus size={14} aria-hidden="true" />
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </section>
+              })}
+            </div>
+          ))}
+        </section>
+        <DragOverlay>
+          {activeDrag ? (
+            <div className={`meal-grid-cell meal-grid-cell-filled meal-grid-slot-${activeDrag.slot} meal-cell-overlay`}>
+              <span className="meal-cell-title">{activeDrag.meal_name}</span>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

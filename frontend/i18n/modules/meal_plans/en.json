@@ -47,5 +47,7 @@
   "module.meal_plans.edit_aria": "Edit meal \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Add meal for {slot} on {date}",
   "module.meal_plans.push_to_shopping": "To shopping list",
+  "module.meal_plans.pushed_one": "1 ingredient pushed to the shopping list",
+  "module.meal_plans.pushed_many": "{count} ingredients pushed to the shopping list",
   "module.meal_plans.demo_blocked": "Not available in demo mode"
 }

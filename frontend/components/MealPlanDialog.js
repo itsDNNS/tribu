@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { MEAL_SLOTS } from '../hooks/useMealPlans';
 
@@ -17,6 +17,8 @@ export default function MealPlanDialog({
   onDelete,
   isEditing,
   ingredientHints = [],
+  shoppingLists = [],
+  onPushToShopping,
 }) {
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
@@ -24,8 +26,17 @@ export default function MealPlanDialog({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const [submitting, setSubmitting] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [selectedListId, setSelectedListId] = useState('');
   const datalistId = useId();
   const titleId = 'meal-dialog-title';
+
+  useEffect(() => {
+    if (!open) return;
+    if (shoppingLists.length > 0 && !selectedListId) {
+      setSelectedListId(String(shoppingLists[0].id));
+    }
+  }, [open, shoppingLists, selectedListId]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -230,6 +241,47 @@ export default function MealPlanDialog({
             value={form.notes}
             onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
           />
+
+          {isEditing && onPushToShopping && (form.ingredients || []).some((i) => (i.name || '').trim()) && shoppingLists.length > 0 && (
+            <div className="meal-push">
+              <div className="meal-push-label">
+                <ShoppingCart size={14} aria-hidden="true" />
+                {t(messages, 'module.meal_plans.push_to_shopping')}
+              </div>
+              <div className="meal-push-row">
+                <select
+                  className="form-input meal-push-list"
+                  value={selectedListId}
+                  onChange={(e) => setSelectedListId(e.target.value)}
+                  aria-label={t(messages, 'module.meal_plans.push_to_shopping')}
+                >
+                  {shoppingLists.map((list) => (
+                    <option key={list.id} value={list.id}>{list.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-secondary meal-push-btn"
+                  disabled={pushing || !selectedListId}
+                  onClick={async () => {
+                    const names = (form.ingredients || [])
+                      .map((i) => (i.name || '').trim())
+                      .filter(Boolean);
+                    if (names.length === 0 || !selectedListId) return;
+                    setPushing(true);
+                    try {
+                      await onPushToShopping(Number(selectedListId), names);
+                    } finally {
+                      setPushing(false);
+                    }
+                  }}
+                >
+                  <ShoppingCart size={14} aria-hidden="true" />
+                  {t(messages, 'module.meal_plans.push_to_shopping')}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="meal-form-actions">
             {isEditing && onDelete && (

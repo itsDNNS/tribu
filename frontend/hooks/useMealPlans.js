@@ -169,6 +169,39 @@ export function useMealPlans() {
     return true;
   }
 
+  async function moveMeal(planId, plan_date, slot) {
+    const current = meals.find((m) => m.id === planId);
+    if (current && current.plan_date === plan_date && current.slot === slot) return true;
+    // Optimistic local update so the drop lands without waiting for the round-trip.
+    setMeals((prev) => prev.map((m) => (m.id === planId ? { ...m, plan_date, slot } : m)));
+    const { ok, status, data } = await api.apiUpdateMealPlan(planId, { plan_date, slot });
+    if (!ok) {
+      if (status === 409) toastError(t(messages, 'module.meal_plans.slot_taken'));
+      else toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      // Refetch to restore server truth on any failure.
+      await load();
+      return false;
+    }
+    await load();
+    return true;
+  }
+
+  async function pushToShopping(planId, shoppingListId, ingredientNames = null) {
+    const { ok, data } = await api.apiAddMealIngredientsToShopping(planId, shoppingListId, ingredientNames);
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return { ok: false };
+    }
+    const added = data?.added_count ?? 0;
+    const template = added === 1
+      ? t(messages, 'module.meal_plans.pushed_one')
+      : t(messages, 'module.meal_plans.pushed_many');
+    const msg = template.replace('{count}', String(added));
+    toastSuccess(msg);
+    announce(msg);
+    return { ok: true, added };
+  }
+
   function populateFormFromMeal(meal) {
     return {
       plan_date: meal.plan_date,
@@ -201,6 +234,8 @@ export function useMealPlans() {
     createMeal,
     updateMeal,
     deleteMeal,
+    moveMeal,
+    pushToShopping,
     populateFormFromMeal,
     emptyFormFor,
     EMPTY_INGREDIENT,

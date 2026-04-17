@@ -2022,3 +2022,17 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .meal-form-grid { grid-template-columns: 1fr; }
   .meal-ingredient-row { grid-template-columns: 1fr 80px 60px auto; }
 }
+
+/* Meal DnD */
+.meal-cell-grip { position: absolute; top: 8px; left: 8px; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; cursor: grab; }
+.meal-grid-cell-filled:hover .meal-cell-grip { opacity: 0.5; }
+.meal-grid-cell-dragging { opacity: 0.3; cursor: grabbing; }
+.meal-grid-cell-drop-over { border-color: var(--amethyst); background: rgba(124, 58, 237, 0.08); }
+.meal-cell-overlay { box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.4); transform: rotate(-1deg); background: var(--void-elevated); cursor: grabbing; max-width: 220px; }
+
+/* Meal shopping push section */
+.meal-push { display: flex; flex-direction: column; gap: 6px; padding: var(--space-sm); border: 1px dashed var(--glass-border); border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.04); }
+.meal-push-label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+.meal-push-row { display: flex; gap: 6px; align-items: center; }
+.meal-push-list { flex: 1; min-width: 0; }
+.meal-push-btn { white-space: nowrap; }
