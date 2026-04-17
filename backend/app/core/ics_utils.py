@@ -31,7 +31,10 @@ def events_to_ics(events, calendar_name="Tribu") -> str:
 
     for ev in events:
         vevent = Event()
-        vevent.add("uid", f"tribu-event-{ev.id}@tribu.local")
+        # Honor a client-chosen UID from CalDAV PUTs when present so the
+        # next GET returns exactly the UID the client stored.
+        uid = getattr(ev, "ical_uid", None) or f"tribu-event-{ev.id}@tribu.local"
+        vevent.add("uid", uid)
         vevent.add("summary", ev.title)
 
         if ev.description:

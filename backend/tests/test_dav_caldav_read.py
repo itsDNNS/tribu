@@ -240,7 +240,7 @@ class TestCalDAVRead:
         assert resp.status_code == 403, resp.text
         assert "valid-sync-token" in resp.text
 
-    def test_put_is_rejected_until_phase_b2(self, app_under_test, seeded):
+    def test_put_creates_a_row(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)
         headers = {
@@ -250,15 +250,88 @@ class TestCalDAVRead:
         ics = (
             "BEGIN:VCALENDAR\r\nVERSION:2.0\r\n"
             "PRODID:-//Test//EN\r\n"
-            "BEGIN:VEVENT\r\nUID:new@example.com\r\n"
+            "BEGIN:VEVENT\r\nUID:new-from-dav@example.com\r\n"
             "DTSTAMP:20260101T000000Z\r\n"
             "DTSTART:20260601T120000Z\r\nDTEND:20260601T130000Z\r\n"
             "SUMMARY:From DAV\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
         )
         put = client.put(
-            f"/dav/{EMAIL}/family-{family_id}/new-event.ics",
+            f"/dav/{EMAIL}/family-{family_id}/from-dav.ics",
             headers=headers,
             content=ics,
         )
-        # Radicale maps a storage PermissionError onto a 403
-        assert put.status_code in (403, 500), put.text
+        assert put.status_code in (201, 204), put.text
+        # The row should be fetchable at the same href.
+        get = client.get(
+            f"/dav/{EMAIL}/family-{family_id}/from-dav.ics",
+            headers={"Authorization": _basic(EMAIL, token)},
+        )
+        assert get.status_code == 200, get.text
+        assert "From DAV" in get.text
+
+    def test_put_overwrite_and_delete(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token)}
+        ics_v1 = (
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
+            "BEGIN:VEVENT\r\nUID:overwrite@example.com\r\n"
+            "DTSTAMP:20260101T000000Z\r\n"
+            "DTSTART:20260701T090000Z\r\nDTEND:20260701T100000Z\r\n"
+            "SUMMARY:Original\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        )
+        ics_v2 = ics_v1.replace("Original", "Renamed")
+
+        put1 = client.put(
+            f"/dav/{EMAIL}/family-{family_id}/overwrite.ics",
+            headers={**auth, "Content-Type": "text/calendar"},
+            content=ics_v1,
+        )
+        assert put1.status_code in (201, 204)
+
+        put2 = client.put(
+            f"/dav/{EMAIL}/family-{family_id}/overwrite.ics",
+            headers={**auth, "Content-Type": "text/calendar"},
+            content=ics_v2,
+        )
+        assert put2.status_code in (201, 204)
+
+        get = client.get(f"/dav/{EMAIL}/family-{family_id}/overwrite.ics", headers=auth)
+        assert get.status_code == 200
+        assert "Renamed" in get.text
+        assert "Original" not in get.text
+
+        delete = client.request(
+            "DELETE",
+            f"/dav/{EMAIL}/family-{family_id}/overwrite.ics",
+            headers=auth,
+        )
+        assert delete.status_code in (200, 204)
+
+        get_after = client.get(
+            f"/dav/{EMAIL}/family-{family_id}/overwrite.ics",
+            headers=auth,
+        )
+        assert get_after.status_code == 404
+
+    def test_put_rejects_invalid_ics(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        headers = {
+            "Authorization": _basic(EMAIL, token),
+            "Content-Type": "text/calendar",
+        }
+        # Missing SUMMARY -> ics_to_event_dicts rejects it.
+        ics = (
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
+            "BEGIN:VEVENT\r\nUID:bad@example.com\r\n"
+            "DTSTAMP:20260101T000000Z\r\nDTSTART:20260601T120000Z\r\n"
+            "END:VEVENT\r\nEND:VCALENDAR\r\n"
+        )
+        put = client.put(
+            f"/dav/{EMAIL}/family-{family_id}/bad.ics",
+            headers=headers,
+            content=ics,
+        )
+        # Radicale maps a ValueError from storage to a 4xx.
+        assert 400 <= put.status_code < 500, put.text

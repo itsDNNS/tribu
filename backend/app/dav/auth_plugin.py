@@ -69,7 +69,7 @@ class Auth(BaseAuth):
             # run back-to-back on the same thread per request, so a
             # threading.local context is the narrowest handoff that
             # does not require patching Radicale's plugin contract.
-            rights_plugin.remember_scopes(user.email, granted)
+            rights_plugin.remember_scopes(user.email, user.id, granted)
             return user.email
 
 

@@ -20,8 +20,9 @@ from radicale import item as radicale_item
 from radicale import pathutils, types
 from radicale.storage import BaseStorage, BaseCollection
 
-from app.core.ics_utils import events_to_ics
+from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.database import SessionLocal
+from app.dav import rights_plugin
 from app.models import CalendarEvent, Family, Membership, User
 
 
@@ -39,11 +40,19 @@ def _db():
     return _Ctx()
 
 
-def _event_href(event_id: int) -> str:
-    return f"tribu-event-{event_id}.ics"
+def _event_href(ev: "CalendarEvent") -> str:
+    """Preferred DAV href for an event row.
+
+    Client-provided ``dav_href`` wins so PUT then GET round-trip at the
+    same URL. Legacy rows fall back to the synthesized id-based path.
+    """
+    if ev.dav_href:
+        return ev.dav_href
+    return f"tribu-event-{ev.id}.ics"
 
 
-def _parse_event_href(href: str) -> Optional[int]:
+def _legacy_href_event_id(href: str) -> Optional[int]:
+    """Extract the event id from the synthesized ``tribu-event-<id>.ics`` href."""
     if not href.startswith("tribu-event-") or not href.endswith(".ics"):
         return None
     try:
@@ -118,22 +127,23 @@ class CalendarCollection(BaseCollection):
 
     def get_multi(self, hrefs: Iterable[str]) -> Iterable[Tuple[str, Optional["radicale_item.Item"]]]:
         for href in hrefs:
-            event_id = _parse_event_href(href)
-            if event_id is None:
-                yield href, None
-                continue
-            with _db() as db:
-                ev = (
-                    db.query(CalendarEvent)
-                    .filter(
-                        CalendarEvent.family_id == self._family_id,
-                        CalendarEvent.id == event_id,
-                    )
-                    .first()
-                )
+            ev = self._find_event_by_href(href)
             yield href, (self._event_to_item(ev) if ev is not None else None)
 
     def has_uid(self, uid: str) -> bool:
+        with _db() as db:
+            exists = (
+                db.query(CalendarEvent.id)
+                .filter(
+                    CalendarEvent.family_id == self._family_id,
+                    CalendarEvent.ical_uid == uid,
+                )
+                .first()
+                is not None
+            )
+        if exists:
+            return True
+        # Legacy rows might have no ical_uid yet.
         event_id = self._uid_to_event_id(uid)
         if event_id is None:
             return False
@@ -159,40 +169,120 @@ class CalendarCollection(BaseCollection):
         return events_to_ics(events, calendar_name=self._family_name)
 
     def sync(self, old_token: str = "") -> Tuple[str, Iterable[str]]:
-        # Incremental sync cannot be correct yet: CalendarEvent has no
-        # ``updated_at`` column, so edits do not disturb the ctag, and
-        # there is no deletion journal to emit tombstones. Raising
-        # ValueError on a non-empty ``old_token`` makes Radicale
-        # return the ``valid-sync-token`` precondition failure, which
-        # reliably forces clients into a full-refresh cycle until
-        # Phase D lands a real modification log.
+        # Deletion tombstones are not tracked yet, so handing a client
+        # an old token and expecting it to ask only for the delta would
+        # let a deleted event linger in its cache forever. Phase D adds
+        # a tombstone journal; until then we reject non-empty tokens so
+        # Radicale returns ``valid-sync-token`` and the client re-runs
+        # the full enumeration.
         if old_token:
-            raise ValueError("sync-token not supported in Phase B1")
+            raise ValueError("sync-token replay not supported until tombstones land")
         hrefs = []
         with _db() as db:
-            ids = (
-                db.query(CalendarEvent.id)
+            rows = (
+                db.query(CalendarEvent)
                 .filter(CalendarEvent.family_id == self._family_id)
                 .all()
             )
-        for (event_id,) in ids:
-            hrefs.append(_event_href(event_id))
+        for ev in rows:
+            hrefs.append(_event_href(ev))
         token = f"http://radicale.org/ns/sync/{self._ctag()}"
         return token, hrefs
 
     # ── writes (Phase B2) ─────────────────────────────────
 
-    def upload(self, href: str, item: "radicale_item.Item"):
-        raise PermissionError("Calendar writes land in Phase B2")
+    def upload(self, href: str, item: "radicale_item.Item") -> Tuple["radicale_item.Item", Optional["radicale_item.Item"]]:
+        """PUT ``href`` to write ``item``.
+
+        Returns ``(stored_item, replaced_item)``. ``replaced_item`` is the
+        prior representation at the same href when the PUT overwrites an
+        existing row, or ``None`` for a fresh create.
+        """
+        ics_text = getattr(item, "text", None) or item.serialize()
+        uid = getattr(item, "uid", None) or ""
+        valid, errors = ics_to_event_dicts(ics_text, self._family_id, rights_plugin.current_user_id())
+        if not valid:
+            reason = errors[0]["error"] if errors else "no VEVENT"
+            raise ValueError(f"VEVENT rejected: {reason}")
+        fields = valid[0]
+        if not uid:
+            uid = str(fields.get("title") or href)
+
+        with _db() as db:
+            existing = (
+                db.query(CalendarEvent)
+                .filter(CalendarEvent.family_id == self._family_id)
+                .filter(
+                    (CalendarEvent.dav_href == href) | (CalendarEvent.ical_uid == uid)
+                )
+                .first()
+            )
+            replaced_item: Optional["radicale_item.Item"] = None
+            if existing is not None:
+                replaced_item = self._event_to_item(existing)
+                _apply_event_fields(existing, fields)
+                existing.ical_uid = uid
+                existing.dav_href = href
+                row = existing
+            else:
+                row = CalendarEvent(
+                    family_id=self._family_id,
+                    created_by_user_id=rights_plugin.current_user_id(),
+                    ical_uid=uid,
+                    dav_href=href,
+                )
+                _apply_event_fields(row, fields)
+                db.add(row)
+            db.commit()
+            db.refresh(row)
+            stored_item = self._event_to_item(row)
+        return stored_item, replaced_item
 
     def delete(self, href: Optional[str] = None) -> None:
-        raise PermissionError("Calendar writes land in Phase B2")
+        """DELETE ``href``. Radicale calls with ``href=None`` to drop the
+        whole collection, which Tribu manages outside DAV so we refuse."""
+        if href is None:
+            raise PermissionError("Collections are managed by Tribu, not DAV")
+        with _db() as db:
+            ev = self._find_event_by_href_scoped(db, href)
+            if ev is None:
+                # Radicale expects KeyError on missing items.
+                raise KeyError(href)
+            db.delete(ev)
+            db.commit()
 
     def set_meta(self, props: Mapping[str, str]) -> None:
         # No-op: metadata is derived from the family row.
         return None
 
     # ── helpers ───────────────────────────────────────────
+
+    def _find_event_by_href(self, href: str) -> Optional[CalendarEvent]:
+        with _db() as db:
+            return self._find_event_by_href_scoped(db, href)
+
+    def _find_event_by_href_scoped(self, db, href: str) -> Optional[CalendarEvent]:
+        ev = (
+            db.query(CalendarEvent)
+            .filter(
+                CalendarEvent.family_id == self._family_id,
+                CalendarEvent.dav_href == href,
+            )
+            .first()
+        )
+        if ev is not None:
+            return ev
+        event_id = _legacy_href_event_id(href)
+        if event_id is None:
+            return None
+        return (
+            db.query(CalendarEvent)
+            .filter(
+                CalendarEvent.family_id == self._family_id,
+                CalendarEvent.id == event_id,
+            )
+            .first()
+        )
 
     def _event_to_item(self, ev: CalendarEvent) -> "radicale_item.Item":
         ics = events_to_ics([ev], calendar_name=self._family_name)
@@ -201,7 +291,7 @@ class CalendarCollection(BaseCollection):
         return radicale_item.Item(
             collection=self,
             text=ics,
-            href=_event_href(ev.id),
+            href=_event_href(ev),
             last_modified=_http_last_modified(mtime),
             etag=etag,
         )
@@ -282,8 +372,7 @@ class Storage(BaseStorage):
             return
         if len(parts) == 3:
             family_id = _parse_collection_segment(parts[1])
-            event_id = _parse_event_href(parts[2])
-            if family_id is None or event_id is None:
+            if family_id is None:
                 return
             family_name = next((n for (fid, n) in families if fid == family_id), None)
             if family_name is None:
@@ -371,3 +460,27 @@ def _families_for(user: User) -> list[tuple[int, str]]:
             .all()
         )
     return [(fid, name) for fid, name in rows]
+
+
+_MUTABLE_EVENT_FIELDS = (
+    "title",
+    "description",
+    "starts_at",
+    "ends_at",
+    "all_day",
+    "recurrence",
+    "recurrence_end",
+    "excluded_dates",
+)
+
+
+def _apply_event_fields(ev: CalendarEvent, fields: Mapping[str, object]) -> None:
+    """Copy parsed-ICS fields from ``ics_to_event_dicts`` onto a row.
+
+    The helper keeps the set of honored columns narrow on purpose:
+    assigned_to, color, category, and created_by_user_id are Tribu-only
+    concepts that DAV clients should not be able to change.
+    """
+    for name in _MUTABLE_EVENT_FIELDS:
+        if name in fields:
+            setattr(ev, name, fields[name])

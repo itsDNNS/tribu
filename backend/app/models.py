@@ -78,6 +78,18 @@ class CalendarEvent(Base):
         onupdate=utcnow,
         server_default=func.now(),
     )
+    # CalDAV identity. ical_uid is the VEVENT UID the client picked, and
+    # dav_href is the path segment under the collection (for example
+    # "ABCD-1234.ics"). Both are unique per family; the storage plugin
+    # writes them on PUT and resolves hrefs/UIDs back to rows on
+    # subsequent GET/PROPFIND.
+    ical_uid = Column(String(200), nullable=True)
+    dav_href = Column(String(250), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("family_id", "ical_uid", name="uq_calendar_events_family_uid"),
+        UniqueConstraint("family_id", "dav_href", name="uq_calendar_events_family_href"),
+    )
 
     family = relationship("Family", back_populates="calendar_events")
 

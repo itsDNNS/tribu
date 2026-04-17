@@ -30,14 +30,32 @@ from radicale.rights import BaseRights
 _context = threading.local()
 
 
-def remember_scopes(user: str, scopes: Set[str]) -> None:
-    """Record the authenticated user's PAT scopes for the current thread."""
+def remember_scopes(user: str, user_id: int, scopes: Set[str]) -> None:
+    """Record the authenticated user's PAT scopes for the current thread.
+
+    The storage plugin reads ``user_id`` out of the same context when it
+    needs to stamp ``created_by_user_id`` on a row written via PUT.
+    """
     _context.user = user
+    _context.user_id = user_id
     _context.scopes = set(scopes)
 
 
+def current_user_id() -> int:
+    """Return the authenticated principal's user id for the current thread.
+
+    Raises ``RuntimeError`` if the auth plugin has not populated the
+    context, which means the caller reached here without going through
+    auth (should never happen in a correctly wired Radicale pipeline).
+    """
+    user_id = getattr(_context, "user_id", None)
+    if user_id is None:
+        raise RuntimeError("DAV request has no authenticated user in context")
+    return user_id
+
+
 def forget_scopes() -> None:
-    for attr in ("user", "scopes"):
+    for attr in ("user", "user_id", "scopes"):
         if hasattr(_context, attr):
             delattr(_context, attr)
 
