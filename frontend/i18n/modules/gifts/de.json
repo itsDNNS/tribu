@@ -48,5 +48,16 @@
   "module.gifts.filter_recipient": "Nach Empfänger filtern",
   "module.gifts.filter_all_statuses": "Alle Status",
   "module.gifts.filter_all_recipients": "Alle Empfänger",
-  "module.gifts.filter_include_gifted": "Verschenkte anzeigen"
+  "module.gifts.filter_include_gifted": "Verschenkte anzeigen",
+  "module.gifts.group_by_recipient": "Nach Empfänger gruppieren",
+  "module.gifts.recipient_unassigned": "Ohne Empfänger",
+  "module.gifts.recipient_unknown": "Unbekannt",
+  "module.gifts.sort_aria": "Sortierung",
+  "module.gifts.sort.created_desc": "Neueste zuerst",
+  "module.gifts.sort.created_asc": "Älteste zuerst",
+  "module.gifts.sort.occasion_date_asc": "Nächster Anlass",
+  "module.gifts.sort.price_desc": "Preis absteigend",
+  "module.gifts.sort.price_asc": "Preis aufsteigend",
+  "module.gifts.sort.title_asc": "Titel A-Z",
+  "module.gifts.upcoming_birthdays": "Kommende Geburtstage"
 }

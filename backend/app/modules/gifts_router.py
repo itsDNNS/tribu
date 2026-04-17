@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_adult, ensure_family_membership
@@ -9,6 +10,7 @@ from app.core.errors import (
     GIFT_NOT_FOUND,
     GIFT_RECIPIENT_CONFLICT,
     GIFT_RECIPIENT_NOT_FAMILY_MEMBER,
+    INVALID_GIFT_SORT,
     INVALID_GIFT_STATUS,
     INVALID_GIFT_URL,
     error_detail,
@@ -31,6 +33,39 @@ from app.schemas import (
 router = APIRouter(prefix="/gifts", tags=["gifts"], responses={**AUTH_RESPONSES})
 
 VALID_STATUSES = set(GIFT_STATUSES)
+
+GIFT_SORT_OPTIONS: tuple[str, ...] = (
+    "created_desc",
+    "created_asc",
+    "occasion_date_asc",
+    "price_desc",
+    "price_asc",
+    "title_asc",
+)
+
+
+def _sort_expressions(sort: str):
+    """Translate a sort key into SQLAlchemy order_by expressions.
+
+    NULL values for occasion_date and price sort to the end so recent
+    entries without those fields do not clutter the top of the list.
+    Every sort ends with id.desc() as a stable tiebreaker so pagination
+    and tie behavior stay deterministic when two rows share a sort key.
+    """
+    id_tiebreaker = GiftIdea.id.desc()
+    if sort == "created_desc":
+        return [GiftIdea.created_at.desc(), id_tiebreaker]
+    if sort == "created_asc":
+        return [GiftIdea.created_at.asc(), GiftIdea.id.asc()]
+    if sort == "occasion_date_asc":
+        return [GiftIdea.occasion_date.asc().nullslast(), id_tiebreaker]
+    if sort == "price_desc":
+        return [GiftIdea.current_price_cents.desc().nullslast(), id_tiebreaker]
+    if sort == "price_asc":
+        return [GiftIdea.current_price_cents.asc().nullslast(), id_tiebreaker]
+    if sort == "title_asc":
+        return [func.lower(GiftIdea.title).asc(), id_tiebreaker]
+    raise HTTPException(status_code=400, detail=error_detail(INVALID_GIFT_SORT, sort=sort))
 
 
 def _require_adult_or_403(db: Session, user: User, family_id: int) -> Membership:
@@ -113,6 +148,13 @@ def list_gifts(
     for_user_id: Optional[int] = Query(None, description="Filter by recipient user ID"),
     occasion: Optional[str] = Query(None, description="Filter by occasion"),
     include_gifted: bool = Query(True, description="Include entries with status 'gifted'"),
+    sort: str = Query(
+        "created_desc",
+        description=(
+            "Sort order. One of: created_desc (default), created_asc, "
+            "occasion_date_asc, price_desc, price_asc, title_asc."
+        ),
+    ),
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     user: User = Depends(current_user),
@@ -132,8 +174,9 @@ def list_gifts(
     if occasion is not None:
         base = base.filter(GiftIdea.occasion == occasion)
 
+    order_by = _sort_expressions(sort)
     total = base.count()
-    items = base.order_by(GiftIdea.created_at.desc()).offset(offset).limit(limit).all()
+    items = base.order_by(*order_by).offset(offset).limit(limit).all()
     return PaginatedGifts(items=items, total=total, offset=offset, limit=limit)
 
 

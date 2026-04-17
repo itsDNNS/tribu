@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, Cake } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { GIFT_STATUSES, GIFT_OCCASIONS } from '../hooks/useGifts';
 
@@ -12,7 +12,18 @@ function occasionLabel(messages, occasion) {
   return t(messages, `module.gifts.occasion.${occasion}`, occasion);
 }
 
-export default function GiftDialog({ open, onClose, messages, members, form, setForm, onSubmit, isEditing }) {
+export default function GiftDialog({
+  open,
+  onClose,
+  messages,
+  members,
+  form,
+  setForm,
+  onSubmit,
+  isEditing,
+  upcomingBirthdays = [],
+  onPickBirthday,
+}) {
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
   const previousFocusRef = useRef(null);
@@ -80,6 +91,27 @@ export default function GiftDialog({ open, onClose, messages, members, form, set
             <X size={18} aria-hidden="true" />
           </button>
         </div>
+        {!isEditing && upcomingBirthdays.length > 0 && (
+          <div className="gift-birthday-picker" role="group" aria-label={t(messages, 'module.gifts.upcoming_birthdays')}>
+            <div className="gift-birthday-picker-label">
+              <Cake size={14} aria-hidden="true" />
+              {t(messages, 'module.gifts.upcoming_birthdays')}
+            </div>
+            <div className="gift-birthday-picker-chips">
+              {upcomingBirthdays.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  className="gift-birthday-chip"
+                  onClick={() => onPickBirthday?.(b)}
+                >
+                  <span className="gift-birthday-chip-name">{b.person_name}</span>
+                  <span className="gift-birthday-chip-date">{b.iso}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <form className="gift-form" onSubmit={onSubmit}>
           <div className="gift-form-grid">
             <input

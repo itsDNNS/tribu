@@ -8,6 +8,14 @@ import * as api from '../lib/api';
 
 export const GIFT_STATUSES = ['idea', 'ordered', 'purchased', 'gifted'];
 export const GIFT_OCCASIONS = ['birthday', 'christmas', 'easter', 'other'];
+export const GIFT_SORT_OPTIONS = [
+  'created_desc',
+  'created_asc',
+  'occasion_date_asc',
+  'price_desc',
+  'price_asc',
+  'title_asc',
+];
 
 const EMPTY_FORM = {
   title: '',
@@ -38,6 +46,7 @@ export function useGifts() {
   const [statusFilter, setStatusFilter] = useState('');
   const [recipientFilter, setRecipientFilter] = useState('');
   const [includeGifted, setIncludeGifted] = useState(false);
+  const [sortOrder, setSortOrder] = useState('created_desc');
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
 
@@ -51,10 +60,11 @@ export function useGifts() {
       status: statusFilter || null,
       forUserId: recipientFilter ? Number(recipientFilter) : null,
       includeGifted,
+      sort: sortOrder,
     });
     if (ok && data?.items) setGifts(data.items);
     setLoading(false);
-  }, [familyId, demoMode, isChild, statusFilter, recipientFilter, includeGifted]);
+  }, [familyId, demoMode, isChild, statusFilter, recipientFilter, includeGifted, sortOrder]);
 
   useEffect(() => {
     loadGifts();
@@ -150,6 +160,7 @@ export function useGifts() {
     statusFilter, setStatusFilter,
     recipientFilter, setRecipientFilter,
     includeGifted, setIncludeGifted,
+    sortOrder, setSortOrder,
     form, setForm,
     editingId,
     submitGift,
