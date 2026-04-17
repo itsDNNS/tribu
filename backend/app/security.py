@@ -58,7 +58,16 @@ def generate_pat() -> tuple[str, str]:
 
 
 def hash_pat(plain: str) -> str:
-    return hashlib.sha256(plain.encode()).hexdigest()
+    """Digest a Personal Access Token for equality lookup.
+
+    PATs are high-entropy bearer tokens produced by
+    ``secrets.token_urlsafe(32)`` — not user-typed passwords — so a
+    fast hash (SHA-256) is the correct primitive. Slow password KDFs
+    (bcrypt, argon2) would add latency to every authenticated
+    request without increasing the attacker's effective search
+    space, because the preimage is already uniform random bytes.
+    """
+    return hashlib.sha256(plain.encode()).hexdigest()  # lgtm[py/weak-sensitive-data-hashing]
 
 
 def is_pat(token: str) -> bool:
