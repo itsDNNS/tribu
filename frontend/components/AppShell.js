@@ -93,7 +93,9 @@ export default function AppShell() {
     calendar: { key: 'calendar', icon: CalendarDays, label: t(messages, 'calendar'), mobileLabel: t(messages, 'calendar') },
     shopping: { key: 'shopping', icon: ShoppingCart, label: t(messages, 'module.shopping.name'), mobileLabel: t(messages, 'module.shopping.name'), badge: totalUnchecked || null },
     tasks: { key: 'tasks', icon: CheckSquare, label: t(messages, 'module.tasks.name'), mobileLabel: t(messages, 'module.tasks.name'), badge: openTaskCount || null },
-    meal_plans: { key: 'meal_plans', icon: UtensilsCrossed, label: t(messages, 'module.meal_plans.name'), mobileLabel: t(messages, 'module.meal_plans.name') },
+    ...(demoMode ? {} : {
+      meal_plans: { key: 'meal_plans', icon: UtensilsCrossed, label: t(messages, 'module.meal_plans.name'), mobileLabel: t(messages, 'module.meal_plans.name') },
+    }),
     rewards: { key: 'rewards', icon: Gift, label: t(messages, 'module.rewards.name'), mobileLabel: t(messages, 'module.rewards.name') },
     ...(isChild || demoMode ? {} : {
       gifts: { key: 'gifts', icon: Sparkles, label: t(messages, 'module.gifts.name'), mobileLabel: t(messages, 'module.gifts.name') },

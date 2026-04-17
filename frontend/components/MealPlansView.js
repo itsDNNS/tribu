@@ -56,7 +56,7 @@ export default function MealPlansView() {
         </div>
         <div className="empty-state">
           <UtensilsCrossed size={32} aria-hidden="true" />
-          <p>{t(messages, 'toast.error')}</p>
+          <p>{t(messages, 'module.meal_plans.demo_blocked')}</p>
         </div>
       </div>
     );
@@ -177,12 +177,11 @@ export default function MealPlansView() {
 
       {hook.loading && <p className="meal-loading">{t(messages, 'module.meal_plans.loading')}</p>}
 
-      <div className="meal-grid" role="grid" aria-label={t(messages, 'module.meal_plans.name')}>
+      <section className="meal-grid" aria-label={t(messages, 'module.meal_plans.name')}>
         <div className="meal-grid-corner" aria-hidden="true" />
         {days.map((d, idx) => (
           <div
             key={d.toISOString()}
-            role="columnheader"
             className={`meal-grid-day-header${isSameDay(d, today) ? ' meal-grid-day-today' : ''}`}
           >
             <span className="meal-grid-day-name">{t(messages, WEEKDAY_KEYS[idx])}</span>
@@ -191,8 +190,8 @@ export default function MealPlansView() {
         ))}
 
         {MEAL_SLOTS.map((slot) => (
-          <div key={slot} className="meal-grid-row" role="row">
-            <div className="meal-grid-slot-label" role="rowheader">
+          <div key={slot} className="meal-grid-row">
+            <div className="meal-grid-slot-label">
               {slotLabel(messages, slot)}
             </div>
             {days.map((d) => {
@@ -204,7 +203,6 @@ export default function MealPlansView() {
                     key={`${iso}:${slot}`}
                     type="button"
                     className={`meal-grid-cell meal-grid-cell-filled meal-grid-slot-${slot}`}
-                    role="gridcell"
                     onClick={() => openEdit(meal)}
                     aria-label={t(messages, 'module.meal_plans.edit_aria').replace('{name}', meal.meal_name)}
                   >
@@ -221,7 +219,6 @@ export default function MealPlansView() {
                   key={`${iso}:${slot}`}
                   type="button"
                   className="meal-grid-cell meal-grid-cell-empty"
-                  role="gridcell"
                   onClick={() => openAdd(d, slot)}
                   aria-label={t(messages, 'module.meal_plans.add_for_slot_aria')
                     .replace('{slot}', slotLabel(messages, slot))
@@ -233,7 +230,7 @@ export default function MealPlansView() {
             })}
           </div>
         ))}
-      </div>
+      </section>
     </div>
   );
 }

@@ -25,6 +25,9 @@ jest.mock('../../lib/api', () => ({
 
 const messages = {
   'module.meal_plans.name': 'Essensplan',
+  'module.meal_plans.demo_blocked': 'Im Demo nicht verfügbar',
+  'module.meal_plans.slot_taken': 'Slot belegt',
+  'toast.error': 'Fehler',
   'module.meal_plans.add': 'Mahlzeit planen',
   'module.meal_plans.add_title': 'Mahlzeit planen',
   'module.meal_plans.edit_title': 'Mahlzeit bearbeiten',
@@ -86,14 +89,14 @@ describe('MealPlansView', () => {
 
   test('renders the add button, fetches the week, and the grid has 7 day headers + 3 slots', async () => {
     mockAppState = baseState();
-    render(<MealPlansView />);
+    const { container } = render(<MealPlansView />);
     expect(screen.getByRole('button', { name: 'Mahlzeit planen' })).toBeInTheDocument();
     await waitFor(() => expect(apiListMealPlans).toHaveBeenCalledTimes(1));
     expect(screen.getByText('Morgens')).toBeInTheDocument();
     expect(screen.getByText('Mittags')).toBeInTheDocument();
     expect(screen.getByText('Abends')).toBeInTheDocument();
     // 21 empty cells (7 days × 3 slots)
-    const cells = screen.getAllByRole('gridcell');
+    const cells = container.querySelectorAll('.meal-grid-cell');
     expect(cells.length).toBe(21);
   });
 
@@ -104,6 +107,30 @@ describe('MealPlansView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mahlzeit planen' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('z.B. Spaghetti')).toBeInTheDocument();
+  });
+
+  test('demo mode renders the blocked placeholder instead of fetching', async () => {
+    mockAppState = baseState({ demoMode: true });
+    render(<MealPlansView />);
+    expect(screen.getByText('Im Demo nicht verfügbar')).toBeInTheDocument();
+    expect(apiListMealPlans).not.toHaveBeenCalled();
+  });
+
+  test('409 on create surfaces the translated slot-taken toast', async () => {
+    mockAppState = baseState();
+    const errorSpy = jest.fn();
+    const toastCtx = require('../../contexts/ToastContext');
+    toastCtx.useToast = () => ({ success: jest.fn(), error: errorSpy });
+
+    apiCreateMealPlan.mockResolvedValueOnce({ ok: false, status: 409, data: { detail: { code: 'MEAL_SLOT_TAKEN' } } });
+
+    render(<MealPlansView />);
+    await waitFor(() => expect(apiListMealPlans).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Mahlzeit planen' }));
+    const nameInput = screen.getByPlaceholderText('z.B. Spaghetti');
+    fireEvent.change(nameInput, { target: { value: 'Pasta' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(errorSpy).toHaveBeenCalledWith('Slot belegt'));
   });
 
   test('renders an existing meal in the right cell with ingredient count', async () => {

@@ -46,5 +46,6 @@
   "module.meal_plans.delete_confirm": "\"{name}\" wirklich entfernen?",
   "module.meal_plans.edit_aria": "Mahlzeit \"{name}\" bearbeiten",
   "module.meal_plans.add_for_slot_aria": "Mahlzeit für {slot} am {date} hinzufügen",
-  "module.meal_plans.push_to_shopping": "In Einkaufsliste"
+  "module.meal_plans.push_to_shopping": "In Einkaufsliste",
+  "module.meal_plans.demo_blocked": "Im Demo-Modus nicht verfügbar"
 }

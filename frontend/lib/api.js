@@ -4,7 +4,7 @@ async function request(path, options = {}) {
   const res = await fetch(`${API}${path}`, { credentials: 'include', ...options });
   let data;
   try { data = await res.json(); } catch { data = null; }
-  return { ok: res.ok, data };
+  return { ok: res.ok, status: res.status, data };
 }
 
 function post(path, body) {
