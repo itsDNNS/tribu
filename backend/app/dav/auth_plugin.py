@@ -21,6 +21,7 @@ from radicale.log import logger
 from app.core.clock import utcnow
 from app.core.scopes import has_scope, parse_scopes
 from app.database import SessionLocal
+from app.dav import rights_plugin
 from app.models import PersonalAccessToken, User
 from app.security import PAT_PREFIX
 
@@ -64,6 +65,11 @@ class Auth(BaseAuth):
                 return ""
             pat.last_used_at = utcnow()
             db.commit()
+            # Hand the scope set to the rights plugin. The two plugins
+            # run back-to-back on the same thread per request, so a
+            # threading.local context is the narrowest handoff that
+            # does not require patching Radicale's plugin contract.
+            rights_plugin.remember_scopes(user.email, granted)
             return user.email
 
 

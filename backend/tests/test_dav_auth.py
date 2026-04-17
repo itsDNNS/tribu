@@ -130,3 +130,42 @@ class TestDavAuth:
         headers = {"Authorization": _basic("dav-star@example.com", token)}
         resp = _propfind(client, "/dav/dav-star@example.com/", headers=headers)
         assert resp.status_code == 207
+
+    def test_read_only_scope_cannot_write(self, app_under_test):
+        """A PAT with only calendar:read can PROPFIND but not PUT."""
+        app, TestSession = app_under_test
+        token = _seed_pat(
+            TestSession,
+            email="dav-ro@example.com",
+            scopes="calendar:read",
+            suffix="ro",
+        )
+        client = TestClient(app)
+        headers = {"Authorization": _basic("dav-ro@example.com", token)}
+
+        read = _propfind(client, "/dav/dav-ro@example.com/", headers=headers)
+        assert read.status_code == 207
+
+        # A MKCOL attempting to create a calendar collection must fail with 403.
+        mkcol = client.request(
+            "MKCOL",
+            "/dav/dav-ro@example.com/test-calendar/",
+            headers={**headers, "Content-Type": "application/xml"},
+        )
+        assert mkcol.status_code in (401, 403), mkcol.text
+
+    def test_ios_urlencoded_username(self, app_under_test):
+        """iOS Calendar/Contacts sends the email URL-encoded in the URL path."""
+        app, TestSession = app_under_test
+        token = _seed_pat(
+            TestSession,
+            email="dav-ios@example.com",
+            scopes="calendar:write",
+            suffix="ios",
+        )
+        client = TestClient(app)
+        # The Basic-Auth credential is still the raw email. Radicale's
+        # urldecode_username applies to the URL path segment.
+        headers = {"Authorization": _basic("dav-ios@example.com", token)}
+        resp = _propfind(client, "/dav/dav-ios%40example.com/", headers=headers)
+        assert resp.status_code == 207, resp.text
