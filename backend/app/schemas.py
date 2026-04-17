@@ -1002,3 +1002,60 @@ class PaginatedGifts(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+# ── Meal Plans ──────────────────────────────────────────────
+
+MEAL_SLOTS = ("morning", "noon", "evening")
+
+
+class MealPlanBase(BaseModel):
+    plan_date: date = Field(..., description="Date the meal is planned for")
+    slot: str = Field(..., description=f"One of {', '.join(MEAL_SLOTS)}")
+    meal_name: str = Field(min_length=1, max_length=200, description="What's on the plate")
+    ingredients: list[str] = Field(default_factory=list, description="Free-text ingredient list, order preserved")
+    notes: Optional[str] = Field(None, description="Optional notes (recipe link, variation, etc.)")
+
+
+class MealPlanCreate(MealPlanBase):
+    family_id: int = Field(..., description="Family ID")
+
+
+class MealPlanUpdate(BaseModel):
+    plan_date: Optional[date] = None
+    slot: Optional[str] = None
+    meal_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    ingredients: Optional[list[str]] = None
+    notes: Optional[str] = None
+
+
+class MealPlanResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    plan_date: date
+    slot: str
+    meal_name: str
+    ingredients: list[str]
+    notes: Optional[str]
+    created_by_user_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+
+
+class MealPlanIngredientsResponse(BaseModel):
+    """Distinct ingredient names previously used in the family's meal plans."""
+    items: list[str]
+
+
+class MealPlanAddToShoppingRequest(BaseModel):
+    shopping_list_id: int = Field(..., description="Target shopping list ID")
+    ingredients: Optional[list[str]] = Field(
+        None,
+        description="Subset of the meal's ingredients to add. Defaults to all when omitted.",
+    )
+
+
+class MealPlanAddToShoppingResponse(BaseModel):
+    added_count: int

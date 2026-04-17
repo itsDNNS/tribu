@@ -373,3 +373,22 @@ class GiftPriceHistory(Base):
     recorded_at = Column(DateTime, nullable=False, server_default=func.now())
 
     gift = relationship("GiftIdea", back_populates="price_history")
+
+
+# ── Meal Plans ────────────────────────────────────────────
+
+
+class MealPlan(Base):
+    """One meal slot on one date. Slots are fixed at morning/noon/evening."""
+    __tablename__ = "meal_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    plan_date = Column(Date, nullable=False, index=True)
+    slot = Column(String(16), nullable=False)
+    meal_name = Column(String(200), nullable=False)
+    ingredients = Column(JSON, nullable=False, default=list, server_default="[]")
+    notes = Column(Text, nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
