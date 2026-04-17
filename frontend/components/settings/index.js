@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Navigation, Bell, Database, Key, Heart, ChevronRight, ArrowLeft } from 'lucide-react';
+import { User, Navigation, Bell, Database, Key, Heart, Smartphone, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import AccountTab from './AccountTab';
@@ -7,12 +7,14 @@ import NavigationTab from './NavigationTab';
 import NotificationsTab from './NotificationsTab';
 import DataTab from './DataTab';
 import ApiTokensTab from './ApiTokensTab';
+import PhoneSyncTab from './PhoneSyncTab';
 import AboutTab from './AboutTab';
 
 const TABS = [
   { key: 'account',       labelKey: 'settings_tab_account',  icon: User,       component: AccountTab,       visible: () => true,                              group: 'personal' },
   { key: 'navigation',    labelKey: 'nav_order_title',       icon: Navigation, component: NavigationTab,    visible: () => true,                              group: 'personal' },
   { key: 'notifications', labelKey: 'notification_settings', icon: Bell,       component: NotificationsTab, visible: ({ demoMode }) => !demoMode,             group: 'personal' },
+  { key: 'phone_sync',    labelKey: 'phone_sync_title',      icon: Smartphone, component: PhoneSyncTab,     visible: ({ demoMode }) => !demoMode,             group: 'personal' },
   { key: 'data',          labelKey: 'data_management',       icon: Database,   component: DataTab,          visible: ({ isChild, demoMode }) => !isChild && !demoMode, group: 'personal' },
   { key: 'tokens',        labelKey: 'api_tokens',            icon: Key,        component: ApiTokensTab,     visible: ({ isChild, demoMode }) => !isChild && !demoMode, group: 'system' },
   { key: 'about',         labelKey: 'about_support',         icon: Heart,      component: AboutTab,         visible: () => true,                              group: 'system' },
