@@ -18,7 +18,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, ShoppingList, User
+from app.models import Family, MealPlan, Membership, PersonalAccessToken, ShoppingList, User
 from app.security import hash_password, PAT_PREFIX
 
 
@@ -507,6 +507,53 @@ class TestMealPlanShoppingIntegration:
         )
         assert push.status_code == 400
         assert "MEAL_INGREDIENT_NOT_IN_PLAN" in str(push.json())
+
+    def test_legacy_string_ingredients_are_normalized_on_read_and_push(self):
+        """Rows written before the structured-ingredient rollout must still
+        serialize cleanly and push ingredients into a shopping list."""
+        token, family_id = _seed_member("*", "legacy")
+        list_id = _seed_shopping_list(family_id)
+
+        # Simulate a row written by 08b44cb: ingredients stored as list[str].
+        db = TestSession()
+        plan = MealPlan(
+            family_id=family_id,
+            plan_date=date(2026, 4, 13),
+            slot="noon",
+            meal_name="Legacy stew",
+            ingredients=["Mehl", "Tomaten", ""],
+            created_by_user_id=None,
+        )
+        db.add(plan)
+        db.commit()
+        plan_id = plan.id
+        db.close()
+
+        # GET must normalize without a 500.
+        listing = client.get(
+            f"/meal-plans?family_id={family_id}&start=2026-04-13&end=2026-04-13",
+            headers=_auth(token),
+        )
+        assert listing.status_code == 200, listing.json()
+        ingredients = listing.json()[0]["ingredients"]
+        assert [i["name"] for i in ingredients] == ["Mehl", "Tomaten"]
+        assert all(i["amount"] is None and i["unit"] is None for i in ingredients)
+
+        # Autocomplete works.
+        ac = client.get(f"/meal-plans/ingredients?family_id={family_id}", headers=_auth(token)).json()
+        assert ac["items"] == ["Mehl", "Tomaten"]
+
+        # Shopping push treats the legacy names as real ingredients.
+        push = client.post(
+            f"/meal-plans/{plan_id}/add-to-shopping",
+            json={"shopping_list_id": list_id, "ingredient_names": ["Mehl"]},
+            headers=_auth(token),
+        )
+        assert push.status_code == 200
+        assert push.json()["added_count"] == 1
+        items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+        assert [i["name"] for i in items] == ["Mehl"]
+        assert items[0]["spec"] is None  # legacy rows had no amount/unit
 
     def test_push_to_shopping_list_from_other_family_returns_404(self):
         token, family_id = _seed_member("*", "shop-c-own")

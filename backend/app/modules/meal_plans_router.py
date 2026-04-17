@@ -74,6 +74,58 @@ def _load_for_caller(db: Session, user: User, plan_id: int) -> MealPlan:
     return plan
 
 
+def _normalize_stored_ingredients(raw: Optional[list[Any]]) -> list[dict]:
+    """Accept legacy list[str] payloads or the new list[dict] shape.
+
+    Always returns a list of ``{"name", "amount", "unit"}`` dicts. This
+    runs on read so a DB that has not yet received migration 0022
+    (for example during a mid-deploy window) still yields valid
+    responses without raising pydantic validation errors for
+    ``MealPlanResponse``.
+    """
+    if not raw:
+        return []
+    normalized: list[dict] = []
+    for entry in raw:
+        if isinstance(entry, str):
+            stripped = entry.strip()
+            if not stripped:
+                continue
+            normalized.append({"name": stripped, "amount": None, "unit": None})
+        elif isinstance(entry, dict):
+            name = entry.get("name")
+            if not isinstance(name, str) or not name.strip():
+                continue
+            normalized.append({
+                "name": name.strip(),
+                "amount": entry.get("amount"),
+                "unit": (entry.get("unit") or None) if isinstance(entry.get("unit"), str) else entry.get("unit"),
+            })
+    return normalized
+
+
+def _serialize(plan: MealPlan) -> MealPlanResponse:
+    """Serialize a MealPlan while normalizing legacy ingredient rows.
+
+    We cannot go straight through ``MealPlanResponse.model_validate`` on
+    a row whose ``ingredients`` column still holds bare strings from an
+    earlier release: pydantic would reject them. Build the response dict
+    manually with normalized ingredients and then validate.
+    """
+    return MealPlanResponse.model_validate({
+        "id": plan.id,
+        "family_id": plan.family_id,
+        "plan_date": plan.plan_date,
+        "slot": plan.slot,
+        "meal_name": plan.meal_name,
+        "ingredients": _normalize_stored_ingredients(plan.ingredients),
+        "notes": plan.notes,
+        "created_by_user_id": plan.created_by_user_id,
+        "created_at": plan.created_at,
+        "updated_at": plan.updated_at,
+    })
+
+
 def _sanitize_ingredients(raw: Optional[list[Any]]) -> list[dict]:
     """Normalize a list of ingredient items.
 
@@ -165,7 +217,7 @@ def list_meal_plans(
         raise HTTPException(status_code=400, detail=error_detail(INVALID_MEAL_RANGE))
     if (end - start).days > MAX_RANGE_DAYS:
         raise HTTPException(status_code=400, detail=error_detail(INVALID_MEAL_RANGE))
-    return (
+    rows = (
         db.query(MealPlan)
         .filter(
             MealPlan.family_id == family_id,
@@ -175,6 +227,7 @@ def list_meal_plans(
         .order_by(MealPlan.plan_date.asc(), MealPlan.slot.asc(), MealPlan.id.asc())
         .all()
     )
+    return [_serialize(plan) for plan in rows]
 
 
 @router.get(
@@ -198,20 +251,8 @@ def list_ingredients(
     seen: set[str] = set()
     unique: list[str] = []
     for (ingredients,) in rows:
-        if not ingredients:
-            continue
-        for entry in ingredients:
-            if isinstance(entry, dict):
-                name = entry.get("name")
-            elif isinstance(entry, str):  # defensive for any legacy rows
-                name = entry
-            else:
-                continue
-            if not isinstance(name, str):
-                continue
-            stripped = name.strip()
-            if not stripped:
-                continue
+        for entry in _normalize_stored_ingredients(ingredients):
+            stripped = entry["name"].strip()
             key = stripped.lower()
             if key in seen:
                 continue
@@ -257,7 +298,7 @@ def create_meal_plan(
         db.rollback()
         raise HTTPException(status_code=409, detail=error_detail(MEAL_SLOT_TAKEN))
     db.refresh(plan)
-    return plan
+    return _serialize(plan)
 
 
 @router.patch(
@@ -301,7 +342,7 @@ def update_meal_plan(
         db.rollback()
         raise HTTPException(status_code=409, detail=error_detail(MEAL_SLOT_TAKEN))
     db.refresh(plan)
-    return plan
+    return _serialize(plan)
 
 
 @router.delete(
@@ -348,11 +389,10 @@ def add_ingredients_to_shopping(
     if shopping_list is None or shopping_list.family_id != plan.family_id:
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
 
-    meal_ingredients = plan.ingredients or []
-    by_name: dict[str, dict] = {}
-    for entry in meal_ingredients:
-        if isinstance(entry, dict) and isinstance(entry.get("name"), str):
-            by_name[entry["name"].strip().lower()] = entry
+    meal_ingredients = _normalize_stored_ingredients(plan.ingredients)
+    by_name: dict[str, dict] = {
+        entry["name"].strip().lower(): entry for entry in meal_ingredients
+    }
 
     if payload.ingredient_names is None:
         selected = list(by_name.values())
