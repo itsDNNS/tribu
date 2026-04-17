@@ -1,8 +1,11 @@
 """Integration tests for the meal planning module.
 
 Covers scope enforcement, child + adult access, CRUD flow, ingredient
-autocomplete, date-range validation, slot validation, and the
-"push ingredients onto a shopping list" integration.
+structure + sanitization, slot and range validation, the one-meal-per-
+slot-per-day invariant, ingredient autocomplete, and the
+push-ingredients-onto-a-shopping-list integration (including the
+subset-of-meal guard that stops the endpoint from being used as a
+backdoor shopping writer).
 """
 
 import hashlib
@@ -97,6 +100,15 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _ing(name: str, amount: float | None = None, unit: str | None = None) -> dict:
+    out: dict = {"name": name}
+    if amount is not None:
+        out["amount"] = amount
+    if unit is not None:
+        out["unit"] = unit
+    return out
+
+
 class TestMealPlanScopes:
     def test_list_requires_read_scope(self):
         token, family_id = _seed_member("meal_plans:write", "scope-a")
@@ -187,7 +199,12 @@ class TestMealPlanCrud:
                 "plan_date": "2026-04-13",
                 "slot": "evening",
                 "meal_name": "  Pizza  ",
-                "ingredients": ["Flour", "flour ", "", "  Tomatoes  ", "Cheese"],
+                "ingredients": [
+                    _ing("Mehl", 500, "g"),
+                    _ing("mehl ", 300, "g"),     # duplicate by name, case-insensitive
+                    _ing("  Tomaten  ", 4, "Stueck"),
+                    _ing("Kaese"),
+                ],
                 "notes": "Friday family dinner",
             },
             headers=_auth(token),
@@ -195,18 +212,23 @@ class TestMealPlanCrud:
         assert post.status_code == 200, post.json()
         created = post.json()
         assert created["meal_name"] == "Pizza"
-        # dedupe case-insensitively, keep first casing, drop empties
-        assert created["ingredients"] == ["Flour", "Tomatoes", "Cheese"]
+        ingredients = created["ingredients"]
+        assert [i["name"] for i in ingredients] == ["Mehl", "Tomaten", "Kaese"]
+        assert ingredients[0]["amount"] == 500
+        assert ingredients[0]["unit"] == "g"
+        assert ingredients[2]["amount"] is None
+        assert ingredients[2]["unit"] is None
+        # preserve first-seen casing + ignore the duplicate "mehl" trailing-space variant
+        assert ingredients[0]["name"] == "Mehl"
 
         plan_id = created["id"]
         patch = client.patch(
             f"/meal-plans/{plan_id}",
-            json={"ingredients": ["Basil", "Basil"], "notes": None},
+            json={"ingredients": [_ing("Basilikum"), _ing("Basilikum")]},
             headers=_auth(token),
         )
         assert patch.status_code == 200
-        assert patch.json()["ingredients"] == ["Basil"]
-        assert patch.json()["notes"] is None
+        assert [i["name"] for i in patch.json()["ingredients"]] == ["Basilikum"]
 
         delete = client.delete(f"/meal-plans/{plan_id}", headers=_auth(token))
         assert delete.status_code == 200
@@ -226,6 +248,87 @@ class TestMealPlanCrud:
         )
         assert resp.status_code == 400
         assert "INVALID_MEAL_SLOT" in str(resp.json())
+
+    def test_duplicate_slot_returns_409(self):
+        token, family_id = _seed_member("*", "crud-dup")
+        first = client.post(
+            "/meal-plans",
+            json={
+                "family_id": family_id,
+                "plan_date": "2026-04-13",
+                "slot": "noon",
+                "meal_name": "Pasta",
+            },
+            headers=_auth(token),
+        )
+        assert first.status_code == 200
+        second = client.post(
+            "/meal-plans",
+            json={
+                "family_id": family_id,
+                "plan_date": "2026-04-13",
+                "slot": "noon",
+                "meal_name": "Pizza",
+            },
+            headers=_auth(token),
+        )
+        assert second.status_code == 409
+        assert "MEAL_SLOT_TAKEN" in str(second.json())
+
+    def test_patch_onto_occupied_slot_returns_409(self):
+        token, family_id = _seed_member("*", "crud-patch-dup")
+        # occupy Monday noon
+        client.post(
+            "/meal-plans",
+            json={
+                "family_id": family_id,
+                "plan_date": "2026-04-13",
+                "slot": "noon",
+                "meal_name": "Pasta",
+            },
+            headers=_auth(token),
+        )
+        # create a second row elsewhere we'll try to move onto Monday noon
+        other = client.post(
+            "/meal-plans",
+            json={
+                "family_id": family_id,
+                "plan_date": "2026-04-13",
+                "slot": "evening",
+                "meal_name": "Pizza",
+            },
+            headers=_auth(token),
+        )
+        other_id = other.json()["id"]
+
+        collision = client.patch(
+            f"/meal-plans/{other_id}",
+            json={"slot": "noon"},
+            headers=_auth(token),
+        )
+        assert collision.status_code == 409
+        assert "MEAL_SLOT_TAKEN" in str(collision.json())
+
+    def test_patch_in_place_does_not_409(self):
+        """Updating the same row without moving its date/slot must not collide with itself."""
+        token, family_id = _seed_member("*", "crud-in-place")
+        created = client.post(
+            "/meal-plans",
+            json={
+                "family_id": family_id,
+                "plan_date": "2026-04-13",
+                "slot": "morning",
+                "meal_name": "Toast",
+            },
+            headers=_auth(token),
+        ).json()
+        patch = client.patch(
+            f"/meal-plans/{created['id']}",
+            json={"meal_name": "Porridge"},
+            headers=_auth(token),
+        )
+        assert patch.status_code == 200
+        assert patch.json()["meal_name"] == "Porridge"
 
 
 class TestMealPlanListRange:
@@ -253,9 +356,6 @@ class TestMealPlanListRange:
         )
         assert resp.status_code == 200
         names = [e["meal_name"] for e in resp.json()]
-        # morning/noon/evening — SQLite string-sorts these slots into evening, morning, noon
-        # which still preserves the date-first ordering we care about, just assert
-        # day-0 entries come before day-1 entries and the out-of-range entry is excluded.
         assert "D" not in names
         assert len(names) == 3
 
@@ -281,18 +381,19 @@ class TestMealPlanListRange:
 class TestMealPlanIngredients:
     def test_autocomplete_distinct_case_insensitive_sorted(self):
         token, family_id = _seed_member("*", "ing-a")
-        for ingredients in (
-            ["Flour", "Tomatoes", "Cheese"],
-            ["flour", "Basil", "  "],
-            ["Olive oil", "Tomatoes"],
-        ):
+        meals = [
+            ("morning", [_ing("Mehl", 500, "g"), _ing("Tomaten", 4, "Stueck"), _ing("Kaese")]),
+            ("noon", [_ing("mehl", 200, "g"), _ing("Basilikum", 1, "Bund")]),
+            ("evening", [_ing("Olivenoel", 2, "EL"), _ing("Tomaten", 200, "g")]),
+        ]
+        for slot, ingredients in meals:
             client.post(
                 "/meal-plans",
                 json={
                     "family_id": family_id,
                     "plan_date": "2026-04-13",
-                    "slot": "noon",
-                    "meal_name": "Meal",
+                    "slot": slot,
+                    "meal_name": slot.capitalize(),
                     "ingredients": ingredients,
                 },
                 headers=_auth(token),
@@ -303,12 +404,11 @@ class TestMealPlanIngredients:
         )
         assert resp.status_code == 200
         items = resp.json()["items"]
-        # sorted case-insensitively, deduped case-insensitively, keeps first-seen casing
-        assert items == ["Basil", "Cheese", "Flour", "Olive oil", "Tomatoes"]
+        assert items == ["Basilikum", "Kaese", "Mehl", "Olivenoel", "Tomaten"]
 
 
 class TestMealPlanShoppingIntegration:
-    def test_push_ingredients_to_shopping_list(self):
+    def test_push_all_ingredients_formats_spec(self):
         token, family_id = _seed_member("*", "shop-a")
         list_id = _seed_shopping_list(family_id)
 
@@ -319,7 +419,11 @@ class TestMealPlanShoppingIntegration:
                 "plan_date": "2026-04-13",
                 "slot": "noon",
                 "meal_name": "Spaghetti",
-                "ingredients": ["Spaghetti", "Tomatoes", "Basil"],
+                "ingredients": [
+                    _ing("Spaghetti", 500, "g"),
+                    _ing("Tomaten", 4, "Stueck"),
+                    _ing("Basilikum"),
+                ],
             },
             headers=_auth(token),
         )
@@ -333,13 +437,13 @@ class TestMealPlanShoppingIntegration:
         assert push.status_code == 200, push.json()
         assert push.json()["added_count"] == 3
 
-        # Verify via the shopping-list items endpoint — items really landed
-        items_resp = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token))
-        assert items_resp.status_code == 200
-        names = sorted(i["name"] for i in items_resp.json())
-        assert names == ["Basil", "Spaghetti", "Tomatoes"]
+        items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+        by_name = {i["name"]: i for i in items}
+        assert by_name["Spaghetti"]["spec"] == "500 g"
+        assert by_name["Tomaten"]["spec"] == "4 Stueck"
+        assert by_name["Basilikum"]["spec"] is None
 
-    def test_push_subset_of_ingredients(self):
+    def test_push_subset_by_name(self):
         token, family_id = _seed_member("*", "shop-b")
         list_id = _seed_shopping_list(family_id)
 
@@ -350,7 +454,12 @@ class TestMealPlanShoppingIntegration:
                 "plan_date": "2026-04-13",
                 "slot": "noon",
                 "meal_name": "Stew",
-                "ingredients": ["Beef", "Carrots", "Onions", "Potatoes"],
+                "ingredients": [
+                    _ing("Rind", 500, "g"),
+                    _ing("Karotten", 3, "Stueck"),
+                    _ing("Zwiebeln", 2, "Stueck"),
+                    _ing("Kartoffeln", 1, "kg"),
+                ],
             },
             headers=_auth(token),
         )
@@ -358,10 +467,46 @@ class TestMealPlanShoppingIntegration:
 
         push = client.post(
             f"/meal-plans/{plan_id}/add-to-shopping",
-            json={"shopping_list_id": list_id, "ingredients": ["Onions", "Potatoes"]},
+            json={
+                "shopping_list_id": list_id,
+                "ingredient_names": ["zwiebeln", "Kartoffeln"],  # case-insensitive match
+            },
             headers=_auth(token),
         )
+        assert push.status_code == 200
         assert push.json()["added_count"] == 2
+
+        items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+        assert sorted(i["name"] for i in items) == ["Kartoffeln", "Zwiebeln"]
+
+    def test_push_unknown_ingredient_returns_400(self):
+        """Reject names that aren't on the meal so this endpoint can't be a backdoor shopping writer."""
+        token, family_id = _seed_member("*", "shop-attack")
+        list_id = _seed_shopping_list(family_id)
+
+        post = client.post(
+            "/meal-plans",
+            json={
+                "family_id": family_id,
+                "plan_date": "2026-04-13",
+                "slot": "noon",
+                "meal_name": "Salad",
+                "ingredients": [_ing("Tomate")],
+            },
+            headers=_auth(token),
+        )
+        plan_id = post.json()["id"]
+
+        push = client.post(
+            f"/meal-plans/{plan_id}/add-to-shopping",
+            json={
+                "shopping_list_id": list_id,
+                "ingredient_names": ["Tomate", "arbitrary.text.payload"],
+            },
+            headers=_auth(token),
+        )
+        assert push.status_code == 400
+        assert "MEAL_INGREDIENT_NOT_IN_PLAN" in str(push.json())
 
     def test_push_to_shopping_list_from_other_family_returns_404(self):
         token, family_id = _seed_member("*", "shop-c-own")
@@ -372,7 +517,7 @@ class TestMealPlanShoppingIntegration:
                 "plan_date": "2026-04-13",
                 "slot": "noon",
                 "meal_name": "Soup",
-                "ingredients": ["Broth"],
+                "ingredients": [_ing("Broth")],
             },
             headers=_auth(token),
         )

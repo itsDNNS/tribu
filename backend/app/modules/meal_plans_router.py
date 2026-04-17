@@ -2,22 +2,26 @@
 
 Lets families capture what they plan to eat on each day across three
 fixed slots (morning, noon, evening). Available to all family members,
-including children. Ingredients are free text; a dedicated endpoint
-exposes the distinct previously-used ingredient names to drive frontend
-autocomplete. Ingredients can be pushed as items onto an existing
-shopping list without converting the meal entry itself.
+including children. Ingredients are structured (name plus optional
+amount and unit) and free text. A dedicated endpoint exposes the
+distinct previously-used ingredient names for frontend autocomplete.
+A push-to-shopping endpoint turns selected ingredients into shopping
+items, formatted as "{amount} {unit}" in the item's spec column.
 """
 from datetime import date
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership
 from app.core.errors import (
     INVALID_MEAL_RANGE,
     INVALID_MEAL_SLOT,
+    MEAL_INGREDIENT_NOT_IN_PLAN,
     MEAL_PLAN_NOT_FOUND,
+    MEAL_SLOT_TAKEN,
     SHOPPING_LIST_NOT_FOUND,
     error_detail,
 )
@@ -28,6 +32,7 @@ from app.models import MealPlan, Membership, ShoppingItem, ShoppingList, User
 from app.schemas import (
     AUTH_RESPONSES,
     MEAL_SLOTS,
+    IngredientItem,
     MealPlanAddToShoppingRequest,
     MealPlanAddToShoppingResponse,
     MealPlanCreate,
@@ -69,26 +74,73 @@ def _load_for_caller(db: Session, user: User, plan_id: int) -> MealPlan:
     return plan
 
 
-def _sanitize_ingredients(raw: Optional[list[str]]) -> list[str]:
-    """Strip whitespace, drop empties and duplicates (case-insensitive),
-    preserve first-seen order. Keeps user-entered casing on the winner.
+def _sanitize_ingredients(raw: Optional[list[Any]]) -> list[dict]:
+    """Normalize a list of ingredient items.
+
+    Strips whitespace on name and unit, drops empty names, and
+    deduplicates by name (case-insensitively). The first entry for a
+    given name wins; later entries with the same name are ignored even
+    if their amount/unit differ, because the meal list is a set of
+    ingredients not a quantity ledger.
     """
     if not raw:
         return []
     seen: set[str] = set()
-    cleaned: list[str] = []
+    cleaned: list[dict] = []
     for item in raw:
-        if not isinstance(item, str):
+        if isinstance(item, IngredientItem):
+            name = item.name
+            amount = item.amount
+            unit = item.unit
+        elif isinstance(item, dict):
+            name = item.get("name")
+            amount = item.get("amount")
+            unit = item.get("unit")
+        else:
             continue
-        stripped = item.strip()
-        if not stripped:
+        if not isinstance(name, str):
             continue
-        key = stripped.lower()
+        name = name.strip()
+        if not name:
+            continue
+        key = name.lower()
         if key in seen:
             continue
         seen.add(key)
-        cleaned.append(stripped)
+        unit_clean: Optional[str] = None
+        if isinstance(unit, str):
+            u = unit.strip()
+            unit_clean = u if u else None
+        cleaned.append({
+            "name": name,
+            "amount": amount,
+            "unit": unit_clean,
+        })
     return cleaned
+
+
+def _format_spec(amount: Optional[float], unit: Optional[str]) -> Optional[str]:
+    """Render an optional amount + unit into a shopping-item spec."""
+    parts: list[str] = []
+    if amount is not None:
+        if float(amount) == int(amount):
+            parts.append(str(int(amount)))
+        else:
+            parts.append(f"{amount:g}")
+    if unit:
+        parts.append(unit)
+    return " ".join(parts) if parts else None
+
+
+def _slot_taken(db: Session, family_id: int, plan_date: date, slot: str, exclude_id: Optional[int] = None) -> bool:
+    query = db.query(MealPlan.id).filter(
+        MealPlan.family_id == family_id,
+        MealPlan.plan_date == plan_date,
+        MealPlan.slot == slot,
+    )
+    if exclude_id is not None:
+        query = query.filter(MealPlan.id != exclude_id)
+    return db.query(query.exists()).scalar()
 
 
 @router.get(
@@ -148,10 +200,16 @@ def list_ingredients(
     for (ingredients,) in rows:
         if not ingredients:
             continue
-        for item in ingredients:
-            if not isinstance(item, str):
+        for entry in ingredients:
+            if isinstance(entry, dict):
+                name = entry.get("name")
+            elif isinstance(entry, str):  # defensive for any legacy rows
+                name = entry
+            else:
                 continue
-            stripped = item.strip()
+            if not isinstance(name, str):
+                continue
+            stripped = name.strip()
             if not stripped:
                 continue
             key = stripped.lower()
@@ -167,7 +225,11 @@ def list_ingredients(
     "",
     response_model=MealPlanResponse,
     summary="Create a meal plan entry",
-    description="Create an entry for one meal slot on one date. Scope: `meal_plans:write`.",
+    description=(
+        "Create an entry for one meal slot on one date. A family may only have "
+        "one meal per (date, slot) cell; conflicts return 409. "
+        "Scope: `meal_plans:write`."
+    ),
 )
 def create_meal_plan(
     payload: MealPlanCreate,
@@ -177,6 +239,8 @@ def create_meal_plan(
 ):
     ensure_family_membership(db, user.id, payload.family_id)
     _validate_slot(payload.slot)
+    if _slot_taken(db, payload.family_id, payload.plan_date, payload.slot):
+        raise HTTPException(status_code=409, detail=error_detail(MEAL_SLOT_TAKEN))
     plan = MealPlan(
         family_id=payload.family_id,
         plan_date=payload.plan_date,
@@ -187,7 +251,11 @@ def create_meal_plan(
         created_by_user_id=user.id,
     )
     db.add(plan)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=error_detail(MEAL_SLOT_TAKEN))
     db.refresh(plan)
     return plan
 
@@ -196,7 +264,10 @@ def create_meal_plan(
     "/{plan_id}",
     response_model=MealPlanResponse,
     summary="Update a meal plan entry",
-    description="Partially update a meal plan entry. Scope: `meal_plans:write`.",
+    description=(
+        "Partially update a meal plan entry. Moving the entry onto a slot "
+        "already taken by another row returns 409. Scope: `meal_plans:write`."
+    ),
     responses={**NOT_FOUND_RESPONSE},
 )
 def update_meal_plan(
@@ -214,9 +285,21 @@ def update_meal_plan(
         fields["meal_name"] = fields["meal_name"].strip()
     if "ingredients" in fields:
         fields["ingredients"] = _sanitize_ingredients(fields["ingredients"])
+
+    next_date = fields.get("plan_date", plan.plan_date)
+    next_slot = fields.get("slot", plan.slot)
+    if (next_date != plan.plan_date or next_slot != plan.slot) and _slot_taken(
+        db, plan.family_id, next_date, next_slot, exclude_id=plan.id
+    ):
+        raise HTTPException(status_code=409, detail=error_detail(MEAL_SLOT_TAKEN))
+
     for key, value in fields.items():
         setattr(plan, key, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=error_detail(MEAL_SLOT_TAKEN))
     db.refresh(plan)
     return plan
 
@@ -244,10 +327,12 @@ def delete_meal_plan(
     response_model=MealPlanAddToShoppingResponse,
     summary="Push meal ingredients onto a shopping list",
     description=(
-        "Append each ingredient of the meal as a new item on the given shopping "
-        "list. Ingredients the shopping list already has are still appended (the "
-        "shopping list itself has no uniqueness constraint). Scope: "
-        "`meal_plans:write`."
+        "Append the meal's ingredients onto the given shopping list. Each "
+        "ingredient's amount + unit become the shopping item's spec. Names "
+        "in ingredient_names must match existing ingredient names on the "
+        "meal (case-insensitive); unknown names are rejected with 400 to "
+        "prevent using this endpoint as a shortcut around the shopping:write "
+        "scope. Scope: `meal_plans:write`."
     ),
     responses={**NOT_FOUND_RESPONSE},
 )
@@ -263,13 +348,41 @@ def add_ingredients_to_shopping(
     if shopping_list is None or shopping_list.family_id != plan.family_id:
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
 
-    source = payload.ingredients if payload.ingredients is not None else (plan.ingredients or [])
-    cleaned = _sanitize_ingredients(source)
+    meal_ingredients = plan.ingredients or []
+    by_name: dict[str, dict] = {}
+    for entry in meal_ingredients:
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str):
+            by_name[entry["name"].strip().lower()] = entry
+
+    if payload.ingredient_names is None:
+        selected = list(by_name.values())
+    else:
+        selected = []
+        seen_keys: set[str] = set()
+        for name in payload.ingredient_names:
+            if not isinstance(name, str):
+                continue
+            key = name.strip().lower()
+            if not key or key in seen_keys:
+                continue
+            seen_keys.add(key)
+            match = by_name.get(key)
+            if match is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=error_detail(MEAL_INGREDIENT_NOT_IN_PLAN, name=name.strip()),
+                )
+            selected.append(match)
+
     created: list[ShoppingItem] = []
-    for name in cleaned:
+    for entry in selected:
+        name = entry.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
         item = ShoppingItem(
             list_id=shopping_list.id,
-            name=name,
+            name=name.strip(),
+            spec=_format_spec(entry.get("amount"), entry.get("unit")),
             added_by_user_id=user.id,
         )
         db.add(item)

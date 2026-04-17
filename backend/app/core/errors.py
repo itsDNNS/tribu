@@ -97,6 +97,8 @@ INVALID_GIFT_SORT = "INVALID_GIFT_SORT"
 MEAL_PLAN_NOT_FOUND = "MEAL_PLAN_NOT_FOUND"
 INVALID_MEAL_SLOT = "INVALID_MEAL_SLOT"
 INVALID_MEAL_RANGE = "INVALID_MEAL_RANGE"
+MEAL_SLOT_TAKEN = "MEAL_SLOT_TAKEN"
+MEAL_INGREDIENT_NOT_IN_PLAN = "MEAL_INGREDIENT_NOT_IN_PLAN"
 
 # ── Rewards ──────────────────────────────────────────────────
 REWARD_CURRENCY_NOT_FOUND = "REWARD_CURRENCY_NOT_FOUND"
@@ -183,6 +185,8 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     MEAL_PLAN_NOT_FOUND: "Meal plan entry not found",
     INVALID_MEAL_SLOT: "Invalid meal slot: {slot}",
     INVALID_MEAL_RANGE: "End date must be on or after start date",
+    MEAL_SLOT_TAKEN: "This family already has a meal planned for that date and slot",
+    MEAL_INGREDIENT_NOT_IN_PLAN: "Ingredient '{name}' is not part of this meal",
 }
 
 
