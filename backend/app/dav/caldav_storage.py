@@ -26,7 +26,7 @@ from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.vcard_utils import contact_to_vcard, contacts_to_vcards, vcard_to_contact_dict
 from app.database import SessionLocal
 from app.models import CalendarEvent, Contact, Family, Membership, User
-from .rights_plugin import current_user_id
+from .rights_plugin import current_user_id, current_user_login
 
 
 def _db():
@@ -386,7 +386,15 @@ class Storage(BaseStorage):
         sane = pathutils.strip_path(path)
         parts = sane.split("/") if sane else []
         if not parts:
-            # Root is virtual; Radicale consults rights separately.
+            # Surface a real DAV root so clients can ask ``/dav/`` for
+            # ``current-user-principal`` and bootstrap from a single base URL.
+            yield _RootCollection(self)
+            if depth == "1":
+                try:
+                    user_email = current_user_login()
+                except RuntimeError:
+                    return
+                yield _PrincipalCollection(self, user_email)
             return
         user_email = parts[0]
         user = _load_user(user_email)
@@ -730,6 +738,51 @@ class _PrincipalCollection(BaseCollection):
 
     def sync(self, old_token: str = ""):
         return "http://radicale.org/ns/sync/principal", []
+
+
+class _RootCollection(BaseCollection):
+    """Virtual DAV root at ``/`` for principal discovery."""
+
+    def __init__(self, storage: Storage):
+        self._storage = storage
+
+    @property
+    def path(self) -> str:
+        return ""
+
+    @property
+    def last_modified(self) -> str:
+        return _http_last_modified(None)
+
+    @property
+    def etag(self) -> str:
+        return '"tribu-root"'
+
+    def get_meta(self, key: Optional[str] = None):
+        meta = {"tag": ""}
+        return meta if key is None else meta.get(key)
+
+    def get_all(self) -> Iterable["radicale_item.Item"]:
+        return iter(())
+
+    def get_multi(self, hrefs):
+        for href in hrefs:
+            yield href, None
+
+    def serialize(self, vcf_to_ics: bool = False) -> str:
+        return ""
+
+    def set_meta(self, props):
+        return None
+
+    def upload(self, href, item):
+        raise PermissionError("DAV root is read-only")
+
+    def delete(self, href=None):
+        raise PermissionError("DAV root is read-only")
+
+    def sync(self, old_token: str = ""):
+        return "http://radicale.org/ns/sync/root", []
 
 
 def _load_user(email: str) -> Optional[User]:

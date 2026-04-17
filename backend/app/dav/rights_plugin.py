@@ -54,6 +54,14 @@ def current_user_id() -> int:
     return user_id
 
 
+def current_user_login() -> str:
+    """Return the authenticated principal email for the current thread."""
+    user = getattr(_context, "user", None)
+    if not user:
+        raise RuntimeError("DAV request has no authenticated user in context")
+    return str(user)
+
+
 def forget_scopes() -> None:
     for attr in ("user", "user_id", "scopes"):
         if hasattr(_context, attr):

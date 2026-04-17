@@ -104,6 +104,28 @@ class TestDavAuth:
         # Radicale returns 207 Multi-Status on a successful PROPFIND.
         assert resp.status_code == 207, resp.text
 
+    def test_root_discovery_returns_current_user_principal(self, app_under_test):
+        app, TestSession = app_under_test
+        token = _seed_pat(
+            TestSession,
+            email="dav-root@example.com",
+            scopes="calendar:read,contacts:read",
+            suffix="root",
+        )
+        client = TestClient(app)
+        headers = {"Authorization": _basic("dav-root@example.com", token)}
+        resp = _propfind(client, "/dav/", headers=headers)
+        assert resp.status_code == 207, resp.text
+        assert "/dav/dav-root%40example.com/" in resp.text
+
+    def test_well_known_endpoints_redirect_to_shared_dav_root(self, app_under_test):
+        app, _ = app_under_test
+        client = TestClient(app)
+        for path in ("/.well-known/caldav", "/.well-known/carddav"):
+            resp = client.request("PROPFIND", path, follow_redirects=False)
+            assert resp.status_code == 308, (path, resp.status_code, resp.text)
+            assert resp.headers["location"] == "/dav/"
+
     def test_valid_pat_without_dav_scope_is_rejected(self, app_under_test):
         """A PAT that only has shopping:read cannot unlock DAV."""
         app, TestSession = app_under_test

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from app.core.compat import patch_asyncio_iscoroutinefunction
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 patch_asyncio_iscoroutinefunction()
@@ -203,6 +203,16 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+
+@app.api_route("/.well-known/caldav", methods=["GET", "HEAD", "OPTIONS", "PROPFIND"])
+def well_known_caldav():
+    return RedirectResponse(url="/dav/", status_code=308)
+
+
+@app.api_route("/.well-known/carddav", methods=["GET", "HEAD", "OPTIONS", "PROPFIND"])
+def well_known_carddav():
+    return RedirectResponse(url="/dav/", status_code=308)
 
 
 # ---------------------------------------------------------------------------
