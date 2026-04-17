@@ -67,6 +67,16 @@ def upgrade() -> None:
             "personal_access_tokens",
             sa.Column("token_lookup", sa.String(64), nullable=True),
         )
+        # Legacy rows stored SHA-256(plain) in token_hash. That is
+        # exactly the value token_lookup is supposed to hold going
+        # forward, so copy it over for every existing row. The
+        # verification primitive per row stays SHA-256 until the first
+        # successful auth rewrites token_hash to bcrypt.
+        op.execute(
+            "UPDATE personal_access_tokens "
+            "SET token_lookup = token_hash "
+            "WHERE token_lookup IS NULL"
+        )
     if not _has_index("personal_access_tokens", "uq_personal_access_tokens_lookup"):
         op.create_index(
             "uq_personal_access_tokens_lookup",

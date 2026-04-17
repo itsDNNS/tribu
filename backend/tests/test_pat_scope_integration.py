@@ -72,6 +72,7 @@ def _seed_user_with_pat(scopes: str) -> str:
         user_id=user.id,
         name="test-pat",
         token_hash=token_hash,
+        token_lookup=token_hash,
         scopes=scopes,
     )
     db.add(pat)
@@ -110,6 +111,7 @@ def _seed_admin_with_pat(scopes: str) -> str:
         user_id=user.id,
         name="admin-pat",
         token_hash=token_hash,
+        token_lookup=token_hash,
         scopes=scopes,
     )
     db.add(pat)

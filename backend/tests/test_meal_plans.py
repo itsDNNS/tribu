@@ -76,6 +76,7 @@ def _seed_member(scopes: str, suffix: str, is_adult: bool = True, family_id: int
         user_id=user.id,
         name="meal-pat",
         token_hash=hashlib.sha256(plain.encode()).hexdigest(),
+        token_lookup=hashlib.sha256(plain.encode()).hexdigest(),
         scopes=scopes,
     ))
     db.commit()

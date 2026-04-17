@@ -51,6 +51,7 @@ def _seed_pat(TestSession, *, email: str, scopes: str, suffix: str) -> str:
         user_id=user.id,
         name="dav-pat",
         token_hash=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
+        token_lookup=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
         scopes=scopes,
     ))
     db.commit()

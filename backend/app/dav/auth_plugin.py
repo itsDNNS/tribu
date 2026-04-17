@@ -22,7 +22,7 @@ from app.core.scopes import has_scope, parse_scopes
 from app.database import SessionLocal
 from app.dav import rights_plugin
 from app.models import PersonalAccessToken, User
-from app.security import PAT_PREFIX, hash_pat, legacy_pat_fingerprint, pat_lookup_key, verify_pat
+from app.security import PAT_PREFIX, hash_pat, pat_lookup_key, verify_pat
 
 
 DAV_SCOPES = ("calendar:read", "calendar:write", "contacts:read", "contacts:write")
@@ -59,12 +59,6 @@ class Auth(BaseAuth):
                 .first()
             )
             if pat is None:
-                pat = (
-                    db.query(PersonalAccessToken)
-                    .filter(PersonalAccessToken.token_hash == legacy_pat_fingerprint(token))
-                    .first()
-                )
-            if pat is None:
                 return ""
             if pat.expires_at is not None and pat.expires_at < utcnow():
                 return ""
@@ -79,10 +73,11 @@ class Auth(BaseAuth):
             if not any(has_scope(granted, s) for s in DAV_SCOPES):
                 logger.info("DAV PAT for %r lacks any DAV scope", user.email)
                 return ""
-            # Lazy-migrate legacy SHA-256 rows to bcrypt + lookup.
+            # Lazy-migrate legacy SHA-256 rows to bcrypt. token_lookup
+            # already matches (migration 0027 backfilled it from
+            # token_hash), so nothing more to write on the index side.
             if not pat.token_hash.startswith("$2"):
                 pat.token_hash = hash_pat(token)
-                pat.token_lookup = pat_lookup_key(token)
             pat.last_used_at = utcnow()
             db.commit()
             # Hand the scope set to the rights plugin. The two plugins

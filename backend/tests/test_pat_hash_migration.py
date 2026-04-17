@@ -45,7 +45,7 @@ def _basic(login: str, token: str) -> str:
 
 
 def test_legacy_pat_lazy_migrates_on_first_auth(app_under_test):
-    from app.security import legacy_pat_fingerprint
+    from app.security import pat_lookup_key
 
     app = app_under_test
     db = SessionLocal()
@@ -58,14 +58,16 @@ def test_legacy_pat_lazy_migrates_on_first_auth(app_under_test):
         db.flush()
         db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
         plain = f"{PAT_PREFIX}legacy-pat-migrate"
-        # Seed the row with the pre-migration SHA-256 format, no
-        # token_lookup. This is exactly how tokens persisted from an
-        # older Tribu deployment look.
+        # Seed the row in the pre-migration layout that the Alembic
+        # upgrade would produce: token_hash = SHA-256(plain),
+        # token_lookup = same value (Alembic 0027 backfills it from
+        # token_hash).
+        legacy = pat_lookup_key(plain)
         db.add(PersonalAccessToken(
             user_id=user.id,
             name="legacy-pat",
-            token_hash=legacy_pat_fingerprint(plain),
-            token_lookup=None,
+            token_hash=legacy,
+            token_lookup=legacy,
             scopes="calendar:read,calendar:write,contacts:read",
         ))
         db.commit()
@@ -83,12 +85,14 @@ def test_legacy_pat_lazy_migrates_on_first_auth(app_under_test):
     resp1 = client.request("PROPFIND", f"/dav/{EMAIL}/", headers={**headers, "Depth": "0", "Content-Type": "application/xml"}, content=body)
     assert resp1.status_code == 207, resp1.text
 
-    # Row should now be bcrypt-format with a populated lookup.
+    # Row should now be bcrypt-format, and token_lookup still holds
+    # the SHA-256 fingerprint so the second PROPFIND hits the same
+    # index row.
     db = SessionLocal()
     try:
         row = db.query(PersonalAccessToken).filter(PersonalAccessToken.id == pat_id).one()
         assert row.token_hash.startswith("$2"), row.token_hash
-        assert row.token_lookup is not None and len(row.token_lookup) == 32
+        assert row.token_lookup == pat_lookup_key(plain)
     finally:
         db.close()
 

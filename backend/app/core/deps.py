@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import COOKIE_NAME
 from app.database import get_db
 from app.models import Membership, PersonalAccessToken, User
-from app.security import decode_token, hash_pat, is_pat, legacy_pat_fingerprint, pat_lookup_key, verify_pat
+from app.security import decode_token, hash_pat, is_pat, pat_lookup_key, verify_pat
 from app.core.scopes import parse_scopes
 from app.core.errors import error_detail, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED, USER_NOT_FOUND, NO_FAMILY_ACCESS, ADULT_REQUIRED, ADMIN_REQUIRED
 
@@ -29,40 +29,32 @@ security = HTTPBearer(
 
 
 def _find_pat(db: Session, token_str: str) -> Optional[PersonalAccessToken]:
-    """Resolve a PAT row from its plain text, preferring the bcrypt path.
+    """Resolve a PAT row via the unified ``token_lookup`` index.
 
-    New PATs are indexed by an HMAC-keyed ``token_lookup`` column.
-    Legacy rows predating the bcrypt migration still live under the
-    raw SHA-256 hex in ``token_hash``; we fall back to that lookup
-    so those rows authenticate and then get rewritten on success.
+    Migration 0027 backfilled ``token_lookup`` from the legacy
+    ``token_hash`` (both are SHA-256 of the plain) so a single
+    equality query finds the row regardless of whether the row's
+    ``token_hash`` is still legacy SHA-256 or the new bcrypt envelope.
     """
-    lookup = pat_lookup_key(token_str)
-    pat = (
-        db.query(PersonalAccessToken)
-        .filter(PersonalAccessToken.token_lookup == lookup)
-        .first()
-    )
-    if pat is not None:
-        return pat
-    legacy = legacy_pat_fingerprint(token_str)
     return (
         db.query(PersonalAccessToken)
-        .filter(PersonalAccessToken.token_hash == legacy)
+        .filter(PersonalAccessToken.token_lookup == pat_lookup_key(token_str))
         .first()
     )
 
 
 def _migrate_pat_if_legacy(pat: PersonalAccessToken, token_str: str) -> None:
-    """Rewrite a legacy SHA-256 PAT row to the bcrypt + lookup layout.
+    """Rewrite a legacy SHA-256 PAT row to a bcrypt envelope.
 
-    No-op for rows that are already bcrypt. The SQL UPDATE is part of
+    No-op for rows already in bcrypt form. The UPDATE piggybacks on
     the same ``db.commit()`` that stamps ``last_used_at`` in the
-    caller, so this never adds a second roundtrip.
+    caller, so this never adds a second roundtrip. ``token_lookup``
+    stays unchanged — it already holds the SHA-256 fingerprint
+    populated by the migration.
     """
     if pat.token_hash.startswith("$2"):
         return
     pat.token_hash = hash_pat(token_str)
-    pat.token_lookup = pat_lookup_key(token_str)
 
 
 def _resolve_user(request: Request, token_str: str, db: Session) -> User:

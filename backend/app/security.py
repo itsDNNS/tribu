@@ -90,32 +90,25 @@ def verify_pat(plain: str, stored_hash: str) -> bool:
             return bcrypt.checkpw(plain.encode(), stored_hash.encode())
         except ValueError:
             return False
-    return hmac.compare_digest(legacy_pat_fingerprint(plain), stored_hash)
-
-
-def legacy_pat_fingerprint(plain: str) -> str:
-    """Legacy SHA-256 hex of a PAT, used only to resolve rows that
-    pre-date the bcrypt migration.
-
-    This is a lookup fingerprint, not a password hash. Once the row
-    is touched by a successful auth, the caller rewrites
-    ``token_hash`` to bcrypt and sets ``token_lookup`` so future
-    requests skip this path.
-    """
-    return hashlib.sha256(plain.encode()).hexdigest()
+    return hmac.compare_digest(pat_lookup_key(plain), stored_hash)
 
 
 def pat_lookup_key(plain: str) -> str:
-    """Keyed HMAC fingerprint used as the DB lookup column.
+    """Deterministic SHA-256 fingerprint used for indexed PAT lookup.
 
-    Deterministic (same input + same JWT_SECRET -> same output) so
-    it can be indexed and queried for equality, but keyed so an
-    attacker who dumps the DB cannot build a rainbow table for the
-    token space without first recovering the JWT secret.
+    The token itself is 256 bits of entropy (``secrets.token_urlsafe(32)``),
+    so an attacker who dumps the DB cannot brute-force the preimage
+    even without a keyed construction. Using plain SHA-256 instead of
+    ``hmac(JWT_SECRET, plain)`` means that rotating ``JWT_SECRET``
+    (for example after a suspected leak of JWTs) does not invalidate
+    PATs. Legacy rows persisted the same value in ``token_hash``, so
+    the migration backfills ``token_lookup = token_hash`` and every
+    row converges on the same column for equality lookup going
+    forward. The verification primitive stays per-row: bcrypt for
+    rows stamped after the migration, SHA-256-via-hmac.compare_digest
+    for legacy rows awaiting lazy migration.
     """
-    import hmac
-    secret = os.environ.get("JWT_SECRET", "")
-    return hmac.new(secret.encode(), plain.encode(), hashlib.sha256).hexdigest()[:32]
+    return hashlib.sha256(plain.encode()).hexdigest()
 
 
 def is_pat(token: str) -> bool:

@@ -58,6 +58,7 @@ def seeded(app_under_test):
             user_id=user.id,
             name="caldav-pat",
             token_hash=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
+            token_lookup=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
             scopes="calendar:read,calendar:write",
         ))
         # Two events
