@@ -314,6 +314,45 @@ class TestCalDAVRead:
         )
         assert get_after.status_code == 404
 
+    def test_concurrent_put_same_href_does_not_500(self, app_under_test, seeded):
+        """Two threads racing on the same href must not both commit and
+        must not surface a 500. The write lock serializes them; either
+        both succeed (with one overwriting the other) or the second
+        surfaces as a deterministic 4xx from the unique-constraint
+        fallback path."""
+        import concurrent.futures
+        import itertools
+
+        token, family_id = seeded
+        base_client = TestClient(app_under_test)
+        headers = {
+            "Authorization": _basic(EMAIL, token),
+            "Content-Type": "text/calendar",
+        }
+
+        def make_ics(suffix: str) -> str:
+            return (
+                "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
+                f"BEGIN:VEVENT\r\nUID:race-{suffix}@example.com\r\n"
+                "DTSTAMP:20260101T000000Z\r\n"
+                "DTSTART:20260801T100000Z\r\nDTEND:20260801T110000Z\r\n"
+                f"SUMMARY:Race variant {suffix}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+            )
+
+        def put(suffix: str):
+            client = TestClient(app_under_test)
+            return client.put(
+                f"/dav/{EMAIL}/family-{family_id}/race.ics",
+                headers=headers,
+                content=make_ics(suffix),
+            ).status_code
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+            statuses = list(ex.map(put, ["a", "b", "c", "d"]))
+
+        for s in statuses:
+            assert s < 500, statuses
+
     def test_put_rejects_invalid_ics(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)

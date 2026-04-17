@@ -12,6 +12,7 @@ back into ``CalendarEvent`` rows and handling DELETE.
 from __future__ import annotations
 
 import hashlib
+import threading
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Iterable, Iterator, Mapping, Optional, Tuple
@@ -19,6 +20,7 @@ from typing import Iterable, Iterator, Mapping, Optional, Tuple
 from radicale import item as radicale_item
 from radicale import pathutils, types
 from radicale.storage import BaseStorage, BaseCollection
+from sqlalchemy.exc import IntegrityError
 
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.database import SessionLocal
@@ -233,7 +235,14 @@ class CalendarCollection(BaseCollection):
                 )
                 _apply_event_fields(row, fields)
                 db.add(row)
-            db.commit()
+            try:
+                db.commit()
+            except IntegrityError as exc:
+                db.rollback()
+                # Unique (family_id, ical_uid) / (family_id, dav_href)
+                # violation: a concurrent writer won. Surface it as a
+                # deterministic 4xx instead of letting the 500 leak.
+                raise ValueError(f"concurrent write conflict: {exc.orig}") from exc
             db.refresh(row)
             stored_item = self._event_to_item(row)
         return stored_item, replaced_item
@@ -333,6 +342,8 @@ class CalendarCollection(BaseCollection):
 class Storage(BaseStorage):
     """DB-backed Radicale storage that surfaces one calendar per family."""
 
+    _write_lock = threading.RLock()
+
     def discover(
         self,
         path: str,
@@ -384,9 +395,20 @@ class Storage(BaseStorage):
 
     @contextmanager
     def acquire_lock(self, mode: str, user: str = "", *args, **kwargs) -> Iterator[None]:
-        # Row-level locking lives in the ORM; Radicale's cross-request
-        # lock is a no-op here.
-        yield
+        """Serialize writes across the whole storage.
+
+        Radicale validates ``If-Match`` preconditions inside this lock
+        before calling ``upload``/``delete``. If the lock is a no-op,
+        two concurrent PUTs can both pass the check with the same old
+        ETag and both commit. A process-wide ``RLock`` held for the
+        duration of any ``w`` request serializes writes; reads still
+        run concurrently.
+        """
+        if mode == "w":
+            with self._write_lock:
+                yield
+        else:
+            yield
 
     def create_collection(self, href, items=None, props=None):
         raise PermissionError(
