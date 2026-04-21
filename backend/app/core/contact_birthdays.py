@@ -48,6 +48,7 @@ def sync_contact_birthday(
     month: int | None,
     day: int | None,
 ) -> None:
+    existing = None
     if old_name and old_name != new_name:
         existing = (
             db.query(FamilyBirthday)
@@ -59,6 +60,14 @@ def sync_contact_birthday(
         )
         if existing:
             existing.person_name = new_name
+
+    if existing:
+        if month and day:
+            existing.month = month
+            existing.day = day
+            return
+        db.delete(existing)
+        return
 
     if month and day:
         upsert_family_birthday(db, family_id, new_name, month, day)
