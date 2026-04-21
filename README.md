@@ -250,7 +250,13 @@ If Tribu helps your family stay organized, consider supporting development:
 
 ## License
 
-Private project. All rights reserved.
+Tribu is **source-available**, but it is **not open source** at this time.
+
+**All rights reserved.**
+
+The repository is public for transparency, feedback, and collaboration, but no open-source license is granted by default.
+
+If you need clarification about usage, redistribution, commercial use, or partnership/licensing options, please contact the maintainer first.
 
 ---
 
