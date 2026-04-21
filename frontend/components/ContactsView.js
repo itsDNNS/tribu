@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Plus, UserPlus, X, Trash2, Cake } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useContacts } from '../hooks/useContacts';
-import { useBirthdays } from '../hooks/useBirthdays';
+import { useBirthdays, birthdayAge } from '../hooks/useBirthdays';
 import { t } from '../lib/i18n';
 
 const AVATAR_COLORS = [
@@ -236,6 +236,7 @@ export default function ContactsView() {
                   const days = daysUntilBirthday(b.month, b.day);
                   const initials = (b.person_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
                   const dateStr = `${String(b.day).padStart(2, '0')}.${String(b.month).padStart(2, '0')}.`;
+                  const age = birthdayAge(b);
                   return (
                     <div
                       key={b.id}
@@ -249,7 +250,10 @@ export default function ContactsView() {
                         {initials}
                       </div>
                       <div className="birthday-info">
-                        <div className="birthday-name">{b.person_name}</div>
+                        <div className="birthday-name">
+                          {b.person_name}
+                          {age !== null && <span className="birthday-age"> · {t(messages, 'module.birthdays.age_years').replace('{age}', age)}</span>}
+                        </div>
                         <div className="birthday-date"><Cake size={12} aria-hidden="true" /> {dateStr}</div>
                       </div>
                       <div className={`birthday-countdown${days === 0 ? ' birthday-today' : ''}`}>
@@ -355,6 +359,21 @@ export default function ContactsView() {
                       {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="birthday-year">{t(messages, 'module.birthdays.form.year')}</label>
+                  <input
+                    id="birthday-year"
+                    className="form-input"
+                    type="number"
+                    inputMode="numeric"
+                    min={1900}
+                    step={1}
+                    placeholder="1985"
+                    value={birthdaysHook.birthdayYear}
+                    onChange={(e) => birthdaysHook.setBirthdayYear(e.target.value)}
+                  />
+                  <span className="set-field-hint">{t(messages, 'module.birthdays.form.year_hint')}</span>
                 </div>
               </>
             );

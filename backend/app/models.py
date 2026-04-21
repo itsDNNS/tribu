@@ -102,6 +102,7 @@ class FamilyBirthday(Base):
     person_name = Column(String, nullable=False)
     month = Column(Integer, nullable=False)
     day = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     family = relationship("Family", back_populates="birthdays")

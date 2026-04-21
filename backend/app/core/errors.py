@@ -58,6 +58,7 @@ END_BEFORE_START = "END_BEFORE_START"
 BIRTHDAY_NOT_FOUND = "BIRTHDAY_NOT_FOUND"
 INVALID_MONTH = "INVALID_MONTH"
 INVALID_DAY = "INVALID_DAY"
+INVALID_YEAR = "INVALID_YEAR"
 
 # ── API Tokens ────────────────────────────────────────────────
 API_TOKEN_NOT_FOUND = "API_TOKEN_NOT_FOUND"
@@ -153,6 +154,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     BIRTHDAY_NOT_FOUND: "Birthday not found",
     INVALID_MONTH: "Month must be between 1 and 12",
     INVALID_DAY: "Day must be between 1 and 31",
+    INVALID_YEAR: "Year must be between 1900 and next year",
     API_TOKEN_NOT_FOUND: "Token not found",
     API_TOKEN_NO_ACCESS: "No access to this token",
     INVALID_SCOPES: "Invalid scopes: {scopes}",
