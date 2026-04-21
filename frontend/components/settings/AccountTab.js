@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { User, Palette, Globe, Check, AlertTriangle, LogOut, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
+import { errorText } from '../../lib/helpers';
 import { t, languageCompleteness } from '../../lib/i18n';
 import { COLOR_PALETTE } from '../../lib/member-colors';
 import * as api from '../../lib/api';
+import SecuritySection from './SecuritySection';
 
 const THEME_DESCS = {
   en: { light: 'Warm and inviting', dark: 'Subtle and dark', 'midnight-glass': 'Glassmorphism, deep violet' },
@@ -213,6 +215,9 @@ export default function AccountTab() {
           </div>
         </div>
       </div>
+      {/* Security */}
+      <SecuritySection />
+
       {/* Danger Zone */}
       <div className="settings-section set-danger-section">
         <div className="settings-section-title set-danger-title">

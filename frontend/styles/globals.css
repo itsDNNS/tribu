@@ -1189,6 +1189,11 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .set-color-swatch { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; position: relative; }
 .set-color-taken-label { font-size: 0.65rem; font-weight: 700; color: #fff; }
 .set-subheading { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-sm); }
+.set-section-desc { font-size: 0.82rem; color: var(--text-secondary); margin: var(--space-sm) 0 var(--space-md); line-height: 1.5; }
+.set-field-hint { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--text-muted); }
+.set-password-form { display: grid; gap: var(--space-md); max-width: 420px; }
+.set-password-form .btn-primary { justify-self: start; }
+.set-password-error { font-size: 0.82rem; color: var(--danger); padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); }
 .set-danger-section { border-color: var(--error, #ef4444); }
 .set-danger-title { color: var(--error, #ef4444); }
 .set-danger-block { margin-bottom: var(--space-lg); }
