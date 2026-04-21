@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Plus, Clock, Check, X, ChevronDown } from 'lucide-react';
+import { Plus, Clock, Check, X, ChevronDown, Pencil } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import MemberAvatar from './MemberAvatar';
 import ConfirmDialog from './ConfirmDialog';
+import TaskEditDialog from './TaskEditDialog';
 
 export default function TasksView() {
   const { familyId, families, members, messages, lang, isChild, timeFormat, tasks } = useApp();
@@ -25,6 +26,16 @@ export default function TasksView() {
           messages={messages}
         />
       )}
+
+      <TaskEditDialog
+        open={!!tk.editingTask}
+        onClose={tk.closeEdit}
+        messages={messages}
+        members={members}
+        form={tk.editForm}
+        setForm={tk.setEditForm}
+        onSubmit={tk.updateTask}
+      />
 
       <div className="view-header">
         <div>
@@ -156,18 +167,27 @@ export default function TasksView() {
                   {assignee && <MemberAvatar member={assignee} index={assigneeIndex} size={24} />}
 
                   {!isChild && (
-                    <button
-                      className="task-delete-btn"
-                      onClick={() => setConfirmAction({
-                        title: t(messages, 'module.tasks.delete_task'),
-                        message: t(messages, 'module.tasks.delete_confirm').replace('{title}', task.title),
-                        danger: true,
-                        action: () => { tk.deleteTask(task.id); setConfirmAction(null); },
-                      })}
-                      aria-label={t(messages, 'aria.delete_task').replace('{title}', task.title)}
-                    >
-                      <X size={16} />
-                    </button>
+                    <>
+                      <button
+                        className="task-edit-btn"
+                        onClick={() => tk.openEdit(task)}
+                        aria-label={t(messages, 'aria.edit_task').replace('{title}', task.title)}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        className="task-delete-btn"
+                        onClick={() => setConfirmAction({
+                          title: t(messages, 'module.tasks.delete_task'),
+                          message: t(messages, 'module.tasks.delete_confirm').replace('{title}', task.title),
+                          danger: true,
+                          action: () => { tk.deleteTask(task.id); setConfirmAction(null); },
+                        })}
+                        aria-label={t(messages, 'aria.delete_task').replace('{title}', task.title)}
+                      >
+                        <X size={16} />
+                      </button>
+                    </>
                   )}
                 </div>
               );

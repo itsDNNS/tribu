@@ -6,6 +6,29 @@ import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
+const EMPTY_EDIT_FORM = {
+  title: '',
+  description: '',
+  due_date: '',
+  priority: 'normal',
+  recurrence: '',
+  assigned_to_user_id: '',
+};
+
+function toDateTimeLocal(iso) {
+  if (!iso) return '';
+  // Slice to "YYYY-MM-DDTHH:mm" for <input type="datetime-local">. The API
+  // returns naive local wall-clock (no trailing Z), which Date parses as
+  // local, so getFullYear/getMonth/etc. reproduce the stored values.
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  );
+}
+
 export function useTasks() {
   const { tasks, setTasks, familyId, messages, loadTasks, demoMode } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -17,6 +40,9 @@ export function useTasks() {
   const [taskPriority, setTaskPriority] = useState('normal');
   const [taskRecurrence, setTaskRecurrence] = useState('');
   const [taskAssignee, setTaskAssignee] = useState('');
+
+  const [editingTask, setEditingTask] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
 
   const filteredTasks = useMemo(
     () => tasks.filter((tk) => taskFilter === 'all' || tk.status === taskFilter),
@@ -69,6 +95,60 @@ export function useTasks() {
     }
   }
 
+  function openEdit(task) {
+    setEditingTask(task);
+    setEditForm({
+      title: task.title || '',
+      description: task.description || '',
+      due_date: toDateTimeLocal(task.due_date),
+      priority: task.priority || 'normal',
+      recurrence: task.recurrence || '',
+      assigned_to_user_id: task.assigned_to_user_id ? String(task.assigned_to_user_id) : '',
+    });
+  }
+
+  function closeEdit() {
+    setEditingTask(null);
+    setEditForm(EMPTY_EDIT_FORM);
+  }
+
+  async function updateTask(e) {
+    e.preventDefault();
+    if (!editingTask) return;
+    const taskId = editingTask.id;
+    const payload = {
+      title: editForm.title,
+      description: editForm.description || null,
+      due_date: toIsoOrNull(editForm.due_date),
+      priority: editForm.priority,
+      recurrence: editForm.recurrence || null,
+      assigned_to_user_id: editForm.assigned_to_user_id ? Number(editForm.assigned_to_user_id) : null,
+    };
+    if (demoMode) {
+      setTasks((prev) => prev.map((t) => t.id === taskId
+        ? { ...t, ...payload, updated_at: new Date().toISOString() }
+        : t));
+    } else {
+      const { ok, data } = await api.apiUpdateTask(taskId, payload);
+      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      await loadTasks();
+    }
+    // Only close the dialog if the user has not already opened a different
+    // task while the save was in flight.
+    let stillSameTask = false;
+    setEditingTask((current) => {
+      if (current && current.id === taskId) {
+        stillSameTask = true;
+        return null;
+      }
+      return current;
+    });
+    if (stillSameTask) setEditForm(EMPTY_EDIT_FORM);
+    const msg = t(messages, 'module.tasks.updated');
+    toastSuccess(msg);
+    announce(msg);
+  }
+
   return {
     taskFilter, setTaskFilter,
     taskTitle, setTaskTitle,
@@ -79,5 +159,7 @@ export function useTasks() {
     taskAssignee, setTaskAssignee,
     filteredTasks,
     createTask, toggleTask, deleteTask,
+    editingTask, editForm, setEditForm,
+    openEdit, closeEdit, updateTask,
   };
 }

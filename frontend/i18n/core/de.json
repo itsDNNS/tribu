@@ -147,6 +147,7 @@
   "aria.events": "{count} Termine",
   "aria.mark_task": "Aufgabe erledigen: {title}",
   "aria.delete_task": "Aufgabe löschen: {title}",
+  "aria.edit_task": "Aufgabe bearbeiten: {title}",
   "aria.add_task": "Aufgabe hinzufügen",
   "aria.add_item": "Artikel hinzufügen",
   "aria.delete_item": "Artikel löschen: {name}",

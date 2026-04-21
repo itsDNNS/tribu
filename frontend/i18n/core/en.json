@@ -147,6 +147,7 @@
   "aria.events": "{count} events",
   "aria.mark_task": "Mark task: {title}",
   "aria.delete_task": "Delete task: {title}",
+  "aria.edit_task": "Edit task: {title}",
   "aria.add_task": "Add task",
   "aria.add_item": "Add item",
   "aria.delete_item": "Delete item: {name}",

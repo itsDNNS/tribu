@@ -27,5 +27,9 @@
   "module.tasks.less_options": "Less options",
   "module.tasks.delete_task": "Delete task",
   "module.tasks.delete_confirm": "Delete task \"{title}\"?",
-  "module.tasks.add_first": "Create first task"
+  "module.tasks.add_first": "Create first task",
+  "module.tasks.edit_title": "Edit task",
+  "module.tasks.save": "Save",
+  "module.tasks.cancel": "Cancel",
+  "module.tasks.updated": "Task updated"
 }

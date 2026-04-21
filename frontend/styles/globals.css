@@ -987,7 +987,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .task-title-row { display: flex; align-items: center; gap: 8px; }
 .task-title { font-size: 0.95rem; font-weight: 500; }
 .task-title.done { text-decoration: line-through; color: var(--text-muted); }
-.task-description { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.task-description { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
 .task-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .task-badge { font-size: 0.72rem; font-weight: 500; padding: 3px 10px; border-radius: var(--radius-pill); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
 .badge-high { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
@@ -1005,6 +1005,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .task-form-input { font-size: 0.82rem; padding: 10px 12px; }
 .task-delete-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; flex-shrink: 0; }
 .task-delete-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+.task-edit-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; flex-shrink: 0; }
+.task-edit-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.06); }
 .tasks-empty { color: var(--text-muted); font-size: 0.88rem; padding: 0 var(--space-md); display: flex; align-items: center; gap: var(--space-sm); }
 .task-form-toggle { display: flex; align-items: center; gap: var(--space-xs); background: none; border: none; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 0.78rem; padding: 4px var(--space-md) var(--space-sm); transition: color 0.2s; }
 .task-form-toggle:hover { color: var(--text-primary); }
@@ -1326,6 +1328,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-more:focus-visible,
 .task-checkbox:focus-visible,
 .task-delete-btn:focus-visible,
+.task-edit-btn:focus-visible,
 .task-form-toggle:focus-visible,
 .shopping-check:focus-visible,
 .mobile-hamburger:focus-visible,
