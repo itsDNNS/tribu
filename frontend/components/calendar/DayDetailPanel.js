@@ -46,10 +46,43 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
       {cal.editingEvent && (
         <form onSubmit={cal.saveEdit} className="cal-edit-form">
           <div className="cal-form-section-title">{t(messages, 'module.calendar.edit_event')}</div>
+          {cal.editingEvent.is_recurring && (
+            <div className="cal-edit-recurring-hint">
+              {t(messages, 'module.calendar.edit_recurring_warning')}
+            </div>
+          )}
           <input className="form-input" value={cal.editTitle} onChange={e => cal.setEditTitle(e.target.value)} required />
           <div className="cal-form-row">
             <input className="form-input cal-form-datetime" type="datetime-local" value={cal.editStartsAt} onChange={e => cal.setEditStartsAt(e.target.value)} required />
             <input className="form-input cal-form-datetime" type="datetime-local" value={cal.editEndsAt} onChange={e => cal.setEditEndsAt(e.target.value)} />
+          </div>
+          <select className="form-input cal-form-datetime" value={cal.editRecurrence} onChange={e => cal.setEditRecurrence(e.target.value)}>
+            {RECURRENCE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
+            ))}
+          </select>
+          {cal.editRecurrence && (
+            <input className="form-input cal-form-datetime" type="date" value={cal.editRecurrenceEnd} onChange={e => cal.setEditRecurrenceEnd(e.target.value)} placeholder={t(messages, 'module.calendar.repeat_until')} />
+          )}
+          {members.length > 0 && (
+            <div>
+              <div className="cal-form-label">{t(messages, 'module.calendar.assign_to')}</div>
+              <AssignChips members={members} assignedTo={cal.editAssignedTo} setAssignedTo={cal.setEditAssignedTo} messages={messages} />
+            </div>
+          )}
+          <div>
+            <div className="cal-form-label">{t(messages, 'module.calendar.color')}</div>
+            <div className="color-picker">
+              <button type="button" onClick={() => cal.setEditColor('')}
+                className={`color-swatch color-swatch-none${!cal.editColor ? ' color-swatch-active' : ''}`}
+                aria-label={t(messages, 'module.calendar.color_none')} />
+              {COLOR_PALETTE.slice(0, 8).map(c => (
+                <button type="button" key={c} onClick={() => cal.setEditColor(c)}
+                  className={`color-swatch${cal.editColor === c ? ' color-swatch-active' : ''}`}
+                  style={{ background: c }}
+                  aria-label={c} />
+              ))}
+            </div>
           </div>
           <input className="form-input" value={cal.editDescription} onChange={e => cal.setEditDescription(e.target.value)} placeholder={t(messages, 'module.calendar.description')} />
           <div className="cal-form-actions">

@@ -925,6 +925,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .cal-onboard { margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.06); border: 1px solid rgba(124, 58, 237, 0.12); }
 .cal-onboard-text { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: var(--space-sm); }
 .cal-edit-form { padding: 12px; margin-bottom: 12px; border-radius: var(--radius-sm); display: grid; gap: var(--space-sm); background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); }
+.cal-edit-recurring-hint { font-size: 0.78rem; color: var(--text-secondary); padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.08); border: 1px solid rgba(124, 58, 237, 0.2); }
 .cal-form-datetime { font-size: 0.82rem; }
 .cal-form-input-lg { font-size: 0.88rem; padding: 12px 14px; }
 
