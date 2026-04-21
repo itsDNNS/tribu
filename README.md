@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+  <a href="#phone-sync">Phone Sync</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki">Wiki</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki/Contributing">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki/Roadmap">Roadmap</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
@@ -96,6 +97,17 @@ Most family organizer apps lock your data in their cloud, split everyday plannin
 ## Phone Sync
 
 Tribu supports **CalDAV and CardDAV** for bidirectional phone sync, so calendars and contacts can integrate with mobile devices and DAV-compatible clients.
+
+**Works with:**
+- **iPhone / iPad** via the built-in Calendar and Contacts apps
+- **Android** via DAV-compatible clients such as **DAVx5**
+
+**What you get:**
+- create and edit events on your phone and see them in Tribu
+- create and edit contacts on your phone and keep them in sync
+- one shared family system instead of separate calendar/contact silos
+
+After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and CardDAV URLs for each family.
 
 [See phone sync and setup docs in the wiki →](https://github.com/itsDNNS/tribu/wiki)
 
