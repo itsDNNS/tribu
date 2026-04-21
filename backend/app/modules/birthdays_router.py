@@ -2,14 +2,25 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core import cache
+from app.core.clock import utcnow
 from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import FamilyBirthday, User
 from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, BirthdayCreate, BirthdayUpdate, BirthdayResponse
-from app.core.errors import error_detail, BIRTHDAY_NOT_FOUND, INVALID_MONTH, INVALID_DAY
+from app.core.errors import error_detail, BIRTHDAY_NOT_FOUND, INVALID_MONTH, INVALID_DAY, INVALID_YEAR
 
 router = APIRouter(prefix="/birthdays", tags=["birthdays"], responses={**AUTH_RESPONSES})
+
+_MIN_BIRTHDAY_YEAR = 1900
+
+
+def _validate_year(year):
+    if year is None:
+        return
+    upper = utcnow().year + 1
+    if year < _MIN_BIRTHDAY_YEAR or year > upper:
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_YEAR))
 
 
 @router.get(
@@ -48,12 +59,14 @@ def create_birthday(
         raise HTTPException(status_code=400, detail=error_detail(INVALID_MONTH))
     if payload.day < 1 or payload.day > 31:
         raise HTTPException(status_code=400, detail=error_detail(INVALID_DAY))
+    _validate_year(payload.year)
 
     birthday = FamilyBirthday(
         family_id=payload.family_id,
         person_name=payload.person_name,
         month=payload.month,
         day=payload.day,
+        year=payload.year,
     )
     db.add(birthday)
     db.commit()
@@ -92,6 +105,12 @@ def update_birthday(
         if payload.day < 1 or payload.day > 31:
             raise HTTPException(status_code=400, detail=error_detail(INVALID_DAY))
         birthday.day = payload.day
+    # Year is nullable and needs true PATCH semantics: an explicit null
+    # in the request should clear it, while an absent key should leave it
+    # untouched. model_fields_set distinguishes the two cases.
+    if "year" in payload.model_fields_set:
+        _validate_year(payload.year)
+        birthday.year = payload.year
 
     db.commit()
     db.refresh(birthday)

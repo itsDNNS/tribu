@@ -51,6 +51,10 @@
   --sidebar-collapsed: 70px;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Tells the browser to render native form controls (notably the
+     <select> dropdown menu) with a dark palette so options stay
+     legible instead of falling back to the OS white-on-light look. */
+  color-scheme: dark;
 }
 
 /* ═══════════════════════════════════════════
@@ -77,6 +81,7 @@
   --warning: #d97706;
   --danger: #dc2626;
   --info: #0891b2;
+  color-scheme: light;
 }
 
 [data-theme="light"] .mesh-bg::before {
@@ -333,6 +338,7 @@
   --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
   --text-muted: #7d8da3;
+  color-scheme: dark;
 }
 
 /* ═══════════════════════════════════════════
@@ -475,6 +481,11 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .form-input { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 14px 16px; font-family: inherit; font-size: 0.95rem; color: var(--text-primary); transition: all 0.2s; min-height: 44px; }
 .form-input::placeholder { color: var(--text-muted); }
 .form-input:focus-visible { border-color: var(--amethyst); box-shadow: 0 0 0 3px var(--amethyst-glow); background: rgba(124, 58, 237, 0.04); outline: 2px solid var(--amethyst); outline-offset: 2px; }
+/* <option> styling is only partially honoured across browsers, but
+   setting background and color gives Chrome/Edge a matching popup to
+   complement the color-scheme hint at :root/[data-theme] level. */
+.form-input option { background: var(--void-surface); color: var(--text-primary); }
+[data-theme="light"] .form-input option { background: #ffffff; color: var(--text-primary); }
 .auth-divider { display: flex; align-items: center; gap: var(--space-md); color: var(--text-muted); font-size: 0.8rem; margin-top: 20px; }
 .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--glass-border); }
 
@@ -925,6 +936,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .cal-onboard { margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.06); border: 1px solid rgba(124, 58, 237, 0.12); }
 .cal-onboard-text { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: var(--space-sm); }
 .cal-edit-form { padding: 12px; margin-bottom: 12px; border-radius: var(--radius-sm); display: grid; gap: var(--space-sm); background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); }
+.cal-edit-recurring-hint { font-size: 0.78rem; color: var(--text-secondary); padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.08); border: 1px solid rgba(124, 58, 237, 0.2); }
 .cal-form-datetime { font-size: 0.82rem; }
 .cal-form-input-lg { font-size: 0.88rem; padding: 12px 14px; }
 
@@ -987,7 +999,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .task-title-row { display: flex; align-items: center; gap: 8px; }
 .task-title { font-size: 0.95rem; font-weight: 500; }
 .task-title.done { text-decoration: line-through; color: var(--text-muted); }
-.task-description { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.task-description { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
 .task-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .task-badge { font-size: 0.72rem; font-weight: 500; padding: 3px 10px; border-radius: var(--radius-pill); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
 .badge-high { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
@@ -1005,6 +1017,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .task-form-input { font-size: 0.82rem; padding: 10px 12px; }
 .task-delete-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; flex-shrink: 0; }
 .task-delete-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+.task-edit-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; flex-shrink: 0; }
+.task-edit-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.06); }
 .tasks-empty { color: var(--text-muted); font-size: 0.88rem; padding: 0 var(--space-md); display: flex; align-items: center; gap: var(--space-sm); }
 .task-form-toggle { display: flex; align-items: center; gap: var(--space-xs); background: none; border: none; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 0.78rem; padding: 4px var(--space-md) var(--space-sm); transition: color 0.2s; }
 .task-form-toggle:hover { color: var(--text-primary); }
@@ -1115,6 +1129,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .birthday-card .birthday-avatar { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.1rem; color: white; flex-shrink: 0; }
 .birthday-card .birthday-info { flex: 1; min-width: 0; }
 .birthday-card .birthday-name { font-weight: 600; font-size: 0.95rem; }
+.birthday-age { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; margin-left: 4px; }
+.birthday-member-tag { color: var(--amethyst); font-weight: 500; font-size: 0.75rem; margin-left: 4px; text-transform: lowercase; letter-spacing: 0.02em; }
+.birthday-card-member { cursor: default; }
+.contacts-empty-hint { margin-top: var(--space-md); font-size: 0.82rem; color: var(--text-muted); max-width: 440px; line-height: 1.5; }
 .birthday-card .birthday-date { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; }
 .birthday-card-clickable { cursor: pointer; }
 .birthday-card-clickable:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
@@ -1186,6 +1204,11 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .set-color-swatch { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; position: relative; }
 .set-color-taken-label { font-size: 0.65rem; font-weight: 700; color: #fff; }
 .set-subheading { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-sm); }
+.set-section-desc { font-size: 0.82rem; color: var(--text-secondary); margin: var(--space-sm) 0 var(--space-md); line-height: 1.5; }
+.set-field-hint { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--text-muted); }
+.set-password-form { display: grid; gap: var(--space-md); max-width: 420px; }
+.set-password-form .btn-primary { justify-self: start; }
+.set-password-error { font-size: 0.82rem; color: var(--danger); padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); }
 .set-danger-section { border-color: var(--error, #ef4444); }
 .set-danger-title { color: var(--error, #ef4444); }
 .set-danger-block { margin-bottom: var(--space-lg); }
@@ -1326,6 +1349,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-more:focus-visible,
 .task-checkbox:focus-visible,
 .task-delete-btn:focus-visible,
+.task-edit-btn:focus-visible,
 .task-form-toggle:focus-visible,
 .shopping-check:focus-visible,
 .mobile-hamburger:focus-visible,

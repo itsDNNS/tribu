@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Plus, UserPlus, X, Trash2, Cake } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useContacts } from '../hooks/useContacts';
-import { useBirthdays } from '../hooks/useBirthdays';
+import { useBirthdays, birthdayAge, buildBirthdayList } from '../hooks/useBirthdays';
 import { t } from '../lib/i18n';
 
 const AVATAR_COLORS = [
@@ -114,7 +114,7 @@ function FormModal({ id, title, onClose, onSubmit, saveKey, deleteButton, messag
 }
 
 export default function ContactsView() {
-  const { messages, demoMode, setActiveView, isChild, lang } = useApp();
+  const { messages, demoMode, setActiveView, isChild, lang, members } = useApp();
   const contactsHook = useContacts();
   const birthdaysHook = useBirthdays();
   const canEdit = !isChild;
@@ -122,9 +122,12 @@ export default function ContactsView() {
 
   const monthNames = MONTH_NAMES[lang] || MONTH_NAMES.en;
 
-  // Group birthdays by month
+  // Merge standalone birthdays with family members who have a stored
+  // date_of_birth so both surface in the Birthdays tab, then group by
+  // month for the section headers.
+  const allBirthdays = buildBirthdayList({ birthdays: birthdaysHook.birthdays, members });
   const grouped = new Map();
-  for (const b of [...birthdaysHook.birthdays].sort((a, c) => a.month - c.month || a.day - c.day)) {
+  for (const b of allBirthdays) {
     if (!grouped.has(b.month)) grouped.set(b.month, []);
     grouped.get(b.month).push(b);
   }
@@ -137,7 +140,7 @@ export default function ContactsView() {
           <div className="view-subtitle">
             {activeTab === 'contacts'
               ? `${contactsHook.contacts.length} ${t(messages, 'contacts')}`
-              : `${birthdaysHook.birthdays.length} ${t(messages, 'module.birthdays.name')}`}
+              : `${allBirthdays.length} ${t(messages, 'module.birthdays.name')}`}
           </div>
         </div>
         {canEdit && (
@@ -228,7 +231,7 @@ export default function ContactsView() {
         </div>
       ) : (
         <div className="birthdays-grid">
-          {birthdaysHook.birthdays.length > 0 ? (
+          {allBirthdays.length > 0 ? (
             Array.from(grouped).map(([month, items]) => (
               <Fragment key={month}>
                 <div className="birthdays-section-month">{monthNames[month - 1]}</div>
@@ -236,20 +239,32 @@ export default function ContactsView() {
                   const days = daysUntilBirthday(b.month, b.day);
                   const initials = (b.person_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
                   const dateStr = `${String(b.day).padStart(2, '0')}.${String(b.month).padStart(2, '0')}.`;
+                  const age = birthdayAge(b);
+                  // Member birthdays come from Membership.date_of_birth and
+                  // are edited in Account settings / Admin, not here. We
+                  // render them the same way but without the click handler.
+                  const clickable = canEdit && !b._isMember;
+                  const avatarColor = b._isMember && b._memberColor
+                    ? b._memberColor
+                    : getAvatarColor(b.person_name);
                   return (
                     <div
                       key={b.id}
-                      className={`birthday-card${canEdit ? ' birthday-card-clickable' : ''}`}
-                      onClick={canEdit ? () => birthdaysHook.openEdit(b) : undefined}
-                      role={canEdit ? 'button' : undefined}
-                      tabIndex={canEdit ? 0 : undefined}
-                      onKeyDown={canEdit ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); birthdaysHook.openEdit(b); } } : undefined}
+                      className={`birthday-card${clickable ? ' birthday-card-clickable' : ''}${b._isMember ? ' birthday-card-member' : ''}`}
+                      onClick={clickable ? () => birthdaysHook.openEdit(b) : undefined}
+                      role={clickable ? 'button' : undefined}
+                      tabIndex={clickable ? 0 : undefined}
+                      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); birthdaysHook.openEdit(b); } } : undefined}
                     >
-                      <div className="birthday-avatar" style={{ background: getAvatarColor(b.person_name) }}>
+                      <div className="birthday-avatar" style={{ background: avatarColor }}>
                         {initials}
                       </div>
                       <div className="birthday-info">
-                        <div className="birthday-name">{b.person_name}</div>
+                        <div className="birthday-name">
+                          {b.person_name}
+                          {b._isMember && <span className="birthday-member-tag"> · {t(messages, 'module.birthdays.member_tag')}</span>}
+                          {age !== null && <span className="birthday-age"> · {t(messages, 'module.birthdays.age_years').replace('{age}', age)}</span>}
+                        </div>
                         <div className="birthday-date"><Cake size={12} aria-hidden="true" /> {dateStr}</div>
                       </div>
                       <div className={`birthday-countdown${days === 0 ? ' birthday-today' : ''}`}>
@@ -266,11 +281,16 @@ export default function ContactsView() {
             <div className="contacts-empty">
               <div className="contacts-empty-text">{t(messages, 'module.birthdays.no_birthdays')}</div>
               {!demoMode && !isChild && (
-                <div className="contacts-empty-actions">
-                  <button className="btn-primary" onClick={birthdaysHook.openCreate}>
-                    <Plus size={15} /> {t(messages, 'module.birthdays.add')}
-                  </button>
-                </div>
+                <>
+                  <div className="contacts-empty-actions">
+                    <button className="btn-primary" onClick={birthdaysHook.openCreate}>
+                      <Plus size={15} /> {t(messages, 'module.birthdays.add')}
+                    </button>
+                  </div>
+                  <div className="contacts-empty-hint">
+                    {t(messages, 'module.birthdays.member_hint')}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -355,6 +375,21 @@ export default function ContactsView() {
                       {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="birthday-year">{t(messages, 'module.birthdays.form.year')}</label>
+                  <input
+                    id="birthday-year"
+                    className="form-input"
+                    type="number"
+                    inputMode="numeric"
+                    min={1900}
+                    step={1}
+                    placeholder="1985"
+                    value={birthdaysHook.birthdayYear}
+                    onChange={(e) => birthdaysHook.setBirthdayYear(e.target.value)}
+                  />
+                  <span className="set-field-hint">{t(messages, 'module.birthdays.form.year_hint')}</span>
                 </div>
               </>
             );

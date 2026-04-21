@@ -49,6 +49,11 @@ export function useCalendar() {
   const [editEndsAt, setEditEndsAt] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editAllDay, setEditAllDay] = useState(false);
+  const [editRecurrence, setEditRecurrence] = useState('');
+  const [editRecurrenceEnd, setEditRecurrenceEnd] = useState('');
+  const [editAssignedTo, setEditAssignedTo] = useState([]);
+  const [editColor, setEditColor] = useState('');
+  const [editCategory, setEditCategory] = useState('');
 
   // Delete confirmation for recurring events
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -246,16 +251,25 @@ export function useCalendar() {
   }
 
   function startEdit(ev) {
-    if (ev._isBirthday || ev.is_recurring) return;
+    if (ev._isBirthday) return;
     setEditingEvent(ev);
     setEditTitle(ev.title || '');
-    // Convert stored datetime to datetime-local format
+    // Stored datetime is naive local ("YYYY-MM-DDTHH:mm:ss"), slice to the
+    // first 16 chars for <input type="datetime-local">.
     const sa = ev.starts_at ? String(ev.starts_at).slice(0, 16) : '';
     setEditStartsAt(sa);
     const ea = ev.ends_at ? String(ev.ends_at).slice(0, 16) : '';
     setEditEndsAt(ea);
     setEditDescription(ev.description || '');
     setEditAllDay(ev.all_day || false);
+    setEditRecurrence(ev.recurrence || '');
+    setEditRecurrenceEnd(ev.recurrence_end ? String(ev.recurrence_end).slice(0, 10) : '');
+    const assigned = ev.assigned_to;
+    if (assigned === 'all') setEditAssignedTo(['all']);
+    else if (Array.isArray(assigned)) setEditAssignedTo(assigned.map(Number));
+    else setEditAssignedTo([]);
+    setEditColor(ev.color || '');
+    setEditCategory(ev.category || '');
   }
 
   function cancelEdit() {
@@ -265,21 +279,35 @@ export function useCalendar() {
   async function saveEdit(e) {
     if (e) e.preventDefault();
     if (!editingEvent) return;
+    const eventId = editingEvent.id;
+    const assignedPayload = editAssignedTo.includes('all')
+      ? 'all'
+      : editAssignedTo.length > 0
+        ? editAssignedTo.map(Number)
+        : null;
+    // all_day and category are not exposed in the edit UI (neither is the
+    // create form). Omitting them from the PATCH keeps the backend's
+    // no-change semantics instead of writing stale state back.
     const payload = {
       title: editTitle,
       starts_at: toIsoOrNull(editStartsAt),
       ends_at: toIsoOrNull(editEndsAt),
       description: editDescription || null,
-      all_day: editAllDay,
+      recurrence: editRecurrence || '',
+      recurrence_end: editRecurrence ? toIsoOrNull(editRecurrenceEnd) : null,
+      assigned_to: assignedPayload,
+      color: editColor || null,
     };
     if (demoMode) {
-      setEvents(prev => prev.map(ev => ev.id === editingEvent.id ? { ...ev, ...payload } : ev));
+      setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, ...payload } : ev));
     } else {
-      const { ok, data } = await api.apiUpdateEvent(editingEvent.id, payload);
+      const { ok, data } = await api.apiUpdateEvent(eventId, payload);
       if (!ok) { toastError(errorText(data?.detail, t(messages, 'toast.error'), messages)); return; }
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
-    setEditingEvent(null);
+    // Same in-flight guard as useTasks: only close if the user has not
+    // switched to editing another event while the save was running.
+    setEditingEvent((current) => (current && current.id === eventId ? null : current));
     toastSuccess(t(messages, 'toast.event_updated'));
   }
 
@@ -372,6 +400,11 @@ export function useCalendar() {
     editTitle, setEditTitle, editStartsAt, setEditStartsAt,
     editEndsAt, setEditEndsAt, editDescription, setEditDescription,
     editAllDay, setEditAllDay,
+    editRecurrence, setEditRecurrence,
+    editRecurrenceEnd, setEditRecurrenceEnd,
+    editAssignedTo, setEditAssignedTo,
+    editColor, setEditColor,
+    editCategory, setEditCategory,
   };
 }
 

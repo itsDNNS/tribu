@@ -511,9 +511,10 @@ class BirthdayCreate(BaseModel):
     person_name: str = Field(..., description="Person's name")
     month: int = Field(..., description="Birthday month (1-12)")
     day: int = Field(..., description="Birthday day (1-31)")
+    year: Optional[int] = Field(None, description="Birth year (optional, enables age display)")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"family_id": 1, "person_name": "Grandma Ilse", "month": 5, "day": 22}]
+        "examples": [{"family_id": 1, "person_name": "Grandma Ilse", "month": 5, "day": 22, "year": 1948}]
     })
 
 
@@ -522,6 +523,7 @@ class BirthdayUpdate(BaseModel):
     person_name: Optional[str] = Field(None, description="Person's name")
     month: Optional[int] = Field(None, description="Birthday month (1-12)")
     day: Optional[int] = Field(None, description="Birthday day (1-31)")
+    year: Optional[int] = Field(None, description="Birth year; send explicitly null to clear")
 
 
 class BirthdayResponse(BaseModel):
@@ -533,6 +535,7 @@ class BirthdayResponse(BaseModel):
     person_name: str = Field(..., description="Person's name")
     month: int = Field(..., description="Month (1-12)")
     day: int = Field(..., description="Day (1-31)")
+    year: Optional[int] = Field(None, description="Birth year (null if unknown)")
 
 
 class UpcomingBirthday(BaseModel):

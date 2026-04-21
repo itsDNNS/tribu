@@ -27,5 +27,9 @@
   "module.tasks.less_options": "Weniger Optionen",
   "module.tasks.delete_task": "Aufgabe löschen",
   "module.tasks.delete_confirm": "Aufgabe \"{title}\" wirklich löschen?",
-  "module.tasks.add_first": "Erste Aufgabe erstellen"
+  "module.tasks.add_first": "Erste Aufgabe erstellen",
+  "module.tasks.edit_title": "Aufgabe bearbeiten",
+  "module.tasks.save": "Speichern",
+  "module.tasks.cancel": "Abbrechen",
+  "module.tasks.updated": "Aufgabe aktualisiert"
 }

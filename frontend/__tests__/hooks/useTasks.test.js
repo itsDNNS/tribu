@@ -90,4 +90,96 @@ describe('useTasks', () => {
     expect(api.apiDeleteTask).toHaveBeenCalledWith(2);
     expect(mockLoadTasks).toHaveBeenCalled();
   });
+
+  it('openEdit prefills the edit form from an existing task', () => {
+    const { result } = renderHook(() => useTasks());
+    const task = {
+      id: 5,
+      title: 'Edit me',
+      description: 'original desc',
+      priority: 'high',
+      recurrence: 'weekly',
+      assigned_to_user_id: 7,
+      due_date: null,
+    };
+
+    act(() => result.current.openEdit(task));
+
+    expect(result.current.editingTask).toBe(task);
+    expect(result.current.editForm.title).toBe('Edit me');
+    expect(result.current.editForm.description).toBe('original desc');
+    expect(result.current.editForm.priority).toBe('high');
+    expect(result.current.editForm.recurrence).toBe('weekly');
+    expect(result.current.editForm.assigned_to_user_id).toBe('7');
+  });
+
+  it('closeEdit clears the edit state', () => {
+    const { result } = renderHook(() => useTasks());
+    act(() => result.current.openEdit({ id: 1, title: 'x', priority: 'normal' }));
+    act(() => result.current.closeEdit());
+    expect(result.current.editingTask).toBeNull();
+    expect(result.current.editForm.title).toBe('');
+  });
+
+  it('updateTask posts the edited fields and closes the dialog', async () => {
+    const api = require('../../lib/api');
+    const { result } = renderHook(() => useTasks());
+
+    act(() => result.current.openEdit({
+      id: 9, title: 'Old', description: '', priority: 'normal', recurrence: '',
+      assigned_to_user_id: null, due_date: null,
+    }));
+    act(() => result.current.setEditForm({
+      ...result.current.editForm,
+      title: 'New title',
+      priority: 'high',
+      assigned_to_user_id: '3',
+    }));
+
+    await act(async () => {
+      await result.current.updateTask({ preventDefault: () => {} });
+    });
+
+    expect(api.apiUpdateTask).toHaveBeenCalledWith(9, expect.objectContaining({
+      title: 'New title',
+      priority: 'high',
+      assigned_to_user_id: 3,
+    }));
+    expect(result.current.editingTask).toBeNull();
+    expect(mockLoadTasks).toHaveBeenCalled();
+  });
+
+  it('updateTask does not wipe the dialog if the user switched to a different task mid-save', async () => {
+    const api = require('../../lib/api');
+    let resolveSave;
+    api.apiUpdateTask.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveSave = () => resolve({ ok: true, data: {} }); }),
+    );
+    const { result } = renderHook(() => useTasks());
+
+    act(() => result.current.openEdit({
+      id: 1, title: 'A', description: '', priority: 'normal', recurrence: '',
+      assigned_to_user_id: null, due_date: null,
+    }));
+
+    let savePromise;
+    act(() => {
+      savePromise = result.current.updateTask({ preventDefault: () => {} });
+    });
+
+    // User opens task B while task A's save is still in flight.
+    act(() => result.current.openEdit({
+      id: 2, title: 'B', description: '', priority: 'normal', recurrence: '',
+      assigned_to_user_id: null, due_date: null,
+    }));
+
+    // Save for task A finishes.
+    await act(async () => {
+      resolveSave();
+      await savePromise;
+    });
+
+    expect(result.current.editingTask).toEqual(expect.objectContaining({ id: 2 }));
+    expect(result.current.editForm.title).toBe('B');
+  });
 });
