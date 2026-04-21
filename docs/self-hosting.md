@@ -61,7 +61,9 @@ These variables are constructed in `docker-compose.yml` and normally don't need 
 
 Running behind a reverse proxy gives you TLS (HTTPS), a clean domain, and is **required** for secure cookies. Set `SECURE_COOKIES=true` in your `.env` when using any of these.
 
-> All examples assume Tribu runs on the same host with the default ports (backend: 8000, frontend: 3000). `/api` must be forwarded to the backend **without** the `/api` prefix, while `/ws`, `/dav`, and `/.well-known/{caldav,carddav}` must reach the backend unchanged.
+> All examples assume Tribu runs on the same host with the default ports (backend: 8000, frontend: 3000). `/api` must be forwarded to the backend **without** the `/api` prefix, while `/dav` and `/.well-known/{caldav,carddav}` must reach the backend unchanged. The `/ws` examples below are included for completeness, but the current shopping UI does not use the proxied `/ws` path yet.
+>
+> **Current limitation:** shopping live sync still opens `ws(s)://<your-domain>:8000/ws/shopping/...` directly from the browser. On HTTP setups that means port `8000` must stay reachable. On HTTPS setups that also means `:8000` must be reachable with working WSS/TLS on the same host, otherwise shopping live sync stays unavailable until the frontend is updated to use the proxied `/ws` route.
 
 ### Caddy (recommended)
 
@@ -75,7 +77,10 @@ tribu.example.com {
 	handle /ws/* {
 		reverse_proxy localhost:8000
 	}
-	handle /dav* {
+	handle /dav {
+		reverse_proxy localhost:8000
+	}
+	handle /dav/* {
 		reverse_proxy localhost:8000
 	}
 	handle /.well-known/caldav {
@@ -191,13 +196,15 @@ backend:
     - "traefik.http.routers.tribu-ws.rule=Host(`tribu.example.com`) && PathPrefix(`/ws`)"
     - "traefik.http.routers.tribu-ws.entrypoints=websecure"
     - "traefik.http.routers.tribu-ws.tls.certresolver=letsencrypt"
+    - "traefik.http.routers.tribu-ws.service=tribu-api"
     - "traefik.http.routers.tribu-dav.rule=Host(`tribu.example.com`) && (PathPrefix(`/dav`) || Path(`/.well-known/caldav`) || Path(`/.well-known/carddav`))"
     - "traefik.http.routers.tribu-dav.entrypoints=websecure"
     - "traefik.http.routers.tribu-dav.tls.certresolver=letsencrypt"
+    - "traefik.http.routers.tribu-dav.service=tribu-api"
     - "traefik.http.services.tribu-api.loadbalancer.server.port=8000"
 ```
 
-When using Traefik, remove the `ports` sections from both services since Traefik handles routing.
+When using Traefik, remove the `ports` sections from both services since Traefik handles routing. If you need shopping live sync today, only remove the backend `ports` mapping after you have separately made `:8000` reachable with matching WS/WSS handling, because the frontend still connects to `ws(s)://<your-domain>:8000/...` directly instead of using the proxied `/ws` route.
 
 ## Push Notifications (Optional)
 
