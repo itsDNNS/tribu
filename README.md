@@ -109,7 +109,7 @@ Tribu supports **CalDAV and CardDAV** for bidirectional phone sync, so calendars
 
 After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and CardDAV URLs for each family.
 
-[See phone sync and setup docs in the wiki →](https://github.com/itsDNNS/tribu/wiki)
+[See the full phone sync setup guide →](docs/self-hosting.md#phone-sync-caldav--carddav)
 
 ## Features
 

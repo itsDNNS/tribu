@@ -177,6 +177,83 @@ docker compose up -d
 
 Users can then enable push notifications from their profile settings. Push notifications require HTTPS (a reverse proxy with TLS).
 
+## Phone Sync (CalDAV / CardDAV)
+
+Tribu can sync calendars and contacts with phones and DAV-compatible clients via **CalDAV** and **CardDAV**.
+
+### Requirements
+
+- A running Tribu instance with a reachable public or local URL
+- HTTPS if you want to connect phones outside a trusted local-only setup
+- A user account that already belongs to the relevant family
+- A **Personal Access Token (PAT)** for DAV login
+
+### Where to find the sync URLs
+
+After signing in to Tribu:
+
+1. Open **Settings**
+2. Go to **Phone sync**
+3. Copy the **CalDAV** and **CardDAV** URLs for the family you want to sync
+
+Tribu shows one calendar URL and one address book URL per family.
+
+### Authentication
+
+DAV clients use **HTTP Basic Auth** with:
+
+- **Username:** your Tribu email address
+- **Password:** a Tribu Personal Access Token (PAT)
+
+Recommended PAT scopes:
+
+- `calendar:read` / `calendar:write`
+- `contacts:read` / `contacts:write`
+
+Use read-only scopes if you only want a subscription-style setup. Use write scopes if events and contacts should sync back into Tribu.
+
+### iPhone / iPad setup
+
+For calendars:
+
+1. Open **Settings → Apps → Calendar → Calendar Accounts → Add Account → Other → Add CalDAV Account**
+2. Paste the CalDAV URL from **Settings → Phone sync** in Tribu
+3. Enter your Tribu email address and PAT
+4. Save and allow the device to sync
+
+For contacts:
+
+1. Open **Settings → Apps → Contacts → Contacts Accounts → Add Account → Other → Add CardDAV Account**
+2. Paste the CardDAV URL from Tribu
+3. Enter your Tribu email address and PAT
+4. Save and allow the device to sync
+
+### Android setup
+
+The most common setup is **DAVx5**:
+
+1. Install **DAVx5**
+2. Add a new account
+3. Choose login with URL and credentials
+4. Paste the CalDAV/CardDAV URL from Tribu
+5. Sign in with your Tribu email address and PAT
+6. Select the collections you want to sync
+
+### What to expect
+
+Once connected, you can:
+
+- create and edit events on your phone and see them in Tribu
+- create and edit contacts on your phone and keep them in sync
+- use Tribu as the shared source of truth for family calendars and contacts
+
+### Troubleshooting
+
+- Make sure the PAT has the scopes required for the DAV collection you want to use
+- If login works in the browser but not in the DAV client, double-check that you are using the **PAT**, not your normal account password
+- If you are exposing Tribu through a reverse proxy, confirm HTTPS is working correctly and the public URL is stable
+- If the client appears stale after reconnecting, force a refresh/resync in the DAV app once before troubleshooting deeper
+
 ## Backup & Restore
 
 Tribu has a built-in backup system accessible from the Admin panel.
