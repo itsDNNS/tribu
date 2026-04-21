@@ -5,8 +5,8 @@
 <h1 align="center">Tribu</h1>
 
 <p align="center">
-  <strong>Self-hosted family organizer to tame the everyday chaos.</strong><br>
-  Calendars, tasks, shopping lists, contacts, birthdays -- one place, your server, your data.
+  <strong>Self-hosted family organizer for real everyday life.</strong><br>
+  Calendars, tasks, shopping lists, contacts, birthdays, and reminders — one place, your server, your data.
 </p>
 
 <p align="center">
@@ -30,7 +30,7 @@
 </p>
 
 <p align="center">
-  <em>Morning Mist theme -- content-first dashboard with events, tasks, and birthdays at a glance</em>
+  <em>Morning Mist theme — content-first dashboard with events, tasks, birthdays, and family context at a glance</em>
 </p>
 
 <details>
@@ -76,35 +76,61 @@ See the [Wiki](https://github.com/itsDNNS/tribu/wiki) for screenshots of every v
 
 ## Why Tribu?
 
-Most family organizer apps lock your data in their cloud and charge monthly fees. Tribu runs on your own hardware, gives you full control, and costs nothing.
+Most family organizer apps lock your data in their cloud, split everyday planning across too many tools, and charge monthly fees on top. Tribu runs on your own hardware, keeps your household data under your control, and gives your family one place to stay coordinated.
 
-- **Privacy first** -- all data stays on your server, no third-party services
-- **Modular** -- each feature is an isolated plugin, extend what you need
-- **Clean design** -- content-first UI with solid cards, consistent spacing, and proper accessibility
-- **Bilingual** -- German and English out of the box, lazy-loaded per module
-- **Try before you install** -- interactive demo mode with realistic sample data, no backend needed
+- **Your data stays at home** — no mandatory cloud, no third-party SaaS dependency
+- **Built for actual family workflows** — calendars, tasks, shopping, contacts, birthdays, and reminders in one place
+- **Works on desktop and mobile** — responsive interface with a clean, content-first layout
+- **Try before you install** — interactive demo mode with realistic sample data, no backend required
+- **Bilingual out of the box** — German and English, lazy-loaded per module
+- **Extensible when you need more** — modular plugin architecture for features, themes, and languages
+
+## What Tribu helps with
+
+- keeping appointments, school events, and family routines in one shared calendar
+- assigning tasks without losing track of who is responsible
+- managing shopping lists together in real time
+- keeping contacts and birthdays in one place
+- reducing app sprawl across chats, notes apps, and disconnected cloud tools
+
+## Phone Sync
+
+Tribu supports **CalDAV and CardDAV** for bidirectional phone sync, so calendars and contacts can integrate with mobile devices and DAV-compatible clients.
+
+[See phone sync and setup docs in the wiki →](https://github.com/itsDNNS/tribu/wiki)
 
 ## Features
 
+### Core Family Workflow
+
 | | |
 |---|---|
-| **Dashboard** | Today's events, open tasks, birthday countdowns, family stats, and quick actions |
-| **Calendar** | Month/week view, event dots, day-detail panel, recurring events, ICS import/export, create FAB |
-| **Tasks** | Priorities, due dates, assignees, recurring tasks, collapsible create form, overdue tracking |
-| **Shopping** | Multiple lists, tap-to-toggle with check animation, progress bars, real-time WebSocket sync |
-| **Contacts** | Alphabetical card grid, colored avatars, CSV import/export, birthday extraction |
-| **Birthdays** | 4-week lookahead with proximity-based countdown colors, auto-synced from contacts |
-| **Rewards** | Family token economy with earning rules, reward catalog, child progress bars, Lucide icons |
-| **Notifications** | Slide-in panel with time grouping (today/yesterday/older), event reminders, overdue alerts |
-| **Search** | Global search across events, tasks, shopping, contacts, and birthdays (Cmd+K) |
+| **Dashboard** | Today’s events, open tasks, birthday countdowns, family stats, and quick actions |
+| **Calendar** | Month/week view, recurring events, ICS import/export, and a focused day-detail panel |
+| **Tasks** | Priorities, due dates, assignees, recurring tasks, and overdue tracking |
+| **Shopping** | Multiple lists, tap-to-toggle interactions, progress bars, and real-time sync |
+| **Contacts** | Alphabetical card grid, colored avatars, CSV import/export, and birthday extraction |
+| **Birthdays** | 4-week lookahead, proximity-based countdown colors, and auto-sync from contacts |
+| **Notifications** | In-app reminders and alerts for upcoming events, overdue tasks, and household activity |
+
+### Extra Capabilities
+
+| | |
+|---|---|
+| **Rewards** | Family token economy with earning rules, reward catalog, child progress bars, and Lucide icons |
+| **Search** | Global search across events, tasks, shopping, contacts, and birthdays (`Cmd+K`) |
 | **Themes** | Morning Mist (light) and Dark |
 | **i18n** | English and German out of the box, lazy-loaded per module |
 | **Demo mode** | Try the full UI with realistic sample data, no server setup required |
-| **Security** | httpOnly cookies, rate limiting, scoped PATs, non-root containers |
+| **Security** | httpOnly cookies, rate limiting, scoped PATs, and non-root containers |
 
 ## Quick Start
 
-Create a new stack in **Portainer**, **Dockge**, or **Dockhand** and paste:
+Run Tribu with Docker Compose on your server, NAS, or homelab setup.
+
+### Option A: Stack UI (Portainer, Dockge, Dockhand)
+
+Create a new stack and paste:
 
 ```yaml
 name: tribu
@@ -166,7 +192,7 @@ Deploy the stack, open [localhost:3000](http://localhost:3000), and register.
 > Want to explore first? Click **Try demo** on the login page.
 
 <details>
-<summary><strong>CLI alternative</strong></summary>
+<summary><strong>Option B: CLI alternative</strong></summary>
 
 ```bash
 mkdir tribu && cd tribu
