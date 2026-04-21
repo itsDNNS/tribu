@@ -24,6 +24,72 @@ jest.mock('../../lib/helpers', () => ({
   errorText: (_detail, fallback) => fallback,
 }));
 
+describe('buildBirthdayList', () => {
+  const { buildBirthdayList } = require('../../hooks/useBirthdays');
+
+  it('returns an empty list when both sources are empty', () => {
+    expect(buildBirthdayList()).toEqual([]);
+    expect(buildBirthdayList({ birthdays: [], members: [] })).toEqual([]);
+  });
+
+  it('sorts entries by month then day', () => {
+    const list = buildBirthdayList({
+      birthdays: [
+        { id: 1, person_name: 'Late', month: 12, day: 31 },
+        { id: 2, person_name: 'Middle', month: 6, day: 15 },
+        { id: 3, person_name: 'Early', month: 6, day: 1 },
+      ],
+      members: [],
+    });
+    expect(list.map((b) => b.person_name)).toEqual(['Early', 'Middle', 'Late']);
+  });
+
+  it('includes family members with a stored date_of_birth and marks them', () => {
+    const list = buildBirthdayList({
+      birthdays: [{ id: 1, person_name: 'Oma Schmidt', month: 4, day: 14 }],
+      members: [{ user_id: 7, display_name: 'Max', date_of_birth: '2015-09-03', color: '#7c3aed' }],
+    });
+    const max = list.find((b) => b.person_name === 'Max');
+    expect(max).toEqual(expect.objectContaining({
+      person_name: 'Max',
+      month: 9,
+      day: 3,
+      year: 2015,
+      _isMember: true,
+      _memberId: 7,
+      _memberColor: '#7c3aed',
+    }));
+    expect(max.id).toBe('member-7');
+    expect(max).not.toHaveProperty('_member');
+  });
+
+  it('keeps a standalone and a member with the same name and date as two entries', () => {
+    // Collapsing would hide a legitimate duplicate namesake. The list
+    // does not deduplicate across sources; admins can delete a stale
+    // standalone entry if it shadows a member.
+    const list = buildBirthdayList({
+      birthdays: [{ id: 99, person_name: 'Max', month: 9, day: 3, year: 2015 }],
+      members: [{ user_id: 7, display_name: 'Max', date_of_birth: '2015-09-03' }],
+    });
+    expect(list).toHaveLength(2);
+    expect(list.some((b) => b._isMember)).toBe(true);
+    expect(list.some((b) => !b._isMember)).toBe(true);
+  });
+
+  it('skips members without date_of_birth and malformed date strings', () => {
+    const list = buildBirthdayList({
+      birthdays: [],
+      members: [
+        { user_id: 1, display_name: 'NoDob' },
+        { user_id: 2, display_name: 'BadDob', date_of_birth: 'not-a-date' },
+        { user_id: 3, display_name: 'Good', date_of_birth: '1990-01-15' },
+      ],
+    });
+    expect(list).toHaveLength(1);
+    expect(list[0].person_name).toBe('Good');
+  });
+});
+
 describe('birthdayAge', () => {
   const { birthdayAge } = require('../../hooks/useBirthdays');
 

@@ -1119,6 +1119,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .birthday-card .birthday-info { flex: 1; min-width: 0; }
 .birthday-card .birthday-name { font-weight: 600; font-size: 0.95rem; }
 .birthday-age { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; margin-left: 4px; }
+.birthday-member-tag { color: var(--amethyst); font-weight: 500; font-size: 0.75rem; margin-left: 4px; text-transform: lowercase; letter-spacing: 0.02em; }
+.birthday-card-member { cursor: default; }
+.contacts-empty-hint { margin-top: var(--space-md); font-size: 0.82rem; color: var(--text-muted); max-width: 440px; line-height: 1.5; }
 .birthday-card .birthday-date { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; }
 .birthday-card-clickable { cursor: pointer; }
 .birthday-card-clickable:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }

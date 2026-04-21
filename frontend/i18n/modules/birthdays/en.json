@@ -17,6 +17,8 @@
   "module.birthdays.form.year_hint": "Lets tribu show the person's age",
   "module.birthdays.year_invalid": "Year must be a whole number",
   "module.birthdays.age_years": "{age} years",
+  "module.birthdays.member_tag": "family",
+  "module.birthdays.member_hint": "Family members can store their own birthday in Account settings, and it will appear here automatically.",
   "module.birthdays.save": "Save",
   "module.birthdays.delete": "Delete",
   "module.birthdays.days_until": "in {days} days",

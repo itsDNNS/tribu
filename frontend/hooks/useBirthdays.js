@@ -164,6 +164,52 @@ export function useBirthdays() {
 }
 
 /**
+ * Merge the standalone FamilyBirthday rows and any family members with
+ * a stored date_of_birth into a single list for the Birthdays tab.
+ * Entries are sorted by month then day. No cross-source deduplication
+ * is performed: a family member named Max and a separate friend named
+ * Max with the same birthday are both legitimate, and there is no
+ * link field on FamilyBirthday that would mark one as the member's
+ * own row. If an admin imported the same person twice they can
+ * remove the duplicate standalone entry.
+ *
+ * Member entries are marked with `_isMember: true` and only carry the
+ * fields the renderer actually needs (`_memberColor`, `_memberId`).
+ * Their birthday is not editable here because the source of truth for
+ * `date_of_birth` lives in Account settings and the admin panel.
+ */
+export function buildBirthdayList({ birthdays = [], members = [] } = {}) {
+  const items = [];
+
+  for (const b of birthdays) {
+    if (!b?.person_name || !b?.month || !b?.day) continue;
+    items.push({ ...b });
+  }
+
+  for (const member of members) {
+    if (!member?.date_of_birth) continue;
+    const match = String(member.date_of_birth).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!match) continue;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    if (!month || !day) continue;
+    items.push({
+      id: `member-${member.user_id}`,
+      person_name: member.display_name || '',
+      month,
+      day,
+      year,
+      _isMember: true,
+      _memberId: member.user_id,
+      _memberColor: member.color || null,
+    });
+  }
+
+  return items.sort((a, b) => a.month - b.month || a.day - b.day);
+}
+
+/**
  * Age a person will reach (or already has reached) on their birthday in
  * the given reference year. Returns null when the birth year is unknown
  * or the person has not been born yet relative to the reference date.
