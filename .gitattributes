@@ -1,0 +1,7 @@
+# Enforce LF line endings for shell scripts so builds on Windows
+# clones still produce images with a working `#!/bin/sh` interpreter.
+*.sh text eol=lf
+
+# Dockerfiles and compose files are consumed by Linux tooling too.
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
