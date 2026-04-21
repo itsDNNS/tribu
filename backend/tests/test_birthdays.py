@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.clock import utcnow
 from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, User
+from app.models import Family, FamilyBirthday, Membership, PersonalAccessToken, User
 from app.security import hash_password, PAT_PREFIX
 
 
@@ -24,7 +24,7 @@ engine = create_engine(
     "sqlite:///./test-birthdays.db",
     connect_args={"check_same_thread": False},
 )
-TestSession = sessionmaker(bind=engine)
+TestSession = sessionmaker(bind=engine, autoflush=False)
 
 
 @event.listens_for(engine, "connect")
@@ -202,3 +202,48 @@ def test_patch_without_year_key_leaves_year_untouched():
     body = resp.json()
     assert body["person_name"] == "Grandpa"
     assert body["year"] == 1940
+
+
+def test_contact_rename_preserves_existing_birthday_row_and_year():
+    token, family_id = _seed_member(scopes="birthdays:write,contacts:write")
+    client = TestClient(app)
+
+    created_birthday = client.post(
+        "/birthdays",
+        json={"family_id": family_id, "person_name": "Alice", "month": 4, "day": 14, "year": 1980},
+        headers=_auth_headers(token),
+    )
+    assert created_birthday.status_code == 200, created_birthday.text
+    birthday_id = created_birthday.json()["id"]
+
+    created_contact = client.post(
+        "/contacts",
+        json={"family_id": family_id, "full_name": "Alice", "birthday_month": 4, "birthday_day": 14},
+        headers=_auth_headers(token),
+    )
+    assert created_contact.status_code == 200, created_contact.text
+    contact_id = created_contact.json()["id"]
+
+    renamed_contact = client.patch(
+        f"/contacts/{contact_id}",
+        json={"full_name": "Alice Smith"},
+        headers=_auth_headers(token),
+    )
+    assert renamed_contact.status_code == 200, renamed_contact.text
+
+    db = TestSession()
+    try:
+        birthdays = (
+            db.query(FamilyBirthday)
+            .filter(FamilyBirthday.family_id == family_id)
+            .order_by(FamilyBirthday.id.asc())
+            .all()
+        )
+        assert len(birthdays) == 1
+        assert birthdays[0].id == birthday_id
+        assert birthdays[0].person_name == "Alice Smith"
+        assert birthdays[0].month == 4
+        assert birthdays[0].day == 14
+        assert birthdays[0].year == 1980
+    finally:
+        db.close()
