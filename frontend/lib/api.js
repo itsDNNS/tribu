@@ -405,6 +405,32 @@ export function apiSetBaseUrl(base_url) {
   });
 }
 
+// OIDC / SSO — public
+export function apiGetOidcPublicConfig() {
+  return request('/auth/oidc/public-config');
+}
+
+// OIDC / SSO — admin
+export function apiGetOidcPresets() {
+  return request('/admin/oidc/presets');
+}
+
+export function apiGetOidcConfig() {
+  return request('/admin/oidc');
+}
+
+export function apiUpdateOidcConfig(payload) {
+  return request('/admin/oidc', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function apiTestOidcDiscovery(issuer) {
+  return post('/admin/oidc/test', { issuer });
+}
+
 export function apiGetTimeFormat() { return request('/admin/settings/time-format'); }
 export function apiSetTimeFormat(time_format) {
   return request('/admin/settings/time-format', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time_format }) });

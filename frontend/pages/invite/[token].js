@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Users, ShieldCheck, AlertCircle, Globe } from 'lucide-react';
+import { Users, ShieldCheck, AlertCircle, Globe, KeyRound } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
-import { apiGetInviteInfo, apiRegisterWithInvite } from '../../lib/api';
+import { apiGetInviteInfo, apiRegisterWithInvite, apiGetOidcPublicConfig } from '../../lib/api';
 
 export default function InvitePage() {
   const router = useRouter();
@@ -18,12 +18,17 @@ export default function InvitePage() {
   const [displayName, setDisplayName] = useState('');
   const [msg, setMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [sso, setSso] = useState({ enabled: false, ready: false, button_label: '', password_login_disabled: false });
 
   useEffect(() => {
     if (!router.isReady) return;
     if (!token) { setLoading(false); return; }
-    apiGetInviteInfo(token).then(({ ok, data }) => {
-      if (ok) setInfo(data);
+    Promise.all([
+      apiGetInviteInfo(token),
+      apiGetOidcPublicConfig(),
+    ]).then(([invRes, ssoRes]) => {
+      if (invRes.ok) setInfo(invRes.data);
+      if (ssoRes.ok && ssoRes.data) setSso(ssoRes.data);
       setLoading(false);
     });
   }, [router.isReady, token]);
@@ -104,6 +109,23 @@ export default function InvitePage() {
             <h2 style={{ margin: '4px 0 0', fontSize: '1.3rem' }}>{info.family_name}</h2>
           </div>
 
+          {sso.ready && (
+            <>
+              <div className="sso-login-box" style={{ marginBottom: 12 }}>
+                <a
+                  className="btn-primary sso-login-btn"
+                  href={`/auth/oidc/login?invite=${encodeURIComponent(String(token || ''))}`}
+                  data-testid="sso-invite-button"
+                >
+                  <KeyRound size={15} aria-hidden="true" />
+                  {sso.button_label || t(messages, 'invite_page_register')}
+                </a>
+              </div>
+              {!sso.password_login_disabled && <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>}
+            </>
+          )}
+
+          {!sso.password_login_disabled && (
           <form onSubmit={handleRegister} className="auth-form">
             <div className="form-field">
               <label htmlFor="invite-email">{t(messages, 'email')}</label>
@@ -122,6 +144,7 @@ export default function InvitePage() {
               {t(messages, 'invite_page_register')}
             </button>
           </form>
+          )}
 
           <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
 

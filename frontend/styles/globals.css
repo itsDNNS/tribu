@@ -499,6 +499,12 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 }
 .btn-demo:hover { background: rgba(124, 58, 237, 0.15); border-color: var(--amethyst); }
 
+.sso-login-box { margin-top: 16px; }
+.sso-login-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; text-decoration: none;
+}
+
 /* ═══════════════════════════════════════════
    BUTTONS
    ═══════════════════════════════════════════ */
