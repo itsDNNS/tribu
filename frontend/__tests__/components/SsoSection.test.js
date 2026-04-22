@@ -123,6 +123,30 @@ describe('SsoSection admin panel', () => {
     await waitFor(() => expect(screen.getByText('sso.test_ok')).toBeInTheDocument());
   });
 
+  it('reconciles state from a fresh GET when PUT throws a network error', async () => {
+    const api = require('../../lib/api');
+    api.apiGetOidcConfig
+      .mockResolvedValueOnce({ ok: true, data: mockCfg({ effective_callback_url: 'https://old.example.com/auth/oidc/callback' }) })
+      .mockResolvedValueOnce({ ok: true, data: mockCfg({ effective_callback_url: 'https://new.example.com/auth/oidc/callback', issuer: 'https://new' }) });
+    api.apiUpdateOidcConfig.mockRejectedValueOnce(new Error('network down'));
+
+    render(<SsoSection />);
+    await screen.findByTestId('sso-admin-section');
+
+    fireEvent.submit(screen.getByTestId('sso-admin-section'));
+
+    await waitFor(() => {
+      // After the failure the component re-fetches the config so the
+      // displayed callback URL reflects the real server state.
+      const hint = screen.getByTestId('sso-callback-hint');
+      expect(hint).toHaveTextContent('https://new.example.com/auth/oidc/callback');
+    });
+    expect(mockToastError).toHaveBeenCalled();
+    // Save button re-enabled
+    const saveButton = screen.getByRole('button', { name: /sso\.save/ });
+    expect(saveButton).not.toBeDisabled();
+  });
+
   it('shows the backend-provided effective callback URL, not the browser origin', async () => {
     const api = require('../../lib/api');
     api.apiGetOidcConfig.mockResolvedValue({

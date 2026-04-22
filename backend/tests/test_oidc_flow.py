@@ -287,6 +287,61 @@ def _mock_token_exchange(monkeypatch, *, subject: str, email: str | None, email_
 # ---------------------------------------------------------------------------
 
 
+def test_callback_reuses_authorize_redirect_uri(monkeypatch):
+    """Regression: the flow JWT must pin the redirect_uri so the
+    token exchange submits the same value as authorize.
+
+    If base_url or x-forwarded headers change between the two
+    requests the IdP would otherwise reject the code for
+    redirect_uri_mismatch.
+    """
+    _seed_config(proven=False)
+
+    captured = {}
+
+    def fake_exchange(**kwargs):
+        captured["redirect_uri"] = kwargs["redirect_uri"]
+        return {"id_token": "MOCK", "access_token": "A"}
+
+    def fake_verify(id_token, *, issuer, client_id, jwks_uri, expected_nonce):
+        return oidc_core.IDTokenClaims(
+            subject="pin-sub",
+            email="pin@example.com",
+            email_verified=True,
+            name="Pin",
+            raw={},
+        )
+
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    monkeypatch.setattr(oidc_core, "exchange_code_for_tokens", fake_exchange)
+    monkeypatch.setattr(oidc_core, "verify_id_token", fake_verify)
+
+    # Authorize request goes through the proxied host
+    start = client.get(
+        "/auth/oidc/login",
+        headers={"x-forwarded-host": "first.example.com", "x-forwarded-proto": "https"},
+    )
+    state = start.headers["location"].split("state=", 1)[1].split("&", 1)[0]
+
+    # Seed a user so the callback succeeds
+    db = TestSession()
+    try:
+        db.add(User(email="pin@example.com", password_hash=hash_password("P1xxx1234"), display_name="Pin"))
+        db.commit()
+    finally:
+        db.close()
+
+    # Callback arrives with a DIFFERENT forwarded host. Without the
+    # pin, redirect_uri would be recomputed to the second host and
+    # the token exchange would fail at the IdP.
+    client.get(
+        f"/auth/oidc/callback?code=c&state={state}",
+        headers={"x-forwarded-host": "second.example.com", "x-forwarded-proto": "https"},
+    )
+    assert captured["redirect_uri"] == "https://first.example.com/auth/oidc/callback"
+    client.cookies.clear()
+
+
 def test_callback_stamps_last_success_timestamp(monkeypatch):
     """Every successful callback must record oidc_last_success_at.
 
