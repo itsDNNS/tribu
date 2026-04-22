@@ -44,6 +44,22 @@ describe('buildBirthdayEvents', () => {
     expect(events).toHaveLength(1);
     expect(events[0].title).toBe('Max (11)');
   });
+
+  it('keeps two contact-synced same-name same-date birthdays separate', () => {
+    const { buildBirthdayEvents } = require('../../hooks/useCalendar');
+    const events = buildBirthdayEvents({
+      viewYear: 2026,
+      birthdays: [
+        { id: 1, contact_id: 11, person_name: 'Max', month: 9, day: 3 },
+        { id: 2, contact_id: 12, person_name: 'Max', month: 9, day: 3 },
+      ],
+      members: [],
+    });
+
+    expect(events).toHaveLength(2);
+    expect(events.map((event) => event.title)).toEqual(['Max', 'Max']);
+    expect(new Set(events.map((event) => event.id)).size).toBe(2);
+  });
 });
 
 describe('useCalendar edit flow', () => {

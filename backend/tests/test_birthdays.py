@@ -14,9 +14,10 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app.core.clock import utcnow
+from app.core.contact_birthdays import backfill_contact_id_from_name_match
 from app.database import Base, get_db
 from app.main import app
-from app.models import Family, FamilyBirthday, Membership, PersonalAccessToken, User
+from app.models import Contact, Family, FamilyBirthday, Membership, PersonalAccessToken, User
 from app.security import hash_password, PAT_PREFIX
 
 
@@ -204,46 +205,236 @@ def test_patch_without_year_key_leaves_year_untouched():
     assert body["year"] == 1940
 
 
-def test_contact_rename_preserves_existing_birthday_row_and_year():
-    token, family_id = _seed_member(scopes="birthdays:write,contacts:write")
+def test_contact_rename_updates_same_synced_row_without_creating_duplicate():
+    """Renaming a contact must rename its own synced birthday in place.
+
+    Stable identity lives on ``FamilyBirthday.contact_id`` now, so a
+    rename updates the existing row regardless of whether the old name
+    still matches.
+    """
+    token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
     client = TestClient(app)
 
-    created_birthday = client.post(
-        "/birthdays",
-        json={"family_id": family_id, "person_name": "Alice", "month": 4, "day": 14, "year": 1980},
-        headers=_auth_headers(token),
-    )
-    assert created_birthday.status_code == 200, created_birthday.text
-    birthday_id = created_birthday.json()["id"]
-
-    created_contact = client.post(
+    created = client.post(
         "/contacts",
         json={"family_id": family_id, "full_name": "Alice", "birthday_month": 4, "birthday_day": 14},
         headers=_auth_headers(token),
     )
-    assert created_contact.status_code == 200, created_contact.text
-    contact_id = created_contact.json()["id"]
+    assert created.status_code == 200, created.text
+    contact_id = created.json()["id"]
 
-    renamed_contact = client.patch(
+    before = client.get(
+        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+    ).json()
+    assert len(before) == 1
+    synced_id = before[0]["id"]
+    assert before[0]["contact_id"] == contact_id
+
+    rename = client.patch(
         f"/contacts/{contact_id}",
         json={"full_name": "Alice Smith"},
         headers=_auth_headers(token),
     )
-    assert renamed_contact.status_code == 200, renamed_contact.text
+    assert rename.status_code == 200, rename.text
+
+    after = client.get(
+        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+    ).json()
+    assert len(after) == 1
+    assert after[0]["id"] == synced_id
+    assert after[0]["person_name"] == "Alice Smith"
+    assert after[0]["contact_id"] == contact_id
+    assert after[0]["month"] == 4
+    assert after[0]["day"] == 14
+
+
+def test_contact_birthday_date_change_updates_same_row_in_place():
+    """Changing ``birthday_month``/``birthday_day`` on an existing contact
+    must update the synced row in place — no stale leftover, no new row.
+    """
+    token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
+    client = TestClient(app)
+
+    created = client.post(
+        "/contacts",
+        json={"family_id": family_id, "full_name": "Alice", "birthday_month": 4, "birthday_day": 14},
+        headers=_auth_headers(token),
+    )
+    assert created.status_code == 200, created.text
+    contact_id = created.json()["id"]
+
+    before = client.get(
+        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+    ).json()
+    assert len(before) == 1
+    synced_id = before[0]["id"]
+    assert before[0]["contact_id"] == contact_id
+    assert (before[0]["month"], before[0]["day"]) == (4, 14)
+
+    patch = client.patch(
+        f"/contacts/{contact_id}",
+        json={"birthday_month": 12, "birthday_day": 25},
+        headers=_auth_headers(token),
+    )
+    assert patch.status_code == 200, patch.text
+
+    after = client.get(
+        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+    ).json()
+    assert len(after) == 1, f"expected exactly one synced row, got {after}"
+    assert after[0]["id"] == synced_id
+    assert after[0]["contact_id"] == contact_id
+    assert (after[0]["month"], after[0]["day"]) == (12, 25)
+    assert after[0]["person_name"] == "Alice"
+
+
+def test_manual_birthday_survives_matching_contact_create_and_delete():
+    """A manual birthday that happens to match a contact must remain safe."""
+    token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
+    client = TestClient(app)
+
+    manual = client.post(
+        "/birthdays",
+        json={"family_id": family_id, "person_name": "Alice", "month": 4, "day": 14, "year": 1980},
+        headers=_auth_headers(token),
+    ).json()
+    manual_id = manual["id"]
+    assert manual["contact_id"] is None
+
+    contact = client.post(
+        "/contacts",
+        json={"family_id": family_id, "full_name": "Alice", "birthday_month": 4, "birthday_day": 14},
+        headers=_auth_headers(token),
+    ).json()
+    contact_id = contact["id"]
+
+    rows = client.get(
+        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+    ).json()
+    by_id = {r["id"]: r for r in rows}
+    assert manual_id in by_id
+    assert by_id[manual_id]["contact_id"] is None
+    assert by_id[manual_id]["year"] == 1980
+    synced = [r for r in rows if r["contact_id"] == contact_id]
+    assert len(synced) == 1
+    assert synced[0]["id"] != manual_id
+
+    delete = client.delete(
+        f"/contacts/{contact_id}", headers=_auth_headers(token),
+    )
+    assert delete.status_code == 200, delete.text
+
+    remaining = client.get(
+        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+    ).json()
+    assert [r["id"] for r in remaining] == [manual_id]
+    assert remaining[0]["year"] == 1980
+
+
+def test_two_contacts_same_name_each_own_a_birthday_row():
+    token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
+    client = TestClient(app)
+
+    a = client.post(
+        "/contacts",
+        json={"family_id": family_id, "full_name": "Max", "birthday_month": 9, "birthday_day": 3},
+        headers=_auth_headers(token),
+    ).json()
+    b = client.post(
+        "/contacts",
+        json={"family_id": family_id, "full_name": "Max", "birthday_month": 9, "birthday_day": 3},
+        headers=_auth_headers(token),
+    ).json()
+    assert a["id"] != b["id"]
+
+    rows = client.get(
+        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+    ).json()
+    assert {r["contact_id"] for r in rows} == {a["id"], b["id"]}
+    assert len(rows) == 2
+
+
+def test_deleting_one_duplicate_name_contact_only_removes_its_own_row():
+    token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
+    client = TestClient(app)
+
+    a = client.post(
+        "/contacts",
+        json={"family_id": family_id, "full_name": "Max", "birthday_month": 9, "birthday_day": 3},
+        headers=_auth_headers(token),
+    ).json()
+    b = client.post(
+        "/contacts",
+        json={"family_id": family_id, "full_name": "Max", "birthday_month": 9, "birthday_day": 3},
+        headers=_auth_headers(token),
+    ).json()
+
+    client.delete(f"/contacts/{a['id']}", headers=_auth_headers(token))
+
+    remaining = client.get(
+        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+    ).json()
+    assert len(remaining) == 1
+    assert remaining[0]["contact_id"] == b["id"]
+
+
+def test_backfill_is_conservative_with_ambiguous_legacy_data():
+    """Simulate a legacy DB: contacts + unlinked birthday rows with
+    matching names and dates. The backfill must link only unambiguous
+    pairs and leave ambiguous ones as ``contact_id IS NULL``.
+    """
+    db = TestSession()
+    try:
+        family = Family(name="Legacy Family")
+        db.add(family)
+        db.flush()
+        fid = family.id
+
+        # Unambiguous pair: one contact + one birthday with the same name/date.
+        solo_contact = Contact(
+            family_id=fid, full_name="Anna", birthday_month=3, birthday_day=1,
+        )
+        db.add(solo_contact)
+        solo_row = FamilyBirthday(family_id=fid, person_name="Anna", month=3, day=1)
+        db.add(solo_row)
+
+        # Ambiguous: two contacts with identical name+date.
+        db.add(Contact(family_id=fid, full_name="Max", birthday_month=9, birthday_day=3))
+        db.add(Contact(family_id=fid, full_name="Max", birthday_month=9, birthday_day=3))
+        ambiguous_row = FamilyBirthday(family_id=fid, person_name="Max", month=9, day=3)
+        db.add(ambiguous_row)
+
+        # Ambiguous: one contact but two candidate birthday rows.
+        db.add(Contact(family_id=fid, full_name="Lena", birthday_month=6, birthday_day=10))
+        dup_a = FamilyBirthday(family_id=fid, person_name="Lena", month=6, day=10)
+        dup_b = FamilyBirthday(family_id=fid, person_name="Lena", month=6, day=10, year=1970)
+        db.add(dup_a)
+        db.add(dup_b)
+
+        db.commit()
+        solo_contact_id = solo_contact.id
+        solo_row_id = solo_row.id
+        ambiguous_row_id = ambiguous_row.id
+        dup_a_id, dup_b_id = dup_a.id, dup_b.id
+    finally:
+        db.close()
+
+    with engine.connect() as conn:
+        with conn.begin():
+            updated = backfill_contact_id_from_name_match(conn)
+
+    assert updated == 1
 
     db = TestSession()
     try:
-        birthdays = (
-            db.query(FamilyBirthday)
-            .filter(FamilyBirthday.family_id == family_id)
-            .order_by(FamilyBirthday.id.asc())
-            .all()
-        )
-        assert len(birthdays) == 1
-        assert birthdays[0].id == birthday_id
-        assert birthdays[0].person_name == "Alice Smith"
-        assert birthdays[0].month == 4
-        assert birthdays[0].day == 14
-        assert birthdays[0].year == 1980
+        linked = db.query(FamilyBirthday).filter(FamilyBirthday.id == solo_row_id).one()
+        assert linked.contact_id == solo_contact_id
+
+        untouched_ambiguous = db.query(FamilyBirthday).filter(FamilyBirthday.id == ambiguous_row_id).one()
+        assert untouched_ambiguous.contact_id is None
+
+        for rid in (dup_a_id, dup_b_id):
+            row = db.query(FamilyBirthday).filter(FamilyBirthday.id == rid).one()
+            assert row.contact_id is None
     finally:
         db.close()

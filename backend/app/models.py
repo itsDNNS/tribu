@@ -1,7 +1,7 @@
 
 from app.core.clock import utcnow
 
-from sqlalchemy import Column, Date, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON
+from sqlalchemy import Column, Date, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -103,9 +103,33 @@ class FamilyBirthday(Base):
     month = Column(Integer, nullable=False)
     day = Column(Integer, nullable=False)
     year = Column(Integer, nullable=True)
+    # Nullable link to the originating Contact row. NULL means the
+    # birthday was entered manually; a non-null value means the row is
+    # synced from a contact and must be located and maintained by
+    # contact identity, not by person_name.
+    contact_id = Column(
+        Integer,
+        ForeignKey("contacts.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
+    __table_args__ = (
+        # At most one synced birthday per (family, contact). Partial so
+        # manual rows (contact_id IS NULL) can coexist freely.
+        Index(
+            "uq_family_birthdays_family_contact",
+            "family_id",
+            "contact_id",
+            unique=True,
+            sqlite_where=text("contact_id IS NOT NULL"),
+            postgresql_where=text("contact_id IS NOT NULL"),
+        ),
+    )
+
     family = relationship("Family", back_populates="birthdays")
+    contact = relationship("Contact", back_populates="birthday_entry")
 
 
 class Task(Base):
@@ -161,6 +185,13 @@ class Contact(Base):
     __table_args__ = (
         UniqueConstraint("family_id", "vcard_uid", name="uq_contacts_family_uid"),
         UniqueConstraint("family_id", "dav_href", name="uq_contacts_family_href"),
+    )
+
+    birthday_entry = relationship(
+        "FamilyBirthday",
+        back_populates="contact",
+        uselist=False,
+        passive_deletes=True,
     )
 
 

@@ -23,7 +23,7 @@ from radicale.storage import BaseStorage, BaseCollection
 from sqlalchemy.exc import IntegrityError
 
 from app.core import cache
-from app.core.contact_birthdays import delete_family_birthday, sync_contact_birthday
+from app.core.contact_birthdays import delete_synced_birthday_for_contact, sync_contact_birthday
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.vcard_utils import contact_to_vcard, contacts_to_vcards, vcard_to_contact_dict
 from app.database import SessionLocal
@@ -608,7 +608,6 @@ class AddressBookCollection(BaseCollection):
 
             replaced_item: Optional["radicale_item.Item"] = None
             if existing_by_href is not None:
-                old_name = existing_by_href.full_name
                 replaced_item = self._contact_to_item(existing_by_href)
                 _apply_contact_fields(existing_by_href, fields)
                 existing_by_href.vcard_uid = uid
@@ -624,11 +623,11 @@ class AddressBookCollection(BaseCollection):
                 )
                 _apply_contact_fields(row, fields)
                 db.add(row)
-                old_name = None
+                db.flush()
             sync_contact_birthday(
                 db,
                 self._family_id,
-                old_name,
+                row.id,
                 row.full_name,
                 row.birthday_month,
                 row.birthday_day,
@@ -650,7 +649,7 @@ class AddressBookCollection(BaseCollection):
             c = self._find_contact_by_href_scoped(db, href)
             if c is None:
                 raise KeyError(href)
-            delete_family_birthday(db, self._family_id, c.full_name)
+            delete_synced_birthday_for_contact(db, self._family_id, c.id)
             db.delete(c)
             db.commit()
         cache.invalidate_pattern(f"tribu:dashboard:{self._family_id}:*")
