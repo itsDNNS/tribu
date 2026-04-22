@@ -203,6 +203,14 @@ def start_login(
         "invite": invite or "",
         "redirect_to": _safe_redirect(redirect_to),
         "issuer": cfg.issuer,
+        # Pin the redirect_uri we actually sent to the IdP so the
+        # callback token-exchange submits exactly the same value.
+        # If base_url / x-forwarded headers shift between the two
+        # requests (e.g. a reverse proxy restarts, BASE_URL env
+        # flips) the authorize-step URI and the token-exchange URI
+        # would otherwise diverge and the IdP would refuse the
+        # exchange with invalid_grant / redirect_uri_mismatch.
+        "redirect_uri": redirect_uri,
     })
 
     response = RedirectResponse(url=authorize_url, status_code=303)
@@ -406,7 +414,7 @@ def _link_identity_with_race_guard(
 
 
 @router.get(
-    "/auth/oidc/callback",
+    oidc_core.CALLBACK_PATH,
     summary="OIDC callback",
     description=(
         "Consume the IdP's ``code`` + ``state`` response. Sets the "
@@ -469,7 +477,12 @@ def callback(
         _clear_flow_cookie(resp)
         return resp
 
-    redirect_uri = f"{resolve_base_url(db, request)}{oidc_core.CALLBACK_PATH}"
+    # Prefer the URI we actually sent to the IdP at authorize time;
+    # fall back to recomputing for older flow cookies that predate
+    # the pinning (this round of the loop is mid-deployment).
+    redirect_uri = flow.get("redirect_uri") or (
+        f"{resolve_base_url(db, request)}{oidc_core.CALLBACK_PATH}"
+    )
 
     try:
         token_response = oidc_core.exchange_code_for_tokens(

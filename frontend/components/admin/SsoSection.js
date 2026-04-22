@@ -67,16 +67,32 @@ export default function SsoSection() {
     } else if (secretDraft) {
       payload.client_secret = secretDraft;
     }
-    const { ok, data } = await api.apiUpdateOidcConfig(payload);
-    setSaving(false);
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      return;
+    try {
+      const { ok, data } = await api.apiUpdateOidcConfig(payload);
+      if (!ok) {
+        toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        return;
+      }
+      toastSuccess(t(messages, 'sso.saved'));
+      setCfg(data);
+      setSecretDraft('');
+      setSecretClearPending(false);
+    } catch (err) {
+      // Network failure or anything that short-circuits the fetch.
+      // The backend may or may not have applied the change; we
+      // cannot know from here. Re-fetch the config so the rendered
+      // effective_callback_url and client_secret_set flag reflect
+      // the actual server state instead of our optimistic draft.
+      toastError(t(messages, 'toast.error'));
+      try {
+        const { ok, data } = await api.apiGetOidcConfig();
+        if (ok && data) setCfg(data);
+      } catch {
+        // Leave cfg alone if even the refetch fails. User can retry.
+      }
+    } finally {
+      setSaving(false);
     }
-    toastSuccess(t(messages, 'sso.saved'));
-    setCfg(data);
-    setSecretDraft('');
-    setSecretClearPending(false);
   }
 
   const selectedPreset = presets.find((p) => p.id === cfg.preset) || null;
