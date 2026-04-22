@@ -239,6 +239,49 @@ class TestPasswordLoginGate:
         db.commit()
         assert oidc_core.password_login_disabled(db) is False
 
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            "",                    # empty
+            "   ",                 # whitespace
+            "2099-01-01",          # date-only: parseable but no time
+            "2099",                # year-only
+            "garbage",             # not even ISO-shaped
+            "T12:00:00",           # time-only with stray T
+            "2026-04-22",          # today, date-only
+        ],
+    )
+    def test_unparseable_or_timeless_timestamp_falls_open(self, db, bad):
+        """Anything not matching the full ISO date+time shape must
+        not count as proof-of-life. Partial values like
+        ``YYYY-MM-DD`` are parseable by ``fromisoformat`` but would
+        silently keep password login disabled for 30 days."""
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        oidc_core.set_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, bad)
+        db.commit()
+        assert oidc_core.password_login_disabled(db) is False
+
+    def test_future_timestamp_falls_open(self, db):
+        """A hand-edited future date must not extend the grace
+        window past ``LOCKOUT_GRACE_DAYS``. Up to a few minutes of
+        clock skew is tolerated, far-future values are rejected."""
+        from datetime import timedelta
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        future = (oidc_core.utcnow() + timedelta(days=365)).replace(microsecond=0).isoformat()
+        oidc_core.set_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, future)
+        db.commit()
+        assert oidc_core.password_login_disabled(db) is False
+
+    def test_small_clock_skew_tolerated(self, db):
+        """A stamp 1 minute in the future (plausible for intra-
+        cluster skew) still counts as proof-of-life."""
+        from datetime import timedelta
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        soon = (oidc_core.utcnow() + timedelta(minutes=1)).replace(microsecond=0).isoformat()
+        oidc_core.set_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, soon)
+        db.commit()
+        assert oidc_core.password_login_disabled(db) is True
+
     def test_flag_off_stays_off(self, db):
         self._store(db, enabled=True, disable_flag=False, ready=True)
         self._stamp(db, days_ago=0)

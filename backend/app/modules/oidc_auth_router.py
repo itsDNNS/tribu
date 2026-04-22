@@ -80,7 +80,11 @@ def public_config(db: Session = Depends(get_db)):
         "enabled": bool(cfg.enabled),
         "ready": ready,
         "button_label": cfg.effective_button_label() if ready else "",
-        "password_login_disabled": ready and cfg.disable_password_login,
+        # Mirror the full backend gate (ready + disable flag + recent
+        # SSO proof-of-life) so the frontend does not hide local auth
+        # before the first successful SSO login, and so password login
+        # automatically re-surfaces after the lockout grace expires.
+        "password_login_disabled": oidc_core.password_login_disabled(db),
     }
 
 

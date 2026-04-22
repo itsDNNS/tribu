@@ -290,7 +290,7 @@ class OIDCConfigResponse(BaseModel):
     client_secret_set: bool = Field(..., description="True if a client secret is stored (value itself is never returned).")
     scopes: str = Field(..., description="Space-separated OAuth2 scopes to request.")
     allow_signup: bool = Field(..., description="Allow new accounts to be created via SSO when following an invite link.")
-    disable_password_login: bool = Field(..., description="Reject /auth/login when SSO is fully configured.")
+    disable_password_login: bool = Field(..., description="Reject /auth/login when SSO is ready AND a successful SSO login was recorded in the last 30 days.")
     ready: bool = Field(..., description="True if enabled AND all required fields are set.")
 
 
@@ -309,7 +309,7 @@ class OIDCConfigUpdate(BaseModel):
     client_secret: Optional[str] = Field(None, description="OAuth2 client secret. Omit to keep existing; empty string clears.")
     scopes: Optional[str] = Field(None, description="Space-separated scopes.")
     allow_signup: Optional[bool] = Field(None, description="Allow new account creation via SSO (invite-bound).")
-    disable_password_login: Optional[bool] = Field(None, description="Reject password login when SSO is ready.")
+    disable_password_login: Optional[bool] = Field(None, description="Reject password login when SSO is ready AND a recent successful SSO login was recorded (30-day proof-of-life window).")
 
     @field_validator("scopes")
     @classmethod
