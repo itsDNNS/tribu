@@ -35,6 +35,7 @@ from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATAB
 from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.modules.invitations_router import router as invitations_router, public_router as invitations_public_router, settings_router as invitations_settings_router
+from app.modules.oidc_router import router as oidc_admin_router
 from app.modules.setup_router import router as setup_router
 from app.modules.search_router import router as search_router
 from app.modules.rewards_router import router as rewards_router
@@ -140,7 +141,8 @@ TAG_METADATA = [
     {"name": "tokens", "description": "Personal Access Token (PAT) management for API automation."},
     {"name": "backup", "description": "Database backup management — schedule, trigger, download, and delete. Admin only."},
     {"name": "invitations", "description": "Family invitation links — create, list, revoke, and accept."},
-    {"name": "admin-settings", "description": "System-wide admin settings (base URL configuration)."},
+    {"name": "admin-settings", "description": "System-wide admin settings (base URL, time format, OIDC / SSO configuration)."},
+    {"name": "sso", "description": "Single Sign-On (OpenID Connect) login flow: public config, authorize redirect, callback."},
     {"name": "nav", "description": "User navigation bar order customization."},
     {"name": "setup", "description": "Initial setup wizard — check status and restore from backup. Only available on empty databases."},
     {"name": "gifts", "description": "Gift list — track gift ideas, prices, and occasions per family. Adult only."},
@@ -535,6 +537,7 @@ app.include_router(nav_router)
 app.include_router(invitations_router)
 app.include_router(invitations_public_router)
 app.include_router(invitations_settings_router)
+app.include_router(oidc_admin_router)
 app.include_router(setup_router)
 app.include_router(search_router)
 app.include_router(rewards_router)

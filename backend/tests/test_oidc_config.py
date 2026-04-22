@@ -1,0 +1,291 @@
+"""Tests for OIDC configuration storage and discovery helpers.
+
+Covers Phase 1 of issue #156: settings round-trip, preset catalog,
+discovery fetch (mocked), and the ``is_ready`` / password-login gate.
+"""
+from __future__ import annotations
+
+import json
+from unittest.mock import patch
+
+import pytest
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
+
+from app.core import oidc as oidc_core
+from app.core.oidc_presets import PRESETS, get_preset, list_presets
+from app.database import Base
+
+
+engine = create_engine(
+    "sqlite:///./test-oidc-config.db",
+    connect_args={"check_same_thread": False},
+)
+TestSession = sessionmaker(bind=engine)
+
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragma(dbapi_conn, _):
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+@pytest.fixture(autouse=True)
+def setup_db():
+    Base.metadata.create_all(bind=engine)
+    yield
+    Base.metadata.drop_all(bind=engine)
+    oidc_core.invalidate_discovery_cache()
+
+
+@pytest.fixture
+def db():
+    session = TestSession()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+# ---------------------------------------------------------------------------
+# Preset catalog
+# ---------------------------------------------------------------------------
+
+
+class TestPresets:
+    def test_catalog_contains_all_required_providers(self):
+        ids = {p["id"] for p in list_presets()}
+        assert {"generic", "authentik", "zitadel", "keycloak"}.issubset(ids)
+
+    def test_every_preset_has_required_fields(self):
+        for preset in PRESETS.values():
+            assert preset["id"]
+            assert preset["name"]
+            assert preset["button_label"]
+            assert preset["issuer_placeholder"].startswith("http")
+            assert "openid" in preset["default_scopes"]
+            assert preset["hint"]
+
+    def test_unknown_preset_falls_back_to_generic(self):
+        assert get_preset("does-not-exist")["id"] == "generic"
+
+
+# ---------------------------------------------------------------------------
+# Config round-trip
+# ---------------------------------------------------------------------------
+
+
+class TestConfigRoundTrip:
+    def test_defaults_when_nothing_stored(self, db):
+        cfg = oidc_core.load_config(db)
+        assert cfg.enabled is False
+        assert cfg.preset == "generic"
+        assert cfg.issuer == ""
+        assert cfg.client_id == ""
+        assert cfg.client_secret == ""
+        assert cfg.scopes == "openid profile email"
+        assert cfg.allow_signup is False
+        assert cfg.disable_password_login is False
+        assert cfg.is_ready() is False
+
+    def test_save_and_reload(self, db):
+        oidc_core.save_config(
+            db,
+            enabled=True,
+            preset="authentik",
+            button_label="Sign in with Home IdP",
+            issuer="https://auth.example.com/application/o/tribu",
+            client_id="tribu-client",
+            client_secret="topsecret",
+            scopes="openid profile email",
+            allow_signup=True,
+            disable_password_login=False,
+        )
+        db.commit()
+
+        cfg = oidc_core.load_config(db)
+        assert cfg.enabled is True
+        assert cfg.preset == "authentik"
+        assert cfg.button_label == "Sign in with Home IdP"
+        # Trailing slash stripped on save so URL concat stays predictable
+        assert cfg.issuer == "https://auth.example.com/application/o/tribu"
+        assert cfg.client_id == "tribu-client"
+        assert cfg.client_secret == "topsecret"
+        assert cfg.allow_signup is True
+        assert cfg.disable_password_login is False
+        assert cfg.is_ready() is True
+
+    def test_secret_passthrough_when_none(self, db):
+        oidc_core.save_config(
+            db,
+            enabled=True,
+            preset="generic",
+            button_label="",
+            issuer="https://idp.example.com",
+            client_id="tribu",
+            client_secret="initial-secret",
+            scopes="openid profile email",
+            allow_signup=False,
+            disable_password_login=False,
+        )
+        db.commit()
+
+        # None means "keep existing"
+        oidc_core.save_config(
+            db,
+            enabled=True,
+            preset="generic",
+            button_label="New label",
+            issuer="https://idp.example.com",
+            client_id="tribu",
+            client_secret=None,
+            scopes="openid profile email",
+            allow_signup=False,
+            disable_password_login=False,
+        )
+        db.commit()
+
+        cfg = oidc_core.load_config(db)
+        assert cfg.client_secret == "initial-secret"
+        assert cfg.button_label == "New label"
+
+    def test_empty_string_clears_secret(self, db):
+        oidc_core.save_config(
+            db, enabled=True, preset="generic", button_label="",
+            issuer="https://idp.example.com", client_id="tribu",
+            client_secret="will-be-cleared", scopes="openid profile email",
+            allow_signup=False, disable_password_login=False,
+        )
+        db.commit()
+        oidc_core.save_config(
+            db, enabled=True, preset="generic", button_label="",
+            issuer="https://idp.example.com", client_id="tribu",
+            client_secret="", scopes="openid profile email",
+            allow_signup=False, disable_password_login=False,
+        )
+        db.commit()
+        assert oidc_core.load_config(db).client_secret == ""
+
+
+# ---------------------------------------------------------------------------
+# password_login_disabled gate
+# ---------------------------------------------------------------------------
+
+
+class TestPasswordLoginGate:
+    def _store(self, db, *, enabled: bool, disable_flag: bool, ready: bool):
+        oidc_core.save_config(
+            db,
+            enabled=enabled,
+            preset="generic",
+            button_label="",
+            issuer="https://idp.example.com" if ready else "",
+            client_id="tribu" if ready else "",
+            client_secret="s" if ready else "",
+            scopes="openid profile email",
+            allow_signup=False,
+            disable_password_login=disable_flag,
+        )
+        db.commit()
+
+    def test_flag_ignored_when_oidc_disabled(self, db):
+        self._store(db, enabled=False, disable_flag=True, ready=False)
+        assert oidc_core.password_login_disabled(db) is False
+
+    def test_flag_ignored_when_not_ready(self, db):
+        # enabled=True but issuer/client missing => not ready
+        self._store(db, enabled=True, disable_flag=True, ready=False)
+        assert oidc_core.password_login_disabled(db) is False
+
+    def test_flag_honoured_when_ready(self, db):
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        assert oidc_core.password_login_disabled(db) is True
+
+    def test_flag_off_stays_off(self, db):
+        self._store(db, enabled=True, disable_flag=False, ready=True)
+        assert oidc_core.password_login_disabled(db) is False
+
+
+# ---------------------------------------------------------------------------
+# Discovery
+# ---------------------------------------------------------------------------
+
+
+def _valid_doc(issuer: str = "https://idp.example.com") -> dict:
+    return {
+        "issuer": issuer,
+        "authorization_endpoint": f"{issuer}/authorize",
+        "token_endpoint": f"{issuer}/token",
+        "userinfo_endpoint": f"{issuer}/userinfo",
+        "jwks_uri": f"{issuer}/jwks",
+    }
+
+
+class TestDiscovery:
+    def test_happy_path(self):
+        with patch.object(oidc_core, "_fetch_json", return_value=_valid_doc()):
+            disc = oidc_core.fetch_discovery("https://idp.example.com", force=True)
+        assert disc.issuer == "https://idp.example.com"
+        assert disc.authorization_endpoint.endswith("/authorize")
+        assert disc.token_endpoint.endswith("/token")
+        assert disc.jwks_uri.endswith("/jwks")
+
+    def test_trailing_slash_normalised(self):
+        with patch.object(oidc_core, "_fetch_json", return_value=_valid_doc()):
+            disc = oidc_core.fetch_discovery("https://idp.example.com/", force=True)
+        assert disc.issuer == "https://idp.example.com"
+
+    def test_missing_required_field_raises(self):
+        bad = _valid_doc()
+        del bad["token_endpoint"]
+        with patch.object(oidc_core, "_fetch_json", return_value=bad):
+            with pytest.raises(oidc_core.DiscoveryError):
+                oidc_core.fetch_discovery("https://idp.example.com", force=True)
+
+    def test_issuer_mismatch_raises(self):
+        doc = _valid_doc("https://other.example.com")
+        with patch.object(oidc_core, "_fetch_json", return_value=doc):
+            with pytest.raises(oidc_core.DiscoveryError):
+                oidc_core.fetch_discovery("https://idp.example.com", force=True)
+
+    def test_result_is_cached(self):
+        call_count = {"n": 0}
+
+        def fake_fetch(url, timeout=5.0):
+            call_count["n"] += 1
+            return _valid_doc()
+
+        with patch.object(oidc_core, "_fetch_json", side_effect=fake_fetch):
+            oidc_core.fetch_discovery("https://idp.example.com", force=True)
+            oidc_core.fetch_discovery("https://idp.example.com")
+            oidc_core.fetch_discovery("https://idp.example.com")
+
+        assert call_count["n"] == 1
+
+    def test_cache_invalidation(self):
+        call_count = {"n": 0}
+
+        def fake_fetch(url, timeout=5.0):
+            call_count["n"] += 1
+            return _valid_doc()
+
+        with patch.object(oidc_core, "_fetch_json", side_effect=fake_fetch):
+            oidc_core.fetch_discovery("https://idp.example.com", force=True)
+            oidc_core.invalidate_discovery_cache()
+            oidc_core.fetch_discovery("https://idp.example.com")
+
+        assert call_count["n"] == 2
+
+    def test_force_bypasses_cache(self):
+        call_count = {"n": 0}
+
+        def fake_fetch(url, timeout=5.0):
+            call_count["n"] += 1
+            return _valid_doc()
+
+        with patch.object(oidc_core, "_fetch_json", side_effect=fake_fetch):
+            oidc_core.fetch_discovery("https://idp.example.com", force=True)
+            oidc_core.fetch_discovery("https://idp.example.com", force=True)
+
+        assert call_count["n"] == 2
