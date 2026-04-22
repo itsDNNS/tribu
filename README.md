@@ -27,11 +27,11 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/screenshot-light.png" alt="Dashboard - Morning Mist theme" width="100%" />
+  <img src="docs/assets/screenshot-hero-mobile.png" alt="Tribu mobile hero" width="100%" />
 </p>
 
 <p align="center">
-  <em>Morning Mist theme - content-first dashboard with events, tasks, birthdays, and family context at a glance</em>
+  <em>Tribu on mobile - a private family organizer for everyday life</em>
 </p>
 
 <details>
