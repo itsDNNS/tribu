@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Self-hosted</strong>&nbsp;&nbsp;&bull;&nbsp;&nbsp;Docker Compose&nbsp;&nbsp;&bull;&nbsp;&nbsp;Demo mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;CalDAV/CardDAV sync&nbsp;&nbsp;&bull;&nbsp;&nbsp;English + German
+  <strong>Self-hosted</strong>&nbsp;&nbsp;&bull;&nbsp;&nbsp;Docker Compose&nbsp;&nbsp;&bull;&nbsp;&nbsp;Demo mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;CalDAV/CardDAV sync&nbsp;&nbsp;&bull;&nbsp;&nbsp;English + German&nbsp;&nbsp;&bull;&nbsp;&nbsp;MIT licensed
 </p>
 
 <p align="center">
@@ -278,6 +278,13 @@ Tribu is not only trying to be pleasant for families using it. It is also set up
 - **Architecture and plugin docs:** enough structure to inspect how it works before touching anything
 - **Open contribution path:** public roadmap, contributing guide, security policy, and MIT license
 
+## Signals that this is a serious project
+
+- **Versioned releases:** published tags such as `v1.6.1`, `v1.6.0`, and earlier releases show an actual shipping cadence
+- **Operational docs:** self-hosting, backups, reverse proxy, architecture, and security guidance are already documented
+- **Clear extension path:** plugin manifest and contribution docs make it easier to understand where custom work belongs
+- **Public roadmap and changelog:** visitors can see both where Tribu is going and what has already shipped
+
 ## Documentation
 
 | | |
@@ -293,7 +300,9 @@ Tribu is not only trying to be pleasant for families using it. It is also set up
 
 ## Support
 
-If Tribu helps your family stay organized, consider supporting development:
+If Tribu helps your family stay organized, consider supporting development.
+
+If you are a self-hoster or contributor, starring the repo, opening issues, improving docs, or contributing code all help make the project stronger too.
 
 - [Ko-fi](https://ko-fi.com/itsdnns)
 - [PayPal](https://paypal.me/itsDNNS)
