@@ -292,6 +292,7 @@ class OIDCConfigResponse(BaseModel):
     allow_signup: bool = Field(..., description="Allow new accounts to be created via SSO when following an invite link.")
     disable_password_login: bool = Field(..., description="Reject /auth/login when SSO is ready AND a successful SSO login was recorded in the last 30 days.")
     ready: bool = Field(..., description="True if enabled AND all required fields are set.")
+    effective_callback_url: str = Field(..., description="The redirect_uri Tribu will actually send to the IdP. Shown in the admin UI so operators register the same value at their provider.")
 
 
 class OIDCConfigUpdate(BaseModel):

@@ -14,7 +14,16 @@ jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({ success: mockToastSuccess, error: mockToastError }),
 }));
 
-jest.mock('../../lib/i18n', () => ({ t: (_m, k) => k }));
+jest.mock('../../lib/i18n', () => ({
+  // Return realistic template strings for keys that the component
+  // runs .replace() on. Other keys fall back to the literal key so
+  // existing tests that assert on key presence still work.
+  t: (_m, k) => {
+    if (k === 'sso.redirect_uri_hint') return 'Register this redirect URL at your provider: {url}';
+    if (k === 'sso.test_fail') return 'Discovery failed: {error}';
+    return k;
+  },
+}));
 jest.mock('../../lib/helpers', () => ({ errorText: (_d, f) => f }));
 
 jest.mock('../../lib/api', () => ({
@@ -43,6 +52,7 @@ function mockCfg(overrides = {}) {
     allow_signup: false,
     disable_password_login: false,
     ready: false,
+    effective_callback_url: 'https://tribu.example.com/auth/oidc/callback',
     ...overrides,
   };
 }
@@ -113,6 +123,23 @@ describe('SsoSection admin panel', () => {
     await waitFor(() => expect(screen.getByText('sso.test_ok')).toBeInTheDocument());
   });
 
+  it('shows the backend-provided effective callback URL, not the browser origin', async () => {
+    const api = require('../../lib/api');
+    api.apiGetOidcConfig.mockResolvedValue({
+      ok: true,
+      data: mockCfg({ effective_callback_url: 'https://tribu.example.com/auth/oidc/callback' }),
+    });
+
+    render(<SsoSection />);
+    const hint = await screen.findByTestId('sso-callback-hint');
+    // Hint template replaces {url} with the backend-calculated value.
+    // window.location.origin in jsdom is 'http://localhost' — the
+    // regression guard is that the displayed URL matches the backend
+    // response, not the browser origin.
+    expect(hint).toHaveTextContent('https://tribu.example.com/auth/oidc/callback');
+    expect(hint).not.toHaveTextContent('http://localhost/auth/oidc/callback');
+  });
+
   it('shows the error from the discovery test result', async () => {
     const api = require('../../lib/api');
     api.apiGetOidcConfig.mockResolvedValue({ ok: true, data: mockCfg({ issuer: 'https://idp.example.com' }) });
@@ -123,7 +150,7 @@ describe('SsoSection admin panel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /sso\.test/ }));
     await waitFor(() =>
-      expect(screen.getByText('sso.test_fail')).toBeInTheDocument()
+      expect(screen.getByText(/host unreachable/)).toBeInTheDocument()
     );
   });
 });

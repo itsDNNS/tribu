@@ -505,6 +505,48 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   width: 100%; text-decoration: none;
 }
 
+/* Admin > Single Sign-On section — enforce a consistent vertical
+   rhythm so the dense stack of fields does not crowd together. */
+.sso-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md, 14px);
+}
+.sso-section .admin-section-header {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0;
+}
+.sso-section .admin-section-header h2 { margin: 0; font-size: 1.05rem; }
+.sso-section .adm-form-desc { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+.sso-section .form-field { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.sso-section .form-field > label { font-weight: 500; font-size: 0.9rem; }
+.sso-section .sso-hint {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.sso-section .sso-hint-warning { color: var(--warning, #c05621); }
+.sso-section .sso-checkbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sso-section .sso-checkbox-field .set-checkbox-label { margin: 0; }
+.sso-section .sso-secret-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sso-section .sso-callback-box {
+  padding: 10px 12px;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(124, 58, 237, 0.04);
+}
+.sso-section .set-btn-row { margin: 0; }
+
 /* ═══════════════════════════════════════════
    BUTTONS
    ═══════════════════════════════════════════ */
