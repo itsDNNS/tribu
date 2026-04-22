@@ -233,13 +233,19 @@ def record_successful_sso_login(db: Session) -> None:
     """Stamp ``oidc_last_success_at`` at UTC now.
 
     Called from the callback handler after the ID token verifies and
-    the local user is resolved. Storage is ISO 8601 (UTC, second
-    precision) for human-readable debugging alongside the other
-    ``oidc_*`` settings. Does not commit — the caller's transaction
-    already commits after wiring up identity, membership, and
-    session cookie.
+    the local user is resolved, immediately before ``db.commit()``.
+    The session cookie is set on the HTTP response after the commit
+    returns, so the stamp represents server-side proof-of-life rather
+    than confirmed browser receipt — close enough for the lockout
+    gate's purposes.
+
+    Storage is ISO 8601 (UTC, second precision, naive to match the
+    rest of Tribu's datetime convention).
     """
     set_setting(db, KEY_LAST_SUCCESS_AT, utcnow().replace(microsecond=0).isoformat())
+
+
+_ISO_WITH_TIME_MIN_LEN = len("YYYY-MM-DDTHH:MM:SS")
 
 
 def _last_success_within_grace(db: Session) -> bool:
@@ -248,20 +254,44 @@ def _last_success_within_grace(db: Session) -> bool:
     Tribu's ``utcnow()`` returns naive UTC datetimes by convention
     (for DB round-trip compatibility), so we normalize the parsed
     timestamp to naive UTC before comparing.
+
+    Any parseable-but-untrusted value falls open (password login
+    stays available). That means:
+
+    - malformed or non-ISO strings
+    - strings without a time component (e.g. plain date ``YYYY-MM-DD``
+      which ``datetime.fromisoformat`` happily parses as midnight)
+    - timestamps in the future (a hand-edited value cannot extend
+      the grace window indefinitely)
+
+    Worse to lock admins out than to leak one password-login window
+    after someone tampers with ``system_settings`` directly.
     """
     raw = get_setting(db, KEY_LAST_SUCCESS_AT, "")
     if not raw:
         return False
+
     from datetime import datetime, timedelta, timezone
+    # Require an explicit time separator. ``datetime.fromisoformat``
+    # accepts date-only strings in modern Pythons, and we do not want
+    # ``2099-01-01`` to count as a 30-day proof-of-life.
+    if "T" not in raw or len(raw) < _ISO_WITH_TIME_MIN_LEN:
+        return False
     try:
         parsed = datetime.fromisoformat(raw)
     except ValueError:
-        # Corrupted value — treat as no proof of life so password
-        # login stays available. Worse to lock out than to allow.
         return False
     if parsed.tzinfo is not None:
         parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
-    return parsed >= utcnow() - timedelta(days=LOCKOUT_GRACE_DAYS)
+
+    now = utcnow()
+    # Tolerate at most a few minutes of forward drift so clock skew
+    # between request-handling and setting-write does not tank the
+    # gate, but reject timestamps further in the future than any real
+    # drift could produce.
+    if parsed > now + timedelta(minutes=5):
+        return False
+    return parsed >= now - timedelta(days=LOCKOUT_GRACE_DAYS)
 
 
 def password_login_disabled(db: Session) -> bool:

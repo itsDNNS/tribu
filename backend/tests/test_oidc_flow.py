@@ -79,7 +79,15 @@ def _seed_config(
     disable_password_login: bool = False,
     button_label: str = "",
     enabled: bool = True,
+    proven: bool = True,
 ) -> None:
+    """Seed the OIDC config rows for tests.
+
+    ``proven=True`` also records a recent successful SSO login so the
+    password-login gate treats the config as trusted end-to-end. Tests
+    that want to exercise the "flag flipped before first success"
+    path pass ``proven=False``.
+    """
     db = TestSession()
     try:
         oidc_core.save_config(
@@ -94,6 +102,8 @@ def _seed_config(
             allow_signup=allow_signup,
             disable_password_login=disable_password_login,
         )
+        if proven:
+            oidc_core.record_successful_sso_login(db)
         db.commit()
     finally:
         db.close()
@@ -282,9 +292,11 @@ def test_callback_stamps_last_success_timestamp(monkeypatch):
 
     That timestamp is the proof-of-life the password_login_disabled
     gate depends on; without it the gate stays open and
-    disable_password_login never locks out the admin.
+    disable_password_login never locks out the admin. Start with
+    proven=False so the assertion actually proves the callback is
+    the thing that stamps.
     """
-    _seed_config()
+    _seed_config(proven=False)
     db = TestSession()
     try:
         db.add(User(
