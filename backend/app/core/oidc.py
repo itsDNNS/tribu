@@ -55,6 +55,13 @@ KEY_DISABLE_PASSWORD_LOGIN = "oidc_disable_password_login"
 # expire. Stamped on every successful callback.
 KEY_LAST_SUCCESS_AT = "oidc_last_success_at"
 
+# Path segment under Tribu's base URL where the IdP must POST the
+# user back after authorization. Kept here so both the admin UI
+# (which displays the redirect_uri the operator must register) and
+# the login flow (which sends redirect_uri to the IdP) derive it
+# from the same source of truth.
+CALLBACK_PATH = "/auth/oidc/callback"
+
 # How stale an SSO proof-of-life can be before password login is re-armed
 # automatically. 30 days is comfortably longer than JWT_EXPIRE_HOURS (24h
 # default) so a single break over a weekend does not flip the instance,

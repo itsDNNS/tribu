@@ -142,6 +142,41 @@ def test_get_config_defaults():
     assert body["preset"] == "generic"
     assert body["client_secret_set"] is False
     assert body["ready"] is False
+    # Effective callback URL always populated, derived from the
+    # request host (TestClient uses http://testserver by default).
+    assert body["effective_callback_url"].endswith("/auth/oidc/callback")
+
+
+def test_effective_callback_url_honours_base_url_env(monkeypatch):
+    """BASE_URL env overrides request-based derivation so admins
+    behind a reverse proxy see the real external URL, not the
+    internal request host."""
+    token = _seed_admin()
+    monkeypatch.setenv("BASE_URL", "https://tribu.example.com")
+    resp = client.get("/admin/oidc", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert resp.json()["effective_callback_url"] == (
+        "https://tribu.example.com/auth/oidc/callback"
+    )
+
+
+def test_effective_callback_url_honours_forwarded_headers():
+    """x-forwarded-host + x-forwarded-proto win over the direct
+    request headers when no BASE_URL is set, matching how
+    resolve_base_url is used elsewhere."""
+    token = _seed_admin()
+    resp = client.get(
+        "/admin/oidc",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "x-forwarded-host": "tribu.example.com",
+            "x-forwarded-proto": "https",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["effective_callback_url"] == (
+        "https://tribu.example.com/auth/oidc/callback"
+    )
 
 
 def test_get_config_requires_admin_scope():

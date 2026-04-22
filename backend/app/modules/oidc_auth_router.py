@@ -182,7 +182,7 @@ def start_login(
     code_verifier = oidc_core.generate_code_verifier()
     code_challenge = oidc_core.code_challenge_s256(code_verifier)
 
-    redirect_uri = f"{resolve_base_url(db, request)}/auth/oidc/callback"
+    redirect_uri = f"{resolve_base_url(db, request)}{oidc_core.CALLBACK_PATH}"
 
     authorize_params = {
         "response_type": "code",
@@ -469,7 +469,7 @@ def callback(
         _clear_flow_cookie(resp)
         return resp
 
-    redirect_uri = f"{resolve_base_url(db, request)}/auth/oidc/callback"
+    redirect_uri = f"{resolve_base_url(db, request)}{oidc_core.CALLBACK_PATH}"
 
     try:
         token_response = oidc_core.exchange_code_for_tokens(
