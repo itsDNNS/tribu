@@ -257,13 +257,9 @@ If Tribu helps your family stay organized, consider supporting development:
 
 ## License
 
-Tribu is **source-available**, but it is **not open source** at this time.
+Tribu is released under the **MIT License**.
 
-**All rights reserved.**
-
-The repository is public for transparency, feedback, and collaboration, but no open-source license is granted by default.
-
-If you need clarification about usage, redistribution, commercial use, or partnership/licensing options, please contact the maintainer first.
+That means you can use, modify, and redistribute the project with very few restrictions. See [LICENSE](LICENSE) for the full text.
 
 ---
 
