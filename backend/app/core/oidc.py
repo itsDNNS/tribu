@@ -48,6 +48,19 @@ KEY_CLIENT_SECRET = "oidc_client_secret"
 KEY_SCOPES = "oidc_scopes"
 KEY_ALLOW_SIGNUP = "oidc_allow_signup"
 KEY_DISABLE_PASSWORD_LOGIN = "oidc_disable_password_login"
+# Timestamp (ISO 8601 UTC) of the most recent successful /auth/oidc/callback.
+# Used as the lockout guard: disable_password_login is only honored when an
+# end-to-end SSO login actually worked recently, otherwise a mistyped issuer
+# or revoked client secret would lock every admin out the moment sessions
+# expire. Stamped on every successful callback.
+KEY_LAST_SUCCESS_AT = "oidc_last_success_at"
+
+# How stale an SSO proof-of-life can be before password login is re-armed
+# automatically. 30 days is comfortably longer than JWT_EXPIRE_HOURS (24h
+# default) so a single break over a weekend does not flip the instance,
+# but short enough that a long outage cannot leave admins permanently
+# unable to recover without shell access.
+LOCKOUT_GRACE_DAYS = 30
 
 ALL_KEYS = (
     KEY_ENABLED,
@@ -216,16 +229,61 @@ def save_config(
     )
 
 
+def record_successful_sso_login(db: Session) -> None:
+    """Stamp ``oidc_last_success_at`` at UTC now.
+
+    Called from the callback handler after the ID token verifies and
+    the local user is resolved. Storage is ISO 8601 (UTC, second
+    precision) for human-readable debugging alongside the other
+    ``oidc_*`` settings. Does not commit — the caller's transaction
+    already commits after wiring up identity, membership, and
+    session cookie.
+    """
+    set_setting(db, KEY_LAST_SUCCESS_AT, utcnow().replace(microsecond=0).isoformat())
+
+
+def _last_success_within_grace(db: Session) -> bool:
+    """True if an SSO login succeeded within ``LOCKOUT_GRACE_DAYS``.
+
+    Tribu's ``utcnow()`` returns naive UTC datetimes by convention
+    (for DB round-trip compatibility), so we normalize the parsed
+    timestamp to naive UTC before comparing.
+    """
+    raw = get_setting(db, KEY_LAST_SUCCESS_AT, "")
+    if not raw:
+        return False
+    from datetime import datetime, timedelta, timezone
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        # Corrupted value — treat as no proof of life so password
+        # login stays available. Worse to lock out than to allow.
+        return False
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed >= utcnow() - timedelta(days=LOCKOUT_GRACE_DAYS)
+
+
 def password_login_disabled(db: Session) -> bool:
     """Return True if local password login should be refused.
 
-    The flag is only honored when OIDC is both enabled AND ready to
-    use. Otherwise we would lock admins out whenever they
-    accidentally flip the toggle before finishing OIDC setup, which
-    is exactly the kind of footgun the issue asked to avoid.
+    Three layers of guard so the flag cannot lock the admin out on a
+    broken SSO config:
+
+    1. ``cfg.disable_password_login`` must be set (admin intent).
+    2. ``cfg.is_ready()`` — required fields present. Necessary but
+       not sufficient: a mistyped issuer satisfies is_ready() but
+       will never actually complete a login.
+    3. ``_last_success_within_grace`` — at least one end-to-end SSO
+       callback has succeeded in the last ``LOCKOUT_GRACE_DAYS``
+       days. This is the proof-of-life that the config is actually
+       usable. If SSO breaks and nobody logs in through it for the
+       grace window, password login automatically re-arms.
     """
     cfg = load_config(db)
-    return cfg.is_ready() and cfg.disable_password_login
+    if not (cfg.disable_password_login and cfg.is_ready()):
+        return False
+    return _last_success_within_grace(db)
 
 
 # ---------------------------------------------------------------------------
@@ -615,10 +673,21 @@ def verify_id_token(
     if not sub:
         raise IDTokenError("ID token has no subject")
 
+    # Strict boolean check: only the JSON value ``true`` counts as
+    # verified. Anything else — missing, null, 0, 1, the string
+    # "true"/"false", an array, etc. — is treated as not-verified.
+    # Guards against non-conformant providers (or attackers) sending
+    # truthy-but-non-boolean claim values that would otherwise slip
+    # past ``bool(...)``. This is the single trust hinge between the
+    # IdP's authentication result and Tribu's identity linking, so we
+    # refuse to interpret it liberally.
+    email_verified_raw = payload.get("email_verified")
+    email_verified = email_verified_raw is True
+
     return IDTokenClaims(
         subject=str(sub),
         email=payload.get("email"),
-        email_verified=bool(payload.get("email_verified", False)),
+        email_verified=email_verified,
         name=payload.get("name") or payload.get("preferred_username"),
         raw=payload,
     )

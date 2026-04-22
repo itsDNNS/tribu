@@ -328,8 +328,14 @@ def test_discovery_probe_rejects_file_scheme():
 # ---------------------------------------------------------------------------
 
 
-def _enable_oidc_ready(disable_password: bool) -> None:
-    """Seed a ready OIDC config directly via the DB, bypassing admin API."""
+def _enable_oidc_ready(disable_password: bool, *, proven: bool = True) -> None:
+    """Seed a ready OIDC config directly via the DB, bypassing admin API.
+
+    ``proven=True`` also stamps ``oidc_last_success_at`` so the
+    password-login gate honors ``disable_password_login``. Set it to
+    False when the test wants to cover the "admin flipped the flag
+    before SSO ever worked" edge case.
+    """
     db = TestSession()
     try:
         oidc_core.save_config(
@@ -344,6 +350,8 @@ def _enable_oidc_ready(disable_password: bool) -> None:
             allow_signup=False,
             disable_password_login=disable_password,
         )
+        if proven:
+            oidc_core.record_successful_sso_login(db)
         db.commit()
     finally:
         db.close()

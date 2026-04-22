@@ -511,6 +511,11 @@ def callback(
         _clear_flow_cookie(resp)
         return resp
 
+    # Stamp proof-of-life so password_login_disabled can trust that
+    # SSO actually works end-to-end. Commit once for the whole
+    # transaction (identity link + membership + timestamp).
+    oidc_core.record_successful_sso_login(db)
+
     db.commit()
 
     jwt_token = create_access_token(user_id=user.id, email=user.email)
