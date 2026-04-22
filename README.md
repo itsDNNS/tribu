@@ -5,8 +5,8 @@
 <h1 align="center">Tribu</h1>
 
 <p align="center">
-  <strong>Self-hosted family organizer for real everyday life.</strong><br>
-  Calendars, tasks, shopping lists, contacts, birthdays, and reminders — one place, your server, your data.
+  <strong>The private family organizer for real everyday life.</strong><br>
+  Shared calendar, tasks, shopping lists, contacts, birthdays, and reminders in one calm home. Self-hosted, bilingual, and built for real family workflows.
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@
 </p>
 
 <p align="center">
-  <em>Morning Mist theme — content-first dashboard with events, tasks, birthdays, and family context at a glance</em>
+  <em>Morning Mist theme - content-first dashboard with events, tasks, birthdays, and family context at a glance</em>
 </p>
 
 <details>
@@ -77,14 +77,21 @@ See the [Wiki](https://github.com/itsDNNS/tribu/wiki) for screenshots of every v
 
 ## Why Tribu?
 
-Most family organizer apps lock your data in their cloud, split everyday planning across too many tools, and charge monthly fees on top. Tribu runs on your own hardware, keeps your household data under your control, and gives your family one place to stay coordinated.
+Most family organizer apps lock your data in their cloud. The privacy-friendly alternatives often make you stitch together separate tools for calendars, lists, contacts, and reminders. Tribu gives your household one shared home for everyday coordination, on your own server and under your control.
 
-- **Your data stays at home** — no mandatory cloud, no third-party SaaS dependency
-- **Built for actual family workflows** — calendars, tasks, shopping, contacts, birthdays, and reminders in one place
-- **Works on desktop and mobile** — responsive interface with a clean, content-first layout
-- **Try before you install** — interactive demo mode with realistic sample data, no backend required
-- **Bilingual out of the box** — German and English, lazy-loaded per module
-- **Extensible when you need more** — modular plugin architecture for features, themes, and languages
+- **One calm shared home** - calendar, tasks, shopping, contacts, birthdays, and reminders in one place
+- **Private by default** - no mandatory cloud, no third-party SaaS dependency, your data stays on your hardware
+- **Built for actual family workflows** - shared planning for routines, errands, school life, household tasks, and family events
+- **Works today on desktop and mobile** - responsive interface plus CalDAV/CardDAV phone sync
+- **Try before you install** - interactive demo mode with realistic sample data, no backend required
+- **Bilingual out of the box** - German and English, lazy-loaded per module
+
+## Why families switch to Tribu
+
+- **Less app patchwork** - replace the usual mix of calendar apps, reminder apps, shopping lists, notes, and chat workarounds
+- **More family-native than generic productivity tools** - household members, shared context, birthdays, contacts, and routines belong together
+- **More private than cloud-first family apps** - your household data stays under your control
+- **More cohesive than DIY stacks** - less glue, less context switching, less setup friction
 
 ## What Tribu helps with
 
@@ -134,7 +141,7 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 | **Themes** | Morning Mist (light) and Dark |
 | **i18n** | English and German out of the box, lazy-loaded per module |
 | **Demo mode** | Try the full UI with realistic sample data, no server setup required |
-| **Security** | httpOnly cookies, rate limiting, scoped PATs, and non-root containers |
+| **Security** | httpOnly cookies, OIDC / SSO, rate limiting, scoped PATs, and non-root containers |
 
 ## Quick Start
 
