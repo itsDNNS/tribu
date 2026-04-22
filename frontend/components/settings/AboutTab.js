@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShieldCheck, Heart, Bug, ExternalLink } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
-import { extractReleaseVersion, hasNewerRelease } from '../../lib/version';
+import { extractReleaseVersion, formatDisplayedVersion, hasNewerRelease } from '../../lib/version';
 import * as api from '../../lib/api';
 
 export default function AboutTab() {
@@ -57,7 +57,7 @@ export default function AboutTab() {
         </p>
         {version && (
           <div className="set-about-version">
-            <span>{t(messages, 'version')}: v{version}</span>
+            <span>{t(messages, 'version')}: {formatDisplayedVersion(version)}</span>
             {isAdmin && updateInfo === 'up_to_date' && (
               <span className="set-about-uptodate">— {t(messages, 'up_to_date')}</span>
             )}
