@@ -19,6 +19,10 @@
 </p>
 
 <p align="center">
+  <strong>Self-hosted</strong>&nbsp;&nbsp;&bull;&nbsp;&nbsp;Docker Compose&nbsp;&nbsp;&bull;&nbsp;&nbsp;Demo mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;CalDAV/CardDAV sync&nbsp;&nbsp;&bull;&nbsp;&nbsp;English + German
+</p>
+
+<p align="center">
   <a href="https://ko-fi.com/itsdnns"><img src="https://img.shields.io/badge/Ko--fi-Support%20Tribu-FF5E5B?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>&nbsp;
   <a href="https://paypal.me/itsDNNS"><img src="https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white" alt="PayPal"></a>&nbsp;
   <a href="https://github.com/sponsors/itsDNNS"><img src="https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?logo=github-sponsors&logoColor=white" alt="GitHub Sponsors"></a>
@@ -96,6 +100,15 @@ It is built for the real rhythm of household life: planning the week, sharing re
 - **Easy to explore before committing:** interactive demo mode with realistic sample data, no backend required
 - **Bilingual and extensible:** German and English out of the box, with plugin support for features, themes, and languages
 
+## Best fit for
+
+Tribu is a strong fit if you want a family organizer that:
+
+- runs in your own homelab, on your server, or on a NAS you already trust
+- replaces a patchwork of calendar apps, shopping apps, chats, and notes
+- gives the whole household shared visibility without giving up data ownership
+- feels useful on both quick phone check-ins and bigger desktop planning sessions
+
 ## What Tribu helps with
 
 - seeing the week at a glance without bouncing between multiple apps
@@ -145,6 +158,12 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 | **i18n** | English and German out of the box, lazy-loaded per module |
 | **Demo mode** | Try the full UI with realistic sample data, no server setup required |
 | **Security** | httpOnly cookies, rate limiting, scoped PATs, and non-root containers |
+
+## Start in the way that fits you
+
+- **Want to feel the product first?** Open Tribu and click **Try demo** on the login page to explore the UI with realistic sample data.
+- **Want it in your stack fast?** Jump to [Quick Start](#quick-start) and run it with Docker Compose on your server, NAS, or mini PC.
+- **Want phone integration from day one?** Use [Phone Sync](#phone-sync) for CalDAV and CardDAV setup with supported clients.
 
 ## Quick Start
 
