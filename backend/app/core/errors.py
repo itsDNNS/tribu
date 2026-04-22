@@ -101,6 +101,16 @@ INVALID_MEAL_RANGE = "INVALID_MEAL_RANGE"
 MEAL_SLOT_TAKEN = "MEAL_SLOT_TAKEN"
 MEAL_INGREDIENT_NOT_IN_PLAN = "MEAL_INGREDIENT_NOT_IN_PLAN"
 
+# ── OIDC / SSO ───────────────────────────────────────────────
+OIDC_NOT_CONFIGURED = "OIDC_NOT_CONFIGURED"
+OIDC_DISCOVERY_FAILED = "OIDC_DISCOVERY_FAILED"
+OIDC_INVALID_CALLBACK = "OIDC_INVALID_CALLBACK"
+OIDC_TOKEN_EXCHANGE_FAILED = "OIDC_TOKEN_EXCHANGE_FAILED"
+OIDC_ID_TOKEN_INVALID = "OIDC_ID_TOKEN_INVALID"
+OIDC_SIGNUP_DISABLED = "OIDC_SIGNUP_DISABLED"
+OIDC_INVALID_PRESET = "OIDC_INVALID_PRESET"
+PASSWORD_LOGIN_DISABLED = "PASSWORD_LOGIN_DISABLED"
+
 # ── Rewards ──────────────────────────────────────────────────
 REWARD_CURRENCY_NOT_FOUND = "REWARD_CURRENCY_NOT_FOUND"
 REWARD_CURRENCY_ALREADY_EXISTS = "REWARD_CURRENCY_ALREADY_EXISTS"
@@ -189,6 +199,14 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     INVALID_MEAL_RANGE: "End date must be on or after start date",
     MEAL_SLOT_TAKEN: "This family already has a meal planned for that date and slot",
     MEAL_INGREDIENT_NOT_IN_PLAN: "Ingredient '{name}' is not part of this meal",
+    OIDC_NOT_CONFIGURED: "Single sign-on is not configured on this instance",
+    OIDC_DISCOVERY_FAILED: "Could not reach the identity provider: {reason}",
+    OIDC_INVALID_CALLBACK: "Invalid single sign-on callback",
+    OIDC_TOKEN_EXCHANGE_FAILED: "Identity provider rejected the token exchange",
+    OIDC_ID_TOKEN_INVALID: "Identity provider returned an invalid ID token: {reason}",
+    OIDC_SIGNUP_DISABLED: "Single sign-on accounts cannot be created automatically on this instance",
+    OIDC_INVALID_PRESET: "Unknown OIDC provider preset: {preset}",
+    PASSWORD_LOGIN_DISABLED: "Password login is disabled on this instance. Use single sign-on.",
 }
 
 

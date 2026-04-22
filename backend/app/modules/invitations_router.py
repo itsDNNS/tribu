@@ -3,7 +3,7 @@ import secrets
 from datetime import timedelta
 
 from app.core.compat import patch_asyncio_iscoroutinefunction
-from app.core.utils import utcnow, audit_log as _audit, ensure_any_admin, get_setting, set_setting
+from app.core.utils import utcnow, audit_log as _audit, ensure_any_admin, get_setting, resolve_base_url, set_setting
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -13,6 +13,7 @@ patch_asyncio_iscoroutinefunction()
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.core import oidc as oidc_core
 from app.core.deps import current_user, ensure_family_admin
 from app.core.scopes import require_scope
 from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE
@@ -23,7 +24,7 @@ from app.schemas import (
     InviteInfoResponse, RegisterWithInviteRequest,
 )
 from app.security import create_access_token, hash_password
-from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS
+from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, PASSWORD_LOGIN_DISABLED
 
 from fastapi.responses import JSONResponse
 
@@ -37,15 +38,7 @@ router = APIRouter(prefix="/families", tags=["invitations"], responses={**AUTH_R
 
 
 def _get_base_url(db: Session, request: Request) -> str:
-    saved = get_setting(db, "base_url")
-    if saved:
-        return saved.rstrip("/")
-    env_val = os.getenv("BASE_URL", "")
-    if env_val:
-        return env_val.rstrip("/")
-    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
-    return f"{scheme}://{host}"
+    return resolve_base_url(db, request)
 
 
 def _invitation_to_response(inv: FamilyInvitation, base_url: str) -> InvitationResponse:
@@ -218,6 +211,9 @@ def register_with_invite(
     payload: RegisterWithInviteRequest,
     db: Session = Depends(get_db),
 ):
+    if oidc_core.password_login_disabled(db):
+        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+
     # Lock the invitation row to prevent race conditions
     invitation = (
         db.query(FamilyInvitation)

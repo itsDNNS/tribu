@@ -19,7 +19,8 @@ from slowapi.util import get_remote_address
 
 from app.core.deps import current_user
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
-from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION
+from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED
+from app.core import oidc as oidc_core
 from app.database import get_db, SessionLocal
 from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User
 from app.modules.birthdays_router import router as birthdays_router
@@ -35,6 +36,8 @@ from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATAB
 from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.modules.invitations_router import router as invitations_router, public_router as invitations_public_router, settings_router as invitations_settings_router
+from app.modules.oidc_auth_router import router as oidc_auth_router
+from app.modules.oidc_router import router as oidc_admin_router
 from app.modules.setup_router import router as setup_router
 from app.modules.search_router import router as search_router
 from app.modules.rewards_router import router as rewards_router
@@ -140,7 +143,8 @@ TAG_METADATA = [
     {"name": "tokens", "description": "Personal Access Token (PAT) management for API automation."},
     {"name": "backup", "description": "Database backup management — schedule, trigger, download, and delete. Admin only."},
     {"name": "invitations", "description": "Family invitation links — create, list, revoke, and accept."},
-    {"name": "admin-settings", "description": "System-wide admin settings (base URL configuration)."},
+    {"name": "admin-settings", "description": "System-wide admin settings (base URL, time format, OIDC / SSO configuration)."},
+    {"name": "sso", "description": "Single Sign-On (OpenID Connect) login flow: public config, authorize redirect, callback."},
     {"name": "nav", "description": "User navigation bar order customization."},
     {"name": "setup", "description": "Initial setup wizard — check status and restore from backup. Only available on empty databases."},
     {"name": "gifts", "description": "Gift list — track gift ideas, prices, and occasions per family. Adult only."},
@@ -244,6 +248,9 @@ def health():
 )
 @limiter.limit("10/minute")
 def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
+    if oidc_core.password_login_disabled(db):
+        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail=error_detail(EMAIL_ALREADY_EXISTS))
@@ -288,6 +295,9 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
 )
 @limiter.limit("20/minute")
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
+    if oidc_core.password_login_disabled(db):
+        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
@@ -535,6 +545,8 @@ app.include_router(nav_router)
 app.include_router(invitations_router)
 app.include_router(invitations_public_router)
 app.include_router(invitations_settings_router)
+app.include_router(oidc_admin_router)
+app.include_router(oidc_auth_router)
 app.include_router(setup_router)
 app.include_router(search_router)
 app.include_router(rewards_router)

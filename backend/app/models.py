@@ -12,7 +12,11 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
+    # Nullable so SSO-only users (who never set a local password) can
+    # still exist. verify_password refuses anything that is not a
+    # bcrypt envelope, so an absent hash cannot be coerced into a
+    # successful password login.
+    password_hash = Column(String, nullable=True)
     display_name = Column(String, nullable=False)
     profile_image = Column(String, nullable=True)
     must_change_password = Column(Boolean, nullable=False, default=False, server_default="false")
@@ -20,6 +24,7 @@ class User(Base):
 
     memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
     personal_access_tokens = relationship("PersonalAccessToken", back_populates="user", cascade="all, delete-orphan")
+    oidc_identities = relationship("OIDCIdentity", back_populates="user", cascade="all, delete-orphan")
 
 
 class Family(Base):
@@ -193,6 +198,31 @@ class Contact(Base):
         uselist=False,
         passive_deletes=True,
     )
+
+
+class OIDCIdentity(Base):
+    """External identity at an OIDC provider linked to a local user.
+
+    The (issuer, subject) pair is the stable identifier per the OIDC
+    spec: ``sub`` is guaranteed not to be reassigned while the account
+    exists at the issuer, and the issuer URL scopes the namespace so
+    two different IdPs cannot collide on the same ``sub``. Email can
+    change, so it is kept only as ``email_at_login`` for audit.
+    """
+    __tablename__ = "oidc_identities"
+    __table_args__ = (
+        UniqueConstraint("issuer", "subject", name="uq_oidc_identities_issuer_subject"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    issuer = Column(String(500), nullable=False)
+    subject = Column(String(255), nullable=False)
+    email_at_login = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    last_login_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="oidc_identities")
 
 
 class PersonalAccessToken(Base):

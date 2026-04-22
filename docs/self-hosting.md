@@ -245,6 +245,55 @@ backend:
 
 When using Traefik, remove the `ports` sections from both services since Traefik handles routing. If you need shopping live sync today, only remove the backend `ports` mapping after you have separately made `:8000` reachable with matching WS/WSS handling, because the frontend still connects to `ws(s)://<your-domain>:8000/...` directly instead of using the proxied `/ws` route.
 
+## Single Sign-On (OIDC)
+
+Tribu speaks OpenID Connect, so you can delegate authentication to an existing identity provider (Authentik, Zitadel, Keycloak, or any other OIDC-compatible stack).
+
+### 1. Create a client at your provider
+
+Set these values when you register Tribu as an OIDC client:
+
+- **Redirect URI / Callback URL**: `https://<your-tribu-domain>/auth/oidc/callback`
+- **Client type**: Confidential (Tribu stores a client secret).
+- **Grant type**: Authorization Code with **PKCE (S256)**.
+- **Scopes**: `openid profile email` (Tribu needs the `email` + `email_verified` claims to match a login to an existing family member).
+
+Provider-specific hints:
+
+| Provider | Issuer URL shape | Notes |
+|----------|------------------|-------|
+| Authentik | `https://auth.example.com/application/o/tribu/` | Copy the value of "OpenID Configuration Issuer" from the provider page. The trailing slash matters. |
+| Zitadel | `https://<instance>.zitadel.cloud` | Register a "Web" application with PKCE. The issuer is your instance root URL. |
+| Keycloak | `https://keycloak.example.com/realms/<realm>` | Create a confidential OIDC client in the realm hosting your users. If the client's `token_endpoint_auth_method` is pinned to `client_secret_basic`, Tribu will fall back to HTTP Basic automatically. |
+| Generic | `https://idp.example.com` | Any OIDC-conformant provider with a `/.well-known/openid-configuration` document. |
+
+### 2. Enable SSO in Tribu
+
+Sign in as an admin, open **Admin settings > Single Sign-On**, and fill in:
+
+- **Provider preset**: Pick your provider for better placeholders and the default button label.
+- **Issuer URL**: From the table above.
+- **Client ID / Client secret**: From your provider.
+- **Scopes**: Leave at `openid profile email` unless your provider is unusual.
+- **Allow new accounts via SSO**: Required only if you also share SSO-backed invitation links (see below).
+- **Disable password login**: Optional. Only takes effect once SSO is fully configured so you cannot lock yourself out.
+
+Use **Test discovery** to verify the provider is reachable before saving.
+
+### 3. User onboarding paths
+
+- **Matching an existing account by email.** When an SSO login arrives for an email that already belongs to a Tribu user, Tribu links the new identity and logs them in. The provider must mark the email as verified (`email_verified=true` in the ID token), otherwise Tribu refuses to link.
+- **Invitation-bound signup.** If **Allow new accounts via SSO** is enabled, creating an invitation link via **Admin > Invitations** and sharing it with a new family member lets them finish onboarding entirely through the IdP. The link's preset role + adult flag apply on creation.
+- **Local admin recovery.** Password login is preserved as long as **Disable password login** is unchecked. Even if you flip it on, Tribu's `/auth/register-with-invite` and `/auth/login` endpoints only refuse password auth when SSO is *ready* (enabled + issuer + client configured), so mis-configurations never lock out the admin.
+
+### 4. Reverse proxy
+
+All Tribu reverse-proxy examples in this guide already forward `/auth/oidc/*` to the Tribu frontend, which proxies it to the backend. No extra rules are needed. If you use a custom split setup that routes `/api/*` directly to the backend, do **not** route `/auth/oidc/*` directly — keep it going through the frontend so the callback URL (`/auth/oidc/callback`) matches what your IdP has registered.
+
+### 5. Secret storage
+
+The client secret is stored in Tribu's `system_settings` table as plaintext, the same trust model as `JWT_SECRET` in your `.env`. Put the database volume on encrypted storage if your threat model requires it, and rotate the secret by editing the admin form and clicking **Clear secret** before pasting a new one.
+
 ## Push Notifications (Optional)
 
 Tribu supports browser push notifications for event reminders, overdue tasks, and birthday alerts.

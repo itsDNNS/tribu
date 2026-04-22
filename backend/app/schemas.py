@@ -261,6 +261,87 @@ class PaginatedAuditLog(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# OIDC / SSO admin
+# ---------------------------------------------------------------------------
+
+
+class OIDCPresetEntry(BaseModel):
+    """One entry in the provider preset catalog exposed to admins."""
+    id: str = Field(..., description="Stable preset identifier (e.g. 'authentik').")
+    name: str = Field(..., description="Human-readable provider name.")
+    button_label: str = Field(..., description="Default text for the login button.")
+    issuer_placeholder: str = Field(..., description="Example issuer URL shown as an input placeholder.")
+    default_scopes: str = Field(..., description="Scopes to request if the admin does not override them.")
+    hint: str = Field(..., description="Short operator-facing note on where to find the issuer.")
+
+
+class OIDCConfigResponse(BaseModel):
+    """Current OIDC configuration as seen by the admin UI.
+
+    ``client_secret`` is never returned in plaintext. ``client_secret_set``
+    lets the UI show a "(secret is set)" indicator without round-
+    tripping the actual value.
+    """
+    enabled: bool = Field(..., description="Whether SSO is enabled.")
+    preset: str = Field(..., description="Currently selected provider preset id.")
+    button_label: str = Field(..., description="Button label override, empty = preset default.")
+    issuer: str = Field(..., description="Issuer URL used to discover endpoints.")
+    client_id: str = Field(..., description="OAuth2 client identifier registered at the IdP.")
+    client_secret_set: bool = Field(..., description="True if a client secret is stored (value itself is never returned).")
+    scopes: str = Field(..., description="Space-separated OAuth2 scopes to request.")
+    allow_signup: bool = Field(..., description="Allow new accounts to be created via SSO when following an invite link.")
+    disable_password_login: bool = Field(..., description="Reject /auth/login when SSO is fully configured.")
+    ready: bool = Field(..., description="True if enabled AND all required fields are set.")
+
+
+class OIDCConfigUpdate(BaseModel):
+    """Update the OIDC configuration. All fields optional.
+
+    ``client_secret`` uses the sentinel ``None`` / missing to mean
+    "keep the stored value". Send an explicit empty string to clear
+    it.
+    """
+    enabled: Optional[bool] = Field(None, description="Enable or disable SSO on this instance.")
+    preset: Optional[str] = Field(None, description="Provider preset id.")
+    button_label: Optional[str] = Field(None, description="Override the login button label.")
+    issuer: Optional[str] = Field(None, description="Issuer URL.")
+    client_id: Optional[str] = Field(None, description="OAuth2 client id.")
+    client_secret: Optional[str] = Field(None, description="OAuth2 client secret. Omit to keep existing; empty string clears.")
+    scopes: Optional[str] = Field(None, description="Space-separated scopes.")
+    allow_signup: Optional[bool] = Field(None, description="Allow new account creation via SSO (invite-bound).")
+    disable_password_login: Optional[bool] = Field(None, description="Reject password login when SSO is ready.")
+
+    @field_validator("scopes")
+    @classmethod
+    def scopes_contain_openid(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
+            return v
+        tokens = v.split()
+        if "openid" not in tokens:
+            raise ValueError("Scopes must include 'openid'")
+        return " ".join(tokens)
+
+
+class OIDCTestRequest(BaseModel):
+    """Request body for the admin discovery probe."""
+    issuer: str = Field(..., description="Issuer URL to probe. Tribu appends /.well-known/openid-configuration.")
+
+
+class OIDCTestResponse(BaseModel):
+    """Discovery probe result returned to the admin UI."""
+    ok: bool = Field(..., description="True when discovery succeeded and all required endpoints are present.")
+    issuer: Optional[str] = Field(None, description="Issuer URL claimed by the discovery document.")
+    authorization_endpoint: Optional[str] = Field(None, description="Discovered authorization endpoint.")
+    token_endpoint: Optional[str] = Field(None, description="Discovered token endpoint.")
+    userinfo_endpoint: Optional[str] = Field(None, description="Discovered userinfo endpoint (if any).")
+    jwks_uri: Optional[str] = Field(None, description="Discovered JWKS URI used to verify ID tokens.")
+    error: Optional[str] = Field(None, description="Error message when ok=False.")
+
+
+# ---------------------------------------------------------------------------
 # Calendar
 # ---------------------------------------------------------------------------
 

@@ -11,6 +11,7 @@ import ConfirmDialog from '../ConfirmDialog';
 import InviteSection from './InviteSection';
 import BackupSection from './BackupSection';
 import AuditLogSection from './AuditLogSection';
+import SsoSection from './SsoSection';
 
 export default function AdminView() {
   const { familyId, members, messages, loadMembers, me, demoMode, timeFormat, setTimeFormat } = useApp();
@@ -255,6 +256,7 @@ export default function AdminView() {
       )}
 
       <InviteSection />
+      <SsoSection />
       <BackupSection />
       <AuditLogSection />
     </div>

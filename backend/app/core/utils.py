@@ -1,4 +1,6 @@
-from fastapi import HTTPException
+import os
+
+from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
@@ -6,7 +8,15 @@ from app.core.errors import error_detail, ADMIN_REQUIRED, ADULT_REQUIRED
 from app.models import AuditLog, Membership, SystemSetting
 
 # Re-export utcnow so existing `from app.core.utils import utcnow` keeps working
-__all__ = ["utcnow", "audit_log", "ensure_any_admin", "ensure_any_adult", "get_setting", "set_setting"]
+__all__ = [
+    "utcnow",
+    "audit_log",
+    "ensure_any_admin",
+    "ensure_any_adult",
+    "get_setting",
+    "set_setting",
+    "resolve_base_url",
+]
 
 
 # ── Audit log helper ────────────────────────────────────────
@@ -60,3 +70,29 @@ def set_setting(db: Session, key: str, value: str):
         row = SystemSetting(key=key, value=value, updated_at=utcnow())
         db.add(row)
     db.flush()
+
+
+# ── Base-URL resolution ────────────────────────────────────
+
+def resolve_base_url(db: Session, request: Request) -> str:
+    """Return the canonical base URL for this instance.
+
+    Resolution order:
+      1. Explicit admin override saved in ``system_settings.base_url``
+         (set via PUT /admin/settings/base-url).
+      2. ``BASE_URL`` environment variable.
+      3. Reverse-proxy headers (``x-forwarded-proto`` / ``x-forwarded-host``)
+         falling back to the direct request if they are missing.
+
+    Trailing slashes are always stripped so callers can safely
+    concatenate paths.
+    """
+    saved = get_setting(db, "base_url")
+    if saved:
+        return saved.rstrip("/")
+    env_val = os.getenv("BASE_URL", "")
+    if env_val:
+        return env_val.rstrip("/")
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
+    return f"{scheme}://{host}".rstrip("/")

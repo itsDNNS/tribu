@@ -1,10 +1,25 @@
-import { useState } from 'react';
-import { Users, Play, Globe, CalendarDays, CheckSquare, ShoppingCart, Bell, Server, Lock, Github } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Users, Play, Globe, CalendarDays, CheckSquare, ShoppingCart, Bell, Server, Lock, Github, KeyRound } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
+
+// Translate a ?sso_error= tag from the callback redirect into a
+// user-facing string. Unknown tags fall back to the generic message
+// instead of echoing the raw tag so the page never renders an
+// attacker-chosen string verbatim.
+function ssoErrorMessage(tag, messages) {
+  if (!tag) return '';
+  const known = [
+    'missing_state', 'invalid_state', 'state_mismatch', 'config_changed',
+    'discovery_failed', 'provider_error', 'token_exchange_failed',
+    'id_token_invalid', 'oidc_signup_disabled', 'oidc_id_token_invalid',
+  ];
+  const key = known.includes(tag) ? `sso.error.${tag}` : 'sso.error.generic';
+  return t(messages, key);
+}
 
 export default function AuthPage() {
   const { messages, setLoggedIn, enterDemo, lang, setLang, availableLanguages } = useApp();
@@ -16,6 +31,33 @@ export default function AuthPage() {
   const [familyName, setFamilyName] = useState('');
   const [authMode, setAuthMode] = useState('login');
   const [msg, setMsg] = useState('');
+  const [sso, setSso] = useState({ enabled: false, ready: false, button_label: '', password_login_disabled: false });
+  const [ssoError, setSsoError] = useState('');
+
+  useEffect(() => {
+    api.apiGetOidcPublicConfig().then(({ ok, data }) => {
+      if (ok && data) setSso(data);
+    });
+    // Surface ?sso_error=<tag> from the callback redirect once, then
+    // scrub it from the URL so a reload does not keep showing it.
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      const tag = url.searchParams.get('sso_error');
+      if (tag) {
+        const message = ssoErrorMessage(tag, messages);
+        setSsoError(message);
+        toastError(message);
+        url.searchParams.delete('sso_error');
+        // Preserve Next.js router state (query cache, scroll position,
+        // etc.) by passing the existing history.state back in. Passing
+        // `{}` nukes it and can confuse future router.replace calls.
+        window.history.replaceState(window.history.state, '', url.pathname + url.search);
+      }
+    }
+    // We intentionally depend only on messages for the toast string;
+    // re-running on language switch refreshes the localized label.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   async function login(e) {
     e.preventDefault();
@@ -105,30 +147,58 @@ export default function AuthPage() {
       {/* Auth Section */}
       <section className="landing-auth" id="auth">
         <div className="auth-card glass glow-purple">
-          <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
-            <button
-              className={`auth-tab${authMode === 'login' ? ' active' : ''}`}
-              onClick={() => setAuthMode('login')}
-              role="tab"
-              id="tab-login"
-              aria-selected={authMode === 'login'}
-              aria-controls="panel-login"
-            >
-              {t(messages, 'auth_login')}
-            </button>
-            <button
-              className={`auth-tab${authMode === 'register' ? ' active' : ''}`}
-              onClick={() => setAuthMode('register')}
-              role="tab"
-              id="tab-register"
-              aria-selected={authMode === 'register'}
-              aria-controls="panel-register"
-            >
-              {t(messages, 'auth_register')}
-            </button>
-          </div>
+          {!(sso.ready && sso.password_login_disabled) && (
+            <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
+              <button
+                className={`auth-tab${authMode === 'login' ? ' active' : ''}`}
+                onClick={() => setAuthMode('login')}
+                role="tab"
+                id="tab-login"
+                aria-selected={authMode === 'login'}
+                aria-controls="panel-login"
+              >
+                {t(messages, 'auth_login')}
+              </button>
+              <button
+                className={`auth-tab${authMode === 'register' ? ' active' : ''}`}
+                onClick={() => setAuthMode('register')}
+                role="tab"
+                id="tab-register"
+                aria-selected={authMode === 'register'}
+                aria-controls="panel-register"
+              >
+                {t(messages, 'auth_register')}
+              </button>
+            </div>
+          )}
 
-          {authMode === 'login' ? (
+          {sso.ready && (
+            <div className="sso-login-box">
+              <a
+                className="btn-primary sso-login-btn"
+                href="/auth/oidc/login"
+                data-testid="sso-login-button"
+              >
+                <KeyRound size={15} aria-hidden="true" />
+                {sso.button_label || t(messages, 'login')}
+              </a>
+              {sso.password_login_disabled && (
+                <p className="sso-password-disabled-hint" style={{ marginTop: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {t(messages, 'sso.password_disabled_hint')}
+                </p>
+              )}
+            </div>
+          )}
+
+          {sso.ready && !(sso.ready && sso.password_login_disabled) && (
+            <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
+          )}
+
+          {ssoError && (
+            <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{ssoError}</p>
+          )}
+
+          {!(sso.ready && sso.password_login_disabled) && (authMode === 'login' ? (
             <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
               <form onSubmit={login} className="auth-form">
                 <div className="form-field">
@@ -165,7 +235,7 @@ export default function AuthPage() {
                 <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
               </form>
             </div>
-          )}
+          ))}
 
           {msg && <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
 
