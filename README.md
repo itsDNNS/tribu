@@ -283,7 +283,7 @@ Tribu is not only trying to be pleasant for families using it. It is also set up
 - **Versioned releases:** published tags such as `v1.6.1`, `v1.6.0`, and earlier releases show an actual shipping cadence
 - **Operational docs:** self-hosting, backups, reverse proxy, architecture, and security guidance are already documented
 - **Clear extension path:** plugin manifest and contribution docs make it easier to understand where custom work belongs
-- **Public roadmap and changelog:** visitors can see both where Tribu is going and what has already shipped
+- **Public roadmap, changelog, and releases:** visitors can see where Tribu is going, what has already shipped, and what version they can deploy today
 
 ## Documentation
 
@@ -295,6 +295,7 @@ Use the document that matches your intent:
 | [Contributing](CONTRIBUTING.md) | Local dev setup, testing, project boundaries, and PR expectations |
 | [Self-Hosting Guide](docs/self-hosting.md) | Configuration, reverse proxy, backups, updating, and troubleshooting |
 | [Wiki](https://github.com/itsDNNS/tribu/wiki) | Architecture, roadmap, changelog, plugin details, and reference pages |
+| [Releases](https://github.com/itsDNNS/tribu/releases) | Versioned builds and release notes |
 | [Security](SECURITY.md) | Security policy and responsible disclosure |
 
 ## Support
@@ -308,6 +309,7 @@ Need the right place?
 - **Questions and setup help:** use [Discussions Q&A](https://github.com/itsDNNS/tribu/discussions/categories/q-a)
 - **Ideas and early product feedback:** use [Discussions Ideas](https://github.com/itsDNNS/tribu/discussions/categories/ideas)
 - **Reproducible bugs or scoped feature requests:** open an [Issue](https://github.com/itsDNNS/tribu/issues)
+- **Want the latest packaged version:** check [Releases](https://github.com/itsDNNS/tribu/releases)
 - **Sensitive security reports:** follow the [Security Policy](SECURITY.md)
 
 - [Ko-fi](https://ko-fi.com/itsdnns)
