@@ -39,27 +39,27 @@
 
 <br>
 
-**Morning Mist (light theme)**
+**Desktop dashboard**
 
 <img src="docs/assets/screenshot-light.png" alt="Dashboard - Morning Mist theme" width="100%" />
 
-**Calendar with day-detail panel and create FAB**
+**Tablet calendar**
 
 <img src="docs/assets/screenshot-calendar.png" alt="Calendar view" width="100%" />
 
-**Tasks with collapsible form, priorities, and assignees**
+**Desktop tasks**
 
 <img src="docs/assets/screenshot-tasks.png" alt="Tasks view" width="100%" />
 
-**Shopping with real-time sync and progress bars**
+**Desktop shopping**
 
 <img src="docs/assets/screenshot-shopping.png" alt="Shopping view" width="100%" />
 
-**Rewards system with child progress tracking**
+**Desktop rewards**
 
 <img src="docs/assets/screenshot-rewards.png" alt="Rewards view" width="100%" />
 
-**Login page**
+**Sign-in experience**
 
 <img src="docs/assets/screenshot-auth.png" alt="Login page" width="100%" />
 
