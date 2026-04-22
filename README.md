@@ -102,12 +102,23 @@ It is built for the real rhythm of household life: planning the week, sharing re
 
 ## Best fit for
 
+### Households that want less friction
+
 Tribu is a strong fit if you want a family organizer that:
 
-- runs in your own homelab, on your server, or on a NAS you already trust
 - replaces a patchwork of calendar apps, shopping apps, chats, and notes
 - gives the whole household shared visibility without giving up data ownership
 - feels useful on both quick phone check-ins and bigger desktop planning sessions
+- helps everyday planning feel calmer instead of more scattered
+
+### Self-hosters who want a product, not just a project
+
+Tribu is also a strong fit if you want something that:
+
+- runs in your own homelab, on your server, or on a NAS you already trust
+- ships as a Docker Compose stack with published frontend and backend images
+- integrates with phones through CalDAV and CardDAV instead of trapping data in one web UI
+- is readable, inspectable, and documented enough that you can actually own it
 
 ## What Tribu helps with
 
@@ -164,6 +175,8 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 - **Want to feel the product first?** Open Tribu and click **Try demo** on the login page to explore the UI with realistic sample data.
 - **Want it in your stack fast?** Jump to [Quick Start](#quick-start) and run it with Docker Compose on your server, NAS, or mini PC.
 - **Want phone integration from day one?** Use [Phone Sync](#phone-sync) for CalDAV and CardDAV setup with supported clients.
+- **Want to inspect how it is built before you commit?** Start with the [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) and [Self-Hosting Guide](docs/self-hosting.md).
+- **Want to contribute or extend it?** Head to [Contributing](https://github.com/itsDNNS/tribu/wiki/Contributing) and the [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest).
 
 ## Quick Start
 
@@ -255,6 +268,15 @@ docker compose up -d
 **Database:** PostgreSQL 16<br>
 **Cache:** Valkey 8<br>
 **Deployment:** Docker Compose, multi-arch images (amd64/arm64) on GHCR
+
+## Why self-hosters and contributors may want to stay
+
+Tribu is not only trying to be pleasant for families using it. It is also set up to be approachable for people who like reading the stack, self-hosting it properly, and improving it over time.
+
+- **Modern, familiar stack:** Next.js, React, FastAPI, PostgreSQL, and Valkey
+- **Real self-hosting path:** Docker Compose deployment, GHCR images, reverse proxy and backup guidance in the docs
+- **Architecture and plugin docs:** enough structure to inspect how it works before touching anything
+- **Open contribution path:** public roadmap, contributing guide, security policy, and MIT license
 
 ## Documentation
 
