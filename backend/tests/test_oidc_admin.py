@@ -307,3 +307,116 @@ def test_discovery_probe_empty_issuer():
     body = resp.json()
     assert body["ok"] is False
     assert "empty" in body["error"].lower()
+
+
+def test_discovery_probe_rejects_file_scheme():
+    """SSRF: admin probe must not dereference file:// URLs."""
+    token = _seed_admin()
+    resp = client.post(
+        "/admin/oidc/test",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"issuer": "file:///etc/passwd"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is False
+    assert "http" in body["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Password-login gate applied to /auth/*
+# ---------------------------------------------------------------------------
+
+
+def _enable_oidc_ready(disable_password: bool) -> None:
+    """Seed a ready OIDC config directly via the DB, bypassing admin API."""
+    db = TestSession()
+    try:
+        oidc_core.save_config(
+            db,
+            enabled=True,
+            preset="generic",
+            button_label="",
+            issuer="https://idp.example.com",
+            client_id="tribu",
+            client_secret="seed",
+            scopes="openid profile email",
+            allow_signup=False,
+            disable_password_login=disable_password,
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_login_blocked_when_password_login_disabled():
+    db = TestSession()
+    try:
+        user = User(
+            email="existing@example.com",
+            password_hash=hash_password("Secure1Pass"),
+            display_name="Existing",
+        )
+        db.add(user)
+        db.commit()
+    finally:
+        db.close()
+
+    _enable_oidc_ready(disable_password=True)
+
+    resp = client.post(
+        "/auth/login",
+        json={"email": "existing@example.com", "password": "Secure1Pass"},
+    )
+    assert resp.status_code == 403
+    assert "PASSWORD_LOGIN_DISABLED" in str(resp.json())
+
+
+def test_register_blocked_when_password_login_disabled():
+    _enable_oidc_ready(disable_password=True)
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "password": "Secure1Pass",
+            "display_name": "New",
+            "family_name": "Fam",
+        },
+    )
+    assert resp.status_code == 403
+    assert "PASSWORD_LOGIN_DISABLED" in str(resp.json())
+
+
+def test_login_still_works_when_oidc_not_ready():
+    """Setting disable_password_login alone must not lock users out."""
+    db = TestSession()
+    try:
+        user = User(
+            email="existing2@example.com",
+            password_hash=hash_password("Secure1Pass"),
+            display_name="Existing",
+        )
+        db.add(user)
+        db.commit()
+    finally:
+        db.close()
+
+    # Flag on but no issuer/client => not ready => flag ignored
+    db = TestSession()
+    try:
+        oidc_core.save_config(
+            db,
+            enabled=True, preset="generic", button_label="",
+            issuer="", client_id="", client_secret="",
+            scopes="openid profile email",
+            allow_signup=False, disable_password_login=True,
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.post(
+        "/auth/login",
+        json={"email": "existing2@example.com", "password": "Secure1Pass"},
+    )
+    assert resp.status_code == 200

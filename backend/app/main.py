@@ -19,7 +19,8 @@ from slowapi.util import get_remote_address
 
 from app.core.deps import current_user
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
-from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION
+from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED
+from app.core import oidc as oidc_core
 from app.database import get_db, SessionLocal
 from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User
 from app.modules.birthdays_router import router as birthdays_router
@@ -246,6 +247,9 @@ def health():
 )
 @limiter.limit("10/minute")
 def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
+    if oidc_core.password_login_disabled(db):
+        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail=error_detail(EMAIL_ALREADY_EXISTS))
@@ -290,6 +294,9 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
 )
 @limiter.limit("20/minute")
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
+    if oidc_core.password_login_disabled(db):
+        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))

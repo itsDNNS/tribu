@@ -23,8 +23,17 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
-def verify_password(plain: str, hashed: str) -> bool:
-    """Verify a password against a bcrypt hash."""
+def verify_password(plain: str, hashed: str | None) -> bool:
+    """Verify a password against a bcrypt hash.
+
+    Tolerates ``hashed=None`` because SSO-only users have no local
+    password_hash on the row. Any non-bcrypt envelope (including
+    ``None`` and the empty string) is rejected so an attacker cannot
+    coerce a successful login by sending a crafted payload against
+    an account that was never meant to use password auth.
+    """
+    if not hashed:
+        return False
     if hashed.startswith("$2b$") or hashed.startswith("$2a$"):
         return bcrypt.checkpw(plain.encode(), hashed.encode())
     return False

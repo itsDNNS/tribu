@@ -27,7 +27,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.oidc_presets import get_preset
-from app.core.utils import get_setting, set_setting
+from app.core.utils import get_setting, set_setting, utcnow
+from app.models import SystemSetting
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,29 @@ def load_config(db: Session) -> OIDCConfig:
     )
 
 
+def lock_config(db: Session) -> None:
+    """Serialize concurrent admin writes via row-level locking.
+
+    Takes a ``SELECT ... FOR UPDATE`` on the ``oidc_enabled`` row so
+    a concurrent ``PUT /admin/oidc`` blocks instead of interleaving
+    its read/write pass with ours. On SQLite this is a no-op but the
+    default journal mode already serializes writes, so the
+    behaviour is the same.
+
+    The helper creates the sentinel row if it does not exist yet so
+    the lock has something to hold on to during the very first save.
+    """
+    row = (
+        db.query(SystemSetting)
+        .filter(SystemSetting.key == KEY_ENABLED)
+        .with_for_update()
+        .first()
+    )
+    if row is None:
+        db.add(SystemSetting(key=KEY_ENABLED, value="false", updated_at=utcnow()))
+        db.flush()
+
+
 def save_config(
     db: Session,
     *,
@@ -210,18 +234,70 @@ class DiscoveryError(RuntimeError):
     """Raised when discovery fails in a user-actionable way."""
 
 
-def _fetch_json(url: str, timeout: float = 5.0) -> dict:
-    """Plain HTTPS GET with a timeout.
+_MAX_DISCOVERY_BYTES = 1_000_000  # 1 MB — real discovery docs are < 10 KB
 
-    urllib is fine here: we want a single synchronous request per
-    login and do not need keep-alive or async semantics.
+# Opener configured with only http/https handlers so that URLs with
+# schemes like file://, ftp://, or gopher:// cannot be dereferenced
+# even if they slip through upstream validation. urllib's default
+# opener includes a FileHandler which would happily read /etc/passwd.
+_http_only_opener = urllib.request.build_opener(
+    urllib.request.HTTPHandler(),
+    urllib.request.HTTPSHandler(),
+)
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Treat 3xx responses as errors.
+
+    Discovery documents are published at a fixed path on the issuer;
+    a redirect here is either an operator misconfig or — more
+    worrying — an IdP aliasing redirect that would let a rogue party
+    point us at their document. Easier to reject outright.
     """
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(
+            req.full_url, code, f"Unexpected redirect to {newurl}", headers, fp
+        )
+
+
+_strict_opener = urllib.request.build_opener(
+    urllib.request.HTTPHandler(),
+    urllib.request.HTTPSHandler(),
+    _NoRedirectHandler(),
+)
+
+
+def _validate_http_url(url: str) -> None:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise DiscoveryError(
+            f"Issuer URL must use http or https (got {parsed.scheme!r})"
+        )
+    if not parsed.netloc:
+        raise DiscoveryError("Issuer URL is missing a host")
+
+
+def _fetch_json(url: str, timeout: float = 5.0) -> dict:
+    """Fetch a JSON document over HTTP(S) with strict transport rules.
+
+    - Rejects non-HTTP(S) schemes before the request is made (no
+      file://, ftp://, gopher://, ...).
+    - Uses a dedicated opener so any redirect-based scheme downgrade
+      attempt is refused.
+    - Caps the response body so a hostile endpoint cannot exhaust
+      memory by streaming gigabytes.
+    """
+    _validate_http_url(url)
     req = urllib.request.Request(
         url,
         headers={"Accept": "application/json", "User-Agent": "tribu-oidc/1.0"},
     )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        body = resp.read()
+    with _strict_opener.open(req, timeout=timeout) as resp:
+        body = resp.read(_MAX_DISCOVERY_BYTES + 1)
+    if len(body) > _MAX_DISCOVERY_BYTES:
+        raise DiscoveryError(
+            f"Discovery response from {url} exceeded {_MAX_DISCOVERY_BYTES} bytes"
+        )
     try:
         return json.loads(body.decode("utf-8"))
     except (ValueError, UnicodeDecodeError) as exc:

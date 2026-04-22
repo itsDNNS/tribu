@@ -289,3 +289,38 @@ class TestDiscovery:
             oidc_core.fetch_discovery("https://idp.example.com", force=True)
 
         assert call_count["n"] == 2
+
+
+class TestSchemeHardening:
+    """`_fetch_json` must refuse anything that is not http(s)."""
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            "file:///etc/passwd",
+            "ftp://idp.example.com/foo",
+            "gopher://idp.example.com/",
+            "javascript:alert(1)",
+            "://no-scheme.example.com",
+            "http:///missing-host",
+        ],
+    )
+    def test_non_http_scheme_rejected(self, bad):
+        with pytest.raises(oidc_core.DiscoveryError):
+            oidc_core._fetch_json(bad)
+
+
+class TestVerifyPasswordNullHash:
+    """Regression: verify_password must not crash on None/empty hash."""
+
+    def test_none_hash_returns_false(self):
+        from app.security import verify_password
+        assert verify_password("anything", None) is False
+
+    def test_empty_hash_returns_false(self):
+        from app.security import verify_password
+        assert verify_password("anything", "") is False
+
+    def test_non_bcrypt_hash_returns_false(self):
+        from app.security import verify_password
+        assert verify_password("anything", "deadbeef") is False

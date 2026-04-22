@@ -116,6 +116,10 @@ def update_oidc_config(
 ) -> OIDCConfigResponse:
     ensure_any_admin(db, user.id)
 
+    # Serialize concurrent admin writes so two PUTs racing on the
+    # same config cannot interleave their read-modify-write passes.
+    oidc_core.lock_config(db)
+
     cfg = oidc_core.load_config(db)
 
     preset = payload.preset if payload.preset is not None else cfg.preset

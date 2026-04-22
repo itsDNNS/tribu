@@ -13,6 +13,7 @@ patch_asyncio_iscoroutinefunction()
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.core import oidc as oidc_core
 from app.core.deps import current_user, ensure_family_admin
 from app.core.scopes import require_scope
 from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE
@@ -23,7 +24,7 @@ from app.schemas import (
     InviteInfoResponse, RegisterWithInviteRequest,
 )
 from app.security import create_access_token, hash_password
-from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS
+from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, PASSWORD_LOGIN_DISABLED
 
 from fastapi.responses import JSONResponse
 
@@ -218,6 +219,9 @@ def register_with_invite(
     payload: RegisterWithInviteRequest,
     db: Session = Depends(get_db),
 ):
+    if oidc_core.password_login_disabled(db):
+        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+
     # Lock the invitation row to prevent race conditions
     invitation = (
         db.query(FamilyInvitation)

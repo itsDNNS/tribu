@@ -94,17 +94,32 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    if _has_index("oidc_identities", "ix_oidc_identities_user_id"):
-        op.drop_index(
-            "ix_oidc_identities_user_id", table_name="oidc_identities"
-        )
+    # Drop index before table: dropping a missing index inside
+    # _has_index is fine, but the index lookup itself raises
+    # NoSuchTableError if the table is already gone, so we gate both
+    # steps on _has_table first.
     if _has_table("oidc_identities"):
+        if _has_index("oidc_identities", "ix_oidc_identities_user_id"):
+            op.drop_index(
+                "ix_oidc_identities_user_id", table_name="oidc_identities"
+            )
         op.drop_table("oidc_identities")
 
-    # Restore NOT NULL only if every row has a password_hash. On a
-    # real deployment that has used SSO accounts this downgrade is
-    # informational only; admins would have to backfill or drop the
-    # SSO-only rows first.
+    # Restoring NOT NULL would fail the moment an SSO-only row has
+    # no password_hash. We refuse the downgrade loudly instead of
+    # silently breaking login for those users; admins who really
+    # want to roll back must first backfill or delete those rows.
+    conn = op.get_bind()
+    sso_only = conn.execute(
+        sa.text("SELECT COUNT(*) FROM users WHERE password_hash IS NULL")
+    ).scalar()
+    if sso_only:
+        raise RuntimeError(
+            f"Cannot downgrade 0030: {sso_only} user(s) have NULL "
+            "password_hash (SSO-only accounts). Set a password or "
+            "remove those rows first."
+        )
+
     with op.batch_alter_table("users") as batch:
         batch.alter_column(
             "password_hash",
