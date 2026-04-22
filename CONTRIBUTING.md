@@ -98,7 +98,7 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install pytest
+pip install pytest httpx
 export DATABASE_URL="postgresql://tribu:***@localhost:5432/tribu"
 export JWT_SECRET="your-generated-64-char-hex"  # generate with: openssl rand -hex 32
 uvicorn app.main:app --reload --port 8000
@@ -110,6 +110,8 @@ Required backend environment variables:
 - `JWT_SECRET`
 
 If you want a ready database/cache quickly, start the supporting services from the compose stack and point your local backend at them.
+
+Backend tests currently expect `pytest` and `httpx` to be available inside `backend/.venv` in addition to the packages from `requirements.txt`.
 
 ### Frontend
 

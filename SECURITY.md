@@ -11,13 +11,13 @@ We will acknowledge reports within 48 hours and provide a timeline for fixes.
 | Feature | Implementation |
 |---------|---------------|
 | Password storage | bcrypt (legacy PBKDF2-SHA256 hashes are verified and auto-rehashed on login) |
-| Password policy | Minimum 8 characters (enforced via Pydantic schema validation) |
+| Password policy | Minimum 8 characters with at least 1 uppercase letter and 1 digit (enforced via Pydantic schema validation) |
 | Authentication | httpOnly cookie (JWT HS256), Bearer token fallback for API testing |
 | Rate limiting | 10/min for registration, 20/min for login (slowapi) |
 | CORS | Restricted to `localhost`, `127.0.0.1`, and `192.168.x.x` via regex |
 | Data isolation | All queries filtered by `family_id` with membership verification |
 | Docker containers | Non-root user (`tribu`) in both backend and frontend images |
-| Docker networking | PostgreSQL and Redis not exposed to host, only accessible within Docker network |
+| Docker networking | PostgreSQL and Valkey are not exposed to the host and stay inside the Docker network |
 | Build process | Multi-stage frontend build, `.dockerignore` files for both services |
 | CSV import | Row limit (500), range checks on month/day fields, email format validation |
 
@@ -47,8 +47,8 @@ Follow these steps before exposing Tribu to the internet:
 2. **Enable secure cookies**: Set `SECURE_COOKIES=true` in your `.env` file. This adds the `Secure` flag to auth cookies so they are only sent over HTTPS.
 3. **Generate strong secrets**: Use `openssl rand -hex 32` for `JWT_SECRET` and `openssl rand -hex 16` for `POSTGRES_PASSWORD`. Never reuse secrets across instances.
 4. **Restrict CORS** (optional): The default regex allows all `192.168.x.x` addresses. If your instance is public, consider narrowing this to your specific domain by modifying the `allow_origin_regex` in `backend/app/main.py`.
-5. **Backups**: Schedule regular PostgreSQL dumps of the `tribu_pg_data` Docker volume. A minimal cron job: `docker exec tribu-postgres pg_dump -U tribu tribu > backup_$(date +%F).sql`
-6. **Keep images updated**: Rebuild Docker images periodically to pick up security patches in base images (Python, Node, PostgreSQL, Redis).
+5. **Backups**: Schedule regular PostgreSQL backups and test restore procedures. The [Self-Hosting Guide](docs/self-hosting.md#backup-and-restore) documents the built-in backup flow.
+6. **Keep images updated**: Rebuild Docker images periodically to pick up security patches in base images and dependencies.
 
 ## Known Limitations
 
@@ -61,7 +61,7 @@ Follow these steps before exposing Tribu to the internet:
 
 ## Docker Security
 
-Both the backend and frontend Dockerfiles create a dedicated non-root user (`tribu`) and run all processes under that user. The Docker Compose configuration does not expose database or cache ports to the host, keeping PostgreSQL and Redis accessible only within the Docker network.
+Both the backend and frontend Dockerfiles create a dedicated non-root user (`tribu`) and run all processes under that user. The Docker Compose configuration does not expose database or cache ports to the host, keeping PostgreSQL and Valkey accessible only within the Docker network.
 
 Build artifacts are minimized through:
 - Multi-stage builds for the frontend (build step separated from runtime)

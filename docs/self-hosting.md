@@ -13,7 +13,7 @@ If you want local development workflow, tests, and PR expectations, use [CONTRIB
 
 ## Prerequisites
 
-- **Docker** with **Compose v2** (`docker compose` — not the legacy `docker-compose`)
+- **Docker** with **Compose v2** (`docker compose`, not the legacy `docker-compose`)
 - **512 MB RAM** minimum, **1 GB disk** for the database volume
 - A **domain with TLS** if you plan to expose Tribu to the internet (see [Reverse Proxy](#reverse-proxy))
 
@@ -51,11 +51,11 @@ The backend refuses to start if these are missing.
 |----------|---------|-------------|
 | `SECURE_COOKIES` | `false` | Set to `true` when running behind a TLS reverse proxy. Enables the `Secure` flag on auth cookies. |
 | `BASE_URL` | *(auto-detect)* | Public URL of your instance (e.g. `https://tribu.example.com`). Used for push notification payloads. Auto-detected from request headers if not set. |
+| `JWT_EXPIRE_HOURS` | `24` | Session lifetime in hours for Tribu's auth tokens and cookies. |
 | `VAPID_PUBLIC_KEY` | *(empty)* | VAPID public key for push notifications. See [Push Notifications](#push-notifications-optional). |
 | `VAPID_PRIVATE_KEY` | *(empty)* | VAPID private key for push notifications. |
 | `VAPID_CLAIMS_EMAIL` | *(empty)* | Contact email for VAPID claims (e.g. `mailto:admin@example.com`). |
-| `REDIS_URL` | `redis://valkey:6379/0` | Optional Valkey/Redis connection string override. |
-| `JWT_EXPIRE_HOURS` | `24` | How long JWT tokens stay valid, in hours. |
+| `REDIS_URL` | `redis://valkey:6379/0` | Optional Valkey-compatible cache connection string override. |
 
 ### Docker Compose Internals
 
@@ -297,7 +297,7 @@ Use **Test discovery** to verify the provider is reachable before saving.
 
 ### 4. Reverse proxy
 
-All Tribu reverse-proxy examples in this guide already forward `/auth/oidc/*` to the Tribu frontend, which proxies it to the backend. No extra rules are needed. If you use a custom split setup that routes `/api/*` directly to the backend, do **not** route `/auth/oidc/*` directly — keep it going through the frontend so the callback URL (`/auth/oidc/callback`) matches what your IdP has registered.
+All Tribu reverse-proxy examples in this guide already forward `/auth/oidc/*` to the Tribu frontend, which proxies it to the backend. No extra rules are needed. If you use a custom split setup that routes `/api/*` directly to the backend, do **not** route `/auth/oidc/*` directly. Keep it going through the frontend so the callback URL (`/auth/oidc/callback`) matches what your IdP has registered.
 
 ### 5. Secret storage
 
@@ -424,8 +424,8 @@ Configure automatic backups in **Settings > Admin > Backup**:
 
 Each backup is a `tribu-backup-YYYY-MM-DD-HHMMSS.tar.gz` archive containing:
 
-- `database.dump` — PostgreSQL dump (`pg_dump -Fc` custom format)
-- `metadata.json` — backup version, Alembic revision, PostgreSQL version, timestamp
+- `database.dump`: PostgreSQL dump (`pg_dump -Fc` custom format)
+- `metadata.json`: backup version, Alembic revision, PostgreSQL version, timestamp
 
 ### Manual Backup
 
@@ -487,8 +487,8 @@ docker compose logs postgres
 ```
 
 Common causes:
-- Missing `JWT_SECRET` or `POSTGRES_PASSWORD` — the backend exits immediately with an error message
-- Port 8000 or 3000 already in use — change the host port in `docker-compose.yml` (e.g. `"8080:8000"`)
+- Missing `JWT_SECRET` or `POSTGRES_PASSWORD`: the backend exits immediately with an error message
+- Port 8000 or 3000 already in use: change the host port in `docker-compose.yml` (e.g. `"8080:8000"`)
 
 ### Database connection errors
 
@@ -519,7 +519,7 @@ If running locally without TLS, keep `SECURE_COOKIES=false`.
 ### Push notifications not working
 
 - VAPID keys must be set in `.env` **and** the backend must be restarted
-- Push notifications require HTTPS — they won't work over plain HTTP
+- Push notifications require HTTPS, so they will not work over plain HTTP
 - The user must explicitly enable notifications in their profile settings
 - Check browser permissions (Settings > Site permissions > Notifications)
 
