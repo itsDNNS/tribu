@@ -6,7 +6,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import cache
-from app.core.contact_birthdays import delete_family_birthday, sync_contact_birthday, upsert_family_birthday
+from app.core.contact_birthdays import delete_synced_birthday_for_contact, sync_contact_birthday
 from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
 from app.core.vcard_utils import contact_channel_values
@@ -75,7 +75,16 @@ def create_contact(
         birthday_day=payload.birthday_day,
     )
     db.add(contact)
-    upsert_family_birthday(db, payload.family_id, payload.full_name, payload.birthday_month, payload.birthday_day)
+    # Flush so the synced birthday row can reference contact.id.
+    db.flush()
+    sync_contact_birthday(
+        db,
+        contact.family_id,
+        contact.id,
+        contact.full_name,
+        contact.birthday_month,
+        contact.birthday_day,
+    )
     db.commit()
     db.refresh(contact)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
@@ -102,16 +111,18 @@ def update_contact(
         raise HTTPException(status_code=404, detail=error_detail(CONTACT_NOT_FOUND))
     ensure_adult(db, user.id, contact.family_id)
 
-    old_name = contact.full_name
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(contact, key, value)
 
-    new_name = contact.full_name
-    new_month = contact.birthday_month
-    new_day = contact.birthday_day
-
-    sync_contact_birthday(db, contact.family_id, old_name, new_name, new_month, new_day)
+    sync_contact_birthday(
+        db,
+        contact.family_id,
+        contact.id,
+        contact.full_name,
+        contact.birthday_month,
+        contact.birthday_day,
+    )
 
     db.commit()
     db.refresh(contact)
@@ -137,7 +148,7 @@ def delete_contact(
         raise HTTPException(status_code=404, detail=error_detail(CONTACT_NOT_FOUND))
     ensure_adult(db, user.id, contact.family_id)
 
-    delete_family_birthday(db, contact.family_id, contact.full_name)
+    delete_synced_birthday_for_contact(db, contact.family_id, contact.id)
 
     db.delete(contact)
     db.commit()
@@ -266,7 +277,15 @@ def import_contacts_csv(
             birthday_day=day,
         )
         db.add(contact)
-        upsert_family_birthday(db, payload.family_id, name, month, day)
+        db.flush()
+        sync_contact_birthday(
+            db,
+            contact.family_id,
+            contact.id,
+            contact.full_name,
+            contact.birthday_month,
+            contact.birthday_day,
+        )
         created += 1
 
     db.commit()

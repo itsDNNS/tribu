@@ -244,6 +244,94 @@ class TestCardDAV:
         finally:
             db.close()
 
+    def test_put_updates_synced_birthday_in_place(self, app_under_test, seeded):
+        """A CardDAV update changing BDAY must update the linked birthday
+        row in place — same id, new month/day, no duplicates.
+        """
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        original = (
+            "BEGIN:VCARD\r\nVERSION:3.0\r\n"
+            "UID:bday-update@example.com\r\n"
+            "FN:Birthday Shift\r\nN:Shift;Birthday;;;\r\n"
+            "BDAY:--04-14\r\n"
+            "END:VCARD\r\n"
+        )
+        put = client.put(
+            f"/dav/{EMAIL}/book-{family_id}/birthday-shift.vcf",
+            headers=auth,
+            content=original,
+        )
+        assert put.status_code in (201, 204), put.text
+
+        db = SessionLocal()
+        try:
+            contact = (
+                db.query(Contact)
+                .filter(Contact.family_id == family_id, Contact.full_name == "Birthday Shift")
+                .first()
+            )
+            assert contact is not None
+            contact_id = contact.id
+            initial_rows = (
+                db.query(FamilyBirthday)
+                .filter(
+                    FamilyBirthday.family_id == family_id,
+                    FamilyBirthday.contact_id == contact_id,
+                )
+                .all()
+            )
+            assert len(initial_rows) == 1
+            synced_id = initial_rows[0].id
+            assert (initial_rows[0].month, initial_rows[0].day) == (4, 14)
+        finally:
+            db.close()
+
+        updated = (
+            "BEGIN:VCARD\r\nVERSION:3.0\r\n"
+            "UID:bday-update@example.com\r\n"
+            "FN:Birthday Shift\r\nN:Shift;Birthday;;;\r\n"
+            "BDAY:--12-25\r\n"
+            "END:VCARD\r\n"
+        )
+        put2 = client.put(
+            f"/dav/{EMAIL}/book-{family_id}/birthday-shift.vcf",
+            headers=auth,
+            content=updated,
+        )
+        assert put2.status_code in (201, 204), put2.text
+
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(FamilyBirthday)
+                .filter(
+                    FamilyBirthday.family_id == family_id,
+                    FamilyBirthday.contact_id == contact_id,
+                )
+                .all()
+            )
+            assert len(rows) == 1, f"expected in-place update, got {rows}"
+            assert rows[0].id == synced_id
+            assert (rows[0].month, rows[0].day) == (12, 25)
+            assert rows[0].person_name == "Birthday Shift"
+
+            # Nothing should have been left behind at the old date.
+            stale = (
+                db.query(FamilyBirthday)
+                .filter(
+                    FamilyBirthday.family_id == family_id,
+                    FamilyBirthday.person_name == "Birthday Shift",
+                    FamilyBirthday.month == 4,
+                    FamilyBirthday.day == 14,
+                )
+                .all()
+            )
+            assert stale == []
+        finally:
+            db.close()
+
     def test_put_preserves_multiple_channel_values_in_contact_response(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)

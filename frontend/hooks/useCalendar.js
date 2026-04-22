@@ -409,14 +409,23 @@ export function useCalendar() {
 }
 
 export function buildBirthdayEvents({ birthdays = [], members = [], viewYear }) {
+  // Contact-synced birthdays (contact_id != null) are keyed by their
+  // stable contact id so two contacts that happen to share a name and
+  // date still show up as distinct calendar entries. Manual birthdays
+  // (contact_id == null) still collapse with a member's own
+  // date_of_birth when the name and date match, since that historically
+  // covers admins who manually added a row for their own family member.
   const deduped = new Map();
 
   for (const birthday of birthdays) {
     if (!birthday?.person_name || !birthday?.month || !birthday?.day) continue;
     const startsAt = new Date(viewYear, birthday.month - 1, birthday.day, 0, 0, 0).toISOString();
-    const key = `${birthday.person_name.toLowerCase()}|${birthday.month}|${birthday.day}`;
+    const key = birthday.contact_id != null
+      ? `contact-${birthday.contact_id}`
+      : `${birthday.person_name.toLowerCase()}|${birthday.month}|${birthday.day}`;
+    const stableIdPart = birthday.id ?? `${birthday.person_name}-${birthday.month}-${birthday.day}`;
     deduped.set(key, {
-      id: `birthday-${birthday.person_name}-${birthday.month}-${birthday.day}-${viewYear}`,
+      id: `birthday-${stableIdPart}-${viewYear}`,
       title: birthday.person_name,
       starts_at: startsAt,
       ends_at: null,

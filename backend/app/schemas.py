@@ -536,6 +536,10 @@ class BirthdayResponse(BaseModel):
     month: int = Field(..., description="Month (1-12)")
     day: int = Field(..., description="Day (1-31)")
     year: Optional[int] = Field(None, description="Birth year (null if unknown)")
+    contact_id: Optional[int] = Field(
+        None,
+        description="Contact this birthday is synced from; null for manual entries",
+    )
 
 
 class UpcomingBirthday(BaseModel):
