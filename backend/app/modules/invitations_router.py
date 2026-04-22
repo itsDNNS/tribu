@@ -3,7 +3,7 @@ import secrets
 from datetime import timedelta
 
 from app.core.compat import patch_asyncio_iscoroutinefunction
-from app.core.utils import utcnow, audit_log as _audit, ensure_any_admin, get_setting, set_setting
+from app.core.utils import utcnow, audit_log as _audit, ensure_any_admin, get_setting, resolve_base_url, set_setting
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -38,15 +38,7 @@ router = APIRouter(prefix="/families", tags=["invitations"], responses={**AUTH_R
 
 
 def _get_base_url(db: Session, request: Request) -> str:
-    saved = get_setting(db, "base_url")
-    if saved:
-        return saved.rstrip("/")
-    env_val = os.getenv("BASE_URL", "")
-    if env_val:
-        return env_val.rstrip("/")
-    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
-    return f"{scheme}://{host}"
+    return resolve_base_url(db, request)
 
 
 def _invitation_to_response(inv: FamilyInvitation, base_url: str) -> InvitationResponse:

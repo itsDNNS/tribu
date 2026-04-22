@@ -404,3 +404,175 @@ def invalidate_discovery_cache(issuer: Optional[str] = None) -> None:
         _discovery_cache.clear()
     else:
         _discovery_cache.pop(issuer.rstrip("/"), None)
+
+
+# ---------------------------------------------------------------------------
+# PKCE helpers
+# ---------------------------------------------------------------------------
+
+import base64
+import hashlib
+import secrets
+
+
+def generate_code_verifier() -> str:
+    """Return a fresh PKCE code_verifier (RFC 7636 §4.1)."""
+    return base64.urlsafe_b64encode(secrets.token_bytes(48)).rstrip(b"=").decode("ascii")
+
+
+def code_challenge_s256(code_verifier: str) -> str:
+    """S256 transformation of a verifier (RFC 7636 §4.2)."""
+    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+# ---------------------------------------------------------------------------
+# Token exchange + ID token verification
+# ---------------------------------------------------------------------------
+
+
+class TokenExchangeError(RuntimeError):
+    """Raised when the IdP rejects our /token call."""
+
+
+class IDTokenError(RuntimeError):
+    """Raised when the IdP's ID token fails validation."""
+
+
+@dataclass
+class IDTokenClaims:
+    subject: str
+    email: Optional[str]
+    email_verified: bool
+    name: Optional[str]
+    raw: dict = field(default_factory=dict)
+
+
+def exchange_code_for_tokens(
+    *,
+    token_endpoint: str,
+    code: str,
+    redirect_uri: str,
+    client_id: str,
+    client_secret: str,
+    code_verifier: str,
+    timeout: float = 5.0,
+) -> dict:
+    """POST the authorization code to the IdP and return the token response.
+
+    Uses ``client_secret_post`` (secret in form body). Most IdPs also
+    accept ``client_secret_basic`` but post is the widest-supported
+    default among Authentik, Zitadel, and Keycloak with their stock
+    OIDC clients.
+    """
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    _validate_http_url(token_endpoint)
+    form = urllib.parse.urlencode({
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": redirect_uri,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code_verifier": code_verifier,
+    }).encode("ascii")
+    req = urllib.request.Request(
+        token_endpoint,
+        data=form,
+        method="POST",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+            "User-Agent": "tribu-oidc/1.0",
+        },
+    )
+    try:
+        with _strict_opener.open(req, timeout=timeout) as resp:
+            body = resp.read(_MAX_DISCOVERY_BYTES + 1)
+    except urllib.error.HTTPError as exc:
+        try:
+            error_body = exc.read(1024).decode("utf-8", errors="replace")
+        except Exception:
+            error_body = ""
+        logger.warning(
+            "OIDC token exchange failed: HTTP %s at %s body=%r",
+            exc.code, token_endpoint, error_body[:200],
+        )
+        raise TokenExchangeError(
+            f"Token endpoint returned HTTP {exc.code}"
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise TokenExchangeError(
+            f"Token endpoint unreachable: {exc.reason}"
+        ) from exc
+    except TimeoutError as exc:
+        raise TokenExchangeError("Token endpoint timed out") from exc
+    if len(body) > _MAX_DISCOVERY_BYTES:
+        raise TokenExchangeError("Token response exceeded size cap")
+    try:
+        data = json.loads(body.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise TokenExchangeError("Token response was not valid JSON") from exc
+
+    if not isinstance(data, dict) or "id_token" not in data:
+        raise TokenExchangeError("Token response missing id_token")
+    return data
+
+
+def verify_id_token(
+    id_token: str,
+    *,
+    issuer: str,
+    client_id: str,
+    jwks_uri: str,
+    expected_nonce: Optional[str],
+) -> IDTokenClaims:
+    """Verify signature and required claims of an OIDC ID token.
+
+    Uses PyJWT's ``PyJWKClient`` to fetch signing keys lazily. The
+    JWKS URL is whitelisted to http(s) up front and PyJWT itself
+    validates ``iss``, ``aud``, and ``exp``. We verify ``nonce``
+    manually because PyJWT has no built-in support for it.
+    """
+    import jwt
+    from jwt import PyJWKClient
+
+    _validate_http_url(jwks_uri)
+    jwk_client = PyJWKClient(jwks_uri, cache_keys=True, lifespan=300)
+    try:
+        signing_key = jwk_client.get_signing_key_from_jwt(id_token)
+    except jwt.PyJWTError as exc:
+        raise IDTokenError(f"Could not resolve signing key: {exc}") from exc
+    except Exception as exc:  # urllib failures inside PyJWKClient
+        raise IDTokenError(f"JWKS fetch failed: {exc}") from exc
+
+    try:
+        payload = jwt.decode(
+            id_token,
+            signing_key.key,
+            algorithms=[signing_key.algorithm_name] if signing_key.algorithm_name else ["RS256", "ES256"],
+            audience=client_id,
+            issuer=issuer,
+            options={"require": ["iss", "aud", "exp", "iat", "sub"]},
+        )
+    except jwt.PyJWTError as exc:
+        raise IDTokenError(f"ID token validation failed: {exc}") from exc
+
+    if expected_nonce is not None:
+        got = payload.get("nonce")
+        if got != expected_nonce:
+            raise IDTokenError("ID token nonce mismatch")
+
+    sub = payload.get("sub")
+    if not sub:
+        raise IDTokenError("ID token has no subject")
+
+    return IDTokenClaims(
+        subject=str(sub),
+        email=payload.get("email"),
+        email_verified=bool(payload.get("email_verified", False)),
+        name=payload.get("name") or payload.get("preferred_username"),
+        raw=payload,
+    )

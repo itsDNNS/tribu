@@ -36,6 +36,7 @@ from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATAB
 from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.modules.invitations_router import router as invitations_router, public_router as invitations_public_router, settings_router as invitations_settings_router
+from app.modules.oidc_auth_router import router as oidc_auth_router
 from app.modules.oidc_router import router as oidc_admin_router
 from app.modules.setup_router import router as setup_router
 from app.modules.search_router import router as search_router
@@ -545,6 +546,7 @@ app.include_router(invitations_router)
 app.include_router(invitations_public_router)
 app.include_router(invitations_settings_router)
 app.include_router(oidc_admin_router)
+app.include_router(oidc_auth_router)
 app.include_router(setup_router)
 app.include_router(search_router)
 app.include_router(rewards_router)
