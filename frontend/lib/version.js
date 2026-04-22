@@ -27,3 +27,10 @@ export function hasNewerRelease(currentVersion, latestReleaseVersion) {
   if (!currentRelease || !latestRelease) return false;
   return compareReleaseVersions(latestRelease, currentRelease) > 0;
 }
+
+export function formatDisplayedVersion(version) {
+  const value = String(version || '').trim();
+  if (!value) return '';
+  if (/^v/i.test(value)) return value;
+  return extractReleaseVersion(value) ? `v${value}` : value;
+}

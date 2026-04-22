@@ -28,7 +28,16 @@ jobs:
         id: app_version
         run: |
           raw="$(git describe --tags --abbrev=7 --match 'v[0-9]*' --always)"
-          echo "value=${raw#v}" >> "$GITHUB_OUTPUT"
+          cleaned="${raw#v}"
+          short_sha="${GITHUB_SHA::7}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${cleaned}"
+          elif [[ "${cleaned}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            version="${cleaned}+build.${GITHUB_RUN_NUMBER}"
+          else
+            version="build.${GITHUB_RUN_NUMBER}-g${short_sha}"
+          fi
+          echo "value=${version}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
 
@@ -58,7 +67,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: APP_VERSION=${{ steps.app_version.outputs.value }}
+          build-args: |
+            APP_VERSION=${{ steps.app_version.outputs.value }}
+            APP_BUILD_NUMBER=${{ github.run_number }}
+            APP_GIT_SHA=${{ github.sha }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,scope=backend,mode=max
 
