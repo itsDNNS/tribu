@@ -291,6 +291,42 @@ class TestDiscovery:
         assert call_count["n"] == 2
 
 
+class TestRedirectHandling:
+    """Discovery must refuse 3xx redirects.
+
+    An IdP should publish its discovery document at a fixed path on
+    the issuer; a redirect is either a misconfig or a rogue aliasing
+    attempt. We spin up a tiny loopback HTTP server that responds with
+    a redirect and assert _fetch_json raises instead of following it.
+    """
+
+    @pytest.mark.parametrize("status", [301, 302, 307, 308])
+    def test_redirect_rejected(self, status):
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(status)
+                self.send_header("Location", "http://example.invalid/elsewhere")
+                self.end_headers()
+
+            def log_message(self, *args, **kwargs):
+                pass
+
+        server = HTTPServer(("127.0.0.1", 0), Handler)
+        port = server.server_address[1]
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            url = f"http://127.0.0.1:{port}/.well-known/openid-configuration"
+            with pytest.raises(oidc_core.DiscoveryError):
+                oidc_core._fetch_json(url, timeout=2.0)
+        finally:
+            server.shutdown()
+            server.server_close()
+
+
 class TestSchemeHardening:
     """`_fetch_json` must refuse anything that is not http(s)."""
 

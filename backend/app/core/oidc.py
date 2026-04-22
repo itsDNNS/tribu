@@ -146,18 +146,39 @@ def lock_config(db: Session) -> None:
     default journal mode already serializes writes, so the
     behaviour is the same.
 
-    The helper creates the sentinel row if it does not exist yet so
-    the lock has something to hold on to during the very first save.
+    The very first request must create the sentinel row. Two
+    concurrent first-requests both see no row and both try to
+    insert: on PostgreSQL the second insert raises IntegrityError on
+    the primary key. We catch that, roll back the failed insert, and
+    re-run the SELECT FOR UPDATE which now finds the row committed
+    by the winner — the loser waits on the lock held by whoever
+    successfully did the insert.
     """
-    row = (
-        db.query(SystemSetting)
-        .filter(SystemSetting.key == KEY_ENABLED)
-        .with_for_update()
-        .first()
-    )
-    if row is None:
-        db.add(SystemSetting(key=KEY_ENABLED, value="false", updated_at=utcnow()))
-        db.flush()
+    from sqlalchemy.exc import IntegrityError
+
+    for _ in range(2):
+        row = (
+            db.query(SystemSetting)
+            .filter(SystemSetting.key == KEY_ENABLED)
+            .with_for_update()
+            .first()
+        )
+        if row is not None:
+            return
+        try:
+            db.add(SystemSetting(key=KEY_ENABLED, value="false", updated_at=utcnow()))
+            db.flush()
+            return
+        except IntegrityError:
+            db.rollback()
+            # Fall through to the next iteration; the winning
+            # transaction has now either committed or still holds
+            # the lock, so our FOR UPDATE will either return the row
+            # or block on it.
+            continue
+    # If we get here a third attempt would be needed; surface the
+    # state clearly instead of looping forever.
+    raise RuntimeError("Could not acquire OIDC config lock")
 
 
 def save_config(
@@ -292,8 +313,15 @@ def _fetch_json(url: str, timeout: float = 5.0) -> dict:
         url,
         headers={"Accept": "application/json", "User-Agent": "tribu-oidc/1.0"},
     )
-    with _strict_opener.open(req, timeout=timeout) as resp:
-        body = resp.read(_MAX_DISCOVERY_BYTES + 1)
+    try:
+        with _strict_opener.open(req, timeout=timeout) as resp:
+            body = resp.read(_MAX_DISCOVERY_BYTES + 1)
+    except urllib.error.HTTPError as exc:
+        # _NoRedirectHandler raises HTTPError for 3xx so redirects
+        # surface as DiscoveryError like any other protocol failure.
+        raise DiscoveryError(
+            f"Discovery request to {url} failed with HTTP {exc.code}"
+        ) from exc
     if len(body) > _MAX_DISCOVERY_BYTES:
         raise DiscoveryError(
             f"Discovery response from {url} exceeded {_MAX_DISCOVERY_BYTES} bytes"
