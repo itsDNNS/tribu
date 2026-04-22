@@ -2,6 +2,15 @@
 
 Everything you need to run Tribu on your own server.
 
+## Use this guide for
+
+- installing Tribu on your own infrastructure
+- configuring environment variables, reverse proxy, and phone sync
+- backups, updates, and troubleshooting in production-like setups
+
+If you want the public overview, start with the [README](../README.md).
+If you want local development workflow, tests, and PR expectations, use [CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## Prerequisites
 
 - **Docker** with **Compose v2** (`docker compose` — not the legacy `docker-compose`)

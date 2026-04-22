@@ -4,7 +4,7 @@ Thanks for your interest in contributing to Tribu.
 
 This file is the fastest repo-local guide for contributors. Use it to understand how to propose work, run the app locally, verify changes, and decide where code should live.
 
-For deeper references, also see:
+For contributor workflow inside the repository, treat this file as the canonical source. Use the wiki for deeper architecture, roadmap, changelog, and plugin reference material.
 
 - [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture)
 - [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest)

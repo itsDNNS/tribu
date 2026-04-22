@@ -287,16 +287,15 @@ Tribu is not only trying to be pleasant for families using it. It is also set up
 
 ## Documentation
 
+Use the document that matches your intent:
+
 | | |
 |---|---|
-| [Self-Hosting Guide](docs/self-hosting.md) | Configuration, reverse proxy, backups, updating, troubleshooting |
-| [Wiki](https://github.com/itsDNNS/tribu/wiki) | Screenshots, features, themes, getting started |
-| [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) | Backend modules, frontend patterns, security, API reference |
-| [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest) | How to build feature, theme, and language plugins |
-| [Roadmap](https://github.com/itsDNNS/tribu/wiki/Roadmap) | Development phases and planned features |
+| [README](README.md) | Product overview, screenshots, positioning, and quick start |
 | [Contributing](CONTRIBUTING.md) | Local dev setup, testing, project boundaries, and PR expectations |
+| [Self-Hosting Guide](docs/self-hosting.md) | Configuration, reverse proxy, backups, updating, and troubleshooting |
+| [Wiki](https://github.com/itsDNNS/tribu/wiki) | Architecture, roadmap, changelog, plugin details, and reference pages |
 | [Security](SECURITY.md) | Security policy and responsible disclosure |
-| [Changelog](https://github.com/itsDNNS/tribu/wiki/Changelog) | Release history |
 
 ## Support
 
