@@ -27,7 +27,7 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/screenshot-mobile.png" alt="Mobile family dashboard" width="320" />
+  <img src="docs/assets/screenshot-hero-mobile.png" alt="Tribu mobile hero" width="100%" />
 </p>
 
 <p align="center">
