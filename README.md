@@ -13,7 +13,7 @@
   <a href="#quick-start">Quick Start</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="#phone-sync">Phone Sync</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki">Wiki</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-  <a href="https://github.com/itsDNNS/tribu/wiki/Contributing">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+  <a href="CONTRIBUTING.md">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki/Roadmap">Roadmap</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki/Changelog">Changelog</a>
 </p>
@@ -176,7 +176,7 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 - **Want it in your stack fast?** Jump to [Quick Start](#quick-start) and run it with Docker Compose on your server, NAS, or mini PC.
 - **Want phone integration from day one?** Use [Phone Sync](#phone-sync) for CalDAV and CardDAV setup with supported clients.
 - **Want to inspect how it is built before you commit?** Start with the [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) and [Self-Hosting Guide](docs/self-hosting.md).
-- **Want to contribute or extend it?** Head to [Contributing](https://github.com/itsDNNS/tribu/wiki/Contributing) and the [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest).
+- **Want to contribute or extend it?** Start with [Contributing](CONTRIBUTING.md), then use the [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest) for extension-specific details.
 
 ## Quick Start
 
@@ -259,7 +259,7 @@ docker compose up -d
 
 </details>
 
-> **Development setup?** See [Contributing](https://github.com/itsDNNS/tribu/wiki/Contributing) for building from source.
+> **Development setup?** See [Contributing](CONTRIBUTING.md) for local workflow, testing, and PR expectations.
 
 ## Tech Stack
 
@@ -294,7 +294,7 @@ Tribu is not only trying to be pleasant for families using it. It is also set up
 | [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) | Backend modules, frontend patterns, security, API reference |
 | [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest) | How to build feature, theme, and language plugins |
 | [Roadmap](https://github.com/itsDNNS/tribu/wiki/Roadmap) | Development phases and planned features |
-| [Contributing](https://github.com/itsDNNS/tribu/wiki/Contributing) | Dev setup, project structure, PR guidelines |
+| [Contributing](CONTRIBUTING.md) | Local dev setup, testing, project boundaries, and PR expectations |
 | [Security](SECURITY.md) | Security policy and responsible disclosure |
 | [Changelog](https://github.com/itsDNNS/tribu/wiki/Changelog) | Release history |
 
