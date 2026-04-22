@@ -121,11 +121,11 @@ export default function InvitePage() {
                   {sso.button_label || t(messages, 'invite_page_register')}
                 </a>
               </div>
-              {!sso.password_login_disabled && <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>}
+              {!(sso.ready && sso.password_login_disabled) && <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>}
             </>
           )}
 
-          {!sso.password_login_disabled && (
+          {!(sso.ready && sso.password_login_disabled) && (
           <form onSubmit={handleRegister} className="auth-form">
             <div className="form-field">
               <label htmlFor="invite-email">{t(messages, 'email')}</label>

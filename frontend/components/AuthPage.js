@@ -48,7 +48,10 @@ export default function AuthPage() {
         setSsoError(message);
         toastError(message);
         url.searchParams.delete('sso_error');
-        window.history.replaceState({}, '', url.pathname + url.search);
+        // Preserve Next.js router state (query cache, scroll position,
+        // etc.) by passing the existing history.state back in. Passing
+        // `{}` nukes it and can confuse future router.replace calls.
+        window.history.replaceState(window.history.state, '', url.pathname + url.search);
       }
     }
     // We intentionally depend only on messages for the toast string;
@@ -144,7 +147,7 @@ export default function AuthPage() {
       {/* Auth Section */}
       <section className="landing-auth" id="auth">
         <div className="auth-card glass glow-purple">
-          {!sso.password_login_disabled && (
+          {!(sso.ready && sso.password_login_disabled) && (
             <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
               <button
                 className={`auth-tab${authMode === 'login' ? ' active' : ''}`}
@@ -187,7 +190,7 @@ export default function AuthPage() {
             </div>
           )}
 
-          {sso.ready && !sso.password_login_disabled && (
+          {sso.ready && !(sso.ready && sso.password_login_disabled) && (
             <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
           )}
 
@@ -195,7 +198,7 @@ export default function AuthPage() {
             <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{ssoError}</p>
           )}
 
-          {!sso.password_login_disabled && (authMode === 'login' ? (
+          {!(sso.ready && sso.password_login_disabled) && (authMode === 'login' ? (
             <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
               <form onSubmit={login} className="auth-form">
                 <div className="form-field">
