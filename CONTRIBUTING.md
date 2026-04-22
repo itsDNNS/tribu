@@ -64,7 +64,7 @@ tribu/
 
 ## Development setup
 
-## Option A: Full stack with Docker Compose
+### Option A: Full stack with Docker Compose
 
 This is the easiest way to boot the whole app locally.
 
@@ -81,7 +81,7 @@ Then open `http://localhost:3000`.
 
 The first registered user becomes the family admin.
 
-## Option B: Local frontend + local backend
+### Option B: Local frontend + local backend
 
 ### Prerequisites
 
@@ -99,8 +99,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 pip install pytest
-export DATABASE_URL="postgresql://tribu:password@localhost:5432/tribu"
-export JWT_SECRET="<random-64-char-hex>"  # generate with: openssl rand -hex 32
+export DATABASE_URL="postgresql://tribu:***@localhost:5432/tribu"
+export JWT_SECRET="your-generated-64-char-hex"  # generate with: openssl rand -hex 32
 uvicorn app.main:app --reload --port 8000
 ```
 

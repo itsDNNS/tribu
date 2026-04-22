@@ -54,7 +54,7 @@ The backend refuses to start if these are missing.
 | `VAPID_PUBLIC_KEY` | *(empty)* | VAPID public key for push notifications. See [Push Notifications](#push-notifications-optional). |
 | `VAPID_PRIVATE_KEY` | *(empty)* | VAPID private key for push notifications. |
 | `VAPID_CLAIMS_EMAIL` | *(empty)* | Contact email for VAPID claims (e.g. `mailto:admin@example.com`). |
-| `REDIS_URL` | `redis://valkey:6379/0` | Connection URL for the Valkey/Redis instance. Only change this if you use an external cache. |
+| `REDIS_URL` | `redis://valkey:6379/0` | Optional Valkey/Redis connection string override. |
 | `JWT_EXPIRE_HOURS` | `24` | How long JWT tokens stay valid, in hours. |
 
 ### Docker Compose Internals
