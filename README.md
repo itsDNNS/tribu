@@ -5,8 +5,8 @@
 <h1 align="center">Tribu</h1>
 
 <p align="center">
-  <strong>Self-hosted family organizer for real everyday life.</strong><br>
-  Calendars, tasks, shopping lists, contacts, birthdays, and reminders — one place, your server, your data.
+  <strong>The self-hosted family organizer that makes a busy household feel under control.</strong><br>
+  Shared calendar, tasks, shopping lists, contacts, birthdays, and reminders in one calm home base, on your server, with your data.
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@
 </p>
 
 <p align="center">
-  <em>Shared family dashboard on your phone — events, tasks, shopping, and household context in one calm view</em>
+  <em>A calm, shared home screen for what the household needs today: upcoming events, open tasks, shopping lists, and the details nobody wants to miss</em>
 </p>
 
 <p align="center">
@@ -39,7 +39,7 @@
 </p>
 
 <p align="center">
-  <em>Then scale up to a full desktop home base with upcoming events, open tasks, birthdays, and quick actions</em>
+  <em>On desktop, Tribu becomes the household command center for planning the week, sharing responsibility, and keeping everyone on the same page</em>
 </p>
 
 <details>
@@ -47,33 +47,33 @@
 
 <br>
 
-**1. Shared family dashboard on mobile**
+**1. The shared mobile view built for quick daily check-ins**
 
 <p align="center">
   <img src="docs/assets/screenshot-mobile.png" alt="Mobile dashboard" width="320" />
 </p>
 
-**2. Full household overview on desktop**
+**2. A desktop home base for planning the whole week**
 
 <img src="docs/assets/screenshot-light.png" alt="Dashboard - Morning Mist theme" width="100%" />
 
-**3. Shared calendar for appointments, school events, and routines**
+**3. A shared calendar for school events, appointments, and family routines**
 
 <img src="docs/assets/screenshot-calendar.png" alt="Calendar view" width="100%" />
 
-**4. Shopping lists that stay synced across the household**
+**4. Shopping lists that stay in sync across the household**
 
 <img src="docs/assets/screenshot-shopping.png" alt="Shopping view" width="100%" />
 
-**5. Tasks with priorities, due dates, and ownership**
+**5. Tasks with ownership, priorities, and due dates**
 
 <img src="docs/assets/screenshot-tasks.png" alt="Tasks view" width="100%" />
 
-**6. Rewards for family routines and motivation**
+**6. Rewards that help turn routines into momentum**
 
 <img src="docs/assets/screenshot-rewards.png" alt="Rewards view" width="100%" />
 
-**7. Clean sign-in and onboarding experience**
+**7. A clean sign-in and onboarding flow that gets families started quickly**
 
 <img src="docs/assets/screenshot-auth.png" alt="Login page" width="100%" />
 
@@ -85,22 +85,24 @@ See the [Wiki](https://github.com/itsDNNS/tribu/wiki) for screenshots of every v
 
 ## Why Tribu?
 
-Most family organizer apps lock your data in their cloud, split everyday planning across too many tools, and charge monthly fees on top. Tribu runs on your own hardware, keeps your household data under your control, and gives your family one place to stay coordinated.
+Most family organizer apps split everyday life across too many places: one calendar here, a shopping app there, tasks in chat, birthdays somewhere else, and household knowledge spread across everyone’s heads. Tribu brings those moving parts together in one self-hosted home base your family can actually use.
 
-- **Your data stays at home** — no mandatory cloud, no third-party SaaS dependency
-- **Built for actual family workflows** — calendars, tasks, shopping, contacts, birthdays, and reminders in one place
-- **Works on desktop and mobile** — responsive interface with a clean, content-first layout
-- **Try before you install** — interactive demo mode with realistic sample data, no backend required
-- **Bilingual out of the box** — German and English, lazy-loaded per module
-- **Extensible when you need more** — modular plugin architecture for features, themes, and languages
+It is built for the real rhythm of household life: planning the week, sharing responsibility, keeping shopping in sync, and making sure important dates do not quietly disappear.
+
+- **Self-hosted and privacy-respecting:** keep your family data on hardware you control
+- **Covers the everyday essentials:** calendar, tasks, shopping, contacts, birthdays, reminders, and rewards in one place
+- **Designed for shared visibility:** the things your household needs are visible on both desktop and mobile
+- **Syncs with the devices people already use:** CalDAV and CardDAV support for phones and compatible clients
+- **Easy to explore before committing:** interactive demo mode with realistic sample data, no backend required
+- **Bilingual and extensible:** German and English out of the box, with plugin support for features, themes, and languages
 
 ## What Tribu helps with
 
-- keeping appointments, school events, and family routines in one shared calendar
-- assigning tasks without losing track of who is responsible
-- managing shopping lists together in real time
-- keeping contacts and birthdays in one place
-- reducing app sprawl across chats, notes apps, and disconnected cloud tools
+- seeing the week at a glance without bouncing between multiple apps
+- making responsibility clear for tasks, routines, and family to-dos
+- keeping shared shopping lists in sync while everyone is out and about
+- keeping contacts, birthdays, and reminders close to the rest of family planning
+- replacing a messy stack of chats, notes, and disconnected cloud tools with one calmer system
 
 ## Phone Sync
 
@@ -121,7 +123,7 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 
 ## Features
 
-### Core Family Workflow
+### Everyday household essentials
 
 | | |
 |---|---|
@@ -133,7 +135,7 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 | **Birthdays** | 4-week lookahead, proximity-based countdown colors, and auto-sync from contacts |
 | **Notifications** | In-app reminders and alerts for upcoming events, overdue tasks, and household activity |
 
-### Extra Capabilities
+### Power-ups that make it feel complete
 
 | | |
 |---|---|
@@ -146,7 +148,7 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 
 ## Quick Start
 
-Run Tribu with Docker Compose on your server, NAS, or homelab setup.
+Run Tribu with Docker Compose on a server, NAS, mini PC, or homelab box. If you already run self-hosted services, getting Tribu live should feel familiar.
 
 ### Option A: Stack UI (Portainer, Dockge, Dockhand)
 
