@@ -308,6 +308,7 @@ Need the right place?
 
 - **Questions and setup help:** use [Discussions Q&A](https://github.com/itsDNNS/tribu/discussions/categories/q-a)
 - **Ideas and early product feedback:** use [Discussions Ideas](https://github.com/itsDNNS/tribu/discussions/categories/ideas)
+- **Want to share your setup or screenshots:** use [Discussions Show and tell](https://github.com/itsDNNS/tribu/discussions/categories/show-and-tell)
 - **Reproducible bugs or scoped feature requests:** open an [Issue](https://github.com/itsDNNS/tribu/issues)
 - **Want the latest packaged version:** check [Releases](https://github.com/itsDNNS/tribu/releases)
 - **Sensitive security reports:** follow the [Security Policy](SECURITY.md)
