@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and setup help
+    url: https://github.com/itsDNNS/tribu/discussions/categories/q-a
+    about: Ask for self-hosting help, setup support, or product questions in Discussions Q&A.
+  - name: Ideas and feature discussion
+    url: https://github.com/itsDNNS/tribu/discussions/categories/ideas
+    about: Share product ideas, feature concepts, and early feedback in Discussions.
+  - name: Security vulnerability report
+    url: https://github.com/itsDNNS/tribu/security/advisories/new
+    about: Report sensitive vulnerabilities privately through GitHub Security Advisories.

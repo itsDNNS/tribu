@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a product improvement, workflow enhancement, or self-hosting capability.
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing an idea.
+
+        If you want early discussion before turning it into a tracked issue, [Discussions Ideas](https://github.com/itsDNNS/tribu/discussions/categories/ideas) is a good place to shape it first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: What friction, gap, or need are you trying to solve?
+      placeholder: What is missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the change you want.
+      placeholder: How should this work?
+    validations:
+      required: true
+  - type: textarea
+    id: households
+    attributes:
+      label: Who benefits
+      description: Tell us whether this is mainly for families, self-hosters, contributors, or multiple groups.
+      placeholder: Who would use or benefit from this?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Core product experience
+        - Calendar / tasks / shopping / reminders
+        - Family onboarding / adoption
+        - Self-hosting / infrastructure
+        - Phone sync / interoperability
+        - Plugins / extensibility
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or related ideas
+      placeholder: Any alternatives, prior workarounds, or related discussions?
