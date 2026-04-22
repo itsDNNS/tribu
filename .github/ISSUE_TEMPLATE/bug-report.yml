@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a reproducible product, self-hosting, or documentation bug.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug.
+
+        If this is a setup question or you are unsure whether it is a bug yet, please consider starting in [Discussions Q&A](https://github.com/itsDNNS/tribu/discussions/categories/q-a) first.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is going wrong?
+      placeholder: A short description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Tell us how to trigger the problem.
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See error ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Web app / UI
+        - Self-hosting / deployment
+        - Phone sync / CalDAV / CardDAV
+        - Authentication / SSO
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Share only what is relevant.
+      placeholder: |
+        - Tribu version:
+        - Browser or device:
+        - Deployment method:
+        - Reverse proxy:
+        - OS / platform:
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or extra context
+      description: Paste logs or add screenshots if they help.
+      render: shell

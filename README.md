@@ -301,7 +301,14 @@ Use the document that matches your intent:
 
 If Tribu helps your family stay organized, consider supporting development.
 
-If you are a self-hoster or contributor, starring the repo, opening issues, improving docs, or contributing code all help make the project stronger too.
+If you are a self-hoster or contributor, starring the repo, opening issues, improving docs, joining Discussions, or contributing code all help make the project stronger too.
+
+Need the right place?
+
+- **Questions and setup help:** use [Discussions Q&A](https://github.com/itsDNNS/tribu/discussions/categories/q-a)
+- **Ideas and early product feedback:** use [Discussions Ideas](https://github.com/itsDNNS/tribu/discussions/categories/ideas)
+- **Reproducible bugs or scoped feature requests:** open an [Issue](https://github.com/itsDNNS/tribu/issues)
+- **Sensitive security reports:** follow the [Security Policy](SECURITY.md)
 
 - [Ko-fi](https://ko-fi.com/itsdnns)
 - [PayPal](https://paypal.me/itsDNNS)
