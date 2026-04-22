@@ -510,27 +510,42 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .sso-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md, 14px);
+  gap: var(--space-lg, 20px);
 }
 .sso-section .admin-section-header {
   display: flex; align-items: center; gap: 8px;
   margin: 0;
 }
 .sso-section .admin-section-header h2 { margin: 0; font-size: 1.05rem; }
-.sso-section .adm-form-desc { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
-.sso-section .form-field { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.sso-section .adm-form-desc { margin: 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.55; max-width: 72ch; }
+.sso-section .sso-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg, 20px) var(--space-md, 14px);
+  align-items: start;
+}
+.sso-section .sso-field-span-2 { grid-column: 1 / -1; }
+.sso-section .form-field { margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .sso-section .form-field > label { font-weight: 500; font-size: 0.9rem; }
 .sso-section .sso-hint {
   display: block;
   color: var(--text-muted);
   font-size: 0.78rem;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 .sso-section .sso-hint-warning { color: var(--warning, #c05621); }
+.sso-section .sso-option-stack {
+  display: grid;
+  gap: 12px;
+}
 .sso-section .sso-checkbox-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md, 12px);
+  background: rgba(255,255,255,0.03);
 }
 .sso-section .sso-checkbox-field .set-checkbox-label { margin: 0; }
 .sso-section .sso-secret-actions {
@@ -540,12 +555,16 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   flex-wrap: wrap;
 }
 .sso-section .sso-callback-box {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px dashed var(--glass-border);
-  border-radius: var(--radius-sm, 8px);
-  background: rgba(124, 58, 237, 0.04);
+  border-radius: var(--radius-md, 12px);
+  background: rgba(124, 58, 237, 0.05);
 }
 .sso-section .set-btn-row { margin: 0; }
+@media (max-width: 900px) {
+  .sso-section .sso-grid { grid-template-columns: 1fr; }
+  .sso-section .sso-field-span-2 { grid-column: auto; }
+}
 
 /* ═══════════════════════════════════════════
    BUTTONS

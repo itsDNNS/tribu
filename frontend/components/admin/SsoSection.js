@@ -122,118 +122,122 @@ export default function SsoSection() {
         </label>
       </div>
 
-      <div className="form-field">
-        <label>{t(messages, 'sso.preset')}</label>
-        <select
-          className="form-input"
-          value={cfg.preset}
-          onChange={(e) => update('preset', e.target.value)}
-          data-testid="sso-preset-select"
-        >
-          {presets.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <small className="sso-hint">{t(messages, 'sso.preset_hint')}</small>
-        {selectedPreset?.hint && (
-          <small className="sso-hint">{selectedPreset.hint}</small>
-        )}
-      </div>
+      <div className="sso-grid">
+        <div className="form-field sso-field-span-2">
+          <label>{t(messages, 'sso.preset')}</label>
+          <select
+            className="form-input"
+            value={cfg.preset}
+            onChange={(e) => update('preset', e.target.value)}
+            data-testid="sso-preset-select"
+          >
+            {presets.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <small className="sso-hint">{t(messages, 'sso.preset_hint')}</small>
+          {selectedPreset?.hint && (
+            <small className="sso-hint">{selectedPreset.hint}</small>
+          )}
+        </div>
 
-      <div className="form-field">
-        <label>{t(messages, 'sso.issuer')}</label>
-        <input
-          className="form-input"
-          type="url"
-          value={cfg.issuer || ''}
-          placeholder={selectedPreset?.issuer_placeholder || ''}
-          onChange={(e) => update('issuer', e.target.value)}
-          data-testid="sso-issuer-input"
-        />
-      </div>
-
-      <div className="form-field">
-        <label>{t(messages, 'sso.client_id')}</label>
-        <input
-          className="form-input"
-          type="text"
-          value={cfg.client_id || ''}
-          onChange={(e) => update('client_id', e.target.value)}
-        />
-      </div>
-
-      <div className="form-field">
-        <label>{t(messages, 'sso.client_secret')}</label>
-        <input
-          className="form-input"
-          type="password"
-          value={secretDraft}
-          placeholder={cfg.client_secret_set ? '••••••••••' : ''}
-          onChange={(e) => { setSecretDraft(e.target.value); setSecretClearPending(false); }}
-          autoComplete="off"
-        />
-        {cfg.client_secret_set && !secretClearPending && (
-          <div className="sso-secret-actions">
-            <small className="sso-hint">{t(messages, 'sso.client_secret_set')}</small>
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => { setSecretClearPending(true); setSecretDraft(''); }}
-            >
-              {t(messages, 'sso.client_secret_clear')}
-            </button>
-          </div>
-        )}
-        {secretClearPending && (
-          <small className="sso-hint sso-hint-warning">{t(messages, 'sso.client_secret_clear')}</small>
-        )}
-      </div>
-
-      <div className="form-field">
-        <label>{t(messages, 'sso.button_label')}</label>
-        <input
-          className="form-input"
-          type="text"
-          value={cfg.button_label || ''}
-          placeholder={selectedPreset?.button_label || ''}
-          onChange={(e) => update('button_label', e.target.value)}
-        />
-        <small className="sso-hint">{t(messages, 'sso.button_label_hint')}</small>
-      </div>
-
-      <div className="form-field">
-        <label>{t(messages, 'sso.scopes')}</label>
-        <input
-          className="form-input"
-          type="text"
-          value={cfg.scopes || ''}
-          onChange={(e) => update('scopes', e.target.value)}
-        />
-        <small className="sso-hint">{t(messages, 'sso.scopes_hint')}</small>
-      </div>
-
-      <div className="sso-checkbox-field">
-        <label className="set-checkbox-label">
+        <div className="form-field sso-field-span-2">
+          <label>{t(messages, 'sso.issuer')}</label>
           <input
-            type="checkbox"
-            checked={!!cfg.allow_signup}
-            onChange={(e) => update('allow_signup', e.target.checked)}
+            className="form-input"
+            type="url"
+            value={cfg.issuer || ''}
+            placeholder={selectedPreset?.issuer_placeholder || ''}
+            onChange={(e) => update('issuer', e.target.value)}
+            data-testid="sso-issuer-input"
           />
-          {t(messages, 'sso.allow_signup')}
-        </label>
-        <small className="sso-hint">{t(messages, 'sso.allow_signup_hint')}</small>
+        </div>
+
+        <div className="form-field">
+          <label>{t(messages, 'sso.client_id')}</label>
+          <input
+            className="form-input"
+            type="text"
+            value={cfg.client_id || ''}
+            onChange={(e) => update('client_id', e.target.value)}
+          />
+        </div>
+
+        <div className="form-field">
+          <label>{t(messages, 'sso.client_secret')}</label>
+          <input
+            className="form-input"
+            type="password"
+            value={secretDraft}
+            placeholder={cfg.client_secret_set ? '**********' : ''}
+            onChange={(e) => { setSecretDraft(e.target.value); setSecretClearPending(false); }}
+            autoComplete="off"
+          />
+          {cfg.client_secret_set && !secretClearPending && (
+            <div className="sso-secret-actions">
+              <small className="sso-hint">{t(messages, 'sso.client_secret_set')}</small>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => { setSecretClearPending(true); setSecretDraft(''); }}
+              >
+                {t(messages, 'sso.client_secret_clear')}
+              </button>
+            </div>
+          )}
+          {secretClearPending && (
+            <small className="sso-hint sso-hint-warning">{t(messages, 'sso.client_secret_clear')}</small>
+          )}
+        </div>
+
+        <div className="form-field">
+          <label>{t(messages, 'sso.button_label')}</label>
+          <input
+            className="form-input"
+            type="text"
+            value={cfg.button_label || ''}
+            placeholder={selectedPreset?.button_label || ''}
+            onChange={(e) => update('button_label', e.target.value)}
+          />
+          <small className="sso-hint">{t(messages, 'sso.button_label_hint')}</small>
+        </div>
+
+        <div className="form-field">
+          <label>{t(messages, 'sso.scopes')}</label>
+          <input
+            className="form-input"
+            type="text"
+            value={cfg.scopes || ''}
+            onChange={(e) => update('scopes', e.target.value)}
+          />
+          <small className="sso-hint">{t(messages, 'sso.scopes_hint')}</small>
+        </div>
       </div>
 
-      <div className="sso-checkbox-field">
-        <label className="set-checkbox-label">
-          <input
-            type="checkbox"
-            checked={!!cfg.disable_password_login}
-            onChange={(e) => update('disable_password_login', e.target.checked)}
-          />
-          {t(messages, 'sso.disable_password_login')}
-        </label>
-        <small className="sso-hint">{t(messages, 'sso.disable_password_login_hint')}</small>
+      <div className="sso-option-stack">
+        <div className="sso-checkbox-field">
+          <label className="set-checkbox-label">
+            <input
+              type="checkbox"
+              checked={!!cfg.allow_signup}
+              onChange={(e) => update('allow_signup', e.target.checked)}
+            />
+            {t(messages, 'sso.allow_signup')}
+          </label>
+          <small className="sso-hint">{t(messages, 'sso.allow_signup_hint')}</small>
+        </div>
+
+        <div className="sso-checkbox-field">
+          <label className="set-checkbox-label">
+            <input
+              type="checkbox"
+              checked={!!cfg.disable_password_login}
+              onChange={(e) => update('disable_password_login', e.target.checked)}
+            />
+            {t(messages, 'sso.disable_password_login')}
+          </label>
+          <small className="sso-hint">{t(messages, 'sso.disable_password_login_hint')}</small>
+        </div>
       </div>
 
       {redirectUri && (
