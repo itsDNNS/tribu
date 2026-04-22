@@ -79,7 +79,15 @@ def _seed_config(
     disable_password_login: bool = False,
     button_label: str = "",
     enabled: bool = True,
+    proven: bool = True,
 ) -> None:
+    """Seed the OIDC config rows for tests.
+
+    ``proven=True`` also records a recent successful SSO login so the
+    password-login gate treats the config as trusted end-to-end. Tests
+    that want to exercise the "flag flipped before first success"
+    path pass ``proven=False``.
+    """
     db = TestSession()
     try:
         oidc_core.save_config(
@@ -94,6 +102,8 @@ def _seed_config(
             allow_signup=allow_signup,
             disable_password_login=disable_password_login,
         )
+        if proven:
+            oidc_core.record_successful_sso_login(db)
         db.commit()
     finally:
         db.close()
@@ -275,6 +285,140 @@ def _mock_token_exchange(monkeypatch, *, subject: str, email: str | None, email_
 # ---------------------------------------------------------------------------
 # Linking existing user by email
 # ---------------------------------------------------------------------------
+
+
+def test_callback_reuses_authorize_redirect_uri(monkeypatch):
+    """Regression: the flow JWT must pin the redirect_uri so the
+    token exchange submits the same value as authorize.
+
+    If base_url or x-forwarded headers change between the two
+    requests the IdP would otherwise reject the code for
+    redirect_uri_mismatch.
+    """
+    _seed_config(proven=False)
+
+    captured = {}
+
+    def fake_exchange(**kwargs):
+        captured["redirect_uri"] = kwargs["redirect_uri"]
+        return {"id_token": "MOCK", "access_token": "A"}
+
+    def fake_verify(id_token, *, issuer, client_id, jwks_uri, expected_nonce):
+        return oidc_core.IDTokenClaims(
+            subject="pin-sub",
+            email="pin@example.com",
+            email_verified=True,
+            name="Pin",
+            raw={},
+        )
+
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    monkeypatch.setattr(oidc_core, "exchange_code_for_tokens", fake_exchange)
+    monkeypatch.setattr(oidc_core, "verify_id_token", fake_verify)
+
+    # Authorize request goes through the proxied host
+    start = client.get(
+        "/auth/oidc/login",
+        headers={"x-forwarded-host": "first.example.com", "x-forwarded-proto": "https"},
+    )
+    state = start.headers["location"].split("state=", 1)[1].split("&", 1)[0]
+
+    # Seed a user so the callback succeeds
+    db = TestSession()
+    try:
+        db.add(User(email="pin@example.com", password_hash=hash_password("P1xxx1234"), display_name="Pin"))
+        db.commit()
+    finally:
+        db.close()
+
+    # Callback arrives with a DIFFERENT forwarded host. Without the
+    # pin, redirect_uri would be recomputed to the second host and
+    # the token exchange would fail at the IdP.
+    client.get(
+        f"/auth/oidc/callback?code=c&state={state}",
+        headers={"x-forwarded-host": "second.example.com", "x-forwarded-proto": "https"},
+    )
+    assert captured["redirect_uri"] == "https://first.example.com/auth/oidc/callback"
+    client.cookies.clear()
+
+
+def test_callback_stamps_last_success_timestamp(monkeypatch):
+    """Every successful callback must record oidc_last_success_at.
+
+    That timestamp is the proof-of-life the password_login_disabled
+    gate depends on; without it the gate stays open and
+    disable_password_login never locks out the admin. Start with
+    proven=False so the assertion actually proves the callback is
+    the thing that stamps.
+    """
+    _seed_config(proven=False)
+    db = TestSession()
+    try:
+        db.add(User(
+            email="stamp@example.com",
+            password_hash=hash_password("Secure1Pass"),
+            display_name="Stamp",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    state = _perform_login_and_extract_state(monkeypatch)
+    _mock_token_exchange(
+        monkeypatch,
+        subject="stamp-sub",
+        email="stamp@example.com",
+        email_verified=True,
+    )
+    resp = client.get(f"/auth/oidc/callback?code=c&state={state}")
+    assert resp.status_code == 303
+
+    db = TestSession()
+    try:
+        stored = oidc_core.get_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, "")
+        assert stored  # non-empty ISO string
+        from datetime import datetime, timezone
+        parsed = datetime.fromisoformat(stored)
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        assert abs((oidc_core.utcnow() - parsed).total_seconds()) < 300
+    finally:
+        db.close()
+    client.cookies.clear()
+
+
+def test_login_not_blocked_until_first_sso_success(monkeypatch):
+    """disable_password_login=true alone must not lock admins out.
+
+    Regression for the adversarial finding: is_ready() only checks
+    non-empty fields. Password login must stay available until at
+    least one callback has actually completed.
+    """
+    db = TestSession()
+    try:
+        db.add(User(
+            email="admin@example.com",
+            password_hash=hash_password("Secure1Pass"),
+            display_name="Admin",
+        ))
+        oidc_core.save_config(
+            db,
+            enabled=True, preset="generic", button_label="",
+            issuer=ISSUER, client_id="tribu-client", client_secret="s",
+            scopes="openid profile email",
+            allow_signup=False, disable_password_login=True,
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.post(
+        "/auth/login",
+        json={"email": "admin@example.com", "password": "Secure1Pass"},
+    )
+    # Password login must still work — no SSO success has been recorded
+    assert resp.status_code == 200, resp.text
+    client.cookies.clear()
 
 
 def test_callback_links_existing_user_by_verified_email(monkeypatch):

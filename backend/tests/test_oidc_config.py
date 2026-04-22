@@ -189,21 +189,102 @@ class TestPasswordLoginGate:
         )
         db.commit()
 
+    def _stamp(self, db, *, days_ago: float = 0.0):
+        from datetime import timedelta
+        ts = (oidc_core.utcnow() - timedelta(days=days_ago)).replace(microsecond=0).isoformat()
+        oidc_core.set_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, ts)
+        db.commit()
+
     def test_flag_ignored_when_oidc_disabled(self, db):
         self._store(db, enabled=False, disable_flag=True, ready=False)
+        self._stamp(db, days_ago=0)
         assert oidc_core.password_login_disabled(db) is False
 
     def test_flag_ignored_when_not_ready(self, db):
         # enabled=True but issuer/client missing => not ready
         self._store(db, enabled=True, disable_flag=True, ready=False)
+        self._stamp(db, days_ago=0)
         assert oidc_core.password_login_disabled(db) is False
 
-    def test_flag_honoured_when_ready(self, db):
+    def test_flag_ignored_when_never_proven(self, db):
+        """Regression: is_ready() alone is not enough.
+
+        A mistyped issuer + client secret satisfies is_ready() but
+        cannot actually complete a login. Without a recorded
+        success, password login must stay available.
+        """
         self._store(db, enabled=True, disable_flag=True, ready=True)
+        # No _stamp() — last_success_at is empty
+        assert oidc_core.password_login_disabled(db) is False
+
+    def test_flag_honoured_when_recently_proven(self, db):
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        self._stamp(db, days_ago=0)
+        assert oidc_core.password_login_disabled(db) is True
+
+    def test_flag_rearms_password_after_grace_expiry(self, db):
+        """After LOCKOUT_GRACE_DAYS with no SSO, password login
+        comes back automatically. The intent is that a silent OIDC
+        outage does not permanently lock admins out."""
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        self._stamp(db, days_ago=oidc_core.LOCKOUT_GRACE_DAYS + 1)
+        assert oidc_core.password_login_disabled(db) is False
+
+    def test_corrupted_timestamp_falls_open(self, db):
+        """If someone hand-edits oidc_last_success_at to garbage we
+        prefer to leave password login usable rather than brick
+        the instance."""
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        oidc_core.set_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, "not a date")
+        db.commit()
+        assert oidc_core.password_login_disabled(db) is False
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            "",                    # empty
+            "   ",                 # whitespace
+            "2099-01-01",          # date-only: parseable but no time
+            "2099",                # year-only
+            "garbage",             # not even ISO-shaped
+            "T12:00:00",           # time-only with stray T
+            "2026-04-22",          # today, date-only
+        ],
+    )
+    def test_unparseable_or_timeless_timestamp_falls_open(self, db, bad):
+        """Anything not matching the full ISO date+time shape must
+        not count as proof-of-life. Partial values like
+        ``YYYY-MM-DD`` are parseable by ``fromisoformat`` but would
+        silently keep password login disabled for 30 days."""
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        oidc_core.set_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, bad)
+        db.commit()
+        assert oidc_core.password_login_disabled(db) is False
+
+    def test_future_timestamp_falls_open(self, db):
+        """A hand-edited future date must not extend the grace
+        window past ``LOCKOUT_GRACE_DAYS``. Up to a few minutes of
+        clock skew is tolerated, far-future values are rejected."""
+        from datetime import timedelta
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        future = (oidc_core.utcnow() + timedelta(days=365)).replace(microsecond=0).isoformat()
+        oidc_core.set_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, future)
+        db.commit()
+        assert oidc_core.password_login_disabled(db) is False
+
+    def test_small_clock_skew_tolerated(self, db):
+        """A stamp 1 minute in the future (plausible for intra-
+        cluster skew) still counts as proof-of-life."""
+        from datetime import timedelta
+        self._store(db, enabled=True, disable_flag=True, ready=True)
+        soon = (oidc_core.utcnow() + timedelta(minutes=1)).replace(microsecond=0).isoformat()
+        oidc_core.set_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, soon)
+        db.commit()
         assert oidc_core.password_login_disabled(db) is True
 
     def test_flag_off_stays_off(self, db):
         self._store(db, enabled=True, disable_flag=False, ready=True)
+        self._stamp(db, days_ago=0)
         assert oidc_core.password_login_disabled(db) is False
 
 
@@ -533,6 +614,89 @@ class TestVerifyIDTokenRealSignature:
                 jwks_uri="https://idp.example.com/jwks",
                 expected_nonce=None,
             )
+
+
+class TestEmailVerifiedStrict:
+    """email_verified must be the JSON boolean true, nothing else.
+
+    Protects against IdPs (or attackers tampering with one) that emit
+    the claim as a string, integer, or anything else truthy. The
+    identity-linking path relies on this flag to decide whether to
+    trust the email claim for matching an existing Tribu user.
+    """
+
+    @pytest.fixture
+    def rsa_keypair(self):
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        return private_key, private_key.public_key()
+
+    def _sign(self, private_key, payload: dict) -> str:
+        from cryptography.hazmat.primitives import serialization
+        pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        import jwt
+        return jwt.encode(payload, pem, algorithm="RS256", headers={"kid": "test-kid"})
+
+    def _install_fake_jwks(self, monkeypatch, public_key):
+        class FakeJWK:
+            def __init__(self, key, alg):
+                self.key = key
+                self.algorithm_name = alg
+
+        fake = FakeJWK(public_key, "RS256")
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs):
+                pass
+            def get_signing_key_from_jwt(self, _id_token):
+                return fake
+
+        monkeypatch.setattr("jwt.PyJWKClient", FakeClient)
+
+    def _verify(self, priv, pub, monkeypatch, extra_payload):
+        self._install_fake_jwks(monkeypatch, pub)
+        import time as _time
+        now = int(_time.time())
+        payload = {
+            "iss": "https://idp.example.com",
+            "aud": "tribu-client",
+            "sub": "sub-1",
+            "exp": now + 300,
+            "iat": now,
+            "email": "anna@example.com",
+        }
+        payload.update(extra_payload)
+        token = self._sign(priv, payload)
+        return oidc_core.verify_id_token(
+            token,
+            issuer="https://idp.example.com",
+            client_id="tribu-client",
+            jwks_uri="https://idp.example.com/jwks",
+            expected_nonce=None,
+        )
+
+    def test_true_boolean_accepted(self, rsa_keypair, monkeypatch):
+        priv, pub = rsa_keypair
+        claims = self._verify(priv, pub, monkeypatch, {"email_verified": True})
+        assert claims.email_verified is True
+
+    @pytest.mark.parametrize(
+        "claim_value",
+        ["true", "false", "True", 1, 0, [], ["true"], {"v": True}, None],
+    )
+    def test_non_boolean_treated_as_unverified(self, rsa_keypair, monkeypatch, claim_value):
+        priv, pub = rsa_keypair
+        claims = self._verify(priv, pub, monkeypatch, {"email_verified": claim_value})
+        assert claims.email_verified is False
+
+    def test_missing_claim_treated_as_unverified(self, rsa_keypair, monkeypatch):
+        priv, pub = rsa_keypair
+        claims = self._verify(priv, pub, monkeypatch, {})  # no email_verified
+        assert claims.email_verified is False
 
 
 class TestVerifyPasswordNullHash:

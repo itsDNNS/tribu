@@ -8,7 +8,7 @@ and lets us put the public login endpoints on their own tag.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core import oidc as oidc_core
@@ -20,7 +20,7 @@ from app.core.errors import (
 )
 from app.core.oidc_presets import PRESETS, list_presets
 from app.core.scopes import require_scope
-from app.core.utils import ensure_any_admin
+from app.core.utils import ensure_any_admin, resolve_base_url
 from app.database import get_db
 from app.models import User
 from app.schemas import (
@@ -32,6 +32,17 @@ from app.schemas import (
     OIDCTestResponse,
 )
 
+def _effective_callback_url(db: Session, request: Request) -> str:
+    """Return the redirect_uri Tribu will actually send to the IdP.
+
+    Shares ``oidc_core.CALLBACK_PATH`` with
+    ``oidc_auth_router.start_login`` so the admin UI shows the exact
+    URL the backend will submit. Reading from ``resolve_base_url``
+    means an explicit ``BASE_URL`` env var or an admin-set
+    ``base_url`` override is honored identically in both places.
+    """
+    return f"{resolve_base_url(db, request)}{oidc_core.CALLBACK_PATH}"
+
 router = APIRouter(
     prefix="/admin/oidc",
     tags=["admin-settings"],
@@ -39,7 +50,9 @@ router = APIRouter(
 )
 
 
-def _to_response(cfg: oidc_core.OIDCConfig) -> OIDCConfigResponse:
+def _to_response(
+    cfg: oidc_core.OIDCConfig, *, effective_callback_url: str
+) -> OIDCConfigResponse:
     return OIDCConfigResponse(
         enabled=cfg.enabled,
         preset=cfg.preset,
@@ -51,6 +64,7 @@ def _to_response(cfg: oidc_core.OIDCConfig) -> OIDCConfigResponse:
         allow_signup=cfg.allow_signup,
         disable_password_login=cfg.disable_password_login,
         ready=cfg.is_ready(),
+        effective_callback_url=effective_callback_url,
     )
 
 
@@ -87,13 +101,16 @@ def get_presets(
     response_description="Current OIDC configuration",
 )
 def get_oidc_config(
+    request: Request,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
     _scope=require_scope("admin:read"),
 ) -> OIDCConfigResponse:
     ensure_any_admin(db, user.id)
     cfg = oidc_core.load_config(db)
-    return _to_response(cfg)
+    return _to_response(
+        cfg, effective_callback_url=_effective_callback_url(db, request),
+    )
 
 
 @router.put(
@@ -110,6 +127,7 @@ def get_oidc_config(
 )
 def update_oidc_config(
     payload: OIDCConfigUpdate,
+    request: Request,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
@@ -160,7 +178,10 @@ def update_oidc_config(
     # configuration. Nothing persists in memory from the previous
     # issuer so the next login attempt re-fetches discovery.
     oidc_core.invalidate_discovery_cache()
-    return _to_response(oidc_core.load_config(db))
+    return _to_response(
+        oidc_core.load_config(db),
+        effective_callback_url=_effective_callback_url(db, request),
+    )
 
 
 @router.post(

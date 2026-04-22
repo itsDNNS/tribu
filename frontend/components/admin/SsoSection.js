@@ -67,22 +67,40 @@ export default function SsoSection() {
     } else if (secretDraft) {
       payload.client_secret = secretDraft;
     }
-    const { ok, data } = await api.apiUpdateOidcConfig(payload);
-    setSaving(false);
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      return;
+    try {
+      const { ok, data } = await api.apiUpdateOidcConfig(payload);
+      if (!ok) {
+        toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+        return;
+      }
+      toastSuccess(t(messages, 'sso.saved'));
+      setCfg(data);
+      setSecretDraft('');
+      setSecretClearPending(false);
+    } catch (err) {
+      // Network failure or anything that short-circuits the fetch.
+      // The backend may or may not have applied the change; we
+      // cannot know from here. Re-fetch the config so the rendered
+      // effective_callback_url and client_secret_set flag reflect
+      // the actual server state instead of our optimistic draft.
+      toastError(t(messages, 'toast.error'));
+      try {
+        const { ok, data } = await api.apiGetOidcConfig();
+        if (ok && data) setCfg(data);
+      } catch {
+        // Leave cfg alone if even the refetch fails. User can retry.
+      }
+    } finally {
+      setSaving(false);
     }
-    toastSuccess(t(messages, 'sso.saved'));
-    setCfg(data);
-    setSecretDraft('');
-    setSecretClearPending(false);
   }
 
   const selectedPreset = presets.find((p) => p.id === cfg.preset) || null;
-  const redirectUri = typeof window !== 'undefined'
-    ? `${window.location.origin}/auth/oidc/callback`
-    : '';
+  // Use the backend's computed callback URL. Deriving from
+  // window.location.origin would diverge from the real redirect_uri
+  // Tribu sends to the IdP whenever BASE_URL env or x-forwarded
+  // headers are in play.
+  const redirectUri = cfg.effective_callback_url || '';
 
   return (
     <form className="settings-section sso-section" onSubmit={handleSave} data-testid="sso-admin-section">
@@ -92,15 +110,17 @@ export default function SsoSection() {
       </div>
       <p className="adm-form-desc">{t(messages, 'sso.desc')}</p>
 
-      <label className="set-checkbox-label">
-        <input
-          type="checkbox"
-          checked={!!cfg.enabled}
-          onChange={(e) => update('enabled', e.target.checked)}
-          data-testid="sso-enabled-toggle"
-        />
-        {t(messages, 'sso.enabled')}
-      </label>
+      <div className="sso-checkbox-field">
+        <label className="set-checkbox-label">
+          <input
+            type="checkbox"
+            checked={!!cfg.enabled}
+            onChange={(e) => update('enabled', e.target.checked)}
+            data-testid="sso-enabled-toggle"
+          />
+          {t(messages, 'sso.enabled')}
+        </label>
+      </div>
 
       <div className="form-field">
         <label>{t(messages, 'sso.preset')}</label>
@@ -114,11 +134,9 @@ export default function SsoSection() {
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
-        <small>{t(messages, 'sso.preset_hint')}</small>
+        <small className="sso-hint">{t(messages, 'sso.preset_hint')}</small>
         {selectedPreset?.hint && (
-          <small style={{ display: 'block', marginTop: 4, color: 'var(--text-muted)' }}>
-            {selectedPreset.hint}
-          </small>
+          <small className="sso-hint">{selectedPreset.hint}</small>
         )}
       </div>
 
@@ -155,8 +173,8 @@ export default function SsoSection() {
           autoComplete="off"
         />
         {cfg.client_secret_set && !secretClearPending && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
-            <small style={{ color: 'var(--text-muted)' }}>{t(messages, 'sso.client_secret_set')}</small>
+          <div className="sso-secret-actions">
+            <small className="sso-hint">{t(messages, 'sso.client_secret_set')}</small>
             <button
               type="button"
               className="btn-ghost"
@@ -167,7 +185,7 @@ export default function SsoSection() {
           </div>
         )}
         {secretClearPending && (
-          <small style={{ color: 'var(--warning, #c05621)' }}>{t(messages, 'sso.client_secret_clear')}</small>
+          <small className="sso-hint sso-hint-warning">{t(messages, 'sso.client_secret_clear')}</small>
         )}
       </div>
 
@@ -180,7 +198,7 @@ export default function SsoSection() {
           placeholder={selectedPreset?.button_label || ''}
           onChange={(e) => update('button_label', e.target.value)}
         />
-        <small>{t(messages, 'sso.button_label_hint')}</small>
+        <small className="sso-hint">{t(messages, 'sso.button_label_hint')}</small>
       </div>
 
       <div className="form-field">
@@ -191,33 +209,39 @@ export default function SsoSection() {
           value={cfg.scopes || ''}
           onChange={(e) => update('scopes', e.target.value)}
         />
-        <small>{t(messages, 'sso.scopes_hint')}</small>
+        <small className="sso-hint">{t(messages, 'sso.scopes_hint')}</small>
       </div>
 
-      <label className="set-checkbox-label">
-        <input
-          type="checkbox"
-          checked={!!cfg.allow_signup}
-          onChange={(e) => update('allow_signup', e.target.checked)}
-        />
-        {t(messages, 'sso.allow_signup')}
-      </label>
-      <small style={{ display: 'block', marginTop: -6, marginBottom: 8 }}>{t(messages, 'sso.allow_signup_hint')}</small>
+      <div className="sso-checkbox-field">
+        <label className="set-checkbox-label">
+          <input
+            type="checkbox"
+            checked={!!cfg.allow_signup}
+            onChange={(e) => update('allow_signup', e.target.checked)}
+          />
+          {t(messages, 'sso.allow_signup')}
+        </label>
+        <small className="sso-hint">{t(messages, 'sso.allow_signup_hint')}</small>
+      </div>
 
-      <label className="set-checkbox-label">
-        <input
-          type="checkbox"
-          checked={!!cfg.disable_password_login}
-          onChange={(e) => update('disable_password_login', e.target.checked)}
-        />
-        {t(messages, 'sso.disable_password_login')}
-      </label>
-      <small style={{ display: 'block', marginTop: -6, marginBottom: 8 }}>{t(messages, 'sso.disable_password_login_hint')}</small>
+      <div className="sso-checkbox-field">
+        <label className="set-checkbox-label">
+          <input
+            type="checkbox"
+            checked={!!cfg.disable_password_login}
+            onChange={(e) => update('disable_password_login', e.target.checked)}
+          />
+          {t(messages, 'sso.disable_password_login')}
+        </label>
+        <small className="sso-hint">{t(messages, 'sso.disable_password_login_hint')}</small>
+      </div>
 
       {redirectUri && (
-        <small style={{ display: 'block', marginTop: 8, marginBottom: 8, color: 'var(--text-muted)' }}>
-          {t(messages, 'sso.redirect_uri_hint').replace('{url}', redirectUri)}
-        </small>
+        <div className="sso-callback-box" data-testid="sso-callback-hint">
+          <small className="sso-hint">
+            {t(messages, 'sso.redirect_uri_hint').replace('{url}', redirectUri)}
+          </small>
+        </div>
       )}
 
       <div className="set-btn-row" style={{ gap: 8 }}>

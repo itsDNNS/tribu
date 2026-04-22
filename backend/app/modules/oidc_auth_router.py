@@ -80,7 +80,11 @@ def public_config(db: Session = Depends(get_db)):
         "enabled": bool(cfg.enabled),
         "ready": ready,
         "button_label": cfg.effective_button_label() if ready else "",
-        "password_login_disabled": ready and cfg.disable_password_login,
+        # Mirror the full backend gate (ready + disable flag + recent
+        # SSO proof-of-life) so the frontend does not hide local auth
+        # before the first successful SSO login, and so password login
+        # automatically re-surfaces after the lockout grace expires.
+        "password_login_disabled": oidc_core.password_login_disabled(db),
     }
 
 
@@ -178,7 +182,7 @@ def start_login(
     code_verifier = oidc_core.generate_code_verifier()
     code_challenge = oidc_core.code_challenge_s256(code_verifier)
 
-    redirect_uri = f"{resolve_base_url(db, request)}/auth/oidc/callback"
+    redirect_uri = f"{resolve_base_url(db, request)}{oidc_core.CALLBACK_PATH}"
 
     authorize_params = {
         "response_type": "code",
@@ -199,6 +203,14 @@ def start_login(
         "invite": invite or "",
         "redirect_to": _safe_redirect(redirect_to),
         "issuer": cfg.issuer,
+        # Pin the redirect_uri we actually sent to the IdP so the
+        # callback token-exchange submits exactly the same value.
+        # If base_url / x-forwarded headers shift between the two
+        # requests (e.g. a reverse proxy restarts, BASE_URL env
+        # flips) the authorize-step URI and the token-exchange URI
+        # would otherwise diverge and the IdP would refuse the
+        # exchange with invalid_grant / redirect_uri_mismatch.
+        "redirect_uri": redirect_uri,
     })
 
     response = RedirectResponse(url=authorize_url, status_code=303)
@@ -402,7 +414,7 @@ def _link_identity_with_race_guard(
 
 
 @router.get(
-    "/auth/oidc/callback",
+    oidc_core.CALLBACK_PATH,
     summary="OIDC callback",
     description=(
         "Consume the IdP's ``code`` + ``state`` response. Sets the "
@@ -465,7 +477,12 @@ def callback(
         _clear_flow_cookie(resp)
         return resp
 
-    redirect_uri = f"{resolve_base_url(db, request)}/auth/oidc/callback"
+    # Prefer the URI we actually sent to the IdP at authorize time;
+    # fall back to recomputing for older flow cookies that predate
+    # the pinning (this round of the loop is mid-deployment).
+    redirect_uri = flow.get("redirect_uri") or (
+        f"{resolve_base_url(db, request)}{oidc_core.CALLBACK_PATH}"
+    )
 
     try:
         token_response = oidc_core.exchange_code_for_tokens(
@@ -510,6 +527,11 @@ def callback(
         resp = RedirectResponse(url=_error_redirect(code_tag), status_code=303)
         _clear_flow_cookie(resp)
         return resp
+
+    # Stamp proof-of-life so password_login_disabled can trust that
+    # SSO actually works end-to-end. Commit once for the whole
+    # transaction (identity link + membership + timestamp).
+    oidc_core.record_successful_sso_login(db)
 
     db.commit()
 
