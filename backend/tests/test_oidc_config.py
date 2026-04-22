@@ -346,6 +346,195 @@ class TestSchemeHardening:
             oidc_core._fetch_json(bad)
 
 
+class TestVerifyIDTokenRealSignature:
+    """Exercise verify_id_token against a locally-signed RS256 ID token.
+
+    PyJWKClient is monkeypatched so the JWKS fetch returns our
+    throwaway public key. Everything else — signature verification,
+    iss/aud/exp enforcement, nonce check, required-claim list, and
+    the asymmetric-algorithm allowlist — runs through the real code.
+    """
+
+    @pytest.fixture
+    def rsa_keypair(self):
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        return private_key, private_key.public_key()
+
+    def _sign(self, private_key, payload: dict) -> str:
+        from cryptography.hazmat.primitives import serialization
+        pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        import jwt
+        return jwt.encode(payload, pem, algorithm="RS256", headers={"kid": "test-kid"})
+
+    def _install_fake_jwks(self, monkeypatch, public_key):
+        import jwt
+        from jwt import PyJWK
+
+        class FakeJWK:
+            def __init__(self, key, alg):
+                self.key = key
+                self.algorithm_name = alg
+
+        fake = FakeJWK(public_key, "RS256")
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def get_signing_key_from_jwt(self, _id_token):
+                return fake
+
+        monkeypatch.setattr("jwt.PyJWKClient", FakeClient)
+
+    def test_happy_path(self, rsa_keypair, monkeypatch):
+        priv, pub = rsa_keypair
+        self._install_fake_jwks(monkeypatch, pub)
+        import time as _time
+        now = int(_time.time())
+        token = self._sign(priv, {
+            "iss": "https://idp.example.com",
+            "aud": "tribu-client",
+            "sub": "subject-123",
+            "exp": now + 300,
+            "iat": now,
+            "email": "anna@example.com",
+            "email_verified": True,
+            "nonce": "expected-nonce",
+            "name": "Anna",
+        })
+        claims = oidc_core.verify_id_token(
+            token,
+            issuer="https://idp.example.com",
+            client_id="tribu-client",
+            jwks_uri="https://idp.example.com/jwks",
+            expected_nonce="expected-nonce",
+        )
+        assert claims.subject == "subject-123"
+        assert claims.email == "anna@example.com"
+        assert claims.email_verified is True
+        assert claims.name == "Anna"
+
+    def test_wrong_issuer_rejected(self, rsa_keypair, monkeypatch):
+        priv, pub = rsa_keypair
+        self._install_fake_jwks(monkeypatch, pub)
+        import time as _time
+        now = int(_time.time())
+        token = self._sign(priv, {
+            "iss": "https://evil.example.com",
+            "aud": "tribu-client",
+            "sub": "x", "exp": now + 60, "iat": now,
+        })
+        with pytest.raises(oidc_core.IDTokenError):
+            oidc_core.verify_id_token(
+                token, issuer="https://idp.example.com",
+                client_id="tribu-client",
+                jwks_uri="https://idp.example.com/jwks",
+                expected_nonce=None,
+            )
+
+    def test_wrong_audience_rejected(self, rsa_keypair, monkeypatch):
+        priv, pub = rsa_keypair
+        self._install_fake_jwks(monkeypatch, pub)
+        import time as _time
+        now = int(_time.time())
+        token = self._sign(priv, {
+            "iss": "https://idp.example.com",
+            "aud": "someone-else",
+            "sub": "x", "exp": now + 60, "iat": now,
+        })
+        with pytest.raises(oidc_core.IDTokenError):
+            oidc_core.verify_id_token(
+                token, issuer="https://idp.example.com",
+                client_id="tribu-client",
+                jwks_uri="https://idp.example.com/jwks",
+                expected_nonce=None,
+            )
+
+    def test_expired_token_rejected(self, rsa_keypair, monkeypatch):
+        priv, pub = rsa_keypair
+        self._install_fake_jwks(monkeypatch, pub)
+        import time as _time
+        now = int(_time.time())
+        token = self._sign(priv, {
+            "iss": "https://idp.example.com",
+            "aud": "tribu-client",
+            "sub": "x", "exp": now - 60, "iat": now - 120,
+        })
+        with pytest.raises(oidc_core.IDTokenError):
+            oidc_core.verify_id_token(
+                token, issuer="https://idp.example.com",
+                client_id="tribu-client",
+                jwks_uri="https://idp.example.com/jwks",
+                expected_nonce=None,
+            )
+
+    def test_nonce_mismatch_rejected(self, rsa_keypair, monkeypatch):
+        priv, pub = rsa_keypair
+        self._install_fake_jwks(monkeypatch, pub)
+        import time as _time
+        now = int(_time.time())
+        token = self._sign(priv, {
+            "iss": "https://idp.example.com",
+            "aud": "tribu-client",
+            "sub": "x", "exp": now + 60, "iat": now,
+            "nonce": "their-nonce",
+        })
+        with pytest.raises(oidc_core.IDTokenError):
+            oidc_core.verify_id_token(
+                token, issuer="https://idp.example.com",
+                client_id="tribu-client",
+                jwks_uri="https://idp.example.com/jwks",
+                expected_nonce="our-nonce",
+            )
+
+    def test_hs256_id_token_rejected_even_with_matching_key(self, monkeypatch):
+        """Algorithm allowlist excludes HS* for ID tokens.
+
+        Guards against the alg-confusion pattern where an attacker
+        swaps the JWK for one that declares ``alg=HS256`` and signs
+        with the public key as the HMAC secret.
+        """
+        secret = "some-shared-secret-bytes"
+
+        class FakeJWK:
+            key = secret
+            algorithm_name = "HS256"
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def get_signing_key_from_jwt(self, _id_token):
+                return FakeJWK()
+
+        monkeypatch.setattr("jwt.PyJWKClient", FakeClient)
+
+        import jwt
+        import time as _time
+        now = int(_time.time())
+        token = jwt.encode(
+            {
+                "iss": "https://idp.example.com",
+                "aud": "tribu-client",
+                "sub": "x", "exp": now + 60, "iat": now,
+            },
+            secret,
+            algorithm="HS256",
+        )
+        with pytest.raises(oidc_core.IDTokenError):
+            oidc_core.verify_id_token(
+                token, issuer="https://idp.example.com",
+                client_id="tribu-client",
+                jwks_uri="https://idp.example.com/jwks",
+                expected_nonce=None,
+            )
+
+
 class TestVerifyPasswordNullHash:
     """Regression: verify_password must not crash on None/empty hash."""
 

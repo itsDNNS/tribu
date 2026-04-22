@@ -448,6 +448,50 @@ class IDTokenClaims:
     raw: dict = field(default_factory=dict)
 
 
+def _post_token_request(
+    token_endpoint: str,
+    form_fields: dict,
+    *,
+    basic_auth: tuple[str, str] | None,
+    timeout: float,
+) -> tuple[int, bytes]:
+    """Low-level token POST. Returns (status, body) or raises on transport."""
+    import base64 as _b64
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    _validate_http_url(token_endpoint)
+    body = urllib.parse.urlencode(form_fields).encode("ascii")
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "User-Agent": "tribu-oidc/1.0",
+    }
+    if basic_auth is not None:
+        creds = f"{basic_auth[0]}:{basic_auth[1]}".encode("utf-8")
+        headers["Authorization"] = "Basic " + _b64.b64encode(creds).decode("ascii")
+
+    req = urllib.request.Request(
+        token_endpoint, data=body, method="POST", headers=headers,
+    )
+    try:
+        with _strict_opener.open(req, timeout=timeout) as resp:
+            return resp.status, resp.read(_MAX_DISCOVERY_BYTES + 1)
+    except urllib.error.HTTPError as exc:
+        try:
+            err_body = exc.read(_MAX_DISCOVERY_BYTES + 1)
+        except Exception:
+            err_body = b""
+        return exc.code, err_body
+    except urllib.error.URLError as exc:
+        raise TokenExchangeError(
+            f"Token endpoint unreachable: {exc.reason}"
+        ) from exc
+    except TimeoutError as exc:
+        raise TokenExchangeError("Token endpoint timed out") from exc
+
+
 def exchange_code_for_tokens(
     *,
     token_endpoint: str,
@@ -460,65 +504,60 @@ def exchange_code_for_tokens(
 ) -> dict:
     """POST the authorization code to the IdP and return the token response.
 
-    Uses ``client_secret_post`` (secret in form body). Most IdPs also
-    accept ``client_secret_basic`` but post is the widest-supported
-    default among Authentik, Zitadel, and Keycloak with their stock
-    OIDC clients.
+    Tribu first attempts ``client_secret_post`` (credentials in the
+    form body) because it is the broadest default across Authentik,
+    Zitadel, and Keycloak. If that request comes back with 401
+    Unauthorized we retry with ``client_secret_basic`` for clients
+    whose ``token_endpoint_auth_method`` is pinned to Basic auth (a
+    common Keycloak setup). Any other failure is reported as-is.
     """
-    import urllib.error
-    import urllib.parse
-    import urllib.request
-
-    _validate_http_url(token_endpoint)
-    form = urllib.parse.urlencode({
+    base_fields = {
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": redirect_uri,
-        "client_id": client_id,
-        "client_secret": client_secret,
         "code_verifier": code_verifier,
-    }).encode("ascii")
-    req = urllib.request.Request(
-        token_endpoint,
-        data=form,
-        method="POST",
-        headers={
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-            "User-Agent": "tribu-oidc/1.0",
-        },
+    }
+
+    # Attempt 1 — client_secret_post
+    post_fields = {**base_fields, "client_id": client_id, "client_secret": client_secret}
+    status, resp_body = _post_token_request(
+        token_endpoint, post_fields, basic_auth=None, timeout=timeout,
     )
-    try:
-        with _strict_opener.open(req, timeout=timeout) as resp:
-            body = resp.read(_MAX_DISCOVERY_BYTES + 1)
-    except urllib.error.HTTPError as exc:
-        try:
-            error_body = exc.read(1024).decode("utf-8", errors="replace")
-        except Exception:
-            error_body = ""
+    if status == 401:
+        logger.info(
+            "OIDC token_endpoint rejected client_secret_post with 401; "
+            "retrying with client_secret_basic"
+        )
+        basic_fields = {**base_fields, "client_id": client_id}
+        status, resp_body = _post_token_request(
+            token_endpoint, basic_fields,
+            basic_auth=(client_id, client_secret), timeout=timeout,
+        )
+
+    if status >= 400:
+        snippet = resp_body[:200].decode("utf-8", errors="replace") if resp_body else ""
         logger.warning(
             "OIDC token exchange failed: HTTP %s at %s body=%r",
-            exc.code, token_endpoint, error_body[:200],
+            status, token_endpoint, snippet,
         )
-        raise TokenExchangeError(
-            f"Token endpoint returned HTTP {exc.code}"
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise TokenExchangeError(
-            f"Token endpoint unreachable: {exc.reason}"
-        ) from exc
-    except TimeoutError as exc:
-        raise TokenExchangeError("Token endpoint timed out") from exc
-    if len(body) > _MAX_DISCOVERY_BYTES:
+        raise TokenExchangeError(f"Token endpoint returned HTTP {status}")
+    if len(resp_body) > _MAX_DISCOVERY_BYTES:
         raise TokenExchangeError("Token response exceeded size cap")
     try:
-        data = json.loads(body.decode("utf-8"))
+        data = json.loads(resp_body.decode("utf-8"))
     except (ValueError, UnicodeDecodeError) as exc:
         raise TokenExchangeError("Token response was not valid JSON") from exc
 
     if not isinstance(data, dict) or "id_token" not in data:
         raise TokenExchangeError("Token response missing id_token")
     return data
+
+
+_ALLOWED_ID_TOKEN_ALGS = (
+    "RS256", "RS384", "RS512",
+    "ES256", "ES384", "ES512",
+    "PS256", "PS384", "PS512",
+)
 
 
 def verify_id_token(
@@ -535,6 +574,13 @@ def verify_id_token(
     JWKS URL is whitelisted to http(s) up front and PyJWT itself
     validates ``iss``, ``aud``, and ``exp``. We verify ``nonce``
     manually because PyJWT has no built-in support for it.
+
+    The ``algorithms`` allowlist is a fixed set of asymmetric
+    algorithms. We intentionally do NOT trust the ``alg`` header on
+    the incoming token nor the ``algorithm_name`` reported by the
+    JWK — an attacker who substitutes a JWK with ``alg=HS256`` could
+    otherwise forge signatures using the public key material as the
+    HMAC secret.
     """
     import jwt
     from jwt import PyJWKClient
@@ -552,7 +598,7 @@ def verify_id_token(
         payload = jwt.decode(
             id_token,
             signing_key.key,
-            algorithms=[signing_key.algorithm_name] if signing_key.algorithm_name else ["RS256", "ES256"],
+            algorithms=list(_ALLOWED_ID_TOKEN_ALGS),
             audience=client_id,
             issuer=issuer,
             options={"require": ["iss", "aud", "exp", "iat", "sub"]},

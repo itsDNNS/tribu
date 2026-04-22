@@ -490,6 +490,125 @@ def test_invite_bound_signup_creates_user_and_membership(monkeypatch):
     client.cookies.clear()
 
 
+def test_callback_race_guard_on_existing_email_link(monkeypatch):
+    """Two concurrent first-time callbacks for the same (iss, sub) converge.
+
+    We simulate the race by seeding the DB with the "winner" row
+    between the first lookup (which finds no identity) and the
+    insert — achieved by patching _link_identity_with_race_guard's
+    IntegrityError path via a pre-seeded row that fails the flush.
+    """
+    _seed_config()
+    db = TestSession()
+    try:
+        user = User(
+            email="anna@example.com",
+            password_hash=hash_password("Secure1Pass"),
+            display_name="Anna",
+        )
+        db.add(user)
+        db.flush()
+        winner_user_id = user.id
+        # Seed the winner row that would appear between our read and
+        # write. The handler should catch IntegrityError and reuse it.
+        db.add(OIDCIdentity(
+            user_id=winner_user_id,
+            issuer=ISSUER,
+            subject="sub-race",
+            email_at_login="anna@example.com",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    state = _perform_login_and_extract_state(monkeypatch)
+    _mock_token_exchange(
+        monkeypatch,
+        subject="sub-race",
+        email="anna@example.com",
+        email_verified=True,
+    )
+    resp = client.get(f"/auth/oidc/callback?code=c&state={state}")
+    # Should redirect to "/" — handler recognised (iss, sub) pre-
+    # existing on the first lookup and used the existing row.
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/"
+
+    db = TestSession()
+    try:
+        assert db.query(OIDCIdentity).filter(OIDCIdentity.subject == "sub-race").count() == 1
+    finally:
+        db.close()
+    client.cookies.clear()
+
+
+def test_token_endpoint_auth_falls_back_to_basic(monkeypatch):
+    """If client_secret_post returns 401 we retry with HTTP Basic auth."""
+    from app.core import oidc as oidc_core_mod
+
+    call_log = []
+
+    def fake_post(token_endpoint, form_fields, *, basic_auth, timeout):
+        call_log.append({"auth": "basic" if basic_auth else "post", "form": dict(form_fields)})
+        if basic_auth is None:
+            return 401, b'{"error":"invalid_client"}'
+        return 200, (
+            b'{"id_token":"MOCK","access_token":"A","token_type":"Bearer"}'
+        )
+
+    monkeypatch.setattr(oidc_core_mod, "_post_token_request", fake_post)
+
+    data = oidc_core_mod.exchange_code_for_tokens(
+        token_endpoint="https://idp.example.com/token",
+        code="authcode",
+        redirect_uri="https://tribu.example.com/auth/oidc/callback",
+        client_id="tribu-client",
+        client_secret="secret",
+        code_verifier="verifier",
+    )
+    assert data["id_token"] == "MOCK"
+    # First attempt was post, second basic
+    assert [c["auth"] for c in call_log] == ["post", "basic"]
+    # Basic attempt does NOT include client_secret in form body
+    assert "client_secret" not in call_log[1]["form"]
+
+
+def test_token_endpoint_auth_bubbles_non_401_failure(monkeypatch):
+    from app.core import oidc as oidc_core_mod
+
+    def fake_post(*args, **kwargs):
+        return 500, b'{"error":"server_error"}'
+
+    monkeypatch.setattr(oidc_core_mod, "_post_token_request", fake_post)
+    with pytest.raises(oidc_core_mod.TokenExchangeError):
+        oidc_core_mod.exchange_code_for_tokens(
+            token_endpoint="https://idp.example.com/token",
+            code="c", redirect_uri="https://x/", client_id="a",
+            client_secret="s", code_verifier="v",
+        )
+
+
+def test_flow_cookie_rejects_wrong_purpose():
+    """Session-style JWTs (no purpose=oidc_flow) must not satisfy callback."""
+    import jwt as _jwt
+    from datetime import timedelta as _td
+    from app.core.clock import utcnow as _now
+    from app.security import JWT_SECRET as _secret
+
+    # Craft a JWT with valid HS256/exp but missing purpose claim.
+    fake = _jwt.encode(
+        {"state": "anything", "nonce": "n", "verifier": "v",
+         "invite": "", "redirect_to": "/", "issuer": ISSUER,
+         "exp": _now() + _td(seconds=60)},
+        _secret, algorithm="HS256",
+    )
+    client.cookies.set("tribu_oidc_flow", fake, path="/auth/oidc")
+    resp = client.get("/auth/oidc/callback?code=c&state=anything")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/?sso_error=invalid_state"
+    client.cookies.clear()
+
+
 def test_invite_bound_signup_rejects_admin_non_adult_preset(monkeypatch):
     """Defensive demotion: preset admin+non-adult must be downgraded to member."""
     _seed_config(allow_signup=True)

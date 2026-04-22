@@ -56,6 +56,7 @@ router = APIRouter(tags=["sso"])
 FLOW_COOKIE = "tribu_oidc_flow"
 FLOW_TTL_SECONDS = 600  # 10 minutes from authorize to callback
 FLOW_JWT_ALG = "HS256"
+FLOW_JWT_PURPOSE = "oidc_flow"
 
 
 # ---------------------------------------------------------------------------
@@ -89,16 +90,27 @@ def public_config(db: Session = Depends(get_db)):
 
 
 def _sign_flow(payload: dict) -> str:
-    """Sign the flow payload into a JWT we hand to the browser."""
+    """Sign the flow payload into a JWT we hand to the browser.
+
+    Shares JWT_SECRET with session tokens for convenience, but pins
+    a distinct ``purpose`` claim so neither the flow cookie can
+    authenticate a session request nor a stolen session cookie can
+    satisfy the callback's state check — defense in depth against
+    future code paths that might blur the two.
+    """
     payload = {
         **payload,
         "exp": utcnow() + timedelta(seconds=FLOW_TTL_SECONDS),
+        "purpose": FLOW_JWT_PURPOSE,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=FLOW_JWT_ALG)
 
 
 def _unsign_flow(raw: str) -> dict:
-    return jwt.decode(raw, JWT_SECRET, algorithms=[FLOW_JWT_ALG])
+    decoded = jwt.decode(raw, JWT_SECRET, algorithms=[FLOW_JWT_ALG])
+    if decoded.get("purpose") != FLOW_JWT_PURPOSE:
+        raise jwt.InvalidTokenError("Flow cookie has wrong purpose")
+    return decoded
 
 
 def _set_flow_cookie(response, token: str) -> None:
@@ -276,13 +288,13 @@ def _link_or_create_user(
         .first()
     )
     if existing_user:
-        db.add(OIDCIdentity(
+        _link_identity_with_race_guard(
+            db,
             user_id=existing_user.id,
             issuer=cfg.issuer,
             subject=claims.subject,
-            email_at_login=claims.email,
-            last_login_at=utcnow(),
-        ))
+            email=claims.email,
+        )
         return existing_user
 
     invitation = _invitation_by_token(db, invite_token)
@@ -312,13 +324,13 @@ def _link_or_create_user(
     ))
     invitation.use_count += 1
 
-    db.add(OIDCIdentity(
+    _link_identity_with_race_guard(
+        db,
         user_id=user.id,
         issuer=cfg.issuer,
         subject=claims.subject,
-        email_at_login=claims.email,
-        last_login_at=utcnow(),
-    ))
+        email=claims.email,
+    )
 
     _audit(
         db, invitation.family_id, None, "sso_invite_used",
@@ -326,6 +338,67 @@ def _link_or_create_user(
         details={"email": user.email, "invite_id": invitation.id},
     )
     return user
+
+
+def _link_identity_with_race_guard(
+    db: Session,
+    *,
+    user_id: int,
+    issuer: str,
+    subject: str,
+    email: Optional[str],
+) -> OIDCIdentity:
+    """Insert an OIDCIdentity, tolerating a concurrent first-login race.
+
+    Two first-time callbacks for the same (issuer, subject) can both
+    see "no row" in ``_link_or_create_user`` and both try to insert.
+    The second flush fails on the ``uq_oidc_identities_issuer_subject``
+    unique constraint. We catch that, roll back the failed flush, and
+    re-fetch the winning row so the caller continues with it. If the
+    winning row happens to belong to a *different* local user (which
+    should not happen in practice: both racers discovered the same
+    email_user_id first), we surface the discrepancy loudly rather
+    than silently cross-binding.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    identity = OIDCIdentity(
+        user_id=user_id,
+        issuer=issuer,
+        subject=subject,
+        email_at_login=email,
+        last_login_at=utcnow(),
+    )
+    db.add(identity)
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        winner = (
+            db.query(OIDCIdentity)
+            .filter(
+                OIDCIdentity.issuer == issuer,
+                OIDCIdentity.subject == subject,
+            )
+            .first()
+        )
+        if winner is None:
+            raise
+        if winner.user_id != user_id:
+            logger.warning(
+                "OIDC identity race: local user %s lost to %s for (%s, %s)",
+                user_id, winner.user_id, issuer, subject,
+            )
+            raise HTTPException(
+                status_code=409,
+                detail=error_detail(OIDC_INVALID_CALLBACK),
+            )
+        # Update mutable fields on the winner
+        winner.last_login_at = utcnow()
+        if email:
+            winner.email_at_login = email
+        return winner
+    return identity
 
 
 @router.get(
