@@ -29,15 +29,18 @@ jobs:
         run: |
           raw="$(git describe --tags --abbrev=7 --match 'v[0-9]*' --always)"
           cleaned="${raw#v}"
-          short_sha="${GITHUB_SHA::7}"
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+          build_date="$(date -u +%F)"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" =~ ^v?[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             version="${cleaned}"
-          elif [[ "${cleaned}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            version="${cleaned}+build.${GITHUB_RUN_NUMBER}"
+          elif [[ "${cleaned}" =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})(-|$) ]]; then
+            version="${BASH_REMATCH[1]}.${GITHUB_RUN_NUMBER}"
           else
-            version="build.${GITHUB_RUN_NUMBER}-g${short_sha}"
+            version="${build_date}.${GITHUB_RUN_NUMBER}"
           fi
           echo "value=${version}" >> "$GITHUB_OUTPUT"
+          echo "date=${build_date}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
 
@@ -55,8 +58,9 @@ jobs:
         with:
           images: ${{ env.BACKEND_IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=tag
+            type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
 
@@ -71,6 +75,7 @@ jobs:
             APP_VERSION=${{ steps.app_version.outputs.value }}
             APP_BUILD_NUMBER=${{ github.run_number }}
             APP_GIT_SHA=${{ github.sha }}
+            APP_BUILD_DATE=${{ steps.app_version.outputs.date }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,scope=backend,mode=max
 
@@ -99,8 +104,9 @@ jobs:
         with:
           images: ${{ env.FRONTEND_IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=tag
+            type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
 

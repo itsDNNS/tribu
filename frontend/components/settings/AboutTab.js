@@ -9,6 +9,7 @@ export default function AboutTab() {
   const { messages, isAdmin } = useApp();
   const [version, setVersion] = useState(null);
   const [updateInfo, setUpdateInfo] = useState(null);
+  const displayedVersion = formatDisplayedVersion(version);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +38,7 @@ export default function AboutTab() {
           if (cancelled || !data.tag_name) return;
           const latest = data.tag_name.replace(/^v/, '');
           const result = hasNewerRelease(current, latest)
-            ? { version: extractReleaseVersion(latest) || latest, url: data.html_url }
+            ? { version: formatDisplayedVersion(extractReleaseVersion(latest) || latest), url: data.html_url }
             : 'up_to_date';
           setUpdateInfo(result);
           try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
@@ -57,7 +58,7 @@ export default function AboutTab() {
         </p>
         {version && (
           <div className="set-about-version">
-            <span>{t(messages, 'version')}: {formatDisplayedVersion(version)}</span>
+            <span>{t(messages, 'version')}: {displayedVersion}</span>
             {isAdmin && updateInfo === 'up_to_date' && (
               <span className="set-about-uptodate">— {t(messages, 'up_to_date')}</span>
             )}
@@ -89,7 +90,7 @@ export default function AboutTab() {
             <Heart size={14} /> {t(messages, 'donate')} <ExternalLink size={12} />
           </a>
           <a
-            href={`https://github.com/itsDNNS/tribu/issues/new?labels=bug&title=&body=${encodeURIComponent(`**Tribu Version:** ${version || 'unknown'}\n**Browser:** ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}\n\n**Describe the bug:**\n\n`)}`}
+            href={`https://github.com/itsDNNS/tribu/issues/new?labels=bug&title=&body=${encodeURIComponent(`**Tribu Version:** ${displayedVersion || 'unknown'}\n**Browser:** ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}\n\n**Describe the bug:**\n\n`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-ghost set-about-support-btn"
