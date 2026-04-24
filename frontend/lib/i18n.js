@@ -19,10 +19,12 @@ import giftsDe from '../i18n/modules/gifts/de.json';
 import giftsEn from '../i18n/modules/gifts/en.json';
 import mealPlansDe from '../i18n/modules/meal_plans/de.json';
 import mealPlansEn from '../i18n/modules/meal_plans/en.json';
+import recipesDe from '../i18n/modules/recipes/de.json';
+import recipesEn from '../i18n/modules/recipes/en.json';
 
 const moduleLocales = {
-  de: [calendarDe, dashboardDe, contactsDe, tasksDe, shoppingDe, birthdaysDe, rewardsDe, giftsDe, mealPlansDe],
-  en: [calendarEn, dashboardEn, contactsEn, tasksEn, shoppingEn, birthdaysEn, rewardsEn, giftsEn, mealPlansEn],
+  de: [calendarDe, dashboardDe, contactsDe, tasksDe, shoppingDe, birthdaysDe, rewardsDe, giftsDe, mealPlansDe, recipesDe],
+  en: [calendarEn, dashboardEn, contactsEn, tasksEn, shoppingEn, birthdaysEn, rewardsEn, giftsEn, mealPlansEn, recipesEn],
 };
 
 const coreLocales = { de: coreDe, en: coreEn };

@@ -27,6 +27,8 @@
   "module.meal_plans.weekday.sunday": "Sonntag",
   "module.meal_plans.meal_name": "Was gibts?",
   "module.meal_plans.meal_name_placeholder": "z.B. Spaghetti Bolognese",
+  "module.meal_plans.recipe_select": "Rezept",
+  "module.meal_plans.recipe_select_placeholder": "Aus Rezept übernehmen",
   "module.meal_plans.notes_placeholder": "Notizen (Rezeptlink, Variante, ...)",
   "module.meal_plans.notes_aria": "Notizen",
   "module.meal_plans.empty_cell": "Noch nichts geplant",

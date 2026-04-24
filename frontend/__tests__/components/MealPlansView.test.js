@@ -13,11 +13,13 @@ jest.mock('../../contexts/AppContext', () => ({
 
 const apiListMealPlans = jest.fn();
 const apiListMealPlanIngredients = jest.fn();
+const apiListRecipes = jest.fn();
 const apiCreateMealPlan = jest.fn();
 const apiDeleteMealPlan = jest.fn();
 jest.mock('../../lib/api', () => ({
   apiListMealPlans: (...args) => apiListMealPlans(...args),
   apiListMealPlanIngredients: (...args) => apiListMealPlanIngredients(...args),
+  apiListRecipes: (...args) => apiListRecipes(...args),
   apiCreateMealPlan: (...args) => apiCreateMealPlan(...args),
   apiUpdateMealPlan: jest.fn(),
   apiDeleteMealPlan: (...args) => apiDeleteMealPlan(...args),
@@ -39,6 +41,8 @@ const messages = {
   'module.meal_plans.delete_confirm': '{name} wirklich löschen?',
   'module.meal_plans.meal_name_placeholder': 'z.B. Spaghetti',
   'module.meal_plans.meal_name': 'Was gibts?',
+  'module.meal_plans.recipe_select': 'Rezept',
+  'module.meal_plans.recipe_select_placeholder': 'Aus Rezept übernehmen',
   'module.meal_plans.ingredients': 'Zutaten',
   'module.meal_plans.ingredient_add': 'Zutat',
   'module.meal_plans.ingredient_none': 'Keine Zutaten',
@@ -88,10 +92,13 @@ describe('MealPlansView', () => {
   beforeEach(() => {
     apiListMealPlans.mockReset();
     apiListMealPlanIngredients.mockReset();
+    apiListRecipes.mockReset();
     apiCreateMealPlan.mockReset();
     apiDeleteMealPlan.mockReset();
     apiListMealPlans.mockResolvedValue({ ok: true, data: [] });
     apiListMealPlanIngredients.mockResolvedValue({ ok: true, data: { items: [] } });
+    apiListRecipes.mockResolvedValue({ ok: true, data: [] });
+    apiCreateMealPlan.mockResolvedValue({ ok: true, data: {} });
     apiDeleteMealPlan.mockResolvedValue({ ok: true, data: {} });
   });
 
@@ -122,6 +129,48 @@ describe('MealPlansView', () => {
     render(<MealPlansView />);
     expect(screen.getByText('Im Demo nicht verfügbar')).toBeInTheDocument();
     expect(apiListMealPlans).not.toHaveBeenCalled();
+    expect(apiListRecipes).not.toHaveBeenCalled();
+  });
+
+  test('copies a recipe into the meal dialog before creating the plan', async () => {
+    mockAppState = baseState();
+    apiListRecipes.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          id: 10,
+          title: 'Pancakes',
+          ingredients: [
+            { name: 'Mehl', amount: 200, unit: 'g' },
+            { name: 'Milch', amount: 300, unit: 'ml' },
+          ],
+        },
+      ],
+    });
+
+    render(<MealPlansView />);
+    await waitFor(() => expect(apiListRecipes).toHaveBeenCalledWith('1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Mahlzeit planen' }));
+
+    fireEvent.change(screen.getByLabelText('Rezept'), { target: { value: '10' } });
+    expect(screen.getByPlaceholderText('z.B. Spaghetti')).toHaveValue('Pancakes');
+    expect(screen.getByDisplayValue('Mehl')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('200')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('g')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Milch')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(apiCreateMealPlan).toHaveBeenCalledTimes(1));
+    expect(apiCreateMealPlan.mock.calls[0][0]).toMatchObject({
+      family_id: 1,
+      plan_date: expect.any(String),
+      slot: 'noon',
+      meal_name: 'Pancakes',
+      ingredients: [
+        { name: 'Mehl', amount: 200, unit: 'g' },
+        { name: 'Milch', amount: 300, unit: 'ml' },
+      ],
+    });
   });
 
   test('409 on create surfaces the translated slot-taken toast', async () => {

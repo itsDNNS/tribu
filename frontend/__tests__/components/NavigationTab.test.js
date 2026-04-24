@@ -28,6 +28,7 @@ const messages = {
   'module.shopping.name': 'Einkauf',
   'module.tasks.name': 'Aufgaben',
   'module.meal_plans.name': 'Essensplan',
+  'module.recipes.name': 'Rezepte',
   'module.rewards.name': 'Belohnungen',
   'module.gifts.name': 'Geschenke',
 };
@@ -50,6 +51,7 @@ const LABEL_BY_KEY = {
   shopping: 'Einkauf',
   tasks: 'Aufgaben',
   meal_plans: 'Essensplan',
+  recipes: 'Rezepte',
   rewards: 'Belohnungen',
   gifts: 'Geschenke',
   contacts: 'Kontakte',
@@ -91,6 +93,7 @@ describe('NavigationTab', () => {
     mockAppState = baseState({ demoMode: true });
     render(<NavigationTab />);
     expect(screen.queryByText('Essensplan')).not.toBeInTheDocument();
+    expect(screen.queryByText('Rezepte')).not.toBeInTheDocument();
     expect(screen.queryByText('Geschenke')).not.toBeInTheDocument();
     expect(screen.getByText('Belohnungen')).toBeInTheDocument();
   });

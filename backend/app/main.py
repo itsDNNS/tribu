@@ -43,6 +43,7 @@ from app.modules.search_router import router as search_router
 from app.modules.rewards_router import router as rewards_router
 from app.modules.gifts_router import router as gifts_router
 from app.modules.meal_plans_router import router as meal_plans_router
+from app.modules.recipes_router import router as recipes_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import ws_broadcast
 from app.schemas import (
@@ -149,6 +150,7 @@ TAG_METADATA = [
     {"name": "setup", "description": "Initial setup wizard — check status and restore from backup. Only available on empty databases."},
     {"name": "gifts", "description": "Gift list — track gift ideas, prices, and occasions per family. Adult only."},
     {"name": "meal_plans", "description": "Weekly meal planning across fixed morning/noon/evening slots. Available to all family members."},
+    {"name": "recipes", "description": "Lightweight family recipe library connected to meal planning and shopping lists."},
     {"name": "health", "description": "Health check and service info."},
 ]
 
@@ -552,6 +554,7 @@ app.include_router(search_router)
 app.include_router(rewards_router)
 app.include_router(gifts_router)
 app.include_router(meal_plans_router)
+app.include_router(recipes_router)
 
 
 # ---------------------------------------------------------------------------

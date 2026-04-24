@@ -1,6 +1,7 @@
 import {
   Bell,
   BookUser,
+  BookOpen,
   CalendarDays,
   CheckSquare,
   Gift,
@@ -20,6 +21,7 @@ export const NAV_ITEM_META = {
   shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
   meal_plans: { icon: UtensilsCrossed, labelKey: 'module.meal_plans.name', hideInDemo: true },
+  recipes: { icon: BookOpen, labelKey: 'module.recipes.name', hideInDemo: true },
   rewards: { icon: Gift, labelKey: 'module.rewards.name' },
   gifts: { icon: Sparkles, labelKey: 'module.gifts.name', adultOnly: true, hideInDemo: true },
   contacts: { icon: BookUser, labelKey: 'contacts' },

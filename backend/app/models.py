@@ -38,6 +38,7 @@ class Family(Base):
     birthdays = relationship("FamilyBirthday", back_populates="family", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
     shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
+    recipes = relationship("Recipe", back_populates="family", cascade="all, delete-orphan")
     invitations = relationship("FamilyInvitation", back_populates="family", cascade="all, delete-orphan")
     reward_currency = relationship("RewardCurrency", back_populates="family", uselist=False, cascade="all, delete-orphan")
 
@@ -505,3 +506,27 @@ class MealPlan(Base):
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class Recipe(Base):
+    """Reusable family recipe for meal planning and shopping.
+
+    Ingredients intentionally share the meal-plan ingredient JSON shape
+    so planned meals can copy recipe data without conversion.
+    """
+    __tablename__ = "recipes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    source_url = Column(String(500), nullable=True)
+    servings = Column(Integer, nullable=True)
+    tags = Column(JSON, nullable=False, default=list, server_default="[]")
+    ingredients = Column(JSON, nullable=False, default=list, server_default="[]")
+    instructions = Column(Text, nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    family = relationship("Family", back_populates="recipes")
