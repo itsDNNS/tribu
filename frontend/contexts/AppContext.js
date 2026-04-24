@@ -88,6 +88,22 @@ function AppOrchestrator({ children }) {
     setLoading(false);
   }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, setLoading, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult]);
 
+  const loadFamilyDataInBackground = useCallback((fid) => {
+    void Promise.allSettled([
+      loadDashboard(fid),
+      loadEvents(fid),
+      loadMembers(fid),
+      loadContacts(fid),
+      loadBirthdays(fid),
+      loadTasks(fid),
+      loadShoppingLists(fid),
+      loadNavOrderWrapped(),
+      api.apiGetTimeFormat().then(({ ok, data: tfData }) => {
+        if (ok && tfData?.time_format) setTimeFormat(tfData.time_format);
+      }),
+    ]);
+  }, [loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNavOrderWrapped, setTimeFormat]);
+
   const enterDemo = useCallback(() => {
     const demo = buildDemoData(lang);
     setDemoMode(true);
@@ -193,26 +209,25 @@ function AppOrchestrator({ children }) {
 
     (async () => {
       setLoading(true);
-      const { ok: meOk, data: meData } = await api.apiGetMe();
-      if (meOk) {
-        setMe(meData);
-        if (meData.profile_image) setProfileImage(meData.profile_image);
-      }
+      try {
+        const { ok: meOk, data: meData } = await api.apiGetMe();
+        if (meOk) {
+          setMe(meData);
+          if (meData.profile_image) setProfileImage(meData.profile_image);
+        }
 
-      const { ok: famOk, data: famData } = await api.apiGetMyFamilies();
-      if (famOk && famData.length > 0) {
-        setFamilies(famData);
-        const fid = String(famData[0].family_id);
-        setFamilyId(fid);
-        setMyFamilyRole(famData[0].role);
-        setMyFamilyIsAdult(famData[0].is_adult);
-        await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadNavOrderWrapped()]);
-        // Load time format setting
-        const { ok: tfOk, data: tfData } = await api.apiGetTimeFormat();
-        if (tfOk && tfData?.time_format) setTimeFormat(tfData.time_format);
+        const { ok: famOk, data: famData } = await api.apiGetMyFamilies();
+        if (famOk && famData.length > 0) {
+          setFamilies(famData);
+          const fid = String(famData[0].family_id);
+          setFamilyId(fid);
+          setMyFamilyRole(famData[0].role);
+          setMyFamilyIsAdult(famData[0].is_adult);
+          loadFamilyDataInBackground(fid);
+        }
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
