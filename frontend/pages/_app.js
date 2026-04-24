@@ -68,6 +68,8 @@ export default function TribuApp({ Component, pageProps }) {
       <AppProvider>
         <ToastProvider>
           <Head>
+            <title>Tribu</title>
+            <meta name="description" content="Self-hosted family organizer for calendars, tasks, shopping lists, contacts, meal planning, and more." />
             <script dangerouslySetInnerHTML={{ __html: DISPLAY_MODE_BOOTSTRAP }} />
             <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
           </Head>
