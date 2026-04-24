@@ -975,7 +975,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .cal-dialog-actions { display: flex; flex-direction: column; gap: var(--space-sm); }
 .cal-dialog-actions .btn-sm { width: 100%; }
 .cal-dialog-delete-all { background: var(--danger); color: #fff; }
-.cal-dialog-cancel { background: transparent; border: 1px solid var(--glass-border); }
+.cal-dialog-cancel { background: transparent; border: 1px solid var(--glass-border); color: var(--text-secondary); }
+.cal-dialog-cancel:hover { background: rgba(120, 130, 180, 0.08); color: var(--text-primary); box-shadow: none; }
 
 .assign-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .assign-chip { padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; cursor: pointer; border: 1.5px solid var(--glass-border); background: transparent; color: var(--text-secondary); font-family: inherit; transition: all 0.2s; min-height: 32px; }
