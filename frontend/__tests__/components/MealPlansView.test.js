@@ -14,12 +14,13 @@ jest.mock('../../contexts/AppContext', () => ({
 const apiListMealPlans = jest.fn();
 const apiListMealPlanIngredients = jest.fn();
 const apiCreateMealPlan = jest.fn();
+const apiDeleteMealPlan = jest.fn();
 jest.mock('../../lib/api', () => ({
   apiListMealPlans: (...args) => apiListMealPlans(...args),
   apiListMealPlanIngredients: (...args) => apiListMealPlanIngredients(...args),
   apiCreateMealPlan: (...args) => apiCreateMealPlan(...args),
   apiUpdateMealPlan: jest.fn(),
-  apiDeleteMealPlan: jest.fn(),
+  apiDeleteMealPlan: (...args) => apiDeleteMealPlan(...args),
   apiAddMealIngredientsToShopping: jest.fn(),
 }));
 
@@ -34,6 +35,8 @@ const messages = {
   'module.meal_plans.cancel': 'Abbrechen',
   'module.meal_plans.save': 'Speichern',
   'module.meal_plans.delete': 'Löschen',
+  'module.meal_plans.delete_title': 'Mahlzeit löschen',
+  'module.meal_plans.delete_confirm': '{name} wirklich löschen?',
   'module.meal_plans.meal_name_placeholder': 'z.B. Spaghetti',
   'module.meal_plans.meal_name': 'Was gibts?',
   'module.meal_plans.ingredients': 'Zutaten',
@@ -67,6 +70,8 @@ const messages = {
   'module.meal_plans.ingredients_summary_one': '1 Zutat',
   'module.meal_plans.ingredients_summary': '{count} Zutaten',
   'module.meal_plans.drag_aria': 'Ziehen {name}',
+  confirm: 'Bestätigen',
+  cancel: 'Abbrechen',
 };
 
 function baseState(overrides) {
@@ -84,8 +89,10 @@ describe('MealPlansView', () => {
     apiListMealPlans.mockReset();
     apiListMealPlanIngredients.mockReset();
     apiCreateMealPlan.mockReset();
+    apiDeleteMealPlan.mockReset();
     apiListMealPlans.mockResolvedValue({ ok: true, data: [] });
     apiListMealPlanIngredients.mockResolvedValue({ ok: true, data: { items: [] } });
+    apiDeleteMealPlan.mockResolvedValue({ ok: true, data: {} });
   });
 
   test('renders the add button, fetches the week, and the grid has 7 day headers + 3 slots', async () => {
@@ -173,6 +180,58 @@ describe('MealPlansView', () => {
       // separate from the click-to-edit button.
       expect(screen.getByRole('button', { name: 'Ziehen Test Pasta' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Edit Test Pasta' })).toBeInTheDocument();
+    } finally {
+      global.Date = realDate;
+    }
+  });
+
+  test('closes the edit dialog before showing delete confirmation', async () => {
+    mockAppState = baseState();
+    apiListMealPlans.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          id: 7,
+          family_id: 1,
+          plan_date: '2099-01-05',
+          slot: 'noon',
+          meal_name: 'Delete Pasta',
+          ingredients: [],
+          notes: null,
+          created_by_user_id: null,
+          created_at: '2099-01-05T00:00:00',
+          updated_at: '2099-01-05T00:00:00',
+        },
+      ],
+    });
+
+    const realDate = global.Date;
+    global.Date = class extends realDate {
+      constructor(...args) {
+        if (args.length === 0) {
+          super('2099-01-05T12:00:00Z');
+        } else {
+          super(...args);
+        }
+      }
+      static now() { return new realDate('2099-01-05T12:00:00Z').getTime(); }
+    };
+
+    try {
+      render(<MealPlansView />);
+      await waitFor(() => expect(screen.getByText('Delete Pasta')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Edit Delete Pasta' }));
+      expect(screen.getByRole('dialog', { name: 'Mahlzeit bearbeiten' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+      expect(screen.queryByRole('dialog', { name: 'Mahlzeit bearbeiten' })).not.toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Mahlzeit löschen' })).toBeInTheDocument();
+      expect(screen.getByText('Delete Pasta wirklich löschen?')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Bestätigen' }));
+      await waitFor(() => expect(apiDeleteMealPlan).toHaveBeenCalledWith(7));
     } finally {
       global.Date = realDate;
     }

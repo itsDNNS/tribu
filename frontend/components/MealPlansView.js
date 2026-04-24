@@ -172,18 +172,18 @@ export default function MealPlansView() {
 
   function handleDelete() {
     if (editingId == null) return;
+    const id = editingId;
     const name = form.meal_name || t(messages, 'module.meal_plans.name');
     setConfirmAction({
       title: t(messages, 'module.meal_plans.delete_title'),
       message: t(messages, 'module.meal_plans.delete_confirm').replace('{name}', name),
       danger: true,
       action: async () => {
-        const id = editingId;
         setConfirmAction(null);
-        closeDialog();
         await hook.deleteMeal(id);
       },
     });
+    closeDialog();
   }
 
   function handleDragStart(event) {
