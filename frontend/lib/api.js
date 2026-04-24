@@ -532,3 +532,31 @@ export function apiAddMealIngredientsToShopping(planId, shoppingListId, ingredie
   if (ingredientNames) body.ingredient_names = ingredientNames;
   return post(`/meal-plans/${planId}/add-to-shopping`, body);
 }
+
+// Recipes
+export function apiListRecipes(familyId) {
+  const params = new URLSearchParams({ family_id: String(familyId) });
+  return request(`/recipes?${params.toString()}`);
+}
+
+export function apiGetRecipe(recipeId) {
+  return request(`/recipes/${recipeId}`);
+}
+
+export function apiCreateRecipe(payload) {
+  return post('/recipes', payload);
+}
+
+export function apiUpdateRecipe(recipeId, payload) {
+  return patch(`/recipes/${recipeId}`, payload);
+}
+
+export function apiDeleteRecipe(recipeId) {
+  return del(`/recipes/${recipeId}`);
+}
+
+export function apiAddRecipeIngredientsToShopping(recipeId, shoppingListId, ingredientNames = null) {
+  const body = { shopping_list_id: shoppingListId };
+  if (ingredientNames) body.ingredient_names = ingredientNames;
+  return post(`/recipes/${recipeId}/add-to-shopping`, body);
+}

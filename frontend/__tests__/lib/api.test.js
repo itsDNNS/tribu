@@ -5,6 +5,7 @@ import {
   apiGetContacts, apiImportContactsCsv,
   apiExportCalendarIcs, apiImportCalendarIcs, apiExportContactsCsv,
   apiGetTasks, apiCreateTask, apiUpdateTask, apiDeleteTask,
+  apiListRecipes, apiCreateRecipe, apiUpdateRecipe, apiDeleteRecipe, apiAddRecipeIngredientsToShopping,
 } from '../../lib/api';
 
 beforeEach(() => {
@@ -181,5 +182,43 @@ describe('Tasks API', () => {
     const [url, opts] = lastCall();
     expect(url).toBe('/api/tasks/5');
     expect(opts.method).toBe('DELETE');
+  });
+});
+
+describe('Recipes API', () => {
+  it('apiListRecipes includes family_id', async () => {
+    await apiListRecipes('7');
+    expect(lastCall()[0]).toBe('/api/recipes?family_id=7');
+  });
+
+  it('apiCreateRecipe sends POST', async () => {
+    await apiCreateRecipe({ family_id: 1, title: 'Pasta' });
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/recipes');
+    expect(opts.method).toBe('POST');
+    expect(JSON.parse(opts.body)).toMatchObject({ family_id: 1, title: 'Pasta' });
+  });
+
+  it('apiUpdateRecipe sends PATCH', async () => {
+    await apiUpdateRecipe(5, { title: 'Soup' });
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/recipes/5');
+    expect(opts.method).toBe('PATCH');
+    expect(JSON.parse(opts.body)).toEqual({ title: 'Soup' });
+  });
+
+  it('apiDeleteRecipe sends DELETE', async () => {
+    await apiDeleteRecipe(5);
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/recipes/5');
+    expect(opts.method).toBe('DELETE');
+  });
+
+  it('apiAddRecipeIngredientsToShopping sends selected ingredient names', async () => {
+    await apiAddRecipeIngredientsToShopping(5, 9, ['Flour']);
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/recipes/5/add-to-shopping');
+    expect(opts.method).toBe('POST');
+    expect(JSON.parse(opts.body)).toEqual({ shopping_list_id: 9, ingredient_names: ['Flour'] });
   });
 });

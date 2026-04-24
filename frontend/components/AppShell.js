@@ -13,6 +13,7 @@ import TasksView from './TasksView';
 import RewardsView from './RewardsView';
 import GiftsView from './GiftsView';
 import MealPlansView from './MealPlansView';
+import RecipesView from './RecipesView';
 import ShoppingView from './ShoppingView';
 import SettingsView from './settings';
 import AdminView from './admin';
@@ -30,6 +31,7 @@ const views = {
   rewards: RewardsView,
   gifts: GiftsView,
   meal_plans: MealPlansView,
+  recipes: RecipesView,
   notifications: NotificationCenter,
   settings: SettingsView,
   admin: AdminView,

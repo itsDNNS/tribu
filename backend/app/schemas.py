@@ -1166,3 +1166,64 @@ class MealPlanAddToShoppingRequest(BaseModel):
 
 class MealPlanAddToShoppingResponse(BaseModel):
     added_count: int
+
+
+# ---------------------------------------------------------------------------
+# Recipes
+# ---------------------------------------------------------------------------
+
+class RecipeBase(BaseModel):
+    title: str = Field(min_length=1, max_length=200, description="Recipe title")
+    description: Optional[str] = Field(None, max_length=2000, description="Optional recipe summary or notes")
+    source_url: Optional[str] = Field(None, max_length=500, description="Optional recipe source URL")
+    servings: Optional[int] = Field(None, ge=1, le=999, description="Optional serving count")
+    tags: list[str] = Field(default_factory=list, description="Short recipe tags")
+    ingredients: list[IngredientItem] = Field(default_factory=list, description="Structured ingredient list, order preserved")
+    instructions: Optional[str] = Field(None, description="Optional cooking instructions")
+
+
+class RecipeCreate(RecipeBase):
+    family_id: int = Field(..., description="Family ID")
+
+
+class RecipeUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    source_url: Optional[str] = Field(None, max_length=500)
+    servings: Optional[int] = Field(None, ge=1, le=999)
+    tags: Optional[list[str]] = None
+    ingredients: Optional[list[IngredientItem]] = None
+    instructions: Optional[str] = None
+
+
+class RecipeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    title: str
+    description: Optional[str]
+    source_url: Optional[str]
+    servings: Optional[int]
+    tags: list[str]
+    ingredients: list[IngredientItem]
+    instructions: Optional[str]
+    created_by_user_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+
+
+class RecipeAddToShoppingRequest(BaseModel):
+    shopping_list_id: int = Field(..., description="Target shopping list ID")
+    ingredient_names: Optional[list[str]] = Field(
+        None,
+        description=(
+            "Subset of the recipe ingredient names to push. Each entry must "
+            "match the name (case-insensitive) of an ingredient already stored "
+            "on the recipe. Defaults to all ingredients when omitted."
+        ),
+    )
+
+
+class RecipeAddToShoppingResponse(BaseModel):
+    added_count: int

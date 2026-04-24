@@ -27,6 +27,8 @@
   "module.meal_plans.weekday.sunday": "Sunday",
   "module.meal_plans.meal_name": "What's on the plate?",
   "module.meal_plans.meal_name_placeholder": "e.g. Spaghetti Bolognese",
+  "module.meal_plans.recipe_select": "Recipe",
+  "module.meal_plans.recipe_select_placeholder": "Copy from a recipe",
   "module.meal_plans.notes_placeholder": "Notes (recipe link, variation, ...)",
   "module.meal_plans.notes_aria": "Notes",
   "module.meal_plans.empty_cell": "Nothing planned",

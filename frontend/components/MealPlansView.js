@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, UtensilsCrossed, Plus, Edit2, CalendarDays, GripVertical } from 'lucide-react';
 import {
   DndContext,
@@ -13,6 +13,7 @@ import {
 import { useApp } from '../contexts/AppContext';
 import { useMealPlans, formatIsoDate, weekDays } from '../hooks/useMealPlans';
 import { MEAL_SLOTS } from '../lib/meal-plans';
+import { apiListRecipes } from '../lib/api';
 import { t } from '../lib/i18n';
 import ConfirmDialog from './ConfirmDialog';
 import MealPlanDialog from './MealPlanDialog';
@@ -122,11 +123,24 @@ export default function MealPlansView() {
   const [form, setForm] = useState(hook.emptyFormFor(formatIsoDate(hook.weekStart), 'noon'));
   const [confirmAction, setConfirmAction] = useState(null);
   const [activeDrag, setActiveDrag] = useState(null);
+  const [recipes, setRecipes] = useState([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
+
+  useEffect(() => {
+    if (!familyId || demoMode) {
+      setRecipes([]);
+      return undefined;
+    }
+    let active = true;
+    apiListRecipes(familyId).then(({ ok, data }) => {
+      if (active && ok && Array.isArray(data)) setRecipes(data);
+    });
+    return () => { active = false; };
+  }, [familyId, demoMode]);
 
   if (demoMode) {
     return (
@@ -238,6 +252,7 @@ export default function MealPlansView() {
         ingredientHints={hook.ingredientHints}
         shoppingLists={shoppingLists}
         onPushToShopping={editingId != null ? handlePushToShopping : null}
+        recipes={recipes}
       />
 
       <div className="view-header">

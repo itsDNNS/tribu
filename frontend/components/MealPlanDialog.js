@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { X, Plus, Trash2, ShoppingCart } from 'lucide-react';
+import { BookOpen, X, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { createEmptyMealIngredient, MEAL_SLOTS } from '../lib/meal-plans';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
@@ -20,6 +20,7 @@ export default function MealPlanDialog({
   ingredientHints = [],
   shoppingLists = [],
   onPushToShopping,
+  recipes = [],
 }) {
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
@@ -62,6 +63,20 @@ export default function MealPlanDialog({
     }));
   }
 
+  function applyRecipe(recipeId) {
+    const recipe = recipes.find((item) => String(item.id) === String(recipeId));
+    if (!recipe) return;
+    setForm((prev) => ({
+      ...prev,
+      meal_name: recipe.title || prev.meal_name,
+      ingredients: (recipe.ingredients || []).map((ingredient) => ({
+        name: ingredient.name || '',
+        amount: ingredient.amount == null ? '' : String(ingredient.amount),
+        unit: ingredient.unit || '',
+      })),
+    }));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
@@ -98,6 +113,27 @@ export default function MealPlanDialog({
           </button>
         </div>
         <form className="meal-form" onSubmit={handleSubmit}>
+          {recipes.length > 0 && (
+            <div className="meal-recipe-picker">
+              <label className="meal-recipe-picker-label" htmlFor="meal-recipe-select">
+                <BookOpen size={14} aria-hidden="true" />
+                {t(messages, 'module.meal_plans.recipe_select')}
+              </label>
+              <select
+                id="meal-recipe-select"
+                className="form-input meal-recipe-picker-select"
+                value=""
+                onChange={(e) => applyRecipe(e.target.value)}
+                aria-label={t(messages, 'module.meal_plans.recipe_select')}
+              >
+                <option value="">{t(messages, 'module.meal_plans.recipe_select_placeholder')}</option>
+                {recipes.map((recipe) => (
+                  <option key={recipe.id} value={recipe.id}>{recipe.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="meal-form-grid">
             <input
               ref={firstFieldRef}
