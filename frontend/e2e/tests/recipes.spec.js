@@ -3,6 +3,30 @@ const { getFamilyId, seedShoppingList } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
 test.describe('Recipes', () => {
+  async function expectRecipeDialogInViewport(page) {
+    const metrics = await page.locator('.recipe-dialog').evaluate((dialog) => {
+      const dialogRect = dialog.getBoundingClientRect();
+      const backdropRect = document.querySelector('.cal-dialog-backdrop').getBoundingClientRect();
+      return {
+        dialogTop: dialogRect.top,
+        dialogBottom: dialogRect.bottom,
+        backdropTop: backdropRect.top,
+        backdropLeft: backdropRect.left,
+        backdropRight: backdropRect.right,
+        backdropBottom: backdropRect.bottom,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      };
+    });
+
+    expect(metrics.backdropTop).toBe(0);
+    expect(metrics.backdropLeft).toBe(0);
+    expect(metrics.backdropRight).toBe(metrics.viewportWidth);
+    expect(metrics.backdropBottom).toBe(metrics.viewportHeight);
+    expect(metrics.dialogTop).toBeGreaterThanOrEqual(0);
+    expect(metrics.dialogBottom).toBeLessThanOrEqual(metrics.viewportHeight);
+  }
+
   test('create a recipe, push ingredients to shopping, and copy it into a meal plan', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
     await seedShoppingList(apiCtx, familyId, 'Recipe Shopping List');
@@ -11,6 +35,7 @@ test.describe('Recipes', () => {
 
     await navigateTo(page, 'Recipes');
     await page.getByRole('button', { name: 'Add recipe' }).click();
+    await expectRecipeDialogInViewport(page);
 
     await page.getByRole('dialog', { name: 'Add recipe' }).getByPlaceholder('e.g. Tomato pasta').fill('Playwright Pancakes');
     await page.getByPlaceholder('Servings').fill('4');

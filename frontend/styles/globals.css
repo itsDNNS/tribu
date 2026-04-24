@@ -707,7 +707,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .dashboard-header-actions { display: flex; align-items: center; gap: var(--space-sm); }
 .btn-icon { width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 .view-enter { animation: viewEnter 0.4s var(--ease-out-expo) both; }
-@keyframes viewEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes viewEnter { from { opacity: 0; } to { opacity: 1; } }
 
 /* ═══════════════════════════════════════════
    BENTO GRID (Dashboard)
