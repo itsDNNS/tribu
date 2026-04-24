@@ -1,5 +1,6 @@
 {
   "module.rewards.name": "Rewards",
+  "module.rewards.view_all": "View all",
   "module.rewards.balance": "Balance",
   "module.rewards.pending": "{count} pending",
   "module.rewards.currency_setup": "Set up your reward currency",

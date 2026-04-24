@@ -32,7 +32,7 @@ export default function RewardsDashboardWidget() {
       <div className="bento-card bento-rewards glass glow-amber">
         <div className="bento-card-header">
           <Gift size={16} /> <span>{t(messages, 'module.rewards.name')}</span>
-          <button className="bento-more" onClick={() => setActiveView('rewards')}>{t(messages, 'view_all')}</button>
+          <button className="bento-more" onClick={() => setActiveView('rewards')}>{t(messages, 'module.rewards.view_all')}</button>
         </div>
         {rw.myBalance && (
           <div className="rewards-balance">
@@ -61,7 +61,7 @@ export default function RewardsDashboardWidget() {
     <div className="bento-card bento-rewards glass glow-amber">
       <div className="bento-card-header">
         <Gift size={16} /> <span>{t(messages, 'module.rewards.name')}</span>
-        <button className="bento-more" onClick={() => setActiveView('rewards')}>{t(messages, 'view_all')}</button>
+        <button className="bento-more" onClick={() => setActiveView('rewards')}>{t(messages, 'module.rewards.view_all')}</button>
       </div>
       {childBalances.length > 0 ? (
         <div className="rewards-child-list">

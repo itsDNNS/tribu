@@ -1,5 +1,6 @@
 {
   "module.rewards.name": "Belohnungen",
+  "module.rewards.view_all": "Alle anzeigen",
   "module.rewards.balance": "Guthaben",
   "module.rewards.pending": "{count} ausstehend",
   "module.rewards.currency_setup": "Belohnungs-Währung einrichten",
