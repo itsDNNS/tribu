@@ -315,6 +315,25 @@ class NotificationSentLog(Base):
     source_id = Column(Integer, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     sent_at = Column(DateTime, nullable=False, server_default=func.now())
+    # Reliability metadata: nullable for legacy rows, populated for rows
+    # written by the scheduler since 0032.
+    trigger_key = Column(String, nullable=True, index=True)
+    status = Column(String, nullable=False, default="pending", server_default="pending")
+    delivery_attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    last_attempt_at = Column(DateTime, nullable=True)
+    last_error = Column(Text, nullable=True)
+    delivered_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index(
+            "uq_notification_sent_log_user_trigger_key",
+            "user_id",
+            "trigger_key",
+            unique=True,
+            sqlite_where=text("trigger_key IS NOT NULL"),
+            postgresql_where=text("trigger_key IS NOT NULL"),
+        ),
+    )
 
 
 class UserNavOrder(Base):
