@@ -124,6 +124,7 @@ export default function InviteSection() {
           <h1 className="view-title">{t(messages, 'invite_title')}</h1>
         </div>
       </div>
+      <p className="invite-intro">{t(messages, 'invite_intro')}</p>
       {/* Base URL setting */}
       {!demoMode && (
         <div className="settings-section adm-section-gap">
@@ -161,6 +162,9 @@ export default function InviteSection() {
           </div>
           <p className="adm-banner-warning">
             {t(messages, 'invite_link_hint')}
+          </p>
+          <p className="adm-banner-warning">
+            {t(messages, 'invite_link_share_hint')}
           </p>
           <div className="adm-banner-row">
             <code className="token-display">{createdUrl}</code>
@@ -220,11 +224,13 @@ export default function InviteSection() {
                     <option value="member">{t(messages, 'member')}</option>
                     <option value="admin">Admin</option>
                   </select>
+                  <small className="invite-helper-text">{t(messages, 'invite_role_helper')}</small>
                 </div>
                 <label className="set-checkbox-label">
                   <input type="checkbox" checked={isAdultPreset} onChange={(e) => setIsAdultPreset(e.target.checked)} />
                   {t(messages, 'invite_is_adult')}
                 </label>
+                <small className="invite-helper-text">{t(messages, 'invite_adult_helper')}</small>
                 <div className="form-field">
                   <label>{t(messages, 'invite_expiry_days')}</label>
                   <input className="form-input adm-input-narrow" type="number" min={1} max={90} value={expiryDays} onChange={(e) => setExpiryDays(parseInt(e.target.value) || 7)} />

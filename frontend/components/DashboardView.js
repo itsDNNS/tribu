@@ -1,4 +1,4 @@
-import { CalendarClock, ListChecks, Cake, BarChart3, Users, Calendar, CheckCircle, Plus, CheckSquare, UserPlus } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, BarChart3, Users, Calendar, CheckCircle, Plus, CheckSquare, UserPlus, Circle, ShoppingCart } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -14,14 +14,114 @@ function getGreeting(messages) {
   return t(messages, 'module.dashboard.greeting_evening');
 }
 
+function ActivationPanel({ steps, messages }) {
+  return (
+    <section className="activation-panel" aria-label={t(messages, 'module.dashboard.activation_title')}>
+      <div className="activation-panel-header">
+        <h2 className="activation-panel-title">{t(messages, 'module.dashboard.activation_title')}</h2>
+        <p className="activation-panel-subtitle">{t(messages, 'module.dashboard.activation_subtitle')}</p>
+      </div>
+      <ul className="activation-step-list">
+        {steps.map((step) => {
+          const ariaLabel = step.done
+            ? t(messages, 'module.dashboard.activation_step_done_aria')
+            : t(messages, 'module.dashboard.activation_step_pending_aria');
+          return (
+            <li
+              key={step.key}
+              className={`activation-step${step.done ? ' activation-step-done' : ''}`}
+              data-testid={`activation-step-${step.key}`}
+            >
+              <span className="activation-step-icon" aria-label={ariaLabel} role="img">
+                {step.done ? <CheckCircle size={16} aria-hidden="true" /> : <Circle size={16} aria-hidden="true" />}
+              </span>
+              <div className="activation-step-body">
+                <div className="activation-step-title">{step.title}</div>
+                <div className="activation-step-desc">{step.description}</div>
+              </div>
+              {step.done ? (
+                <span className="activation-step-status">{step.doneLabel}</span>
+              ) : (
+                <button type="button" className="activation-step-cta" onClick={step.onClick}>
+                  {step.ctaLabel}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, setActiveView, messages, lang, timeFormat, isChild } = useApp();
+  const { summary, me, members, tasks, events, shoppingLists, setActiveView, messages, lang, timeFormat, isChild, isAdmin } = useApp();
 
   const openTasks = tasks.filter((t) => t.status === 'open');
   const doneTasks = tasks.filter((t) => t.status === 'done');
   const donePercent = tasks.length > 0 ? Math.round((doneTasks.length / tasks.length) * 100) : 0;
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const todayStr = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const safeShoppingLists = Array.isArray(shoppingLists) ? shoppingLists : [];
+  const hasShoppingContent = safeShoppingLists.some((list) => {
+    if (!list) return false;
+    const items = Array.isArray(list.items) ? list.items : [];
+    return items.length > 0;
+  }) || safeShoppingLists.length > 0;
+  const inviteDone = members.length >= 2;
+  const eventDone = events.length > 0;
+  const taskDone = tasks.length > 0;
+  const shoppingDone = hasShoppingContent;
+  const adoptionIncomplete = !inviteDone || !eventDone || !taskDone || !shoppingDone;
+
+  const activationSteps = [];
+  if (isAdmin) {
+    activationSteps.push({
+      key: 'invite',
+      done: inviteDone,
+      title: t(messages, 'module.dashboard.activation_step_invite_title'),
+      description: t(messages, 'module.dashboard.activation_step_invite_desc'),
+      ctaLabel: t(messages, 'module.dashboard.activation_step_invite_cta'),
+      doneLabel: t(messages, 'module.dashboard.activation_step_invite_done'),
+      onClick: () => setActiveView('admin'),
+      icon: UserPlus,
+    });
+  }
+  activationSteps.push(
+    {
+      key: 'event',
+      done: eventDone,
+      title: t(messages, 'module.dashboard.activation_step_event_title'),
+      description: t(messages, 'module.dashboard.activation_step_event_desc'),
+      ctaLabel: t(messages, 'module.dashboard.activation_step_event_cta'),
+      doneLabel: t(messages, 'module.dashboard.activation_step_event_done'),
+      onClick: () => setActiveView('calendar'),
+      icon: Calendar,
+    },
+    {
+      key: 'task',
+      done: taskDone,
+      title: t(messages, 'module.dashboard.activation_step_task_title'),
+      description: t(messages, 'module.dashboard.activation_step_task_desc'),
+      ctaLabel: t(messages, 'module.dashboard.activation_step_task_cta'),
+      doneLabel: t(messages, 'module.dashboard.activation_step_task_done'),
+      onClick: () => setActiveView('tasks'),
+      icon: CheckSquare,
+    },
+    {
+      key: 'shopping',
+      done: shoppingDone,
+      title: t(messages, 'module.dashboard.activation_step_shopping_title'),
+      description: t(messages, 'module.dashboard.activation_step_shopping_desc'),
+      ctaLabel: t(messages, 'module.dashboard.activation_step_shopping_cta'),
+      doneLabel: t(messages, 'module.dashboard.activation_step_shopping_done'),
+      onClick: () => setActiveView('shopping'),
+      icon: ShoppingCart,
+    },
+  );
+
+  const showActivationPanel = !isChild && adoptionIncomplete;
 
   const summaryText = (() => {
     const now = new Date();
@@ -59,6 +159,8 @@ export default function DashboardView() {
           <div className="view-date">{todayStr}</div>
         </div>
       </div>
+
+      {showActivationPanel && <ActivationPanel steps={activationSteps} messages={messages} />}
 
       <div className="bento-grid">
         {/* Events Card */}
