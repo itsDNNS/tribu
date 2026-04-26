@@ -13,9 +13,18 @@ import BackupSection from './BackupSection';
 import AuditLogSection from './AuditLogSection';
 import SsoSection from './SsoSection';
 
+const ADMIN_TABS = [
+  { key: 'members', labelKey: 'admin_tab_members' },
+  { key: 'invites', labelKey: 'invite_title' },
+  { key: 'sso', labelKey: 'sso.title' },
+  { key: 'backups', labelKey: 'backup_title' },
+  { key: 'audit', labelKey: 'audit_log_title' },
+];
+
 export default function AdminView() {
   const { familyId, members, messages, loadMembers, me, demoMode, timeFormat, setTimeFormat } = useApp();
   const { error: toastError, info: toastInfo } = useToast();
+  const [activeTab, setActiveTab] = useState('members');
   const [showAddMember, setShowAddMember] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
@@ -145,120 +154,146 @@ export default function AdminView() {
       )}
       <div className="view-header">
         <div>
-          <h1 className="view-title">{t(messages, 'admin_members')}</h1>
-        </div>
-      </div>
-      {/* Time Format Toggle */}
-      <div className="admin-time-toggle">
-        <span className="admin-time-label">{t(messages, 'time_format')}</span>
-        <div className="rewards-tabs">
-          <button className={`rewards-tab${timeFormat === '24h' ? ' active' : ''}`} onClick={async () => {
-            const { ok } = await api.apiSetTimeFormat('24h');
-            if (ok) setTimeFormat('24h'); else toastError(t(messages, 'toast.error'));
-          }}>24h</button>
-          <button className={`rewards-tab${timeFormat === '12h' ? ' active' : ''}`} onClick={async () => {
-            const { ok } = await api.apiSetTimeFormat('12h');
-            if (ok) setTimeFormat('12h'); else toastError(t(messages, 'toast.error'));
-          }}>12h</button>
+          <h1 className="view-title">{t(messages, 'admin_title')}</h1>
         </div>
       </div>
 
-      {/* Member Created Banner */}
-      {createdPassword && (
-        <div className="adm-success-banner">
-          <div className="adm-banner-header">
-            <Check size={16} className="adm-icon-success" />
-            <span className="adm-banner-title">{t(messages, passwordBannerType === 'reset' ? 'password_was_reset' : 'member_created')}</span>
-          </div>
-          <p className="adm-banner-warning">
-            {t(messages, 'member_created_warning')}
-          </p>
-          <div className="adm-banner-row">
-            <code className="token-display">{createdPassword}</code>
-            <button className="btn-ghost adm-banner-no-shrink" onClick={handleCopyPassword}>
-              {copied ? <><Check size={14} /> {t(messages, 'token_copied')}</> : <><Copy size={14} /> {t(messages, 'token_copy')}</>}
-            </button>
-          </div>
-          <button
-            className="adm-banner-dismiss"
-            onClick={() => { setCreatedPassword(null); setCopied(false); }}
-          >
-            <X size={12} className="adm-icon-middle" /> {t(messages, 'dismiss')}
-          </button>
-        </div>
-      )}
+      <div className="settings-layout admin-layout">
+        <nav className="settings-sidebar admin-sidebar" aria-label={t(messages, 'admin_sections')}>
+          {ADMIN_TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                className={`settings-sidebar-item${isActive ? ' active' : ''}`}
+                onClick={() => setActiveTab(tab.key)}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {t(messages, tab.labelKey)}
+              </button>
+            );
+          })}
+        </nav>
 
-      <MemberGroups members={members} me={me} messages={messages} onSetAdult={handleSetAdult} onSetRole={handleSetRole} onResetPassword={handleResetPassword} onRemoveMember={handleRemoveMember} onSetBirthdate={handleSetBirthdate} onSetAvatar={handleSetAvatar} />
-
-      {/* Add Member */}
-      {!demoMode && (
-        <div className="adm-add-wrapper">
-          {showAddMember ? (
-            <form onSubmit={handleCreateMember}>
-              <div className="settings-section adm-form-grid">
-                <p className="adm-form-desc">
-                  {t(messages, 'add_member_desc')}
-                </p>
-                <div className="form-field">
-                  <label>{t(messages, 'member_email')}</label>
-                  <input
-                    className="form-input"
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-field">
-                  <label>{t(messages, 'member_name')}</label>
-                  <input
-                    className="form-input"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-field">
-                  <label>{t(messages, 'member_role')}</label>
-                  <select
-                    className="form-input"
-                    value={newRole}
-                    onChange={(e) => setNewRole(e.target.value)}
-                  >
-                    <option value="member">{t(messages, 'member')}</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-                <label className="set-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={newIsAdult}
-                    onChange={(e) => setNewIsAdult(e.target.checked)}
-                  />
-                  {t(messages, 'member_is_adult')}
-                </label>
-                <div className="set-btn-row">
-                  <button type="submit" className="btn-sm" disabled={!newEmail.trim() || !newName.trim() || creating === 'loading'}>
-                    <Plus size={14} /> {t(messages, 'add_member')}
-                  </button>
-                  <button type="button" className="btn-ghost" onClick={() => setShowAddMember(false)}>
-                    {t(messages, 'cancel')}
-                  </button>
+        <div className="settings-content admin-content">
+          {activeTab === 'members' && (
+            <>
+              {/* Time Format Toggle */}
+              <div className="admin-time-toggle">
+                <span className="admin-time-label">{t(messages, 'time_format')}</span>
+                <div className="rewards-tabs">
+                  <button className={`rewards-tab${timeFormat === '24h' ? ' active' : ''}`} onClick={async () => {
+                    const { ok } = await api.apiSetTimeFormat('24h');
+                    if (ok) setTimeFormat('24h'); else toastError(t(messages, 'toast.error'));
+                  }}>24h</button>
+                  <button className={`rewards-tab${timeFormat === '12h' ? ' active' : ''}`} onClick={async () => {
+                    const { ok } = await api.apiSetTimeFormat('12h');
+                    if (ok) setTimeFormat('12h'); else toastError(t(messages, 'toast.error'));
+                  }}>12h</button>
                 </div>
               </div>
-            </form>
-          ) : (
-            <button className="btn-ghost" onClick={() => setShowAddMember(true)}>
-              <Plus size={14} /> {t(messages, 'add_member')}
-            </button>
-          )}
-        </div>
-      )}
 
-      <InviteSection />
-      <SsoSection />
-      <BackupSection />
-      <AuditLogSection />
+              {/* Member Created Banner */}
+              {createdPassword && (
+                <div className="adm-success-banner">
+                  <div className="adm-banner-header">
+                    <Check size={16} className="adm-icon-success" />
+                    <span className="adm-banner-title">{t(messages, passwordBannerType === 'reset' ? 'password_was_reset' : 'member_created')}</span>
+                  </div>
+                  <p className="adm-banner-warning">
+                    {t(messages, 'member_created_warning')}
+                  </p>
+                  <div className="adm-banner-row">
+                    <code className="token-display">{createdPassword}</code>
+                    <button className="btn-ghost adm-banner-no-shrink" onClick={handleCopyPassword}>
+                      {copied ? <><Check size={14} /> {t(messages, 'token_copied')}</> : <><Copy size={14} /> {t(messages, 'token_copy')}</>}
+                    </button>
+                  </div>
+                  <button
+                    className="adm-banner-dismiss"
+                    onClick={() => { setCreatedPassword(null); setCopied(false); }}
+                  >
+                    <X size={12} className="adm-icon-middle" /> {t(messages, 'dismiss')}
+                  </button>
+                </div>
+              )}
+
+              <MemberGroups members={members} me={me} messages={messages} onSetAdult={handleSetAdult} onSetRole={handleSetRole} onResetPassword={handleResetPassword} onRemoveMember={handleRemoveMember} onSetBirthdate={handleSetBirthdate} onSetAvatar={handleSetAvatar} />
+
+              {/* Add Member */}
+              {!demoMode && (
+                <div className="adm-add-wrapper">
+                  {showAddMember ? (
+                    <form onSubmit={handleCreateMember}>
+                      <div className="settings-section adm-form-grid">
+                        <p className="adm-form-desc">
+                          {t(messages, 'add_member_desc')}
+                        </p>
+                        <div className="form-field">
+                          <label>{t(messages, 'member_email')}</label>
+                          <input
+                            className="form-input"
+                            type="email"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="form-field">
+                          <label>{t(messages, 'member_name')}</label>
+                          <input
+                            className="form-input"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="form-field">
+                          <label>{t(messages, 'member_role')}</label>
+                          <select
+                            className="form-input"
+                            value={newRole}
+                            onChange={(e) => setNewRole(e.target.value)}
+                          >
+                            <option value="member">{t(messages, 'member')}</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                        <label className="set-checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={newIsAdult}
+                            onChange={(e) => setNewIsAdult(e.target.checked)}
+                          />
+                          {t(messages, 'member_is_adult')}
+                        </label>
+                        <div className="set-btn-row">
+                          <button type="submit" className="btn-sm" disabled={!newEmail.trim() || !newName.trim() || creating === 'loading'}>
+                            <Plus size={14} /> {t(messages, 'add_member')}
+                          </button>
+                          <button type="button" className="btn-ghost" onClick={() => setShowAddMember(false)}>
+                            {t(messages, 'cancel')}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  ) : (
+                    <button className="btn-ghost" onClick={() => setShowAddMember(true)}>
+                      <Plus size={14} /> {t(messages, 'add_member')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'invites' && <InviteSection />}
+          {activeTab === 'sso' && <SsoSection />}
+          {activeTab === 'backups' && <BackupSection />}
+          {activeTab === 'audit' && <AuditLogSection />}
+        </div>
+      </div>
     </div>
   );
 }
