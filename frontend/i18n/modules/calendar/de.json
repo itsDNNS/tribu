@@ -57,5 +57,18 @@
   "module.calendar.edit_recurring_warning": "Die Bearbeitung ändert die gesamte Terminserie.",
   "module.calendar.source_import": "Importiert",
   "module.calendar.source_subscription": "Abonniert",
-  "module.calendar.source_readonly_hint": "Stammt aus einem externen Feed. Änderungen bitte in der Quell-App vornehmen – ein erneuter Import aktualisiert diesen Eintrag."
+  "module.calendar.source_readonly_hint": "Stammt aus einem externen Feed. Änderungen bitte in der Quell-App vornehmen – ein erneuter Import aktualisiert diesen Eintrag.",
+  "module.calendar.managed_subscriptions": "Gespeicherte Feeds",
+  "module.calendar.managed_subscriptions_empty": "Noch keine gespeicherten Feeds. Füge oben einen hinzu, um Status und Verlauf zu behalten.",
+  "module.calendar.subscription_create_submit": "Feed speichern und aktualisieren",
+  "module.calendar.subscription_refresh": "Aktualisieren",
+  "module.calendar.subscription_delete": "Löschen",
+  "module.calendar.subscription_status_success": "Letzte Aktualisierung erfolgreich",
+  "module.calendar.subscription_status_partial": "Letzte Aktualisierung mit Hinweisen",
+  "module.calendar.subscription_status_failed": "Letzte Aktualisierung fehlgeschlagen",
+  "module.calendar.subscription_status_pending": "Noch nicht aktualisiert",
+  "module.calendar.subscription_last_counts": "Erstellt {created}, aktualisiert {updated}, übersprungen {skipped}",
+  "module.calendar.subscription_history": "Letzte Aktualisierungen",
+  "module.calendar.subscription_loaded_error": "Gespeicherte Feeds konnten nicht geladen werden",
+  "module.calendar.subscription_deleted": "Feed entfernt. Bestehende Termine bleiben im Kalender."
 }

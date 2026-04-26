@@ -204,6 +204,22 @@ export function apiPreviewSubscribeCalendarIcs(family_id, source_url, source_nam
   return post('/calendar/events/subscribe-ics/preview', { family_id, source_url, source_name });
 }
 
+export function apiGetCalendarSubscriptions(family_id) {
+  return request(`/calendar/subscriptions?family_id=${family_id}`);
+}
+
+export function apiCreateCalendarSubscription(family_id, source_url, source_name = '') {
+  return post('/calendar/subscriptions', { family_id, source_url, source_name });
+}
+
+export function apiRefreshCalendarSubscription(subscriptionId) {
+  return post(`/calendar/subscriptions/${subscriptionId}/refresh`, {});
+}
+
+export function apiDeleteCalendarSubscription(subscriptionId) {
+  return del(`/calendar/subscriptions/${subscriptionId}`);
+}
+
 // Tasks
 export async function apiGetTasks(familyId) {
   const res = await request(`/tasks?family_id=${familyId}`);

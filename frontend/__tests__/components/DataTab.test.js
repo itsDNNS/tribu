@@ -26,6 +26,10 @@ jest.mock('../../lib/api', () => ({
   apiPreviewImportCalendarIcs: jest.fn(),
   apiSubscribeCalendarIcs: jest.fn(),
   apiPreviewSubscribeCalendarIcs: jest.fn(),
+  apiGetCalendarSubscriptions: jest.fn(),
+  apiCreateCalendarSubscription: jest.fn(),
+  apiRefreshCalendarSubscription: jest.fn(),
+  apiDeleteCalendarSubscription: jest.fn(),
   apiExportContactsCsv: jest.fn(),
   apiImportContactsCsv: jest.fn(),
 }));
@@ -44,12 +48,13 @@ describe('DataTab calendar subscriptions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAppState = baseState();
+    api.apiGetCalendarSubscriptions.mockResolvedValue({ ok: true, data: [] });
   });
 
   test('subscribes to an external ICS URL and renders the refresh summary', async () => {
-    api.apiSubscribeCalendarIcs.mockResolvedValue({
+    api.apiCreateCalendarSubscription.mockResolvedValue({
       ok: true,
-      data: { created: 1, updated: 2, skipped: 0, errors: [] },
+      data: { id: 7, name: 'School', last_created: 1, last_updated: 2, last_skipped: 0, sync_history: [] },
     });
 
     render(<DataTab />);
@@ -60,10 +65,10 @@ describe('DataTab calendar subscriptions', () => {
     fireEvent.change(screen.getByPlaceholderText('Feed name (optional)'), {
       target: { value: 'School' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Subscribe / refresh feed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and refresh feed' }));
 
     await waitFor(() => {
-      expect(api.apiSubscribeCalendarIcs).toHaveBeenCalledWith(
+      expect(api.apiCreateCalendarSubscription).toHaveBeenCalledWith(
         42,
         'https://school.example.com/calendar.ics',
         'School',
@@ -72,6 +77,37 @@ describe('DataTab calendar subscriptions', () => {
     expect(await screen.findByText('Created 1, updated 2, skipped 0.')).toBeInTheDocument();
     expect(mockAppState.loadDashboard).toHaveBeenCalled();
   });
+
+  test('renders managed feeds and refreshes one', async () => {
+    api.apiGetCalendarSubscriptions.mockResolvedValue({
+      ok: true,
+      data: [{
+        id: 7,
+        name: 'School',
+        source_url: 'https://school.example.com/calendar.ics',
+        last_sync_status: 'success',
+        last_created: 1,
+        last_updated: 0,
+        last_skipped: 0,
+        sync_history: [{ id: 1, status: 'success', created: 1, updated: 0, skipped: 0 }],
+      }],
+    });
+    api.apiRefreshCalendarSubscription.mockResolvedValue({
+      ok: true,
+      data: { id: 7, name: 'School', last_created: 0, last_updated: 1, last_skipped: 0, sync_history: [] },
+    });
+
+    render(<DataTab />);
+
+    expect(await screen.findByText('School')).toBeInTheDocument();
+    expect(screen.getByText('https://school.example.com/calendar.ics')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh/ }));
+
+    await waitFor(() => {
+      expect(api.apiRefreshCalendarSubscription).toHaveBeenCalledWith(7);
+    });
+    expect(await screen.findByText('Created 0, updated 1, skipped 0.')).toBeInTheDocument();
+  });
 });
 
 
@@ -79,6 +115,7 @@ describe('DataTab calendar import previews', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAppState = baseState();
+    api.apiGetCalendarSubscriptions.mockResolvedValue({ ok: true, data: [] });
   });
 
   test('previews pasted ICS without importing it', async () => {
@@ -126,7 +163,7 @@ describe('DataTab calendar import previews', () => {
         'School',
       );
     });
-    expect(api.apiSubscribeCalendarIcs).not.toHaveBeenCalled();
+    expect(api.apiCreateCalendarSubscription).not.toHaveBeenCalled();
     expect(await screen.findByText('Preview: would create 3, update 0, skip 1. No calendar changes yet.')).toBeInTheDocument();
     expect(await screen.findByText(/Dup/)).toBeInTheDocument();
   });

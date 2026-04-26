@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import CalendarEvent, Family, Membership, PersonalAccessToken, User
+from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync, Family, Membership, PersonalAccessToken, User
 from app.security import hash_password, PAT_PREFIX
 from app.core.calendar_subscriptions import IcsSubscriptionError, fetch_ics_text
 
@@ -452,3 +452,97 @@ class TestFetchFailureSafe:
         text = resp.text
         assert "10.0.0.5" not in text
         assert "Traceback" not in text
+
+
+
+class TestManagedSubscriptions:
+    def test_create_persists_feed_status_and_sync_history(self, monkeypatch):
+        token, family_id = _seed_adult()
+        _patch_fetch(monkeypatch, lambda url, **kw: _ics("managed-1@feed.example.com", summary="Practice"))
+
+        client = TestClient(app)
+        resp = client.post(
+            "/calendar/subscriptions",
+            json={
+                "family_id": family_id,
+                "source_url": "https://feed.example.com/team.ics",
+                "source_name": "Team",
+            },
+            headers=_auth(token),
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["name"] == "Team"
+        assert body["source_url"] == "https://feed.example.com/team.ics"
+        assert body["last_sync_status"] == "success"
+        assert body["last_created"] == 1
+        assert body["last_updated"] == 0
+        assert body["last_skipped"] == 0
+        assert body["sync_history"][0]["status"] == "success"
+
+        db = TestSession()
+        try:
+            subscription = db.query(CalendarSubscription).one()
+            assert subscription.name == "Team"
+            event = db.query(CalendarEvent).filter(CalendarEvent.ical_uid == "managed-1@feed.example.com").one()
+            assert event.subscription_id == subscription.id
+            assert event.source_type == "subscription"
+            assert db.query(CalendarSubscriptionSync).count() == 1
+        finally:
+            db.close()
+
+    def test_list_refresh_and_delete_managed_subscription(self, monkeypatch):
+        token, family_id = _seed_adult()
+        url = "https://feed.example.com/team.ics"
+        client = TestClient(app)
+
+        _patch_fetch(monkeypatch, lambda u, **kw: _ics("managed-refresh@feed.example.com", summary="Practice"))
+        first = client.post(
+            "/calendar/subscriptions",
+            json={"family_id": family_id, "source_url": url, "source_name": "Team"},
+            headers=_auth(token),
+        )
+        assert first.status_code == 200, first.text
+        subscription_id = first.json()["id"]
+
+        listed = client.get(f"/calendar/subscriptions?family_id={family_id}", headers=_auth(token))
+        assert listed.status_code == 200, listed.text
+        assert listed.json()[0]["id"] == subscription_id
+
+        _patch_fetch(monkeypatch, lambda u, **kw: _ics("managed-refresh@feed.example.com", summary="Practice updated"))
+        refreshed = client.post(f"/calendar/subscriptions/{subscription_id}/refresh", headers=_auth(token))
+        assert refreshed.status_code == 200, refreshed.text
+        assert refreshed.json()["last_updated"] == 1
+
+        deleted = client.delete(f"/calendar/subscriptions/{subscription_id}", headers=_auth(token))
+        assert deleted.status_code == 200, deleted.text
+
+        db = TestSession()
+        try:
+            assert db.query(CalendarSubscription).count() == 0
+            event = db.query(CalendarEvent).filter(CalendarEvent.ical_uid == "managed-refresh@feed.example.com").one()
+            assert event.title == "Practice updated"
+            assert event.subscription_id is None
+            assert event.source_type == "subscription"
+        finally:
+            db.close()
+
+    def test_managed_refresh_failure_records_safe_status(self, monkeypatch):
+        token, family_id = _seed_adult()
+
+        def _boom(url, **kw):
+            raise RuntimeError("internal host 10.1.2.3 failed")
+
+        _patch_fetch(monkeypatch, _boom)
+        client = TestClient(app)
+        resp = client.post(
+            "/calendar/subscriptions",
+            json={"family_id": family_id, "source_url": "https://feed.example.com/bad.ics"},
+            headers=_auth(token),
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["last_sync_status"] == "failed"
+        assert body["last_sync_error"] == "Could not fetch subscription URL"
+        assert "10.1.2.3" not in resp.text
+        assert body["sync_history"][0]["status"] == "failed"
