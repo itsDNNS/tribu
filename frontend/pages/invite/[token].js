@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Users, ShieldCheck, AlertCircle, Globe, KeyRound } from 'lucide-react';
+import { Users, ShieldCheck, AlertCircle, Globe, KeyRound, Sparkles } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
@@ -107,6 +107,40 @@ export default function InvitePage() {
           <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <small style={{ color: 'var(--text-muted)' }}>{t(messages, 'invite_page_joining')}</small>
             <h2 style={{ margin: '4px 0 0', fontSize: '1.3rem' }}>{info.family_name}</h2>
+            {(() => {
+              const role = info.role_preset;
+              const isAdult = info.is_adult_preset;
+              let roleKey = 'invite_page_role_member';
+              if (role === 'admin') roleKey = 'invite_page_role_admin';
+              else if (isAdult === true) roleKey = 'invite_page_role_adult_member';
+              else if (isAdult === false) roleKey = 'invite_page_role_child_member';
+              return (
+                <div className="invite-role-pill" data-testid="invite-role-pill">
+                  <strong>{t(messages, 'invite_page_role_label')}:</strong> {t(messages, roleKey)}
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="invite-next-card" data-testid="invite-next-card">
+            <h3 className="invite-next-title">
+              <Sparkles size={14} aria-hidden="true" />
+              {t(messages, 'invite_page_next_title')}
+            </h3>
+            <ol className="invite-next-list">
+              <li>
+                <span className="invite-next-step-num" aria-hidden="true">1</span>
+                <span>{t(messages, 'invite_page_next_step_account')}</span>
+              </li>
+              <li>
+                <span className="invite-next-step-num" aria-hidden="true">2</span>
+                <span>{t(messages, 'invite_page_next_step_join').replace('{family}', info.family_name)}</span>
+              </li>
+              <li>
+                <span className="invite-next-step-num" aria-hidden="true">3</span>
+                <span>{t(messages, 'invite_page_next_step_start')}</span>
+              </li>
+            </ol>
           </div>
 
           {sso.ready && (
