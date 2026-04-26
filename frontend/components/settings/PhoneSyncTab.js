@@ -106,6 +106,14 @@ export default function PhoneSyncTab() {
           <li>{t(messages, 'phone_sync_android_step3')}</li>
         </ol>
 
+        <div className="sync-section-heading">{t(messages, 'phone_sync_coexist_heading')}</div>
+        <p className="set-data-section-desc">{t(messages, 'phone_sync_coexist_intro')}</p>
+        <ul className="sync-steps sync-coexist">
+          <li>{t(messages, 'phone_sync_coexist_apple')}</li>
+          <li>{t(messages, 'phone_sync_coexist_google')}</li>
+          <li>{t(messages, 'phone_sync_coexist_outlook')}</li>
+        </ul>
+
         <div className="sync-section-heading">{t(messages, 'phone_sync_limits_heading')}</div>
         <ul className="sync-steps sync-limits">
           <li>{t(messages, 'phone_sync_limit_incremental')}</li>

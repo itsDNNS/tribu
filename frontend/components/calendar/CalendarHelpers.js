@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Cake, Pencil, Repeat, Trash2 } from 'lucide-react';
+import { Cake, Download, Pencil, Repeat, Rss, Trash2 } from 'lucide-react';
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
@@ -97,18 +97,40 @@ export function AssignChips({ members, assignedTo, setAssignedTo, messages }) {
 }
 
 export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onEdit, members }) {
+  const sourceType = ev.source_type || 'local';
+  const isImported = sourceType === 'import' || sourceType === 'subscription';
+  const editable = !!onEdit && !ev._isBirthday && !isImported;
+  const cardClickable = editable;
+
   return (
-    <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index), cursor: onEdit && !ev._isBirthday ? 'pointer' : undefined }} onClick={() => onEdit && !ev._isBirthday && onEdit(ev)}>
+    <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index), cursor: cardClickable ? 'pointer' : undefined }} onClick={() => cardClickable && onEdit(ev)}>
       <div style={{ flex: 1 }}>
         <div className="event-card-title">
           {ev._isBirthday && <Cake size={14} style={{ color: '#f43f5e', flexShrink: 0 }} aria-hidden="true" />}
           {ev.title}
           {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />}
+          {isImported && (
+            <span
+              className="event-card-source-badge"
+              data-source-type={sourceType}
+              title={ev.source_name || t(messages, sourceType === 'subscription' ? 'module.calendar.source_subscription' : 'module.calendar.source_import')}
+            >
+              {sourceType === 'subscription'
+                ? <Rss size={11} aria-hidden="true" />
+                : <Download size={11} aria-hidden="true" />}
+              <span className="event-card-source-label">
+                {ev.source_name || t(messages, sourceType === 'subscription' ? 'module.calendar.source_subscription' : 'module.calendar.source_import')}
+              </span>
+            </span>
+          )}
         </div>
         <div className="event-card-meta">{prettyDate(ev.starts_at, lang, timeFormat)}</div>
+        {isImported && (
+          <div className="event-card-source-hint">{t(messages, 'module.calendar.source_readonly_hint')}</div>
+        )}
         {members && <AssignedBadges assignedTo={ev.assigned_to} members={members} />}
       </div>
-      {onEdit && !ev._isBirthday && !ev.is_recurring && (
+      {editable && !ev.is_recurring && (
         <button type="button" className="event-card-action" onClick={(e) => { e.stopPropagation(); onEdit(ev); }}
           aria-label={t(messages, 'aria.edit_event').replace('{title}', ev.title)}>
           <Pencil size={14} />

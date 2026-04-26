@@ -43,5 +43,8 @@
   "module.calendar.edit_event": "Edit event",
   "module.calendar.description": "Description",
   "module.calendar.onboard_text": "Import your existing calendar to get started.",
-  "module.calendar.edit_recurring_warning": "Editing this event changes the whole recurring series."
+  "module.calendar.edit_recurring_warning": "Editing this event changes the whole recurring series.",
+  "module.calendar.source_import": "Imported",
+  "module.calendar.source_subscription": "Subscribed",
+  "module.calendar.source_readonly_hint": "From an external feed. Edit it in the source app — re-importing will update this entry."
 }

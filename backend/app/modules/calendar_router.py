@@ -138,18 +138,53 @@ def import_calendar_ics(
     _scope=require_scope("calendar:write"),
 ):
     ensure_adult(db, user.id, payload.family_id)
-    valid_events, errors = ics_to_event_dicts(payload.ics_text, payload.family_id, user.id)
+    valid_events, errors = ics_to_event_dicts(
+        payload.ics_text,
+        payload.family_id,
+        user.id,
+        source_type="import",
+        source_name=payload.source_name,
+        source_url=payload.source_url,
+    )
 
     MAX_EVENTS = 500
     created = 0
+    updated = 0
+    skipped = 0
     for event_dict in valid_events[:MAX_EVENTS]:
-        db.add(CalendarEvent(**event_dict))
-        created += 1
+        ical_uid = event_dict.get("ical_uid")
+        existing = None
+        if ical_uid:
+            existing = (
+                db.query(CalendarEvent)
+                .filter(
+                    CalendarEvent.family_id == payload.family_id,
+                    CalendarEvent.ical_uid == ical_uid,
+                )
+                .first()
+            )
+        if existing:
+            if existing.source_type != "import":
+                skipped += 1
+                errors.append({
+                    "index": created + updated + skipped,
+                    "summary": event_dict.get("title", ""),
+                    "error": "VEVENT UID already exists as a non-imported event; skipped to avoid overwriting a local or synced event",
+                })
+                continue
+            for key, value in event_dict.items():
+                if key in {"imported_at", "created_by_user_id"}:
+                    continue
+                setattr(existing, key, value)
+            updated += 1
+        else:
+            db.add(CalendarEvent(**event_dict))
+            created += 1
 
     db.commit()
-    if created:
+    if created or updated:
         cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
-    return {"status": "ok", "created": created, "errors": errors}
+    return {"status": "ok", "created": created, "updated": updated, "skipped": skipped, "errors": errors}
 
 
 @router.post(
