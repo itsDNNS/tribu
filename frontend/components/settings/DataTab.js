@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Database, Rss, Download, Upload, ChevronUp, ChevronDown, Plus, Copy, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Database, Rss, Download, Upload, ChevronUp, ChevronDown, Plus, Copy, Check, RefreshCw, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { copyTextToClipboard, downloadBlob } from '../../lib/helpers';
@@ -19,6 +19,9 @@ export default function DataTab() {
   const [icsSubName, setIcsSubName] = useState('');
   const [icsSubMsg, setIcsSubMsg] = useState('');
   const [icsSubErrors, setIcsSubErrors] = useState([]);
+  const [calendarSubscriptions, setCalendarSubscriptions] = useState([]);
+  const [subscriptionBusyId, setSubscriptionBusyId] = useState(null);
+  const [subscriptionsLoading, setSubscriptionsLoading] = useState(false);
   const [showContactsImport, setShowContactsImport] = useState(false);
   const [csvText, setCsvText] = useState('');
   const [contactsMsg, setContactsMsg] = useState('');
@@ -33,6 +36,36 @@ export default function DataTab() {
 
   const subCalendarUrl = subToken ? `${window.location.origin}/api/calendar/events/feed.ics?family_id=${familyId}&token=${subToken}` : '';
   const subContactsUrl = subToken ? `${window.location.origin}/api/contacts/feed.vcf?family_id=${familyId}&token=${subToken}` : '';
+
+
+  function formatSubscriptionCounts(subscription) {
+    const template = t(messages, 'module.calendar.subscription_last_counts') || 'Created {created}, updated {updated}, skipped {skipped}';
+    return template
+      .replace('{created}', subscription?.last_created ?? 0)
+      .replace('{updated}', subscription?.last_updated ?? 0)
+      .replace('{skipped}', subscription?.last_skipped ?? 0);
+  }
+
+  function subscriptionStatusLabel(subscription) {
+    const status = subscription?.last_sync_status || 'pending';
+    return t(messages, `module.calendar.subscription_status_${status}`) || status;
+  }
+
+  async function loadCalendarSubscriptions() {
+    if (!familyId) return;
+    setSubscriptionsLoading(true);
+    const res = await api.apiGetCalendarSubscriptions(Number(familyId));
+    setSubscriptionsLoading(false);
+    if (res.ok) {
+      setCalendarSubscriptions(res.data || []);
+    } else {
+      setIcsSubMsg(t(messages, 'module.calendar.subscription_loaded_error') || 'Could not load saved feeds');
+    }
+  }
+
+  useEffect(() => {
+    loadCalendarSubscriptions();
+  }, [familyId]);
 
   async function handleCreateSubToken() {
     setSubCreating(true);
@@ -115,18 +148,53 @@ export default function DataTab() {
     e.preventDefault();
     setIcsSubMsg('');
     setIcsSubErrors([]);
-    const { ok, data } = await api.apiSubscribeCalendarIcs(Number(familyId), icsSubUrl, icsSubName);
+    const { ok, data } = await api.apiCreateCalendarSubscription(Number(familyId), icsSubUrl, icsSubName);
     if (!ok) {
       const detail = data?.detail ? `: ${data.detail}` : '';
       return setIcsSubMsg(`${t(messages, 'module.calendar.subscription_error') || 'Subscription failed'}${detail}`);
     }
     const template = t(messages, 'module.calendar.subscription_success') || 'Created {created}, updated {updated}, skipped {skipped}.';
     setIcsSubMsg(template
-      .replace('{created}', data.created ?? 0)
-      .replace('{updated}', data.updated ?? 0)
-      .replace('{skipped}', data.skipped ?? 0));
-    if (data.errors?.length) setIcsSubErrors(data.errors);
-    await loadDashboard();
+      .replace('{created}', data.last_created ?? 0)
+      .replace('{updated}', data.last_updated ?? 0)
+      .replace('{skipped}', data.last_skipped ?? 0));
+    const latestErrors = data.sync_history?.[0]?.error_summary ? [{ index: 0, summary: data.name, error: data.sync_history[0].error_summary }] : [];
+    if (latestErrors.length) setIcsSubErrors(latestErrors);
+    setIcsSubUrl('');
+    setIcsSubName('');
+    await Promise.all([loadCalendarSubscriptions(), loadDashboard()]);
+  }
+
+  async function handleRefreshManagedSubscription(subscriptionId) {
+    setSubscriptionBusyId(subscriptionId);
+    setIcsSubMsg('');
+    setIcsSubErrors([]);
+    const { ok, data } = await api.apiRefreshCalendarSubscription(subscriptionId);
+    setSubscriptionBusyId(null);
+    if (!ok) {
+      const detail = data?.detail ? `: ${data.detail}` : '';
+      return setIcsSubMsg(`${t(messages, 'module.calendar.subscription_error') || 'Subscription failed'}${detail}`);
+    }
+    const template = t(messages, 'module.calendar.subscription_success') || 'Created {created}, updated {updated}, skipped {skipped}.';
+    setIcsSubMsg(template
+      .replace('{created}', data.last_created ?? 0)
+      .replace('{updated}', data.last_updated ?? 0)
+      .replace('{skipped}', data.last_skipped ?? 0));
+    const latestErrors = data.sync_history?.[0]?.error_summary ? [{ index: 0, summary: data.name, error: data.sync_history[0].error_summary }] : [];
+    if (latestErrors.length) setIcsSubErrors(latestErrors);
+    await Promise.all([loadCalendarSubscriptions(), loadDashboard()]);
+  }
+
+  async function handleDeleteManagedSubscription(subscriptionId) {
+    setSubscriptionBusyId(subscriptionId);
+    const { ok, data } = await api.apiDeleteCalendarSubscription(subscriptionId);
+    setSubscriptionBusyId(null);
+    if (!ok) {
+      const detail = data?.detail ? `: ${data.detail}` : '';
+      return setIcsSubMsg(`${t(messages, 'module.calendar.subscription_error') || 'Subscription failed'}${detail}`);
+    }
+    setIcsSubMsg(t(messages, 'module.calendar.subscription_deleted') || 'Feed removed. Existing events stay in the calendar.');
+    await loadCalendarSubscriptions();
   }
 
   function handleIcsFile(e) {
@@ -205,7 +273,7 @@ export default function DataTab() {
                   {t(messages, 'module.calendar.preview_subscription_submit')}
                 </button>
                 <button className="btn-primary" type="submit" disabled={!icsSubUrl.trim()}>
-                  {t(messages, 'module.calendar.subscription_submit')}
+                  {t(messages, 'module.calendar.subscription_create_submit') || t(messages, 'module.calendar.subscription_submit')}
                 </button>
               </div>
             </form>
@@ -224,6 +292,43 @@ export default function DataTab() {
                 </ul>
               </div>
             )}
+            <div className="settings-subsection">
+              <div className="set-data-sub-heading">{t(messages, 'module.calendar.managed_subscriptions')}</div>
+              {subscriptionsLoading && <p className="set-data-muted-info">...</p>}
+              {!subscriptionsLoading && calendarSubscriptions.length === 0 && (
+                <p className="set-data-muted-info">{t(messages, 'module.calendar.managed_subscriptions_empty')}</p>
+              )}
+              {calendarSubscriptions.map((subscription) => (
+                <div key={subscription.id} className="set-data-block">
+                  <div className="set-data-flex-row">
+                    <div className="set-data-flex-grow">
+                      <strong>{subscription.name}</strong>
+                      <div><code>{subscription.source_url}</code></div>
+                      <p className="set-data-muted-info">
+                        {subscriptionStatusLabel(subscription)} · {formatSubscriptionCounts(subscription)}
+                        {subscription.last_sync_error ? ` · ${subscription.last_sync_error}` : ''}
+                      </p>
+                      {subscription.sync_history?.length > 0 && (
+                        <details>
+                          <summary>{t(messages, 'module.calendar.subscription_history')}</summary>
+                          <ul className="set-data-warning-list">
+                            {subscription.sync_history.map((sync) => (
+                              <li key={sync.id}>{sync.status}: {sync.created}/{sync.updated}/{sync.skipped}{sync.error_summary ? ` · ${sync.error_summary}` : ''}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                    <button className="btn-ghost set-data-no-shrink" type="button" disabled={subscriptionBusyId === subscription.id} onClick={() => handleRefreshManagedSubscription(subscription.id)}>
+                      <RefreshCw size={14} /> {t(messages, 'module.calendar.subscription_refresh')}
+                    </button>
+                    <button className="btn-ghost set-data-no-shrink" type="button" disabled={subscriptionBusyId === subscription.id} onClick={() => handleDeleteManagedSubscription(subscription.id)}>
+                      <Trash2 size={14} /> {t(messages, 'module.calendar.subscription_delete')}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           {showCalImport && (
             <div className="settings-subsection">

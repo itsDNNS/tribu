@@ -458,6 +458,51 @@ class CalendarIcsSubscribe(BaseModel):
     )
 
 
+class CalendarSubscriptionCreate(BaseModel):
+    """Create or refresh a managed external ICS subscription feed."""
+    family_id: int = Field(..., description="Target family ID")
+    source_url: str = Field(..., max_length=500, description="External http(s) URL of the ICS feed")
+    source_name: Optional[str] = Field(None, max_length=200, description="Optional human-readable feed label")
+
+
+class CalendarSubscriptionSyncResponse(BaseModel):
+    """One refresh attempt for a managed calendar subscription."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    subscription_id: int
+    family_id: int
+    started_at: datetime
+    finished_at: Optional[datetime] = None
+    status: str
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    error_count: int = 0
+    error_summary: Optional[str] = None
+
+
+class CalendarSubscriptionResponse(BaseModel):
+    """Managed external ICS subscription feed with latest sync status."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    name: str
+    source_url: str
+    status: str
+    last_synced_at: Optional[datetime] = None
+    last_sync_status: Optional[str] = None
+    last_sync_error: Optional[str] = None
+    last_created: int = 0
+    last_updated: int = 0
+    last_skipped: int = 0
+    created_by_user_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    sync_history: list[CalendarSubscriptionSyncResponse] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------

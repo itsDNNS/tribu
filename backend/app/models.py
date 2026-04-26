@@ -35,6 +35,7 @@ class Family(Base):
 
     memberships = relationship("Membership", back_populates="family", cascade="all, delete-orphan")
     calendar_events = relationship("CalendarEvent", back_populates="family", cascade="all, delete-orphan")
+    calendar_subscriptions = relationship("CalendarSubscription", back_populates="family", cascade="all, delete-orphan")
     birthdays = relationship("FamilyBirthday", back_populates="family", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
     shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
@@ -110,6 +111,7 @@ class CalendarEvent(Base):
     imported_at = Column(DateTime, nullable=True)
     last_synced_at = Column(DateTime, nullable=True)
     sync_status = Column(String(20), nullable=True)
+    subscription_id = Column(Integer, ForeignKey("calendar_subscriptions.id", ondelete="SET NULL"), nullable=True, index=True)
 
     __table_args__ = (
         UniqueConstraint("family_id", "ical_uid", name="uq_calendar_events_family_uid"),
@@ -117,6 +119,53 @@ class CalendarEvent(Base):
     )
 
     family = relationship("Family", back_populates="calendar_events")
+    subscription = relationship("CalendarSubscription", back_populates="events")
+
+
+class CalendarSubscription(Base):
+    __tablename__ = "calendar_subscriptions"
+    __table_args__ = (
+        UniqueConstraint("family_id", "source_url", name="uq_calendar_subscriptions_family_url"),
+        Index("ix_calendar_subscriptions_family_status", "family_id", "status"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(200), nullable=False)
+    source_url = Column(String(500), nullable=False)
+    status = Column(String(20), nullable=False, default="active", server_default="active")
+    last_synced_at = Column(DateTime, nullable=True)
+    last_sync_status = Column(String(20), nullable=True)
+    last_sync_error = Column(String(300), nullable=True)
+    last_created = Column(Integer, nullable=False, default=0, server_default="0")
+    last_updated = Column(Integer, nullable=False, default=0, server_default="0")
+    last_skipped = Column(Integer, nullable=False, default=0, server_default="0")
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="calendar_subscriptions")
+    events = relationship("CalendarEvent", back_populates="subscription")
+    syncs = relationship("CalendarSubscriptionSync", back_populates="subscription", cascade="all, delete-orphan", order_by="CalendarSubscriptionSync.started_at.desc()")
+
+
+class CalendarSubscriptionSync(Base):
+    __tablename__ = "calendar_subscription_syncs"
+    __table_args__ = (Index("ix_calendar_subscription_syncs_subscription_started", "subscription_id", "started_at"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscription_id = Column(Integer, ForeignKey("calendar_subscriptions.id", ondelete="CASCADE"), nullable=False, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    started_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
+    finished_at = Column(DateTime, nullable=True)
+    status = Column(String(20), nullable=False)
+    created = Column(Integer, nullable=False, default=0, server_default="0")
+    updated = Column(Integer, nullable=False, default=0, server_default="0")
+    skipped = Column(Integer, nullable=False, default=0, server_default="0")
+    error_count = Column(Integer, nullable=False, default=0, server_default="0")
+    error_summary = Column(String(300), nullable=True)
+
+    subscription = relationship("CalendarSubscription", back_populates="syncs")
 
 
 class FamilyBirthday(Base):

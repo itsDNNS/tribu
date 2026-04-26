@@ -57,5 +57,18 @@
   "module.calendar.edit_recurring_warning": "Editing this event changes the whole recurring series.",
   "module.calendar.source_import": "Imported",
   "module.calendar.source_subscription": "Subscribed",
-  "module.calendar.source_readonly_hint": "From an external feed. Edit it in the source app — re-importing will update this entry."
+  "module.calendar.source_readonly_hint": "From an external feed. Edit it in the source app — re-importing will update this entry.",
+  "module.calendar.managed_subscriptions": "Managed feeds",
+  "module.calendar.managed_subscriptions_empty": "No saved feeds yet. Add one above to keep its status and refresh history.",
+  "module.calendar.subscription_create_submit": "Save and refresh feed",
+  "module.calendar.subscription_refresh": "Refresh",
+  "module.calendar.subscription_delete": "Delete",
+  "module.calendar.subscription_status_success": "Last refresh succeeded",
+  "module.calendar.subscription_status_partial": "Last refresh had warnings",
+  "module.calendar.subscription_status_failed": "Last refresh failed",
+  "module.calendar.subscription_status_pending": "Not refreshed yet",
+  "module.calendar.subscription_last_counts": "Created {created}, updated {updated}, skipped {skipped}",
+  "module.calendar.subscription_history": "Recent refreshes",
+  "module.calendar.subscription_loaded_error": "Could not load saved feeds",
+  "module.calendar.subscription_deleted": "Feed removed. Existing events stay in the calendar."
 }
