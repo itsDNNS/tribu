@@ -88,9 +88,28 @@ class CalendarEvent(Base):
     # dav_href is the path segment under the collection (for example
     # "ABCD-1234.ics"). Both are unique per family; the storage plugin
     # writes them on PUT and resolves hrefs/UIDs back to rows on
-    # subsequent GET/PROPFIND.
+    # subsequent GET/PROPFIND. ICS imports also write the source UID
+    # into ical_uid so a re-import of the same feed updates the same
+    # row instead of duplicating it.
     ical_uid = Column(String(200), nullable=True)
     dav_href = Column(String(250), nullable=True)
+
+    # Provenance for non-local events so the UI can show where an event
+    # came from and edits can be steered safely. ``source_type`` is one
+    # of "local" (created in Tribu), "import" (uploaded ICS), or
+    # "subscription" (refreshed from a remote URL). Existing rows
+    # default to "local" via the migration's server_default.
+    source_type = Column(
+        String(20),
+        nullable=False,
+        default="local",
+        server_default="local",
+    )
+    source_name = Column(String(200), nullable=True)
+    source_url = Column(String(500), nullable=True)
+    imported_at = Column(DateTime, nullable=True)
+    last_synced_at = Column(DateTime, nullable=True)
+    sync_status = Column(String(20), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("family_id", "ical_uid", name="uq_calendar_events_family_uid"),

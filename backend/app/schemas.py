@@ -399,6 +399,12 @@ class CalendarEventResponse(BaseModel):
     category: Optional[str] = Field(None, description="Event category label")
     created_by_user_id: Optional[int] = Field(None, description="User who created the event")
     created_at: datetime = Field(..., description="Creation timestamp")
+    source_type: str = Field("local", description="Where the event came from: 'local', 'import', or 'subscription'")
+    source_name: Optional[str] = Field(None, description="Human-readable name of the source feed (e.g. 'Apple Holidays')")
+    source_url: Optional[str] = Field(None, description="Subscription URL for refreshable feeds")
+    imported_at: Optional[datetime] = Field(None, description="When the event was first imported")
+    last_synced_at: Optional[datetime] = Field(None, description="Last time an external feed was refreshed or re-imported")
+    sync_status: Optional[str] = Field(None, description="Current external sync state, e.g. ok or error")
 
 
 class PaginatedCalendarEvents(BaseModel):
@@ -410,9 +416,25 @@ class PaginatedCalendarEvents(BaseModel):
 
 
 class CalendarIcsImport(BaseModel):
-    """Import calendar events from ICS text."""
+    """Import calendar events from ICS text.
+
+    When ``source_name`` or ``source_url`` is provided the imported
+    rows are tagged with that provenance so the UI can mark them as
+    coming from an external feed and a re-import of the same feed is
+    merged into the existing rows by VEVENT UID.
+    """
     family_id: int = Field(..., description="Target family ID")
     ics_text: str = Field(..., description="Raw ICS/iCalendar file content")
+    source_name: Optional[str] = Field(
+        None,
+        max_length=200,
+        description="Optional human-readable label for the imported feed (e.g. 'Apple Holidays')",
+    )
+    source_url: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="Optional subscription URL the ICS was fetched from",
+    )
 
 
 # ---------------------------------------------------------------------------

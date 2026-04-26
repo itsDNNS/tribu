@@ -75,19 +75,34 @@ def events_to_ics(events, calendar_name="Tribu") -> str:
     return cal.to_ical().decode("utf-8")
 
 
-def ics_to_event_dicts(ics_text: str, family_id: int, user_id: int) -> tuple[list[dict], list[dict]]:
+def ics_to_event_dicts(
+    ics_text: str,
+    family_id: int,
+    user_id: int,
+    *,
+    source_type: str = "import",
+    source_name: str | None = None,
+    source_url: str | None = None,
+) -> tuple[list[dict], list[dict]]:
     """Parse an ICS string and return (valid_events, errors).
 
-    Each valid_event is a dict ready for CalendarEvent(**dict).
+    Each valid_event is a dict ready for CalendarEvent(**dict). The
+    VEVENT UID is preserved as ``ical_uid`` so a re-import of the same
+    feed can be merged into the existing row instead of duplicated.
+    Source metadata (``source_type`` / ``source_name`` / ``source_url``)
+    flags the rows as non-local; ``imported_at`` is set to the current
+    UTC time.
+
     Each error is {"index": int, "summary": str, "error": str}.
     """
+    imported_at = utcnow()
     valid_events = []
     errors = []
 
     try:
         cal = Calendar.from_ical(ics_text)
-    except Exception as e:
-        errors.append({"index": 0, "summary": "", "error": f"Invalid ICS data: {e}"})
+    except Exception:
+        errors.append({"index": 0, "summary": "", "error": "Invalid ICS data"})
         return valid_events, errors
 
     index = 0
@@ -97,6 +112,11 @@ def ics_to_event_dicts(ics_text: str, family_id: int, user_id: int) -> tuple[lis
 
         summary = str(component.get("summary", "")) or ""
         index += 1
+
+        uid_prop = component.get("uid")
+        ical_uid = str(uid_prop).strip() if uid_prop else None
+        if not ical_uid:
+            ical_uid = None
 
         if not summary.strip():
             errors.append({"index": index, "summary": summary, "error": "Missing SUMMARY"})
@@ -201,6 +221,13 @@ def ics_to_event_dicts(ics_text: str, family_id: int, user_id: int) -> tuple[lis
             "recurrence_end": recurrence_end,
             "excluded_dates": excluded_dates or None,
             "created_by_user_id": user_id,
+            "ical_uid": ical_uid,
+            "source_type": source_type,
+            "source_name": source_name,
+            "source_url": source_url,
+            "imported_at": imported_at,
+            "last_synced_at": imported_at,
+            "sync_status": "ok",
         }
         valid_events.append(event_dict)
 

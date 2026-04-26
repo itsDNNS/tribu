@@ -43,5 +43,8 @@
   "module.calendar.edit_event": "Termin bearbeiten",
   "module.calendar.description": "Beschreibung",
   "module.calendar.onboard_text": "Importiere deinen bestehenden Kalender, um direkt loszulegen.",
-  "module.calendar.edit_recurring_warning": "Die Bearbeitung ändert die gesamte Terminserie."
+  "module.calendar.edit_recurring_warning": "Die Bearbeitung ändert die gesamte Terminserie.",
+  "module.calendar.source_import": "Importiert",
+  "module.calendar.source_subscription": "Abonniert",
+  "module.calendar.source_readonly_hint": "Stammt aus einem externen Feed. Änderungen bitte in der Quell-App vornehmen – ein erneuter Import aktualisiert diesen Eintrag."
 }
