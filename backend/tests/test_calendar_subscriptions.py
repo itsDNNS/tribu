@@ -204,8 +204,7 @@ class TestSubscribeCreates:
             ).one()
             # When no source_name was provided we fall back to a label
             # derived from the URL so the UI can still show provenance.
-            assert row.source_name
-            assert "feed.example.com" in row.source_name
+            assert row.source_name == "feed.example.com"
         finally:
             db.close()
 
