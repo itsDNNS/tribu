@@ -289,7 +289,17 @@ class TestIcsToEventDicts:
         valid, errors = ics_to_event_dicts("not valid ics at all", family_id=1, user_id=1)
         assert len(valid) == 0
         assert len(errors) == 1
-        assert "Invalid ICS" in errors[0]["error"]
+        assert errors[0]["error"] == "Invalid ICS data"
+
+    def test_invalid_ics_error_does_not_expose_parser_details(self):
+        valid, errors = ics_to_event_dicts(
+            "BEGIN:VCALENDAR\nBEGIN:VEVENT\nDTSTART:bad-date", family_id=1, user_id=1
+        )
+        assert len(valid) == 0
+        assert len(errors) == 1
+        assert errors[0]["error"] == "Invalid ICS data"
+        assert "Traceback" not in errors[0]["error"]
+        assert "bad-date" not in errors[0]["error"]
 
     def test_roundtrip(self):
         """Export events to ICS, then re-import. Core fields should match."""

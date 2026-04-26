@@ -101,8 +101,8 @@ def ics_to_event_dicts(
 
     try:
         cal = Calendar.from_ical(ics_text)
-    except Exception as e:
-        errors.append({"index": 0, "summary": "", "error": f"Invalid ICS data: {e}"})
+    except Exception:
+        errors.append({"index": 0, "summary": "", "error": "Invalid ICS data"})
         return valid_events, errors
 
     index = 0
