@@ -6,13 +6,19 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import cache
+from app.core.calendar_subscriptions import (
+    IcsSubscriptionError,
+    fetch_ics_text,
+    hostname_from_url,
+    validate_subscription_url,
+)
 from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership, to_utc_naive
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, Membership, Notification, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, PaginatedCalendarEvents
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, CalendarIcsSubscribe, PaginatedCalendarEvents
 from app.core.errors import error_detail, EVENT_NOT_FOUND, END_BEFORE_START, INVALID_RECURRENCE
 
 router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})
@@ -170,6 +176,95 @@ def import_calendar_ics(
                     "index": created + updated + skipped,
                     "summary": event_dict.get("title", ""),
                     "error": "VEVENT UID already exists as a non-imported event; skipped to avoid overwriting a local or synced event",
+                })
+                continue
+            for key, value in event_dict.items():
+                if key in {"imported_at", "created_by_user_id"}:
+                    continue
+                setattr(existing, key, value)
+            updated += 1
+        else:
+            db.add(CalendarEvent(**event_dict))
+            created += 1
+
+    db.commit()
+    if created or updated:
+        cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
+    return {"status": "ok", "created": created, "updated": updated, "skipped": skipped, "errors": errors}
+
+
+@router.post(
+    "/events/subscribe-ics",
+    summary="Subscribe to (or refresh) an external ICS URL",
+    description=(
+        "Fetch an external `.ics` URL once and store its events as "
+        "`source_type=\"subscription\"`. Calling the endpoint again with the "
+        "same URL refreshes the same rows by VEVENT UID. This is a manual "
+        "subscribe/refresh — Tribu does not poll the feed in the background. "
+        "Adult only. Scope: `calendar:write`."
+    ),
+    response_description="Subscription result with created/updated/skipped counts and errors",
+)
+def subscribe_calendar_ics(
+    payload: CalendarIcsSubscribe,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+
+    try:
+        normalized_url = validate_subscription_url(payload.source_url)
+    except IcsSubscriptionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    try:
+        ics_text = fetch_ics_text(normalized_url)
+    except IcsSubscriptionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        # Belt-and-braces: never let a transport library quirk surface
+        # a stack trace or internal host/port to the API caller.
+        raise HTTPException(status_code=400, detail="Could not fetch subscription URL")
+
+    label = (payload.source_name or "").strip() or hostname_from_url(normalized_url) or normalized_url
+
+    valid_events, errors = ics_to_event_dicts(
+        ics_text,
+        payload.family_id,
+        user.id,
+        source_type="subscription",
+        source_name=label,
+        source_url=normalized_url,
+    )
+
+    MAX_EVENTS = 500
+    created = 0
+    updated = 0
+    skipped = 0
+    for event_dict in valid_events[:MAX_EVENTS]:
+        ical_uid = event_dict.get("ical_uid")
+        existing = None
+        if ical_uid:
+            existing = (
+                db.query(CalendarEvent)
+                .filter(
+                    CalendarEvent.family_id == payload.family_id,
+                    CalendarEvent.ical_uid == ical_uid,
+                )
+                .first()
+            )
+        if existing:
+            owned_by_this_feed = (
+                existing.source_type == "subscription"
+                and existing.source_url == normalized_url
+            )
+            if not owned_by_this_feed:
+                skipped += 1
+                errors.append({
+                    "index": created + updated + skipped,
+                    "summary": event_dict.get("title", ""),
+                    "error": "VEVENT UID already exists as a non-subscription or different-feed event; skipped to avoid overwriting it",
                 })
                 continue
             for key, value in event_dict.items():

@@ -437,6 +437,27 @@ class CalendarIcsImport(BaseModel):
     )
 
 
+class CalendarIcsSubscribe(BaseModel):
+    """Subscribe to (or refresh) an external ICS URL.
+
+    Tribu fetches ``source_url`` once per call and merges the events
+    into the family calendar. Rows are tagged ``source_type="subscription"``
+    so a later refresh of the same URL upserts the same rows by VEVENT
+    UID instead of duplicating them.
+    """
+    family_id: int = Field(..., description="Target family ID")
+    source_url: str = Field(
+        ...,
+        max_length=500,
+        description="External http(s) URL of the ICS feed",
+    )
+    source_name: Optional[str] = Field(
+        None,
+        max_length=200,
+        description="Optional human-readable label for the feed (e.g. 'Public Holidays')",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------
