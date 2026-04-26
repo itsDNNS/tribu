@@ -68,6 +68,26 @@ export default function DataTab() {
     }
   }
 
+  function formatPreviewMessage(data) {
+    const template = t(messages, 'module.calendar.preview_success') || 'Preview: would create {created}, update {updated}, skip {skipped}. No calendar changes yet.';
+    return template
+      .replace('{created}', data?.would_create ?? 0)
+      .replace('{updated}', data?.would_update ?? 0)
+      .replace('{skipped}', data?.would_skip ?? 0);
+  }
+
+  async function handlePreviewImportIcs() {
+    setCalMsg('');
+    setCalErrors([]);
+    const { ok, data } = await api.apiPreviewImportCalendarIcs(Number(familyId), icsText);
+    if (!ok) {
+      const detail = data?.detail ? `: ${data.detail}` : '';
+      return setCalMsg(`${t(messages, 'module.calendar.preview_error') || 'Preview failed'}${detail}`);
+    }
+    setCalMsg(formatPreviewMessage(data));
+    if (data.errors?.length) setCalErrors(data.errors);
+  }
+
   async function handleImportIcs(e) {
     e.preventDefault();
     setCalMsg('');
@@ -77,6 +97,18 @@ export default function DataTab() {
     setCalMsg(t(messages, 'module.calendar.import_success').replace('{count}', data.created));
     if (data.errors?.length) setCalErrors(data.errors);
     setIcsText('');
+  }
+
+  async function handlePreviewSubscribeIcs() {
+    setIcsSubMsg('');
+    setIcsSubErrors([]);
+    const { ok, data } = await api.apiPreviewSubscribeCalendarIcs(Number(familyId), icsSubUrl, icsSubName);
+    if (!ok) {
+      const detail = data?.detail ? `: ${data.detail}` : '';
+      return setIcsSubMsg(`${t(messages, 'module.calendar.preview_error') || 'Preview failed'}${detail}`);
+    }
+    setIcsSubMsg(formatPreviewMessage(data));
+    if (data.errors?.length) setIcsSubErrors(data.errors);
   }
 
   async function handleSubscribeIcs(e) {
@@ -168,9 +200,14 @@ export default function DataTab() {
                 onChange={(e) => setIcsSubName(e.target.value)}
                 placeholder={t(messages, 'module.calendar.subscription_name_placeholder')}
               />
-              <button className="btn-primary" type="submit" disabled={!icsSubUrl.trim()}>
-                {t(messages, 'module.calendar.subscription_submit')}
-              </button>
+              <div className="set-data-btn-row">
+                <button className="btn-ghost" type="button" disabled={!icsSubUrl.trim()} onClick={handlePreviewSubscribeIcs}>
+                  {t(messages, 'module.calendar.preview_subscription_submit')}
+                </button>
+                <button className="btn-primary" type="submit" disabled={!icsSubUrl.trim()}>
+                  {t(messages, 'module.calendar.subscription_submit')}
+                </button>
+              </div>
             </form>
             {icsSubMsg && (
               <p className="set-data-msg" style={{ color: icsSubErrors.length === 0 && !icsSubMsg.includes(t(messages, 'module.calendar.subscription_error')) ? 'var(--success)' : 'var(--danger)' }}>
@@ -214,9 +251,14 @@ export default function DataTab() {
                   onChange={(e) => setIcsText(e.target.value)}
                   placeholder={t(messages, 'module.calendar.import_placeholder')}
                 />
-                <button className="btn-primary" type="submit" disabled={!icsText.trim()}>
-                  {t(messages, 'module.calendar.import_submit')}
-                </button>
+                <div className="set-data-btn-row">
+                  <button className="btn-ghost" type="button" disabled={!icsText.trim()} onClick={handlePreviewImportIcs}>
+                    {t(messages, 'module.calendar.preview_import_submit')}
+                  </button>
+                  <button className="btn-primary" type="submit" disabled={!icsText.trim()}>
+                    {t(messages, 'module.calendar.import_submit')}
+                  </button>
+                </div>
               </form>
             </div>
           )}

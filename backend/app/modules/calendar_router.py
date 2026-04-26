@@ -131,6 +131,128 @@ def calendar_feed_ics(
     )
 
 
+
+
+def _classify_ics_preview(
+    db: Session,
+    *,
+    family_id: int,
+    valid_events: list[dict],
+    errors: list[dict],
+    source_type: str,
+    normalized_url: str | None = None,
+    max_events: int = 500,
+    sample_limit: int = 10,
+) -> dict:
+    """Classify an ICS import/refresh without mutating calendar rows."""
+    would_create = 0
+    would_update = 0
+    would_skip = 0
+    preview_errors = list(errors)
+    sample_events: list[dict] = []
+
+    for event_dict in valid_events[:max_events]:
+        outcome = "create"
+        ical_uid = event_dict.get("ical_uid")
+        existing = None
+        if ical_uid:
+            existing = (
+                db.query(CalendarEvent)
+                .filter(
+                    CalendarEvent.family_id == family_id,
+                    CalendarEvent.ical_uid == ical_uid,
+                )
+                .first()
+            )
+
+        if existing:
+            if source_type == "import":
+                if existing.source_type != "import":
+                    outcome = "skip"
+                    would_skip += 1
+                    preview_errors.append({
+                        "index": would_create + would_update + would_skip,
+                        "summary": event_dict.get("title", ""),
+                        "error": "VEVENT UID already exists as a non-imported event; skipped to avoid overwriting a local or synced event",
+                    })
+                else:
+                    outcome = "update"
+                    would_update += 1
+            else:
+                owned_by_this_feed = (
+                    existing.source_type == "subscription"
+                    and existing.source_url == normalized_url
+                )
+                if not owned_by_this_feed:
+                    outcome = "skip"
+                    would_skip += 1
+                    preview_errors.append({
+                        "index": would_create + would_update + would_skip,
+                        "summary": event_dict.get("title", ""),
+                        "error": "VEVENT UID already exists as a non-subscription or different-feed event; skipped to avoid overwriting it",
+                    })
+                else:
+                    outcome = "update"
+                    would_update += 1
+        else:
+            would_create += 1
+
+        if len(sample_events) < sample_limit:
+            sample_events.append({
+                "title": event_dict.get("title", ""),
+                "starts_at": event_dict.get("starts_at"),
+                "ends_at": event_dict.get("ends_at"),
+                "ical_uid": ical_uid,
+                "outcome": outcome,
+            })
+
+    if len(valid_events) > max_events:
+        preview_errors.append({
+            "index": max_events,
+            "summary": "",
+            "error": f"Only the first {max_events} events would be processed",
+        })
+
+    return {
+        "status": "ok",
+        "would_create": would_create,
+        "would_update": would_update,
+        "would_skip": would_skip,
+        "errors": preview_errors,
+        "sample_events": sample_events,
+    }
+
+
+
+@router.post(
+    "/events/import-ics/preview",
+    summary="Preview events from ICS",
+    description="Parse ICS text and classify what would be created, updated, or skipped without mutating calendar rows. Adult only. Scope: `calendar:write`.",
+    response_description="Preview result with would-create/update/skip counts and errors",
+)
+def preview_import_calendar_ics(
+    payload: CalendarIcsImport,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+    valid_events, errors = ics_to_event_dicts(
+        payload.ics_text,
+        payload.family_id,
+        user.id,
+        source_type="import",
+        source_name=payload.source_name,
+        source_url=payload.source_url,
+    )
+    return _classify_ics_preview(
+        db,
+        family_id=payload.family_id,
+        valid_events=valid_events,
+        errors=errors,
+        source_type="import",
+    )
+
 @router.post(
     "/events/import-ics",
     summary="Import events from ICS",
@@ -192,6 +314,51 @@ def import_calendar_ics(
         cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return {"status": "ok", "created": created, "updated": updated, "skipped": skipped, "errors": errors}
 
+
+
+@router.post(
+    "/events/subscribe-ics/preview",
+    summary="Preview subscribing to an external ICS URL",
+    description="Fetch an external `.ics` URL once and classify what would be created, updated, or skipped without mutating calendar rows. Adult only. Scope: `calendar:write`.",
+    response_description="Preview result with would-create/update/skip counts and errors",
+)
+def preview_subscribe_calendar_ics(
+    payload: CalendarIcsSubscribe,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+
+    try:
+        normalized_url = validate_subscription_url(payload.source_url)
+    except IcsSubscriptionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    try:
+        ics_text = fetch_ics_text(normalized_url)
+    except IcsSubscriptionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not fetch subscription URL")
+
+    label = (payload.source_name or "").strip() or hostname_from_url(normalized_url) or normalized_url
+    valid_events, errors = ics_to_event_dicts(
+        ics_text,
+        payload.family_id,
+        user.id,
+        source_type="subscription",
+        source_name=label,
+        source_url=normalized_url,
+    )
+    return _classify_ics_preview(
+        db,
+        family_id=payload.family_id,
+        valid_events=valid_events,
+        errors=errors,
+        source_type="subscription",
+        normalized_url=normalized_url,
+    )
 
 @router.post(
     "/events/subscribe-ics",
