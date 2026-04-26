@@ -153,6 +153,7 @@ def fetch_ics_text(
         sock.connect(sockaddr)
         if parsed.scheme == "https":
             context = ssl.create_default_context()
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
             sock = context.wrap_socket(sock, server_hostname=host)
             conn = http.client.HTTPSConnection(host, port=port, timeout=timeout)
         else:
