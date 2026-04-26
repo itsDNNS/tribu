@@ -7,6 +7,7 @@ are never overwritten.
 """
 
 import hashlib
+import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,6 +18,7 @@ from app.database import Base, get_db
 from app.main import app
 from app.models import CalendarEvent, Family, Membership, PersonalAccessToken, User
 from app.security import hash_password, PAT_PREFIX
+from app.core.calendar_subscriptions import IcsSubscriptionError, fetch_ics_text
 
 
 engine = create_engine(
@@ -139,6 +141,65 @@ class TestUrlSafety:
             headers=_auth(token),
         )
         assert resp.status_code == 400, resp.text
+
+
+    def test_fetch_rejects_hosts_resolving_to_private_addresses(self, monkeypatch):
+        def _private_addrinfo(host, port, type=0):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", port or 443))]
+
+        monkeypatch.setattr(socket, "getaddrinfo", _private_addrinfo)
+
+        with pytest.raises(IcsSubscriptionError, match="not allowed"):
+            fetch_ics_text("https://feed.example.com/holidays.ics")
+
+    @pytest.mark.parametrize("resolved_ip", ["10.0.0.8", "100.100.100.200", "fec0::1"])
+    def test_fetch_rejects_non_public_hosts_before_socket_connect(self, monkeypatch, resolved_ip):
+        calls = {"connected": False}
+
+        def _private_addrinfo(host, port, type=0):
+            if ":" in resolved_ip:
+                return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", (resolved_ip, port or 443, 0, 0))]
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (resolved_ip, port or 443))]
+
+        class _Socket:
+            def __init__(self, *args, **kwargs):
+                pass
+            def settimeout(self, timeout):
+                pass
+            def connect(self, sockaddr):
+                calls["connected"] = True
+            def close(self):
+                pass
+
+        monkeypatch.setattr(socket, "getaddrinfo", _private_addrinfo)
+        monkeypatch.setattr(socket, "socket", _Socket)
+
+        with pytest.raises(IcsSubscriptionError, match="not allowed"):
+            fetch_ics_text("https://feed.example.com/holidays.ics")
+        assert calls["connected"] is False
+
+    def test_fetch_rejects_all_resolved_addresses_when_none_are_public(self, monkeypatch):
+        def _addrinfo(host, port, type=0):
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("100.100.100.200", port or 443)),
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", port or 443)),
+            ]
+
+        monkeypatch.setattr(socket, "getaddrinfo", _addrinfo)
+
+        with pytest.raises(IcsSubscriptionError, match="not allowed"):
+            fetch_ics_text("https://feed.example.com/holidays.ics")
+
+    def test_malformed_url_returns_safe_400(self):
+        token, family_id = _seed_adult()
+        client = TestClient(app)
+        resp = client.post(
+            "/calendar/events/subscribe-ics",
+            json={"family_id": family_id, "source_url": "https://[::1/holidays.ics"},
+            headers=_auth(token),
+        )
+        assert resp.status_code == 400, resp.text
+        assert "Traceback" not in resp.text
 
 
 # --- Successful subscription ------------------------------------------------
