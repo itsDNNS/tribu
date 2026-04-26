@@ -15,6 +15,10 @@ export default function DataTab() {
   const [icsText, setIcsText] = useState('');
   const [calMsg, setCalMsg] = useState('');
   const [calErrors, setCalErrors] = useState([]);
+  const [icsSubUrl, setIcsSubUrl] = useState('');
+  const [icsSubName, setIcsSubName] = useState('');
+  const [icsSubMsg, setIcsSubMsg] = useState('');
+  const [icsSubErrors, setIcsSubErrors] = useState([]);
   const [showContactsImport, setShowContactsImport] = useState(false);
   const [csvText, setCsvText] = useState('');
   const [contactsMsg, setContactsMsg] = useState('');
@@ -75,6 +79,24 @@ export default function DataTab() {
     setIcsText('');
   }
 
+  async function handleSubscribeIcs(e) {
+    e.preventDefault();
+    setIcsSubMsg('');
+    setIcsSubErrors([]);
+    const { ok, data } = await api.apiSubscribeCalendarIcs(Number(familyId), icsSubUrl, icsSubName);
+    if (!ok) {
+      const detail = data?.detail ? `: ${data.detail}` : '';
+      return setIcsSubMsg(`${t(messages, 'module.calendar.subscription_error') || 'Subscription failed'}${detail}`);
+    }
+    const template = t(messages, 'module.calendar.subscription_success') || 'Created {created}, updated {updated}, skipped {skipped}.';
+    setIcsSubMsg(template
+      .replace('{created}', data.created ?? 0)
+      .replace('{updated}', data.updated ?? 0)
+      .replace('{skipped}', data.skipped ?? 0));
+    if (data.errors?.length) setIcsSubErrors(data.errors);
+    await loadDashboard();
+  }
+
   function handleIcsFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -128,6 +150,43 @@ export default function DataTab() {
               {showCalImport ? <ChevronUp size={15} /> : <Upload size={15} />}
               {showCalImport ? t(messages, 'module.calendar.close_import') : t(messages, 'module.calendar.import')}
             </button>
+          </div>
+          <div className="settings-subsection">
+            <form onSubmit={handleSubscribeIcs} className="quick-add-form">
+              <label className="set-data-form-hint">{t(messages, 'module.calendar.subscription_hint')}</label>
+              <input
+                className="form-input"
+                type="url"
+                value={icsSubUrl}
+                onChange={(e) => setIcsSubUrl(e.target.value)}
+                placeholder={t(messages, 'module.calendar.subscription_url_placeholder')}
+              />
+              <input
+                className="form-input"
+                type="text"
+                value={icsSubName}
+                onChange={(e) => setIcsSubName(e.target.value)}
+                placeholder={t(messages, 'module.calendar.subscription_name_placeholder')}
+              />
+              <button className="btn-primary" type="submit" disabled={!icsSubUrl.trim()}>
+                {t(messages, 'module.calendar.subscription_submit')}
+              </button>
+            </form>
+            {icsSubMsg && (
+              <p className="set-data-msg" style={{ color: icsSubErrors.length === 0 && !icsSubMsg.includes(t(messages, 'module.calendar.subscription_error')) ? 'var(--success)' : 'var(--danger)' }}>
+                {icsSubMsg}
+              </p>
+            )}
+            {icsSubErrors.length > 0 && (
+              <div className="set-data-warning">
+                <strong>{t(messages, 'module.calendar.subscription_warnings')}:</strong>
+                <ul className="set-data-warning-list">
+                  {icsSubErrors.map((err, i) => (
+                    <li key={i}>#{err.index} {err.summary ? `"${err.summary}"` : ''}: {err.error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           {showCalImport && (
             <div className="settings-subsection">

@@ -192,6 +192,10 @@ export function apiImportCalendarIcs(family_id, ics_text) {
   return post('/calendar/events/import-ics', { family_id, ics_text });
 }
 
+export function apiSubscribeCalendarIcs(family_id, source_url, source_name = '') {
+  return post('/calendar/events/subscribe-ics', { family_id, source_url, source_name });
+}
+
 // Tasks
 export async function apiGetTasks(familyId) {
   const res = await request(`/tasks?family_id=${familyId}`);
