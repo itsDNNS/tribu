@@ -1232,6 +1232,16 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .settings-layout { grid-template-columns: 1fr; }
   .settings-sidebar { display: none; }
 }
+
+/* Admin submenu */
+.admin-layout { max-width: 1040px; }
+.admin-sidebar { gap: 4px; }
+.admin-content { min-width: 0; }
+@media (max-width: 768px) {
+  .admin-layout { gap: var(--space-md); }
+  .admin-sidebar { position: static; display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .admin-sidebar .settings-sidebar-item { width: auto; }
+}
 /* Section cards */
 .settings-grid { display: grid; gap: var(--space-md); max-width: 640px; }
 .settings-section { padding: var(--space-lg); border-radius: var(--radius-lg); }
