@@ -605,8 +605,13 @@ export function apiListDisplayDevices(familyId) {
   return request(`/families/${familyId}/display-devices`);
 }
 
-export function apiCreateDisplayDevice(familyId, name) {
-  return post(`/families/${familyId}/display-devices`, { name });
+export function apiCreateDisplayDevice(familyId, payload) {
+  const body = typeof payload === 'string' ? { name: payload } : payload;
+  return post(`/families/${familyId}/display-devices`, body);
+}
+
+export function apiUpdateDisplayDevice(familyId, deviceId, payload) {
+  return patch(`/families/${familyId}/display-devices/${deviceId}`, payload);
 }
 
 export function apiRevokeDisplayDevice(familyId, deviceId) {

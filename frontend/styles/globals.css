@@ -2402,15 +2402,33 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   background: radial-gradient(800px 500px at 50% 50%, rgba(239, 68, 68, 0.12), transparent 70%);
 }
 
-/* ─── Three-column dashboard grid ─── */
+/* ─── Configurable dashboard grid ─── */
 .display-dashboard {
-  display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(420px, 2fr) minmax(280px, 1fr);
-  gap: 1.5rem;
   padding: 1.5rem;
   height: 100%;
   width: 100%;
   box-sizing: border-box;
+}
+
+.display-layout-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--display-grid-columns, 4), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--display-grid-rows, 3), minmax(0, 1fr));
+  gap: 1.5rem;
+  height: 100%;
+  width: 100%;
+}
+
+.display-widget {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.display-widget > .display-card {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 
 .display-pulse,
@@ -2770,18 +2788,84 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 /* ─── Portrait & narrow viewports ─── */
 @media (max-width: 1024px), (orientation: portrait) {
   .display-dashboard {
-    grid-template-columns: 1fr;
-    grid-auto-rows: min-content;
-    gap: 1.25rem;
     padding: 1.25rem;
     overflow-y: auto;
     height: auto;
     min-height: 100vh;
   }
+  .display-layout-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    height: auto;
+  }
+  .display-widget {
+    display: flex;
+  }
   .display-horizon { overflow: visible; }
   .display-agenda { overflow: visible; max-height: none; }
   .display-clock { font-size: clamp(3rem, 14vw, 5rem); }
   .display-card { padding: 1.25rem; }
+}
+
+/* ─── E-ink mode: high contrast, static, no glass/gradient dependency ─── */
+.display-dashboard--eink {
+  background: #fff;
+  color: #000;
+}
+.display-dashboard--eink .display-layout-grid {
+  gap: 1rem;
+}
+.display-dashboard--eink .display-card {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 8px;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.display-dashboard--eink .display-hearth-name,
+.display-dashboard--eink .display-clock,
+.display-dashboard--eink .display-date,
+.display-dashboard--eink .display-focus-title,
+.display-dashboard--eink .display-agenda-day-name,
+.display-dashboard--eink .display-agenda-when,
+.display-dashboard--eink .display-agenda-title,
+.display-dashboard--eink .display-member-name,
+.display-dashboard--eink .display-celebration-name {
+  color: #000;
+  background: none;
+  text-shadow: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+}
+.display-dashboard--eink .display-section-header,
+.display-dashboard--eink .display-section-header h2,
+.display-dashboard--eink .display-date,
+.display-dashboard--eink .display-focus-meta,
+.display-dashboard--eink .display-agenda-day-date,
+.display-dashboard--eink .display-agenda-category,
+.display-dashboard--eink .display-device-tag,
+.display-dashboard--eink .display-empty,
+.display-dashboard--eink .display-celebration-when {
+  color: #111;
+}
+.display-dashboard--eink .display-focus,
+.display-dashboard--eink .display-agenda-row,
+.display-dashboard--eink .display-agenda-row--live {
+  background: #fff;
+  border-left-color: #000;
+}
+.display-dashboard--eink .display-member-avatar {
+  color: #fff;
+  background: #000;
+  border-color: #000;
+  box-shadow: none;
+}
+.display-dashboard--eink .display-focus--live,
+.display-dashboard--eink .display-agenda-row--live,
+.display-dashboard--eink .display-member--celebrant .display-member-avatar {
+  animation: none;
 }
 
 /* ─── Reduced motion (kiosk accessibility) ─── */

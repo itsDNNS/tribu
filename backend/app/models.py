@@ -334,6 +334,10 @@ class DisplayDevice(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     last_used_at = Column(DateTime, nullable=True)
     revoked_at = Column(DateTime, nullable=True)
+    display_mode = Column(String(16), nullable=False, server_default="tablet", default="tablet")
+    refresh_interval_seconds = Column(Integer, nullable=False, server_default="60", default=60)
+    layout_preset = Column(String(64), nullable=False, server_default="hearth", default="hearth")
+    layout_config = Column(JSON, nullable=True)
 
     family = relationship("Family", back_populates="display_devices")
 
