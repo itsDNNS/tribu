@@ -2541,7 +2541,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   letter-spacing: 0.14em;
 }
 .display-home-header--standard .display-clock {
-  font-size: clamp(2.7rem, 5.8vw, 4.6rem);
+  font-size: clamp(3rem, 5.8vw, 4.6rem);
 }
 .display-home-header-cue {
   align-self: flex-start;
