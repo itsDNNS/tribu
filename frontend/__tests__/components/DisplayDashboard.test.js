@@ -272,3 +272,60 @@ describe('DisplayDashboard — privacy + chrome isolation', () => {
     expect(screen.queryByRole('button', { name: /quick.*add/i })).not.toBeInTheDocument();
   });
 });
+
+
+describe('DisplayDashboard — configurable display layouts', () => {
+  test('applies e-ink mode and widget slot spans from the safe config', () => {
+    renderWithFixedNow(
+      buildDashboard({
+        config: {
+          display_mode: 'eink',
+          refresh_interval_seconds: 900,
+          layout_preset: 'eink_agenda',
+          layout_config: {
+            columns: 4,
+            rows: 3,
+            widgets: [
+              { id: 'clock-wide', type: 'clock', x: 0, y: 0, w: 2, h: 1 },
+              { id: 'agenda-large', type: 'agenda', x: 0, y: 1, w: 4, h: 2 },
+            ],
+          },
+        },
+      }),
+      new Date('2026-04-27T08:00:00')
+    );
+
+    const root = screen.getByTestId('display-dashboard');
+    expect(root).toHaveAttribute('data-display-mode', 'eink');
+    expect(root).toHaveAttribute('data-layout-preset', 'eink_agenda');
+    expect(screen.getByTestId('display-layout-grid')).toHaveStyle({
+      '--display-grid-columns': '4',
+      '--display-grid-rows': '3',
+    });
+    const agenda = screen.getByTestId('display-widget-agenda');
+    expect(agenda).toHaveStyle({ gridColumn: '1 / span 4', gridRow: '2 / span 2' });
+  });
+
+  test('ignores unwhitelisted widget types from runtime payloads', () => {
+    renderWithFixedNow(
+      buildDashboard({
+        config: {
+          display_mode: 'tablet',
+          layout_preset: 'hearth',
+          layout_config: {
+            columns: 2,
+            rows: 2,
+            widgets: [
+              { id: 'identity', type: 'identity', x: 0, y: 0, w: 1, h: 1 },
+              { id: 'admin', type: 'admin', x: 1, y: 0, w: 1, h: 1 },
+            ],
+          },
+        },
+      }),
+      new Date('2026-04-27T08:00:00')
+    );
+
+    expect(screen.getByTestId('display-widget-identity')).toBeInTheDocument();
+    expect(screen.queryByTestId('display-widget-admin')).not.toBeInTheDocument();
+  });
+});

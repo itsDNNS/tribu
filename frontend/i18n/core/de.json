@@ -543,5 +543,16 @@
   "display_revoke_confirm": "Display \"{name}\" wirklich entfernen? Die Anzeige wird sofort beendet.",
   "display_last_used": "Zuletzt aktiv: {when}",
   "display_never_used": "Noch nicht genutzt",
-  "display_created": "Hinzugefügt: {when}"
+  "display_created": "Hinzugefügt: {when}",
+  "display_mode_label": "Display-Modus",
+  "display_mode_tablet": "Tablet",
+  "display_mode_eink": "E-Ink",
+  "display_layout_label": "Layout-Vorlage",
+  "display_layout_hearth": "Hearth",
+  "display_layout_agenda_first": "Agenda zuerst",
+  "display_layout_family_board": "Family Board",
+  "display_layout_eink_compact": "E-Ink kompakt",
+  "display_layout_eink_agenda": "E-Ink Agenda",
+  "display_refresh_label": "Aktualisierungsintervall",
+  "display_refresh_helper": "Sekunden. E-Ink wird auf schonende, langsamere Aktualisierung begrenzt."
 }

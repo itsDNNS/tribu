@@ -24,6 +24,10 @@ export default function DisplaysSection() {
   const [devices, setDevices] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newMode, setNewMode] = useState('tablet');
+  const [newPreset, setNewPreset] = useState('hearth');
+  const [newRefresh, setNewRefresh] = useState(60);
+  const [deviceDrafts, setDeviceDrafts] = useState({});
   const [created, setCreated] = useState(null); // { token, device, displayUrl }
   const [copied, setCopied] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -31,7 +35,10 @@ export default function DisplaysSection() {
   const load = useCallback(async () => {
     if (demoMode) return;
     const { ok, data } = await api.apiListDisplayDevices(familyId);
-    if (ok) setDevices(data);
+    if (ok) {
+      setDevices(data);
+      setDeviceDrafts(Object.fromEntries((data || []).map((device) => [device.id, deviceToDraft(device)])));
+    }
   }, [familyId, demoMode]);
 
   useEffect(() => { load(); }, [load]);
@@ -44,7 +51,12 @@ export default function DisplaysSection() {
   async function handleCreate(e) {
     e.preventDefault();
     if (!newName.trim()) return;
-    const { ok, data } = await api.apiCreateDisplayDevice(familyId, newName.trim());
+    const { ok, data } = await api.apiCreateDisplayDevice(familyId, {
+      name: newName.trim(),
+      display_mode: newMode,
+      layout_preset: newPreset,
+      refresh_interval_seconds: Number(newRefresh),
+    });
     if (!ok) {
       toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
@@ -55,8 +67,36 @@ export default function DisplaysSection() {
       displayUrl: buildDisplayUrl(data.token),
     });
     setShowCreate(false);
-    setNewName('');
+    resetCreateForm();
     setCopied(false);
+    await load();
+  }
+
+  function resetCreateForm() {
+    setNewName('');
+    setNewMode('tablet');
+    setNewPreset('hearth');
+    setNewRefresh(60);
+  }
+
+  function updateDraft(deviceId, patch) {
+    setDeviceDrafts((current) => ({
+      ...current,
+      [deviceId]: { ...(current[deviceId] || {}), ...patch },
+    }));
+  }
+
+  async function handleSaveDevice(device) {
+    const draft = deviceDrafts[device.id] || deviceToDraft(device);
+    const { ok, data } = await api.apiUpdateDisplayDevice(familyId, device.id, {
+      display_mode: draft.display_mode,
+      layout_preset: draft.layout_preset,
+      refresh_interval_seconds: Number(draft.refresh_interval_seconds),
+    });
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return;
+    }
     await load();
   }
 
@@ -164,7 +204,16 @@ export default function DisplaysSection() {
                     ? t(messages, 'display_last_used').replace('{when}', new Date(device.last_used_at).toLocaleString())
                     : t(messages, 'display_never_used')}
                   {' · '}{t(messages, 'display_created').replace('{when}', new Date(device.created_at).toLocaleDateString())}
+                  {' · '}{displayModeLabel(device.display_mode, messages)} · {layoutPresetLabel(device.layout_preset, messages)} · {device.refresh_interval_seconds || 60}s
                 </div>
+                {!device.revoked_at && (
+                  <DisplayConfigControls
+                    draft={deviceDrafts[device.id] || deviceToDraft(device)}
+                    messages={messages}
+                    onChange={(patch) => updateDraft(device.id, patch)}
+                    onSave={() => handleSaveDevice(device)}
+                  />
+                )}
               </div>
               {!device.revoked_at && (
                 <button
@@ -199,6 +248,18 @@ export default function DisplaysSection() {
                   />
                   <small className="invite-helper-text">{t(messages, 'display_name_helper')}</small>
                 </div>
+                <DisplayConfigControls
+                  draft={{ display_mode: newMode, layout_preset: newPreset, refresh_interval_seconds: newRefresh }}
+                  messages={messages}
+                  onChange={(patch) => {
+                    if (patch.display_mode) {
+                      setNewMode(patch.display_mode);
+                      if (patch.display_mode === 'eink' && newPreset === 'hearth') setNewPreset('eink_compact');
+                    }
+                    if (patch.layout_preset) setNewPreset(patch.layout_preset);
+                    if (patch.refresh_interval_seconds) setNewRefresh(Number(patch.refresh_interval_seconds));
+                  }}
+                />
                 <div className="set-btn-row">
                   <button type="submit" className="btn-sm" data-testid="display-create-submit">
                     <Monitor size={14} /> {t(messages, 'display_create')}
@@ -206,7 +267,7 @@ export default function DisplaysSection() {
                   <button
                     type="button"
                     className="btn-ghost"
-                    onClick={() => { setShowCreate(false); setNewName(''); }}
+                    onClick={() => { setShowCreate(false); resetCreateForm(); }}
                   >
                     {t(messages, 'cancel')}
                   </button>
@@ -225,5 +286,77 @@ export default function DisplaysSection() {
         </div>
       )}
     </>
+  );
+}
+
+const DISPLAY_MODES = ['tablet', 'eink'];
+const LAYOUT_PRESETS = ['hearth', 'agenda_first', 'family_board', 'eink_compact', 'eink_agenda'];
+
+function deviceToDraft(device) {
+  return {
+    display_mode: device.display_mode || 'tablet',
+    layout_preset: device.layout_preset || 'hearth',
+    refresh_interval_seconds: device.refresh_interval_seconds || (device.display_mode === 'eink' ? 900 : 60),
+  };
+}
+
+function displayModeLabel(mode, messages) {
+  return mode === 'eink' ? t(messages, 'display_mode_eink') : t(messages, 'display_mode_tablet');
+}
+
+function layoutPresetLabel(preset, messages) {
+  return t(messages, `display_layout_${preset || 'hearth'}`);
+}
+
+function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
+  return (
+    <div className="adm-form-grid" data-testid="display-config-controls">
+      <div className="form-field">
+        <label>{t(messages, 'display_mode_label')}</label>
+        <select
+          className="form-input"
+          value={draft.display_mode}
+          onChange={(e) => onChange({ display_mode: e.target.value })}
+          data-testid="display-mode-select"
+        >
+          {DISPLAY_MODES.map((mode) => (
+            <option key={mode} value={mode}>{displayModeLabel(mode, messages)}</option>
+          ))}
+        </select>
+      </div>
+      <div className="form-field">
+        <label>{t(messages, 'display_layout_label')}</label>
+        <select
+          className="form-input"
+          value={draft.layout_preset}
+          onChange={(e) => onChange({ layout_preset: e.target.value })}
+          data-testid="display-layout-select"
+        >
+          {LAYOUT_PRESETS.map((preset) => (
+            <option key={preset} value={preset}>{layoutPresetLabel(preset, messages)}</option>
+          ))}
+        </select>
+      </div>
+      <div className="form-field">
+        <label>{t(messages, 'display_refresh_label')}</label>
+        <input
+          className="form-input"
+          type="number"
+          min={draft.display_mode === 'eink' ? 300 : 30}
+          max={draft.display_mode === 'eink' ? 86400 : 3600}
+          value={draft.refresh_interval_seconds}
+          onChange={(e) => onChange({ refresh_interval_seconds: e.target.value })}
+          data-testid="display-refresh-input"
+        />
+        <small className="invite-helper-text">{t(messages, 'display_refresh_helper')}</small>
+      </div>
+      {onSave && (
+        <div className="set-btn-row">
+          <button type="button" className="btn-sm" onClick={onSave} data-testid="display-save-config">
+            {t(messages, 'save')}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

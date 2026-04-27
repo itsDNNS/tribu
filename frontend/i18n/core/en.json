@@ -543,5 +543,16 @@
   "display_revoke_confirm": "Remove the display \"{name}\"? It will stop showing your dashboard immediately.",
   "display_last_used": "Last used: {when}",
   "display_never_used": "Never used",
-  "display_created": "Added: {when}"
+  "display_created": "Added: {when}",
+  "display_mode_label": "Display mode",
+  "display_mode_tablet": "Tablet",
+  "display_mode_eink": "E-Ink",
+  "display_layout_label": "Layout preset",
+  "display_layout_hearth": "Hearth",
+  "display_layout_agenda_first": "Agenda first",
+  "display_layout_family_board": "Family board",
+  "display_layout_eink_compact": "E-Ink compact",
+  "display_layout_eink_agenda": "E-Ink agenda",
+  "display_refresh_label": "Refresh interval",
+  "display_refresh_helper": "Seconds. E-Ink mode is clamped to slower, panel-friendly refreshes."
 }

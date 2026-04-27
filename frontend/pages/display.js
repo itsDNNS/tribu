@@ -5,7 +5,9 @@ import DisplayDashboard from '../components/DisplayDashboard';
 import { apiDisplayMe, apiDisplayDashboard } from '../lib/api';
 
 const TOKEN_STORAGE_KEY = 'tribu_display_token';
-const REFRESH_INTERVAL_MS = 60 * 1000;
+const DEFAULT_REFRESH_INTERVAL_MS = 60 * 1000;
+const MIN_REFRESH_INTERVAL_MS = 30 * 1000;
+const MAX_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Shared-home display page (issue #172).
@@ -96,12 +98,14 @@ export default function DisplayPage() {
     setState('ready');
   }, []);
 
+  const refreshIntervalMs = getRefreshIntervalMs(dashboard?.config || me?.config);
+
   useEffect(() => {
     if (!token) return undefined;
     refresh(token);
-    const id = setInterval(() => { refresh(token); }, REFRESH_INTERVAL_MS);
+    const id = setInterval(() => { refresh(token); }, refreshIntervalMs);
     return () => clearInterval(id);
-  }, [token, refresh]);
+  }, [token, refresh, refreshIntervalMs]);
 
   return (
     <>
@@ -149,4 +153,11 @@ export default function DisplayPage() {
       </main>
     </>
   );
+}
+
+function getRefreshIntervalMs(config) {
+  const seconds = Number(config?.refresh_interval_seconds);
+  if (!Number.isFinite(seconds)) return DEFAULT_REFRESH_INTERVAL_MS;
+  const ms = Math.round(seconds * 1000);
+  return Math.min(MAX_REFRESH_INTERVAL_MS, Math.max(MIN_REFRESH_INTERVAL_MS, ms));
 }

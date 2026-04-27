@@ -1,9 +1,9 @@
 const { test, expect } = require('../helpers/fixtures');
 const { getFamilyId, seedCalendarEvent } = require('../helpers/api-setup');
 
-async function createDisplayDevice(request, familyId, name = 'Kitchen Display') {
+async function createDisplayDevice(request, familyId, name = 'Kitchen Display', config = {}) {
   const res = await request.post(`/api/families/${familyId}/display-devices`, {
-    data: { name },
+    data: { name, ...config },
   });
   if (!res.ok()) {
     throw new Error(`POST /api/families/${familyId}/display-devices failed (${res.status()}): ${await res.text()}`);
@@ -15,6 +15,14 @@ async function revokeDisplayDevice(request, familyId, deviceId) {
   const res = await request.delete(`/api/families/${familyId}/display-devices/${deviceId}`);
   if (!res.ok()) {
     throw new Error(`DELETE /api/families/${familyId}/display-devices/${deviceId} failed (${res.status()}): ${await res.text()}`);
+  }
+}
+
+async function gotoDisplayWithToken(page, token) {
+  try {
+    await page.goto(`/display?token=${encodeURIComponent(token)}`, { waitUntil: 'domcontentloaded' });
+  } catch (error) {
+    if (!String(error).includes('ERR_ABORTED')) throw error;
   }
 }
 
@@ -30,7 +38,7 @@ test.describe('Display mode', () => {
       if (url.includes('/api/')) requested.push(url);
     });
 
-    await page.goto(`/display?token=${encodeURIComponent(created.token)}`);
+    await gotoDisplayWithToken(page, created.token);
 
     await expect(page.getByTestId('display-dashboard')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('display-device-name')).toContainText('Kitchen Tablet');
@@ -75,6 +83,33 @@ test.describe('Display mode', () => {
     await expect(page.getByTestId('display-family-name')).toBeVisible();
   });
 
+  test('renders an e-ink display with the configured layout preset', async ({ page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    await seedCalendarEvent(apiCtx, familyId, { title: 'Morning Agenda' });
+    const created = await createDisplayDevice(apiCtx, familyId, 'Kitchen E-Ink', {
+      display_mode: 'eink',
+      layout_preset: 'eink_agenda',
+      refresh_interval_seconds: 900,
+      layout_config: {
+        columns: 4,
+        rows: 3,
+        widgets: [
+          { id: 'identity', type: 'identity', x: 0, y: 0, w: 2, h: 1 },
+          { id: 'agenda-large', type: 'agenda', x: 0, y: 1, w: 4, h: 2 },
+        ],
+      },
+    });
+
+    await gotoDisplayWithToken(page, created.token);
+
+    const dashboard = page.getByTestId('display-dashboard');
+    await expect(dashboard).toBeVisible({ timeout: 15000 });
+    await expect(dashboard).toHaveAttribute('data-display-mode', 'eink');
+    await expect(dashboard).toHaveAttribute('data-layout-preset', 'eink_agenda');
+    await expect(page.getByTestId('display-widget-agenda')).toHaveCSS('grid-column-start', '1');
+    await expect(page.getByTestId('display-events')).toContainText('Morning Agenda');
+  });
+
   test('shows a revoked-device state instead of falling back to a user session', async ({ page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
     const created = await createDisplayDevice(apiCtx, familyId, 'Hallway Display');
@@ -86,7 +121,7 @@ test.describe('Display mode', () => {
       if (url.includes('/api/auth/me')) authMeRequests.push(url);
     });
 
-    await page.goto(`/display?token=${encodeURIComponent(created.token)}`);
+    await gotoDisplayWithToken(page, created.token);
 
     await expect(page.getByTestId('display-state-revoked')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('This display has been removed by an admin.')).toBeVisible();

@@ -30,6 +30,7 @@ from app.core.deps import current_display_device, current_user, ensure_family_ad
 from app.core.errors import DISPLAY_DEVICE_NOT_FOUND, error_detail
 from app.core.recurrence import expand_event
 from app.core.scopes import require_scope
+from app.core.display_layouts import normalize_config
 from app.database import get_db
 from app.models import CalendarEvent, DisplayDevice, Family, FamilyBirthday, Membership, User
 from app.schemas import (
@@ -42,6 +43,8 @@ from app.schemas import (
     DisplayDeviceCreate,
     DisplayDeviceCreatedResponse,
     DisplayDeviceResponse,
+    DisplayDeviceUpdate,
+    DisplayDeviceConfig,
     DisplayMeResponse,
 )
 from app.security import generate_display_token
@@ -49,6 +52,16 @@ from app.security import generate_display_token
 
 admin_router = APIRouter(prefix="/families", tags=["display"], responses={**AUTH_RESPONSES})
 display_router = APIRouter(prefix="/display", tags=["display"], responses={**AUTH_RESPONSES})
+
+
+def _device_config(device: DisplayDevice) -> DisplayDeviceConfig:
+    config = normalize_config(
+        mode=device.display_mode,
+        refresh_interval_seconds=device.refresh_interval_seconds,
+        layout_preset=device.layout_preset,
+        layout_config=device.layout_config,
+    )
+    return DisplayDeviceConfig(**config)
 
 
 # ---------------------------------------------------------------------------
@@ -104,12 +117,22 @@ def create_display_device(
     ensure_family_admin(db, user.id, family_id)
 
     plain, token_hash, lookup_key = generate_display_token()
+    config = normalize_config(
+        mode=payload.display_mode,
+        refresh_interval_seconds=payload.refresh_interval_seconds,
+        layout_preset=payload.layout_preset,
+        layout_config=payload.layout_config,
+    )
     device = DisplayDevice(
         family_id=family_id,
         name=payload.name,
         token_hash=token_hash,
         token_lookup=lookup_key,
         created_by_user_id=user.id,
+        display_mode=config["display_mode"],
+        refresh_interval_seconds=config["refresh_interval_seconds"],
+        layout_preset=config["layout_preset"],
+        layout_config=config["layout_config"],
     )
     db.add(device)
     db.commit()
@@ -119,6 +142,54 @@ def create_display_device(
         token=plain,
         device=DisplayDeviceResponse.model_validate(device),
     )
+
+
+@admin_router.patch(
+    "/{family_id}/display-devices/{device_id}",
+    response_model=DisplayDeviceResponse,
+    summary="Update a display device",
+    response_description="Updated display device metadata (no plaintext token)",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def update_display_device(
+    family_id: int,
+    device_id: int,
+    payload: DisplayDeviceUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+    device = (
+        db.query(DisplayDevice)
+        .filter(DisplayDevice.id == device_id, DisplayDevice.family_id == family_id)
+        .first()
+    )
+    if not device:
+        raise HTTPException(status_code=404, detail=error_detail(DISPLAY_DEVICE_NOT_FOUND))
+    if device.revoked_at is not None:
+        raise HTTPException(status_code=404, detail=error_detail(DISPLAY_DEVICE_NOT_FOUND))
+
+    data = payload.model_dump(exclude_unset=True)
+    if "name" in data:
+        device.name = data["name"]
+    if {"display_mode", "refresh_interval_seconds", "layout_preset", "layout_config"} & data.keys():
+        config = normalize_config(
+            mode=data.get("display_mode", device.display_mode),
+            refresh_interval_seconds=data.get("refresh_interval_seconds", device.refresh_interval_seconds),
+            layout_preset=data.get("layout_preset", device.layout_preset),
+            layout_config=data.get(
+                "layout_config",
+                None if {"display_mode", "layout_preset"} & data.keys() else device.layout_config,
+            ),
+        )
+        device.display_mode = config["display_mode"]
+        device.refresh_interval_seconds = config["refresh_interval_seconds"]
+        device.layout_preset = config["layout_preset"]
+        device.layout_config = config["layout_config"]
+    db.commit()
+    db.refresh(device)
+    return DisplayDeviceResponse.model_validate(device)
 
 
 @admin_router.delete(
@@ -182,6 +253,7 @@ def display_me(
         family_id=device.family_id,
         family_name=family_name,
         name=device.name,
+        config=_device_config(device),
     )
 
 
@@ -284,4 +356,5 @@ def display_dashboard(
         members=members,
         next_events=next_events,
         upcoming_birthdays=upcoming_birthdays,
+        config=_device_config(device),
     )

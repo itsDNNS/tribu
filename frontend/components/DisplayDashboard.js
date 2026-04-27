@@ -23,6 +23,7 @@ export default function DisplayDashboard({ me, dashboard }) {
     return () => clearInterval(id);
   }, []);
 
+  const config = normalizeDisplayConfig(dashboard?.config || me?.config);
   const timeLabel = formatTimeOfDay(now);
   const dateLabel = formatBigDate(now);
 
@@ -40,155 +41,186 @@ export default function DisplayDashboard({ me, dashboard }) {
 
   const familyName = dashboard.family_name || '';
   const deviceName = (me && me.name) || dashboard.device_name || '';
+  const widgetContext = {
+    now,
+    timeLabel,
+    dateLabel,
+    eventGroups,
+    focus,
+    celebration,
+    imminentNames,
+    familyName,
+    deviceName,
+    members: Array.isArray(dashboard.members) ? dashboard.members : [],
+  };
 
   return (
     <div
-      className="display-dashboard"
+      className={`display-dashboard display-dashboard--${config.display_mode}`}
       data-testid="display-dashboard"
+      data-display-mode={config.display_mode}
+      data-layout-preset={config.layout_preset}
       role="region"
       aria-label="Tribu shared home display"
     >
-      <section className="display-pulse" data-testid="display-pulse">
-        <div className="display-card display-identity">
-          <div className="display-hearth-label">
-            <span className="display-hearth-prefix">The</span>
-            <span
-              className="display-hearth-name"
-              data-testid="display-family-name"
-            >
-              {familyName || 'Family'}
-            </span>
-            <span className="display-hearth-suffix">Home</span>
-          </div>
-          {deviceName && (
-            <div
-              className="display-device-tag"
-              data-testid="display-device-name"
-            >
-              {deviceName}
-            </div>
-          )}
-        </div>
-
-        <div className="display-card display-clock-shell" aria-live="off">
-          <div className="display-clock" data-testid="display-time">
-            {timeLabel}
-          </div>
-          <div className="display-date" data-testid="display-date">
-            {dateLabel}
-          </div>
-        </div>
-
-        <FocusCard focus={focus} />
-      </section>
-
-      <section
-        className="display-card display-horizon"
-        data-testid="display-events"
-        aria-live="polite"
+      <div
+        className="display-layout-grid"
+        data-testid="display-layout-grid"
+        style={{
+          '--display-grid-columns': config.layout_config.columns,
+          '--display-grid-rows': config.layout_config.rows,
+        }}
       >
-        <header className="display-section-header">
-          <Calendar size={22} aria-hidden="true" />
-          <h2>Family agenda</h2>
-        </header>
-        {eventGroups.length === 0 ? (
-          <EmptyHearth message="The hearth is quiet — nothing scheduled in the next 14 days." />
-        ) : (
-          <ol className="display-agenda">
-            {eventGroups.map((group) => (
-              <li key={group.key} className="display-agenda-day">
-                <div className="display-agenda-day-head">
-                  <span className="display-agenda-day-name">
-                    {group.dayLabel}
-                  </span>
-                  <span className="display-agenda-day-date">
-                    {group.subLabel}
-                  </span>
-                </div>
-                <ul className="display-agenda-list">
-                  {group.events.map((ev, idx) => (
-                    <AgendaRow
-                      key={`${group.key}-${idx}`}
-                      event={ev}
-                      now={now}
-                    />
-                  ))}
-                </ul>
+        {config.layout_config.widgets.map((widget) => (
+          <WidgetShell key={widget.id} widget={widget}>
+            {renderWidget(widget.type, widgetContext)}
+          </WidgetShell>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WidgetShell({ widget, children }) {
+  return (
+    <section
+      className={`display-widget display-widget--${widget.type}`}
+      data-testid={`display-widget-${widget.type}`}
+      data-widget-type={widget.type}
+      style={{
+        gridColumn: `${widget.x + 1} / span ${widget.w}`,
+        gridRow: `${widget.y + 1} / span ${widget.h}`,
+      }}
+    >
+      {children}
+    </section>
+  );
+}
+
+function renderWidget(type, context) {
+  switch (type) {
+    case 'identity':
+      return <IdentityCard familyName={context.familyName} deviceName={context.deviceName} />;
+    case 'clock':
+      return <ClockCard timeLabel={context.timeLabel} dateLabel={context.dateLabel} />;
+    case 'focus':
+      return <FocusCard focus={context.focus} />;
+    case 'agenda':
+      return <AgendaCard eventGroups={context.eventGroups} now={context.now} />;
+    case 'birthdays':
+      return <BirthdaysCard celebration={context.celebration} />;
+    case 'members':
+      return <MembersCard members={context.members} imminentNames={context.imminentNames} />;
+    default:
+      return null;
+  }
+}
+
+function IdentityCard({ familyName, deviceName }) {
+  return (
+    <div className="display-card display-identity">
+      <div className="display-hearth-label">
+        <span className="display-hearth-prefix">The</span>
+        <span className="display-hearth-name" data-testid="display-family-name">
+          {familyName || 'Family'}
+        </span>
+        <span className="display-hearth-suffix">Home</span>
+      </div>
+      {deviceName && (
+        <div className="display-device-tag" data-testid="display-device-name">
+          {deviceName}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClockCard({ timeLabel, dateLabel }) {
+  return (
+    <div className="display-card display-clock-shell" aria-live="off">
+      <div className="display-clock" data-testid="display-time">{timeLabel}</div>
+      <div className="display-date" data-testid="display-date">{dateLabel}</div>
+    </div>
+  );
+}
+
+function AgendaCard({ eventGroups, now }) {
+  return (
+    <div className="display-card display-horizon" data-testid="display-events" aria-live="polite">
+      <header className="display-section-header">
+        <Calendar size={22} aria-hidden="true" />
+        <h2>Family agenda</h2>
+      </header>
+      {eventGroups.length === 0 ? (
+        <EmptyHearth message="The hearth is quiet — nothing scheduled in the next 14 days." />
+      ) : (
+        <ol className="display-agenda">
+          {eventGroups.map((group) => (
+            <li key={group.key} className="display-agenda-day">
+              <div className="display-agenda-day-head">
+                <span className="display-agenda-day-name">{group.dayLabel}</span>
+                <span className="display-agenda-day-date">{group.subLabel}</span>
+              </div>
+              <ul className="display-agenda-list">
+                {group.events.map((ev, idx) => (
+                  <AgendaRow key={`${group.key}-${idx}`} event={ev} now={now} />
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function BirthdaysCard({ celebration }) {
+  return (
+    <div className="display-card display-card-celebration" data-testid="display-birthdays">
+      <header className="display-section-header">
+        <Cake size={22} aria-hidden="true" />
+        <h2>Celebration</h2>
+      </header>
+      {celebration ? (
+        <CelebrationCard birthday={celebration} />
+      ) : (
+        <EmptyHearth tone="soft" message="No birthdays in the next 4 weeks." />
+      )}
+    </div>
+  );
+}
+
+function MembersCard({ members, imminentNames }) {
+  return (
+    <div className="display-card display-card-members" data-testid="display-members">
+      <header className="display-section-header">
+        <Users size={22} aria-hidden="true" />
+        <h2>Family</h2>
+      </header>
+      {members.length > 0 ? (
+        <ul className="display-member-wall">
+          {members.map((m, idx) => {
+            const isCelebrant = imminentNames.has(m.display_name);
+            const tint = sanitizeColor(m.color) || fallbackTint(idx);
+            return (
+              <li
+                key={`${m.display_name}-${idx}`}
+                className={'display-member' + (isCelebrant ? ' display-member--celebrant' : '')}
+                style={{ '--member-tint': tint }}
+                data-testid="display-member"
+              >
+                <span className="display-member-avatar" aria-hidden="true">{initials(m.display_name)}</span>
+                <span className="display-member-name">{m.display_name}</span>
+                {isCelebrant && (
+                  <span className="display-member-badge" aria-label="Birthday soon" title="Birthday soon">🎂</span>
+                )}
               </li>
-            ))}
-          </ol>
-        )}
-      </section>
-
-      <section className="display-tribe">
-        <div
-          className="display-card display-card-celebration"
-          data-testid="display-birthdays"
-        >
-          <header className="display-section-header">
-            <Cake size={22} aria-hidden="true" />
-            <h2>Celebration</h2>
-          </header>
-          {celebration ? (
-            <CelebrationCard birthday={celebration} />
-          ) : (
-            <EmptyHearth
-              tone="soft"
-              message="No birthdays in the next 4 weeks."
-            />
-          )}
-        </div>
-
-        <div
-          className="display-card display-card-members"
-          data-testid="display-members"
-        >
-          <header className="display-section-header">
-            <Users size={22} aria-hidden="true" />
-            <h2>Family</h2>
-          </header>
-          {dashboard.members && dashboard.members.length > 0 ? (
-            <ul className="display-member-wall">
-              {dashboard.members.map((m, idx) => {
-                const isCelebrant = imminentNames.has(m.display_name);
-                const tint = sanitizeColor(m.color) || fallbackTint(idx);
-                return (
-                  <li
-                    key={`${m.display_name}-${idx}`}
-                    className={
-                      'display-member' +
-                      (isCelebrant ? ' display-member--celebrant' : '')
-                    }
-                    style={{ '--member-tint': tint }}
-                    data-testid="display-member"
-                  >
-                    <span className="display-member-avatar" aria-hidden="true">
-                      {initials(m.display_name)}
-                    </span>
-                    <span className="display-member-name">
-                      {m.display_name}
-                    </span>
-                    {isCelebrant && (
-                      <span
-                        className="display-member-badge"
-                        aria-label="Birthday soon"
-                        title="Birthday soon"
-                      >
-                        🎂
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <EmptyHearth
-              tone="soft"
-              message="No family members yet."
-            />
-          )}
-        </div>
-      </section>
+            );
+          })}
+        </ul>
+      ) : (
+        <EmptyHearth tone="soft" message="No family members yet." />
+      )}
     </div>
   );
 }
@@ -282,6 +314,65 @@ function EmptyHearth({ message, tone = 'default' }) {
       <span>{message}</span>
     </div>
   );
+}
+
+const ALLOWED_WIDGETS = new Set(['identity', 'clock', 'focus', 'agenda', 'birthdays', 'members']);
+const DEFAULT_LAYOUT_CONFIG = {
+  columns: 4,
+  rows: 3,
+  widgets: [
+    { id: 'identity', type: 'identity', x: 0, y: 0, w: 1, h: 1 },
+    { id: 'clock', type: 'clock', x: 0, y: 1, w: 1, h: 1 },
+    { id: 'focus', type: 'focus', x: 0, y: 2, w: 1, h: 1 },
+    { id: 'agenda', type: 'agenda', x: 1, y: 0, w: 2, h: 3 },
+    { id: 'birthdays', type: 'birthdays', x: 3, y: 0, w: 1, h: 1 },
+    { id: 'members', type: 'members', x: 3, y: 1, w: 1, h: 2 },
+  ],
+};
+
+function normalizeDisplayConfig(config) {
+  const mode = config?.display_mode === 'eink' ? 'eink' : 'tablet';
+  const preset = typeof config?.layout_preset === 'string' && config.layout_preset.trim()
+    ? config.layout_preset.trim()
+    : mode === 'eink' ? 'eink_compact' : 'hearth';
+  return {
+    display_mode: mode,
+    refresh_interval_seconds: Number.isFinite(Number(config?.refresh_interval_seconds))
+      ? Number(config.refresh_interval_seconds)
+      : mode === 'eink' ? 900 : 60,
+    layout_preset: preset,
+    layout_config: normalizeLayoutConfig(config?.layout_config),
+  };
+}
+
+function normalizeLayoutConfig(layoutConfig) {
+  const columns = clampInt(layoutConfig?.columns, 1, 6, DEFAULT_LAYOUT_CONFIG.columns);
+  const rows = clampInt(layoutConfig?.rows, 1, 6, DEFAULT_LAYOUT_CONFIG.rows);
+  const sourceWidgets = Array.isArray(layoutConfig?.widgets)
+    ? layoutConfig.widgets
+    : DEFAULT_LAYOUT_CONFIG.widgets;
+  const widgets = sourceWidgets
+    .map((widget, idx) => normalizeWidget(widget, idx, columns, rows))
+    .filter(Boolean);
+  return { columns, rows, widgets: widgets.length ? widgets : DEFAULT_LAYOUT_CONFIG.widgets };
+}
+
+function normalizeWidget(widget, idx, columns, rows) {
+  if (!widget || !ALLOWED_WIDGETS.has(widget.type)) return null;
+  const x = clampInt(widget.x, 0, columns - 1, 0);
+  const y = clampInt(widget.y, 0, rows - 1, idx % rows);
+  const w = clampInt(widget.w, 1, columns - x, 1);
+  const h = clampInt(widget.h, 1, rows - y, 1);
+  const id = typeof widget.id === 'string' && widget.id.trim()
+    ? widget.id.trim().replace(/[^a-z0-9_-]/gi, '').slice(0, 40)
+    : `${widget.type}-${idx}`;
+  return { id: id || `${widget.type}-${idx}`, type: widget.type, x, y, w, h };
+}
+
+function clampInt(value, min, max, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
 }
 
 const HOUR_MS = 60 * 60 * 1000;

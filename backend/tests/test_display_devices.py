@@ -443,3 +443,89 @@ class TestRevocation:
             headers=_auth(admin_b),
         )
         assert cross.status_code == 404
+
+
+class TestDisplayRenderConfig:
+    def test_admin_can_create_eink_device_with_normalized_layout(self):
+        admin_token, _, family_id = _seed_member_with_pat("cfgCreate", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={
+                "name": "Kitchen E-Ink",
+                "display_mode": "eink",
+                "refresh_interval_seconds": 60,
+                "layout_preset": "eink_agenda",
+                "layout_config": {
+                    "columns": 4,
+                    "rows": 3,
+                    "widgets": [
+                        {"id": "agenda-big", "type": "agenda", "x": 0, "y": 0, "w": 4, "h": 2},
+                        {"id": "bad", "type": "admin", "x": 0, "y": 0, "w": 9, "h": 9},
+                    ],
+                },
+            },
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        device = resp.json()["device"]
+        assert device["display_mode"] == "eink"
+        assert device["refresh_interval_seconds"] == 300
+        assert device["layout_preset"] == "eink_agenda"
+        widgets = device["layout_config"]["widgets"]
+        assert [w["type"] for w in widgets] == ["agenda"]
+        assert widgets[0]["w"] == 4
+        assert widgets[0]["h"] == 2
+
+    def test_admin_can_update_display_config_without_reminting_token(self):
+        admin_token, _, family_id = _seed_member_with_pat("cfgUpdate", role="admin", is_adult=True)
+        create = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Wall"},
+            headers=_auth(admin_token),
+        )
+        body = create.json()
+        token = body["token"]
+        device_id = body["device"]["id"]
+
+        update = client.patch(
+            f"/families/{family_id}/display-devices/{device_id}",
+            json={"display_mode": "eink", "layout_preset": "eink_compact", "refresh_interval_seconds": 900},
+            headers=_auth(admin_token),
+        )
+        assert update.status_code == 200, update.text
+        assert "token" not in update.json()
+        assert update.json()["display_mode"] == "eink"
+
+        me = client.get("/display/me", headers=_auth(token))
+        assert me.status_code == 200
+        assert me.json()["config"]["display_mode"] == "eink"
+        dash = client.get("/display/dashboard", headers=_auth(token))
+        assert dash.status_code == 200
+        config = dash.json()["config"]
+        assert config["refresh_interval_seconds"] == 900
+        assert config["layout_preset"] == "eink_compact"
+        assert config["layout_config"]["columns"] == 2
+        assert [widget["type"] for widget in config["layout_config"]["widgets"]] == [
+            "identity",
+            "clock",
+            "agenda",
+            "birthdays",
+            "members",
+        ]
+        assert "email" not in dash.text
+
+    def test_non_admin_cannot_update_display_config(self):
+        admin_token, _, family_id = _seed_member_with_pat("cfgAdmin", role="admin", is_adult=True)
+        member_token, _, _ = _seed_member_with_pat("cfgMember", role="member", is_adult=True, family_id=family_id)
+        create = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Wall"},
+            headers=_auth(admin_token),
+        )
+        device_id = create.json()["device"]["id"]
+        update = client.patch(
+            f"/families/{family_id}/display-devices/{device_id}",
+            json={"display_mode": "eink"},
+            headers=_auth(member_token),
+        )
+        assert update.status_code == 403

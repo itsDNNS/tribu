@@ -1331,10 +1331,31 @@ class RecipeAddToShoppingResponse(BaseModel):
 class DisplayDeviceCreate(BaseModel):
     """Admin-only request to mint a new display device for a family."""
     name: str = Field(min_length=1, max_length=120, description="Human-readable device label (e.g. 'Kitchen Tablet')")
+    display_mode: Optional[str] = Field(None, description="Render mode: tablet or eink")
+    refresh_interval_seconds: Optional[int] = Field(None, description="Refresh cadence in seconds")
+    layout_preset: Optional[str] = Field(None, description="Layout preset key")
+    layout_config: Optional[dict] = Field(None, description="Bounded widget grid config")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"name": "Kitchen Tablet"}]
     })
+
+
+class DisplayDeviceUpdate(BaseModel):
+    """Admin-only update for device name and rendering config."""
+    name: Optional[str] = Field(None, min_length=1, max_length=120)
+    display_mode: Optional[str] = Field(None)
+    refresh_interval_seconds: Optional[int] = Field(None)
+    layout_preset: Optional[str] = Field(None)
+    layout_config: Optional[dict] = Field(None)
+
+
+class DisplayDeviceConfig(BaseModel):
+    """Normalized display rendering config."""
+    display_mode: str = Field(..., description="Render mode: tablet or eink")
+    refresh_interval_seconds: int = Field(..., description="Refresh cadence in seconds")
+    layout_preset: str = Field(..., description="Layout preset key")
+    layout_config: dict = Field(..., description="Resolved bounded widget grid")
 
 
 class DisplayDeviceResponse(BaseModel):
@@ -1347,6 +1368,10 @@ class DisplayDeviceResponse(BaseModel):
     created_at: datetime = Field(..., description="When the device was created")
     last_used_at: Optional[datetime] = Field(None, description="Last time the device's token authenticated")
     revoked_at: Optional[datetime] = Field(None, description="When the device was revoked (null = active)")
+    display_mode: str = Field("tablet", description="Render mode")
+    refresh_interval_seconds: int = Field(60, description="Refresh cadence in seconds")
+    layout_preset: str = Field("hearth", description="Layout preset key")
+    layout_config: Optional[dict] = Field(None, description="Resolved bounded widget grid")
 
 
 class DisplayDeviceCreatedResponse(BaseModel):
@@ -1361,6 +1386,7 @@ class DisplayMeResponse(BaseModel):
     family_id: int = Field(..., description="Family this display is bound to")
     family_name: str = Field(..., description="Family name (safe to render on the home display)")
     name: str = Field(..., description="Device name")
+    config: Optional[DisplayDeviceConfig] = Field(None, description="Display rendering config")
 
 
 class DisplayDashboardMember(BaseModel):
@@ -1416,3 +1442,4 @@ class DisplayDashboardResponse(BaseModel):
     members: list[DisplayDashboardMember] = Field(..., description="Family members (display name + color only)")
     next_events: list[DisplayDashboardEvent] = Field(..., description="Upcoming events within 14 days (display-safe fields only)")
     upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
+    config: DisplayDeviceConfig = Field(..., description="Resolved display render config")
