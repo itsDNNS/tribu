@@ -10,6 +10,7 @@ env:
   POSTGRES_PASSWORD: testpassword
   JWT_SECRET: e2e-test-secret-key
   SECURE_COOKIES: "false"
+  ALLOW_OPEN_REGISTRATION: "true"
 
 jobs:
   e2e:
