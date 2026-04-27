@@ -37,7 +37,12 @@ const DISPLAY_MODE_BOOTSTRAP = `
 })();
 `;
 
-class ErrorBoundary extends ReactComponent {
+// Top-level ErrorBoundary. Detail is gated by NODE_ENV: a stack trace
+// in front of an end user leaks file paths, internal symbols, and
+// library versions, which is exactly the kind of fingerprint a
+// scanner uses to pick the next exploit. Developers still need the
+// full message + stack, so dev keeps them.
+export class ErrorBoundary extends ReactComponent {
   constructor(props) {
     super(props);
     this.state = { error: null };
@@ -47,11 +52,36 @@ class ErrorBoundary extends ReactComponent {
   }
   render() {
     if (this.state.error) {
+      const isDev = process.env.NODE_ENV !== 'production';
       return (
-        <div style={{ padding: 40, fontFamily: 'monospace', color: '#ff6b6b', background: '#1a1a2e', minHeight: '100vh' }}>
-          <h1>Client Error</h1>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{this.state.error.message}</pre>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', opacity: 0.7, fontSize: 12, marginTop: 16 }}>{this.state.error.stack}</pre>
+        <div
+          role="alert"
+          style={{
+            padding: 40,
+            fontFamily: 'monospace',
+            color: '#ff6b6b',
+            background: '#1a1a2e',
+            minHeight: '100vh',
+          }}
+        >
+          <h1>Something went wrong</h1>
+          <p>The page failed to load. Please reload, and contact your admin if the problem persists.</p>
+          {isDev && (
+            <>
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{this.state.error.message}</pre>
+              <pre
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  opacity: 0.7,
+                  fontSize: 12,
+                  marginTop: 16,
+                }}
+              >
+                {this.state.error.stack}
+              </pre>
+            </>
+          )}
         </div>
       );
     }
