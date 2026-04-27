@@ -32,6 +32,7 @@ export default function DisplaysSection() {
   const [created, setCreated] = useState(null); // { token, device, displayUrl }
   const [copied, setCopied] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [expandedDeviceId, setExpandedDeviceId] = useState(null);
 
   const load = useCallback(async () => {
     if (demoMode) return;
@@ -111,6 +112,7 @@ export default function DisplaysSection() {
       toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
     }
+    setExpandedDeviceId(null);
     await load();
   }
 
@@ -124,6 +126,7 @@ export default function DisplaysSection() {
         if (!ok) {
           toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
         } else {
+          if (expandedDeviceId === device.id) setExpandedDeviceId(null);
           await load();
         }
         setConfirmAction(null);
@@ -221,12 +224,38 @@ export default function DisplaysSection() {
                   {' · '}{displayModeLabel(device.display_mode, messages)} · {layoutPresetLabel(device.layout_preset, messages)} · {device.refresh_interval_seconds || 60}s
                 </div>
                 {!device.revoked_at && (
-                  <DisplayConfigControls
-                    draft={deviceDrafts[device.id] || deviceToDraft(device)}
-                    messages={messages}
-                    onChange={(patch) => updateDraft(device.id, patch, device)}
-                    onSave={() => handleSaveDevice(device)}
-                  />
+                  <div className="display-device-composer-shell">
+                    <button
+                      type="button"
+                      className="btn-ghost display-config-toggle"
+                      onClick={() => setExpandedDeviceId(expandedDeviceId === device.id ? null : device.id)}
+                      data-testid={`display-config-toggle-${device.id}`}
+                      aria-expanded={expandedDeviceId === device.id ? 'true' : 'false'}
+                    >
+                      {expandedDeviceId === device.id
+                        ? t(messages, 'display_hide_composer')
+                        : t(messages, 'display_show_composer')}
+                    </button>
+                    {expandedDeviceId === device.id ? (
+                      <DisplayConfigControls
+                        draft={deviceDrafts[device.id] || deviceToDraft(device)}
+                        messages={messages}
+                        onChange={(patch) => updateDraft(device.id, patch, device)}
+                        onSave={() => handleSaveDevice(device)}
+                      />
+                    ) : (
+                      <div className="display-device-compact-preview">
+                        <PresetMiniPreview
+                          preset={`row-${device.id}-${device.layout_preset || 'hearth'}`}
+                          layout={effectiveLayout(deviceToDraft(device))}
+                          messages={messages}
+                        />
+                        <span>
+                          {t(messages, 'display_compact_preview_hint').replace('{preset}', layoutPresetLabel(device.layout_preset, messages))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               {!device.revoked_at && (
@@ -248,6 +277,10 @@ export default function DisplaysSection() {
           {showCreate ? (
             <form onSubmit={handleCreate}>
               <div className="settings-section adm-form-grid">
+                <div className="display-create-form-heading">
+                  <h2>{t(messages, 'display_create_section_title')}</h2>
+                  <p>{t(messages, 'display_create_section_hint')}</p>
+                </div>
                 <div className="form-field">
                   <label>{t(messages, 'display_name_label')}</label>
                   <input
@@ -258,6 +291,7 @@ export default function DisplaysSection() {
                     maxLength={120}
                     required
                     autoFocus
+                    autoComplete="off"
                     data-testid="display-create-name"
                   />
                   <small className="invite-helper-text">{t(messages, 'display_name_helper')}</small>
@@ -304,7 +338,7 @@ export default function DisplaysSection() {
           ) : (
             <button
               className="btn-ghost"
-              onClick={() => setShowCreate(true)}
+              onClick={() => { resetCreateForm(); setShowCreate(true); }}
               data-testid="display-create-toggle"
             >
               <Monitor size={14} /> {t(messages, 'display_create')}
@@ -398,17 +432,26 @@ function effectiveLayout(draft) {
   return PRESET_LAYOUTS[draft.layout_preset] || PRESET_LAYOUTS.hearth;
 }
 
-function PresetMiniPreview({ preset, layout }) {
+const WIDGET_GLYPHS = {
+  home_header: '⌂',
+  identity: 'A',
+  clock: '◷',
+  focus: '★',
+  agenda: '☰',
+  birthdays: '✦',
+  members: '☺',
+};
+
+function PresetMiniPreview({ preset, layout, withLabels = false, messages = null }) {
   return (
     <div
-      className="display-layout-preview"
+      className={`display-layout-preview${withLabels ? ' display-layout-preview--labeled' : ''}`}
       data-testid={`display-layout-preview-${preset}`}
       style={{
-        display: 'grid',
         gridTemplateColumns: `repeat(${layout.columns}, 1fr)`,
         gridTemplateRows: `repeat(${layout.rows}, 1fr)`,
-        gap: 2,
       }}
+      aria-hidden={withLabels ? undefined : 'true'}
     >
       {layout.widgets.map((widget, idx) => (
         <span
@@ -419,7 +462,18 @@ function PresetMiniPreview({ preset, layout }) {
             gridColumn: `${widget.x + 1} / span ${widget.w}`,
             gridRow: `${widget.y + 1} / span ${widget.h}`,
           }}
-        />
+        >
+          {withLabels && (
+            <>
+              <span className="display-layout-preview-cell-glyph" aria-hidden="true">
+                {WIDGET_GLYPHS[widget.type] || '·'}
+              </span>
+              <span className="display-layout-preview-cell-label">
+                {messages ? widgetLabel(widget.type, messages) : widget.type}
+              </span>
+            </>
+          )}
+        </span>
       ))}
     </div>
   );
@@ -509,29 +563,81 @@ function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
       <div className="form-field" data-testid="display-live-preview">
         <label>{t(messages, 'display_live_preview_label')}</label>
         <div className="display-live-preview-body">
-          <strong className="display-live-preview-title">{layoutPresetLabel(draft.layout_preset, messages)}</strong>
-          <PresetMiniPreview preset={`live-${draft.layout_preset}`} layout={layout} />
-          <ul className="display-live-preview-slots">
-            {layout.widgets.map((widget, idx) => (
-              <li key={`${widget.type}-${idx}`}>
-                {widgetLabel(widget.type, messages)} · {widget.w}×{widget.h} @ ({widget.x},{widget.y})
-              </li>
-            ))}
-          </ul>
+          <div
+            className={`display-live-preview-frame display-live-preview-frame--${draft.display_mode}`}
+            aria-hidden="true"
+          >
+            <div className="display-live-preview-frame-bezel">
+              <PresetMiniPreview
+                preset={`live-${draft.layout_preset}`}
+                layout={layout}
+                withLabels
+                messages={messages}
+              />
+            </div>
+          </div>
+          <div className="display-live-preview-meta">
+            <strong className="display-live-preview-title">{layoutPresetLabel(draft.layout_preset, messages)}</strong>
+            <span className="display-live-preview-grid-summary">
+              {layout.columns}×{layout.rows} · {layout.widgets.length} {layout.widgets.length === 1 ? 'slot' : 'slots'}
+            </span>
+            <ul className="display-live-preview-slots">
+              {layout.widgets.map((widget, idx) => (
+                <li key={`${widget.type}-${idx}`}>
+                  <span
+                    className="display-live-preview-slot-glyph"
+                    data-widget-type={widget.type}
+                    aria-hidden="true"
+                  >
+                    {WIDGET_GLYPHS[widget.type] || '·'}
+                  </span>
+                  <span className="display-live-preview-slot-name">{widgetLabel(widget.type, messages)}</span>
+                  <span className="display-live-preview-slot-coords">
+                    {widget.w}×{widget.h} @ ({widget.x},{widget.y})
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 
       <div className="form-field">
         <label>{t(messages, 'display_slot_editor_label')}</label>
         <div className="display-slot-editor">
+          <div className="display-slot-editor-head" aria-hidden="true">
+            <span className="display-slot-editor-head-cell display-slot-editor-head-cell--type">
+              {t(messages, 'display_slot_widget_label')}
+            </span>
+            <span className="display-slot-editor-head-cell">
+              {t(messages, 'display_slot_x_label')}
+            </span>
+            <span className="display-slot-editor-head-cell">
+              {t(messages, 'display_slot_y_label')}
+            </span>
+            <span className="display-slot-editor-head-cell">
+              {t(messages, 'display_slot_w_label')}
+            </span>
+            <span className="display-slot-editor-head-cell">
+              {t(messages, 'display_slot_h_label')}
+            </span>
+          </div>
           {layout.widgets.map((widget, idx) => (
             <div
               key={idx}
               className="display-slot-editor-row"
               data-testid={`display-slot-editor-row-${idx}`}
+              data-widget-type={widget.type}
             >
+              <span
+                className="display-slot-editor-marker"
+                data-widget-type={widget.type}
+                aria-hidden="true"
+              >
+                {WIDGET_GLYPHS[widget.type] || '·'}
+              </span>
               <select
-                className="form-input"
+                className="form-input display-slot-editor-type"
                 value={ALLOWED_WIDGETS.includes(widget.type) ? widget.type : ALLOWED_WIDGETS[0]}
                 onChange={(e) => updateSlot(idx, { type: e.target.value })}
                 data-testid={`display-slot-editor-row-${idx}-type`}
@@ -543,7 +649,7 @@ function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
               </select>
               <input
                 type="number"
-                className="form-input"
+                className="form-input display-slot-editor-num"
                 min={0}
                 max={Math.max(0, layout.columns - 1)}
                 value={widget.x}
@@ -553,7 +659,7 @@ function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
               />
               <input
                 type="number"
-                className="form-input"
+                className="form-input display-slot-editor-num"
                 min={0}
                 max={Math.max(0, layout.rows - 1)}
                 value={widget.y}
@@ -563,7 +669,7 @@ function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
               />
               <input
                 type="number"
-                className="form-input"
+                className="form-input display-slot-editor-num"
                 min={1}
                 max={Math.max(1, layout.columns - widget.x)}
                 value={widget.w}
@@ -573,7 +679,7 @@ function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
               />
               <input
                 type="number"
-                className="form-input"
+                className="form-input display-slot-editor-num"
                 min={1}
                 max={Math.max(1, layout.rows - widget.y)}
                 value={widget.h}

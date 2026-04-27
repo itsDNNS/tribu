@@ -328,6 +328,7 @@ describe('DisplaysSection layout composer', () => {
     await flushAsync();
 
     const row = await screen.findByTestId('display-row-11');
+    fireEvent.click(within(row).getByTestId('display-config-toggle-11'));
     const slotRow = within(row).getByTestId('display-slot-editor-row-0');
     // Hearth's home_header starts with w=1; bumping to 2 forces a real onChange.
     fireEvent.change(within(slotRow).getByTestId('display-slot-editor-row-0-w'), {
@@ -375,6 +376,7 @@ describe('DisplaysSection layout composer', () => {
     await flushAsync();
 
     const row = await screen.findByTestId('display-row-12');
+    fireEvent.click(within(row).getByTestId('display-config-toggle-12'));
     fireEvent.change(within(row).getByTestId('display-mode-select'), {
       target: { value: 'eink' },
     });
