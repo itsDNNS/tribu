@@ -12,6 +12,7 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="#phone-sync">Phone Sync</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+  <a href="#shared-home-display">Wall Display</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki">Wiki</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="CONTRIBUTING.md">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki/Roadmap">Roadmap</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
@@ -19,7 +20,7 @@
 </p>
 
 <p align="center">
-  <strong>Self-hosted</strong>&nbsp;&nbsp;&bull;&nbsp;&nbsp;Docker Compose&nbsp;&nbsp;&bull;&nbsp;&nbsp;Demo mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;CalDAV/CardDAV sync&nbsp;&nbsp;&bull;&nbsp;&nbsp;English + German&nbsp;&nbsp;&bull;&nbsp;&nbsp;MIT licensed
+  <strong>Self-hosted</strong>&nbsp;&nbsp;&bull;&nbsp;&nbsp;Docker Compose&nbsp;&nbsp;&bull;&nbsp;&nbsp;Demo mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;Wall display mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;CalDAV/CardDAV sync&nbsp;&nbsp;&bull;&nbsp;&nbsp;English + German&nbsp;&nbsp;&bull;&nbsp;&nbsp;MIT licensed
 </p>
 
 <p align="center">
@@ -95,7 +96,8 @@ It is built for the real rhythm of household life: planning the week, sharing re
 
 - **Self-hosted and privacy-respecting:** keep your family data on hardware you control
 - **Covers the everyday essentials:** calendar, tasks, shopping, contacts, birthdays, reminders, and rewards in one place
-- **Designed for shared visibility:** the things your household needs are visible on both desktop and mobile
+- **Designed for shared visibility:** the things your household needs are visible on phones, desktops, and shared home displays
+- **Safe for kitchen tablets and wall screens:** pair a dedicated display device instead of leaving a parent account signed in
 - **Syncs with the devices people already use:** CalDAV and CardDAV support for phones and compatible clients
 - **Easy to explore before committing:** interactive demo mode with realistic sample data, no backend required
 - **Bilingual and extensible:** German and English out of the box, with plugin support for features, themes, and languages
@@ -122,6 +124,7 @@ Tribu is also a strong fit if you want something that:
 
 ## What Tribu helps with
 
+- putting a shared dashboard on a kitchen tablet or hallway display without exposing a personal account
 - seeing the week at a glance without bouncing between multiple apps
 - making responsibility clear for tasks, routines, and family to-dos
 - keeping shared shopping lists in sync while everyone is out and about
@@ -145,6 +148,23 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 
 [See the full phone sync setup guide →](docs/self-hosting.md#phone-sync-caldav--carddav)
 
+## Shared Home Display
+
+Tribu can turn a kitchen tablet, hallway screen, or wall display into a shared family dashboard without signing in as a real person.
+
+Instead of creating a fake family member like “Kitchen Tablet” or leaving a parent account open on a public screen, admins can pair a dedicated display device. That device gets a revocable, read-only display token and a standalone `/display` view built for glanceable household information.
+
+**What makes it different:**
+
+- **A display is a device, not a person:** it has no email, password, role, rewards, assignments, or member profile.
+- **No personal account exposure:** the display route does not load the normal app shell, profile flows, notifications center, settings, or authenticated user bootstrap.
+- **Curated family dashboard:** the display sees safe household information like today’s events, upcoming birthdays, members by display name, and open tasks without emails, user IDs, admin metadata, or calendar source URLs.
+- **Easy to revoke:** remove the display in Admin → Displays and the paired tablet stops authenticating immediately.
+
+This is ideal for the “always visible” family screen in the kitchen, hallway, office, or command center area.
+
+[See the shared display setup guide →](https://github.com/itsDNNS/tribu/wiki/Shared-Home-Display)
+
 ## Features
 
 ### Everyday household essentials
@@ -152,6 +172,7 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 | | |
 |---|---|
 | **Dashboard** | Today’s events, open tasks, birthday countdowns, family stats, and quick actions |
+| **Shared Home Display** | A standalone, read-only wall display mode for kitchen tablets and shared household screens |
 | **Calendar** | Month/week view, recurring events, ICS import/export, and a focused day-detail panel |
 | **Tasks** | Priorities, due dates, assignees, recurring tasks, and overdue tracking |
 | **Shopping** | Multiple lists, tap-to-toggle interactions, progress bars, and real-time sync |
@@ -175,6 +196,7 @@ After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and Ca
 - **Want to feel the product first?** Open Tribu and click **Try demo** on the login page to explore the UI with realistic sample data.
 - **Want it in your stack fast?** Jump to [Quick Start](#quick-start) and run it with Docker Compose on your server, NAS, or mini PC.
 - **Want phone integration from day one?** Use [Phone Sync](#phone-sync) for CalDAV and CardDAV setup with supported clients.
+- **Want a shared kitchen or wall dashboard?** Use [Shared Home Display](#shared-home-display) and pair a dedicated display device instead of a personal account.
 - **Want to inspect how it is built before you commit?** Start with the [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) and [Self-Hosting Guide](docs/self-hosting.md).
 - **Want to contribute or extend it?** Start with [Contributing](CONTRIBUTING.md), then use the [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest) for extension-specific details.
 
