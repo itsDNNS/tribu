@@ -4,6 +4,11 @@ const MAX_BACKOFF = 30000;
 const PING_INTERVAL = 25000;
 const NO_RECONNECT_CODES = [4001, 4003];
 
+export function buildShoppingWebSocketUrl(listId, location = window.location) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${proto}://${location.host}/ws/shopping/${encodeURIComponent(listId)}`;
+}
+
 export function useWebSocket(listId, { onMessage, enabled = true } = {}) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
@@ -35,9 +40,7 @@ export function useWebSocket(listId, { onMessage, enabled = true } = {}) {
     function connect() {
       if (cancelled) return;
 
-      const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const host = window.location.hostname;
-      const url = `${proto}://${host}:8000/ws/shopping/${listId}`;
+      const url = buildShoppingWebSocketUrl(listId);
 
       const ws = new WebSocket(url);
       wsRef.current = ws;

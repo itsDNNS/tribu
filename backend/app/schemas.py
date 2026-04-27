@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from typing import Optional, Union
+from urllib.parse import urlparse
 
 import binascii
 import re
@@ -1256,6 +1257,19 @@ class MealPlanAddToShoppingResponse(BaseModel):
     added_count: int
 
 
+
+
+def _validate_http_url(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    stripped = value.strip()
+    if not stripped:
+        return None
+    parsed = urlparse(stripped)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("URL must use http or https")
+    return stripped
+
 # ---------------------------------------------------------------------------
 # Recipes
 # ---------------------------------------------------------------------------
@@ -1268,6 +1282,11 @@ class RecipeBase(BaseModel):
     tags: list[str] = Field(default_factory=list, description="Short recipe tags")
     ingredients: list[IngredientItem] = Field(default_factory=list, description="Structured ingredient list, order preserved")
     instructions: Optional[str] = Field(None, description="Optional cooking instructions")
+
+    @field_validator("source_url")
+    @classmethod
+    def source_url_must_be_http(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_http_url(value)
 
 
 class RecipeCreate(RecipeBase):
@@ -1282,6 +1301,11 @@ class RecipeUpdate(BaseModel):
     tags: Optional[list[str]] = None
     ingredients: Optional[list[IngredientItem]] = None
     instructions: Optional[str] = None
+
+    @field_validator("source_url")
+    @classmethod
+    def source_url_must_be_http(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_http_url(value)
 
 
 class RecipeResponse(BaseModel):

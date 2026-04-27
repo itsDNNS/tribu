@@ -1,6 +1,6 @@
 import os
 
-from app.core.utils import utcnow, ensure_any_admin, get_setting, set_setting
+from app.core.utils import utcnow, ensure_instance_admin, get_setting, set_setting
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -29,7 +29,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "")
     response_description="Backup configuration",
 )
 def get_config(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     schedule = get_setting(db, "backup_schedule", "off")
     retention = get_setting(db, "backup_retention", "7")
     last_backup = get_setting(db, "backup_last_timestamp", "")
@@ -55,7 +55,7 @@ def update_config(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
 ):
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     set_setting(db, "backup_schedule", payload.schedule.value)
     set_setting(db, "backup_retention", str(payload.retention))
     db.commit()
@@ -72,7 +72,7 @@ def update_config(
     response_description="Backup filename",
 )
 def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     try:
         filename = create_backup(DATABASE_URL, BACKUP_DIR)
         retention = int(get_setting(db, "backup_retention", "7"))
@@ -96,7 +96,7 @@ def trigger_backup(user: User = Depends(current_user), db: Session = Depends(get
     response_description="List of backup entries",
 )
 def list_all_backups(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     entries = list_backups(BACKUP_DIR)
     return [BackupEntry(**e) for e in entries]
 
@@ -109,7 +109,7 @@ def list_all_backups(user: User = Depends(current_user), db: Session = Depends(g
     responses={**NOT_FOUND_RESPONSE},
 )
 def download_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     path = get_backup_path(BACKUP_DIR, filename)
     if not path:
         raise HTTPException(status_code=404, detail=error_detail(BACKUP_NOT_FOUND))
@@ -124,7 +124,7 @@ def download_backup(filename: str, user: User = Depends(current_user), db: Sessi
     responses={**NOT_FOUND_RESPONSE},
 )
 def delete_single_backup(filename: str, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     if not delete_backup(BACKUP_DIR, filename):
         raise HTTPException(status_code=404, detail=error_detail(BACKUP_NOT_FOUND))
     return {"status": "ok"}

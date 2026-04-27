@@ -84,6 +84,21 @@ describe('RecipesView', () => {
     expect(screen.getByText('breakfast')).toBeInTheDocument();
   });
 
+
+  test('does not render unsafe recipe source URLs as links', async () => {
+    mockAppState = baseState();
+    apiListRecipes.mockResolvedValueOnce({
+      ok: true,
+      data: [{ ...recipe, source_url: 'javascript:alert(1)' }],
+    });
+
+    render(<RecipesView />);
+
+    await waitFor(() => expect(screen.getByText('Pancakes')).toBeInTheDocument());
+    expect(screen.queryByRole('link', { name: 'Open source' })).not.toBeInTheDocument();
+    expect(screen.getByText('No source link')).toBeInTheDocument();
+  });
+
   test('opens add dialog and creates a recipe with structured ingredients', async () => {
     mockAppState = baseState();
 

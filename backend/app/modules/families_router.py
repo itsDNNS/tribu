@@ -5,12 +5,12 @@ from sqlalchemy.orm import Session, joinedload, aliased
 from app.core import cache
 from app.core.deps import current_user, ensure_family_admin, ensure_family_membership
 from app.core.scopes import require_scope
-from app.core.utils import audit_log as _audit
+from app.core.utils import audit_log as _audit, is_instance_admin_user
 from app.database import get_db
 from app.models import AuditLog, Membership, User
 from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
-from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF
+from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN
 
 router = APIRouter(prefix="/families", tags=["families"], responses={**AUTH_RESPONSES})
 
@@ -213,6 +213,8 @@ def update_member_adult(
 
     if not payload.is_adult and target_user_id == user.id:
         raise HTTPException(status_code=400, detail=error_detail(CANNOT_CHANGE_OWN_ADULT))
+    if not payload.is_adult and is_instance_admin_user(db, target_user_id):
+        raise HTTPException(status_code=400, detail=error_detail(CANNOT_MODIFY_INSTANCE_ADMIN))
 
     membership.is_adult = payload.is_adult
     if not payload.is_adult and membership.role == "admin":
@@ -319,6 +321,8 @@ def update_member_role(
 
     if payload.role == "member" and target_user_id == user.id:
         raise HTTPException(status_code=400, detail=error_detail(CANNOT_DEMOTE_SELF))
+    if payload.role == "member" and is_instance_admin_user(db, target_user_id):
+        raise HTTPException(status_code=400, detail=error_detail(CANNOT_MODIFY_INSTANCE_ADMIN))
 
     if payload.role == "admin" and not membership.is_adult:
         raise HTTPException(status_code=400, detail=error_detail(ONLY_ADULTS_ADMIN))
@@ -394,6 +398,8 @@ def remove_member(
 
     if target_user_id == user.id:
         raise HTTPException(status_code=400, detail=error_detail(CANNOT_REMOVE_SELF))
+    if is_instance_admin_user(db, target_user_id):
+        raise HTTPException(status_code=400, detail=error_detail(CANNOT_MODIFY_INSTANCE_ADMIN))
 
     membership = db.query(Membership).filter(
         Membership.family_id == family_id,

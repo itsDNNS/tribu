@@ -31,6 +31,7 @@ export default function SetupWizard() {
   // Restore
   const [restoreFile, setRestoreFile] = useState(null);
   const [restoreMeta, setRestoreMeta] = useState(null);
+  const [restoreToken, setRestoreToken] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -69,7 +70,7 @@ export default function SetupWizard() {
     if (!restoreFile) return;
     setSubmitting(true);
     setMsg('');
-    const { ok, data } = await api.apiRestoreBackup(restoreFile);
+    const { ok, data } = await api.apiRestoreBackup(restoreFile, restoreToken);
     setSubmitting(false);
     if (!ok) return setMsg(errorText(data?.detail, t(messages, 'setup_restore_failed'), messages));
     setRestoreMeta(data);
@@ -196,6 +197,15 @@ export default function SetupWizard() {
                   {restoreFile.name} ({(restoreFile.size / 1024).toFixed(0)} KB)
                 </p>
               )}
+              <input
+                type="password"
+                value={restoreToken}
+                onChange={(e) => setRestoreToken(e.target.value)}
+                placeholder="Setup restore token"
+                autoComplete="off"
+                className="setup-input"
+                style={{ width: '100%', marginTop: 12 }}
+              />
               <button
                 className="btn-primary"
                 style={{ width: '100%', marginTop: 16 }}

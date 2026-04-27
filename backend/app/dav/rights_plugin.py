@@ -68,8 +68,10 @@ def forget_scopes() -> None:
             delattr(_context, attr)
 
 
-READ_SCOPES = {"calendar:read", "calendar:write", "contacts:read", "contacts:write"}
-WRITE_SCOPES = {"calendar:write", "contacts:write"}
+CALENDAR_READ_SCOPES = {"calendar:read", "calendar:write"}
+CALENDAR_WRITE_SCOPES = {"calendar:write"}
+CONTACTS_READ_SCOPES = {"contacts:read", "contacts:write"}
+CONTACTS_WRITE_SCOPES = {"contacts:write"}
 
 
 class Rights(BaseRights):
@@ -93,8 +95,20 @@ class Rights(BaseRights):
             # gets a usable PROPFIND on first contact; actual
             # collection writes are gated below.
             return "RW"
-        if "*" in scopes or (scopes & WRITE_SCOPES):
+        if "*" in scopes:
             return "rRwW"
-        if scopes & READ_SCOPES:
-            return "rR"
+
+        collection = parts[1] if len(parts) > 1 else ""
+        if collection.startswith("cal-"):
+            if scopes & CALENDAR_WRITE_SCOPES:
+                return "rRwW"
+            if scopes & CALENDAR_READ_SCOPES:
+                return "rR"
+            return ""
+        if collection.startswith("book-"):
+            if scopes & CONTACTS_WRITE_SCOPES:
+                return "rRwW"
+            if scopes & CONTACTS_READ_SCOPES:
+                return "rR"
+            return ""
         return ""
