@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Standalone output emits a self-contained server (.next/standalone)
+  // with only the production deps Next traced as reachable. The Docker
+  // runtime image copies that bundle instead of the full node_modules,
+  // dropping the dev/test dependency surface from production images.
+  output: 'standalone',
   reactStrictMode: true,
   skipTrailingSlashRedirect: true,
   async rewrites() {
