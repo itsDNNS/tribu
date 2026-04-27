@@ -105,6 +105,10 @@ MEAL_INGREDIENT_NOT_IN_PLAN = "MEAL_INGREDIENT_NOT_IN_PLAN"
 RECIPE_NOT_FOUND = "RECIPE_NOT_FOUND"
 RECIPE_INGREDIENT_NOT_IN_RECIPE = "RECIPE_INGREDIENT_NOT_IN_RECIPE"
 
+# ── Display Devices (issue #172) ─────────────────────────────
+DISPLAY_DEVICE_NOT_FOUND = "DISPLAY_DEVICE_NOT_FOUND"
+DISPLAY_TOKEN_REVOKED = "DISPLAY_TOKEN_REVOKED"
+
 # ── OIDC / SSO ───────────────────────────────────────────────
 OIDC_NOT_CONFIGURED = "OIDC_NOT_CONFIGURED"
 OIDC_DISCOVERY_FAILED = "OIDC_DISCOVERY_FAILED"
@@ -205,6 +209,8 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     MEAL_INGREDIENT_NOT_IN_PLAN: "Ingredient '{name}' is not part of this meal",
     RECIPE_NOT_FOUND: "Recipe not found",
     RECIPE_INGREDIENT_NOT_IN_RECIPE: "Ingredient '{name}' is not part of this recipe",
+    DISPLAY_DEVICE_NOT_FOUND: "Display device not found",
+    DISPLAY_TOKEN_REVOKED: "Display token has been revoked",
     OIDC_NOT_CONFIGURED: "Single sign-on is not configured on this instance",
     OIDC_DISCOVERY_FAILED: "Could not reach the identity provider: {reason}",
     OIDC_INVALID_CALLBACK: "Invalid single sign-on callback",

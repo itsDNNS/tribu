@@ -12,10 +12,12 @@ import InviteSection from './InviteSection';
 import BackupSection from './BackupSection';
 import AuditLogSection from './AuditLogSection';
 import SsoSection from './SsoSection';
+import DisplaysSection from './DisplaysSection';
 
 const ADMIN_TABS = [
   { key: 'members', labelKey: 'admin_tab_members' },
   { key: 'invites', labelKey: 'invite_title' },
+  { key: 'displays', labelKey: 'display_title' },
   { key: 'sso', labelKey: 'sso.title' },
   { key: 'backups', labelKey: 'backup_title' },
   { key: 'audit', labelKey: 'audit_log_title' },
@@ -289,6 +291,7 @@ export default function AdminView() {
           )}
 
           {activeTab === 'invites' && <InviteSection />}
+          {activeTab === 'displays' && <DisplaysSection />}
           {activeTab === 'sso' && <SsoSection />}
           {activeTab === 'backups' && <BackupSection />}
           {activeTab === 'audit' && <AuditLogSection />}

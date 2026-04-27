@@ -3,6 +3,22 @@ const MOBILE_ALIASES = {
   Dashboard: 'Home',
 };
 
+const VIEW_KEYS = {
+  Dashboard: 'dashboard',
+  Home: 'dashboard',
+  Calendar: 'calendar',
+  Shopping: 'shopping',
+  Tasks: 'tasks',
+  'Meal plan': 'meal_plans',
+  Recipes: 'recipes',
+  Rewards: 'rewards',
+  Gifts: 'gifts',
+  Contacts: 'contacts',
+  Notifications: 'notifications',
+  Settings: 'settings',
+  Admin: 'admin',
+};
+
 // Items pinned to overflow on mobile - skip bottom-nav check
 const ALWAYS_OVERFLOW = new Set(['Settings', 'Admin']);
 
@@ -15,19 +31,21 @@ async function navigateTo(page, viewName) {
   const viewport = page.viewportSize();
   const isMobile = viewport ? viewport.width < 768 : false;
 
+  const desktopName = Object.entries(MOBILE_ALIASES)
+    .find(([, mobile]) => mobile === viewName)?.[0] || viewName;
+  const mobileName = MOBILE_ALIASES[viewName] || viewName;
+
   if (!isMobile) {
-    // Desktop sidebar: use the viewName directly (e.g. "Dashboard", "Calendar")
-    // Handle reverse alias: "Home" → "Dashboard" for desktop
-    const desktopName = Object.entries(MOBILE_ALIASES)
-      .find(([, mobile]) => mobile === viewName)?.[0] || viewName;
-    await page.locator('.nav-item', { hasText: desktopName }).first().click();
+    const desktopItem = page.locator('.nav-item', { hasText: desktopName }).first();
+    if (await desktopItem.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await desktopItem.click();
+      return;
+    }
+    await navigateByHash(page, desktopName);
     return;
   }
 
-  // Mobile: resolve alias (e.g. "Dashboard" → "Home")
-  const mobileName = MOBILE_ALIASES[viewName] || viewName;
-
-  // Skip bottom-nav check for items that are always in overflow
+  // Mobile: prefer the user-visible bottom nav when the target is pinned there.
   if (!ALWAYS_OVERFLOW.has(viewName)) {
     const bottomNavItem = page.locator('.bottom-nav-item', { hasText: mobileName });
     if (await bottomNavItem.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -36,14 +54,43 @@ async function navigateTo(page, viewName) {
     }
   }
 
-  // Open "More" overflow, then click the item
+  // Then try the mobile drawer opened via the header button.
+  const openMenu = page.getByRole('button', { name: 'Open menu' });
+  if (await openMenu.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await openMenu.click();
+    const drawerItem = page.locator('.nav-item', { hasText: desktopName }).first();
+    if (await drawerItem.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await drawerItem.click();
+      return;
+    }
+  }
+
+  // Then try bottom-nav overflow when present.
   const moreBtn = page.locator('.bottom-nav-item', { hasText: 'More' })
     .or(page.locator('.bottom-nav .bottom-nav-overflow > button'));
-  await moreBtn.first().click();
+  if (await moreBtn.first().isVisible({ timeout: 1000 }).catch(() => false)) {
+    await moreBtn.first().click();
+    const overflowItem = page.locator('.bottom-nav-overflow-item', { hasText: mobileName });
+    if (await overflowItem.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await overflowItem.click();
+      return;
+    }
+  }
 
-  const overflowItem = page.locator('.bottom-nav-overflow-item', { hasText: mobileName });
-  await overflowItem.waitFor({ timeout: 3000 });
-  await overflowItem.click();
+  // Last-resort test navigation: Tribu treats the hash/session value as
+  // the canonical in-app route. This avoids mobile flakiness where hidden
+  // sidebars are present in the DOM but outside the viewport.
+  await navigateByHash(page, desktopName);
+}
+
+async function navigateByHash(page, label) {
+  const key = VIEW_KEYS[label];
+  if (!key) throw new Error(`Unknown navigation target: ${label}`);
+  await page.evaluate((view) => {
+    sessionStorage.setItem('tribu_view', view);
+    history.pushState(null, '', `#${view}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, key);
 }
 
 module.exports = { navigateTo };

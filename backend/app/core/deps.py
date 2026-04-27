@@ -10,10 +10,19 @@ from sqlalchemy.orm import Session
 
 from app.core.config import COOKIE_NAME
 from app.database import get_db
-from app.models import Membership, PersonalAccessToken, User
-from app.security import decode_token, hash_pat, is_pat, pat_lookup_key, verify_pat
+from app.models import DisplayDevice, Membership, PersonalAccessToken, User
+from app.security import (
+    decode_token,
+    display_token_lookup_key,
+    hash_pat,
+    is_display_token,
+    is_pat,
+    pat_lookup_key,
+    verify_display_token,
+    verify_pat,
+)
 from app.core.scopes import parse_scopes
-from app.core.errors import error_detail, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED, USER_NOT_FOUND, NO_FAMILY_ACCESS, ADULT_REQUIRED, ADMIN_REQUIRED
+from app.core.errors import error_detail, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED, USER_NOT_FOUND, NO_FAMILY_ACCESS, ADULT_REQUIRED, ADMIN_REQUIRED, DISPLAY_TOKEN_REVOKED
 
 security = HTTPBearer(
     auto_error=False,
@@ -59,7 +68,15 @@ def _migrate_pat_if_legacy(pat: PersonalAccessToken, token_str: str) -> None:
 
 
 def _resolve_user(request: Request, token_str: str, db: Session) -> User:
-    """Resolve a user from a token string (JWT or PAT). Sets request.state.pat_scopes."""
+    """Resolve a user from a token string (JWT or PAT). Sets request.state.pat_scopes.
+
+    Display tokens (``tribu_display_...``) authenticate a *device*, not
+    a user, and must never be accepted by user-facing endpoints. Reject
+    them explicitly here so a display token cannot reach ``/auth/me``,
+    ``/families/me``, or any other user-bound route.
+    """
+    if is_display_token(token_str):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
     if is_pat(token_str):
         pat = _find_pat(db, token_str)
         if not pat:
@@ -120,6 +137,52 @@ def current_user_via_token_param(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(UNAUTHENTICATED))
 
     return _resolve_user(request, token_str, db)
+
+
+display_security = HTTPBearer(
+    auto_error=False,
+    scheme_name="DisplayBearerAuth",
+    description=(
+        "Shared-home display device token. Created by a family admin via "
+        "POST /families/{family_id}/display-devices. Tokens are prefixed "
+        "with `tribu_display_` and grant read-only access to the display "
+        "endpoints (`/display/me`, `/display/dashboard`) for the bound "
+        "family only. Display tokens are not Users and cannot reach "
+        "user-facing routes (`/auth/me`, `/families/me`, ...)."
+    ),
+)
+
+
+def current_display_device(
+    request: Request,
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(display_security),
+    db: Session = Depends(get_db),
+) -> DisplayDevice:
+    """Resolve a display device from a ``tribu_display_`` bearer token.
+
+    Stamps ``last_used_at`` on success. Refuses cookies, JWTs, and
+    PATs so a user-side credential leak cannot be replayed against
+    the display surface (and vice versa).
+    """
+    token_str = creds.credentials if creds else None
+    if not token_str or not is_display_token(token_str):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(UNAUTHENTICATED))
+
+    device = (
+        db.query(DisplayDevice)
+        .filter(DisplayDevice.token_lookup == display_token_lookup_key(token_str))
+        .first()
+    )
+    if not device:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
+    if not verify_display_token(token_str, device.token_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
+    if device.revoked_at is not None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(DISPLAY_TOKEN_REVOKED))
+
+    device.last_used_at = utcnow()
+    db.commit()
+    return device
 
 
 def to_utc_naive(value):

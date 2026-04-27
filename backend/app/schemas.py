@@ -1315,3 +1315,104 @@ class RecipeAddToShoppingRequest(BaseModel):
 
 class RecipeAddToShoppingResponse(BaseModel):
     added_count: int
+
+
+# ---------------------------------------------------------------------------
+# Display Devices (issue #172)
+#
+# A display device is a dedicated identity for a shared-home screen
+# (kitchen tablet, hallway frame). It is intentionally separate from
+# User/Membership: it has no email, no password, no PAT scope, and
+# its bearer token (`tribu_display_...`) only resolves to a
+# read-only, family-bound dashboard.
+# ---------------------------------------------------------------------------
+
+
+class DisplayDeviceCreate(BaseModel):
+    """Admin-only request to mint a new display device for a family."""
+    name: str = Field(min_length=1, max_length=120, description="Human-readable device label (e.g. 'Kitchen Tablet')")
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{"name": "Kitchen Tablet"}]
+    })
+
+
+class DisplayDeviceResponse(BaseModel):
+    """Display device metadata. The plaintext token is NEVER included here."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Display device ID")
+    family_id: int = Field(..., description="Family this device is bound to")
+    name: str = Field(..., description="Human-readable device label")
+    created_at: datetime = Field(..., description="When the device was created")
+    last_used_at: Optional[datetime] = Field(None, description="Last time the device's token authenticated")
+    revoked_at: Optional[datetime] = Field(None, description="When the device was revoked (null = active)")
+
+
+class DisplayDeviceCreatedResponse(BaseModel):
+    """Newly minted display device. ``token`` is shown ONCE — it cannot be retrieved again."""
+    token: str = Field(..., description="Full bearer token, prefixed `tribu_display_`. Save it now.")
+    device: DisplayDeviceResponse = Field(..., description="Device metadata")
+
+
+class DisplayMeResponse(BaseModel):
+    """Identity returned for the bound display device. No user/email data."""
+    device_id: int = Field(..., description="Display device ID")
+    family_id: int = Field(..., description="Family this display is bound to")
+    family_name: str = Field(..., description="Family name (safe to render on the home display)")
+    name: str = Field(..., description="Device name")
+
+
+class DisplayDashboardMember(BaseModel):
+    """Family member info safe for a public-ish home display.
+
+    Intentionally minimal: only the visible chip data (display name +
+    optional color). Excludes user_id, email, is_adult, profile image,
+    role, and any other personal/admin metadata so a token leak from a
+    wall tablet cannot reveal account identifiers, link members back
+    to a User row, or expose family role structure.
+    """
+    display_name: str = Field(..., description="Display name (rendered on the wall display)")
+    color: Optional[str] = Field(None, description="Personal color hex code, if set")
+
+
+class DisplayDashboardEvent(BaseModel):
+    """Calendar event projection safe for a wall display.
+
+    Mirrors only the fields the glanceable layout actually renders.
+    Drops user IDs (created_by_user_id, assigned_to), refresh URLs
+    (source_url), and other operational metadata that has no display
+    purpose and would constitute additional surface area on a token
+    leak.
+    """
+    title: str = Field(..., description="Event title")
+    starts_at: datetime = Field(..., description="Start date/time")
+    ends_at: Optional[datetime] = Field(None, description="End date/time")
+    all_day: bool = Field(..., description="All-day event flag")
+    occurrence_date: Optional[str] = Field(None, description="Date of this specific occurrence (YYYY-MM-DD) for recurring events")
+    color: Optional[str] = Field(None, description="Event color as hex string, if set")
+    category: Optional[str] = Field(None, description="Event category label")
+
+
+class DisplayDashboardBirthday(BaseModel):
+    """Upcoming birthday projection. Same shape as UpcomingBirthday."""
+    person_name: str = Field(..., description="Person's name")
+    occurs_on: str = Field(..., description="Next occurrence date (YYYY-MM-DD)")
+    days_until: int = Field(..., description="Days until the birthday")
+
+
+class DisplayDashboardResponse(BaseModel):
+    """Aggregated dashboard payload for a shared-home display.
+
+    Family-bound by the display token: the device cannot pass a
+    different ``family_id`` to widen its view. Contains only fields
+    safe to render on a wall screen — no emails, no user IDs, no
+    profile images, no admin data, no PAT scopes, no audit-log
+    fragments, no source URLs.
+    """
+    family_id: int = Field(..., description="Family ID (the display is bound to this family)")
+    family_name: str = Field(..., description="Family name")
+    device_name: str = Field(..., description="Name of the display device requesting the dashboard")
+    members: list[DisplayDashboardMember] = Field(..., description="Family members (display name + color only)")
+    next_events: list[DisplayDashboardEvent] = Field(..., description="Upcoming events within 14 days (display-safe fields only)")
+    upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
