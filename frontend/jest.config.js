@@ -4,7 +4,8 @@ const createJestConfig = nextJest({ dir: './' });
 
 module.exports = createJestConfig({
   testEnvironment: 'jsdom',
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/.next/'],
+  modulePathIgnorePatterns: ['<rootDir>/.next/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },

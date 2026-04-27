@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "node -e \"const fs=require('fs'); require(fs.existsSync('server.js') ? './server.js' : './.next/standalone/server.js')\"",
     "test": "jest",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
