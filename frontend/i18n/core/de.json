@@ -554,5 +554,19 @@
   "display_layout_eink_compact": "E-Ink kompakt",
   "display_layout_eink_agenda": "E-Ink Agenda",
   "display_refresh_label": "Aktualisierungsintervall",
-  "display_refresh_helper": "Sekunden. E-Ink wird auf schonende, langsamere Aktualisierung begrenzt."
+  "display_refresh_helper": "Sekunden. E-Ink wird auf schonende, langsamere Aktualisierung begrenzt.",
+  "display_live_preview_label": "Live-Vorschau",
+  "display_slot_editor_label": "Slot-Editor",
+  "display_slot_widget_label": "Widget",
+  "display_slot_x_label": "Spalte",
+  "display_slot_y_label": "Zeile",
+  "display_slot_w_label": "Breite",
+  "display_slot_h_label": "Höhe",
+  "display_widget_home_header": "Home-Header",
+  "display_widget_identity": "Home-Titel",
+  "display_widget_clock": "Uhr",
+  "display_widget_focus": "Fokus",
+  "display_widget_agenda": "Agenda",
+  "display_widget_birthdays": "Geburtstage",
+  "display_widget_members": "Familienmitglieder"
 }

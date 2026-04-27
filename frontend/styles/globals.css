@@ -2521,6 +2521,78 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   letter-spacing: 0.22em;
 }
 
+.display-home-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  overflow: hidden;
+}
+.display-home-header--compact {
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+.display-home-header--compact .display-clock {
+  font-size: clamp(2.1rem, 4.4vw, 3.4rem);
+  line-height: 1;
+}
+.display-home-header--compact .display-date {
+  font-size: clamp(0.75rem, 0.95vw, 0.95rem);
+  letter-spacing: 0.14em;
+}
+.display-home-header--standard .display-clock {
+  font-size: clamp(3rem, 5.8vw, 4.6rem);
+}
+.display-home-header-cue {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+.display-home-header--expanded {
+  gap: 0.75rem;
+}
+.display-home-header--expanded .display-clock {
+  font-size: clamp(2.6rem, 5vw, 4.2rem);
+}
+.display-home-header-events {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+  overflow: hidden;
+}
+.display-home-header-event {
+  display: grid;
+  grid-template-columns: 4.75rem 1fr;
+  gap: 0.6rem;
+  align-items: baseline;
+  min-width: 0;
+}
+.display-home-header-when {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.display-home-header-title {
+  color: var(--text-primary);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.display-home-header-empty {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
 .display-focus {
   --focus-tint: var(--amethyst);
   display: flex;

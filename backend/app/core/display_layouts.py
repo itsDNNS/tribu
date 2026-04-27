@@ -19,7 +19,10 @@ DEFAULT_REFRESH = {
     MODE_EINK: 900,
 }
 
-ALLOWED_WIDGETS = {"identity", "clock", "focus", "agenda", "birthdays", "members"}
+# `home_header` is a combined home-title/clock/date widget. The legacy
+# `identity` and `clock` widgets stay whitelisted so devices configured
+# before the composer keep rendering exactly as they did.
+ALLOWED_WIDGETS = {"home_header", "identity", "clock", "focus", "agenda", "birthdays", "members"}
 GRID_MAX_COLUMNS = 6
 GRID_MAX_ROWS = 6
 
@@ -30,8 +33,7 @@ PRESETS: dict[str, dict[str, Any]] = {
             "columns": 3,
             "rows": 3,
             "widgets": [
-                {"type": "identity", "x": 0, "y": 0, "w": 1, "h": 1},
-                {"type": "clock", "x": 0, "y": 1, "w": 1, "h": 1},
+                {"type": "home_header", "x": 0, "y": 0, "w": 1, "h": 2},
                 {"type": "focus", "x": 0, "y": 2, "w": 1, "h": 1},
                 {"type": "agenda", "x": 1, "y": 0, "w": 1, "h": 3},
                 {"type": "birthdays", "x": 2, "y": 0, "w": 1, "h": 1},
@@ -46,8 +48,7 @@ PRESETS: dict[str, dict[str, Any]] = {
             "rows": 3,
             "widgets": [
                 {"type": "agenda", "x": 0, "y": 0, "w": 2, "h": 3},
-                {"type": "identity", "x": 2, "y": 0, "w": 1, "h": 1},
-                {"type": "clock", "x": 2, "y": 1, "w": 1, "h": 1},
+                {"type": "home_header", "x": 2, "y": 0, "w": 1, "h": 2},
                 {"type": "birthdays", "x": 2, "y": 2, "w": 1, "h": 1},
             ],
         },
@@ -58,9 +59,8 @@ PRESETS: dict[str, dict[str, Any]] = {
             "columns": 3,
             "rows": 3,
             "widgets": [
-                {"type": "identity", "x": 0, "y": 0, "w": 1, "h": 1},
+                {"type": "home_header", "x": 0, "y": 0, "w": 1, "h": 2},
                 {"type": "members", "x": 1, "y": 0, "w": 2, "h": 2},
-                {"type": "clock", "x": 0, "y": 1, "w": 1, "h": 1},
                 {"type": "agenda", "x": 0, "y": 2, "w": 2, "h": 1},
                 {"type": "birthdays", "x": 2, "y": 2, "w": 1, "h": 1},
             ],
@@ -72,8 +72,7 @@ PRESETS: dict[str, dict[str, Any]] = {
             "columns": 2,
             "rows": 3,
             "widgets": [
-                {"type": "identity", "x": 0, "y": 0, "w": 1, "h": 1},
-                {"type": "clock", "x": 1, "y": 0, "w": 1, "h": 1},
+                {"type": "home_header", "x": 0, "y": 0, "w": 2, "h": 1},
                 {"type": "agenda", "x": 0, "y": 1, "w": 2, "h": 1},
                 {"type": "birthdays", "x": 0, "y": 2, "w": 1, "h": 1},
                 {"type": "members", "x": 1, "y": 2, "w": 1, "h": 1},
@@ -86,7 +85,7 @@ PRESETS: dict[str, dict[str, Any]] = {
             "columns": 1,
             "rows": 3,
             "widgets": [
-                {"type": "identity", "x": 0, "y": 0, "w": 1, "h": 1},
+                {"type": "home_header", "x": 0, "y": 0, "w": 1, "h": 1},
                 {"type": "agenda", "x": 0, "y": 1, "w": 1, "h": 1},
                 {"type": "birthdays", "x": 0, "y": 2, "w": 1, "h": 1},
             ],
