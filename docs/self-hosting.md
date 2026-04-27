@@ -52,6 +52,9 @@ The backend refuses to start if these are missing.
 | `SECURE_COOKIES` | `false` | Set to `true` when running behind a TLS reverse proxy. Enables the `Secure` flag on auth cookies. |
 | `BASE_URL` | *(auto-detect)* | Public URL of your instance (e.g. `https://tribu.example.com`). Used for push notification payloads. Auto-detected from request headers if not set. |
 | `JWT_EXPIRE_HOURS` | `24` | Session lifetime in hours for Tribu's auth tokens and cookies. |
+| `ALLOW_OPEN_REGISTRATION` | `false` | Enables public registration after initial setup. Keep disabled for normal self-hosted instances and invite users instead. |
+| `SETUP_RESTORE_TOKEN` | empty | Required for initial setup restore. Leave empty to disable setup restore, or set a one-time secret and enter it in the restore screen. |
+| `SETUP_RESTORE_MAX_BYTES` | `104857600` | Maximum setup restore archive size in bytes. |
 | `VAPID_PUBLIC_KEY` | *(empty)* | VAPID public key for push notifications. See [Push Notifications](#push-notifications-optional). |
 | `VAPID_PRIVATE_KEY` | *(empty)* | VAPID private key for push notifications. |
 | `VAPID_CLAIMS_EMAIL` | *(empty)* | Contact email for VAPID claims (e.g. `mailto:admin@example.com`). |
@@ -70,9 +73,9 @@ These variables are constructed in `docker-compose.yml` and normally don't need 
 
 Running behind a reverse proxy gives you TLS (HTTPS), a clean domain, and is **required** for secure cookies. Set `SECURE_COOKIES=true` in your `.env` when using any of these.
 
-> All examples assume Tribu runs on the same host with the default ports (backend: 8000, frontend: 3000). `/api` must be forwarded to the backend **without** the `/api` prefix, while `/dav` and `/.well-known/{caldav,carddav}` must reach the backend unchanged. The `/ws` examples below are included for completeness, but the current shopping UI does not use the proxied `/ws` path yet.
+> All examples assume Tribu runs on the same host with the default ports (backend: 8000, frontend: 3000). `/api` must be forwarded to the backend **without** the `/api` prefix, while `/dav` and `/.well-known/{caldav,carddav}` must reach the backend unchanged. The `/ws` examples below are required for shopping live sync.
 >
-> **Current limitation:** shopping live sync still opens `ws(s)://<your-domain>:8000/ws/shopping/...` directly from the browser. On HTTP setups that means port `8000` must stay reachable. On HTTPS setups that also means `:8000` must be reachable with working WSS/TLS on the same host, otherwise shopping live sync stays unavailable until the frontend is updated to use the proxied `/ws` route.
+> Shopping live sync uses the current frontend origin and the proxied `/ws/shopping/...` path. Ensure your reverse proxy forwards `/ws/*` to the backend with WebSocket upgrade headers.
 
 ### Caddy (recommended)
 
@@ -252,7 +255,7 @@ backend:
     - "traefik.http.services.tribu-api.loadbalancer.server.port=8000"
 ```
 
-When using Traefik, remove the `ports` sections from both services since Traefik handles routing. If you need shopping live sync today, only remove the backend `ports` mapping after you have separately made `:8000` reachable with matching WS/WSS handling, because the frontend still connects to `ws(s)://<your-domain>:8000/...` directly instead of using the proxied `/ws` route.
+When using Traefik, remove the `ports` sections from both services since Traefik handles routing. Shopping live sync uses the proxied `/ws` route, so the backend port does not need to be exposed publicly when Traefik handles `/ws`.
 
 ## Single Sign-On (OIDC)
 

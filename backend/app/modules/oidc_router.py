@@ -20,7 +20,7 @@ from app.core.errors import (
 )
 from app.core.oidc_presets import PRESETS, list_presets
 from app.core.scopes import require_scope
-from app.core.utils import ensure_any_admin, resolve_base_url
+from app.core.utils import ensure_instance_admin, resolve_base_url
 from app.database import get_db
 from app.models import User
 from app.schemas import (
@@ -84,7 +84,7 @@ def get_presets(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:read"),
 ) -> list[OIDCPresetEntry]:
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     return [OIDCPresetEntry(**p) for p in list_presets()]
 
 
@@ -106,7 +106,7 @@ def get_oidc_config(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:read"),
 ) -> OIDCConfigResponse:
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     cfg = oidc_core.load_config(db)
     return _to_response(
         cfg, effective_callback_url=_effective_callback_url(db, request),
@@ -132,7 +132,7 @@ def update_oidc_config(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
 ) -> OIDCConfigResponse:
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
 
     # Serialize concurrent admin writes so two PUTs racing on the
     # same config cannot interleave their read-modify-write passes.
@@ -202,7 +202,7 @@ def test_discovery(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:read"),
 ) -> OIDCTestResponse:
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
 
     issuer = (payload.issuer or "").strip()
     if not issuer:

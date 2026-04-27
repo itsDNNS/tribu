@@ -105,14 +105,14 @@ def _propfind(client: TestClient, path: str, *, headers=None, depth="1"):
 
 
 class TestCardDAV:
-    def test_principal_lists_both_calendar_and_addressbook(self, app_under_test, seeded):
+    def test_principal_lists_addressbook_for_contact_scoped_pat(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)
         headers = {"Authorization": _basic(EMAIL, token)}
         resp = _propfind(client, f"/dav/{EMAIL}/", headers=headers, depth="1")
         assert resp.status_code == 207, resp.text
-        assert f"cal-{family_id}" in resp.text
         assert f"book-{family_id}" in resp.text
+        assert f"cal-{family_id}" not in resp.text
 
     def test_addressbook_lists_contacts(self, app_under_test, seeded):
         token, family_id = seeded

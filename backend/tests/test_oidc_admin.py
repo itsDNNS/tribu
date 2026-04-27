@@ -81,6 +81,31 @@ def _seed_admin(scopes: str = "*") -> str:
     return plain
 
 
+def _seed_second_family_admin(scopes: str = "*") -> str:
+    db = TestSession()
+    user = User(
+        email=f"second-admin-{scopes}@example.com",
+        password_hash=hash_password("password"),
+        display_name="Second Admin",
+    )
+    db.add(user)
+    db.flush()
+    family = Family(name="Second Fam")
+    db.add(family)
+    db.flush()
+    db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
+
+    plain = f"{PAT_PREFIX}secondadmintok-{scopes.replace(':', '_').replace('*', 'star')}"
+    digest = hashlib.sha256(plain.encode()).hexdigest()
+    db.add(PersonalAccessToken(
+        user_id=user.id, name="second-admin", token_hash=digest, token_lookup=digest,
+        scopes=scopes,
+    ))
+    db.commit()
+    db.close()
+    return plain
+
+
 def _seed_non_admin(scopes: str = "admin:read,admin:write") -> str:
     db = TestSession()
     user = User(
@@ -120,6 +145,15 @@ def test_presets_listed_for_admin():
 def test_presets_requires_admin_membership():
     token = _seed_non_admin()
     resp = client.get("/admin/oidc/presets", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
+
+
+def test_oidc_admin_rejects_second_family_admin():
+    _seed_admin()
+    token = _seed_second_family_admin()
+
+    resp = client.get("/admin/oidc", headers={"Authorization": f"Bearer {token}"})
+
     assert resp.status_code == 403
 
 

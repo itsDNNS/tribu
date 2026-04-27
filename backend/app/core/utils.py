@@ -5,13 +5,15 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
 from app.core.errors import error_detail, ADMIN_REQUIRED, ADULT_REQUIRED
-from app.models import AuditLog, Membership, SystemSetting
+from app.models import AuditLog, Membership, SystemSetting, User
 
 # Re-export utcnow so existing `from app.core.utils import utcnow` keeps working
 __all__ = [
     "utcnow",
     "audit_log",
     "ensure_any_admin",
+    "ensure_instance_admin",
+    "is_instance_admin_user",
     "ensure_any_adult",
     "get_setting",
     "set_setting",
@@ -37,6 +39,25 @@ def ensure_any_admin(db: Session, user_id: int):
         Membership.role == "admin",
     ).first()
     if not admin:
+        raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
+    return admin
+
+
+def is_instance_admin_user(db: Session, user_id: int) -> bool:
+    first_user_id = db.query(User.id).order_by(User.id.asc()).limit(1).scalar()
+    return first_user_id == user_id
+
+
+def ensure_instance_admin(db: Session, user_id: int):
+    """Raise 403 unless the user is the first owner account and a family admin.
+
+    Instance-wide surfaces such as backups, OIDC configuration, and base URL
+    settings are broader than family administration. Until Tribu has an
+    explicit system-admin table, the first registered owner is the instance
+    admin.
+    """
+    admin = ensure_any_admin(db, user_id)
+    if not is_instance_admin_user(db, user_id):
         raise HTTPException(status_code=403, detail=error_detail(ADMIN_REQUIRED))
     return admin
 

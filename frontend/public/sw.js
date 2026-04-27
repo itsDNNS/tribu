@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tribu-v5';
+const CACHE_NAME = 'tribu-v6';
 const STATIC_ASSETS = ['/manifest.json', '/offline.html'];
 
 self.addEventListener('install', (event) => {
@@ -20,6 +20,28 @@ self.addEventListener('activate', (event) => {
       .then(() => self.clients.claim())
   );
 });
+
+
+function isSensitiveRuntimeRoute(url) {
+  const path = url.pathname;
+  if (url.search) return true;
+  return (
+    path === '/display' || path.startsWith('/display/') ||
+    path === '/invite' || path.startsWith('/invite/') ||
+    path === '/auth' || path.startsWith('/auth/') ||
+    path === '/api' || path.startsWith('/api/') ||
+    path === '/dav' || path.startsWith('/dav/') ||
+    path === '/ws' || path.startsWith('/ws/')
+  );
+}
+
+function shouldRuntimeCache(request, url, response) {
+  return Boolean(
+    response?.ok &&
+    request.method === 'GET' &&
+    !isSensitiveRuntimeRoute(url)
+  );
+}
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -54,13 +76,16 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok && request.method === 'GET') {
+        if (shouldRuntimeCache(request, url, response)) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
       })
       .catch(() => {
+        if (isSensitiveRuntimeRoute(url)) {
+          return Response.error();
+        }
         return caches.match(request).then((cached) => {
           if (cached) return cached;
           if (request.headers.get('accept')?.includes('text/html')) {

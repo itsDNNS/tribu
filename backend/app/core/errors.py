@@ -17,6 +17,7 @@ INSUFFICIENT_SCOPE = "INSUFFICIENT_SCOPE"
 
 # ── Registration / Email ──────────────────────────────────────
 EMAIL_ALREADY_EXISTS = "EMAIL_ALREADY_EXISTS"
+OPEN_REGISTRATION_DISABLED = "OPEN_REGISTRATION_DISABLED"
 
 # ── Family / Members ─────────────────────────────────────────
 MEMBER_NOT_FOUND = "MEMBER_NOT_FOUND"
@@ -26,6 +27,7 @@ ONLY_ADULTS_ADMIN = "ONLY_ADULTS_ADMIN"
 CANNOT_DEMOTE_SELF = "CANNOT_DEMOTE_SELF"
 CANNOT_CHANGE_OWN_ADULT = "CANNOT_CHANGE_OWN_ADULT"
 CANNOT_REMOVE_SELF = "CANNOT_REMOVE_SELF"
+CANNOT_MODIFY_INSTANCE_ADMIN = "CANNOT_MODIFY_INSTANCE_ADMIN"
 CANNOT_RESET_OWN_PASSWORD = "CANNOT_RESET_OWN_PASSWORD"
 LAST_ADMIN = "LAST_ADMIN"
 INVALID_CONFIRMATION = "INVALID_CONFIRMATION"
@@ -75,6 +77,9 @@ SETUP_ALREADY_COMPLETED = "SETUP_ALREADY_COMPLETED"
 INVALID_FILE_FORMAT = "INVALID_FILE_FORMAT"
 RESTORE_IN_PROGRESS = "RESTORE_IN_PROGRESS"
 RESTORE_FAILED = "RESTORE_FAILED"
+SETUP_RESTORE_TOKEN_REQUIRED = "SETUP_RESTORE_TOKEN_REQUIRED"
+SETUP_RESTORE_TOKEN_INVALID = "SETUP_RESTORE_TOKEN_INVALID"
+SETUP_RESTORE_UPLOAD_TOO_LARGE = "SETUP_RESTORE_UPLOAD_TOO_LARGE"
 
 # ── Contacts ─────────────────────────────────────────────────
 CONTACT_NOT_FOUND = "CONTACT_NOT_FOUND"
@@ -143,6 +148,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ADMIN_REQUIRED: "Admin role required",
     INSUFFICIENT_SCOPE: "Token missing scope: {scope}",
     EMAIL_ALREADY_EXISTS: "Email already exists",
+    OPEN_REGISTRATION_DISABLED: "Open registration is disabled after initial setup. Use an invitation link.",
     MEMBER_NOT_FOUND: "Member not found",
     NOT_A_MEMBER: "Not a member of this family",
     INVALID_ROLE: "Role must be admin or member",
@@ -150,6 +156,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     CANNOT_DEMOTE_SELF: "Cannot demote yourself",
     CANNOT_CHANGE_OWN_ADULT: "Cannot change own adult status",
     CANNOT_REMOVE_SELF: "Cannot remove yourself",
+    CANNOT_MODIFY_INSTANCE_ADMIN: "The instance owner account cannot be demoted, made non-adult, or removed.",
     LAST_ADMIN: "Cannot leave: you are the only admin. Transfer admin role first",
     INVALID_CONFIRMATION: "Type DELETE to confirm account deletion",
     CANNOT_RESET_OWN_PASSWORD: "Cannot reset your own password here",
@@ -183,6 +190,9 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     INVALID_FILE_FORMAT: "File must be a .tar.gz archive",
     RESTORE_IN_PROGRESS: "Restore already in progress",
     RESTORE_FAILED: "Restore failed: {reason}",
+    SETUP_RESTORE_TOKEN_REQUIRED: "Setup restore requires SETUP_RESTORE_TOKEN to be configured.",
+    SETUP_RESTORE_TOKEN_INVALID: "Invalid setup restore token.",
+    SETUP_RESTORE_UPLOAD_TOO_LARGE: "Setup restore archive is too large.",
     CONTACT_NOT_FOUND: "Contact not found",
     CSV_MISSING_COLUMN: "CSV requires at least the column full_name",
     NOTIFICATION_NOT_FOUND: "Notification not found",

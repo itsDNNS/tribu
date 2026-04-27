@@ -194,6 +194,28 @@ class TestRecipeCrud:
         assert delete.status_code == 200
         assert delete.json()["recipe_id"] == recipe_id
 
+
+    def test_source_url_rejects_unsafe_schemes(self):
+        token, family_id = _seed_member("*", "crud-url")
+        create = client.post(
+            "/recipes",
+            json={
+                "family_id": family_id,
+                "title": "Unsafe",
+                "source_url": "javascript:alert(1)",
+            },
+            headers=_auth(token),
+        )
+        assert create.status_code == 422
+
+        created = _create_recipe(token, family_id, title="Safe")
+        patch = client.patch(
+            f"/recipes/{created['id']}",
+            json={"source_url": "data:text/html,boom"},
+            headers=_auth(token),
+        )
+        assert patch.status_code == 422
+
     def test_outsider_gets_404(self):
         owner_token, family_id = _seed_member("*", "outsider-owner")
         recipe = _create_recipe(owner_token, family_id)

@@ -18,6 +18,17 @@ import { t } from '../lib/i18n';
 import { createEmptyRecipeIngredient, formatIngredientAmount } from '../lib/recipes';
 import ConfirmDialog from './ConfirmDialog';
 
+
+function safeHttpUrl(value) {
+  if (!value) return null;
+  try {
+    const parsed = new URL(String(value));
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function ingredientCountLabel(messages, count) {
   if (count === 1) return t(messages, 'module.recipes.ingredients_summary_one');
   return t(messages, 'module.recipes.ingredients_summary').replace('{count}', String(count));
@@ -26,6 +37,7 @@ function ingredientCountLabel(messages, count) {
 function RecipeCard({ recipe, messages, onEdit }) {
   const ingredients = recipe.ingredients || [];
   const previewIngredients = ingredients.slice(0, 4);
+  const sourceUrl = safeHttpUrl(recipe.source_url);
 
   return (
     <article className="recipe-card">
@@ -85,8 +97,8 @@ function RecipeCard({ recipe, messages, onEdit }) {
       )}
 
       <div className="recipe-card-footer">
-        {recipe.source_url ? (
-          <a className="recipe-card-link" href={recipe.source_url} target="_blank" rel="noopener noreferrer">
+        {sourceUrl ? (
+          <a className="recipe-card-link" href={sourceUrl} target="_blank" rel="noopener noreferrer">
             <ExternalLink size={12} aria-hidden="true" />
             {t(messages, 'module.recipes.open_source')}
           </a>

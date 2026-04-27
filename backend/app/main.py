@@ -1,4 +1,6 @@
 import asyncio
+import hmac
+import os
 import logging
 from contextlib import asynccontextmanager
 
@@ -19,7 +21,12 @@ from slowapi.util import get_remote_address
 
 from app.core.deps import current_user
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
-from app.core.errors import error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT, LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED
+from app.core.errors import (
+    error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT,
+    LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED,
+    OPEN_REGISTRATION_DISABLED, SETUP_ALREADY_COMPLETED, SETUP_RESTORE_TOKEN_REQUIRED,
+    SETUP_RESTORE_TOKEN_INVALID, SETUP_RESTORE_UPLOAD_TOO_LARGE,
+)
 from app.core import oidc as oidc_core
 from app.database import get_db, SessionLocal
 from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User
@@ -57,6 +64,27 @@ from app.security import create_access_token, hash_password, verify_password
 from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE, VERSION
 
 logger = logging.getLogger(__name__)
+
+
+def open_registration_enabled() -> bool:
+    return os.getenv("ALLOW_OPEN_REGISTRATION", "false").lower() in {"1", "true", "yes", "on"}
+
+SETUP_RESTORE_TOKEN_HEADER = "x-setup-restore-token"
+DEFAULT_SETUP_RESTORE_MAX_BYTES = 100 * 1024 * 1024
+
+
+def setup_restore_max_bytes() -> int:
+    raw = os.getenv("SETUP_RESTORE_MAX_BYTES")
+    if not raw:
+        return DEFAULT_SETUP_RESTORE_MAX_BYTES
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return DEFAULT_SETUP_RESTORE_MAX_BYTES
+
+
+def setup_restore_token_configured() -> str:
+    return os.getenv("SETUP_RESTORE_TOKEN", "")
 
 
 # ---------------------------------------------------------------------------
@@ -209,8 +237,27 @@ app.add_middleware(
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.[0-9]+\.[0-9]+)(:[0-9]+)?",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-Setup-Restore-Token"],
 )
+
+
+@app.middleware("http")
+async def setup_restore_header_guard(request: Request, call_next):
+    if request.method == "POST" and request.url.path == "/setup/restore":
+        expected = setup_restore_token_configured()
+        if not expected:
+            return JSONResponse(status_code=403, content={"detail": error_detail(SETUP_RESTORE_TOKEN_REQUIRED)})
+        provided = request.headers.get(SETUP_RESTORE_TOKEN_HEADER, "")
+        if not provided or not hmac.compare_digest(provided, expected):
+            return JSONResponse(status_code=403, content={"detail": error_detail(SETUP_RESTORE_TOKEN_INVALID)})
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > setup_restore_max_bytes():
+                    return JSONResponse(status_code=413, content={"detail": error_detail(SETUP_RESTORE_UPLOAD_TOO_LARGE)})
+            except ValueError:
+                pass
+    return await call_next(request)
 
 
 @app.api_route("/.well-known/caldav", methods=["GET", "HEAD", "OPTIONS", "PROPFIND"])
@@ -254,6 +301,9 @@ def health():
 def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
     if oidc_core.password_login_disabled(db):
         raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+
+    if db.query(User).count() > 0 and not open_registration_enabled():
+        raise HTTPException(status_code=403, detail=error_detail(OPEN_REGISTRATION_DISABLED))
 
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:

@@ -407,12 +407,14 @@ export function apiGetSetupStatus() {
   return request('/setup/status');
 }
 
-export async function apiRestoreBackup(file) {
+export async function apiRestoreBackup(file, restoreToken) {
   const form = new FormData();
   form.append('file', file);
+  const headers = restoreToken ? { 'X-Setup-Restore-Token': restoreToken } : {};
   const res = await fetch(`${API}/setup/restore`, {
     method: 'POST',
     credentials: 'include',
+    headers,
     body: form,
   });
   let data;

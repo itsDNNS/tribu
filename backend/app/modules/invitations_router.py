@@ -3,7 +3,7 @@ import secrets
 from datetime import timedelta
 
 from app.core.compat import patch_asyncio_iscoroutinefunction
-from app.core.utils import utcnow, audit_log as _audit, ensure_any_admin, get_setting, resolve_base_url, set_setting
+from app.core.utils import utcnow, audit_log as _audit, ensure_any_admin, ensure_instance_admin, get_setting, resolve_base_url, set_setting
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -18,7 +18,7 @@ from app.core.deps import current_user, ensure_family_admin
 from app.core.scopes import require_scope
 from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE
 from app.database import get_db
-from app.models import Family, FamilyInvitation, User
+from app.models import Family, FamilyInvitation, Membership, User
 from app.schemas import (
     AUTH_RESPONSES, NOT_FOUND_RESPONSE, BaseUrlUpdate, InvitationCreate, InvitationResponse,
     InviteInfoResponse, RegisterWithInviteRequest,
@@ -293,7 +293,7 @@ def get_base_url(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:read"),
 ):
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     saved = get_setting(db, "base_url")
     env_val = os.getenv("BASE_URL", "")
     effective = _get_base_url(db, request)
@@ -312,7 +312,7 @@ def set_base_url(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
 ):
-    ensure_any_admin(db, user.id)
+    ensure_instance_admin(db, user.id)
     set_setting(db, "base_url", payload.base_url)
     db.commit()
     return {"status": "ok", "base_url": payload.base_url}
