@@ -52,6 +52,7 @@ The backend refuses to start if these are missing.
 | `SECURE_COOKIES` | `false` | Set to `true` when running behind a TLS reverse proxy. Enables the `Secure` flag on auth cookies. |
 | `BASE_URL` | *(auto-detect)* | Public URL of your instance (e.g. `https://tribu.example.com`). Used for push notification payloads. Auto-detected from request headers if not set. |
 | `JWT_EXPIRE_HOURS` | `24` | Session lifetime in hours for Tribu's auth tokens and cookies. |
+| `ALLOW_OPEN_REGISTRATION` | `false` | Enables public registration after initial setup. Keep disabled for normal self-hosted instances and invite users instead. |
 | `SETUP_RESTORE_TOKEN` | empty | Required for initial setup restore. Leave empty to disable setup restore, or set a one-time secret and enter it in the restore screen. |
 | `SETUP_RESTORE_MAX_BYTES` | `104857600` | Maximum setup restore archive size in bytes. |
 | `VAPID_PUBLIC_KEY` | *(empty)* | VAPID public key for push notifications. See [Push Notifications](#push-notifications-optional). |
