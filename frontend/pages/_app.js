@@ -1,11 +1,30 @@
 import { Component as ReactComponent } from 'react';
 import { useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { AppProvider } from '../contexts/AppContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import { ToastContainer } from '../components/Toast';
 import { PWABanners } from '../components/PWABanners';
 import '../styles/globals.css';
+
+// Routes that MUST NOT mount the global app bootstrap (AppProvider,
+// ToastProvider, PWABanners). AppProvider hits /auth/me, /families/me,
+// member loaders, and notifications on mount — none of which are
+// allowed for the shared-home display page (issue #172). A wall
+// tablet that happens to have a leaked admin cookie would otherwise
+// silently authenticate against personal endpoints and leak data
+// the display surface explicitly excludes.
+const STANDALONE_ROUTES = new Set(['/display']);
+
+function isStandaloneRoute(pathname) {
+  if (!pathname) return false;
+  return STANDALONE_ROUTES.has(pathname);
+}
+
+export function __isStandaloneRouteForTest(pathname) {
+  return isStandaloneRoute(pathname);
+}
 
 const DISPLAY_MODE_BOOTSTRAP = `
 (() => {
@@ -63,6 +82,25 @@ function DisplayModeRootFlag() {
 }
 
 export default function TribuApp({ Component, pageProps }) {
+  const router = useRouter();
+  const standalone = isStandaloneRoute(router?.pathname);
+
+  if (standalone) {
+    // Standalone routes (currently just /display) render with NO
+    // global providers. Anything they need must be self-contained.
+    // This is the production wrapper that proves the display route
+    // never triggers /auth/me, /families/me, notifications, etc.
+    return (
+      <ErrorBoundary>
+        <Head>
+          <title>Tribu</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        </Head>
+        <Component {...pageProps} />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <AppProvider>

@@ -588,3 +588,45 @@ export function apiAddRecipeIngredientsToShopping(recipeId, shoppingListId, ingr
   if (ingredientNames) body.ingredient_names = ingredientNames;
   return post(`/recipes/${recipeId}/add-to-shopping`, body);
 }
+
+// ──────────────────────────────────────────────────────────────
+// Display Devices (issue #172)
+//
+// Two surfaces:
+//   - Admin CRUD authenticated by the normal user session cookie.
+//   - Display runtime authenticated by a dedicated `tribu_display_`
+//     bearer token. The display surface MUST NOT include cookies
+//     (otherwise it would silently fall back to the admin's session
+//     when a token is missing or revoked), so it goes through a
+//     separate request helper that explicitly omits credentials.
+// ──────────────────────────────────────────────────────────────
+
+export function apiListDisplayDevices(familyId) {
+  return request(`/families/${familyId}/display-devices`);
+}
+
+export function apiCreateDisplayDevice(familyId, name) {
+  return post(`/families/${familyId}/display-devices`, { name });
+}
+
+export function apiRevokeDisplayDevice(familyId, deviceId) {
+  return del(`/families/${familyId}/display-devices/${deviceId}`);
+}
+
+async function displayRequest(path, token) {
+  const res = await fetch(`${API}${path}`, {
+    credentials: 'omit',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  let data;
+  try { data = await res.json(); } catch { data = null; }
+  return { ok: res.ok, status: res.status, data };
+}
+
+export function apiDisplayMe(token) {
+  return displayRequest('/display/me', token);
+}
+
+export function apiDisplayDashboard(token) {
+  return displayRequest('/display/dashboard', token);
+}

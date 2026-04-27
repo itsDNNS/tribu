@@ -42,6 +42,7 @@ class Family(Base):
     recipes = relationship("Recipe", back_populates="family", cascade="all, delete-orphan")
     invitations = relationship("FamilyInvitation", back_populates="family", cascade="all, delete-orphan")
     reward_currency = relationship("RewardCurrency", back_populates="family", uselist=False, cascade="all, delete-orphan")
+    display_devices = relationship("DisplayDevice", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -308,6 +309,33 @@ class PersonalAccessToken(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="personal_access_tokens")
+
+
+class DisplayDevice(Base):
+    """Shared home display identity (e.g. wall tablet showing the family dashboard).
+
+    A DisplayDevice is intentionally NOT a User and NOT a Membership.
+    The device holds its own bearer token (prefix ``tribu_display_``)
+    that is stored hashed at rest, with a separate sha256 lookup
+    fingerprint for indexed equality lookup. The token is bound to a
+    single ``family_id`` at creation time and grants read-only access
+    to a curated, family-bound set of display endpoints. Revocation is
+    soft (``revoked_at``) so tokens stay auditable after they stop
+    working.
+    """
+    __tablename__ = "display_devices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    token_lookup = Column(String(64), unique=True, nullable=False, index=True)
+    token_hash = Column(String(256), nullable=False)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    last_used_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+
+    family = relationship("Family", back_populates="display_devices")
 
 
 class ShoppingList(Base):

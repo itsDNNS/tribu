@@ -125,6 +125,40 @@ def is_pat(token: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Display device tokens
+#
+# A display token authenticates a *device*, not a user. The on-disk
+# storage shape (sha256 lookup + bcrypt verify) intentionally mirrors
+# PATs so we can reuse the same primitives, but the prefix is distinct
+# (``tribu_display_``) and ``is_display_token`` is kept separate from
+# ``is_pat`` so the auth dependency layer can route the two token
+# families to different resolvers without a substring overlap.
+# ---------------------------------------------------------------------------
+
+DISPLAY_TOKEN_PREFIX = "tribu_display_"
+
+
+def generate_display_token() -> tuple[str, str, str]:
+    """Return ``(plain, stored_hash, lookup_key)`` for a fresh display token."""
+    raw = secrets.token_urlsafe(32)
+    plain = f"{DISPLAY_TOKEN_PREFIX}{raw}"
+    return plain, hash_pat(plain), pat_lookup_key(plain)
+
+
+def is_display_token(token: str) -> bool:
+    return token.startswith(DISPLAY_TOKEN_PREFIX)
+
+
+def verify_display_token(plain: str, stored_hash: str) -> bool:
+    """Constant-time compare a display token against its stored hash."""
+    return verify_pat(plain, stored_hash)
+
+
+def display_token_lookup_key(plain: str) -> str:
+    return pat_lookup_key(plain)
+
+
+# ---------------------------------------------------------------------------
 # Temporary password generation
 # ---------------------------------------------------------------------------
 
