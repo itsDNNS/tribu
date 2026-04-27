@@ -506,8 +506,7 @@ class TestDisplayRenderConfig:
         assert config["layout_preset"] == "eink_compact"
         assert config["layout_config"]["columns"] == 2
         assert [widget["type"] for widget in config["layout_config"]["widgets"]] == [
-            "identity",
-            "clock",
+            "home_header",
             "agenda",
             "birthdays",
             "members",
@@ -529,3 +528,128 @@ class TestDisplayRenderConfig:
             headers=_auth(member_token),
         )
         assert update.status_code == 403
+
+
+class TestHomeHeaderWidget:
+    """`home_header` is a combined identity+clock widget that adapts to slot size.
+
+    Whitelisting it server-side is the boundary that keeps invalid layout
+    payloads from reaching the wall display. Existing devices configured with
+    the legacy ``clock`` widget must keep rendering — backward compatibility
+    is preserved through normalization, not silent stripping.
+    """
+
+    def test_home_header_is_an_allowed_widget_type(self):
+        """A custom layout posted by an admin must keep `home_header` widgets."""
+        admin_token, _, family_id = _seed_member_with_pat("hhAllow", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={
+                "name": "Hero",
+                "display_mode": "tablet",
+                "layout_preset": "hearth",
+                "layout_config": {
+                    "columns": 3,
+                    "rows": 3,
+                    "widgets": [
+                        {"id": "hdr", "type": "home_header", "x": 0, "y": 0, "w": 2, "h": 1},
+                        {"id": "agenda", "type": "agenda", "x": 0, "y": 1, "w": 3, "h": 2},
+                    ],
+                },
+            },
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        widgets = resp.json()["device"]["layout_config"]["widgets"]
+        assert {w["type"] for w in widgets} == {"home_header", "agenda"}
+        header = next(w for w in widgets if w["type"] == "home_header")
+        assert (header["w"], header["h"]) == (2, 1)
+
+    def test_home_header_replaces_identity_and_clock_in_default_presets(self):
+        """The default tablet preset (hearth) merges identity+clock into one home_header."""
+        admin_token, _, family_id = _seed_member_with_pat("hhPreset", role="admin", is_adult=True)
+        create = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Wall", "layout_preset": "hearth"},
+            headers=_auth(admin_token),
+        )
+        assert create.status_code == 200, create.text
+        widgets = create.json()["device"]["layout_config"]["widgets"]
+        widget_types = [w["type"] for w in widgets]
+        assert "home_header" in widget_types, widget_types
+        # identity/clock are no longer separate widgets in the default tablet preset.
+        assert "identity" not in widget_types
+        assert "clock" not in widget_types
+
+    def test_legacy_clock_and_identity_widgets_are_still_accepted(self):
+        """Devices configured before home_header (with clock/identity) keep rendering."""
+        admin_token, _, family_id = _seed_member_with_pat("hhLegacy", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={
+                "name": "Legacy",
+                "layout_preset": "hearth",
+                "layout_config": {
+                    "columns": 2,
+                    "rows": 2,
+                    "widgets": [
+                        {"id": "id", "type": "identity", "x": 0, "y": 0, "w": 1, "h": 1},
+                        {"id": "ck", "type": "clock", "x": 1, "y": 0, "w": 1, "h": 1},
+                        {"id": "ag", "type": "agenda", "x": 0, "y": 1, "w": 2, "h": 1},
+                    ],
+                },
+            },
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        widgets = resp.json()["device"]["layout_config"]["widgets"]
+        widget_types = {w["type"] for w in widgets}
+        # All three legacy types pass normalization unchanged.
+        assert widget_types == {"identity", "clock", "agenda"}
+
+    def test_unknown_widget_types_are_still_dropped(self):
+        """Adding home_header must not loosen the widget whitelist."""
+        admin_token, _, family_id = _seed_member_with_pat("hhStrict", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={
+                "name": "Strict",
+                "layout_preset": "hearth",
+                "layout_config": {
+                    "columns": 2,
+                    "rows": 2,
+                    "widgets": [
+                        {"id": "ok", "type": "home_header", "x": 0, "y": 0, "w": 2, "h": 1},
+                        {"id": "bad", "type": "iframe", "x": 0, "y": 1, "w": 1, "h": 1},
+                        {"id": "evil", "type": "<script>", "x": 1, "y": 1, "w": 1, "h": 1},
+                    ],
+                },
+            },
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        types = [w["type"] for w in resp.json()["device"]["layout_config"]["widgets"]]
+        assert types == ["home_header"]
+
+    def test_home_header_out_of_bounds_widget_is_dropped(self):
+        """home_header with a span exceeding the grid is dropped, not clamped."""
+        admin_token, _, family_id = _seed_member_with_pat("hhBounds", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={
+                "name": "OOB",
+                "layout_preset": "hearth",
+                "layout_config": {
+                    "columns": 2,
+                    "rows": 2,
+                    "widgets": [
+                        {"id": "oob", "type": "home_header", "x": 0, "y": 0, "w": 99, "h": 99},
+                        {"id": "ag", "type": "agenda", "x": 0, "y": 0, "w": 2, "h": 2},
+                    ],
+                },
+            },
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        types = [w["type"] for w in resp.json()["device"]["layout_config"]["widgets"]]
+        assert types == ["agenda"]

@@ -274,6 +274,101 @@ describe('DisplayDashboard — privacy + chrome isolation', () => {
 });
 
 
+describe('DisplayDashboard — home_header widget', () => {
+  function fixedTime() {
+    return new Date('2026-04-27T08:30:00');
+  }
+
+  function withHomeHeader(extra = {}, w = 1, h = 2, columns = 3, rows = 3) {
+    return buildDashboard({
+      ...extra,
+      config: {
+        display_mode: 'tablet',
+        layout_preset: 'hearth',
+        layout_config: {
+          columns,
+          rows,
+          widgets: [
+            { id: 'hdr', type: 'home_header', x: 0, y: 0, w, h },
+          ],
+        },
+      },
+    });
+  }
+
+  test('renders the family hearth name and a clock inside one widget', () => {
+    renderWithFixedNow(withHomeHeader(), fixedTime());
+
+    const header = screen.getByTestId('display-widget-home_header');
+    expect(within(header).getByTestId('display-family-name')).toHaveTextContent('Mueller');
+    expect(within(header).getByTestId('display-time').textContent).toMatch(/\d{1,2}:\d{2}/);
+    // The standalone identity/clock widgets must NOT appear when only home_header is configured.
+    expect(screen.queryByTestId('display-widget-identity')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('display-widget-clock')).not.toBeInTheDocument();
+  });
+
+  test('compact density (single-cell slot) shows only the time + date', () => {
+    renderWithFixedNow(withHomeHeader({}, 1, 1, 4, 4), fixedTime());
+
+    const header = screen.getByTestId('display-widget-home_header');
+    expect(header).toHaveAttribute('data-density', 'compact');
+    // Compact suppresses the family hearth name to keep the slot legible.
+    expect(within(header).queryByTestId('display-family-name')).not.toBeInTheDocument();
+    expect(within(header).getByTestId('display-time')).toBeInTheDocument();
+    expect(within(header).getByTestId('display-date')).toBeInTheDocument();
+    // Compact does NOT render the today event list.
+    expect(within(header).queryByTestId('display-home-header-events')).not.toBeInTheDocument();
+  });
+
+  test('standard density shows title + time + date + a today count cue', () => {
+    const today = new Date('2026-04-27T18:00:00');
+    const dashboard = {
+      ...withHomeHeader({
+        next_events: [
+          { title: 'Soccer', starts_at: isoLocal(today), ends_at: null, all_day: false, color: null, category: null },
+          { title: 'Dinner', starts_at: isoLocal(new Date('2026-04-27T20:00:00')), ends_at: null, all_day: false, color: null, category: null },
+        ],
+      }, 1, 2, 4, 4),
+    };
+    renderWithFixedNow(dashboard, fixedTime());
+
+    const header = screen.getByTestId('display-widget-home_header');
+    expect(header).toHaveAttribute('data-density', 'standard');
+    expect(within(header).getByTestId('display-family-name')).toHaveTextContent('Mueller');
+    expect(within(header).getByTestId('display-time').textContent).toMatch(/\d{1,2}:\d{2}/);
+    // Today cue is the count, not a full event list.
+    const cue = within(header).getByTestId('display-home-header-today-cue');
+    expect(cue).toHaveTextContent(/2/);
+    expect(within(header).queryByTestId('display-home-header-events')).not.toBeInTheDocument();
+  });
+
+  test('expanded density shows the next-up event list inside the header', () => {
+    const dashboard = withHomeHeader({
+      next_events: [
+        { title: 'Soccer practice', starts_at: isoLocal(new Date('2026-04-27T18:00:00')), ends_at: null, all_day: false, color: null, category: null },
+        { title: 'Dentist', starts_at: isoLocal(new Date('2026-04-28T09:00:00')), ends_at: null, all_day: false, color: null, category: null },
+      ],
+    }, 2, 3, 4, 4);
+    renderWithFixedNow(dashboard, fixedTime());
+
+    const header = screen.getByTestId('display-widget-home_header');
+    expect(header).toHaveAttribute('data-density', 'expanded');
+    const events = within(header).getByTestId('display-home-header-events');
+    expect(within(events).getByText('Soccer practice')).toBeInTheDocument();
+    expect(within(events).getByText('Dentist')).toBeInTheDocument();
+  });
+
+  test('expanded density with no events shows a quiet message', () => {
+    renderWithFixedNow(withHomeHeader({ next_events: [] }, 2, 3, 4, 4), fixedTime());
+
+    const header = screen.getByTestId('display-widget-home_header');
+    expect(header).toHaveAttribute('data-density', 'expanded');
+    const events = within(header).getByTestId('display-home-header-events');
+    expect(events).toHaveTextContent(/no events/i);
+  });
+});
+
+
 describe('DisplayDashboard — configurable display layouts', () => {
   test('applies e-ink mode and widget slot spans from the safe config', () => {
     renderWithFixedNow(

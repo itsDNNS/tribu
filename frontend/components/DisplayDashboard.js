@@ -30,6 +30,10 @@ export default function DisplayDashboard({ me, dashboard }) {
   const events = Array.isArray(dashboard.next_events) ? dashboard.next_events : [];
   const eventGroups = useMemo(() => groupEventsByDay(events, now), [events, now]);
   const focus = useMemo(() => pickFocusEvent(events, now), [events, now]);
+  const { todayEvents, upcomingEvents } = useMemo(
+    () => partitionEvents(events, now),
+    [events, now]
+  );
 
   const birthdays = Array.isArray(dashboard.upcoming_birthdays)
     ? dashboard.upcoming_birthdays
@@ -51,6 +55,8 @@ export default function DisplayDashboard({ me, dashboard }) {
     imminentNames,
     familyName,
     deviceName,
+    todayEvents,
+    upcomingEvents,
     members: Array.isArray(dashboard.members) ? dashboard.members : [],
   };
 
@@ -71,22 +77,26 @@ export default function DisplayDashboard({ me, dashboard }) {
           '--display-grid-rows': config.layout_config.rows,
         }}
       >
-        {config.layout_config.widgets.map((widget) => (
-          <WidgetShell key={widget.id} widget={widget}>
-            {renderWidget(widget.type, widgetContext)}
-          </WidgetShell>
-        ))}
+        {config.layout_config.widgets.map((widget) => {
+          const density = widgetDensity(widget);
+          return (
+            <WidgetShell key={widget.id} widget={widget} density={density}>
+              {renderWidget(widget.type, widgetContext, density)}
+            </WidgetShell>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function WidgetShell({ widget, children }) {
+function WidgetShell({ widget, children, density }) {
   return (
     <section
       className={`display-widget display-widget--${widget.type}`}
       data-testid={`display-widget-${widget.type}`}
       data-widget-type={widget.type}
+      data-density={density || undefined}
       style={{
         gridColumn: `${widget.x + 1} / span ${widget.w}`,
         gridRow: `${widget.y + 1} / span ${widget.h}`,
@@ -97,8 +107,20 @@ function WidgetShell({ widget, children }) {
   );
 }
 
-function renderWidget(type, context) {
+function renderWidget(type, context, density) {
   switch (type) {
+    case 'home_header':
+      return (
+        <HomeHeaderCard
+          familyName={context.familyName}
+          deviceName={context.deviceName}
+          timeLabel={context.timeLabel}
+          dateLabel={context.dateLabel}
+          density={density}
+          todayEvents={context.todayEvents}
+          upcomingEvents={context.upcomingEvents}
+        />
+      );
     case 'identity':
       return <IdentityCard familyName={context.familyName} deviceName={context.deviceName} />;
     case 'clock':
@@ -114,6 +136,61 @@ function renderWidget(type, context) {
     default:
       return null;
   }
+}
+
+function HomeHeaderCard({ familyName, deviceName, timeLabel, dateLabel, density, todayEvents, upcomingEvents }) {
+  const showHearth = density !== 'compact';
+  const showTodayCue = density === 'standard';
+  const showEventList = density === 'expanded';
+  const todayCount = Array.isArray(todayEvents) ? todayEvents.length : 0;
+  const upcoming = Array.isArray(upcomingEvents) ? upcomingEvents.slice(0, 4) : [];
+  return (
+    <div
+      className={`display-card display-home-header display-home-header--${density}`}
+      data-testid="display-home-header"
+    >
+      {showHearth && (
+        <div className="display-hearth-label">
+          <span className="display-hearth-prefix">The</span>
+          <span className="display-hearth-name" data-testid="display-family-name">
+            {familyName || 'Family'}
+          </span>
+          <span className="display-hearth-suffix">Home</span>
+        </div>
+      )}
+      {showHearth && deviceName && (
+        <div className="display-device-tag" data-testid="display-device-name">
+          {deviceName}
+        </div>
+      )}
+      <div className="display-clock" data-testid="display-time">{timeLabel}</div>
+      <div className="display-date" data-testid="display-date">{dateLabel}</div>
+      {showTodayCue && (
+        <div className="display-home-header-cue" data-testid="display-home-header-today-cue">
+          {todayCount > 0
+            ? `${todayCount} today`
+            : 'Nothing today'}
+        </div>
+      )}
+      {showEventList && (
+        <ul
+          className="display-home-header-events"
+          data-testid="display-home-header-events"
+        >
+          {upcoming.length === 0 ? (
+            <li className="display-home-header-empty">No events on the horizon.</li>
+          ) : (
+            upcoming.map((ev, idx) => (
+              <li key={idx} className="display-home-header-event">
+                <span className="display-home-header-when">{formatAgendaWhen(ev)}</span>
+                <span className="display-home-header-title">{ev.title}</span>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function IdentityCard({ familyName, deviceName }) {
@@ -316,7 +393,15 @@ function EmptyHearth({ message, tone = 'default' }) {
   );
 }
 
-const ALLOWED_WIDGETS = new Set(['identity', 'clock', 'focus', 'agenda', 'birthdays', 'members']);
+const ALLOWED_WIDGETS = new Set([
+  'home_header',
+  'identity',
+  'clock',
+  'focus',
+  'agenda',
+  'birthdays',
+  'members',
+]);
 const DEFAULT_LAYOUT_CONFIG = {
   columns: 4,
   rows: 3,
@@ -367,6 +452,32 @@ function normalizeWidget(widget, idx, columns, rows) {
     ? widget.id.trim().replace(/[^a-z0-9_-]/gi, '').slice(0, 40)
     : `${widget.type}-${idx}`;
   return { id: id || `${widget.type}-${idx}`, type: widget.type, x, y, w, h };
+}
+
+function widgetDensity(widget) {
+  if (!widget || widget.type !== 'home_header') return undefined;
+  const area = (Number(widget.w) || 1) * (Number(widget.h) || 1);
+  if (area <= 1) return 'compact';
+  if (area < 4) return 'standard';
+  return 'expanded';
+}
+
+function partitionEvents(events, now) {
+  if (!Array.isArray(events) || events.length === 0) {
+    return { todayEvents: [], upcomingEvents: [] };
+  }
+  const today = startOfDay(now).getTime();
+  const enriched = events
+    .map((e) => ({ e, t: parseLooseDate(e.starts_at) }))
+    .filter(({ t }) => !!t)
+    .sort((a, b) => a.t - b.t);
+  const todayEvents = enriched
+    .filter(({ t }) => startOfDay(t).getTime() === today)
+    .map(({ e }) => e);
+  const upcomingEvents = enriched
+    .filter(({ t }) => t.getTime() >= today)
+    .map(({ e }) => e);
+  return { todayEvents, upcomingEvents };
 }
 
 function clampInt(value, min, max, fallback) {

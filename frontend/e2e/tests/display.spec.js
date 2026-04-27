@@ -41,7 +41,8 @@ test.describe('Display mode', () => {
     await gotoDisplayWithToken(page, created.token);
 
     await expect(page.getByTestId('display-dashboard')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId('display-device-name')).toContainText('Kitchen Tablet');
+    await expect(page.getByTestId('display-widget-home_header')).toBeVisible();
+    await expect(page.getByTestId('display-home-header')).toBeVisible();
     // The redesign surfaces the next event in two distinct regions — the
     // hero "focus" card and the agenda list — so scope the assertion to
     // each region to avoid strict-mode ambiguity from the duplicate title.
