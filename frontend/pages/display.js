@@ -111,8 +111,18 @@ export default function DisplayPage() {
       </Head>
       <main className="display-root" data-testid="display-root">
         {state === 'loading' && (
-          <div className="display-state" data-testid="display-state-loading">
-            <p>Loading…</p>
+          <div
+            className="display-state-loading"
+            data-testid="display-state-loading"
+            aria-busy="true"
+            aria-label="Loading display"
+          >
+            <div className="display-skeleton-card" />
+            <div className="display-skeleton-card" />
+            <div className="display-skeleton-card" />
+            <span className="visually-hidden" style={{ position: 'absolute', left: -9999 }}>
+              Loading…
+            </span>
           </div>
         )}
         {state === 'missing' && (

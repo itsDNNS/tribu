@@ -34,7 +34,11 @@ test.describe('Display mode', () => {
 
     await expect(page.getByTestId('display-dashboard')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('display-device-name')).toContainText('Kitchen Tablet');
-    await expect(page.getByText('Dinner Plan')).toBeVisible();
+    // The redesign surfaces the next event in two distinct regions — the
+    // hero "focus" card and the agenda list — so scope the assertion to
+    // each region to avoid strict-mode ambiguity from the duplicate title.
+    await expect(page.getByTestId('display-focus')).toContainText('Dinner Plan');
+    await expect(page.getByTestId('display-events')).toContainText('Dinner Plan');
     await expect(page.getByText(testUser.displayName)).toBeVisible();
 
     await expect(page).toHaveURL(/\/display$/);
@@ -45,6 +49,30 @@ test.describe('Display mode', () => {
     expect(requested.some((url) => url.includes('/api/families/me'))).toBe(false);
     expect(requested.some((url) => url.includes('/api/display/me'))).toBe(true);
     expect(requested.some((url) => url.includes('/api/display/dashboard'))).toBe(true);
+
+    // Glance test: the hero clock is rendered and large enough to be
+    // legible from across a kitchen. We allow some leeway (>= 48px)
+    // so the assertion stays robust across viewport sizes.
+    const clock = page.getByTestId('display-time');
+    await expect(clock).toBeVisible();
+    const clockFontPx = await clock.evaluate((el) => {
+      const v = window.getComputedStyle(el).fontSize;
+      return parseFloat(v);
+    });
+    expect(clockFontPx).toBeGreaterThanOrEqual(48);
+
+    // Privacy audit: no e-mail-shaped strings, no `ID:` labels, and
+    // no source URLs leak into the rendered DOM.
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toMatch(/[a-z0-9._%+-]+@[a-z0-9.-]+/i);
+    expect(bodyText).not.toMatch(/\bID:\s*\d+/i);
+
+    // The redesign keeps the original section testids so a future
+    // styling change can't silently drop a privacy-relevant region.
+    await expect(page.getByTestId('display-events')).toBeVisible();
+    await expect(page.getByTestId('display-birthdays')).toBeVisible();
+    await expect(page.getByTestId('display-members')).toBeVisible();
+    await expect(page.getByTestId('display-family-name')).toBeVisible();
   });
 
   test('shows a revoked-device state instead of falling back to a user session', async ({ page, apiCtx }) => {
