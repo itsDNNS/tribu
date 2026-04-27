@@ -49,6 +49,7 @@ export default function DisplayDashboard({ me, dashboard }) {
     now,
     timeLabel,
     dateLabel,
+    timeIso: now.toISOString(),
     eventGroups,
     focus,
     celebration,
@@ -116,6 +117,7 @@ function renderWidget(type, context, density) {
           deviceName={context.deviceName}
           timeLabel={context.timeLabel}
           dateLabel={context.dateLabel}
+          timeIso={context.timeIso}
           density={density}
           todayEvents={context.todayEvents}
           upcomingEvents={context.upcomingEvents}
@@ -124,7 +126,7 @@ function renderWidget(type, context, density) {
     case 'identity':
       return <IdentityCard familyName={context.familyName} deviceName={context.deviceName} />;
     case 'clock':
-      return <ClockCard timeLabel={context.timeLabel} dateLabel={context.dateLabel} />;
+      return <ClockCard timeLabel={context.timeLabel} dateLabel={context.dateLabel} timeIso={context.timeIso} />;
     case 'focus':
       return <FocusCard focus={context.focus} />;
     case 'agenda':
@@ -138,56 +140,66 @@ function renderWidget(type, context, density) {
   }
 }
 
-function HomeHeaderCard({ familyName, deviceName, timeLabel, dateLabel, density, todayEvents, upcomingEvents }) {
+function HomeHeaderCard({ familyName, deviceName, timeLabel, dateLabel, timeIso, density, todayEvents, upcomingEvents }) {
   const showHearth = density !== 'compact';
   const showTodayCue = density === 'standard';
   const showEventList = density === 'expanded';
   const todayCount = Array.isArray(todayEvents) ? todayEvents.length : 0;
-  const upcoming = Array.isArray(upcomingEvents) ? upcomingEvents.slice(0, 4) : [];
+  const upcoming = Array.isArray(upcomingEvents) ? upcomingEvents.slice(0, 3) : [];
   return (
     <div
       className={`display-card display-home-header display-home-header--${density}`}
       data-testid="display-home-header"
     >
       {showHearth && (
-        <div className="display-hearth-label">
-          <span className="display-hearth-prefix">The</span>
-          <span className="display-hearth-name" data-testid="display-family-name">
-            {familyName || 'Family'}
+        <div className="display-home-header-brand">
+          <span className="display-hearth-label">
+            <span className="display-hearth-prefix">The</span>
+            <span className="display-hearth-name" data-testid="display-family-name">
+              {familyName || 'Family'}
+            </span>
+            <span className="display-hearth-suffix">Home</span>
           </span>
-          <span className="display-hearth-suffix">Home</span>
+          {deviceName && (
+            <span className="display-device-tag" data-testid="display-device-name">
+              {deviceName}
+            </span>
+          )}
         </div>
       )}
-      {showHearth && deviceName && (
-        <div className="display-device-tag" data-testid="display-device-name">
-          {deviceName}
-        </div>
-      )}
-      <div className="display-clock" data-testid="display-time">{timeLabel}</div>
-      <div className="display-date" data-testid="display-date">{dateLabel}</div>
+      <div className="display-home-header-time">
+        <time className="display-clock" dateTime={timeIso} data-testid="display-time">{timeLabel}</time>
+        <div className="display-date" data-testid="display-date">{dateLabel}</div>
+      </div>
       {showTodayCue && (
         <div className="display-home-header-cue" data-testid="display-home-header-today-cue">
-          {todayCount > 0
-            ? `${todayCount} today`
-            : 'Nothing today'}
+          <span className="display-home-header-cue-dot" aria-hidden="true" />
+          <span>
+            {todayCount > 0
+              ? `${todayCount} today`
+              : 'Nothing today'}
+          </span>
         </div>
       )}
       {showEventList && (
-        <ul
-          className="display-home-header-events"
-          data-testid="display-home-header-events"
-        >
-          {upcoming.length === 0 ? (
-            <li className="display-home-header-empty">No events on the horizon.</li>
-          ) : (
-            upcoming.map((ev, idx) => (
-              <li key={idx} className="display-home-header-event">
-                <span className="display-home-header-when">{formatAgendaWhen(ev)}</span>
-                <span className="display-home-header-title">{ev.title}</span>
-              </li>
-            ))
-          )}
-        </ul>
+        <div className="display-home-header-upcoming" aria-live="polite">
+          <div className="display-home-header-eyebrow">Up next</div>
+          <ul
+            className="display-home-header-events"
+            data-testid="display-home-header-events"
+          >
+            {upcoming.length === 0 ? (
+              <li className="display-home-header-empty">No events on the horizon.</li>
+            ) : (
+              upcoming.map((ev, idx) => (
+                <li key={idx} className="display-home-header-event">
+                  <span className="display-home-header-when">{formatAgendaWhen(ev)}</span>
+                  <span className="display-home-header-title">{ev.title}</span>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -212,10 +224,10 @@ function IdentityCard({ familyName, deviceName }) {
   );
 }
 
-function ClockCard({ timeLabel, dateLabel }) {
+function ClockCard({ timeLabel, dateLabel, timeIso }) {
   return (
     <div className="display-card display-clock-shell" aria-live="off">
-      <div className="display-clock" data-testid="display-time">{timeLabel}</div>
+      <time className="display-clock" dateTime={timeIso} data-testid="display-time">{timeLabel}</time>
       <div className="display-date" data-testid="display-date">{dateLabel}</div>
     </div>
   );
@@ -386,7 +398,7 @@ function EmptyHearth({ message, tone = 'default' }) {
   return (
     <div className={`display-empty display-empty--${tone}`}>
       <span className="display-empty-glyph" aria-hidden="true">
-        ·
+        ✦
       </span>
       <span>{message}</span>
     </div>
