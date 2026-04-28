@@ -30,6 +30,8 @@ describe('version helpers', () => {
   test('hasNewerRelease ignores older or equal release bases for latest builds', () => {
     expect(hasNewerRelease('2026-04-24.412', 'v2026-04-24')).toBe(false);
     expect(hasNewerRelease('2026-04-24.412', 'v2026-04-25')).toBe(true);
+    expect(hasNewerRelease('2026-04-24.131', 'v2026-04-27.1')).toBe(true);
+    expect(hasNewerRelease('2026-04-27.1', 'v2026-04-27.1')).toBe(false);
     expect(hasNewerRelease('1.4.0-2-g7fd2bc4', '1.4.0')).toBe(false);
     expect(hasNewerRelease('1.4.1-3-gabcdef0', '1.4.0')).toBe(false);
     expect(hasNewerRelease('1.3.0-9-g1234567', '1.4.0')).toBe(true);
@@ -37,7 +39,9 @@ describe('version helpers', () => {
 
   test('formatDisplayedVersion prefixes product and legacy release versions', () => {
     expect(formatDisplayedVersion('2026-04-24.412')).toBe('v2026-04-24.412');
+    expect(formatDisplayedVersion('2026-04-27.1')).toBe('v2026-04-27.1');
     expect(formatDisplayedVersion('v2026-04-24')).toBe('v2026-04-24');
+    expect(formatDisplayedVersion('v2026-04-27.1')).toBe('v2026-04-27.1');
     expect(formatDisplayedVersion('1.4.0-2-g7fd2bc4+build.412')).toBe('v1.4.0-2-g7fd2bc4+build.412');
     expect(formatDisplayedVersion('v1.4.1')).toBe('v1.4.1');
     expect(formatDisplayedVersion('build.412-gabcdef1')).toBe('build.412-gabcdef1');

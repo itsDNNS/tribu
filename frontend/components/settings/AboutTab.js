@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShieldCheck, Heart, Bug, ExternalLink } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
-import { extractReleaseVersion, formatDisplayedVersion, hasNewerRelease } from '../../lib/version';
+import { formatDisplayedVersion, hasNewerRelease } from '../../lib/version';
 import * as api from '../../lib/api';
 
 export default function AboutTab() {
@@ -38,7 +38,7 @@ export default function AboutTab() {
           if (cancelled || !data.tag_name) return;
           const latest = data.tag_name.replace(/^v/, '');
           const result = hasNewerRelease(current, latest)
-            ? { version: formatDisplayedVersion(extractReleaseVersion(latest) || latest), url: data.html_url }
+            ? { version: formatDisplayedVersion(latest), url: data.html_url }
             : 'up_to_date';
           setUpdateInfo(result);
           try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
