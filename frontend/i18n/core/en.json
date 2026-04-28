@@ -388,7 +388,7 @@
   "sub_setup_contacts_hint": "Open the contacts feed URL in your browser to download a VCF file that can be imported into any contacts app.",
   "sub_token_missing": "Create a subscription token first to generate feed URLs.",
   "version": "Version",
-  "update_available": "v{version} available",
+  "update_available": "{version} available",
   "view_release": "View release notes",
   "up_to_date": "Up to date",
   "version_check_label": "Update check",
