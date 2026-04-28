@@ -29,7 +29,40 @@ describe('AboutTab version update check', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    delete process.env.NEXT_PUBLIC_APP_VERSION;
+    delete process.env.NEXT_PUBLIC_TRIBU_VERSION;
     delete global.fetch;
+  });
+
+  test('uses the frontend build version when it is newer than the backend health version', async () => {
+    process.env.NEXT_PUBLIC_APP_VERSION = '2026-04-28.181';
+
+    renderAboutTab();
+
+    await screen.findByText('Version: v2026-04-28.181');
+    await waitFor(() => {
+      expect(screen.getByText(/Up to date/)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/v2026-04-27\.1 available/)).not.toBeInTheDocument();
+  });
+
+  test('does not reuse a cached update result from an older effective version', async () => {
+    sessionStorage.setItem('tribu_update_check:2026-04-24.131', JSON.stringify({
+      ts: Date.now(),
+      data: {
+        version: 'v2026-04-27.1',
+        url: 'https://github.com/itsDNNS/tribu/releases/tag/v2026-04-27.1',
+      },
+    }));
+    process.env.NEXT_PUBLIC_APP_VERSION = '2026-04-28.181';
+
+    renderAboutTab();
+
+    await screen.findByText('Version: v2026-04-28.181');
+    await waitFor(() => {
+      expect(screen.getByText(/Up to date/)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/v2026-04-27\.1 available/)).not.toBeInTheDocument();
   });
 
   test('shows the full latest release with a single v prefix', async () => {
