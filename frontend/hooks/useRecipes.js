@@ -73,6 +73,16 @@ export function useRecipes() {
     return { ok: true, data };
   }
 
+  async function updateRecipeFields(recipeId, fields) {
+    const { ok, data } = await api.apiUpdateRecipe(recipeId, fields);
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return { ok: false };
+    }
+    await load();
+    return { ok: true, data };
+  }
+
   async function deleteRecipe(recipeId) {
     const { ok, data } = await api.apiDeleteRecipe(recipeId);
     if (!ok) {
@@ -109,6 +119,7 @@ export function useRecipes() {
     reload: load,
     createRecipe,
     updateRecipe,
+    updateRecipeFields,
     deleteRecipe,
     pushToShopping,
     emptyForm: createEmptyRecipeForm,

@@ -676,6 +676,8 @@ class Recipe(Base):
     description = Column(Text, nullable=True)
     source_url = Column(String(500), nullable=True)
     servings = Column(Integer, nullable=True)
+    is_favorite = Column(Boolean, nullable=False, default=False, server_default="false")
+    last_used_at = Column(DateTime, nullable=True)
     tags = Column(JSON, nullable=False, default=list, server_default="[]")
     ingredients = Column(JSON, nullable=False, default=list, server_default="[]")
     instructions = Column(Text, nullable=True)

@@ -2209,6 +2209,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .recipe-card-title { font-size: 1rem; font-weight: 600; margin: 0; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recipe-card-action { background: transparent; border: 1px solid transparent; color: var(--text-muted); border-radius: var(--radius-sm); padding: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; min-height: auto; transition: all 0.15s; }
 .recipe-card-action:hover { color: var(--text-primary); background: rgba(120, 130, 180, 0.1); border-color: var(--glass-border); }
+.recipe-card-actions { display: flex; align-items: center; gap: 4px; }
+.recipe-card-action-active { color: var(--warning); background: rgba(245, 158, 11, 0.12); }
+.recipe-card-favorite { color: var(--warning); }
 .recipe-card-action:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
 .recipe-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--text-secondary); font-size: 0.82rem; }
 .recipe-card-meta-item { display: inline-flex; align-items: center; gap: 5px; }
@@ -2269,6 +2272,11 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .recipe-push-row { display: flex; gap: 6px; align-items: center; }
 .recipe-push-list { flex: 1; min-width: 0; }
 .recipe-push-btn { white-space: nowrap; }
+.recipe-scale { display: flex; flex-direction: column; gap: 8px; padding: var(--space-sm); border: 1px dashed var(--glass-border); border-radius: var(--radius-sm); background: rgba(245, 158, 11, 0.05); }
+.recipe-scale-label { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 0.85rem; }
+.recipe-scale-input { max-width: 120px; }
+.recipe-scale-preview ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
+.recipe-scale-preview li { display: flex; justify-content: space-between; gap: 12px; color: var(--text-secondary); font-size: 0.82rem; }
 
 @media (max-width: 780px) {
   .recipe-header-actions { width: 100%; }

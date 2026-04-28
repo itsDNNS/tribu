@@ -46,6 +46,8 @@ const recipe = {
   description: 'Weekend breakfast',
   source_url: 'https://example.com/pancakes',
   servings: 4,
+  is_favorite: false,
+  last_used_at: null,
   tags: ['breakfast'],
   ingredients: [
     { name: 'Flour', amount: 200, unit: 'g' },
@@ -84,6 +86,45 @@ describe('RecipesView', () => {
     expect(screen.getByText('breakfast')).toBeInTheDocument();
   });
 
+  test('renders favorite and recently used metadata and toggles favorites', async () => {
+    mockAppState = baseState();
+    apiListRecipes.mockResolvedValueOnce({
+      ok: true,
+      data: [{ ...recipe, is_favorite: true, last_used_at: '2099-01-02T03:04:05' }],
+    });
+
+    render(<RecipesView />);
+
+    await waitFor(() => expect(screen.getByText('Favorite')).toBeInTheDocument());
+    expect(screen.getByText('Used recently')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Pancakes from favorites' }));
+
+    await waitFor(() => expect(apiUpdateRecipe).toHaveBeenCalledWith(5, { is_favorite: false }));
+  });
+
+  test('shows conservative serving scaling in the recipe dialog', async () => {
+    mockAppState = baseState();
+    apiListRecipes.mockResolvedValueOnce({
+      ok: true,
+      data: [{
+        ...recipe,
+        ingredients: [...recipe.ingredients, { name: 'Salt', amount: null, unit: null }],
+      }],
+    });
+
+    render(<RecipesView />);
+    await waitFor(() => expect(screen.getByText('Pancakes')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Edit recipe "Pancakes"' }));
+
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Edit recipe' })).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Scale to servings'), { target: { value: '8' } });
+
+    expect(screen.getByText('Scaled ingredients')).toBeInTheDocument();
+    expect(screen.getAllByText('Flour').length).toBeGreaterThan(0);
+    expect(screen.getByText('400 g')).toBeInTheDocument();
+    expect(screen.getAllByText('Salt').length).toBeGreaterThan(0);
+    expect(screen.getByText('Cannot scale')).toBeInTheDocument();
+  });
 
   test('does not render unsafe recipe source URLs as links', async () => {
     mockAppState = baseState();

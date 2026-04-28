@@ -6,6 +6,7 @@ copy operation, and pushing recipe ingredients to shopping lists can use
 the same item formatting as meal plans.
 """
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from typing import Optional, TypeAlias, TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -161,6 +162,8 @@ def _serialize(recipe: Recipe) -> RecipeResponse:
         "description": recipe.description,
         "source_url": recipe.source_url,
         "servings": recipe.servings,
+        "is_favorite": bool(recipe.is_favorite),
+        "last_used_at": recipe.last_used_at,
         "tags": recipe.tags or [],
         "ingredients": _normalize_stored_ingredients(recipe.ingredients),
         "instructions": recipe.instructions,
@@ -199,7 +202,7 @@ def list_recipes(
     rows = (
         db.query(Recipe)
         .filter(Recipe.family_id == family_id)
-        .order_by(Recipe.title.asc(), Recipe.id.asc())
+        .order_by(Recipe.is_favorite.desc(), Recipe.last_used_at.desc().nullslast(), Recipe.title.asc(), Recipe.id.asc())
         .all()
     )
     return [_serialize(recipe) for recipe in rows]
@@ -224,6 +227,7 @@ def create_recipe(
         description=_clean_text(payload.description),
         source_url=_clean_text(payload.source_url),
         servings=payload.servings,
+        is_favorite=payload.is_favorite,
         tags=_sanitize_tags(payload.tags),
         ingredients=_sanitize_ingredients(payload.ingredients),
         instructions=_clean_text(payload.instructions),
@@ -363,6 +367,7 @@ def add_recipe_ingredients_to_shopping(
         )
         db.add(item)
         created.append(item)
+    recipe.last_used_at = datetime.now(timezone.utc)
     db.commit()
     for item in created:
         db.refresh(item)
