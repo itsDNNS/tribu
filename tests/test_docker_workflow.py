@@ -20,3 +20,12 @@ def test_stable_release_tag_detection_covers_date_patch_tags():
     assert STABLE_RELEASE_TAG_RE.fullmatch('v1.2.3')
     assert not STABLE_RELEASE_TAG_RE.fullmatch('v2026-04-27.1-rc1')
     assert not STABLE_RELEASE_TAG_RE.fullmatch('v1.2.3-rc1')
+
+
+def test_frontend_image_receives_same_build_version_as_backend():
+    workflow = Path('.github/workflows/docker.yml').read_text()
+
+    assert 'id: frontend_app_version' in workflow
+    assert 'NEXT_PUBLIC_APP_VERSION=${{ steps.frontend_app_version.outputs.value }}' in workflow
+    assert 'NEXT_PUBLIC_APP_BUILD_NUMBER=${{ github.run_number }}' in workflow
+    assert 'NEXT_PUBLIC_APP_GIT_SHA=${{ github.sha }}' in workflow

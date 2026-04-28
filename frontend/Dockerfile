@@ -15,6 +15,20 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# NEXT_PUBLIC_* vars must be present during `next build` because Next.js
+# substitutes them into the client bundle at compile time. The CI
+# workflow passes the same value the backend gets for APP_VERSION, so
+# the running frontend reports its own build instead of the backend's
+# /health version when the two images ship independently.
+ARG NEXT_PUBLIC_APP_VERSION=""
+ARG NEXT_PUBLIC_APP_BUILD_NUMBER=""
+ARG NEXT_PUBLIC_APP_GIT_SHA=""
+ARG NEXT_PUBLIC_APP_BUILD_DATE=""
+ENV NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION
+ENV NEXT_PUBLIC_APP_BUILD_NUMBER=$NEXT_PUBLIC_APP_BUILD_NUMBER
+ENV NEXT_PUBLIC_APP_GIT_SHA=$NEXT_PUBLIC_APP_GIT_SHA
+ENV NEXT_PUBLIC_APP_BUILD_DATE=$NEXT_PUBLIC_APP_BUILD_DATE
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 

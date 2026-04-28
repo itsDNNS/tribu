@@ -7,46 +7,59 @@ import * as api from '../../lib/api';
 
 export default function AboutTab() {
   const { messages, isAdmin } = useApp();
-  const [version, setVersion] = useState(null);
+  // The frontend build version is baked in by the Docker build (Next.js
+  // inlines NEXT_PUBLIC_* at build time). When backend and frontend
+  // images are released independently, the backend's /health version
+  // can lag behind the running frontend bundle, so prefer the frontend
+  // build version for both the displayed version and the update check.
+  const buildVersion = process.env.NEXT_PUBLIC_APP_VERSION || null;
+  const [healthVersion, setHealthVersion] = useState(null);
   const [updateInfo, setUpdateInfo] = useState(null);
-  const displayedVersion = formatDisplayedVersion(version);
+  const effectiveVersion = buildVersion || healthVersion;
+  const displayedVersion = formatDisplayedVersion(effectiveVersion);
 
   useEffect(() => {
+    if (buildVersion) return undefined;
     let cancelled = false;
-    api.apiGetHealth().then(res => {
-      if (cancelled || !res.ok || !res.data?.version) return;
-      const current = res.data.version;
-      setVersion(current);
-
-      if (!isAdmin) return;
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
-      const CACHE_KEY = 'tribu_update_check';
-      const CACHE_TTL = 60 * 60 * 1000;
-      try {
-        const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
-        if (cached && Date.now() - cached.ts < CACHE_TTL) {
-          setUpdateInfo(cached.data);
-          return;
-        }
-      } catch {}
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 3000);
-      fetch('https://api.github.com/repos/itsDNNS/tribu/releases/latest', { signal: ctrl.signal })
-        .then(r => r.json())
-        .then(data => {
-          clearTimeout(timer);
-          if (cancelled || !data.tag_name) return;
-          const latest = data.tag_name.replace(/^v/, '');
-          const result = hasNewerRelease(current, latest)
-            ? { version: formatDisplayedVersion(latest), url: data.html_url }
-            : 'up_to_date';
-          setUpdateInfo(result);
-          try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
-        })
-        .catch(() => clearTimeout(timer));
-    }).catch(() => null);
+    api.apiGetHealth()
+      .then(res => {
+        if (cancelled || !res.ok || !res.data?.version) return;
+        setHealthVersion(res.data.version);
+      })
+      .catch(() => null);
     return () => { cancelled = true; };
-  }, [isAdmin]);
+  }, [buildVersion]);
+
+  useEffect(() => {
+    if (!effectiveVersion || !isAdmin) return undefined;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return undefined;
+    let cancelled = false;
+    const CACHE_KEY = `tribu_update_check:${effectiveVersion}`;
+    const CACHE_TTL = 60 * 60 * 1000;
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.ts < CACHE_TTL) {
+        setUpdateInfo(cached.data);
+        return undefined;
+      }
+    } catch {}
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    fetch('https://api.github.com/repos/itsDNNS/tribu/releases/latest', { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(data => {
+        clearTimeout(timer);
+        if (cancelled || !data.tag_name) return;
+        const latest = data.tag_name.replace(/^v/, '');
+        const result = hasNewerRelease(effectiveVersion, latest)
+          ? { version: formatDisplayedVersion(latest), url: data.html_url }
+          : 'up_to_date';
+        setUpdateInfo(result);
+        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
+      })
+      .catch(() => clearTimeout(timer));
+    return () => { cancelled = true; };
+  }, [effectiveVersion, isAdmin]);
 
   return (
     <div className="settings-grid">
@@ -56,7 +69,7 @@ export default function AboutTab() {
         <p className="set-about-desc">
           {t(messages, 'privacy_note')}
         </p>
-        {version && (
+        {effectiveVersion && (
           <div className="set-about-version">
             <span>{t(messages, 'version')}: {displayedVersion}</span>
             {isAdmin && updateInfo === 'up_to_date' && (
