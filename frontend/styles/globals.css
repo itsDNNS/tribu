@@ -999,6 +999,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .cal-form-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
 .cal-form-section-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-md); }
 .cal-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+.day-detail-panel .cal-form-row { grid-template-columns: 1fr; }
 .cal-form-actions { display: flex; gap: var(--space-sm); }
 .cal-empty-day { color: var(--text-muted); font-size: 0.88rem; }
 .cal-onboard { margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.06); border: 1px solid rgba(124, 58, 237, 0.12); }

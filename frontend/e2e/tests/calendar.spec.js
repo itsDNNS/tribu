@@ -27,6 +27,34 @@ test.describe('Calendar', () => {
     await expect(page.getByText('E2E Test Event')).toBeVisible({ timeout: 10000 });
   });
 
+  test('desktop event form gives date-time fields enough room for time entry', async ({ authedPage: page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await navigateTo(page, 'Calendar');
+    await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+
+    await page.locator('.calendar-day:not(.other-month)', { hasText: /^15$/ }).first().click();
+
+    const form = page.locator('.day-detail-panel .quick-add-form');
+    await expect(form).toBeVisible({ timeout: 5000 });
+    const startInput = form.locator('input[type="datetime-local"]').first();
+    const endInput = form.locator('input[type="datetime-local"]').nth(1);
+    await expect(startInput).toBeVisible();
+    await expect(endInput).toBeVisible();
+
+    const [formBox, startBox, endBox] = await Promise.all([
+      form.boundingBox(),
+      startInput.boundingBox(),
+      endInput.boundingBox(),
+    ]);
+    expect(formBox).not.toBeNull();
+    expect(startBox).not.toBeNull();
+    expect(endBox).not.toBeNull();
+
+    expect(startBox.width).toBeGreaterThan(250);
+    expect(endBox.width).toBeGreaterThan(250);
+    expect(endBox.y).toBeGreaterThan(startBox.y + startBox.height - 1);
+  });
+
   test('delete an event', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
 
