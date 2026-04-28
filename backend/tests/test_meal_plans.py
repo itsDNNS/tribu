@@ -408,6 +408,102 @@ class TestMealPlanIngredients:
         assert items == ["Basilikum", "Kaese", "Mehl", "Olivenoel", "Tomaten"]
 
 
+class TestWeeklyMealPlanShoppingIntegration:
+    def test_push_week_merges_compatible_duplicates_and_preserves_unsafe_items(self):
+        token, family_id = _seed_member("*", "week-shop")
+        list_id = _seed_shopping_list(family_id)
+
+        meals = [
+            ("2026-04-13", "morning", "Pancakes", [_ing("Flour", 500, "g"), _ing("Milk", 1, "l"), _ing("Basil")]),
+            ("2026-04-14", "noon", "Pasta", [_ing("flour", 250, "g"), _ing("Milk", 500, "ml"), _ing("basil")]),
+            ("2026-04-15", "evening", "Cake", [_ing("Sugar", 2, "tbsp"), _ing("Sugar")]),
+        ]
+        for plan_date, slot, meal_name, ingredients in meals:
+            resp = client.post(
+                "/meal-plans",
+                json={
+                    "family_id": family_id,
+                    "plan_date": plan_date,
+                    "slot": slot,
+                    "meal_name": meal_name,
+                    "ingredients": ingredients,
+                },
+                headers=_auth(token),
+            )
+            assert resp.status_code == 200, resp.json()
+
+        push = client.post(
+            "/meal-plans/week/add-to-shopping",
+            json={
+                "family_id": family_id,
+                "week_start": "2026-04-13",
+                "shopping_list_id": list_id,
+            },
+            headers=_auth(token),
+        )
+        assert push.status_code == 200, push.json()
+        assert push.json()["added_count"] == 5
+
+        items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+        pairs = sorted((item["name"], item["spec"]) for item in items)
+        assert pairs == sorted([
+            ("Basil", None),
+            ("Flour", "750 g"),
+            ("Milk", "1 l"),
+            ("Milk", "500 ml"),
+            ("Sugar", "2 tbsp"),
+        ])
+
+    def test_push_week_only_uses_selected_family_week_and_target_list_family(self):
+        token, family_id = _seed_member("*", "week-scope")
+        list_id = _seed_shopping_list(family_id)
+
+        in_week = client.post(
+            "/meal-plans",
+            json={
+                "family_id": family_id,
+                "plan_date": "2026-04-13",
+                "slot": "noon",
+                "meal_name": "Soup",
+                "ingredients": [_ing("Carrot", 2, "pcs")],
+            },
+            headers=_auth(token),
+        )
+        assert in_week.status_code == 200
+        out_of_week = client.post(
+            "/meal-plans",
+            json={
+                "family_id": family_id,
+                "plan_date": "2026-04-20",
+                "slot": "noon",
+                "meal_name": "Next soup",
+                "ingredients": [_ing("Potato", 3, "pcs")],
+            },
+            headers=_auth(token),
+        )
+        assert out_of_week.status_code == 200
+
+        push = client.post(
+            "/meal-plans/week/add-to-shopping",
+            json={"family_id": family_id, "week_start": "2026-04-13", "shopping_list_id": list_id},
+            headers=_auth(token),
+        )
+        assert push.status_code == 200
+        assert push.json()["added_count"] == 1
+        items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+        assert [(item["name"], item["spec"]) for item in items] == [("Carrot", "2 pcs")]
+
+        _, other_family_id = _seed_member("*", "week-other")
+        other_list = _seed_shopping_list(other_family_id)
+        bad = client.post(
+            "/meal-plans/week/add-to-shopping",
+            json={"family_id": family_id, "week_start": "2026-04-13", "shopping_list_id": other_list},
+            headers=_auth(token),
+        )
+        assert bad.status_code == 404
+        assert "SHOPPING_LIST_NOT_FOUND" in str(bad.json())
+
+
 class TestMealPlanShoppingIntegration:
     def test_push_all_ingredients_formats_spec(self):
         token, family_id = _seed_member("*", "shop-a")

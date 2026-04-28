@@ -16,6 +16,7 @@ const apiListMealPlanIngredients = jest.fn();
 const apiListRecipes = jest.fn();
 const apiCreateMealPlan = jest.fn();
 const apiDeleteMealPlan = jest.fn();
+const apiAddWeekMealIngredientsToShopping = jest.fn();
 jest.mock('../../lib/api', () => ({
   apiListMealPlans: (...args) => apiListMealPlans(...args),
   apiListMealPlanIngredients: (...args) => apiListMealPlanIngredients(...args),
@@ -24,6 +25,7 @@ jest.mock('../../lib/api', () => ({
   apiUpdateMealPlan: jest.fn(),
   apiDeleteMealPlan: (...args) => apiDeleteMealPlan(...args),
   apiAddMealIngredientsToShopping: jest.fn(),
+  apiAddWeekMealIngredientsToShopping: (...args) => apiAddWeekMealIngredientsToShopping(...args),
 }));
 
 const messages = {
@@ -74,6 +76,11 @@ const messages = {
   'module.meal_plans.ingredients_summary_one': '1 Zutat',
   'module.meal_plans.ingredients_summary': '{count} Zutaten',
   'module.meal_plans.drag_aria': 'Ziehen {name}',
+  'module.meal_plans.push_to_shopping': 'In Einkaufsliste',
+  'module.meal_plans.push_week_to_shopping': 'Woche zur Einkaufsliste hinzufügen',
+  'module.meal_plans.push_week_to_shopping_aria': 'Alle Zutaten dieser Woche in Einkaufsliste schieben',
+  'module.meal_plans.pushed_one': '1 Zutat auf die Einkaufsliste geschoben',
+  'module.meal_plans.pushed_many': '{count} Zutaten auf die Einkaufsliste geschoben',
   confirm: 'Bestätigen',
   cancel: 'Abbrechen',
 };
@@ -95,11 +102,13 @@ describe('MealPlansView', () => {
     apiListRecipes.mockReset();
     apiCreateMealPlan.mockReset();
     apiDeleteMealPlan.mockReset();
+    apiAddWeekMealIngredientsToShopping.mockReset();
     apiListMealPlans.mockResolvedValue({ ok: true, data: [] });
     apiListMealPlanIngredients.mockResolvedValue({ ok: true, data: { items: [] } });
     apiListRecipes.mockResolvedValue({ ok: true, data: [] });
     apiCreateMealPlan.mockResolvedValue({ ok: true, data: {} });
     apiDeleteMealPlan.mockResolvedValue({ ok: true, data: {} });
+    apiAddWeekMealIngredientsToShopping.mockResolvedValue({ ok: true, data: { added_count: 2 } });
   });
 
   test('renders the add button, fetches the week, and the grid has 7 day headers + 3 slots', async () => {
@@ -172,6 +181,51 @@ describe('MealPlansView', () => {
       ],
     });
   });
+
+  test('pushes the visible week ingredients to the selected shopping list', async () => {
+    mockAppState = baseState({ shoppingLists: [{ id: 55, name: 'Groceries' }] });
+    apiListMealPlans.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          id: 11,
+          family_id: 1,
+          plan_date: '2099-01-05',
+          slot: 'noon',
+          meal_name: 'Weekly Pasta',
+          ingredients: [{ name: 'Flour', amount: 500, unit: 'g' }],
+          notes: null,
+          created_by_user_id: null,
+          created_at: '2099-01-05T00:00:00',
+          updated_at: '2099-01-05T00:00:00',
+        },
+      ],
+    });
+
+    const realDate = global.Date;
+    global.Date = class extends realDate {
+      constructor(...args) {
+        if (args.length === 0) {
+          super('2099-01-05T12:00:00Z');
+        } else {
+          super(...args);
+        }
+      }
+      static now() { return new realDate('2099-01-05T12:00:00Z').getTime(); }
+    };
+
+    try {
+      render(<MealPlansView />);
+      await waitFor(() => expect(screen.getByText('Weekly Pasta')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Alle Zutaten dieser Woche in Einkaufsliste schieben' }));
+
+      await waitFor(() => expect(apiAddWeekMealIngredientsToShopping).toHaveBeenCalledWith(1, '2099-01-05', 55));
+    } finally {
+      global.Date = realDate;
+    }
+  });
+
 
   test('409 on create surfaces the translated slot-taken toast', async () => {
     mockAppState = baseState();
