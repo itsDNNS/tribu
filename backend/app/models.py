@@ -39,6 +39,7 @@ class Family(Base):
     birthdays = relationship("FamilyBirthday", back_populates="family", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
     shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
+    shopping_templates = relationship("ShoppingTemplate", back_populates="family", cascade="all, delete-orphan")
     recipes = relationship("Recipe", back_populates="family", cascade="all, delete-orphan")
     invitations = relationship("FamilyInvitation", back_populates="family", cascade="all, delete-orphan")
     reward_currency = relationship("RewardCurrency", back_populates="family", uselist=False, cascade="all, delete-orphan")
@@ -362,6 +363,7 @@ class ShoppingItem(Base):
     list_id = Column(Integer, ForeignKey("shopping_lists.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String, nullable=False)
     spec = Column(String, nullable=True)
+    category = Column(String, nullable=True)
     checked = Column(Boolean, nullable=False, default=False)
     checked_at = Column(DateTime, nullable=True)
     added_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -369,6 +371,39 @@ class ShoppingItem(Base):
     position = Column(Integer, nullable=False, default=0)
 
     shopping_list = relationship("ShoppingList", back_populates="items")
+
+
+class ShoppingTemplate(Base):
+    __tablename__ = "shopping_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="shopping_templates")
+    items = relationship(
+        "ShoppingTemplateItem",
+        back_populates="template",
+        cascade="all, delete-orphan",
+        order_by="ShoppingTemplateItem.position",
+    )
+
+
+class ShoppingTemplateItem(Base):
+    __tablename__ = "shopping_template_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    template_id = Column(Integer, ForeignKey("shopping_templates.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    spec = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    position = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    template = relationship("ShoppingTemplate", back_populates="items")
 
 
 class Notification(Base):

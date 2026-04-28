@@ -19,5 +19,18 @@
   "module.shopping.clear_checked_confirm": "Alle erledigten Artikel entfernen?",
   "module.shopping.new_list": "Neue Liste",
   "module.shopping.added_by": "Hinzugefügt von",
-  "module.shopping.add_first_item": "Ersten Artikel hinzufügen"
+  "module.shopping.add_first_item": "Ersten Artikel hinzufügen",
+  "module.shopping.templates": "Vorlagen",
+  "module.shopping.new_template": "Neue Vorlage",
+  "module.shopping.template_name_placeholder": "z.B. Wocheneinkauf",
+  "module.shopping.template_item_name_placeholder": "Vorlagenartikel",
+  "module.shopping.template_item_spec_placeholder": "Menge/Details",
+  "module.shopping.template_item_category_placeholder": "Kategorie",
+  "module.shopping.add_template_item": "Vorlagenartikel hinzufügen",
+  "module.shopping.remove_template_item": "Vorlagenartikel entfernen",
+  "module.shopping.save_template": "Vorlage speichern",
+  "module.shopping.cancel_template": "Abbrechen",
+  "module.shopping.apply_template": "Zur Liste hinzufügen",
+  "module.shopping.edit_template": "Vorlage bearbeiten",
+  "module.shopping.delete_template": "Vorlage löschen"
 }

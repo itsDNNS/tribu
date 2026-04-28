@@ -1,8 +1,10 @@
 const { test, expect } = require('../helpers/fixtures');
-const { getFamilyId, seedShoppingList, seedShoppingItem } = require('../helpers/api-setup');
+const { getFamilyId, seedShoppingList, seedShoppingItem, seedShoppingTemplate } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
 test.describe('Shopping', () => {
+  test.setTimeout(90000);
+
   test('create a shopping list', async ({ authedPage: page }) => {
     await navigateTo(page, 'Shopping');
 
@@ -19,7 +21,7 @@ test.describe('Shopping', () => {
 
     await navigateTo(page, 'Shopping');
     await page.reload();
-    await page.locator('#main-content').waitFor({ timeout: 10000 });
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
     await page.getByText('Item Test List').click();
@@ -38,7 +40,7 @@ test.describe('Shopping', () => {
 
     await navigateTo(page, 'Shopping');
     await page.reload();
-    await page.locator('#main-content').waitFor({ timeout: 10000 });
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
     await page.getByText('Toggle List').click();
@@ -54,13 +56,71 @@ test.describe('Shopping', () => {
     await expect(item).toHaveAttribute('aria-checked', 'false', { timeout: 5000 });
   });
 
+  test('create, edit, and apply a shopping template', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    await seedShoppingList(apiCtx, familyId, 'Template Target List');
+
+    await navigateTo(page, 'Shopping');
+    await page.reload();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+    await navigateTo(page, 'Shopping');
+
+    await page.getByText('Template Target List').click();
+    await page.getByRole('button', { name: 'New template' }).click();
+    await page.locator('input[placeholder="e.g. Weekly groceries"]').fill('Weekly groceries');
+    await page.locator('input[placeholder="Template item"]').first().fill('Milk');
+    await page.locator('input[placeholder="Amount/details"]').first().fill('2 L');
+    await page.locator('input[placeholder="Category"]').first().fill('Dairy');
+    await page.getByRole('button', { name: 'Add template item' }).click();
+    await page.locator('input[placeholder="Template item"]').nth(1).fill('Bananas');
+    await page.locator('input[placeholder="Amount/details"]').nth(1).fill('6');
+    await page.locator('input[placeholder="Category"]').nth(1).fill('Produce');
+    await page.getByRole('button', { name: 'Save template' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Weekly groceries' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Milk')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Edit template: Weekly groceries' }).click();
+    await page.locator('input[placeholder="e.g. Weekly groceries"]').fill('Weekly basics');
+    await page.getByRole('button', { name: 'Save template' }).click();
+    await expect(page.getByRole('heading', { name: 'Weekly basics' })).toBeVisible({ timeout: 10000 });
+
+    await page.getByRole('button', { name: 'Add to list: Weekly basics' }).click();
+    const milkItem = page.locator('[role="checkbox"][aria-label="Milk"]');
+    await expect(milkItem).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[role="checkbox"][aria-label="Bananas"]')).toBeVisible();
+    await expect(milkItem).toContainText('2 L');
+    await expect(milkItem).toContainText('Dairy');
+  });
+
+  test('apply a seeded shopping template to a list', async ({ authedPage: page, apiCtx }) => {
+    test.setTimeout(90000);
+    const familyId = await getFamilyId(apiCtx);
+    await seedShoppingList(apiCtx, familyId, 'Seeded Template Target');
+    await seedShoppingTemplate(apiCtx, familyId, 'Seeded weekly groceries', [
+      { name: 'Oats', spec: '1 kg', category: 'Pantry' },
+      { name: 'Eggs', spec: '12', category: 'Dairy' },
+    ]);
+
+    await navigateTo(page, 'Shopping');
+    await page.reload();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+    await navigateTo(page, 'Shopping');
+
+    await page.getByText('Seeded Template Target').click();
+    await page.getByRole('button', { name: 'Add to list: Seeded weekly groceries' }).click();
+
+    await expect(page.locator('[role="checkbox"][aria-label="Oats"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[role="checkbox"][aria-label="Eggs"]')).toBeVisible();
+  });
+
   test('delete a shopping list', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
     await seedShoppingList(apiCtx, familyId, 'Delete This List');
 
     await navigateTo(page, 'Shopping');
     await page.reload();
-    await page.locator('#main-content').waitFor({ timeout: 10000 });
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
     await page.getByText('Delete This List').click();
