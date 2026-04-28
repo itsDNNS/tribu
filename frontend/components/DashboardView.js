@@ -1,4 +1,4 @@
-import { CalendarClock, ListChecks, Cake, BarChart3, Users, Calendar, CheckCircle, Plus, CheckSquare, UserPlus, Circle, ShoppingCart } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, Users, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -58,10 +58,35 @@ export default function DashboardView() {
   const { summary, me, members, tasks, events, shoppingLists, setActiveView, messages, lang, timeFormat, isChild, isAdmin } = useApp();
 
   const openTasks = tasks.filter((t) => t.status === 'open');
-  const doneTasks = tasks.filter((t) => t.status === 'done');
-  const donePercent = tasks.length > 0 ? Math.round((doneTasks.length / tasks.length) * 100) : 0;
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const todayStr = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const todayEventCount = (summary.next_events || []).filter((ev) => {
+    const d = parseDate(ev.starts_at);
+    if (!d) return false;
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  }).length;
+
+  const adultQuickActions = [
+    { key: 'event', label: t(messages, 'module.dashboard.quick_event'), icon: Calendar, onClick: () => setActiveView('calendar') },
+    { key: 'task', label: t(messages, 'module.dashboard.quick_task'), icon: CheckSquare, onClick: () => setActiveView('tasks') },
+    { key: 'shopping', label: t(messages, 'module.dashboard.quick_shopping'), icon: ShoppingCart, onClick: () => setActiveView('shopping') },
+    ...(isAdmin ? [{ key: 'invite', label: t(messages, 'module.dashboard.quick_invite'), icon: UserPlus, onClick: () => setActiveView('admin') }] : []),
+  ];
+
+  const quickActions = isChild
+    ? [
+        { key: 'my-tasks', label: t(messages, 'module.dashboard.quick_my_tasks'), icon: CheckSquare, onClick: () => setActiveView('tasks') },
+        { key: 'rewards', label: t(messages, 'module.dashboard.quick_rewards'), icon: CheckCircle, onClick: () => setActiveView('rewards') },
+      ]
+    : adultQuickActions;
+
+  const heroChips = [
+    ...(isAdmin ? [{ key: 'members', testId: 'hero-chip-members', value: members.length, label: t(messages, 'module.dashboard.chip_members'), icon: Users, onClick: () => setActiveView('admin') }] : []),
+    { key: 'events', testId: 'hero-chip-events', value: todayEventCount, label: t(messages, 'module.dashboard.chip_today_events'), icon: CalendarClock, onClick: () => setActiveView('calendar') },
+    { key: 'tasks', testId: 'hero-chip-tasks', value: openTasks.length, label: t(messages, 'module.dashboard.chip_open_tasks'), icon: ListChecks, onClick: () => setActiveView('tasks') },
+  ];
 
   const safeShoppingLists = Array.isArray(shoppingLists) ? shoppingLists : [];
   const hasShoppingContent = safeShoppingLists.some((list) => {
@@ -124,14 +149,8 @@ export default function DashboardView() {
   const showActivationPanel = !isChild && adoptionIncomplete;
 
   const summaryText = (() => {
-    const now = new Date();
-    const todayEvents = (summary.next_events || []).filter(ev => {
-      const d = parseDate(ev.starts_at);
-      return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-    });
-    const evCount = todayEvents.length;
-    let s = evCount > 0
-      ? t(messages, 'module.dashboard.summary_events').replace('{count}', evCount)
+    let s = todayEventCount > 0
+      ? t(messages, 'module.dashboard.summary_events').replace('{count}', todayEventCount)
       : t(messages, 'module.dashboard.summary_no_events');
     if (openTasks.length > 0) {
       s += t(messages, 'module.dashboard.summary_tasks').replace('{count}', openTasks.length);
@@ -149,15 +168,53 @@ export default function DashboardView() {
           <div className="view-subtitle">{summaryText}</div>
         </div>
         <div className="dashboard-header-actions">
-          {!isChild && (
-            <>
-              <button className="btn-ghost btn-icon" onClick={() => setActiveView('calendar')} aria-label={t(messages, 'module.dashboard.quick_event')}><Plus size={16} aria-hidden="true" /></button>
-              <button className="btn-ghost btn-icon" onClick={() => setActiveView('tasks')} aria-label={t(messages, 'module.dashboard.quick_task')}><CheckSquare size={16} aria-hidden="true" /></button>
-              <button className="btn-ghost btn-icon" onClick={() => setActiveView('contacts')} aria-label={t(messages, 'module.dashboard.quick_contact')}><UserPlus size={16} aria-hidden="true" /></button>
-            </>
-          )}
           <div className="view-date">{todayStr}</div>
         </div>
+      </div>
+
+      <div
+        className="hero-context-chips"
+        role="group"
+        aria-label={t(messages, 'module.dashboard.context_chips_label')}
+      >
+        {heroChips.map((chip) => {
+          const Icon = chip.icon;
+          return (
+            <button
+              key={chip.key}
+              type="button"
+              className="hero-chip"
+              data-testid={chip.testId}
+              onClick={chip.onClick}
+            >
+              <span className="hero-chip-icon" aria-hidden="true"><Icon size={14} /></span>
+              <span className="hero-chip-value">{chip.value}</span>
+              <span className="hero-chip-label">{chip.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        className="dashboard-quick-actions"
+        role="group"
+        aria-label={t(messages, 'module.dashboard.quick_actions_label')}
+      >
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.key}
+              type="button"
+              className="quick-action-pill"
+              data-testid={`quick-action-${action.key}`}
+              onClick={action.onClick}
+            >
+              <Icon size={16} aria-hidden="true" />
+              <span>{action.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {showActivationPanel && <ActivationPanel steps={activationSteps} messages={messages} />}
@@ -196,27 +253,6 @@ export default function DashboardView() {
               </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Stats Card */}
-        <div className="bento-card bento-stats" role="region" aria-label={t(messages, 'module.dashboard.family')}>
-          <div className="bento-card-header">
-            <h2 className="bento-card-title"><BarChart3 size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.family')}</h2>
-          </div>
-          <div className="stat-grid">
-            <div className="stat-item stat-item-link" onClick={() => setActiveView('admin')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('admin')}>
-              <div className="stat-icon" style={{ background: 'rgba(124,58,237,0.12)' }}><Users size={18} style={{ color: 'var(--amethyst)' }} aria-hidden="true" /></div>
-              <div><div className="stat-value">{members.length}</div><div className="stat-label">{t(messages, 'module.dashboard.members')}</div></div>
-            </div>
-            <div className="stat-item stat-item-link" onClick={() => setActiveView('calendar')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('calendar')}>
-              <div className="stat-icon" style={{ background: 'rgba(59,130,246,0.12)' }}><Calendar size={18} style={{ color: 'var(--sapphire)' }} aria-hidden="true" /></div>
-              <div><div className="stat-value">{events.length}</div><div className="stat-label">{t(messages, 'module.dashboard.events_count')}</div></div>
-            </div>
-            <div className="stat-item stat-item-link" onClick={() => setActiveView('tasks')} role="link" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setActiveView('tasks')}>
-              <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)' }}><CheckCircle size={18} style={{ color: 'var(--success)' }} aria-hidden="true" /></div>
-              <div><div className="stat-value">{donePercent}%</div><div className="stat-label">{t(messages, 'module.dashboard.tasks_done')}</div></div>
-            </div>
           </div>
         </div>
 

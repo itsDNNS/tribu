@@ -48,7 +48,6 @@ function DashboardSkeleton() {
       </div>
       <div className="bento-grid">
         <div className="bento-events skeleton skeleton-card" style={{ minHeight: 180 }} />
-        <div className="bento-stats skeleton skeleton-card" style={{ minHeight: 180 }} />
         <div className="bento-tasks skeleton skeleton-card" style={{ minHeight: 180 }} />
         <div className="bento-birthdays skeleton skeleton-card" style={{ minHeight: 180 }} />
       </div>
