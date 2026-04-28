@@ -160,6 +160,7 @@
   "aria.add_item": "Add item",
   "aria.delete_item": "Delete item: {name}",
   "aria.delete_list": "Delete list: {name}",
+  "aria.delete_template": "Delete template: {name}",
   "aria.welcome": "Welcome",
   "aria.status_messages": "Status messages",
   "aria.skip_to_content": "Skip to main content",

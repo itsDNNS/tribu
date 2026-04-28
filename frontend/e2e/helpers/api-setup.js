@@ -75,6 +75,16 @@ async function seedShoppingItem(request, listId, name = 'Milk', spec = '') {
   return res.json();
 }
 
+async function seedShoppingTemplate(request, familyId, name = 'Weekly groceries', items = []) {
+  const res = await request.post('/api/shopping/templates', {
+    data: { family_id: familyId, name, items },
+  });
+  if (!res.ok()) {
+    throw new Error(`POST /api/shopping/templates failed (${res.status()}): ${await res.text()}`);
+  }
+  return res.json();
+}
+
 
 async function seedMealPlan(request, familyId, overrides = {}) {
   const res = await request.post('/api/meal-plans', {
@@ -100,5 +110,6 @@ module.exports = {
   completeTask,
   seedShoppingList,
   seedShoppingItem,
+  seedShoppingTemplate,
   seedMealPlan,
 };

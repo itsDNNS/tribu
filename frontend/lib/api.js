@@ -274,6 +274,26 @@ export function apiClearCheckedItems(listId) {
   return del(`/shopping/lists/${listId}/checked`);
 }
 
+export function apiGetShoppingTemplates(familyId) {
+  return request(`/shopping/templates?family_id=${familyId}`);
+}
+
+export function apiCreateShoppingTemplate(payload) {
+  return post('/shopping/templates', payload);
+}
+
+export function apiUpdateShoppingTemplate(templateId, payload) {
+  return patch(`/shopping/templates/${templateId}`, payload);
+}
+
+export function apiDeleteShoppingTemplate(templateId) {
+  return del(`/shopping/templates/${templateId}`);
+}
+
+export function apiApplyShoppingTemplate(templateId, payload) {
+  return post(`/shopping/templates/${templateId}/apply`, payload);
+}
+
 // Tokens
 export function apiGetTokens() {
   return request('/tokens');

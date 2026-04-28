@@ -19,5 +19,18 @@
   "module.shopping.clear_checked_confirm": "Remove all checked items?",
   "module.shopping.new_list": "New list",
   "module.shopping.added_by": "Added by",
-  "module.shopping.add_first_item": "Add first item"
+  "module.shopping.add_first_item": "Add first item",
+  "module.shopping.templates": "Templates",
+  "module.shopping.new_template": "New template",
+  "module.shopping.template_name_placeholder": "e.g. Weekly groceries",
+  "module.shopping.template_item_name_placeholder": "Template item",
+  "module.shopping.template_item_spec_placeholder": "Amount/details",
+  "module.shopping.template_item_category_placeholder": "Category",
+  "module.shopping.add_template_item": "Add template item",
+  "module.shopping.remove_template_item": "Remove template item",
+  "module.shopping.save_template": "Save template",
+  "module.shopping.cancel_template": "Cancel",
+  "module.shopping.apply_template": "Add to list",
+  "module.shopping.edit_template": "Edit template",
+  "module.shopping.delete_template": "Delete template"
 }

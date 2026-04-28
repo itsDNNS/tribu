@@ -18,6 +18,7 @@ export function useShopping() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemSpec, setNewItemSpec] = useState('');
   const [showCreateList, setShowCreateList] = useState(false);
+  const [templates, setTemplates] = useState([]);
   const itemInputRef = useRef(null);
 
 
@@ -89,6 +90,19 @@ export function useShopping() {
       setItems([]);
     }
   }, [shoppingLists, activeListId]);
+
+  useEffect(() => {
+    if (!familyId || demoMode) { setTemplates([]); return; }
+    api.apiGetShoppingTemplates(familyId).then(({ ok, data }) => {
+      if (ok) setTemplates(data);
+    });
+  }, [familyId, demoMode]);
+
+  const loadTemplates = useCallback(async () => {
+    if (!familyId || demoMode) return;
+    const { ok, data } = await api.apiGetShoppingTemplates(familyId);
+    if (ok) setTemplates(data);
+  }, [familyId, demoMode]);
 
   useEffect(() => {
     if (!activeListId) { setItems([]); return; }
@@ -250,6 +264,94 @@ export function useShopping() {
     }
   }
 
+  async function createTemplate(payload) {
+    if (!payload.name?.trim()) return;
+    if (demoMode) {
+      const template = {
+        id: Date.now(),
+        family_id: Number(familyId),
+        name: payload.name.trim(),
+        items: payload.items || [],
+        item_count: (payload.items || []).length,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setTemplates((prev) => [...prev, template]);
+      return;
+    }
+    const { ok, data } = await api.apiCreateShoppingTemplate({
+      family_id: Number(familyId),
+      name: payload.name.trim(),
+      items: payload.items || [],
+    });
+    if (!ok) return toastError(t(messages, 'toast.error'));
+    setTemplates((prev) => [...prev.filter((tpl) => tpl.id !== data.id), data]);
+  }
+
+  async function updateTemplate(templateId, payload) {
+    if (!payload.name?.trim()) return;
+    if (demoMode) {
+      setTemplates((prev) => prev.map((tpl) => tpl.id === templateId ? {
+        ...tpl,
+        name: payload.name.trim(),
+        items: payload.items || [],
+        item_count: (payload.items || []).length,
+        updated_at: new Date().toISOString(),
+      } : tpl));
+      return;
+    }
+    const { ok, data } = await api.apiUpdateShoppingTemplate(templateId, {
+      name: payload.name.trim(),
+      items: payload.items || [],
+    });
+    if (!ok) return toastError(t(messages, 'toast.error'));
+    setTemplates((prev) => prev.map((tpl) => tpl.id === templateId ? data : tpl));
+  }
+
+  async function deleteTemplate(templateId) {
+    if (demoMode) {
+      setTemplates((prev) => prev.filter((tpl) => tpl.id !== templateId));
+      return;
+    }
+    const previous = templates;
+    setTemplates((prev) => prev.filter((tpl) => tpl.id !== templateId));
+    const { ok } = await api.apiDeleteShoppingTemplate(templateId);
+    if (!ok) {
+      toastError(t(messages, 'toast.error'));
+      setTemplates(previous);
+    }
+  }
+
+  async function applyTemplate(templateId) {
+    if (!activeListId) return;
+    if (demoMode) {
+      const template = templates.find((tpl) => tpl.id === templateId);
+      const newItems = (template?.items || []).map((item, idx) => ({
+        id: Date.now() + idx,
+        list_id: activeListId,
+        name: item.name,
+        spec: item.spec || null,
+        category: item.category || null,
+        checked: false,
+        checked_at: null,
+        added_by_user_id: 1,
+        created_at: new Date().toISOString(),
+      }));
+      setItems((prev) => [...prev, ...newItems]);
+      setShoppingLists((prev) => prev.map((list) => list.id === activeListId
+        ? { ...list, item_count: list.item_count + newItems.length, items: [...(list.items || []), ...newItems] }
+        : list));
+      return;
+    }
+    const { ok } = await api.apiApplyShoppingTemplate(templateId, { list_id: activeListId });
+    if (!ok) {
+      toastError(t(messages, 'toast.error'));
+      return;
+    }
+    await reloadItems();
+    await loadShoppingLists();
+  }
+
   async function clearChecked() {
     if (!activeListId) return;
     if (demoMode) {
@@ -283,9 +385,11 @@ export function useShopping() {
     newItemName, setNewItemName,
     newItemSpec, setNewItemSpec,
     showCreateList, setShowCreateList,
+    templates,
     itemInputRef,
     createList, deleteList,
     addItem, toggleItem, deleteItem, clearChecked,
+    createTemplate, updateTemplate, deleteTemplate, applyTemplate, loadTemplates,
     wsConnected,
   };
 }

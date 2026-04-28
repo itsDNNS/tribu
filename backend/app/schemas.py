@@ -597,9 +597,10 @@ class ShoppingItemCreate(BaseModel):
     """Add an item to a shopping list."""
     name: str = Field(min_length=1, max_length=200, description="Item name")
     spec: Optional[str] = Field(None, max_length=200, description="Specification (e.g. '500g', 'organic')")
+    category: Optional[str] = Field(None, max_length=100, description="Optional category or aisle label")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"name": "Milk", "spec": "1L, whole"}]
+        "examples": [{"name": "Milk", "spec": "1L, whole", "category": "Dairy"}]
     })
 
 
@@ -607,6 +608,7 @@ class ShoppingItemUpdate(BaseModel):
     """Update a shopping item (partial update)."""
     name: Optional[str] = Field(None, min_length=1, max_length=200, description="Item name")
     spec: Optional[str] = Field(None, max_length=200, description="Item specification")
+    category: Optional[str] = Field(None, max_length=100, description="Optional category or aisle label")
     checked: Optional[bool] = Field(None, description="Check/uncheck the item")
 
 
@@ -618,10 +620,78 @@ class ShoppingItemResponse(BaseModel):
     list_id: int = Field(..., description="Parent list ID")
     name: str = Field(..., description="Item name")
     spec: Optional[str] = Field(None, description="Item specification")
+    category: Optional[str] = Field(None, description="Optional category or aisle label")
     checked: bool = Field(..., description="Whether the item is checked off")
     checked_at: Optional[datetime] = Field(None, description="When the item was checked")
     added_by_user_id: Optional[int] = Field(None, description="User who added the item")
     created_at: datetime = Field(..., description="Creation timestamp")
+
+
+class ShoppingTemplateItemBase(BaseModel):
+    """Reusable item stored in a shopping template."""
+    name: str = Field(min_length=1, max_length=200, description="Item name")
+    spec: Optional[str] = Field(None, max_length=200, description="Specification (e.g. '500g', 'organic')")
+    category: Optional[str] = Field(None, max_length=100, description="Optional category or aisle label")
+
+
+class ShoppingTemplateCreate(BaseModel):
+    """Create a saved shopping template."""
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(min_length=1, max_length=100, description="Template name")
+    items: list[ShoppingTemplateItemBase] = Field(default_factory=list, max_length=100, description="Template items")
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{
+            "family_id": 1,
+            "name": "Weekly groceries",
+            "items": [{"name": "Milk", "spec": "2 L", "category": "Dairy"}],
+        }]
+    })
+
+
+class ShoppingTemplateUpdate(BaseModel):
+    """Update a saved shopping template."""
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Template name")
+    items: Optional[list[ShoppingTemplateItemBase]] = Field(None, max_length=100, description="Replacement item list")
+
+
+class ShoppingTemplateItemResponse(BaseModel):
+    """Saved template item."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Template item ID")
+    template_id: int = Field(..., description="Template ID")
+    name: str = Field(..., description="Item name")
+    spec: Optional[str] = Field(None, description="Item specification")
+    category: Optional[str] = Field(None, description="Optional category or aisle label")
+    position: int = Field(0, description="Item ordering position")
+
+
+class ShoppingTemplateResponse(BaseModel):
+    """Saved shopping template with items."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Template ID")
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(..., description="Template name")
+    created_by_user_id: Optional[int] = Field(None, description="Creator user ID")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+    item_count: int = Field(0, description="Number of template items")
+    items: list[ShoppingTemplateItemResponse] = Field(default_factory=list, description="Template items")
+
+
+class ShoppingTemplateApplyRequest(BaseModel):
+    """Add all template items to a shopping list."""
+    list_id: int = Field(..., description="Destination shopping list ID")
+
+
+class ShoppingTemplateApplyResponse(BaseModel):
+    """Items added from a template."""
+    template_id: int = Field(..., description="Template ID")
+    list_id: int = Field(..., description="Destination shopping list ID")
+    added_count: int = Field(0, description="Number of added items")
+    items: list[ShoppingItemResponse] = Field(default_factory=list, description="Created shopping items")
 
 
 # ---------------------------------------------------------------------------

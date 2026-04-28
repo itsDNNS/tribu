@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
 from app.database import get_db
-from app.models import ShoppingItem, ShoppingList, User
+from app.models import ShoppingItem, ShoppingList, ShoppingTemplate, ShoppingTemplateItem, User
 from app.core.ws_broadcast import (
     broadcast_item_added,
     broadcast_item_deleted,
@@ -24,8 +24,19 @@ from app.schemas import (
     ShoppingItemUpdate,
     ShoppingListCreate,
     ShoppingListResponse,
+    ShoppingTemplateApplyRequest,
+    ShoppingTemplateApplyResponse,
+    ShoppingTemplateCreate,
+    ShoppingTemplateResponse,
+    ShoppingTemplateUpdate,
 )
-from app.core.errors import error_detail, SHOPPING_LIST_NOT_FOUND, SHOPPING_ITEM_NOT_FOUND, ADULT_REQUIRED
+from app.core.errors import (
+    error_detail,
+    SHOPPING_LIST_NOT_FOUND,
+    SHOPPING_ITEM_NOT_FOUND,
+    SHOPPING_TEMPLATE_NOT_FOUND,
+    ADULT_REQUIRED,
+)
 
 router = APIRouter(prefix="/shopping", tags=["shopping"], responses={**AUTH_RESPONSES})
 
@@ -41,6 +52,187 @@ def _list_response(sl: ShoppingList) -> ShoppingListResponse:
         created_at=sl.created_at,
         item_count=total,
         checked_count=checked,
+    )
+
+
+def _template_response(template: ShoppingTemplate) -> ShoppingTemplateResponse:
+    ordered_items = sorted(template.items, key=lambda item: item.position)
+    return ShoppingTemplateResponse(
+        id=template.id,
+        family_id=template.family_id,
+        name=template.name,
+        created_by_user_id=template.created_by_user_id,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+        item_count=len(ordered_items),
+        items=ordered_items,
+    )
+
+
+def _replace_template_items(template: ShoppingTemplate, items) -> None:
+    template.items.clear()
+    for position, item in enumerate(items):
+        template.items.append(
+            ShoppingTemplateItem(
+                name=item.name,
+                spec=item.spec,
+                category=item.category,
+                position=position,
+            )
+        )
+
+
+def _get_template_or_404(db: Session, template_id: int) -> ShoppingTemplate:
+    template = db.query(ShoppingTemplate).filter(ShoppingTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_TEMPLATE_NOT_FOUND))
+    return template
+
+
+# ── Templates ──────────────────────────────────────────
+
+
+@router.get(
+    "/templates",
+    response_model=list[ShoppingTemplateResponse],
+    summary="List shopping templates",
+    description="Return all saved shopping templates for a family. Scope: `shopping:read`.",
+    response_description="List of saved shopping templates",
+)
+def get_templates(
+    family_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:read"),
+):
+    ensure_family_membership(db, user.id, family_id)
+    templates = (
+        db.query(ShoppingTemplate)
+        .filter(ShoppingTemplate.family_id == family_id)
+        .order_by(ShoppingTemplate.created_at, ShoppingTemplate.id)
+        .all()
+    )
+    return [_template_response(template) for template in templates]
+
+
+@router.post(
+    "/templates",
+    response_model=ShoppingTemplateResponse,
+    summary="Create a shopping template",
+    description="Create a saved shopping template. Adult only. Scope: `shopping:write`.",
+    response_description="The created shopping template",
+)
+def create_template(
+    payload: ShoppingTemplateCreate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+    template = ShoppingTemplate(
+        family_id=payload.family_id,
+        name=payload.name,
+        created_by_user_id=user.id,
+    )
+    _replace_template_items(template, payload.items)
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+    return _template_response(template)
+
+
+@router.patch(
+    "/templates/{template_id}",
+    response_model=ShoppingTemplateResponse,
+    summary="Update a shopping template",
+    description="Update a saved shopping template and optionally replace its items. Adult only. Scope: `shopping:write`.",
+    response_description="The updated shopping template",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def update_template(
+    template_id: int,
+    payload: ShoppingTemplateUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    template = _get_template_or_404(db, template_id)
+    ensure_adult(db, user.id, template.family_id)
+    if payload.name is not None:
+        template.name = payload.name
+    if payload.items is not None:
+        _replace_template_items(template, payload.items)
+    db.commit()
+    db.refresh(template)
+    return _template_response(template)
+
+
+@router.delete(
+    "/templates/{template_id}",
+    summary="Delete a shopping template",
+    description="Delete a saved shopping template. Adult only. Scope: `shopping:write`.",
+    response_description="Deletion confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def delete_template(
+    template_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    template = _get_template_or_404(db, template_id)
+    ensure_adult(db, user.id, template.family_id)
+    db.delete(template)
+    db.commit()
+    return {"status": "deleted", "template_id": template_id}
+
+
+@router.post(
+    "/templates/{template_id}/apply",
+    response_model=ShoppingTemplateApplyResponse,
+    summary="Add a shopping template to a list",
+    description="Copy all template items to an existing shopping list. Adult only. Scope: `shopping:write`.",
+    response_description="The created shopping items",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def apply_template(
+    template_id: int,
+    payload: ShoppingTemplateApplyRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    template = _get_template_or_404(db, template_id)
+    ensure_adult(db, user.id, template.family_id)
+    sl = db.query(ShoppingList).filter(ShoppingList.id == payload.list_id).first()
+    if not sl or sl.family_id != template.family_id:
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
+
+    created_items = []
+    ordered_template_items = sorted(template.items, key=lambda item: item.position)
+    max_position = max((item.position for item in sl.items), default=-1)
+    for offset, template_item in enumerate(ordered_template_items):
+        item = ShoppingItem(
+            list_id=sl.id,
+            name=template_item.name,
+            spec=template_item.spec,
+            category=template_item.category,
+            added_by_user_id=user.id,
+            position=max_position + offset + 1,
+        )
+        db.add(item)
+        created_items.append(item)
+
+    db.commit()
+    for item in created_items:
+        db.refresh(item)
+        broadcast_item_added(sl.id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
+
+    return ShoppingTemplateApplyResponse(
+        template_id=template.id,
+        list_id=sl.id,
+        added_count=len(created_items),
+        items=created_items,
     )
 
 
@@ -169,6 +361,7 @@ def add_item(
         list_id=list_id,
         name=payload.name,
         spec=payload.spec,
+        category=payload.category,
         added_by_user_id=user.id,
     )
     db.add(item)
@@ -207,6 +400,8 @@ def update_item(
         item.name = payload.name
     if payload.spec is not None:
         item.spec = payload.spec
+    if payload.category is not None:
+        item.category = payload.category
     if payload.checked is not None:
         item.checked = payload.checked
         item.checked_at = utcnow() if payload.checked else None

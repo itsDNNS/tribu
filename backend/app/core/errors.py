@@ -51,6 +51,7 @@ INVITATION_FULLY_USED = "INVITATION_FULLY_USED"
 # ── Shopping ──────────────────────────────────────────────────
 SHOPPING_LIST_NOT_FOUND = "SHOPPING_LIST_NOT_FOUND"
 SHOPPING_ITEM_NOT_FOUND = "SHOPPING_ITEM_NOT_FOUND"
+SHOPPING_TEMPLATE_NOT_FOUND = "SHOPPING_TEMPLATE_NOT_FOUND"
 
 # ── Calendar ──────────────────────────────────────────────────
 EVENT_NOT_FOUND = "EVENT_NOT_FOUND"
@@ -174,6 +175,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     INVITATION_FULLY_USED: "Invitation has been fully used",
     SHOPPING_LIST_NOT_FOUND: "Shopping list not found",
     SHOPPING_ITEM_NOT_FOUND: "Shopping item not found",
+    SHOPPING_TEMPLATE_NOT_FOUND: "Shopping template not found",
     EVENT_NOT_FOUND: "Event not found",
     END_BEFORE_START: "End must be after start",
     BIRTHDAY_NOT_FOUND: "Birthday not found",
