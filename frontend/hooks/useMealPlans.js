@@ -191,6 +191,27 @@ export function useMealPlans() {
     return { ok: true, added };
   }
 
+  async function pushWeekToShopping(shoppingListId) {
+    const { ok, data } = await api.apiAddWeekMealIngredientsToShopping(
+      Number(familyId),
+      formatIsoDate(weekStart),
+      shoppingListId,
+    );
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return { ok: false };
+    }
+    const added = data?.added_count ?? 0;
+    const template = added === 1
+      ? t(messages, 'module.meal_plans.pushed_one')
+      : t(messages, 'module.meal_plans.pushed_many');
+    const msg = template.replace('{count}', String(added));
+    toastSuccess(msg);
+    announce(msg);
+    return { ok: true, added };
+  }
+
+
   function populateFormFromMeal(meal) {
     return {
       plan_date: meal.plan_date,
@@ -225,6 +246,7 @@ export function useMealPlans() {
     deleteMeal,
     moveMeal,
     pushToShopping,
+    pushWeekToShopping,
     populateFormFromMeal,
     emptyFormFor,
   };

@@ -48,6 +48,8 @@
   "module.meal_plans.delete_confirm": "Really remove \"{name}\"?",
   "module.meal_plans.edit_aria": "Edit meal \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Add meal for {slot} on {date}",
+  "module.meal_plans.push_week_to_shopping": "Add week to shopping list",
+  "module.meal_plans.push_week_to_shopping_aria": "Push all ingredients from this week to a shopping list",
   "module.meal_plans.push_to_shopping": "To shopping list",
   "module.meal_plans.drag_aria": "Drag \"{name}\" to another slot",
   "module.meal_plans.pushed_one": "1 ingredient pushed to the shopping list",

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, UtensilsCrossed, Plus, Edit2, CalendarDays, GripVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, UtensilsCrossed, Plus, Edit2, CalendarDays, GripVertical, ShoppingCart } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -116,7 +116,7 @@ function DroppableEmptyCell({ date, slot, messages, onClick }) {
 }
 
 export default function MealPlansView() {
-  const { familyId, families, messages, demoMode, shoppingLists } = useApp();
+  const { familyId, families, messages, demoMode, shoppingLists = [] } = useApp();
   const hook = useMealPlans();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -124,6 +124,8 @@ export default function MealPlansView() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [activeDrag, setActiveDrag] = useState(null);
   const [recipes, setRecipes] = useState([]);
+  const [selectedWeekListId, setSelectedWeekListId] = useState('');
+  const [pushingWeek, setPushingWeek] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -141,6 +143,13 @@ export default function MealPlansView() {
     });
     return () => { active = false; };
   }, [familyId, demoMode]);
+
+
+  useEffect(() => {
+    if ((shoppingLists || []).length > 0 && !selectedWeekListId) {
+      setSelectedWeekListId(String(shoppingLists[0].id));
+    }
+  }, [shoppingLists, selectedWeekListId]);
 
   if (demoMode) {
     return (
@@ -222,6 +231,17 @@ export default function MealPlansView() {
     setActiveDrag(null);
   }
 
+  async function handlePushWeekToShopping() {
+    if (!selectedWeekListId) return;
+    setPushingWeek(true);
+    try {
+      await hook.pushWeekToShopping(Number(selectedWeekListId));
+    } finally {
+      setPushingWeek(false);
+    }
+  }
+
+
   async function handlePushToShopping(shoppingListId, ingredientNames) {
     if (editingId == null) return { ok: false };
     return hook.pushToShopping(editingId, shoppingListId, ingredientNames);
@@ -288,6 +308,31 @@ export default function MealPlansView() {
               <ChevronRight size={16} />
             </button>
           </div>
+
+          {shoppingLists.length > 0 && (
+            <div className="meal-week-shopping" role="group" aria-label={t(messages, 'module.meal_plans.push_week_to_shopping')}>
+              <select
+                className="form-input meal-week-shopping-list"
+                value={selectedWeekListId}
+                onChange={(e) => setSelectedWeekListId(e.target.value)}
+                aria-label={t(messages, 'module.meal_plans.push_to_shopping')}
+              >
+                {shoppingLists.map((list) => (
+                  <option key={list.id} value={list.id}>{list.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handlePushWeekToShopping}
+                disabled={pushingWeek || !selectedWeekListId}
+                aria-label={t(messages, 'module.meal_plans.push_week_to_shopping_aria')}
+              >
+                <ShoppingCart size={16} aria-hidden="true" />
+                {t(messages, 'module.meal_plans.push_week_to_shopping')}
+              </button>
+            </div>
+          )}
           <button
             type="button"
             className="btn btn-primary"

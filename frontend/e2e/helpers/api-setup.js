@@ -75,6 +75,24 @@ async function seedShoppingItem(request, listId, name = 'Milk', spec = '') {
   return res.json();
 }
 
+
+async function seedMealPlan(request, familyId, overrides = {}) {
+  const res = await request.post('/api/meal-plans', {
+    data: {
+      family_id: familyId,
+      plan_date: overrides.plan_date,
+      slot: overrides.slot || 'noon',
+      meal_name: overrides.meal_name || 'Test meal',
+      ingredients: overrides.ingredients || [],
+      notes: overrides.notes ?? null,
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(`POST /api/meal-plans failed (${res.status()}): ${await res.text()}`);
+  }
+  return res.json();
+}
+
 module.exports = {
   getFamilyId,
   seedCalendarEvent,
@@ -82,4 +100,5 @@ module.exports = {
   completeTask,
   seedShoppingList,
   seedShoppingItem,
+  seedMealPlan,
 };

@@ -1241,6 +1241,12 @@ class MealPlanIngredientsResponse(BaseModel):
     items: list[str]
 
 
+class MealPlanWeekAddToShoppingRequest(BaseModel):
+    family_id: int = Field(..., description="Family ID")
+    week_start: date = Field(..., description="First day of the week to push")
+    shopping_list_id: int = Field(..., description="Target shopping list ID")
+
+
 class MealPlanAddToShoppingRequest(BaseModel):
     shopping_list_id: int = Field(..., description="Target shopping list ID")
     ingredient_names: Optional[list[str]] = Field(

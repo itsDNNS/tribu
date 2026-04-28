@@ -36,6 +36,7 @@ from app.schemas import (
     IngredientItem,
     MealPlanAddToShoppingRequest,
     MealPlanAddToShoppingResponse,
+    MealPlanWeekAddToShoppingRequest,
     MealPlanCreate,
     MealPlanIngredientsResponse,
     MealPlanResponse,
@@ -204,6 +205,42 @@ def _format_spec(amount: Optional[float], unit: Optional[str]) -> Optional[str]:
     if unit:
         parts.append(unit)
     return " ".join(parts) if parts else None
+
+
+def _aggregation_key(entry: NormalizedIngredient) -> tuple[str, str | None] | None:
+    """Return a safe key for combining quantities across meals.
+
+    We only merge rows that have the same ingredient name and the same unit
+    shape. Unitless items are mergeable with each other as checklist items;
+    rows with an amount but no unit are kept separate because the meaning can
+    be ambiguous across recipes.
+    """
+    name_key = entry["name"].strip().lower()
+    amount = entry["amount"]
+    unit = entry["unit"]
+    if amount is None and unit is None:
+        return (name_key, None)
+    if amount is not None and unit:
+        return (name_key, unit.strip().lower())
+    return None
+
+
+def _aggregate_week_ingredients(plans: list[MealPlan]) -> list[NormalizedIngredient]:
+    """Aggregate ingredients from multiple meal-plan rows for one week."""
+    aggregated: list[NormalizedIngredient] = []
+    index: dict[tuple[str, str | None], int] = {}
+    for plan in plans:
+        for entry in _normalize_stored_ingredients(plan.ingredients):
+            key = _aggregation_key(entry)
+            if key is None or key not in index:
+                if key is not None:
+                    index[key] = len(aggregated)
+                aggregated.append(dict(entry))
+                continue
+            existing = aggregated[index[key]]
+            if existing["amount"] is not None and entry["amount"] is not None:
+                existing["amount"] += entry["amount"]
+    return aggregated
 
 
 def _slot_taken(db: Session, family_id: int, plan_date: date, slot: str, exclude_id: Optional[int] = None) -> bool:
@@ -383,6 +420,60 @@ def delete_meal_plan(
     db.delete(plan)
     db.commit()
     return {"status": "deleted", "meal_plan_id": plan_id}
+
+
+@router.post(
+    "/week/add-to-shopping",
+    response_model=MealPlanAddToShoppingResponse,
+    summary="Push a week's meal ingredients onto a shopping list",
+    description=(
+        "Collect all meal-plan ingredients for the selected family week and "
+        "append them to the target shopping list. Compatible duplicates are "
+        "merged by ingredient name and unit. Scope: `meal_plans:write`."
+    ),
+    responses={**NOT_FOUND_RESPONSE},
+)
+def add_week_ingredients_to_shopping(
+    payload: MealPlanWeekAddToShoppingRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("meal_plans:write"),
+):
+    ensure_family_membership(db, user.id, payload.family_id)
+    shopping_list = db.query(ShoppingList).filter(ShoppingList.id == payload.shopping_list_id).first()
+    if shopping_list is None or shopping_list.family_id != payload.family_id:
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
+
+    week_end = date.fromordinal(payload.week_start.toordinal() + 6)
+    plans = (
+        db.query(MealPlan)
+        .filter(
+            MealPlan.family_id == payload.family_id,
+            MealPlan.plan_date >= payload.week_start,
+            MealPlan.plan_date <= week_end,
+        )
+        .order_by(MealPlan.plan_date, MealPlan.slot, MealPlan.id)
+        .all()
+    )
+
+    created: list[ShoppingItem] = []
+    for entry in _aggregate_week_ingredients(plans):
+        item = ShoppingItem(
+            list_id=shopping_list.id,
+            name=entry["name"].strip(),
+            spec=_format_spec(entry["amount"], entry["unit"]),
+            added_by_user_id=user.id,
+        )
+        db.add(item)
+        created.append(item)
+    db.commit()
+    for item in created:
+        db.refresh(item)
+        broadcast_item_added(
+            shopping_list.id,
+            ShoppingItemResponse.model_validate(item).model_dump(mode="json"),
+        )
+    return MealPlanAddToShoppingResponse(added_count=len(created))
 
 
 @router.post(

@@ -563,6 +563,15 @@ export function apiAddMealIngredientsToShopping(planId, shoppingListId, ingredie
   return post(`/meal-plans/${planId}/add-to-shopping`, body);
 }
 
+export function apiAddWeekMealIngredientsToShopping(familyId, weekStart, shoppingListId) {
+  return post('/meal-plans/week/add-to-shopping', {
+    family_id: Number(familyId),
+    week_start: weekStart,
+    shopping_list_id: shoppingListId,
+  });
+}
+
+
 // Recipes
 export function apiListRecipes(familyId) {
   const params = new URLSearchParams({ family_id: String(familyId) });
