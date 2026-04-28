@@ -8,27 +8,28 @@ test.describe('Dashboard', () => {
     await expect(greeting).toContainText(testUser.displayName);
   });
 
-  test('quick-action buttons navigate to correct views', async ({ authedPage: page }) => {
-    await page.locator('.dashboard-header-actions').waitFor({ timeout: 10000 });
+  test('quick-action pills navigate to correct views', async ({ authedPage: page }) => {
+    const quickActions = page.getByRole('group', { name: 'Quick actions' });
+    await quickActions.waitFor({ timeout: 10000 });
 
-    // Event → Calendar (icon button with aria-label)
-    await page.locator('.dashboard-header-actions .btn-icon').first().click();
+    // Event → Calendar
+    await page.getByTestId('quick-action-event').click();
     await expect(page.locator('.calendar-grid-wrapper')).toBeVisible({ timeout: 10000 });
 
     // Back to Dashboard
     await navigateTo(page, 'Home');
-    await page.locator('.dashboard-header-actions').waitFor({ timeout: 10000 });
+    await page.getByRole('group', { name: 'Quick actions' }).waitFor({ timeout: 10000 });
 
-    // Task → Tasks (second icon button)
-    await page.locator('.dashboard-header-actions .btn-icon').nth(1).click();
+    // Task → Tasks
+    await page.getByTestId('quick-action-task').click();
     await expect(page.locator('.tasks-filter-tabs')).toBeVisible({ timeout: 10000 });
 
     // Back to Dashboard
     await navigateTo(page, 'Home');
-    await page.locator('.dashboard-header-actions').waitFor({ timeout: 10000 });
+    await page.getByRole('group', { name: 'Quick actions' }).waitFor({ timeout: 10000 });
 
-    // Contact → Contacts (third icon button)
-    await page.locator('.dashboard-header-actions .btn-icon').nth(2).click();
-    await expect(page.locator('.contacts-grid')).toBeVisible({ timeout: 10000 });
+    // Invite → Admin
+    await page.getByTestId('quick-action-invite').click();
+    await expect(page.getByRole('heading', { name: 'Admin' })).toBeVisible({ timeout: 10000 });
   });
 });

@@ -8,7 +8,14 @@
   "module.dashboard.summary_tasks": " und {count} offene Aufgaben.",
   "module.dashboard.quick_event": "Termin",
   "module.dashboard.quick_task": "Aufgabe",
+  "module.dashboard.quick_shopping": "Einkauf",
+  "module.dashboard.quick_invite": "Einladen",
   "module.dashboard.quick_contact": "Kontakt",
+  "module.dashboard.quick_actions_label": "Schnellaktionen",
+  "module.dashboard.context_chips_label": "Familie auf einen Blick",
+  "module.dashboard.chip_members": "Mitglieder",
+  "module.dashboard.chip_today_events": "Heute",
+  "module.dashboard.chip_open_tasks": "Offene Aufgaben",
   "module.dashboard.family": "Familie",
   "module.dashboard.members": "Mitglieder",
   "module.dashboard.events_count": "Termine",
@@ -40,5 +47,7 @@
   "module.dashboard.activation_step_shopping_cta": "Einkauf öffnen",
   "module.dashboard.activation_step_shopping_done": "Einkaufsliste bereit",
   "module.dashboard.activation_step_done_aria": "Schritt erledigt",
-  "module.dashboard.activation_step_pending_aria": "Schritt offen"
+  "module.dashboard.activation_step_pending_aria": "Schritt offen",
+  "module.dashboard.quick_my_tasks": "Meine Aufgaben",
+  "module.dashboard.quick_rewards": "Rewards"
 }
