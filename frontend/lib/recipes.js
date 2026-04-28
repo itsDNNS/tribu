@@ -81,3 +81,26 @@ export function formatIngredientAmount(ingredient) {
   if (ingredient?.unit) parts.push(ingredient.unit);
   return parts.join(' ');
 }
+
+function roundScaledAmount(value) {
+  return Number(Number(value).toFixed(2));
+}
+
+export function scaleRecipeIngredients(ingredients, baseServings, targetServings) {
+  const base = Number(baseServings);
+  const target = Number(targetServings);
+  const canScaleRecipe = Number.isFinite(base) && base > 0 && Number.isFinite(target) && target > 0;
+  const factor = canScaleRecipe ? target / base : 1;
+
+  return (ingredients || []).map((ingredient) => {
+    const rawAmount = ingredient?.amount;
+    const amount = rawAmount === '' || rawAmount == null ? null : Number(rawAmount);
+    const canScaleAmount = canScaleRecipe && Number.isFinite(amount);
+    return {
+      ...ingredient,
+      amount: canScaleAmount ? roundScaledAmount(amount * factor) : ingredient?.amount ?? null,
+      unit: ingredient?.unit ?? null,
+      scalable: canScaleAmount,
+    };
+  });
+}

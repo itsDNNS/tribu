@@ -1355,6 +1355,7 @@ class RecipeBase(BaseModel):
     description: Optional[str] = Field(None, max_length=2000, description="Optional recipe summary or notes")
     source_url: Optional[str] = Field(None, max_length=500, description="Optional recipe source URL")
     servings: Optional[int] = Field(None, ge=1, le=999, description="Optional serving count")
+    is_favorite: bool = Field(False, description="Whether the recipe is pinned as a family favorite")
     tags: list[str] = Field(default_factory=list, description="Short recipe tags")
     ingredients: list[IngredientItem] = Field(default_factory=list, description="Structured ingredient list, order preserved")
     instructions: Optional[str] = Field(None, description="Optional cooking instructions")
@@ -1374,6 +1375,7 @@ class RecipeUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     source_url: Optional[str] = Field(None, max_length=500)
     servings: Optional[int] = Field(None, ge=1, le=999)
+    is_favorite: Optional[bool] = None
     tags: Optional[list[str]] = None
     ingredients: Optional[list[IngredientItem]] = None
     instructions: Optional[str] = None
@@ -1393,6 +1395,8 @@ class RecipeResponse(BaseModel):
     description: Optional[str]
     source_url: Optional[str]
     servings: Optional[int]
+    is_favorite: bool
+    last_used_at: Optional[datetime]
     tags: list[str]
     ingredients: list[IngredientItem]
     instructions: Optional[str]

@@ -53,7 +53,13 @@ test.describe('Recipes', () => {
     await expect(page.getByRole('heading', { name: 'Playwright Pancakes' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('2 ingredients')).toBeVisible();
 
+    await page.getByRole('button', { name: 'Add Playwright Pancakes to favorites' }).click();
+    await expect(page.getByText('Favorite')).toBeVisible({ timeout: 10000 });
+
     await page.getByRole('button', { name: 'Edit recipe "Playwright Pancakes"' }).click();
+    await page.getByLabel('Scale to servings').fill('8');
+    await expect(page.locator('.recipe-scale-preview').getByText('400 g')).toBeVisible();
+    await expect(page.locator('.recipe-scale-preview').getByText('600 ml')).toBeVisible();
     await expect(page.getByRole('dialog', { name: 'Edit recipe' })).toBeVisible();
     await page.locator('.recipe-push-btn').click();
     await expect(page.getByLabel('Notifications').getByText('2 ingredients pushed to the shopping list')).toBeVisible({ timeout: 10000 });

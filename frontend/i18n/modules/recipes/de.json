@@ -47,6 +47,13 @@
   "module.recipes.delete_confirm": "\"{title}\" wirklich löschen?",
   "module.recipes.edit_aria": "Rezept \"{title}\" bearbeiten",
   "module.recipes.push_to_shopping": "In Einkaufsliste",
+  "module.recipes.favorite": "Favorit",
+  "module.recipes.used_recently": "Kürzlich genutzt",
+  "module.recipes.favorite_add_aria": "{title} als Favorit markieren",
+  "module.recipes.favorite_remove_aria": "{title} aus Favoriten entfernen",
+  "module.recipes.scale_to_servings": "Auf Portionen skalieren",
+  "module.recipes.scaled_ingredients": "Skalierte Zutaten",
+  "module.recipes.cannot_scale": "Nicht skalierbar",
   "module.recipes.pushed_one": "1 Zutat auf die Einkaufsliste geschoben",
   "module.recipes.pushed_many": "{count} Zutaten auf die Einkaufsliste geschoben",
   "module.recipes.demo_blocked": "Im Demo-Modus nicht verfügbar"

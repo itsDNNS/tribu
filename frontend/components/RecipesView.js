@@ -6,6 +6,7 @@ import {
   Plus,
   Search,
   ShoppingCart,
+  Star,
   Tags,
   Trash2,
   Users,
@@ -15,7 +16,7 @@ import { useApp } from '../contexts/AppContext';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 import { useRecipes } from '../hooks/useRecipes';
 import { t } from '../lib/i18n';
-import { createEmptyRecipeIngredient, formatIngredientAmount } from '../lib/recipes';
+import { createEmptyRecipeIngredient, formatIngredientAmount, scaleRecipeIngredients } from '../lib/recipes';
 import ConfirmDialog from './ConfirmDialog';
 
 
@@ -34,7 +35,7 @@ function ingredientCountLabel(messages, count) {
   return t(messages, 'module.recipes.ingredients_summary').replace('{count}', String(count));
 }
 
-function RecipeCard({ recipe, messages, onEdit }) {
+function RecipeCard({ recipe, messages, onEdit, onToggleFavorite }) {
   const ingredients = recipe.ingredients || [];
   const previewIngredients = ingredients.slice(0, 4);
   const sourceUrl = safeHttpUrl(recipe.source_url);
@@ -46,18 +47,39 @@ function RecipeCard({ recipe, messages, onEdit }) {
           <BookOpen size={17} className="recipe-card-icon" aria-hidden="true" />
           <h3 className="recipe-card-title">{recipe.title}</h3>
         </div>
-        <button
-          type="button"
-          className="recipe-card-action"
-          onClick={() => onEdit(recipe)}
-          aria-label={t(messages, 'module.recipes.edit_aria').replace('{title}', recipe.title)}
-        >
-          <Edit2 size={14} aria-hidden="true" />
-        </button>
+        <div className="recipe-card-actions">
+          <button
+            type="button"
+            className={`recipe-card-action ${recipe.is_favorite ? 'recipe-card-action-active' : ''}`}
+            onClick={() => onToggleFavorite(recipe)}
+            aria-label={(recipe.is_favorite
+              ? t(messages, 'module.recipes.favorite_remove_aria')
+              : t(messages, 'module.recipes.favorite_add_aria')).replace('{title}', recipe.title)}
+          >
+            <Star size={14} aria-hidden="true" fill={recipe.is_favorite ? 'currentColor' : 'none'} />
+          </button>
+          <button
+            type="button"
+            className="recipe-card-action"
+            onClick={() => onEdit(recipe)}
+            aria-label={t(messages, 'module.recipes.edit_aria').replace('{title}', recipe.title)}
+          >
+            <Edit2 size={14} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
-      {(recipe.servings || ingredients.length > 0) && (
+      {(recipe.servings || ingredients.length > 0 || recipe.is_favorite || recipe.last_used_at) && (
         <div className="recipe-card-meta">
+          {recipe.is_favorite && (
+            <span className="recipe-card-meta-item recipe-card-favorite">
+              <Star size={13} aria-hidden="true" fill="currentColor" />
+              {t(messages, 'module.recipes.favorite')}
+            </span>
+          )}
+          {recipe.last_used_at && (
+            <span className="recipe-card-meta-item">{t(messages, 'module.recipes.used_recently')}</span>
+          )}
           {recipe.servings && (
             <span className="recipe-card-meta-item">
               <Users size={13} aria-hidden="true" />
@@ -129,6 +151,7 @@ function RecipeDialog({
   const [pushing, setPushing] = useState(false);
   const [selectedListId, setSelectedListId] = useState('');
   const [selectedIngredientNames, setSelectedIngredientNames] = useState([]);
+  const [scaleServings, setScaleServings] = useState('');
   const datalistId = useId();
   const titleId = 'recipe-dialog-title';
 
@@ -148,6 +171,10 @@ function RecipeDialog({
     );
   }, [open, form.ingredients]);
 
+  useEffect(() => {
+    if (open) setScaleServings('');
+  }, [open, form.servings]);
+
   useDialogFocusTrap({ open, containerRef: dialogRef, initialFocusRef: firstFieldRef, onClose });
 
   if (!open) return null;
@@ -155,6 +182,9 @@ function RecipeDialog({
   const namedIngredients = (form.ingredients || [])
     .map((ingredient) => (ingredient.name || '').trim())
     .filter(Boolean);
+  const scaledIngredients = scaleServings
+    ? scaleRecipeIngredients(form.ingredients || [], form.servings, scaleServings)
+    : [];
 
   function updateIngredient(index, patch) {
     setForm((prev) => {
@@ -328,6 +358,40 @@ function RecipeDialog({
                 </li>
               ))}
             </ul>
+            {form.ingredients.length > 0 && form.servings && (
+              <div className="recipe-scale">
+                <label className="recipe-scale-label">
+                  {t(messages, 'module.recipes.scale_to_servings')}
+                  <input
+                    className="form-input recipe-scale-input"
+                    type="number"
+                    min="1"
+                    max="999"
+                    step="1"
+                    inputMode="numeric"
+                    aria-label={t(messages, 'module.recipes.scale_to_servings')}
+                    value={scaleServings}
+                    onChange={(e) => setScaleServings(e.target.value)}
+                  />
+                </label>
+                {scaledIngredients.length > 0 && (
+                  <div className="recipe-scale-preview">
+                    <span className="recipe-section-title">{t(messages, 'module.recipes.scaled_ingredients')}</span>
+                    <ul>
+                      {scaledIngredients.map((ingredient) => {
+                        const amount = formatIngredientAmount(ingredient);
+                        return (
+                          <li key={ingredient.name}>
+                            <span>{ingredient.name}</span>
+                            <span>{ingredient.scalable ? amount : t(messages, 'module.recipes.cannot_scale')}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <textarea
@@ -495,6 +559,10 @@ export default function RecipesView() {
     return recipes.pushToShopping(editingId, shoppingListId, ingredientNames);
   }
 
+  async function handleToggleFavorite(recipe) {
+    return recipes.updateRecipeFields(recipe.id, { is_favorite: !recipe.is_favorite });
+  }
+
   return (
     <div>
       {confirmAction && (
@@ -574,6 +642,7 @@ export default function RecipesView() {
               recipe={recipe}
               messages={messages}
               onEdit={openEdit}
+              onToggleFavorite={handleToggleFavorite}
             />
           ))}
         </section>

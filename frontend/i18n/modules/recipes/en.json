@@ -47,6 +47,13 @@
   "module.recipes.delete_confirm": "Really delete \"{title}\"?",
   "module.recipes.edit_aria": "Edit recipe \"{title}\"",
   "module.recipes.push_to_shopping": "To shopping list",
+  "module.recipes.favorite": "Favorite",
+  "module.recipes.used_recently": "Used recently",
+  "module.recipes.favorite_add_aria": "Add {title} to favorites",
+  "module.recipes.favorite_remove_aria": "Remove {title} from favorites",
+  "module.recipes.scale_to_servings": "Scale to servings",
+  "module.recipes.scaled_ingredients": "Scaled ingredients",
+  "module.recipes.cannot_scale": "Cannot scale",
   "module.recipes.pushed_one": "1 ingredient pushed to the shopping list",
   "module.recipes.pushed_many": "{count} ingredients pushed to the shopping list",
   "module.recipes.demo_blocked": "Not available in demo mode"
