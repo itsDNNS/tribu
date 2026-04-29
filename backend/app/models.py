@@ -48,6 +48,7 @@ class Family(Base):
     household_activities = relationship("HouseholdActivity", back_populates="family", cascade="all, delete-orphan")
     quick_capture_items = relationship("QuickCaptureItem", back_populates="family", cascade="all, delete-orphan")
     setup_checklist = relationship("FamilySetupChecklist", back_populates="family", uselist=False, cascade="all, delete-orphan")
+    webhook_endpoints = relationship("WebhookEndpoint", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -594,6 +595,44 @@ class SystemSetting(Base):
     key = Column(String, primary_key=True)
     value = Column(Text, nullable=False)
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class WebhookEndpoint(Base):
+    __tablename__ = "webhook_endpoints"
+    __table_args__ = (Index("ix_webhook_endpoints_family_active", "family_id", "active"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    url = Column(Text, nullable=False)
+    events = Column(JSON, nullable=False, default=list, server_default="[]")
+    active = Column(Boolean, nullable=False, default=True, server_default="true")
+    secret_header_name = Column(String(80), nullable=True)
+    secret_header_value = Column(Text, nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="webhook_endpoints")
+    created_by = relationship("User")
+    deliveries = relationship("WebhookDelivery", back_populates="endpoint", cascade="all, delete-orphan")
+
+
+class WebhookDelivery(Base):
+    __tablename__ = "webhook_deliveries"
+    __table_args__ = (Index("ix_webhook_deliveries_endpoint_created", "endpoint_id", "created_at"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    endpoint_id = Column(Integer, ForeignKey("webhook_endpoints.id", ondelete="CASCADE"), nullable=False, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(80), nullable=False)
+    status = Column(String(20), nullable=False, default="pending", server_default="pending")
+    status_code = Column(Integer, nullable=True)
+    error = Column(String(240), nullable=True)
+    attempted_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    endpoint = relationship("WebhookEndpoint", back_populates="deliveries")
 
 
 # ── Reward System ─────────────────────────────────────────

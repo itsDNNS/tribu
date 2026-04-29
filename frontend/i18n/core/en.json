@@ -108,6 +108,7 @@
   "admin_self_hint": "You cannot change your own role",
   "password_hint": "Min. 8 characters, 1 uppercase letter, 1 number",
   "api_tokens": "API Tokens",
+  "automation_webhooks": "Automation Webhooks",
   "api_tokens_desc": "Personal access tokens for third-party apps and scripts.",
   "create_token": "Create token",
   "token_name": "Token name",

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_adult, ensure_family_membership, to_utc_naive
 from app.core.activity import record_activity
+from app.core.webhooks import dispatch_webhook_event
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Membership, RewardCurrency, Task, TokenTransaction, User
@@ -119,6 +120,12 @@ def create_task(
     )
     db.commit()
     db.refresh(task)
+    dispatch_webhook_event(
+        db,
+        family_id=task.family_id,
+        event_type="task.created",
+        data={"task_id": task.id, "title": task.title, "status": task.status, "assigned_to_user_id": task.assigned_to_user_id},
+    )
     return task
 
 
@@ -233,6 +240,12 @@ def update_task(
     db.refresh(task)
     if next_task:
         db.refresh(next_task)
+    dispatch_webhook_event(
+        db,
+        family_id=task.family_id,
+        event_type="task.updated",
+        data={"task_id": task.id, "title": task.title, "status": task.status, "assigned_to_user_id": task.assigned_to_user_id},
+    )
     return task
 
 

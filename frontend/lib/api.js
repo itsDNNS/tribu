@@ -529,6 +529,31 @@ export function apiSetBaseUrl(base_url) {
   });
 }
 
+// Automation webhooks
+export function apiListWebhooks(familyId) {
+  return request(`/webhooks?family_id=${familyId}`);
+}
+
+export function apiCreateWebhook(payload) {
+  return post('/webhooks', payload);
+}
+
+export function apiUpdateWebhook(endpointId, payload) {
+  return patch(`/webhooks/${endpointId}`, payload);
+}
+
+export function apiDeleteWebhook(endpointId) {
+  return del(`/webhooks/${endpointId}`);
+}
+
+export function apiTestWebhook(endpointId) {
+  return post(`/webhooks/${endpointId}/test`, {});
+}
+
+export function apiListWebhookDeliveries(endpointId, limit = 20) {
+  return request(`/webhooks/${endpointId}/deliveries?limit=${limit}`);
+}
+
 // OIDC / SSO — public
 export function apiGetOidcPublicConfig() {
   return request('/auth/oidc/public-config');

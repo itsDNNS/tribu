@@ -1786,3 +1786,164 @@ class DisplayDashboardResponse(BaseModel):
     next_events: list[DisplayDashboardEvent] = Field(..., description="Upcoming events within 14 days (display-safe fields only)")
     upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
     config: DisplayDeviceConfig = Field(..., description="Resolved display render config")
+
+
+# ---------------------------------------------------------------------------
+# Webhooks
+# ---------------------------------------------------------------------------
+
+WEBHOOK_EVENT_TYPES = {
+    "calendar.event.created",
+    "task.created",
+    "task.updated",
+    "shopping.list.created",
+    "shopping.item.created",
+    "shopping.item.updated",
+    "quick_capture.created",
+    "birthday.created",
+    "webhook.test",
+}
+
+
+def _clean_webhook_events(events: list[str]) -> list[str]:
+    cleaned = sorted({event.strip() for event in events if event and event.strip()})
+    invalid = [event for event in cleaned if event not in WEBHOOK_EVENT_TYPES]
+    if invalid:
+        raise ValueError(f"Unsupported webhook event: {', '.join(invalid)}")
+    return cleaned
+
+
+DENIED_WEBHOOK_SECRET_HEADERS = {
+    "authorization",
+    "connection",
+    "content-length",
+    "content-type",
+    "host",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    "user-agent",
+}
+
+
+def _validate_webhook_url(value: str) -> str:
+    cleaned = value.strip()
+    parsed = urlparse(cleaned)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError("Webhook URL must be an HTTPS URL")
+    if parsed.username or parsed.password:
+        raise ValueError("Webhook URL must not include credentials")
+    return cleaned
+
+
+def _clean_webhook_secret_header_name(value: Optional[str]) -> Optional[str]:
+    if value is None or not value.strip():
+        return None
+    cleaned = value.strip()
+    if not re.fullmatch(r"[A-Za-z0-9-]{1,80}", cleaned):
+        raise ValueError("Secret header name may only contain letters, digits, and dashes")
+    if cleaned.lower() in DENIED_WEBHOOK_SECRET_HEADERS:
+        raise ValueError("Secret header name must be a custom header")
+    return cleaned
+
+
+class WebhookEndpointCreate(BaseModel):
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(..., min_length=1, max_length=120, description="Webhook display name")
+    url: str = Field(..., min_length=8, max_length=2000, description="HTTPS endpoint URL")
+    events: list[str] = Field(default_factory=list, description="Subscribed event types")
+    active: bool = Field(True, description="Whether deliveries are enabled")
+    secret_header_name: Optional[str] = Field(None, max_length=80, description="Optional custom secret header name")
+    secret_header_value: Optional[str] = Field(None, max_length=500, description="Optional custom secret header value")
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        return _validate_webhook_url(value)
+
+    @field_validator("events")
+    @classmethod
+    def validate_events(cls, value: list[str]) -> list[str]:
+        return _clean_webhook_events(value)
+
+    @field_validator("secret_header_name")
+    @classmethod
+    def validate_header_name(cls, value: Optional[str]) -> Optional[str]:
+        return _clean_webhook_secret_header_name(value)
+
+    @field_validator("secret_header_value")
+    @classmethod
+    def clean_header_value(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or not value.strip():
+            return None
+        return value.strip()
+
+
+class WebhookEndpointUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=120)
+    url: Optional[str] = Field(None, min_length=8, max_length=2000)
+    events: Optional[list[str]] = None
+    active: Optional[bool] = None
+    secret_header_name: Optional[str] = Field(None, max_length=80)
+    secret_header_value: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        return _validate_webhook_url(value)
+
+    @field_validator("events")
+    @classmethod
+    def validate_events(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        if value is None:
+            return None
+        return _clean_webhook_events(value)
+
+    @field_validator("secret_header_name")
+    @classmethod
+    def validate_header_name(cls, value: Optional[str]) -> Optional[str]:
+        return _clean_webhook_secret_header_name(value)
+
+    @field_validator("secret_header_value")
+    @classmethod
+    def clean_header_value(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or not value.strip():
+            return None
+        return value.strip()
+
+
+class WebhookEndpointResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    family_id: int
+    name: str
+    url_redacted: str
+    events: list[str]
+    active: bool
+    secret_header_name: Optional[str] = None
+    has_secret: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+
+class WebhookDeliveryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    endpoint_id: int
+    family_id: int
+    event_type: str
+    status: str
+    status_code: Optional[int] = None
+    error: Optional[str] = None
+    attempted_at: datetime
+
+
+class WebhookTestResponse(BaseModel):
+    status: str
+    delivery: WebhookDeliveryResponse

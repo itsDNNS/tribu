@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from app.core.compat import patch_asyncio_iscoroutinefunction
 from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -57,6 +58,7 @@ from app.modules.meal_plans_router import router as meal_plans_router
 from app.modules.recipes_router import router as recipes_router
 from app.modules.display_router import admin_router as display_admin_router, display_router as display_runtime_router
 from app.modules.mobile_router import router as mobile_router
+from app.modules.webhooks_router import router as webhooks_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import ws_broadcast
 from app.schemas import (
@@ -238,6 +240,32 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+def _redact_validation_errors(value):
+    if isinstance(value, BaseException):
+        return str(value)
+    if isinstance(value, list):
+        return [_redact_validation_errors(item) for item in value]
+    if isinstance(value, dict):
+        sensitive_input = any(part in {"url", "secret_header_value"} for part in value.get("loc", []))
+        redacted = {}
+        for key, item in value.items():
+            if key == "input" and sensitive_input:
+                redacted[key] = "[redacted]"
+            elif key == "input" and isinstance(item, str) and "://" in item:
+                redacted[key] = "[redacted]"
+            else:
+                redacted[key] = _redact_validation_errors(item)
+        return redacted
+    return value
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"detail": _redact_validation_errors(exc.errors())})
+
+
 app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
@@ -622,6 +650,7 @@ app.include_router(recipes_router)
 app.include_router(display_admin_router)
 app.include_router(display_runtime_router)
 app.include_router(mobile_router)
+app.include_router(webhooks_router)
 
 
 # ---------------------------------------------------------------------------

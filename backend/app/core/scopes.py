@@ -32,8 +32,8 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "meal_plans:write": "Create, update, and delete meal plan entries; push ingredients to shopping lists",
     "recipes:read": "View family recipes",
     "recipes:write": "Create, update, and delete recipes; push recipe ingredients to shopping lists",
-    "admin:read": "View backup config, admin settings, and system status",
-    "admin:write": "Manage backups, update admin settings, and trigger system operations",
+    "admin:read": "View backup config, admin settings, automation webhooks, and system status",
+    "admin:write": "Manage backups, automation webhooks, admin settings, and trigger system operations",
 }
 
 VALID_SCOPES = set(SCOPE_DESCRIPTIONS.keys())

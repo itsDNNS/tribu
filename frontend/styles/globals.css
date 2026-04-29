@@ -3810,3 +3810,12 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .template-preview-grid { grid-template-columns: 1fr; }
   .templates-header { display: grid; }
 }
+
+.settings-help { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin: 0 0 var(--space-md); }
+.settings-form { display: grid; gap: var(--space-md); }
+.settings-checklist { display: grid; gap: var(--space-xs); padding: var(--space-sm); border: 1px solid var(--glass-border); border-radius: var(--radius-md); }
+.settings-list { display: grid; gap: var(--space-sm); }
+.settings-list-item { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); padding: var(--space-md); border: 1px solid var(--glass-border); border-radius: var(--radius-md); }
+.settings-row-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); justify-content: flex-end; }
+.muted-text { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+@media (max-width: 768px) { .settings-list-item { flex-direction: column; } .settings-row-actions { justify-content: flex-start; } }
