@@ -137,6 +137,22 @@ export function apiDismissQuickCapture(itemId) {
   return post(`/quick-capture/inbox/${itemId}/dismiss`, {});
 }
 
+export function apiGetSetupChecklist(familyId) {
+  return request(`/setup-checklist?family_id=${familyId}`);
+}
+
+export function apiDismissSetupChecklist(familyId) {
+  return post('/setup-checklist/dismiss', { family_id: familyId });
+}
+
+export function apiResetSetupChecklist(familyId) {
+  return post('/setup-checklist/reset', { family_id: familyId });
+}
+
+export function apiCompleteSetupChecklistStep(familyId, stepKey) {
+  return post(`/setup-checklist/steps/${stepKey}/complete`, { family_id: familyId });
+}
+
 // Calendar
 export async function apiGetEvents(familyId, rangeStart, rangeEnd) {
   let url = `/calendar/events?family_id=${familyId}`;

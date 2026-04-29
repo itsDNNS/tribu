@@ -6,6 +6,7 @@ import {
   apiExportCalendarIcs, apiImportCalendarIcs, apiExportContactsCsv,
   apiGetActivity,
   apiCreateQuickCapture, apiGetQuickCaptureInbox, apiConvertQuickCapture, apiDismissQuickCapture,
+  apiGetSetupChecklist, apiDismissSetupChecklist, apiResetSetupChecklist, apiCompleteSetupChecklistStep,
   apiGetHouseholdTemplates, apiCreateHouseholdTemplate, apiUpdateHouseholdTemplate, apiDeleteHouseholdTemplate, apiApplyHouseholdTemplate,
   apiGetTasks, apiCreateTask, apiUpdateTask, apiDeleteTask,
   apiListRecipes, apiCreateRecipe, apiUpdateRecipe, apiDeleteRecipe, apiAddRecipeIngredientsToShopping,
@@ -111,6 +112,25 @@ describe('Dashboard API', () => {
     await apiDismissQuickCapture(11);
     expect(lastCall()[0]).toBe('/api/quick-capture/inbox/11/dismiss');
     expect(lastCall()[1].method).toBe('POST');
+  });
+
+  it('setup checklist API supports status, dismiss, reset, and manual completion', async () => {
+    await apiGetSetupChecklist('7');
+    expect(lastCall()[0]).toBe('/api/setup-checklist?family_id=7');
+
+    await apiDismissSetupChecklist(7);
+    expect(lastCall()[0]).toBe('/api/setup-checklist/dismiss');
+    expect(lastCall()[1].method).toBe('POST');
+    expect(JSON.parse(lastCall()[1].body)).toEqual({ family_id: 7 });
+
+    await apiResetSetupChecklist(7);
+    expect(lastCall()[0]).toBe('/api/setup-checklist/reset');
+    expect(lastCall()[1].method).toBe('POST');
+
+    await apiCompleteSetupChecklistStep(7, 'backup_guidance');
+    expect(lastCall()[0]).toBe('/api/setup-checklist/steps/backup_guidance/complete');
+    expect(lastCall()[1].method).toBe('POST');
+    expect(JSON.parse(lastCall()[1].body)).toEqual({ family_id: 7 });
   });
 
   it('household templates API supports CRUD and built-in/custom apply', async () => {

@@ -18,6 +18,8 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "quick_capture:write": "Create and triage quick captures",
     "household_templates:read": "View household planning templates",
     "household_templates:write": "Create, update, delete, and apply household planning templates",
+    "setup_checklist:read": "View first-week setup checklist status",
+    "setup_checklist:write": "Dismiss or reset first-week setup checklist",
     "shopping:read": "View shopping lists and items",
     "shopping:write": "Create, update, and delete shopping lists and items",
     "profile:read": "View own profile and list personal access tokens",

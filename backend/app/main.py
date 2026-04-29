@@ -36,6 +36,7 @@ from app.modules.dashboard_router import router as dashboard_router
 from app.modules.activity_router import router as activity_router
 from app.modules.quick_capture_router import router as quick_capture_router
 from app.modules.household_templates_router import router as household_templates_router
+from app.modules.setup_checklist_router import router as setup_checklist_router
 from app.modules.families_router import router as families_router
 from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
@@ -596,6 +597,7 @@ app.include_router(dashboard_router)
 app.include_router(activity_router)
 app.include_router(quick_capture_router)
 app.include_router(household_templates_router)
+app.include_router(setup_checklist_router)
 app.include_router(contacts_router)
 app.include_router(tasks_router)
 app.include_router(shopping_router)

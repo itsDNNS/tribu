@@ -34,6 +34,15 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Admin' })).toBeVisible({ timeout: 10000 });
   });
 
+  test('shows and dismisses the first-week setup checklist', async ({ authedPage: page }) => {
+    const checklist = page.getByRole('region', { name: 'Set up your first week' });
+    await expect(checklist).toBeVisible({ timeout: 10000 });
+    await expect(checklist).toContainText('Invite your family');
+    await expect(checklist).toContainText('Create a shared shopping list');
+    await checklist.getByRole('button', { name: 'Hide for later' }).click();
+    await expect(checklist).not.toBeVisible({ timeout: 10000 });
+  });
+
   test('shows household activity from recent task changes', async ({ authedPage: page, apiCtx, testUser }) => {
     const familyId = await getFamilyId(apiCtx);
     await seedTask(apiCtx, familyId, {
