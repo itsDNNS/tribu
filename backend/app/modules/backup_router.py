@@ -6,19 +6,31 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.core.backup import create_backup, delete_backup, enforce_retention, get_backup_path, list_backups
+from app.core.backup import build_backup_status, create_backup, delete_backup, enforce_retention, get_backup_path, list_backups
 from app.core.deps import current_user
 from app.core.scopes import require_scope
 from app.core.scheduler import configure_backup_schedule
 from app.database import get_db
 from app.models import User
-from app.schemas import ADMIN_RESPONSES, NOT_FOUND_RESPONSE, BackupConfigResponse, BackupConfigUpdate, BackupEntry
+from app.schemas import ADMIN_RESPONSES, NOT_FOUND_RESPONSE, BackupConfigResponse, BackupConfigUpdate, BackupEntry, BackupStatusResponse
 from app.core.errors import error_detail, BACKUP_NOT_FOUND, BACKUP_FAILED
 
 router = APIRouter(prefix="/admin/backup", tags=["backup"], responses={**ADMIN_RESPONSES})
 
 BACKUP_DIR = os.getenv("BACKUP_DIR", "/backups")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+
+@router.get(
+    "/status",
+    response_model=BackupStatusResponse,
+    summary="Get backup confidence status",
+    description="Return public-safe backup and restore confidence metadata for the admin UI. Admin role required.",
+    response_description="Backup confidence status",
+)
+def get_status(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
+    ensure_instance_admin(db, user.id)
+    return BackupStatusResponse(**build_backup_status(DATABASE_URL, BACKUP_DIR, list_backups(BACKUP_DIR)))
 
 
 @router.get(

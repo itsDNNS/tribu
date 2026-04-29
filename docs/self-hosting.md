@@ -430,6 +430,10 @@ Each backup is a `tribu-backup-YYYY-MM-DD-HHMMSS.tar.gz` archive containing:
 - `database.dump`: PostgreSQL dump (`pg_dump -Fc` custom format)
 - `metadata.json`: backup version, Alembic revision, PostgreSQL version, timestamp
 
+The export is a database backup. It includes Tribu household data such as calendars, tasks, contacts, shopping lists, meal plans, recipes, rewards, gifts, families, members, and app settings stored in the database.
+
+It does not include deployment-level secrets or host files such as `JWT_SECRET`, OIDC client secrets, reverse proxy configuration, TLS certificates, or files outside the database and configured backup volume. Keep your `.env`, Compose file, and reverse proxy configuration in your normal server backup.
+
 ### Manual Backup
 
 Trigger a backup from the Admin panel or via API:

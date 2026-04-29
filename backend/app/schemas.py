@@ -893,6 +893,25 @@ class BackupEntry(BaseModel):
     pg_version: Optional[str] = Field(None, description="PostgreSQL version at backup time")
 
 
+class BackupStatusLatestExport(BaseModel):
+    """Public-safe latest backup export metadata."""
+    filename: str = Field(..., description="Backup filename")
+    size_bytes: int = Field(..., description="File size in bytes")
+    created_at: datetime = Field(..., description="Backup creation timestamp")
+
+
+class BackupStatusResponse(BaseModel):
+    """Public-safe backup confidence metadata for admins."""
+    database_backend: str = Field(..., description="Stable detected database backend code")
+    backup_dir: str = Field(..., description="Public storage location code for backups")
+    has_backups: bool = Field(..., description="Whether any backup files are available")
+    latest_backup: Optional[BackupStatusLatestExport] = Field(None, description="Most recent public-safe backup metadata")
+    included_domains: list[str] = Field(..., description="Stable data-domain codes included in database backups")
+    excluded_domains: list[str] = Field(..., description="Stable deployment-domain codes not included in database backups")
+    restore_supported: str = Field(..., description="Supported restore path identifier")
+    restore_runbook: str = Field(..., description="Stable backup and restore runbook code")
+
+
 # ---------------------------------------------------------------------------
 # Notifications
 # ---------------------------------------------------------------------------
