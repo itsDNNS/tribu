@@ -6,12 +6,65 @@ import { t } from '../../lib/i18n';
 import usePushSubscription from '../../hooks/usePushSubscription';
 import * as api from '../../lib/api';
 
+function pushStatusCopy(messages, pushStatus, pushSupported, pushPermission, pushSubscription) {
+  if (!pushSupported) {
+    return {
+      tone: 'warning',
+      title: t(messages, 'push_unavailable_title'),
+      detail: t(messages, 'push_unavailable_hint'),
+    };
+  }
+  if (!pushStatus) return null;
+  if (!pushStatus.server_configured) {
+    return {
+      tone: 'warning',
+      title: t(messages, 'push_server_not_configured'),
+      detail: t(messages, 'push_server_not_configured_hint'),
+    };
+  }
+  if (pushPermission === 'denied') {
+    return {
+      tone: 'warning',
+      title: t(messages, 'push_blocked'),
+      detail: t(messages, 'push_blocked_hint'),
+    };
+  }
+  if (!pushStatus.pywebpush_available) {
+    return {
+      tone: 'warning',
+      title: t(messages, 'push_sender_unavailable'),
+      detail: t(messages, 'push_sender_unavailable_hint'),
+    };
+  }
+  if (!pushStatus.push_enabled) {
+    return {
+      tone: 'neutral',
+      title: t(messages, 'push_device_not_subscribed'),
+      detail: t(messages, 'push_device_not_subscribed_hint'),
+    };
+  }
+  if (!pushSubscription || pushStatus.subscription_count === 0) {
+    return {
+      tone: 'neutral',
+      title: t(messages, 'push_device_not_subscribed'),
+      detail: t(messages, 'push_device_not_subscribed_hint'),
+    };
+  }
+  return {
+    tone: 'success',
+    title: t(messages, 'push_ready_title'),
+    detail: t(messages, 'push_ready_hint'),
+  };
+}
+
 export default function NotificationsTab() {
   const { messages, loggedIn, demoMode } = useApp();
   const { success: toastSuccess } = useToast();
   const { pushSupported, pushSubscription, pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushSubscription(loggedIn, demoMode);
 
   const [notifPrefs, setNotifPrefs] = useState({ reminders_enabled: true, reminder_minutes: 30, quiet_start: '', quiet_end: '' });
+  const [pushStatus, setPushStatus] = useState(null);
+  const [pushBusy, setPushBusy] = useState(false);
 
   const loadNotifPrefs = useCallback(async () => {
     if (!loggedIn || demoMode) return;
@@ -24,7 +77,14 @@ export default function NotificationsTab() {
     });
   }, [loggedIn, demoMode]);
 
+  const loadPushStatus = useCallback(async () => {
+    if (!loggedIn || demoMode) return;
+    const res = await api.apiGetPushStatus();
+    if (res.ok) setPushStatus(res.data);
+  }, [loggedIn, demoMode]);
+
   useEffect(() => { loadNotifPrefs(); }, [loadNotifPrefs]);
+  useEffect(() => { loadPushStatus(); }, [loadPushStatus, pushSubscription]);
 
   async function handleSaveNotifPrefs() {
     const payload = {
@@ -35,8 +95,53 @@ export default function NotificationsTab() {
     const res = await api.apiUpdateNotificationPreferences(payload);
     if (res.ok) {
       toastSuccess(t(messages, 'notification_saved'));
+      loadPushStatus();
     }
   }
+
+  async function handlePushSubscribe() {
+    setPushBusy(true);
+    try {
+      const ok = await pushSubscribe();
+      if (ok) {
+        toastSuccess(t(messages, 'push_subscribed'));
+        await loadPushStatus();
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function handlePushUnsubscribe() {
+    setPushBusy(true);
+    try {
+      const ok = await pushUnsubscribe();
+      if (ok) {
+        toastSuccess(t(messages, 'push_unsubscribed'));
+        await loadPushStatus();
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function handleSendTestPush() {
+    setPushBusy(true);
+    try {
+      const res = await api.apiSendTestPush();
+      if (res.ok && res.data?.status === 'sent') {
+        toastSuccess(t(messages, 'push_test_sent'));
+      }
+      await loadPushStatus();
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  const statusCopy = pushStatusCopy(messages, pushStatus, pushSupported, pushPermission, pushSubscription);
+  const serverReady = Boolean(pushStatus?.server_configured && pushStatus?.pywebpush_available);
+  const canSubscribe = pushSupported && serverReady && pushPermission !== 'denied' && !pushBusy;
+  const canTestPush = Boolean(pushSupported && pushStatus?.ready && pushSubscription && !pushBusy);
 
   return (
     <div className="settings-grid">
@@ -90,16 +195,25 @@ export default function NotificationsTab() {
             {t(messages, 'notification_save')}
           </button>
 
-          {pushSupported && (
-            <div className="set-push-section">
-              <div className="set-push-header">
-                <BellRing size={16} />
-                <span className="set-push-title">{t(messages, 'push_notifications')}</span>
+          <div className="set-push-section">
+            <div className="set-push-header">
+              <BellRing size={16} />
+              <span className="set-push-title">{t(messages, 'push_notifications')}</span>
+            </div>
+            {statusCopy && (
+              <div className={`set-push-diagnostic set-push-diagnostic-${statusCopy.tone}`}>
+                <strong>{statusCopy.title}</strong>
+                <p>{statusCopy.detail}</p>
               </div>
-              {pushSubscription ? (
+            )}
+            {pushSupported && (
+              pushSubscription ? (
                 <div className="set-push-status">
                   <span className="set-push-enabled">{t(messages, 'push_enabled')}</span>
-                  <button className="btn-ghost set-push-disable" onClick={pushUnsubscribe}>
+                  <button className="btn-sm" onClick={handleSendTestPush} disabled={!canTestPush}>
+                    {t(messages, 'push_test_send')}
+                  </button>
+                  <button className="btn-ghost set-push-disable" onClick={handlePushUnsubscribe} disabled={pushBusy}>
                     {t(messages, 'push_disable')}
                   </button>
                 </div>
@@ -107,20 +221,15 @@ export default function NotificationsTab() {
                 <div>
                   <button
                     className="btn-sm"
-                    onClick={pushSubscribe}
-                    disabled={pushPermission === 'denied'}
+                    onClick={handlePushSubscribe}
+                    disabled={!canSubscribe}
                   >
                     {t(messages, 'push_enable')}
                   </button>
-                  {pushPermission === 'denied' && (
-                    <p className="set-push-blocked">
-                      {t(messages, 'push_blocked_hint')}
-                    </p>
-                  )}
                 </div>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
         </div>
       </div>
     </div>

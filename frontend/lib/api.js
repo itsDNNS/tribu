@@ -440,6 +440,14 @@ export function apiGetVapidKey() {
   return request('/notifications/push/vapid-key');
 }
 
+export function apiGetPushStatus() {
+  return request('/notifications/push/status');
+}
+
+export function apiSendTestPush() {
+  return post('/notifications/push/test', {});
+}
+
 export function apiPushSubscribe(subscription) {
   const key = subscription.getKey('p256dh');
   const auth = subscription.getKey('auth');

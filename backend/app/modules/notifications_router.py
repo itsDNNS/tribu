@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 from app.core import cache
 from app.core.deps import current_user
 from app.core.scopes import require_scope
-from app.core.push import get_vapid_public_key
+from app.core.push import get_vapid_public_key, is_pywebpush_available, is_vapid_configured, send_push_for_user
 from app.database import get_db, SessionLocal
-from app.models import Notification, NotificationPreference, PushSubscription, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushSubscriptionCreate, PushUnsubscribe
+from app.models import Notification, NotificationPreference, NotificationSentLog, PushSubscription, User
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushStatusResponse, PushSubscriptionCreate, PushTestResponse, PushUnsubscribe
 from app.core.errors import error_detail, NOTIFICATION_NOT_FOUND
 
 router = APIRouter(prefix="/notifications", tags=["notifications"], responses={**AUTH_RESPONSES})
@@ -49,7 +49,7 @@ def list_notifications(
 )
 def unread_count(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:read")):
     def _load():
-        return {"count": db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).count()}
+        return {"count": db.query(Notification).filter(Notification.user_id == user.id, Notification.read.is_(False)).count()}
     return cache.get_or_set(f"tribu:notif_count:{user.id}", 15, _load)
 
 
@@ -77,7 +77,7 @@ def mark_read(notification_id: int, user: User = Depends(current_user), db: Sess
     response_description="Confirmation",
 )
 def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:write")):
-    db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).update({"read": True})
+    db.query(Notification).filter(Notification.user_id == user.id, Notification.read.is_(False)).update({"read": True})
     db.commit()
     cache.invalidate(f"tribu:notif_count:{user.id}")
     return {"status": "ok"}
@@ -148,6 +148,128 @@ async def notification_stream(
 def vapid_key():
     key = get_vapid_public_key()
     return {"vapid_key": key}
+
+
+def _push_blocked_reason(
+    *,
+    server_configured: bool,
+    pywebpush_available: bool,
+    push_enabled: bool,
+    subscription_count: int,
+) -> str | None:
+    if not server_configured:
+        return "server_not_configured"
+    if not pywebpush_available:
+        return "sender_unavailable"
+    if not push_enabled:
+        return "preference_disabled"
+    if subscription_count == 0:
+        return "no_subscription"
+    return None
+
+
+@router.get(
+    "/push/status",
+    response_model=PushStatusResponse,
+    summary="Get push readiness status",
+    description="Return redacted push readiness diagnostics for the current user and device setup.",
+    response_description="Push readiness diagnostics",
+)
+def push_status(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("profile:read"),
+):
+    pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
+    subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).count()
+    last_log = (
+        db.query(NotificationSentLog)
+        .filter(NotificationSentLog.user_id == user.id)
+        .order_by(NotificationSentLog.last_attempt_at.desc().nullslast(), NotificationSentLog.sent_at.desc())
+        .first()
+    )
+    server_configured = is_vapid_configured()
+    sender_available = is_pywebpush_available()
+    push_enabled = bool(pref and pref.push_enabled)
+    blocked_reason = _push_blocked_reason(
+        server_configured=server_configured,
+        pywebpush_available=sender_available,
+        push_enabled=push_enabled,
+        subscription_count=subscription_count,
+    )
+    return {
+        "server_configured": server_configured,
+        "vapid_public_key_available": bool(get_vapid_public_key()),
+        "pywebpush_available": sender_available,
+        "subscription_count": subscription_count,
+        "push_enabled": push_enabled,
+        "ready": blocked_reason is None,
+        "blocked_reason": blocked_reason,
+        "last_attempt": (
+            {
+                "status": last_log.status,
+                "last_attempt_at": last_log.last_attempt_at,
+                "delivered_at": last_log.delivered_at,
+                "delivery_attempts": last_log.delivery_attempts,
+            }
+            if last_log
+            else None
+        ),
+    }
+
+
+@router.post(
+    "/push/test",
+    response_model=PushTestResponse,
+    summary="Send a test push notification",
+    description="Attempt a redacted test push to the current user's stored subscriptions.",
+    response_description="Redacted test push outcome",
+)
+def push_test(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
+):
+    pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
+    subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).count()
+    blocked_reason = _push_blocked_reason(
+        server_configured=is_vapid_configured(),
+        pywebpush_available=is_pywebpush_available(),
+        push_enabled=bool(pref and pref.push_enabled),
+        subscription_count=subscription_count,
+    )
+    if blocked_reason:
+        return {
+            "status": "skipped",
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "removed": 0,
+            "skipped_reason": blocked_reason,
+        }
+
+    result = send_push_for_user(
+        db,
+        user.id,
+        "Tribu test notification",
+        "Push notifications are ready for this device.",
+        "settings",
+    )
+    db.commit()
+    if result.succeeded > 0:
+        status = "sent"
+    elif result.attempted == 0:
+        status = "skipped"
+    else:
+        status = "failed"
+    return {
+        "status": status,
+        "attempted": result.attempted,
+        "succeeded": result.succeeded,
+        "failed": result.failed,
+        "removed": result.removed,
+        "skipped_reason": result.skipped_reason,
+    }
 
 
 @router.post(
