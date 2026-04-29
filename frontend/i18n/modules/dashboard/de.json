@@ -49,5 +49,14 @@
   "module.dashboard.activation_step_done_aria": "Schritt erledigt",
   "module.dashboard.activation_step_pending_aria": "Schritt offen",
   "module.dashboard.quick_my_tasks": "Meine Aufgaben",
-  "module.dashboard.quick_rewards": "Rewards"
+  "module.dashboard.quick_rewards": "Rewards",
+  "module.dashboard.daily_loop_title": "Heute im Griff",
+  "module.dashboard.daily_loop_subtitle": "Essen, Einkauf und Routinen in einem täglichen Check-in.",
+  "module.dashboard.daily_loop_meals": "Geplante Mahlzeiten",
+  "module.dashboard.daily_loop_shopping": "Offener Einkauf",
+  "module.dashboard.daily_loop_routines": "Fällige Routinen",
+  "module.dashboard.daily_loop_open_meals": "Essen planen",
+  "module.dashboard.daily_loop_open_shopping": "Einkauf öffnen",
+  "module.dashboard.daily_loop_open_routines": "Routinen öffnen",
+  "module.dashboard.daily_loop_empty": "Plane ein Essen, ergänze den Einkauf oder lege eine wiederkehrende Aufgabe an, damit der Tag gut startet."
 }
