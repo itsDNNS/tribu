@@ -2389,7 +2389,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 /* ─── Dashboard activation panel ─── */
 .activation-panel { background: var(--glass); backdrop-filter: blur(8px) saturate(1.2); -webkit-backdrop-filter: blur(8px) saturate(1.2); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-lg); margin-bottom: var(--space-lg); position: relative; overflow: hidden; }
 .activation-panel::before { content: ''; position: absolute; inset: 0; background: var(--grad-primary); opacity: 0.08; pointer-events: none; }
-.activation-panel-header { position: relative; margin-bottom: var(--space-md); }
+.activation-panel-header { position: relative; margin-bottom: var(--space-md); display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); }
 .activation-panel-title { margin: 0 0 4px; font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }
 .activation-panel-subtitle { margin: 0; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.45; }
 .activation-step-list { position: relative; display: grid; gap: var(--space-sm); list-style: none; padding: 0; margin: 0; }
@@ -2405,6 +2405,11 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .activation-step-cta:hover { background: rgba(120, 130, 180, 0.1); border-color: var(--amethyst); color: var(--amethyst); }
 .activation-step-cta:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
 .activation-step-status { color: var(--success); font-size: 0.82rem; font-weight: 500; white-space: nowrap; }
+.setup-checklist-progress { position: relative; flex: 0 0 auto; min-width: 58px; height: 58px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.22); color: var(--amethyst); font-weight: 700; }
+.setup-checklist-footer { position: relative; margin-top: var(--space-md); display: flex; justify-content: flex-end; }
+.setup-checklist-dismiss { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.84rem; cursor: pointer; padding: 4px 0; }
+.setup-checklist-dismiss:hover { color: var(--amethyst); }
+.setup-checklist-dismiss:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 3px; border-radius: var(--radius-sm); }
 @media (max-width: 560px) {
   .activation-step { grid-template-columns: 28px 1fr; }
   .activation-step-cta, .activation-step-status { grid-column: 2; justify-self: start; }

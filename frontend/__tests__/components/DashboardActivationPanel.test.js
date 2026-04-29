@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardView from '../../components/DashboardView';
+import { apiCompleteSetupChecklistStep } from '../../lib/api';
 
 let mockAppState = {};
 
@@ -10,6 +11,13 @@ jest.mock('../../contexts/AppContext', () => ({
 
 jest.mock('../../lib/i18n', () => ({
   t: (messages, key) => messages?.[key] || key,
+}));
+
+jest.mock('../../lib/api', () => ({
+  apiCompleteSetupChecklistStep: jest.fn(() => Promise.resolve({ ok: true, data: { dismissed: false, show_on_dashboard: false, completed_count: 1, total_count: 1, steps: [] } })),
+  apiDismissSetupChecklist: jest.fn(() => Promise.resolve({ ok: true })),
+  apiGetSetupChecklist: jest.fn(() => Promise.resolve({ ok: false })),
+  apiListMealPlans: jest.fn(() => Promise.resolve({ ok: true, data: [] })),
 }));
 
 jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
@@ -59,6 +67,22 @@ const messages = {
   'module.dashboard.activation_step_shopping_done': 'Shopping list ready',
   'module.dashboard.activation_step_done_aria': 'Step completed',
   'module.dashboard.activation_step_pending_aria': 'Step pending',
+  'module.dashboard.setup_checklist_title': 'Set up your first week',
+  'module.dashboard.setup_checklist_subtitle': 'The key steps that make Tribu useful in everyday family life.',
+  'module.dashboard.setup_checklist_progress': '{completed} of {total} steps completed',
+  'module.dashboard.setup_checklist_dismiss': 'Hide for later',
+  'module.dashboard.setup_step_done': 'Done',
+  'module.dashboard.setup_step_manual_cta': 'Mark done',
+  'module.dashboard.setup_step_members_title': 'Invite your family',
+  'module.dashboard.setup_step_members_desc': 'Bring at least one more family member into the household.',
+  'module.dashboard.setup_step_members_cta': 'Open invitations',
+  'module.dashboard.setup_step_calendar_title': 'Add a calendar event',
+  'module.dashboard.setup_step_calendar_desc': 'Put school, sport, or a family routine on the calendar.',
+  'module.dashboard.setup_step_calendar_cta': 'Open calendar',
+  'module.dashboard.setup_step_phone_sync_title': 'Review phone sync',
+  'module.dashboard.setup_step_phone_sync_desc': 'Connect calendar or contacts sync for the devices that need it.',
+  'module.dashboard.setup_step_backup_guidance_title': 'Review backup guidance',
+  'module.dashboard.setup_step_backup_guidance_desc': 'Check backup and restore guidance before the household depends on Tribu daily.',
   next_events: 'Next events',
   upcoming_birthdays_4w: 'Birthdays',
 };
@@ -83,14 +107,15 @@ function baseApp(overrides = {}) {
 
 describe('DashboardView activation panel', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     mockAppState = baseApp();
   });
 
   it('renders day-one activation steps for an admin household that is not set up yet', () => {
     render(<DashboardView />);
 
-    expect(screen.getByRole('region', { name: 'Get your household started' })).toBeInTheDocument();
-    expect(screen.getByTestId('activation-step-invite')).toHaveTextContent('Invite your family');
+    expect(screen.getByRole('region', { name: 'Set up your first week' })).toBeInTheDocument();
+    expect(screen.getByTestId('activation-step-members')).toHaveTextContent('Invite your family');
     expect(screen.getByTestId('activation-step-event')).toHaveTextContent('Add your first event');
     expect(screen.getByTestId('activation-step-task')).toHaveTextContent('Add your first task');
     expect(screen.getByTestId('activation-step-shopping')).toHaveTextContent('Start a shopping list');
@@ -101,7 +126,7 @@ describe('DashboardView activation panel', () => {
     mockAppState = baseApp({ setActiveView });
 
     render(<DashboardView />);
-    const panel = screen.getByRole('region', { name: 'Get your household started' });
+    const panel = screen.getByRole('region', { name: 'Set up your first week' });
     fireEvent.click(within(panel).getByRole('button', { name: 'Open invitations' }));
     fireEvent.click(within(panel).getByRole('button', { name: 'Open calendar' }));
     fireEvent.click(within(panel).getByRole('button', { name: 'Open tasks' }));
@@ -113,12 +138,38 @@ describe('DashboardView activation panel', () => {
     expect(setActiveView).toHaveBeenCalledWith('shopping');
   });
 
+  it('marks manual remote checklist steps complete from the dashboard', async () => {
+    mockAppState = baseApp({
+      familyId: 7,
+    });
+    mockAppState.messages = messages;
+
+    const api = require('../../lib/api');
+    api.apiGetSetupChecklist.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        dismissed: false,
+        show_on_dashboard: true,
+        completed_count: 0,
+        total_count: 1,
+        steps: [
+          { key: 'backup_guidance', completed: false, auto_completed: false, target_view: 'admin' },
+        ],
+      },
+    });
+
+    render(<DashboardView />);
+    await screen.findByTestId('activation-step-backup_guidance');
+    fireEvent.click(screen.getByRole('button', { name: 'Mark done' }));
+    await waitFor(() => expect(apiCompleteSetupChecklistStep).toHaveBeenCalledWith(7, 'backup_guidance'));
+  });
+
   it('does not render the activation panel for child members', () => {
     mockAppState = baseApp({ isChild: true, isAdmin: false });
 
     render(<DashboardView />);
 
-    expect(screen.queryByRole('region', { name: 'Get your household started' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Set up your first week' })).not.toBeInTheDocument();
   });
 
   it('does not render once the household has members and shared data', () => {
@@ -132,6 +183,6 @@ describe('DashboardView activation panel', () => {
 
     render(<DashboardView />);
 
-    expect(screen.queryByRole('region', { name: 'Get your household started' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Set up your first week' })).not.toBeInTheDocument();
   });
 });

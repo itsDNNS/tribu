@@ -1191,6 +1191,32 @@ class SetupStatusResponse(BaseModel):
     needs_setup: bool = Field(..., description="True if no users exist and setup is required")
 
 
+class SetupChecklistStepResponse(BaseModel):
+    """One first-week setup checklist step."""
+    key: str
+    title: str
+    description: str
+    cta_label: str
+    target_view: str
+    completed: bool
+    auto_completed: bool = False
+
+
+class SetupChecklistResponse(BaseModel):
+    """Family first-week setup checklist state."""
+    family_id: int
+    dismissed: bool
+    show_on_dashboard: bool
+    completed_count: int
+    total_count: int
+    steps: list[SetupChecklistStepResponse]
+
+
+class SetupChecklistActionRequest(BaseModel):
+    """Dismiss, reset, or complete a first-week checklist step for a family."""
+    family_id: int = Field(..., description="Family ID")
+
+
 class RestoreResponse(BaseModel):
     """Result of a backup restore during setup."""
     status: str = Field(..., description="Restore result: 'ok' or error message")

@@ -4,7 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
-import { apiListMealPlans } from '../lib/api';
+import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetSetupChecklist, apiListMealPlans } from '../lib/api';
 import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
@@ -111,14 +111,19 @@ function getGreeting(messages) {
   return t(messages, 'module.dashboard.greeting_evening');
 }
 
-function ActivationPanel({ steps, messages }) {
+function ActivationPanel({ steps, completedCount, totalCount, messages, onDismiss }) {
   return (
-    <section className="activation-panel" aria-label={t(messages, 'module.dashboard.activation_title')}>
+    <section className="activation-panel setup-checklist-panel" aria-label={t(messages, 'module.dashboard.setup_checklist_title')}>
       <div className="activation-panel-header">
-        <h2 className="activation-panel-title">{t(messages, 'module.dashboard.activation_title')}</h2>
-        <p className="activation-panel-subtitle">{t(messages, 'module.dashboard.activation_subtitle')}</p>
+        <div>
+          <h2 className="activation-panel-title">{t(messages, 'module.dashboard.setup_checklist_title')}</h2>
+          <p className="activation-panel-subtitle">{t(messages, 'module.dashboard.setup_checklist_subtitle')}</p>
+        </div>
+        <div className="setup-checklist-progress" aria-label={t(messages, 'module.dashboard.setup_checklist_progress').replace('{completed}', completedCount).replace('{total}', totalCount)}>
+          <span>{completedCount}/{totalCount}</span>
+        </div>
       </div>
-      <ul className="activation-step-list">
+      <ul className="activation-step-list setup-checklist-list">
         {steps.map((step) => {
           const ariaLabel = step.done
             ? t(messages, 'module.dashboard.activation_step_done_aria')
@@ -147,6 +152,11 @@ function ActivationPanel({ steps, messages }) {
           );
         })}
       </ul>
+      <div className="setup-checklist-footer">
+        <button type="button" className="setup-checklist-dismiss" onClick={onDismiss}>
+          {t(messages, 'module.dashboard.setup_checklist_dismiss')}
+        </button>
+      </div>
     </section>
   );
 }
@@ -155,6 +165,7 @@ export default function DashboardView() {
   const { summary, me, members, tasks, events, shoppingLists, activity, quickCaptureInbox, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
   const todayIso = useMemo(() => todayIsoDate(), []);
   const [mealsTodayCount, setMealsTodayCount] = useState(0);
+  const [setupChecklist, setSetupChecklist] = useState(null);
 
   const openTasks = tasks.filter((task) => task.status === 'open');
   const shoppingOpenCount = useMemo(() => countOpenShoppingItems(shoppingLists), [shoppingLists]);
@@ -179,6 +190,20 @@ export default function DashboardView() {
 
     return () => { cancelled = true; };
   }, [familyId, demoMode, todayIso]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!familyId || demoMode || isChild) {
+      setSetupChecklist(null);
+      return () => { cancelled = true; };
+    }
+    apiGetSetupChecklist(familyId).then((res) => {
+      if (!cancelled && res?.ok) setSetupChecklist(res.data);
+    }).catch(() => {
+      if (!cancelled) setSetupChecklist(null);
+    });
+    return () => { cancelled = true; };
+  }, [familyId, demoMode, isChild]);
 
   const todayEventCount = (summary.next_events || []).filter((ev) => {
     const d = parseDate(ev.starts_at);
@@ -217,22 +242,20 @@ export default function DashboardView() {
   const eventDone = events.length > 0;
   const taskDone = tasks.length > 0;
   const shoppingDone = hasShoppingContent;
-  const adoptionIncomplete = !inviteDone || !eventDone || !taskDone || !shoppingDone;
 
-  const activationSteps = [];
+  const fallbackChecklistSteps = [];
   if (isAdmin) {
-    activationSteps.push({
-      key: 'invite',
+    fallbackChecklistSteps.push({
+      key: 'members',
       done: inviteDone,
-      title: t(messages, 'module.dashboard.activation_step_invite_title'),
-      description: t(messages, 'module.dashboard.activation_step_invite_desc'),
-      ctaLabel: t(messages, 'module.dashboard.activation_step_invite_cta'),
-      doneLabel: t(messages, 'module.dashboard.activation_step_invite_done'),
+      title: t(messages, 'module.dashboard.setup_step_members_title'),
+      description: t(messages, 'module.dashboard.setup_step_members_desc'),
+      ctaLabel: t(messages, 'module.dashboard.setup_step_members_cta'),
+      doneLabel: t(messages, 'module.dashboard.setup_step_done'),
       onClick: () => setActiveView('admin'),
-      icon: UserPlus,
     });
   }
-  activationSteps.push(
+  fallbackChecklistSteps.push(
     {
       key: 'event',
       done: eventDone,
@@ -265,7 +288,65 @@ export default function DashboardView() {
     },
   );
 
-  const showActivationPanel = !isChild && adoptionIncomplete;
+  const checklistIconMap = {
+    members: UserPlus,
+    calendar: Calendar,
+    tasks: CheckSquare,
+    shopping: ShoppingCart,
+    meal_plan: Utensils,
+    routine: CheckSquare,
+    phone_sync: Sparkles,
+    backup_guidance: CheckCircle,
+  };
+  const checklistViewMap = {
+    members: 'admin',
+    calendar: 'calendar',
+    tasks: 'tasks',
+    shopping: 'shopping',
+    meal_plan: 'meal_plans',
+    routine: 'tasks',
+    phone_sync: 'settings',
+    backup_guidance: 'admin',
+  };
+  const manualChecklistKeys = new Set(['phone_sync', 'backup_guidance']);
+  const handleCompleteSetupChecklistStep = async (stepKey) => {
+    if (!familyId) return;
+    const response = await apiCompleteSetupChecklistStep(familyId, stepKey).catch(() => null);
+    if (response?.ok) {
+      setSetupChecklist(response.data);
+    }
+  };
+  const remoteChecklistSteps = Array.isArray(setupChecklist?.steps)
+    ? setupChecklist.steps.map((step) => {
+        const titleKey = `module.dashboard.setup_step_${step.key}_title`;
+        const descKey = `module.dashboard.setup_step_${step.key}_desc`;
+        const ctaKey = manualChecklistKeys.has(step.key)
+          ? 'module.dashboard.setup_step_manual_cta'
+          : `module.dashboard.setup_step_${step.key}_cta`;
+        return {
+          key: step.key,
+          done: Boolean(step.completed),
+          title: t(messages, titleKey),
+          description: t(messages, descKey),
+          ctaLabel: t(messages, ctaKey),
+          doneLabel: t(messages, 'module.dashboard.setup_step_done'),
+          onClick: manualChecklistKeys.has(step.key)
+            ? () => handleCompleteSetupChecklistStep(step.key)
+            : () => setActiveView(step.target_view || checklistViewMap[step.key] || 'dashboard'),
+          icon: checklistIconMap[step.key] || Circle,
+        };
+      })
+    : [];
+  const checklistSteps = remoteChecklistSteps.length > 0 ? remoteChecklistSteps : fallbackChecklistSteps;
+  const checklistCompletedCount = setupChecklist?.completed_count ?? checklistSteps.filter((step) => step.done).length;
+  const checklistTotalCount = setupChecklist?.total_count ?? checklistSteps.length;
+  const showActivationPanel = !isChild && checklistSteps.length > 0 && (setupChecklist?.show_on_dashboard ?? (!(setupChecklist?.dismissed) && checklistCompletedCount < checklistTotalCount));
+  const handleDismissSetupChecklist = async () => {
+    if (!familyId) return;
+    setSetupChecklist((current) => current ? { ...current, dismissed: true, show_on_dashboard: false } : current);
+    const response = await apiDismissSetupChecklist(familyId).catch(() => null);
+    if (response?.ok) setSetupChecklist(response.data);
+  };
 
   const summaryText = (() => {
     let s = todayEventCount > 0
@@ -336,7 +417,15 @@ export default function DashboardView() {
         })}
       </div>
 
-      {showActivationPanel && <ActivationPanel steps={activationSteps} messages={messages} />}
+      {showActivationPanel && (
+        <ActivationPanel
+          steps={checklistSteps}
+          completedCount={checklistCompletedCount}
+          totalCount={checklistTotalCount}
+          messages={messages}
+          onDismiss={handleDismissSetupChecklist}
+        />
+      )}
 
       <div className="bento-grid">
         {!isChild && (

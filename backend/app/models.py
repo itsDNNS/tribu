@@ -47,6 +47,7 @@ class Family(Base):
     display_devices = relationship("DisplayDevice", back_populates="family", cascade="all, delete-orphan")
     household_activities = relationship("HouseholdActivity", back_populates="family", cascade="all, delete-orphan")
     quick_capture_items = relationship("QuickCaptureItem", back_populates="family", cascade="all, delete-orphan")
+    setup_checklist = relationship("FamilySetupChecklist", back_populates="family", uselist=False, cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -427,6 +428,22 @@ class HouseholdTemplate(Base):
     updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
 
     family = relationship("Family", back_populates="household_templates")
+
+
+class FamilySetupChecklist(Base):
+    __tablename__ = "family_setup_checklists"
+    __table_args__ = (UniqueConstraint("family_id", name="uq_family_setup_checklists_family"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    completed_steps = Column(JSON, nullable=False, default=list, server_default="[]")
+    dismissed = Column(Boolean, nullable=False, default=False, server_default="false")
+    dismissed_at = Column(DateTime, nullable=True)
+    reset_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="setup_checklist")
 
 
 class Notification(Base):
