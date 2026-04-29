@@ -67,8 +67,8 @@ test.describe('Recipes', () => {
 
     await navigateTo(page, 'Shopping');
     await page.getByText('Recipe Shopping List').click();
-    await expect(page.getByText('Flour')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Milk')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Flour' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('checkbox', { name: 'Milk' })).toBeVisible();
 
     await navigateTo(page, 'Meal plan');
     await page.getByRole('button', { name: 'Plan a meal' }).click();

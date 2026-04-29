@@ -70,11 +70,11 @@ test.describe('Meal plan', () => {
 
       await expect(page.getByText('Weekly Groceries')).toBeVisible({ timeout: 90000 });
       await page.locator('.shopping-list-card', { hasText: 'Weekly Groceries' }).click();
-      await expect(page.getByText('Flour')).toBeVisible({ timeout: 30000 });
+      await expect(page.getByRole('checkbox', { name: 'Flour' })).toBeVisible({ timeout: 30000 });
       await expect(page.getByText('750 g')).toBeVisible({ timeout: 30000 });
-      await expect(page.getByText('Milk')).toBeVisible({ timeout: 30000 });
+      await expect(page.getByRole('checkbox', { name: 'Milk' })).toBeVisible({ timeout: 30000 });
       await expect(page.getByText('1 l')).toBeVisible({ timeout: 30000 });
-      await expect(page.getByText('Basil')).toBeVisible({ timeout: 30000 });
+      await expect(page.getByRole('checkbox', { name: 'Basil' })).toBeVisible({ timeout: 30000 });
     } finally {
       await workerUser.api.dispose();
     }

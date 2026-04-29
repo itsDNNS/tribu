@@ -42,6 +42,35 @@ from app.core.errors import (
 router = APIRouter(prefix="/shopping", tags=["shopping"], responses={**AUTH_RESPONSES})
 
 
+def _clean_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def _capitalize_first(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        return cleaned
+    return f"{cleaned[:1].upper()}{cleaned[1:]}"
+
+
+def _normalize_item_name(value: str) -> str:
+    item_name = _capitalize_first(value)
+    if not item_name:
+        raise HTTPException(status_code=422, detail="Shopping item name cannot be blank")
+    return item_name
+
+
+def _same_item_name(left: str, right: str) -> bool:
+    return left.strip().casefold() == right.strip().casefold()
+
+
+def _same_optional_text(left: str | None, right: str | None) -> bool:
+    return _clean_optional_text(left) == _clean_optional_text(right)
+
+
 def _list_response(sl: ShoppingList) -> ShoppingListResponse:
     total = len(sl.items)
     checked = sum(1 for i in sl.items if i.checked)
@@ -371,11 +400,37 @@ def add_item(
     if not sl:
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
     ensure_adult(db, user.id, sl.family_id)
+    item_name = _normalize_item_name(payload.name)
+    item_spec = _clean_optional_text(payload.spec)
+    item_category = _clean_optional_text(payload.category)
+    checked_match = next(
+        (
+            existing
+            for existing in sl.items
+            if existing.checked
+            and _same_item_name(existing.name, item_name)
+            and _same_optional_text(existing.spec, item_spec)
+            and _same_optional_text(existing.category, item_category)
+        ),
+        None,
+    )
+    if checked_match:
+        checked_match.name = item_name
+        checked_match.spec = item_spec
+        checked_match.category = item_category
+        checked_match.checked = False
+        checked_match.checked_at = None
+        db.commit()
+        db.refresh(checked_match)
+        resp = ShoppingItemResponse.model_validate(checked_match).model_dump(mode="json")
+        broadcast_item_updated(list_id, resp)
+        return checked_match
+
     item = ShoppingItem(
         list_id=list_id,
-        name=payload.name,
-        spec=payload.spec,
-        category=payload.category,
+        name=item_name,
+        spec=item_spec,
+        category=item_category,
         added_by_user_id=user.id,
     )
     db.add(item)
@@ -424,11 +479,11 @@ def update_item(
             raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
 
     if payload.name is not None:
-        item.name = payload.name
+        item.name = _normalize_item_name(payload.name)
     if payload.spec is not None:
-        item.spec = payload.spec
+        item.spec = _clean_optional_text(payload.spec)
     if payload.category is not None:
-        item.category = payload.category
+        item.category = _clean_optional_text(payload.category)
     if payload.checked is not None:
         was_checked = item.checked
         item.checked = payload.checked
@@ -496,7 +551,7 @@ def clear_checked(
     ensure_adult(db, user.id, sl.family_id)
     deleted = db.query(ShoppingItem).filter(
         ShoppingItem.list_id == list_id,
-        ShoppingItem.checked == True,
+        ShoppingItem.checked,
     ).delete(synchronize_session="fetch")
     db.commit()
     broadcast_items_cleared(list_id, deleted)
