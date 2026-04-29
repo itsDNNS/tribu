@@ -1,0 +1,100 @@
+# Tribu Home Assistant package
+#
+# Add this file to your Home Assistant packages directory and define the
+# referenced secrets in secrets.yaml. Keep token values out of this file.
+
+rest:
+  - resource: !secret tribu_dashboard_summary_url
+    scan_interval: 300
+    headers:
+      Authorization: !secret tribu_authorization_header
+      Accept: application/json
+    sensor:
+      - name: Tribu Next Event
+        unique_id: tribu_next_event
+        value_template: >-
+          {% set events = value_json.next_events | default([]) %}
+          {{ events[0].title if events | length > 0 else 'None' }}
+        json_attributes_path: "$.next_events[0]"
+        json_attributes:
+          - id
+          - starts_at
+          - ends_at
+          - location_name
+          - address
+          - source
+      - name: Tribu Upcoming Birthdays
+        unique_id: tribu_upcoming_birthdays
+        value_template: "{{ value_json.upcoming_birthdays | default([]) | length }}"
+        json_attributes:
+          - upcoming_birthdays
+
+  - resource: !secret tribu_open_tasks_url
+    scan_interval: 300
+    headers:
+      Authorization: !secret tribu_authorization_header
+      Accept: application/json
+    sensor:
+      - name: Tribu Open Tasks
+        unique_id: tribu_open_tasks
+        value_template: "{{ value_json.total | default(0) }}"
+        unit_of_measurement: tasks
+        json_attributes:
+          - total
+          - items
+
+  - resource: !secret tribu_shopping_lists_url
+    scan_interval: 300
+    headers:
+      Authorization: !secret tribu_authorization_header
+      Accept: application/json
+    sensor:
+      - name: Tribu Open Shopping Items
+        unique_id: tribu_open_shopping_items
+        value_template: >-
+          {% set lists = value_json if value_json is sequence else [] %}
+          {{ lists | map(attribute='item_count') | sum - lists | map(attribute='checked_count') | sum }}
+        unit_of_measurement: items
+        json_attributes:
+          - lists
+
+# Entity ids created by the REST sensors above:
+# - sensor.tribu_next_event
+# - sensor.tribu_open_tasks
+# - sensor.tribu_open_shopping_items
+# - sensor.tribu_upcoming_birthdays
+
+rest_command:
+  tribu_add_quick_capture:
+    # Endpoint path: /api/quick-capture
+    url: !secret tribu_quick_capture_url
+    method: POST
+    headers:
+      Authorization: !secret tribu_authorization_header
+      Content-Type: application/json
+    # Pass family_id from the calling script or automation.
+    # Example caller value: family_id: !secret tribu_family_id
+    payload: >-
+      {"family_id": {{ family_id }}, "text": "{{ text }}", "destination": "{{ destination | default('inbox') }}"}
+
+# Tribu can send outbound webhooks to Home Assistant at:
+# https://home-assistant.example/api/webhook/<tribu_webhook_id>
+automation:
+  - alias: Tribu webhook event received
+    id: tribu_webhook_event_received
+    mode: queued
+    trigger:
+      - platform: webhook
+        webhook_id: !secret tribu_webhook_id
+        allowed_methods:
+          - POST
+        local_only: false
+    condition:
+      - condition: template
+        value_template: "{{ trigger.json.source == 'tribu' }}"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Tribu {{ trigger.json.event_type }}"
+          message: >-
+            Event {{ trigger.json.event_type }} received for family {{ trigger.json.family_id }}.

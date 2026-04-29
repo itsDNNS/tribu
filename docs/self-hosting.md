@@ -6,6 +6,7 @@ Everything you need to run Tribu on your own server.
 
 - installing Tribu on your own infrastructure
 - configuring environment variables, reverse proxy, and phone sync
+- connecting Home Assistant through REST sensors and Tribu webhooks
 - backups, updates, and troubleshooting in production-like setups
 
 If you want the public overview, start with the [README](../README.md).
@@ -31,6 +32,10 @@ docker compose up -d
 ```
 
 Open [localhost:3000](http://localhost:3000) and register. The first user becomes the family admin.
+
+## Home Assistant
+
+Tribu ships a Home Assistant package for REST sensors, a webhook automation example, a quick-capture REST command, and a small dashboard card. See [Home Assistant integration](home-assistant.md) for setup and privacy notes.
 
 ## Configuration Reference
 

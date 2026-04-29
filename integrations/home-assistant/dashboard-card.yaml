@@ -1,0 +1,17 @@
+type: entities
+title: Tribu household
+show_header_toggle: false
+entities:
+  - entity: sensor.tribu_next_event
+    name: Next event
+  - entity: sensor.tribu_open_tasks
+    name: Open tasks
+  - entity: sensor.tribu_open_shopping_items
+    name: Open shopping items
+  - entity: sensor.tribu_upcoming_birthdays
+    name: Upcoming birthdays
+footer:
+  type: buttons
+  entities:
+    - entity: sensor.tribu_next_event
+      name: Open Tribu
