@@ -10,6 +10,7 @@ import DashboardView from './DashboardView';
 import CalendarView from './calendar';
 import ContactsView from './ContactsView';
 import TasksView from './TasksView';
+import TemplatesView from './TemplatesView';
 import RewardsView from './RewardsView';
 import GiftsView from './GiftsView';
 import MealPlansView from './MealPlansView';
@@ -28,6 +29,7 @@ const views = {
   shopping: ShoppingView,
   contacts: ContactsView,
   tasks: TasksView,
+  templates: TemplatesView,
   rewards: RewardsView,
   gifts: GiftsView,
   meal_plans: MealPlansView,

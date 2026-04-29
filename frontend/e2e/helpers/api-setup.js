@@ -85,6 +85,23 @@ async function seedShoppingTemplate(request, familyId, name = 'Weekly groceries'
   return res.json();
 }
 
+async function seedHouseholdTemplate(request, familyId, overrides = {}) {
+  const res = await request.post('/api/household-templates', {
+    data: {
+      family_id: familyId,
+      name: 'Weekend reset',
+      description: 'A reusable family reset plan',
+      task_items: [{ title: 'Tidy bedrooms', days_offset: 0 }],
+      shopping_items: [{ name: 'Trash bags', spec: '1 roll' }],
+      ...overrides,
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(`POST /api/household-templates failed (${res.status()}): ${await res.text()}`);
+  }
+  return res.json();
+}
+
 
 async function seedMealPlan(request, familyId, overrides = {}) {
   const res = await request.post('/api/meal-plans', {
@@ -111,5 +128,6 @@ module.exports = {
   seedShoppingList,
   seedShoppingItem,
   seedShoppingTemplate,
+  seedHouseholdTemplate,
   seedMealPlan,
 };

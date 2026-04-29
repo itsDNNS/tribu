@@ -7,7 +7,7 @@ import { copyTextToClipboard } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
-const SCOPE_MODULE_KEYS_BASE = ['calendar', 'tasks', 'contacts', 'birthdays', 'families', 'profile'];
+const SCOPE_MODULE_KEYS_BASE = ['calendar', 'tasks', 'contacts', 'birthdays', 'families', 'profile', 'household_templates'];
 
 export default function ApiTokensTab() {
   const { messages, lang, loggedIn, demoMode } = useApp();

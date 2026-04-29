@@ -35,6 +35,7 @@ from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
 from app.modules.activity_router import router as activity_router
 from app.modules.quick_capture_router import router as quick_capture_router
+from app.modules.household_templates_router import router as household_templates_router
 from app.modules.families_router import router as families_router
 from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
@@ -172,6 +173,7 @@ TAG_METADATA = [
     {"name": "birthdays", "description": "Family birthday tracking."},
     {"name": "dashboard", "description": "Aggregated dashboard with upcoming events (14 days) and birthdays (28 days)."},
     {"name": "activity", "description": "Recent public-safe household activity for the current family."},
+    {"name": "household_templates", "description": "Reusable household planning templates for tasks and shopping lists."},
     {"name": "notifications", "description": "User notifications with SSE streaming, read/unread management, and notification preferences."},
     {"name": "tokens", "description": "Personal Access Token (PAT) management for API automation."},
     {"name": "backup", "description": "Database backup management — schedule, trigger, download, and delete. Admin only."},
@@ -593,6 +595,7 @@ app.include_router(birthdays_router)
 app.include_router(dashboard_router)
 app.include_router(activity_router)
 app.include_router(quick_capture_router)
+app.include_router(household_templates_router)
 app.include_router(contacts_router)
 app.include_router(tasks_router)
 app.include_router(shopping_router)

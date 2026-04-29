@@ -6,6 +6,7 @@ import {
   apiExportCalendarIcs, apiImportCalendarIcs, apiExportContactsCsv,
   apiGetActivity,
   apiCreateQuickCapture, apiGetQuickCaptureInbox, apiConvertQuickCapture, apiDismissQuickCapture,
+  apiGetHouseholdTemplates, apiCreateHouseholdTemplate, apiUpdateHouseholdTemplate, apiDeleteHouseholdTemplate, apiApplyHouseholdTemplate,
   apiGetTasks, apiCreateTask, apiUpdateTask, apiDeleteTask,
   apiListRecipes, apiCreateRecipe, apiUpdateRecipe, apiDeleteRecipe, apiAddRecipeIngredientsToShopping,
 } from '../../lib/api';
@@ -109,6 +110,31 @@ describe('Dashboard API', () => {
 
     await apiDismissQuickCapture(11);
     expect(lastCall()[0]).toBe('/api/quick-capture/inbox/11/dismiss');
+    expect(lastCall()[1].method).toBe('POST');
+  });
+
+  it('household templates API supports CRUD and built-in/custom apply', async () => {
+    await apiGetHouseholdTemplates('7');
+    expect(lastCall()[0]).toBe('/api/household-templates?family_id=7');
+
+    await apiCreateHouseholdTemplate({ family_id: 7, name: 'Weekend reset' });
+    expect(lastCall()[0]).toBe('/api/household-templates');
+    expect(lastCall()[1].method).toBe('POST');
+
+    await apiUpdateHouseholdTemplate(12, { name: 'Updated' });
+    expect(lastCall()[0]).toBe('/api/household-templates/12');
+    expect(lastCall()[1].method).toBe('PATCH');
+
+    await apiDeleteHouseholdTemplate(12);
+    expect(lastCall()[0]).toBe('/api/household-templates/12');
+    expect(lastCall()[1].method).toBe('DELETE');
+
+    await apiApplyHouseholdTemplate({ id: 'school-morning', is_builtin: true }, { family_id: 7, target_date: '2026-05-04' });
+    expect(lastCall()[0]).toBe('/api/household-templates/builtin/school-morning/apply');
+    expect(lastCall()[1].method).toBe('POST');
+
+    await apiApplyHouseholdTemplate({ id: 'custom-template-id', is_builtin: false }, { target_date: '2026-05-04' });
+    expect(lastCall()[0]).toBe('/api/household-templates/custom-template-id/apply');
     expect(lastCall()[1].method).toBe('POST');
   });
 });
