@@ -1,0 +1,110 @@
+import fs from 'fs';
+import path from 'path';
+import { render } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import DashboardView from '../../components/DashboardView';
+
+let mockAppState = {};
+
+jest.mock('../../contexts/AppContext', () => ({
+  useApp: () => mockAppState,
+}));
+
+jest.mock('../../lib/i18n', () => ({
+  t: (messages, key) => messages?.[key] || key,
+}));
+
+jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
+  return <div className="bento-card bento-rewards" data-testid="rewards-widget" />;
+});
+
+const messages = {
+  'module.dashboard.greeting_morning': 'Good morning',
+  'module.dashboard.greeting_afternoon': 'Good afternoon',
+  'module.dashboard.greeting_evening': 'Good evening',
+  'module.dashboard.summary_events': 'Today you have {count} events',
+  'module.dashboard.summary_no_events': 'No events today',
+  'module.dashboard.summary_tasks': ' and {count} open tasks.',
+  'module.dashboard.open_tasks': 'Open tasks',
+  'module.dashboard.all': 'All',
+  'module.dashboard.empty_events': 'No upcoming events',
+  'module.dashboard.empty_events_action': 'Open calendar',
+  'module.dashboard.empty_tasks': 'All done!',
+  'module.dashboard.empty_tasks_action': 'Create task',
+  'module.tasks.no_tasks': 'No tasks yet',
+  'module.dashboard.empty_birthdays': 'No birthdays',
+  'module.dashboard.days': 'days',
+  'module.dashboard.quick_event': 'Event',
+  'module.dashboard.quick_task': 'Task',
+  'module.dashboard.quick_contact': 'Contact',
+  'module.dashboard.context_chips_label': 'Dashboard summary',
+  'module.dashboard.quick_actions_label': 'Quick actions',
+  'module.dashboard.members': 'Members',
+  'module.dashboard.today': 'Today',
+  'module.dashboard.open_tasks_short': 'Open tasks',
+  next_events: 'Next events',
+  upcoming_birthdays_4w: 'Birthdays',
+};
+
+function baseApp(overrides = {}) {
+  return {
+    summary: { next_events: [], upcoming_birthdays: [] },
+    me: { display_name: 'Dennis' },
+    members: [
+      { user_id: 1, display_name: 'Dennis' },
+      { user_id: 2, display_name: 'Family member' },
+    ],
+    tasks: [{ id: 1, title: 'Take bins out', status: 'done' }],
+    events: [{ id: 1, title: 'Training', starts_at: '2030-01-01T10:00:00Z' }],
+    shoppingLists: [{ id: 1, items: [{ id: 1, name: 'Milk' }] }],
+    setActiveView: jest.fn(),
+    messages,
+    lang: 'en',
+    timeFormat: '24h',
+    isChild: false,
+    isAdmin: true,
+    ...overrides,
+  };
+}
+
+describe('DashboardView desktop bento layout', () => {
+  beforeEach(() => {
+    mockAppState = baseApp();
+  });
+
+  it('places next events and open tasks as the first two desktop modules', () => {
+    const { container } = render(<DashboardView />);
+
+    const modules = Array.from(container.querySelectorAll('.bento-grid > .bento-card'));
+    expect(modules[0]).toHaveClass('bento-events');
+    expect(modules[0]).toHaveAccessibleName('Next events');
+    expect(modules[1]).toHaveClass('bento-tasks');
+    expect(modules[1]).toHaveAccessibleName('Open tasks');
+    expect(modules[2]).toHaveClass('bento-birthdays');
+    expect(modules[2]).toHaveAccessibleName('Birthdays');
+    expect(modules[3]).toHaveClass('bento-rewards');
+  });
+
+  it('keeps the loading skeleton in the same card order', () => {
+    const appShellPath = path.join(__dirname, '../../components/AppShell.js');
+    const appShell = fs.readFileSync(appShellPath, 'utf8');
+    const skeletonBlock = appShell.match(/function DashboardSkeleton\(\) \{[\s\S]*?\n\}/)?.[0];
+
+    expect(skeletonBlock).toBeDefined();
+    expect(skeletonBlock.indexOf('bento-events')).toBeLessThan(skeletonBlock.indexOf('bento-tasks'));
+    expect(skeletonBlock.indexOf('bento-tasks')).toBeLessThan(skeletonBlock.indexOf('bento-birthdays'));
+    expect(skeletonBlock.indexOf('bento-birthdays')).toBeLessThan(skeletonBlock.indexOf('bento-rewards'));
+  });
+
+  it('uses equal two-column spans until the mobile breakpoint', () => {
+    const cssPath = path.join(__dirname, '../../styles/globals.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+
+    expect(css).toMatch(/\.bento-events\s*\{\s*grid-column:\s*span 6;\s*\}/);
+    expect(css).toMatch(/\.bento-tasks\s*\{\s*grid-column:\s*span 6;\s*\}/);
+    expect(css).toMatch(/\.bento-birthdays\s*\{\s*grid-column:\s*span 6;\s*\}/);
+    expect(css).toMatch(/\.bento-rewards\s*\{\s*grid-column:\s*span 6;\s*\}/);
+    expect(css).toMatch(/@media \(max-width: 1100px\) \{\s*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-rewards \{ grid-column: span 6; \}/);
+    expect(css).toMatch(/@media \(max-width: 768px\)[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-rewards \{ grid-column: span 1; \}/);
+  });
+});
