@@ -307,7 +307,10 @@ export function apiRevokeToken(tokenId) {
   return del(`/tokens/${tokenId}`);
 }
 
-// Backup
+export function apiGetBackupStatus() {
+  return request('/admin/backup/status');
+}
+
 export function apiGetBackupConfig() {
   return request('/admin/backup/config');
 }

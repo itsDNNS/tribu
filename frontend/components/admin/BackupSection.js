@@ -12,10 +12,26 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function backupStatusLabel(messages, namespace, value) {
+  if (!value) return '';
+  const label = t(messages, `backup_${namespace}_${value}`, value);
+  if (label !== value) return label;
+  return t(messages, `backup_${namespace}_unknown`, t(messages, 'backup_database_unknown'));
+}
+
+function backupDocsHref(runbook) {
+  if (runbook === 'self_hosting_backup_restore') {
+    return 'https://github.com/itsDNNS/tribu/blob/main/docs/self-hosting.md#backup--restore';
+  }
+  return 'https://github.com/itsDNNS/tribu/blob/main/docs/self-hosting.md';
+}
+
 export default function BackupSection() {
   const { messages } = useApp();
   const { error: toastError } = useToast();
   const [config, setConfig] = useState(null);
+  const [status, setStatus] = useState(null);
+  const [statusError, setStatusError] = useState(false);
   const [backups, setBackups] = useState([]);
   const [schedule, setSchedule] = useState('off');
   const [retention, setRetention] = useState(7);
@@ -32,15 +48,43 @@ export default function BackupSection() {
     }
   }, []);
 
+  const loadStatus = useCallback(async ({ fallbackBackups = null } = {}) => {
+    try {
+      const { ok, data } = await api.apiGetBackupStatus();
+      if (ok) {
+        setStatus(data);
+        setStatusError(false);
+        return true;
+      } else {
+        setStatus((current) => (Array.isArray(fallbackBackups) && current
+          ? { ...current, has_backups: fallbackBackups.length > 0, latest_backup: fallbackBackups[0] || null }
+          : null));
+        setStatusError(true);
+        return false;
+      }
+    } catch {
+      setStatus((current) => (Array.isArray(fallbackBackups) && current
+        ? { ...current, has_backups: fallbackBackups.length > 0, latest_backup: fallbackBackups[0] || null }
+        : null));
+      setStatusError(true);
+      return false;
+    }
+  }, []);
+
   const loadBackups = useCallback(async () => {
     const { ok, data } = await api.apiGetBackups();
-    if (ok) setBackups(data);
+    if (ok) {
+      setBackups(data);
+      return data;
+    }
+    return null;
   }, []);
 
   useEffect(() => {
     loadConfig();
+    loadStatus();
     loadBackups();
-  }, [loadConfig, loadBackups]);
+  }, [loadConfig, loadStatus, loadBackups]);
 
   async function handleSaveConfig() {
     setSaving(true);
@@ -60,7 +104,8 @@ export default function BackupSection() {
       toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
     }
     await loadConfig();
-    await loadBackups();
+    const nextBackups = (await loadBackups()) || backups;
+    await loadStatus({ fallbackBackups: nextBackups });
     setCreating(false);
   }
 
@@ -81,7 +126,9 @@ export default function BackupSection() {
         if (!ok) {
           toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
         } else {
-          await loadBackups();
+          await loadConfig();
+          const nextBackups = (await loadBackups()) || backups;
+          await loadStatus({ fallbackBackups: nextBackups });
         }
         setConfirmAction(null);
       },
@@ -112,6 +159,62 @@ export default function BackupSection() {
           <h1 className="view-title">{t(messages, 'backup_title')}</h1>
         </div>
       </div>
+
+      <div className="settings-section backup-confidence-panel">
+        <div className="backup-confidence-header">
+          <div>
+            <div className="adm-field-title">{t(messages, 'backup_confidence_title')}</div>
+            {status?.has_backups === false && (
+              <p className="backup-confidence-warning" role="status">{t(messages, 'backup_confidence_empty')}</p>
+            )}
+            {statusError && (
+              <p className="backup-confidence-warning" role="alert">{t(messages, 'backup_status_unavailable')}</p>
+            )}
+          </div>
+          {status?.restore_runbook && (
+            <a className="btn-ghost backup-docs-link" href={backupDocsHref(status.restore_runbook)}>
+              {t(messages, 'backup_docs_link')}
+            </a>
+          )}
+        </div>
+        {status && (
+          <div className="backup-confidence-grid">
+            <div className="backup-confidence-card">
+              <span>{t(messages, 'backup_database_backend')}</span>
+              <strong>{backupStatusLabel(messages, 'database', status.database_backend)}</strong>
+              <small>{backupStatusLabel(messages, 'storage', status.backup_dir)}</small>
+            </div>
+            <div className="backup-confidence-card">
+              <span>{t(messages, 'backup_latest_export')}</span>
+              {status.latest_backup ? (
+                <>
+                  <strong>{status.latest_backup.filename}</strong>
+                  <small>{new Date(status.latest_backup.created_at).toLocaleString()} · {formatBytes(status.latest_backup.size_bytes)}</small>
+                </>
+              ) : (
+                <strong>{t(messages, 'backup_last_none')}</strong>
+              )}
+            </div>
+            <div className="backup-confidence-card backup-confidence-list-card">
+              <span>{t(messages, 'backup_included_domains')}</span>
+              <div className="backup-domain-list">
+                {(status.included_domains || []).map((domain) => <em key={domain}>{backupStatusLabel(messages, 'domain', domain)}</em>)}
+              </div>
+            </div>
+            <div className="backup-confidence-card backup-confidence-list-card">
+              <span>{t(messages, 'backup_excluded_domains')}</span>
+              <div className="backup-domain-list muted">
+                {(status.excluded_domains || []).map((domain) => <em key={domain}>{backupStatusLabel(messages, 'excluded', domain)}</em>)}
+              </div>
+            </div>
+            <div className="backup-confidence-card backup-restore-card">
+              <span>{t(messages, 'backup_restore_guidance')}</span>
+              <strong>{backupStatusLabel(messages, 'restore', status.restore_supported)}</strong>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="settings-section adm-section-gap">
         <div className="adm-col-layout-lg">
           <label>

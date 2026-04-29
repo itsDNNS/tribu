@@ -20,6 +20,10 @@ def _get_scope_string(func):
 
 
 class TestBackupRouterScopes:
+    def test_get_status_scope(self):
+        from app.modules.backup_router import get_status
+        assert _get_scope_string(get_status) == "admin:read"
+
     def test_get_config_scope(self):
         from app.modules.backup_router import get_config
         assert _get_scope_string(get_config) == "admin:read"

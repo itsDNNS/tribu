@@ -814,6 +814,25 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .adm-backup-volume { font-size: 0.8rem; opacity: 0.6; }
 .adm-retention-hint { font-size: 0.8rem; opacity: 0.7; }
 .adm-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.backup-confidence-panel { display: grid; gap: var(--space-md); }
+.backup-confidence-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); }
+.backup-confidence-warning { margin: 0.35rem 0 0; color: var(--warning, #d97706); font-size: 0.9rem; }
+.backup-docs-link { white-space: nowrap; }
+.backup-confidence-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
+.backup-confidence-card { border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); background: rgba(120, 130, 180, 0.05); display: grid; gap: 0.35rem; min-width: 0; }
+.backup-confidence-card span { color: var(--text-secondary); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.backup-confidence-card strong { color: var(--text-primary); font-size: 0.95rem; overflow-wrap: anywhere; }
+.backup-confidence-card small { color: var(--text-muted); overflow-wrap: anywhere; }
+.backup-confidence-list-card, .backup-restore-card { grid-column: span 2; }
+.backup-domain-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.backup-domain-list em { font-style: normal; border-radius: 999px; padding: 0.25rem 0.55rem; background: rgba(124, 58, 237, 0.1); color: var(--text-primary); font-size: 0.82rem; }
+.backup-domain-list.muted em { background: rgba(120, 130, 180, 0.08); color: var(--text-secondary); }
+@media (max-width: 720px) {
+  .backup-confidence-header { display: grid; }
+  .backup-docs-link { width: fit-content; }
+  .backup-confidence-grid { grid-template-columns: 1fr; }
+  .backup-confidence-list-card, .backup-restore-card { grid-column: auto; }
+}
 
 /* Admin: audit log */
 .adm-load-more { margin-top: var(--space-sm); }

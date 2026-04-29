@@ -59,6 +59,59 @@ def _get_pg_version(db_params: dict) -> str:
         return "unknown"
 
 
+BACKUP_INCLUDED_DOMAINS = [
+    "calendar",
+    "tasks",
+    "contacts",
+    "shopping_lists",
+    "meal_plans",
+    "recipes",
+    "rewards",
+    "gifts",
+    "families_and_settings",
+]
+
+BACKUP_EXCLUDED_DOMAINS = [
+    "jwt_secret",
+    "oidc_client_secrets",
+    "reverse_proxy_configuration",
+    "host_files_outside_database_and_backup_volume",
+]
+
+
+def _database_backend_code(db_url: str) -> str:
+    parsed = urlparse(db_url or "")
+    scheme = (parsed.scheme or "").split("+")[0].lower()
+    if scheme in {"postgres", "postgresql"}:
+        return "postgresql"
+    if scheme == "sqlite":
+        return "sqlite"
+    return "unknown"
+
+
+def build_backup_status(db_url: str, backup_dir: str, backups: list[dict] | None = None) -> dict:
+    """Build public-safe backup confidence metadata for the admin UI."""
+    backup_entries = list(backups or [])
+    latest_backup = None
+    if backup_entries:
+        entry = backup_entries[0]
+        latest_backup = {
+            "filename": entry.get("filename"),
+            "created_at": entry.get("created_at"),
+            "size_bytes": entry.get("size_bytes"),
+        }
+    return {
+        "database_backend": _database_backend_code(db_url),
+        "backup_dir": "configured_backup_volume",
+        "has_backups": latest_backup is not None,
+        "latest_backup": latest_backup,
+        "included_domains": list(BACKUP_INCLUDED_DOMAINS),
+        "excluded_domains": list(BACKUP_EXCLUDED_DOMAINS),
+        "restore_supported": "setup_wizard",
+        "restore_runbook": "self_hosting_backup_restore",
+    }
+
+
 def create_backup(db_url: str, backup_dir: str) -> str:
     db = _parse_db_url(db_url)
     timestamp = utcnow().strftime("%Y-%m-%d-%H%M%S")
