@@ -56,6 +56,7 @@ from app.modules.gifts_router import router as gifts_router
 from app.modules.meal_plans_router import router as meal_plans_router
 from app.modules.recipes_router import router as recipes_router
 from app.modules.display_router import admin_router as display_admin_router, display_router as display_runtime_router
+from app.modules.mobile_router import router as mobile_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import ws_broadcast
 from app.schemas import (
@@ -187,6 +188,7 @@ TAG_METADATA = [
     {"name": "meal_plans", "description": "Weekly meal planning across fixed morning/noon/evening slots. Available to all family members."},
     {"name": "recipes", "description": "Lightweight family recipe library connected to meal planning and shopping lists."},
     {"name": "display", "description": "Shared-home display devices: admin CRUD for tokens and a curated read-only dashboard authenticated by a per-device `tribu_display_` bearer token."},
+    {"name": "mobile", "description": "Mobile-client aggregate contracts for native app screens."},
     {"name": "health", "description": "Health check and service info."},
 ]
 
@@ -619,6 +621,7 @@ app.include_router(meal_plans_router)
 app.include_router(recipes_router)
 app.include_router(display_admin_router)
 app.include_router(display_runtime_router)
+app.include_router(mobile_router)
 
 
 # ---------------------------------------------------------------------------
