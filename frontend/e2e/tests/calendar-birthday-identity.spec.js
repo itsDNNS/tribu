@@ -17,6 +17,12 @@ async function seedContact(request, familyId, fullName, month, day) {
   return res.json();
 }
 
+async function openCalendarDay(page, day) {
+  const calendarDay = page.locator('.calendar-day:not(.other-month)', { hasText: new RegExp(`^${day}$`) }).first();
+  await calendarDay.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
+  await calendarDay.click();
+}
+
 test.describe('Birthday identity regression', () => {
   test('calendar keeps duplicate-name contact birthdays separate and tracks rename/delete correctly', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
@@ -30,7 +36,7 @@ test.describe('Birthday identity regression', () => {
     await page.reload();
     await navigateTo(page, 'Calendar');
     await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
-    await page.locator('.calendar-day:not(.other-month)', { hasText: /^3$/ }).first().click();
+    await openCalendarDay(page, day);
 
     await expect(page.locator('.day-detail-events .event-card-title', { hasText: name })).toHaveCount(2);
 
@@ -42,7 +48,7 @@ test.describe('Birthday identity regression', () => {
 
     await page.reload();
     await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
-    await page.locator('.calendar-day:not(.other-month)', { hasText: /^3$/ }).first().click();
+    await openCalendarDay(page, day);
 
     await expect(page.locator('.day-detail-events .event-card-title', { hasText: name })).toHaveCount(1);
     await expect(page.locator('.day-detail-events .event-card-title', { hasText: renamed })).toHaveCount(1);
@@ -52,7 +58,7 @@ test.describe('Birthday identity regression', () => {
 
     await page.reload();
     await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
-    await page.locator('.calendar-day:not(.other-month)', { hasText: /^3$/ }).first().click();
+    await openCalendarDay(page, day);
 
     await expect(page.locator('.day-detail-events .event-card-title', { hasText: name })).toHaveCount(0);
     await expect(page.locator('.day-detail-events .event-card-title', { hasText: renamed })).toHaveCount(1);

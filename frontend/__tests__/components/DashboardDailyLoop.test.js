@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardView from '../../components/DashboardView';
-import { apiListMealPlans } from '../../lib/api';
+import { apiGetSetupChecklist, apiListMealPlans } from '../../lib/api';
 
 let mockAppState = {};
 
@@ -10,6 +10,7 @@ jest.mock('../../contexts/AppContext', () => ({
 }));
 
 jest.mock('../../lib/api', () => ({
+  apiGetSetupChecklist: jest.fn(),
   apiListMealPlans: jest.fn(),
 }));
 
@@ -109,6 +110,7 @@ function baseApp(overrides = {}) {
 
 describe('DashboardView daily loop', () => {
   beforeEach(() => {
+    apiGetSetupChecklist.mockResolvedValue({ ok: true, data: null });
     apiListMealPlans.mockResolvedValue({ ok: true, data: [] });
     mockAppState = baseApp();
   });

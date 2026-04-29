@@ -15,6 +15,7 @@ jest.mock('../../lib/i18n', () => ({
 }));
 
 jest.mock('../../lib/api', () => ({
+  apiGetSetupChecklist: jest.fn().mockResolvedValue({ ok: true, data: null }),
   apiListMealPlans: jest.fn().mockResolvedValue({ ok: true, data: [] }),
 }));
 
@@ -86,19 +87,21 @@ describe('DashboardView desktop bento layout', () => {
     mockAppState = baseApp();
   });
 
-  it('places the daily loop before the existing desktop modules', () => {
+  it('keeps the current desktop module order', () => {
     const { container } = render(<DashboardView />);
 
     const modules = Array.from(container.querySelectorAll('.bento-grid > .bento-card'));
-    expect(modules[0]).toHaveClass('bento-daily-loop');
-    expect(modules[0]).toHaveAccessibleName('Today in motion');
-    expect(modules[1]).toHaveClass('bento-events');
-    expect(modules[1]).toHaveAccessibleName('Next events');
-    expect(modules[2]).toHaveClass('bento-tasks');
-    expect(modules[2]).toHaveAccessibleName('Open tasks');
-    expect(modules[3]).toHaveClass('bento-birthdays');
-    expect(modules[3]).toHaveAccessibleName('Birthdays');
-    expect(modules[4]).toHaveClass('bento-rewards');
+    expect(modules[0]).toHaveClass('bento-quick-capture');
+    expect(modules[1]).toHaveClass('bento-daily-loop');
+    expect(modules[1]).toHaveAccessibleName('Today in motion');
+    expect(modules[2]).toHaveClass('bento-events');
+    expect(modules[2]).toHaveAccessibleName('Next events');
+    expect(modules[3]).toHaveClass('bento-tasks');
+    expect(modules[3]).toHaveAccessibleName('Open tasks');
+    expect(modules[4]).toHaveClass('bento-birthdays');
+    expect(modules[4]).toHaveAccessibleName('Birthdays');
+    expect(modules[5]).toHaveClass('bento-activity');
+    expect(modules[6]).toHaveClass('bento-rewards');
   });
 
   it('keeps the loading skeleton in the same card order', () => {
@@ -118,11 +121,12 @@ describe('DashboardView desktop bento layout', () => {
     const css = fs.readFileSync(cssPath, 'utf8');
 
     expect(css).toMatch(/\.bento-events\s*\{\s*grid-column:\s*span 6;\s*\}/);
-    expect(css).toMatch(/\.bento-daily-loop\s*\{\s*grid-column:\s*span 12;\s*\}/);
+    expect(css).toMatch(/\.bento-daily-loop\s*\{\s*grid-column:\s*span 6;\s*\}/);
     expect(css).toMatch(/\.bento-tasks\s*\{\s*grid-column:\s*span 6;\s*\}/);
     expect(css).toMatch(/\.bento-birthdays\s*\{\s*grid-column:\s*span 6;\s*\}/);
     expect(css).toMatch(/\.bento-rewards\s*\{\s*grid-column:\s*span 6;\s*\}/);
-    expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-rewards \{ grid-column: span 6; \}/);
-    expect(css).toMatch(/@media \(max-width: 768px\)[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-rewards, \.bento-daily-loop \{ grid-column: span 1; \}/);
+    expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.bento-daily-loop, \.bento-quick-capture \{ grid-column: span 12; \}/);
+    expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-activity, \.bento-rewards \{ grid-column: span 6; \}/);
+    expect(css).toMatch(/@media \(max-width: 768px\)[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-activity, \.bento-rewards, \.bento-daily-loop, \.bento-quick-capture \{ grid-column: span 1; \}/);
   });
 });

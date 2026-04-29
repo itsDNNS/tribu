@@ -11,9 +11,6 @@ few state / nonce / redirect failure modes.
 """
 from __future__ import annotations
 
-import hashlib
-import time
-
 import jwt
 import pytest
 from fastapi.testclient import TestClient

@@ -20,7 +20,6 @@ JSON error page.
 """
 from __future__ import annotations
 
-import json
 import logging
 import secrets
 from datetime import timedelta
@@ -29,7 +28,7 @@ from urllib.parse import urlencode
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core import oidc as oidc_core
@@ -40,12 +39,11 @@ from app.core.errors import (
     OIDC_INVALID_CALLBACK,
     OIDC_NOT_CONFIGURED,
     OIDC_SIGNUP_DISABLED,
-    OIDC_TOKEN_EXCHANGE_FAILED,
     error_detail,
 )
 from app.core.utils import audit_log as _audit, resolve_base_url
 from app.database import get_db
-from app.models import Family, FamilyInvitation, Membership, OIDCIdentity, User
+from app.models import FamilyInvitation, Membership, OIDCIdentity, User
 from app.security import JWT_SECRET, create_access_token
 
 logger = logging.getLogger(__name__)

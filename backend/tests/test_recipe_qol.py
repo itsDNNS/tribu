@@ -39,7 +39,7 @@ def setup_db():
 
 def test_favorite_recipes_are_returned_first_and_can_be_toggled():
     token, family_id = _seed_member("*", "qol-favorite")
-    weeknight = _create_recipe(token, family_id, title="Weeknight pasta")
+    _create_recipe(token, family_id, title="Weeknight pasta")
     favorite = _create_recipe(token, family_id, title="Apple pancakes")
 
     patch = client.patch(
