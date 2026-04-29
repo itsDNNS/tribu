@@ -2386,6 +2386,32 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .sync-health-actions { justify-content: flex-start; }
 }
 
+/* ─── Weekly plan print view ─── */
+.weekly-plan-page { max-width: 1120px; margin: 0 auto; padding: var(--space-xl); color: var(--text-primary); }
+.weekly-plan-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-lg); flex-wrap: wrap; }
+.weekly-plan-nav { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+.weekly-plan-toolbar button { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.weekly-plan-filters { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin: 0 0 var(--space-lg); padding: var(--space-md); border: 1px solid var(--border); border-radius: var(--radius-lg); background: rgba(255, 255, 255, 0.78); box-shadow: var(--shadow-sm); flex-wrap: wrap; }
+.weekly-plan-member-filter { display: inline-flex; align-items: center; gap: var(--space-sm); color: var(--text-secondary); font-size: 0.9rem; }
+.weekly-plan-member-filter select { min-width: 170px; border: 1px solid var(--border); border-radius: var(--radius-md); background: #fff; color: var(--text-primary); padding: 0.55rem 0.7rem; font: inherit; }
+.weekly-plan-section-filters { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+.weekly-plan-section-filters label { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.7rem; border-radius: var(--radius-pill); background: var(--surface-muted); color: var(--text-secondary); font-size: 0.86rem; cursor: pointer; }
+.weekly-plan-section-filters input { accent-color: var(--amethyst); }
+.weekly-plan-header { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-xl); padding: var(--space-xl); margin-bottom: var(--space-lg); box-shadow: var(--shadow-sm); }
+.weekly-plan-header h1 { margin: 0 0 var(--space-xs); font-size: clamp(2rem, 5vw, 3.3rem); letter-spacing: -0.045em; }
+.weekly-plan-header p { margin: 0 0 var(--space-md); color: var(--text-secondary); max-width: 720px; }
+.weekly-plan-header strong { font-size: 1.1rem; }
+.weekly-plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-lg); align-items: start; }
+.weekly-plan-section { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); break-inside: avoid; }
+.weekly-plan-section h2 { display: flex; align-items: center; gap: var(--space-xs); margin: 0 0 var(--space-md); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); }
+.weekly-plan-section ul { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-sm); }
+.weekly-plan-section li { display: grid; gap: 0.15rem; padding: var(--space-sm); border-radius: var(--radius-md); background: var(--surface-muted); }
+.weekly-plan-section li span { color: var(--text-secondary); font-size: 0.84rem; }
+.weekly-plan-section li strong { color: var(--text-primary); font-weight: 650; }
+.weekly-plan-empty { margin: 0; color: var(--text-secondary); }
+@media (max-width: 760px) { .weekly-plan-page { padding: var(--space-md); } .weekly-plan-grid { grid-template-columns: 1fr; } }
+@media print { body { background: #fff !important; } .no-print, .pwa-banner, .sidebar, .mobile-header, .mobile-topbar, .bottom-nav, .app-sidebar, .app-header { display: none !important; } .app-layout, .main-content, .weekly-plan-page { display: block !important; width: 100% !important; max-width: none !important; padding: 0 !important; margin: 0 !important; background: #fff !important; } .weekly-plan-header, .weekly-plan-section { box-shadow: none !important; border-color: #d4d4d8 !important; } .weekly-plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+
 /* ─── Dashboard activation panel ─── */
 .activation-panel { background: var(--glass); backdrop-filter: blur(8px) saturate(1.2); -webkit-backdrop-filter: blur(8px) saturate(1.2); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-lg); margin-bottom: var(--space-lg); position: relative; overflow: hidden; }
 .activation-panel::before { content: ''; position: absolute; inset: 0; background: var(--grad-primary); opacity: 0.08; pointer-events: none; }

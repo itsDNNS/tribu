@@ -40,6 +40,7 @@ const messages = {
   'module.dashboard.quick_task': 'Task',
   'module.dashboard.quick_shopping': 'Shopping',
   'module.dashboard.quick_invite': 'Invite',
+  'module.dashboard.quick_weekly_plan': 'Weekly plan',
   'module.dashboard.quick_actions_label': 'Quick actions',
   'module.dashboard.quick_my_tasks': 'My tasks',
   'module.dashboard.quick_rewards': 'Rewards',
@@ -119,6 +120,7 @@ describe('DashboardView hero', () => {
     expect(within(region).getByRole('button', { name: 'Task' })).toBeVisible();
     expect(within(region).getByRole('button', { name: 'Shopping' })).toBeVisible();
     expect(within(region).getByRole('button', { name: 'Invite' })).toBeVisible();
+    expect(within(region).getByRole('button', { name: 'Weekly plan' })).toBeVisible();
   });
 
   it('navigates from the labeled quick action pills to the correct views', () => {
@@ -130,10 +132,12 @@ describe('DashboardView hero', () => {
     fireEvent.click(within(region).getByRole('button', { name: 'Task' }));
     fireEvent.click(within(region).getByRole('button', { name: 'Shopping' }));
     fireEvent.click(within(region).getByRole('button', { name: 'Invite' }));
+    fireEvent.click(within(region).getByRole('button', { name: 'Weekly plan' }));
     expect(setActiveView).toHaveBeenCalledWith('calendar');
     expect(setActiveView).toHaveBeenCalledWith('tasks');
     expect(setActiveView).toHaveBeenCalledWith('shopping');
     expect(setActiveView).toHaveBeenCalledWith('admin');
+    expect(setActiveView).toHaveBeenCalledWith('weekly_plan');
   });
 
   it('does not render the icon-only header quick action buttons anymore', () => {

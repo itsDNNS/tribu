@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ListChecks, Cake, Users, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, Users, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -216,6 +216,7 @@ export default function DashboardView() {
     { key: 'event', label: t(messages, 'module.dashboard.quick_event'), icon: Calendar, onClick: () => setActiveView('calendar') },
     { key: 'task', label: t(messages, 'module.dashboard.quick_task'), icon: CheckSquare, onClick: () => setActiveView('tasks') },
     { key: 'shopping', label: t(messages, 'module.dashboard.quick_shopping'), icon: ShoppingCart, onClick: () => setActiveView('shopping') },
+    { key: 'weekly-plan', label: t(messages, 'module.dashboard.quick_weekly_plan'), icon: Printer, onClick: () => setActiveView('weekly_plan') },
     ...(isAdmin ? [{ key: 'invite', label: t(messages, 'module.dashboard.quick_invite'), icon: UserPlus, onClick: () => setActiveView('admin') }] : []),
   ];
 

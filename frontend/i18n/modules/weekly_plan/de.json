@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Wochenplan",
+  "module.weekly_plan.subtitle": "Druckfertiger Überblick für Kalender, Aufgaben, Essen, Einkauf und Geburtstage.",
+  "module.weekly_plan.this_week": "Diese Woche",
+  "module.weekly_plan.next_week": "Nächste Woche",
+  "module.weekly_plan.previous_week": "Vorherige Woche",
+  "module.weekly_plan.print": "Drucken",
+  "module.weekly_plan.back_dashboard": "Zurück zum Dashboard",
+  "module.weekly_plan.events": "Termine",
+  "module.weekly_plan.tasks": "Aufgaben und Routinen",
+  "module.weekly_plan.meals": "Essen",
+  "module.weekly_plan.shopping": "Einkauf",
+  "module.weekly_plan.birthdays": "Geburtstage",
+  "module.weekly_plan.empty_section": "Nichts geplant",
+  "module.weekly_plan.no_due_date": "Ohne Fälligkeitsdatum",
+  "module.weekly_plan.filters": "Filter",
+  "module.weekly_plan.filter_member": "Mitglied",
+  "module.weekly_plan.filter_all_members": "Alle Mitglieder",
+  "module.weekly_plan.filter_sections": "Bereiche"
+}

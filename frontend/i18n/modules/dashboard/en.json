@@ -10,6 +10,7 @@
   "module.dashboard.quick_task": "Task",
   "module.dashboard.quick_shopping": "Shopping",
   "module.dashboard.quick_invite": "Invite",
+  "module.dashboard.quick_weekly_plan": "Weekly plan",
   "module.dashboard.quick_contact": "Contact",
   "module.dashboard.quick_actions_label": "Quick actions",
   "module.dashboard.context_chips_label": "Family at a glance",
