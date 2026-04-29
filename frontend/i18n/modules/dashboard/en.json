@@ -49,5 +49,14 @@
   "module.dashboard.activation_step_done_aria": "Step completed",
   "module.dashboard.activation_step_pending_aria": "Step pending",
   "module.dashboard.quick_my_tasks": "My tasks",
-  "module.dashboard.quick_rewards": "Rewards"
+  "module.dashboard.quick_rewards": "Rewards",
+  "module.dashboard.daily_loop_title": "Today in motion",
+  "module.dashboard.daily_loop_subtitle": "Meals, groceries and routines in one daily check-in.",
+  "module.dashboard.daily_loop_meals": "Meals planned",
+  "module.dashboard.daily_loop_shopping": "Shopping open",
+  "module.dashboard.daily_loop_routines": "Routines due",
+  "module.dashboard.daily_loop_open_meals": "Plan meals",
+  "module.dashboard.daily_loop_open_shopping": "Open shopping",
+  "module.dashboard.daily_loop_open_routines": "Open routines",
+  "module.dashboard.daily_loop_empty": "Plan a meal, add groceries, or set a recurring task to get today started."
 }

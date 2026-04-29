@@ -14,6 +14,10 @@ jest.mock('../../lib/i18n', () => ({
   t: (messages, key) => messages?.[key] || key,
 }));
 
+jest.mock('../../lib/api', () => ({
+  apiListMealPlans: jest.fn().mockResolvedValue({ ok: true, data: [] }),
+}));
+
 jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
   return <div className="bento-card bento-rewards" data-testid="rewards-widget" />;
 });
@@ -42,6 +46,15 @@ const messages = {
   'module.dashboard.members': 'Members',
   'module.dashboard.today': 'Today',
   'module.dashboard.open_tasks_short': 'Open tasks',
+  'module.dashboard.daily_loop_title': 'Today in motion',
+  'module.dashboard.daily_loop_subtitle': 'Meals, groceries and routines in one daily check-in.',
+  'module.dashboard.daily_loop_meals': 'Meals planned',
+  'module.dashboard.daily_loop_shopping': 'Shopping open',
+  'module.dashboard.daily_loop_routines': 'Routines due',
+  'module.dashboard.daily_loop_open_meals': 'Plan meals',
+  'module.dashboard.daily_loop_open_shopping': 'Open shopping',
+  'module.dashboard.daily_loop_open_routines': 'Open routines',
+  'module.dashboard.daily_loop_empty': 'Plan a meal, add groceries or set a recurring task to start the daily loop.',
   next_events: 'Next events',
   upcoming_birthdays_4w: 'Birthdays',
 };
@@ -57,6 +70,7 @@ function baseApp(overrides = {}) {
     tasks: [{ id: 1, title: 'Take bins out', status: 'done' }],
     events: [{ id: 1, title: 'Training', starts_at: '2030-01-01T10:00:00Z' }],
     shoppingLists: [{ id: 1, items: [{ id: 1, name: 'Milk' }] }],
+    familyId: 42,
     setActiveView: jest.fn(),
     messages,
     lang: 'en',
@@ -72,17 +86,19 @@ describe('DashboardView desktop bento layout', () => {
     mockAppState = baseApp();
   });
 
-  it('places next events and open tasks as the first two desktop modules', () => {
+  it('places the daily loop before the existing desktop modules', () => {
     const { container } = render(<DashboardView />);
 
     const modules = Array.from(container.querySelectorAll('.bento-grid > .bento-card'));
-    expect(modules[0]).toHaveClass('bento-events');
-    expect(modules[0]).toHaveAccessibleName('Next events');
-    expect(modules[1]).toHaveClass('bento-tasks');
-    expect(modules[1]).toHaveAccessibleName('Open tasks');
-    expect(modules[2]).toHaveClass('bento-birthdays');
-    expect(modules[2]).toHaveAccessibleName('Birthdays');
-    expect(modules[3]).toHaveClass('bento-rewards');
+    expect(modules[0]).toHaveClass('bento-daily-loop');
+    expect(modules[0]).toHaveAccessibleName('Today in motion');
+    expect(modules[1]).toHaveClass('bento-events');
+    expect(modules[1]).toHaveAccessibleName('Next events');
+    expect(modules[2]).toHaveClass('bento-tasks');
+    expect(modules[2]).toHaveAccessibleName('Open tasks');
+    expect(modules[3]).toHaveClass('bento-birthdays');
+    expect(modules[3]).toHaveAccessibleName('Birthdays');
+    expect(modules[4]).toHaveClass('bento-rewards');
   });
 
   it('keeps the loading skeleton in the same card order', () => {
@@ -91,6 +107,7 @@ describe('DashboardView desktop bento layout', () => {
     const skeletonBlock = appShell.match(/function DashboardSkeleton\(\) \{[\s\S]*?\n\}/)?.[0];
 
     expect(skeletonBlock).toBeDefined();
+    expect(skeletonBlock.indexOf('bento-daily-loop')).toBeLessThan(skeletonBlock.indexOf('bento-events'));
     expect(skeletonBlock.indexOf('bento-events')).toBeLessThan(skeletonBlock.indexOf('bento-tasks'));
     expect(skeletonBlock.indexOf('bento-tasks')).toBeLessThan(skeletonBlock.indexOf('bento-birthdays'));
     expect(skeletonBlock.indexOf('bento-birthdays')).toBeLessThan(skeletonBlock.indexOf('bento-rewards'));
@@ -101,10 +118,11 @@ describe('DashboardView desktop bento layout', () => {
     const css = fs.readFileSync(cssPath, 'utf8');
 
     expect(css).toMatch(/\.bento-events\s*\{\s*grid-column:\s*span 6;\s*\}/);
+    expect(css).toMatch(/\.bento-daily-loop\s*\{\s*grid-column:\s*span 12;\s*\}/);
     expect(css).toMatch(/\.bento-tasks\s*\{\s*grid-column:\s*span 6;\s*\}/);
     expect(css).toMatch(/\.bento-birthdays\s*\{\s*grid-column:\s*span 6;\s*\}/);
     expect(css).toMatch(/\.bento-rewards\s*\{\s*grid-column:\s*span 6;\s*\}/);
-    expect(css).toMatch(/@media \(max-width: 1100px\) \{\s*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-rewards \{ grid-column: span 6; \}/);
-    expect(css).toMatch(/@media \(max-width: 768px\)[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-rewards \{ grid-column: span 1; \}/);
+    expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-rewards \{ grid-column: span 6; \}/);
+    expect(css).toMatch(/@media \(max-width: 768px\)[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-rewards, \.bento-daily-loop \{ grid-column: span 1; \}/);
   });
 });

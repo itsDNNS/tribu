@@ -1,11 +1,106 @@
-import { CalendarClock, ListChecks, Cake, Users, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarClock, ListChecks, Cake, Users, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
+import { apiListMealPlans } from '../lib/api';
 import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
+
+function todayIsoDate() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function normalizeDateOnly(value) {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  const parsed = parseDate(value);
+  if (!parsed) return null;
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  return `${parsed.getFullYear()}-${month}-${day}`;
+}
+
+function countOpenShoppingItems(lists) {
+  return (Array.isArray(lists) ? lists : []).reduce((sum, list) => {
+    if (!list) return sum;
+    if (typeof list.item_count === 'number' || typeof list.checked_count === 'number') {
+      return sum + Math.max(0, Number(list.item_count || 0) - Number(list.checked_count || 0));
+    }
+    const items = Array.isArray(list.items) ? list.items : [];
+    return sum + items.filter((item) => !item?.checked && !item?.is_checked).length;
+  }, 0);
+}
+
+function countDueRoutines(tasks, today = todayIsoDate()) {
+  return (Array.isArray(tasks) ? tasks : []).filter((task) => {
+    if (!task || task.status !== 'open' || !task.recurrence) return false;
+    const dueDate = normalizeDateOnly(task.due_date);
+    return Boolean(dueDate) && dueDate <= today;
+  }).length;
+}
+
+function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, messages, setActiveView }) {
+  const hasDailyInputs = mealsTodayCount > 0 || shoppingOpenCount > 0 || routineDueCount > 0;
+  const items = [
+    {
+      key: 'meals',
+      icon: Utensils,
+      value: mealsTodayCount,
+      label: t(messages, 'module.dashboard.daily_loop_meals'),
+      actionLabel: t(messages, 'module.dashboard.daily_loop_open_meals'),
+      onClick: () => setActiveView('meal_plans'),
+    },
+    {
+      key: 'shopping',
+      icon: ShoppingCart,
+      value: shoppingOpenCount,
+      label: t(messages, 'module.dashboard.daily_loop_shopping'),
+      actionLabel: t(messages, 'module.dashboard.daily_loop_open_shopping'),
+      onClick: () => setActiveView('shopping'),
+    },
+    {
+      key: 'routines',
+      icon: ListChecks,
+      value: routineDueCount,
+      label: t(messages, 'module.dashboard.daily_loop_routines'),
+      actionLabel: t(messages, 'module.dashboard.daily_loop_open_routines'),
+      onClick: () => setActiveView('tasks'),
+    },
+  ];
+
+  return (
+    <div className="bento-card bento-daily-loop" role="region" aria-label={t(messages, 'module.dashboard.daily_loop_title')}>
+      <div className="bento-card-header daily-loop-header">
+        <div>
+          <h2 className="bento-card-title"><Sparkles size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.daily_loop_title')}</h2>
+          <p className="daily-loop-subtitle">{t(messages, 'module.dashboard.daily_loop_subtitle')}</p>
+        </div>
+      </div>
+      <div className="daily-loop-list">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.key} className="daily-loop-item">
+              <span className="daily-loop-icon" aria-hidden="true"><Icon size={16} /></span>
+              <div className="daily-loop-copy">
+                <span className="daily-loop-value" data-testid={`daily-loop-${item.key}`}>{item.value}</span>
+                <span className="daily-loop-label">{item.label}</span>
+              </div>
+              <button type="button" className="daily-loop-action" onClick={item.onClick}>{item.actionLabel}</button>
+            </div>
+          );
+        })}
+      </div>
+      {!hasDailyInputs && <div className="daily-loop-empty">{t(messages, 'module.dashboard.daily_loop_empty')}</div>}
+    </div>
+  );
+}
 
 function getGreeting(messages) {
   const h = new Date().getHours();
@@ -55,11 +150,33 @@ function ActivationPanel({ steps, messages }) {
 }
 
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, shoppingLists, setActiveView, messages, lang, timeFormat, isChild, isAdmin } = useApp();
+  const { summary, me, members, tasks, events, shoppingLists, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode } = useApp();
+  const todayIso = useMemo(() => todayIsoDate(), []);
+  const [mealsTodayCount, setMealsTodayCount] = useState(0);
 
-  const openTasks = tasks.filter((t) => t.status === 'open');
+  const openTasks = tasks.filter((task) => task.status === 'open');
+  const shoppingOpenCount = useMemo(() => countOpenShoppingItems(shoppingLists), [shoppingLists]);
+  const routineDueCount = useMemo(() => countDueRoutines(tasks, todayIso), [tasks, todayIso]);
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const todayStr = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!familyId || demoMode) {
+      setMealsTodayCount(0);
+      return () => { cancelled = true; };
+    }
+
+    apiListMealPlans(familyId, todayIso, todayIso).then((res) => {
+      if (cancelled) return;
+      const items = Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data) ? res.data : [];
+      setMealsTodayCount(items.length);
+    }).catch(() => {
+      if (!cancelled) setMealsTodayCount(0);
+    });
+
+    return () => { cancelled = true; };
+  }, [familyId, demoMode, todayIso]);
 
   const todayEventCount = (summary.next_events || []).filter((ev) => {
     const d = parseDate(ev.starts_at);
@@ -220,6 +337,14 @@ export default function DashboardView() {
       {showActivationPanel && <ActivationPanel steps={activationSteps} messages={messages} />}
 
       <div className="bento-grid">
+        <DailyLoopCard
+          mealsTodayCount={mealsTodayCount}
+          shoppingOpenCount={shoppingOpenCount}
+          routineDueCount={routineDueCount}
+          messages={messages}
+          setActiveView={setActiveView}
+        />
+
         {/* Events Card */}
         <div className="bento-card bento-events" role="region" aria-label={t(messages, 'next_events')}>
           <div className="bento-card-header">
