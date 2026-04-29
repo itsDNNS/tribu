@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_adult, ensure_family_membership
+from app.core.activity import record_activity
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import ShoppingItem, ShoppingList, ShoppingTemplate, ShoppingTemplateItem, User
@@ -277,6 +278,19 @@ def create_list(
         created_by_user_id=user.id,
     )
     db.add(sl)
+    db.flush()
+    record_activity(
+        db,
+        family_id=sl.family_id,
+        actor_user_id=user.id,
+        actor_display_name=user.display_name,
+        action="created",
+        object_type="shopping_list",
+        object_id=sl.id,
+        object_label=sl.name,
+        verb="created",
+        object_kind="shopping list",
+    )
     db.commit()
     db.refresh(sl)
     resp = _list_response(sl)
@@ -365,6 +379,19 @@ def add_item(
         added_by_user_id=user.id,
     )
     db.add(item)
+    db.flush()
+    record_activity(
+        db,
+        family_id=sl.family_id,
+        actor_user_id=user.id,
+        actor_display_name=user.display_name,
+        action="added",
+        object_type="shopping_item",
+        object_id=item.id,
+        object_label=item.name,
+        verb="added",
+        object_kind="to shopping",
+    )
     db.commit()
     db.refresh(item)
     broadcast_item_added(list_id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
@@ -403,8 +430,21 @@ def update_item(
     if payload.category is not None:
         item.category = payload.category
     if payload.checked is not None:
+        was_checked = item.checked
         item.checked = payload.checked
         item.checked_at = utcnow() if payload.checked else None
+        if payload.checked and not was_checked:
+            record_activity(
+                db,
+                family_id=sl.family_id,
+                actor_user_id=user.id,
+                actor_display_name=user.display_name,
+                action="checked",
+                object_type="shopping_item",
+                object_id=item.id,
+                object_label=item.name,
+                verb="checked off",
+            )
 
     db.commit()
     db.refresh(item)

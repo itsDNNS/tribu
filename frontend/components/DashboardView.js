@@ -8,6 +8,7 @@ import { apiListMealPlans } from '../lib/api';
 import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
+import HouseholdActivityFeed from './HouseholdActivityFeed';
 
 function todayIsoDate() {
   const now = new Date();
@@ -150,7 +151,7 @@ function ActivationPanel({ steps, messages }) {
 }
 
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, shoppingLists, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode } = useApp();
+  const { summary, me, members, tasks, events, shoppingLists, activity, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode } = useApp();
   const todayIso = useMemo(() => todayIsoDate(), []);
   const [mealsTodayCount, setMealsTodayCount] = useState(0);
 
@@ -440,6 +441,8 @@ export default function DashboardView() {
             })}
           </div>
         </div>
+
+        <HouseholdActivityFeed activity={activity} messages={messages} lang={lang} />
 
         {/* Rewards Widget */}
         <RewardsDashboardWidget />

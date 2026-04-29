@@ -71,6 +71,9 @@ const messages = {
   'module.dashboard.daily_loop_open_shopping': 'Open shopping',
   'module.dashboard.daily_loop_open_routines': 'Open routines',
   'module.dashboard.daily_loop_empty': 'Plan a meal, add groceries or set a recurring task to start the daily loop.',
+  'module.dashboard.activity_title': 'Recent activity',
+  'module.dashboard.activity_empty': 'No household activity yet.',
+  'module.dashboard.activity_unknown_actor': 'Someone',
   next_events: 'Next events',
   upcoming_birthdays_4w: 'Birthdays',
 };
@@ -91,6 +94,7 @@ function baseApp(overrides = {}) {
     tasks: [],
     events: [{ id: 1, title: 'School', starts_at: `${isoDate()}T08:00:00` }],
     shoppingLists: [],
+    activity: [],
     familyId: 42,
     setActiveView: jest.fn(),
     messages,
@@ -164,5 +168,21 @@ describe('DashboardView daily loop', () => {
 
     const card = screen.getByRole('region', { name: 'Today in motion' });
     expect(await within(card).findByText('Plan a meal, add groceries or set a recurring task to start the daily loop.')).toBeVisible();
+  });
+
+  it('shows household activity on the dashboard', async () => {
+    mockAppState = baseApp({
+      activity: [{
+        id: 1,
+        actor_display_name: 'Dennis',
+        summary: 'Dennis completed task "Pay school lunch"',
+        created_at: '2026-04-29T10:00:00Z',
+      }],
+    });
+
+    render(<DashboardView />);
+
+    const card = screen.getByRole('region', { name: 'Recent activity' });
+    expect(within(card).getByText('Dennis completed task "Pay school lunch"')).toBeVisible();
   });
 });

@@ -733,6 +733,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-events { grid-column: span 6; }
 .bento-tasks { grid-column: span 6; }
 .bento-birthdays { grid-column: span 6; }
+.bento-activity { grid-column: span 6; }
 .bento-rewards { grid-column: span 6; }
 .bento-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md); }
 .bento-card-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
@@ -749,6 +750,13 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .daily-loop-action { justify-self: end; min-height: 44px; border: none; border-radius: var(--radius-pill); padding: 7px 11px; background: var(--void-surface); color: var(--amethyst); font-family: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); }
 .daily-loop-action:hover { background: rgba(139, 92, 246, 0.1); }
 .daily-loop-empty { margin-top: var(--space-sm); padding: 10px 12px; border-radius: var(--radius-md); background: rgba(120, 130, 180, 0.06); color: var(--text-muted); font-size: 0.85rem; }
+.activity-feed-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.activity-feed-item { display: grid; grid-template-columns: auto 1fr; gap: var(--space-sm); align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(120, 130, 180, 0.08); }
+.activity-feed-item:last-child { border-bottom: 0; }
+.activity-feed-dot { width: 10px; height: 10px; margin-top: 6px; border-radius: var(--radius-pill); background: linear-gradient(135deg, var(--amethyst), var(--sapphire)); box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.08); }
+.activity-feed-copy { min-width: 0; }
+.activity-feed-summary { color: var(--text-primary); font-size: 0.9rem; line-height: 1.35; overflow-wrap: anywhere; }
+.activity-feed-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 4px; color: var(--text-muted); font-size: 0.75rem; }
 .bento-empty { color: var(--text-muted); font-size: 0.85rem; padding: var(--space-md) 0; display: flex; align-items: center; gap: var(--space-sm); }
 .bento-empty-action { background: none; border: none; color: var(--amethyst); cursor: pointer; font-family: inherit; font-size: 0.85rem; font-weight: 500; padding: 8px 12px; min-height: 44px; display: inline-flex; align-items: center; border-radius: var(--radius-sm); transition: opacity 0.2s; }
 .bento-empty-action:hover { opacity: 0.7; }
@@ -1661,7 +1669,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    ═══════════════════════════════════════════ */
 @media (max-width: 1100px) {
   .bento-daily-loop { grid-column: span 12; }
-  .bento-events, .bento-tasks, .bento-birthdays, .bento-rewards { grid-column: span 6; }
+  .bento-events, .bento-tasks, .bento-birthdays, .bento-activity, .bento-rewards { grid-column: span 6; }
   .daily-loop-list { grid-template-columns: 1fr; }
   .calendar-layout { grid-template-columns: 1fr; }
 }
@@ -1673,7 +1681,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .mobile-header { display: flex; }
   .bottom-nav { display: block; }
   .bento-grid { grid-template-columns: 1fr; row-gap: var(--space-md); }
-  .bento-events, .bento-tasks, .bento-birthdays, .bento-rewards, .bento-daily-loop { grid-column: span 1; }
+  .bento-events, .bento-tasks, .bento-birthdays, .bento-activity, .bento-rewards, .bento-daily-loop { grid-column: span 1; }
   .daily-loop-list { grid-template-columns: 1fr; }
   .daily-loop-item { grid-template-columns: auto 1fr; }
   .daily-loop-action { grid-column: 1 / -1; justify-self: stretch; text-align: center; }

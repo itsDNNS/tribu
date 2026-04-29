@@ -4,6 +4,7 @@ import {
   apiGetDashboard, apiGetEvents, apiCreateEvent, apiAddBirthday,
   apiGetContacts, apiImportContactsCsv,
   apiExportCalendarIcs, apiImportCalendarIcs, apiExportContactsCsv,
+  apiGetActivity,
   apiGetTasks, apiCreateTask, apiUpdateTask, apiDeleteTask,
   apiListRecipes, apiCreateRecipe, apiUpdateRecipe, apiDeleteRecipe, apiAddRecipeIngredientsToShopping,
 } from '../../lib/api';
@@ -86,6 +87,11 @@ describe('Dashboard API', () => {
   it('apiGetDashboard includes family_id', async () => {
     await apiGetDashboard('7');
     expect(lastCall()[0]).toBe('/api/dashboard/summary?family_id=7');
+  });
+
+  it('apiGetActivity includes family_id and pagination', async () => {
+    await apiGetActivity('7', 5, 10);
+    expect(lastCall()[0]).toBe('/api/activity?family_id=7&limit=5&offset=10');
   });
 });
 

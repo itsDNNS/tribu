@@ -58,5 +58,8 @@
   "module.dashboard.daily_loop_open_meals": "Plan meals",
   "module.dashboard.daily_loop_open_shopping": "Open shopping",
   "module.dashboard.daily_loop_open_routines": "Open routines",
-  "module.dashboard.daily_loop_empty": "Plan a meal, add groceries, or set a recurring task to get today started."
+  "module.dashboard.daily_loop_empty": "Plan a meal, add groceries, or set a recurring task to get today started.",
+  "module.dashboard.activity_title": "Recent activity",
+  "module.dashboard.activity_empty": "No household activity yet.",
+  "module.dashboard.activity_unknown_actor": "Someone"
 }

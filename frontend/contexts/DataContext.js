@@ -11,6 +11,7 @@ export function DataProvider({ children }) {
   const [birthdays, setBirthdays] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [shoppingLists, setShoppingLists] = useState([]);
+  const [activity, setActivity] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const lastEventIdRef = useRef(0);
@@ -45,6 +46,11 @@ export function DataProvider({ children }) {
     if (ok) setShoppingLists(data);
   }, []);
 
+  const loadActivity = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetActivity(fid, 10, 0);
+    if (ok) setActivity(Array.isArray(data?.items) ? data.items : []);
+  }, []);
+
   const loadNotifications = useCallback(async () => {
     const { ok, data } = await api.apiGetNotifications(50, 0);
     if (ok) {
@@ -63,6 +69,7 @@ export function DataProvider({ children }) {
     setBirthdays([]);
     setTasks([]);
     setShoppingLists([]);
+    setActivity([]);
     setNotifications([]);
     setUnreadCount(0);
   }, []);
@@ -74,10 +81,11 @@ export function DataProvider({ children }) {
     birthdays, setBirthdays,
     tasks, setTasks,
     shoppingLists, setShoppingLists,
+    activity, setActivity,
     notifications, setNotifications,
     unreadCount, setUnreadCount,
     lastEventIdRef,
-    loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadNotifications,
+    loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadNotifications,
     resetData,
   };
 

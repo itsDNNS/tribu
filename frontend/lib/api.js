@@ -117,6 +117,10 @@ export function apiGetDashboard(familyId) {
   return request(`/dashboard/summary?family_id=${familyId}`);
 }
 
+export function apiGetActivity(familyId, limit = 10, offset = 0) {
+  return request(`/activity?family_id=${familyId}&limit=${limit}&offset=${offset}`);
+}
+
 // Calendar
 export async function apiGetEvents(familyId, rangeStart, rangeEnd) {
   let url = `/calendar/events?family_id=${familyId}`;
