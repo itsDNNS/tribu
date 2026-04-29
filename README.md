@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/itsDNNS/tribu/wiki"><strong>Documentation Wiki</strong></a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="#quick-start">Quick Start</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="#phone-sync">Phone Sync</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="#shared-home-display">Wall Display</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-  <a href="https://github.com/itsDNNS/tribu/wiki">Wiki</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="CONTRIBUTING.md">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki/Roadmap">Roadmap</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="https://github.com/itsDNNS/tribu/wiki/Changelog">Changelog</a>
@@ -146,7 +146,7 @@ Tribu supports **CalDAV and CardDAV** for bidirectional phone sync, so calendars
 
 After setup, open **Settings → Phone sync** in Tribu to copy the CalDAV and CardDAV URLs for each family.
 
-[See the full phone sync setup guide →](docs/self-hosting.md#phone-sync-caldav--carddav)
+[See the full phone sync setup guide in the Wiki →](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#phone-sync-caldav--carddav)
 
 ## Shared Home Display
 
@@ -197,7 +197,7 @@ This is ideal for the “always visible” family screen in the kitchen, hallway
 - **Want it in your stack fast?** Jump to [Quick Start](#quick-start) and run it with Docker Compose on your server, NAS, or mini PC.
 - **Want phone integration from day one?** Use [Phone Sync](#phone-sync) for CalDAV and CardDAV setup with supported clients.
 - **Want a shared kitchen or wall dashboard?** Use [Shared Home Display](#shared-home-display) and pair a dedicated display device instead of a personal account.
-- **Want to inspect how it is built before you commit?** Start with the [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) and [Self-Hosting Guide](docs/self-hosting.md).
+- **Want to inspect how it is built before you commit?** Start with the [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture) and [Self-Hosting Guide](https://github.com/itsDNNS/tribu/wiki/Self-Hosting).
 - **Want to contribute or extend it?** Start with [Contributing](CONTRIBUTING.md), then use the [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest) for extension-specific details.
 
 ## Quick Start
@@ -309,17 +309,18 @@ Tribu is not only trying to be pleasant for families using it. It is also set up
 
 ## Documentation
 
-Use the document that matches your intent:
+Use the [GitHub Wiki](https://github.com/itsDNNS/tribu/wiki) as the primary documentation entry point for user-facing setup, self-hosting, operations, integrations, troubleshooting, roadmap, and release-oriented guides. Repo-local Markdown stays small and code-adjacent: the README gives the product overview and quick start, CONTRIBUTING covers local development, SECURITY covers responsible disclosure, and pointer stubs preserve important old links.
 
 | | |
 |---|---|
+| [Documentation Wiki](https://github.com/itsDNNS/tribu/wiki) | Primary home for user docs, self-hosting, integrations, operations, roadmap, changelog, and reference pages |
+| [Self-Hosting Guide](https://github.com/itsDNNS/tribu/wiki/Self-Hosting) | Configuration, reverse proxy, backups, phone sync, updating, and troubleshooting |
+| [Home Assistant](https://github.com/itsDNNS/tribu/wiki/Home-Assistant) | REST sensors, quick capture commands, webhook automation, and dashboard examples for Home Assistant |
 | [README](README.md) | Product overview, screenshots, positioning, and quick start |
 | [Contributing](CONTRIBUTING.md) | Local dev setup, testing, project boundaries, and PR expectations |
-| [Self-Hosting Guide](docs/self-hosting.md) | Configuration, reverse proxy, backups, updating, and troubleshooting |
-| [Home Assistant](docs/home-assistant.md) | REST sensors, quick capture commands, webhook automation, and dashboard examples for Home Assistant |
-| [Wiki](https://github.com/itsDNNS/tribu/wiki) | Architecture, roadmap, changelog, plugin details, and reference pages |
-| [Releases](https://github.com/itsDNNS/tribu/releases) | Versioned builds and release notes |
 | [Security](SECURITY.md) | Security policy and responsible disclosure |
+| [Docs ownership policy](docs/documentation-policy.md) | Inventory and placement rules for repo-local docs and Wiki pages |
+| [Releases](https://github.com/itsDNNS/tribu/releases) | Versioned builds and release notes |
 
 ## Support
 
