@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import DisplayDevice, Family, Membership, PersonalAccessToken, User
+from app.models import Family, Membership, PersonalAccessToken, User
 from app.security import PAT_PREFIX, hash_password
 
 

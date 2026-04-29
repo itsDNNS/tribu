@@ -5,7 +5,6 @@ discovery fetch (mocked), and the ``is_ready`` / password-login gate.
 """
 from __future__ import annotations
 
-import json
 from unittest.mock import patch
 
 import pytest
@@ -453,8 +452,6 @@ class TestVerifyIDTokenRealSignature:
         return jwt.encode(payload, pem, algorithm="RS256", headers={"kid": "test-kid"})
 
     def _install_fake_jwks(self, monkeypatch, public_key):
-        import jwt
-        from jwt import PyJWK
 
         class FakeJWK:
             def __init__(self, key, alg):
