@@ -7,6 +7,7 @@ from app.core.activity import record_activity
 from app.core.deps import current_user, ensure_adult
 from app.core.errors import error_detail
 from app.core.scopes import require_scope
+from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
 from app.models import QuickCaptureItem, ShoppingItem, ShoppingList, Task, User
 from app.schemas import (
@@ -135,12 +136,24 @@ def create_quick_capture(
         task = _create_task(db, family_id=payload.family_id, user=user, text=text)
         db.commit()
         db.refresh(task)
+        dispatch_webhook_event(
+            db,
+            family_id=payload.family_id,
+            event_type="task.created",
+            data={"task_id": task.id, "title": task.title, "status": task.status, "source": "quick_capture"},
+        )
         return _created_payload(payload.destination, task)
 
     if payload.destination == QuickCaptureDestination.shopping:
         item = _create_shopping_item(db, family_id=payload.family_id, user=user, text=text)
         db.commit()
         db.refresh(item)
+        dispatch_webhook_event(
+            db,
+            family_id=payload.family_id,
+            event_type="shopping.item.created",
+            data={"list_id": item.list_id, "item_id": item.id, "name": item.name, "source": "quick_capture"},
+        )
         return _created_payload(payload.destination, item)
 
     item = QuickCaptureItem(
@@ -151,6 +164,12 @@ def create_quick_capture(
     db.add(item)
     db.commit()
     db.refresh(item)
+    dispatch_webhook_event(
+        db,
+        family_id=payload.family_id,
+        event_type="quick_capture.created",
+        data={"quick_capture_id": item.id, "status": item.status},
+    )
     return QuickCaptureResponse(destination=QuickCaptureDestination.inbox, inbox_item=item)
 
 

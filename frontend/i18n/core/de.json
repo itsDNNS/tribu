@@ -108,6 +108,7 @@
   "admin_self_hint": "Eigene Rolle kann nicht geändert werden",
   "password_hint": "Mind. 8 Zeichen, 1 Großbuchstabe, 1 Zahl",
   "api_tokens": "API Tokens",
+  "automation_webhooks": "Automation Webhooks",
   "api_tokens_desc": "Persönliche Zugangstoken für Drittanbieter-Apps und Skripte.",
   "create_token": "Token erstellen",
   "token_name": "Token-Name",

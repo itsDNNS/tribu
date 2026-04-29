@@ -52,4 +52,27 @@ test.describe('Settings', () => {
     await expect(page.getByText('Ask an admin to add VAPID keys on the server and restart Tribu.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enable push notifications' })).toBeDisabled();
   });
+
+  test('creates an automation webhook without exposing URL tokens', async ({ authedPage: page }) => {
+    await navigateTo(page, 'Settings');
+
+    const webhooksItem = page.locator('.settings-mobile-item', { hasText: 'Automation Webhooks' });
+    if (await webhooksItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await webhooksItem.click();
+    } else {
+      await page.locator('.settings-sidebar-item', { hasText: 'Automation Webhooks' }).click();
+    }
+
+    await page.getByLabel('Name').fill('Home Assistant');
+    await page.getByLabel('Webhook URL').fill('https://ha.example/api/webhook/private-token?secret=private');
+    await page.getByLabel('Optionaler Secret Header').fill('X-Tribu-Secret');
+    await page.getByPlaceholder('Secret Wert').fill('super-secret');
+    await page.getByRole('button', { name: 'Webhook hinzufügen' }).click();
+
+    await expect(page.getByText('https://ha.example/[redacted]')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Secret Header: X-Tribu-Secret')).toBeVisible();
+    await expect(page.getByText(/private-token/)).toHaveCount(0);
+    await expect(page.getByText(/super-secret/)).toHaveCount(0);
+  });
+
 });

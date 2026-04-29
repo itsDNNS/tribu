@@ -17,6 +17,7 @@ from app.core.ws_broadcast import (
     broadcast_list_created,
     broadcast_list_deleted,
 )
+from app.core.webhooks import dispatch_webhook_event
 from app.schemas import (
     AUTH_RESPONSES,
     NOT_FOUND_RESPONSE,
@@ -324,6 +325,12 @@ def create_list(
     db.refresh(sl)
     resp = _list_response(sl)
     broadcast_list_created(sl.family_id, resp.model_dump(mode="json"))
+    dispatch_webhook_event(
+        db,
+        family_id=sl.family_id,
+        event_type="shopping.list.created",
+        data={"list_id": sl.id, "name": sl.name, "created_by_user_id": user.id},
+    )
     return resp
 
 
@@ -424,6 +431,12 @@ def add_item(
         db.refresh(checked_match)
         resp = ShoppingItemResponse.model_validate(checked_match).model_dump(mode="json")
         broadcast_item_updated(list_id, resp)
+        dispatch_webhook_event(
+            db,
+            family_id=sl.family_id,
+            event_type="shopping.item.updated",
+            data={"list_id": list_id, "item_id": checked_match.id, "name": checked_match.name, "checked": checked_match.checked},
+        )
         return checked_match
 
     item = ShoppingItem(
@@ -450,6 +463,12 @@ def add_item(
     db.commit()
     db.refresh(item)
     broadcast_item_added(list_id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
+    dispatch_webhook_event(
+        db,
+        family_id=sl.family_id,
+        event_type="shopping.item.created",
+        data={"list_id": list_id, "item_id": item.id, "name": item.name, "checked": item.checked},
+    )
     return item
 
 
@@ -504,6 +523,12 @@ def update_item(
     db.commit()
     db.refresh(item)
     broadcast_item_updated(item.list_id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
+    dispatch_webhook_event(
+        db,
+        family_id=sl.family_id,
+        event_type="shopping.item.updated",
+        data={"list_id": item.list_id, "item_id": item.id, "name": item.name, "checked": item.checked},
+    )
     return item
 
 

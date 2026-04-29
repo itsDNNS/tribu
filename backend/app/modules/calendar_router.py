@@ -17,6 +17,7 @@ from app.core.deps import current_user, current_user_via_token_param, ensure_adu
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
+from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
 from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync, Membership, Notification, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, CalendarIcsSubscribe, CalendarSubscriptionCreate, CalendarSubscriptionResponse, PaginatedCalendarEvents
@@ -740,6 +741,12 @@ def create_calendar_event(
     db.commit()
     db.refresh(event)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
+    dispatch_webhook_event(
+        db,
+        family_id=event.family_id,
+        event_type="calendar.event.created",
+        data={"event_id": event.id, "title": event.title, "starts_at": event.starts_at.isoformat(), "all_day": event.all_day},
+    )
     return event
 
 

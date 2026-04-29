@@ -5,6 +5,7 @@ from app.core import cache
 from app.core.clock import utcnow
 from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
+from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
 from app.models import FamilyBirthday, User
 from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, BirthdayCreate, BirthdayUpdate, BirthdayResponse
@@ -72,6 +73,12 @@ def create_birthday(
     db.commit()
     db.refresh(birthday)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
+    dispatch_webhook_event(
+        db,
+        family_id=birthday.family_id,
+        event_type="birthday.created",
+        data={"birthday_id": birthday.id, "person_name": birthday.person_name, "month": birthday.month, "day": birthday.day},
+    )
     return birthday
 
 
