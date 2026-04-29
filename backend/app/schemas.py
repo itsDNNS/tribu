@@ -1105,6 +1105,36 @@ class PushUnsubscribe(BaseModel):
     endpoint: str = Field(..., description="Push service endpoint URL to remove")
 
 
+class PushLastAttempt(BaseModel):
+    """Redacted status for the latest push-capable notification attempt."""
+    status: str = Field(..., description="Delivery status")
+    last_attempt_at: Optional[datetime] = Field(None, description="Last delivery attempt timestamp")
+    delivered_at: Optional[datetime] = Field(None, description="Successful delivery timestamp")
+    delivery_attempts: int = Field(0, description="Number of delivery attempts")
+
+
+class PushStatusResponse(BaseModel):
+    """Current user's browser push readiness without secrets."""
+    server_configured: bool = Field(..., description="Whether required VAPID settings are present")
+    vapid_public_key_available: bool = Field(..., description="Whether a public key can be served to the browser")
+    pywebpush_available: bool = Field(..., description="Whether the backend can import the Web Push sender")
+    subscription_count: int = Field(..., ge=0, description="Stored subscriptions for this user")
+    push_enabled: bool = Field(..., description="Whether push is enabled in notification preferences")
+    ready: bool = Field(..., description="Whether server, dependency, preference, and subscription are ready")
+    blocked_reason: Optional[str] = Field(None, description="High-level readiness blocker")
+    last_attempt: Optional[PushLastAttempt] = Field(None, description="Redacted latest attempt status")
+
+
+class PushTestResponse(BaseModel):
+    """Redacted outcome of a test push send."""
+    status: str = Field(..., description="sent, failed, skipped, or not_configured")
+    attempted: int = Field(0, ge=0)
+    succeeded: int = Field(0, ge=0)
+    failed: int = Field(0, ge=0)
+    removed: int = Field(0, ge=0)
+    skipped_reason: Optional[str] = Field(None, description="High-level skip reason")
+
+
 # ---------------------------------------------------------------------------
 # Navigation
 # ---------------------------------------------------------------------------

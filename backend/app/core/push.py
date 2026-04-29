@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import logging
 import os
@@ -36,8 +37,38 @@ class PushResult:
         return asdict(self)
 
 
+def _clean_env(name: str) -> str | None:
+    value = os.environ.get(name)
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
 def get_vapid_public_key() -> str | None:
-    return os.environ.get("VAPID_PUBLIC_KEY") or None
+    return _clean_env("VAPID_PUBLIC_KEY")
+
+
+def get_vapid_private_key() -> str | None:
+    return _clean_env("VAPID_PRIVATE_KEY")
+
+
+def is_vapid_configured() -> bool:
+    return bool(get_vapid_public_key() and get_vapid_private_key() and get_vapid_claim_subject())
+
+
+def is_pywebpush_available() -> bool:
+    return importlib.util.find_spec("pywebpush") is not None
+
+
+def get_vapid_claim_subject() -> str | None:
+    claims_email = _clean_env("VAPID_CLAIMS_EMAIL")
+    if not claims_email:
+        return None
+    if claims_email.lower().startswith("mailto:"):
+        address = claims_email[7:].strip()
+        return f"mailto:{address}" if address else None
+    return f"mailto:{claims_email}"
 
 
 def _short_error(exc: BaseException, limit: int = 200) -> str:
@@ -61,11 +92,11 @@ def send_push_for_user(
     """
     result = PushResult()
 
-    public_key = os.environ.get("VAPID_PUBLIC_KEY")
-    private_key = os.environ.get("VAPID_PRIVATE_KEY")
-    claims_email = os.environ.get("VAPID_CLAIMS_EMAIL")
+    public_key = get_vapid_public_key()
+    private_key = get_vapid_private_key()
+    vapid_subject = get_vapid_claim_subject()
 
-    if not public_key or not private_key or not claims_email:
+    if not public_key or not private_key or not vapid_subject:
         result.skipped_reason = "vapid_not_configured"
         return result
 
@@ -82,7 +113,7 @@ def send_push_for_user(
         return result
 
     payload = json.dumps({"title": title, "body": body, "url": url})
-    vapid_claims = {"sub": f"mailto:{claims_email}"}
+    vapid_claims = {"sub": vapid_subject}
 
     for sub in subscriptions:
         result.attempted += 1

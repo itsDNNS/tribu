@@ -324,7 +324,7 @@ This outputs a public key, private key, and a subject line.
 ```
 VAPID_PUBLIC_KEY=BPxr...your-public-key
 VAPID_PRIVATE_KEY=your-private-key
-VAPID_CLAIMS_EMAIL=mailto:admin@example.com
+VAPID_CLAIMS_EMAIL=admin@example.com
 ```
 
 ### 3. Restart
@@ -333,7 +333,7 @@ VAPID_CLAIMS_EMAIL=mailto:admin@example.com
 docker compose up -d
 ```
 
-Users can then enable push notifications from their profile settings. Push notifications require HTTPS (a reverse proxy with TLS).
+Users can then enable push notifications from their profile settings. Push notifications require HTTPS (a reverse proxy with TLS). On iPhone and iPad, Web Push only works for the installed Home Screen app on supported iOS/Safari versions, not from a normal browser tab. If Settings says server push is not configured, verify all three VAPID variables are set and restart the backend.
 
 ## Phone Sync (CalDAV / CardDAV)
 

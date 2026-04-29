@@ -37,4 +37,19 @@ test.describe('Settings', () => {
       expect(newTheme).not.toBe(initialTheme);
     }
   });
+
+  test('shows push diagnostics when server push is not configured', async ({ authedPage: page }) => {
+    await navigateTo(page, 'Settings');
+
+    const notificationsItem = page.locator('.settings-mobile-item', { hasText: 'Notifications' });
+    if (await notificationsItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await notificationsItem.click();
+    } else {
+      await page.locator('.settings-sidebar-item', { hasText: 'Notifications' }).click();
+    }
+
+    await expect(page.getByText('Server push is not configured')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Ask an admin to add VAPID keys on the server and restart Tribu.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enable push notifications' })).toBeDisabled();
+  });
 });
