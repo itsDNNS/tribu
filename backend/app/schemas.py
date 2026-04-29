@@ -816,6 +816,16 @@ class PATCreate(BaseModel):
     })
 
 
+SAFE_DAV_FAILURE_REASONS = {
+    "auth_failed",
+    "scope_mismatch",
+    "token_expired",
+    "malformed_request",
+    "not_found",
+    "server_error",
+}
+
+
 class PATResponse(BaseModel):
     """Personal access token metadata (token value is NOT returned after creation)."""
     model_config = ConfigDict(from_attributes=True)
@@ -825,7 +835,17 @@ class PATResponse(BaseModel):
     scopes: str = Field(..., description="Comma-separated scopes")
     expires_at: Optional[datetime] = Field(None, description="Expiration date")
     last_used_at: Optional[datetime] = Field(None, description="Last usage timestamp")
+    last_dav_success_at: Optional[datetime] = Field(None, description="Last successful DAV request timestamp")
+    last_dav_failure_at: Optional[datetime] = Field(None, description="Last failed DAV request timestamp")
+    last_dav_failure_reason: Optional[str] = Field(None, description="Safe DAV failure category")
     created_at: datetime = Field(..., description="Creation timestamp")
+
+    @field_validator("last_dav_failure_reason")
+    @classmethod
+    def safe_dav_failure_reason(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or value in SAFE_DAV_FAILURE_REASONS:
+            return value
+        return "unknown"
 
 
 class PATCreatedResponse(BaseModel):

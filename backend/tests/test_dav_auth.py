@@ -10,12 +10,15 @@ import base64
 import hashlib
 import os
 import tempfile
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.database import Base, SessionLocal, engine
+from app.core.clock import utcnow
 from app.models import PersonalAccessToken, User
+from app.schemas import PATResponse
 from app.security import hash_password, PAT_PREFIX
 
 
@@ -56,6 +59,19 @@ def _seed_pat(TestSession, *, email: str, scopes: str, suffix: str) -> str:
     db.commit()
     db.close()
     return plain
+
+
+def _pat_by_token(TestSession, token: str) -> PersonalAccessToken:
+    db = TestSession()
+    try:
+        pat = db.query(PersonalAccessToken).filter(
+            PersonalAccessToken.token_lookup == hashlib.sha256(token.encode("utf-8")).hexdigest()
+        ).first()
+        assert pat is not None
+        db.expunge(pat)
+        return pat
+    finally:
+        db.close()
 
 
 def _basic(login: str, token: str) -> str:
@@ -104,6 +120,11 @@ class TestDavAuth:
         # Radicale returns 207 Multi-Status on a successful PROPFIND.
         assert resp.status_code == 207, resp.text
 
+        pat = _pat_by_token(TestSession, token)
+        assert pat.last_dav_success_at is not None
+        assert pat.last_dav_failure_at is None
+        assert pat.last_dav_failure_reason is None
+
     def test_root_discovery_returns_current_user_principal(self, app_under_test):
         app, TestSession = app_under_test
         token = _seed_pat(
@@ -139,6 +160,52 @@ class TestDavAuth:
         headers = {"Authorization": _basic("dav-shop@example.com", token)}
         resp = _propfind(client, "/dav/dav-shop@example.com/", headers=headers)
         assert resp.status_code == 401
+
+        pat = _pat_by_token(TestSession, token)
+        assert pat.last_dav_success_at is None
+        assert pat.last_dav_failure_at is not None
+        assert pat.last_dav_failure_reason == "scope_mismatch"
+
+    def test_expired_dav_pat_records_safe_failure_reason(self, app_under_test):
+        app, TestSession = app_under_test
+        token = _seed_pat(
+            TestSession,
+            email="dav-expired@example.com",
+            scopes="calendar:read",
+            suffix="expired",
+        )
+        db = TestSession()
+        pat = db.query(PersonalAccessToken).filter(
+            PersonalAccessToken.token_lookup == hashlib.sha256(token.encode("utf-8")).hexdigest()
+        ).first()
+        pat.expires_at = utcnow() - timedelta(days=1)
+        db.commit()
+        db.close()
+
+        client = TestClient(app)
+        headers = {"Authorization": _basic("dav-expired@example.com", token)}
+        resp = _propfind(client, "/dav/dav-expired@example.com/", headers=headers)
+        assert resp.status_code == 401
+
+        pat = _pat_by_token(TestSession, token)
+        assert pat.last_dav_failure_at is not None
+        assert pat.last_dav_failure_reason == "token_expired"
+
+    def test_pat_response_sanitizes_unknown_dav_failure_reason(self):
+        pat = PersonalAccessToken(
+            id=1,
+            user_id=1,
+            name="DAVx5",
+            token_hash="hash",
+            token_lookup="lookup",
+            scopes="calendar:read",
+            last_dav_failure_reason="raw database traceback with secret",
+            created_at=utcnow(),
+        )
+
+        response = PATResponse.model_validate(pat)
+
+        assert response.last_dav_failure_reason == "unknown"
 
     def test_wildcard_scope_works(self, app_under_test):
         app, TestSession = app_under_test
