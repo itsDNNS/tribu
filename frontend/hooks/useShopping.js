@@ -5,6 +5,38 @@ import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 import { useWebSocket } from './useWebSocket';
 
+export function formatShoppingItemName(value) {
+  const cleaned = value.trim();
+  if (!cleaned) return cleaned;
+  return `${cleaned.charAt(0).toUpperCase()}${cleaned.slice(1)}`;
+}
+
+function cleanOptionalText(value) {
+  if (value == null) return null;
+  const cleaned = String(value).trim();
+  return cleaned || null;
+}
+
+function sameItemName(left, right) {
+  return left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
+}
+
+function sameOptionalText(left, right) {
+  return cleanOptionalText(left) === cleanOptionalText(right);
+}
+
+export function findReusableCheckedItem(items, payload) {
+  const itemName = formatShoppingItemName(payload.name);
+  const itemSpec = cleanOptionalText(payload.spec);
+  const itemCategory = cleanOptionalText(payload.category);
+  return items.find((item) => (
+    item.checked
+    && sameItemName(item.name, itemName)
+    && sameOptionalText(item.spec, itemSpec)
+    && sameOptionalText(item.category, itemCategory)
+  )) || null;
+}
+
 export function useShopping() {
   const {
     shoppingLists, setShoppingLists, familyId, messages,
@@ -177,24 +209,43 @@ export function useShopping() {
   async function addItem(e) {
     e.preventDefault();
     if (!newItemName.trim() || !activeListId) return;
-    const payload = { name: newItemName.trim(), spec: newItemSpec.trim() || null };
+    const payload = { name: formatShoppingItemName(newItemName), spec: cleanOptionalText(newItemSpec) };
+    const reusableCheckedItem = findReusableCheckedItem(items, payload);
     if (demoMode) {
-      const newItem = {
-        id: Date.now(),
-        list_id: activeListId,
-        ...payload,
-        checked: false,
-        checked_at: null,
-        added_by_user_id: 1,
-        created_at: new Date().toISOString(),
-      };
-      setItems((prev) => [...prev, newItem]);
-      setShoppingLists((prev) =>
-        prev.map((l) => l.id === activeListId
-          ? { ...l, item_count: l.item_count + 1, items: [...(l.items || []), newItem] }
-          : l
-        ),
-      );
+      if (reusableCheckedItem) {
+        setItems((prev) => prev.map((item) => item.id === reusableCheckedItem.id
+          ? { ...item, ...payload, checked: false, checked_at: null }
+          : item));
+        setShoppingLists((prev) =>
+          prev.map((l) => l.id === activeListId
+            ? {
+                ...l,
+                checked_count: Math.max((l.checked_count || 0) - 1, 0),
+                items: (l.items || []).map((item) => item.id === reusableCheckedItem.id
+                  ? { ...item, ...payload, checked: false, checked_at: null }
+                  : item),
+              }
+            : l
+          ),
+        );
+      } else {
+        const newItem = {
+          id: Date.now(),
+          list_id: activeListId,
+          ...payload,
+          checked: false,
+          checked_at: null,
+          added_by_user_id: 1,
+          created_at: new Date().toISOString(),
+        };
+        setItems((prev) => [...prev, newItem]);
+        setShoppingLists((prev) =>
+          prev.map((l) => l.id === activeListId
+            ? { ...l, item_count: l.item_count + 1, items: [...(l.items || []), newItem] }
+            : l
+          ),
+        );
+      }
     } else {
       const { ok } = await api.apiAddShoppingItem(activeListId, payload);
       if (!ok) {

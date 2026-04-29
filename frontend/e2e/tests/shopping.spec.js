@@ -29,8 +29,33 @@ test.describe('Shopping', () => {
     await page.locator('.shopping-spec-input').fill('whole wheat');
     await page.locator('[aria-label="Add item"]').click();
 
-    await expect(page.getByText('Bread')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[role="checkbox"][aria-label="Bread"]')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('whole wheat')).toBeVisible();
+  });
+
+  test('reactivates checked items and normalizes quick-add names', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const list = await seedShoppingList(apiCtx, familyId, 'Reuse Checked List');
+    const milk = await seedShoppingItem(apiCtx, list.id, 'Milk');
+    await apiCtx.patch(`/api/shopping/items/${milk.id}`, { data: { checked: true } });
+
+    await navigateTo(page, 'Shopping');
+    await page.reload();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+    await navigateTo(page, 'Shopping');
+
+    await page.getByText('Reuse Checked List').click();
+    await expect(page.locator('[role="checkbox"][aria-label="Milk"]')).toHaveAttribute('aria-checked', 'true', { timeout: 10000 });
+
+    await page.locator('input[placeholder="Add an item..."]').fill('milch');
+    await page.locator('[aria-label="Add item"]').click();
+    await expect(page.locator('[role="checkbox"][aria-label="Milch"]')).toHaveAttribute('aria-checked', 'false', { timeout: 10000 });
+
+    await page.locator('input[placeholder="Add an item..."]').fill('milk');
+    await page.locator('[aria-label="Add item"]').click();
+    const milkRows = page.locator('[role="checkbox"][aria-label="Milk"]');
+    await expect(milkRows).toHaveCount(1, { timeout: 10000 });
+    await expect(milkRows.first()).toHaveAttribute('aria-checked', 'false');
   });
 
   test('toggle an item checked / unchecked', async ({ authedPage: page, apiCtx }) => {

@@ -205,6 +205,7 @@ export default function ShoppingView() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const itemSuggestions = Array.from(new Set((sh.items || []).map((item) => item.name).filter(Boolean))).sort((a, b) => a.localeCompare(b));
 
   function openTemplateForm(template = null) {
     setEditingTemplate(template);
@@ -370,8 +371,12 @@ export default function ShoppingView() {
                     value={sh.newItemName}
                     onChange={(e) => sh.setNewItemName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sh.itemInputRef.current?.form?.requestSubmit(); } }}
+                    list="shopping-item-suggestions"
                     required
                   />
+                  <datalist id="shopping-item-suggestions">
+                    {itemSuggestions.map((name) => <option key={name} value={name}>{name}</option>)}
+                  </datalist>
                   <input
                     className="quick-add-input shopping-spec-input"
                     placeholder={t(messages, 'module.shopping.item_spec_placeholder')}

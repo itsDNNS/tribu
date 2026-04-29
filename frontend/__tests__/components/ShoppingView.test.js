@@ -93,6 +93,25 @@ function setup(overrides = {}) {
   return render(<ShoppingView />);
 }
 
+describe('ShoppingView quick add', () => {
+  test('offers checked items as quick-add suggestions', () => {
+    setup({
+      items: [
+        { id: 1, name: 'Milk', spec: null, checked: true },
+        { id: 2, name: 'Bread', spec: null, checked: false },
+        { id: 3, name: 'Milk', spec: null, checked: false },
+      ],
+      checkedItems: [{ id: 1, name: 'Milk', spec: null, checked: true }],
+      uncheckedItems: [{ id: 2, name: 'Bread', spec: null, checked: false }, { id: 3, name: 'Milk', spec: null, checked: false }],
+    });
+
+    const input = screen.getByPlaceholderText('Add an item...');
+    expect(input).toHaveAttribute('list', 'shopping-item-suggestions');
+    const options = Array.from(document.querySelectorAll('#shopping-item-suggestions option')).map((option) => option.value);
+    expect(options).toEqual(['Bread', 'Milk']);
+  });
+});
+
 describe('ShoppingView templates', () => {
   test('renders saved templates and can apply one to the active list', () => {
     setup();
