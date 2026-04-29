@@ -314,6 +314,33 @@ export function apiApplyShoppingTemplate(templateId, payload) {
   return post(`/shopping/templates/${templateId}/apply`, payload);
 }
 
+// Household templates
+export function apiGetHouseholdTemplates(familyId) {
+  return request(`/household-templates?family_id=${familyId}`);
+}
+
+export function apiCreateHouseholdTemplate(payload) {
+  return post('/household-templates', payload);
+}
+
+export function apiUpdateHouseholdTemplate(templateId, payload) {
+  return patch(`/household-templates/${templateId}`, payload);
+}
+
+export function apiDeleteHouseholdTemplate(templateId) {
+  return del(`/household-templates/${templateId}`);
+}
+
+export function apiApplyHouseholdTemplate(template, payload) {
+  const isObject = template && typeof template === 'object';
+  const templateId = isObject ? template.id : template;
+  const builtin = isObject ? Boolean(template.is_builtin) : false;
+  const path = builtin
+    ? `/household-templates/builtin/${encodeURIComponent(templateId)}/apply`
+    : `/household-templates/${templateId}/apply`;
+  return post(path, payload);
+}
+
 // Tokens
 export function apiGetTokens() {
   return request('/tokens');

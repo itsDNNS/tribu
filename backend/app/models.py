@@ -40,6 +40,7 @@ class Family(Base):
     tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
     shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
     shopping_templates = relationship("ShoppingTemplate", back_populates="family", cascade="all, delete-orphan")
+    household_templates = relationship("HouseholdTemplate", back_populates="family", cascade="all, delete-orphan")
     recipes = relationship("Recipe", back_populates="family", cascade="all, delete-orphan")
     invitations = relationship("FamilyInvitation", back_populates="family", cascade="all, delete-orphan")
     reward_currency = relationship("RewardCurrency", back_populates="family", uselist=False, cascade="all, delete-orphan")
@@ -411,6 +412,23 @@ class ShoppingTemplateItem(Base):
     template = relationship("ShoppingTemplate", back_populates="items")
 
 
+class HouseholdTemplate(Base):
+    __tablename__ = "household_templates"
+    __table_args__ = (Index("ix_household_templates_family_created", "family_id", "created_at"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    description = Column(String(300), nullable=True)
+    task_items = Column(JSON, nullable=False, default=list, server_default="[]")
+    shopping_items = Column(JSON, nullable=False, default=list, server_default="[]")
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="household_templates")
+
+
 class Notification(Base):
     __tablename__ = "notifications"
 
@@ -480,7 +498,7 @@ class UserNavOrder(Base):
     __tablename__ = "user_nav_order"
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    nav_order = Column(JSON, nullable=False, default=["dashboard", "calendar", "shopping", "tasks", "contacts", "notifications", "settings"])
+    nav_order = Column(JSON, nullable=False, default=["dashboard", "calendar", "shopping", "tasks", "templates", "contacts", "notifications", "settings"])
 
 
 class AuditLog(Base):

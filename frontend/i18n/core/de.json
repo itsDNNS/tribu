@@ -132,6 +132,7 @@
   "token_scope_birthdays": "Geburtstage",
   "token_scope_families": "Familien",
   "token_scope_profile": "Profil",
+  "token_scope_household_templates": "Vorlagen",
   "token_scope_admin": "Admin",
   "token_action_read": "Lesen",
   "token_action_write": "Schreiben",

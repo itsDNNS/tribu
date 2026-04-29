@@ -9,6 +9,8 @@ import contactsDe from '../i18n/modules/contacts/de.json';
 import contactsEn from '../i18n/modules/contacts/en.json';
 import tasksDe from '../i18n/modules/tasks/de.json';
 import tasksEn from '../i18n/modules/tasks/en.json';
+import templatesDe from '../i18n/modules/templates/de.json';
+import templatesEn from '../i18n/modules/templates/en.json';
 import shoppingDe from '../i18n/modules/shopping/de.json';
 import shoppingEn from '../i18n/modules/shopping/en.json';
 import birthdaysDe from '../i18n/modules/birthdays/de.json';
@@ -23,8 +25,8 @@ import recipesDe from '../i18n/modules/recipes/de.json';
 import recipesEn from '../i18n/modules/recipes/en.json';
 
 const moduleLocales = {
-  de: [calendarDe, dashboardDe, contactsDe, tasksDe, shoppingDe, birthdaysDe, rewardsDe, giftsDe, mealPlansDe, recipesDe],
-  en: [calendarEn, dashboardEn, contactsEn, tasksEn, shoppingEn, birthdaysEn, rewardsEn, giftsEn, mealPlansEn, recipesEn],
+  de: [calendarDe, dashboardDe, contactsDe, tasksDe, templatesDe, shoppingDe, birthdaysDe, rewardsDe, giftsDe, mealPlansDe, recipesDe],
+  en: [calendarEn, dashboardEn, contactsEn, tasksEn, templatesEn, shoppingEn, birthdaysEn, rewardsEn, giftsEn, mealPlansEn, recipesEn],
 };
 
 const coreLocales = { de: coreDe, en: coreEn };

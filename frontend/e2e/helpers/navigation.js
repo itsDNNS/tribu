@@ -9,6 +9,7 @@ const VIEW_KEYS = {
   Calendar: 'calendar',
   Shopping: 'shopping',
   Tasks: 'tasks',
+  Templates: 'templates',
   'Meal plan': 'meal_plans',
   Recipes: 'recipes',
   Rewards: 'rewards',

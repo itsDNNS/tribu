@@ -695,6 +695,74 @@ class ShoppingTemplateApplyResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Household templates
+# ---------------------------------------------------------------------------
+
+class HouseholdTemplateTaskItem(BaseModel):
+    """Task row inside a reusable household planning template."""
+    title: str = Field(min_length=1, max_length=200, description="Task title")
+    description: Optional[str] = Field(None, max_length=500, description="Optional task details")
+    priority: str = Field("normal", description="Priority: 'low', 'normal', or 'high'")
+    days_offset: int = Field(0, ge=0, le=365, description="Days after the selected apply date")
+
+
+class HouseholdTemplateShoppingItem(BaseModel):
+    """Shopping row inside a reusable household planning template."""
+    name: str = Field(min_length=1, max_length=200, description="Shopping item name")
+    spec: Optional[str] = Field(None, max_length=200, description="Amount or details")
+    category: Optional[str] = Field(None, max_length=100, description="Category or aisle label")
+
+
+class HouseholdTemplateCreate(BaseModel):
+    """Create a custom household planning template."""
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(min_length=1, max_length=120, description="Template name")
+    description: Optional[str] = Field(None, max_length=300, description="Short template description")
+    task_items: list[HouseholdTemplateTaskItem] = Field(default_factory=list, max_length=50)
+    shopping_items: list[HouseholdTemplateShoppingItem] = Field(default_factory=list, max_length=100)
+
+
+class HouseholdTemplateUpdate(BaseModel):
+    """Update a custom household planning template."""
+    name: Optional[str] = Field(None, min_length=1, max_length=120)
+    description: Optional[str] = Field(None, max_length=300)
+    task_items: Optional[list[HouseholdTemplateTaskItem]] = Field(None, max_length=50)
+    shopping_items: Optional[list[HouseholdTemplateShoppingItem]] = Field(None, max_length=100)
+
+
+class HouseholdTemplateResponse(BaseModel):
+    """Household planning template returned to the UI."""
+    id: Union[int, str] = Field(..., description="Template ID or built-in key")
+    name: str
+    description: Optional[str] = None
+    is_builtin: bool = False
+    task_count: int = 0
+    shopping_count: int = 0
+    task_items: list[HouseholdTemplateTaskItem] = Field(default_factory=list)
+    shopping_items: list[HouseholdTemplateShoppingItem] = Field(default_factory=list)
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class HouseholdTemplateApplyRequest(BaseModel):
+    """Apply a household template to a selected date."""
+    family_id: Optional[int] = Field(None, description="Family ID, required for built-in templates")
+    target_date: date = Field(..., description="Date used as the start for task due dates")
+    shopping_list_id: Optional[int] = Field(None, description="Existing shopping list to append to")
+    shopping_list_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Create a new shopping list with this name")
+
+
+class HouseholdTemplateApplyResponse(BaseModel):
+    """Objects created by applying a household template."""
+    template_id: Union[int, str]
+    created_task_count: int = 0
+    created_shopping_count: int = 0
+    shopping_list_id: Optional[int] = None
+    tasks: list[TaskResponse] = Field(default_factory=list)
+    shopping_items: list[ShoppingItemResponse] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
 # Contacts
 # ---------------------------------------------------------------------------
 
