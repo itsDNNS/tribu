@@ -316,6 +316,7 @@ Use the document that matches your intent:
 | [README](README.md) | Product overview, screenshots, positioning, and quick start |
 | [Contributing](CONTRIBUTING.md) | Local dev setup, testing, project boundaries, and PR expectations |
 | [Self-Hosting Guide](docs/self-hosting.md) | Configuration, reverse proxy, backups, updating, and troubleshooting |
+| [Home Assistant](docs/home-assistant.md) | REST sensors, quick capture commands, webhook automation, and dashboard examples for Home Assistant |
 | [Wiki](https://github.com/itsDNNS/tribu/wiki) | Architecture, roadmap, changelog, plugin details, and reference pages |
 | [Releases](https://github.com/itsDNNS/tribu/releases) | Versioned builds and release notes |
 | [Security](SECURITY.md) | Security policy and responsible disclosure |
