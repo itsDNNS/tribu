@@ -307,6 +307,9 @@ class PersonalAccessToken(Base):
     scopes = Column(String, nullable=False, default="*")
     expires_at = Column(DateTime, nullable=True)
     last_used_at = Column(DateTime, nullable=True)
+    last_dav_success_at = Column(DateTime, nullable=True)
+    last_dav_failure_at = Column(DateTime, nullable=True)
+    last_dav_failure_reason = Column(String(40), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="personal_access_tokens")

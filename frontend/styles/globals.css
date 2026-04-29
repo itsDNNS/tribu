@@ -2319,6 +2319,26 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .sync-limits { color: var(--text-muted); }
 .sync-external-link { color: var(--amethyst); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
 .sync-external-link:hover { text-decoration: underline; }
+.sync-health-panel { margin: var(--space-md) 0 var(--space-lg); }
+.sync-health-list { display: grid; gap: var(--space-sm); }
+.sync-health-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); background: rgba(120, 130, 180, 0.05); }
+.sync-health-card-warning { border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.07); }
+.sync-health-card-main { min-width: 0; display: grid; gap: 5px; }
+.sync-health-card-title-row { display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
+.sync-health-card-warning .sync-health-card-title-row { color: var(--warning, #d97706); }
+.sync-health-card-title { font-weight: 600; overflow-wrap: anywhere; }
+.sync-health-scope { color: var(--text-muted); font-size: 0.78rem; overflow-wrap: anywhere; }
+.sync-health-meta { display: grid; gap: 3px; color: var(--text-secondary); font-size: 0.82rem; line-height: 1.4; }
+.sync-health-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.sync-health-action { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; }
+.sync-health-danger { color: var(--danger, #dc2626); }
+.sync-health-empty, .sync-health-error { border: 1px dashed var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); color: var(--text-secondary); background: rgba(120, 130, 180, 0.04); }
+.sync-health-error { border-color: rgba(220, 38, 38, 0.28); color: var(--danger, #dc2626); background: rgba(220, 38, 38, 0.06); }
+.sync-health-token-banner { margin-bottom: var(--space-md); }
+@media (max-width: 720px) {
+  .sync-health-card { grid-template-columns: 1fr; }
+  .sync-health-actions { justify-content: flex-start; }
+}
 
 /* ─── Dashboard activation panel ─── */
 .activation-panel { background: var(--glass); backdrop-filter: blur(8px) saturate(1.2); -webkit-backdrop-filter: blur(8px) saturate(1.2); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-lg); margin-bottom: var(--space-lg); position: relative; overflow: hidden; }

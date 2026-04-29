@@ -28,6 +28,17 @@ from .rights_plugin import remember_scopes
 DAV_SCOPES = ("calendar:read", "calendar:write", "contacts:read", "contacts:write")
 
 
+def _record_dav_failure(pat: PersonalAccessToken, reason: str) -> None:
+    pat.last_dav_failure_at = utcnow()
+    pat.last_dav_failure_reason = reason
+
+
+def _record_dav_success(pat: PersonalAccessToken) -> None:
+    pat.last_dav_success_at = utcnow()
+    pat.last_dav_failure_at = None
+    pat.last_dav_failure_reason = None
+
+
 class Auth(BaseAuth):
     """Radicale auth plugin backed by Tribu's PAT table.
 
@@ -61,17 +72,27 @@ class Auth(BaseAuth):
             if pat is None:
                 return ""
             if pat.expires_at is not None and pat.expires_at < utcnow():
+                _record_dav_failure(pat, "token_expired")
+                db.commit()
                 return ""
             if not verify_pat(token, pat.token_hash):
+                _record_dav_failure(pat, "auth_failed")
+                db.commit()
                 return ""
             user = db.query(User).filter(User.id == pat.user_id).first()
             if user is None:
+                _record_dav_failure(pat, "auth_failed")
+                db.commit()
                 return ""
             if (user.email or "").casefold() != (login or "").casefold():
+                _record_dav_failure(pat, "auth_failed")
+                db.commit()
                 return ""
             granted = parse_scopes(pat.scopes or "")
             if not any(has_scope(granted, s) for s in DAV_SCOPES):
                 logger.info("DAV PAT for %r lacks any DAV scope", user.email)
+                _record_dav_failure(pat, "scope_mismatch")
+                db.commit()
                 return ""
             # Lazy-migrate legacy SHA-256 rows to bcrypt. token_lookup
             # already matches (migration 0027 backfilled it from
@@ -79,6 +100,7 @@ class Auth(BaseAuth):
             if not pat.token_hash.startswith("$2"):
                 pat.token_hash = hash_pat(token)
             pat.last_used_at = utcnow()
+            _record_dav_success(pat)
             db.commit()
             # Hand the scope set to the rights plugin. The two plugins
             # run back-to-back on the same thread per request, so a
