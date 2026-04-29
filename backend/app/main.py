@@ -34,6 +34,7 @@ from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
 from app.modules.activity_router import router as activity_router
+from app.modules.quick_capture_router import router as quick_capture_router
 from app.modules.families_router import router as families_router
 from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
@@ -591,6 +592,7 @@ app.include_router(calendar_router)
 app.include_router(birthdays_router)
 app.include_router(dashboard_router)
 app.include_router(activity_router)
+app.include_router(quick_capture_router)
 app.include_router(contacts_router)
 app.include_router(tasks_router)
 app.include_router(shopping_router)

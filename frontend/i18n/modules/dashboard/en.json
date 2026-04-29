@@ -61,5 +61,17 @@
   "module.dashboard.daily_loop_empty": "Plan a meal, add groceries, or set a recurring task to get today started.",
   "module.dashboard.activity_title": "Recent activity",
   "module.dashboard.activity_empty": "No household activity yet.",
-  "module.dashboard.activity_unknown_actor": "Someone"
+  "module.dashboard.activity_unknown_actor": "Someone",
+  "module.dashboard.quick_capture_title": "Quick capture",
+  "module.dashboard.quick_capture_subtitle": "Save thoughts now and sort them later.",
+  "module.dashboard.quick_capture_placeholder": "Note an event, task, or shopping thought…",
+  "module.dashboard.quick_capture_save_inbox": "Save to inbox",
+  "module.dashboard.quick_capture_add_task": "Task",
+  "module.dashboard.quick_capture_add_shopping": "Shopping",
+  "module.dashboard.quick_capture_inbox_title": "Inbox",
+  "module.dashboard.quick_capture_inbox_empty": "Nothing to sort.",
+  "module.dashboard.quick_capture_to_task": "Task",
+  "module.dashboard.quick_capture_to_shopping": "Shopping",
+  "module.dashboard.quick_capture_dismiss": "Dismiss",
+  "module.dashboard.quick_capture_inbox_count": "{count} quick notes open"
 }

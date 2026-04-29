@@ -309,5 +309,24 @@ export function buildDemoData(lang = 'en') {
     },
   ];
 
-  return { me, families, members, events, tasks, contacts, birthdays, shoppingLists, activity, summary };
+  const quickCaptureInbox = [
+    {
+      id: nextId(),
+      text: lang === 'de' ? 'Geburtstagsgeschenk für Oma klären' : 'Check birthday gift for grandma',
+      status: 'open',
+      converted_to: null,
+      created_at: dateAt(0, 9, 5),
+      updated_at: dateAt(0, 9, 5),
+    },
+    {
+      id: nextId(),
+      text: lang === 'de' ? 'Neue Hallenschuhe besorgen' : 'Buy new indoor shoes',
+      status: 'open',
+      converted_to: null,
+      created_at: dateAt(-1, 17, 30),
+      updated_at: dateAt(-1, 17, 30),
+    },
+  ];
+
+  return { me, families, members, events, tasks, contacts, birthdays, shoppingLists, activity, quickCaptureInbox, summary };
 }
