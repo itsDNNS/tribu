@@ -29,6 +29,17 @@ test.describe('Dashboard', () => {
     await navigateTo(page, 'Home');
     await page.getByRole('group', { name: 'Quick actions' }).waitFor({ timeout: 10000 });
 
+    // Weekly plan → print-ready weekly view
+    await page.getByTestId('quick-action-weekly-plan').click();
+    await expect(page.getByRole('heading', { name: 'Weekly plan' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Print' })).toHaveClass(/no-print/);
+    await expect(page.getByRole('group', { name: 'Filters' })).toHaveClass(/no-print/);
+    await expect(page.getByRole('region', { name: 'Events' })).toBeVisible();
+
+    // Back to Dashboard
+    await page.getByRole('button', { name: 'Back to dashboard' }).click();
+    await page.getByRole('group', { name: 'Quick actions' }).waitFor({ timeout: 10000 });
+
     // Invite → Admin
     await page.getByTestId('quick-action-invite').click();
     await expect(page.getByRole('heading', { name: 'Admin' })).toBeVisible({ timeout: 10000 });

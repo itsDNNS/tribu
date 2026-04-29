@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Weekly plan",
+  "module.weekly_plan.subtitle": "Print-ready overview for calendar, tasks, meals, shopping, and birthdays.",
+  "module.weekly_plan.this_week": "This week",
+  "module.weekly_plan.next_week": "Next week",
+  "module.weekly_plan.previous_week": "Previous week",
+  "module.weekly_plan.print": "Print",
+  "module.weekly_plan.back_dashboard": "Back to dashboard",
+  "module.weekly_plan.events": "Events",
+  "module.weekly_plan.tasks": "Tasks and routines",
+  "module.weekly_plan.meals": "Meals",
+  "module.weekly_plan.shopping": "Shopping reminders",
+  "module.weekly_plan.birthdays": "Birthdays",
+  "module.weekly_plan.empty_section": "Nothing planned",
+  "module.weekly_plan.no_due_date": "No due date",
+  "module.weekly_plan.filters": "Filters",
+  "module.weekly_plan.filter_member": "Member",
+  "module.weekly_plan.filter_all_members": "All members",
+  "module.weekly_plan.filter_sections": "Sections"
+}

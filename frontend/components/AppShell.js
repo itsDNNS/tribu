@@ -18,6 +18,7 @@ import RecipesView from './RecipesView';
 import ShoppingView from './ShoppingView';
 import SettingsView from './settings';
 import AdminView from './admin';
+import WeeklyPlanView from './WeeklyPlanView';
 import NotificationCenter from './NotificationCenter';
 import ForcePasswordChange from './ForcePasswordChange';
 import OnboardingWizard from './OnboardingWizard';
@@ -37,6 +38,7 @@ const views = {
   notifications: NotificationCenter,
   settings: SettingsView,
   admin: AdminView,
+  weekly_plan: WeeklyPlanView,
 };
 
 function DashboardSkeleton() {
