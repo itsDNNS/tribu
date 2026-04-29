@@ -45,6 +45,7 @@ class Family(Base):
     reward_currency = relationship("RewardCurrency", back_populates="family", uselist=False, cascade="all, delete-orphan")
     display_devices = relationship("DisplayDevice", back_populates="family", cascade="all, delete-orphan")
     household_activities = relationship("HouseholdActivity", back_populates="family", cascade="all, delete-orphan")
+    quick_capture_items = relationship("QuickCaptureItem", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -512,6 +513,26 @@ class HouseholdActivity(Base):
 
     family = relationship("Family", back_populates="household_activities")
     actor = relationship("User")
+
+
+class QuickCaptureItem(Base):
+    __tablename__ = "quick_capture_items"
+    __table_args__ = (
+        Index("ix_quick_capture_family_status_created", "family_id", "status", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    text = Column(String(240), nullable=False)
+    status = Column(String(20), nullable=False, default="open", server_default="open")
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    converted_to = Column(String(40), nullable=True)
+    converted_object_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    family = relationship("Family", back_populates="quick_capture_items")
+    created_by = relationship("User")
 
 
 class FamilyInvitation(Base):

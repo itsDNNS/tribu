@@ -820,6 +820,64 @@ class PaginatedHouseholdActivity(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Quick capture
+# ---------------------------------------------------------------------------
+
+class QuickCaptureDestination(str, Enum):
+    """Supported destinations for a captured note."""
+    inbox = "inbox"
+    task = "task"
+    shopping = "shopping"
+
+
+class QuickCaptureCreate(BaseModel):
+    """Create a quick capture item or route it directly."""
+    family_id: int = Field(..., description="Family ID")
+    text: str = Field(min_length=1, max_length=240, description="Captured text")
+    destination: QuickCaptureDestination = Field(QuickCaptureDestination.inbox, description="Where to send the capture")
+
+
+class QuickCaptureInboxItem(BaseModel):
+    """Inbox item awaiting triage."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Inbox item ID")
+    text: str = Field(..., description="Captured text")
+    status: str = Field(..., description="Status: open, converted, or dismissed")
+    converted_to: Optional[str] = Field(None, description="Destination after conversion")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+
+class QuickCaptureResponse(BaseModel):
+    """Result of a quick capture action."""
+    destination: QuickCaptureDestination = Field(..., description="Resolved destination")
+    inbox_item: Optional[QuickCaptureInboxItem] = Field(None, description="Created inbox item")
+    created_item: Optional[Union[TaskResponse, ShoppingItemResponse]] = Field(None, description="Created task or shopping item")
+
+
+class PaginatedQuickCaptureInbox(BaseModel):
+    """Paginated quick capture inbox."""
+    items: list[QuickCaptureInboxItem] = Field(..., description="Inbox items")
+    total: int = Field(..., description="Total matching entries")
+    offset: int = Field(..., description="Pagination offset")
+    limit: int = Field(..., description="Pagination limit")
+
+
+class QuickCaptureConvertRequest(BaseModel):
+    """Convert an inbox item to a destination."""
+    destination: QuickCaptureDestination = Field(..., description="Conversion destination")
+
+
+class QuickCaptureConvertResponse(BaseModel):
+    """Converted or dismissed inbox item response."""
+    status: str = Field(..., description="New inbox item status")
+    converted_to: Optional[QuickCaptureDestination] = Field(None, description="Destination after conversion")
+    inbox_item: QuickCaptureInboxItem = Field(..., description="Updated inbox item")
+    converted_item: Optional[Union[TaskResponse, ShoppingItemResponse]] = Field(None, description="Created task or shopping item")
+
+
+# ---------------------------------------------------------------------------
 # Personal Access Tokens (PAT)
 # ---------------------------------------------------------------------------
 

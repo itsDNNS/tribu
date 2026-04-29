@@ -9,6 +9,7 @@ import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
 import HouseholdActivityFeed from './HouseholdActivityFeed';
+import QuickCaptureCard from './QuickCaptureCard';
 
 function todayIsoDate() {
   const now = new Date();
@@ -151,7 +152,7 @@ function ActivationPanel({ steps, messages }) {
 }
 
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, shoppingLists, activity, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode } = useApp();
+  const { summary, me, members, tasks, events, shoppingLists, activity, quickCaptureInbox, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
   const todayIso = useMemo(() => todayIsoDate(), []);
   const [mealsTodayCount, setMealsTodayCount] = useState(0);
 
@@ -338,6 +339,18 @@ export default function DashboardView() {
       {showActivationPanel && <ActivationPanel steps={activationSteps} messages={messages} />}
 
       <div className="bento-grid">
+        {!isChild && (
+          <QuickCaptureCard
+            familyId={familyId}
+            inbox={quickCaptureInbox}
+            messages={messages}
+            loadQuickCaptureInbox={loadQuickCaptureInbox}
+            loadTasks={loadTasks}
+            loadShoppingLists={loadShoppingLists}
+            loadActivity={loadActivity}
+          />
+        )}
+
         <DailyLoopCard
           mealsTodayCount={mealsTodayCount}
           shoppingOpenCount={shoppingOpenCount}

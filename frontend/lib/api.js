@@ -121,6 +121,22 @@ export function apiGetActivity(familyId, limit = 10, offset = 0) {
   return request(`/activity?family_id=${familyId}&limit=${limit}&offset=${offset}`);
 }
 
+export function apiCreateQuickCapture(payload) {
+  return post('/quick-capture', payload);
+}
+
+export function apiGetQuickCaptureInbox(familyId, limit = 10, offset = 0) {
+  return request(`/quick-capture/inbox?family_id=${familyId}&limit=${limit}&offset=${offset}`);
+}
+
+export function apiConvertQuickCapture(itemId, payload) {
+  return post(`/quick-capture/inbox/${itemId}/convert`, payload);
+}
+
+export function apiDismissQuickCapture(itemId) {
+  return post(`/quick-capture/inbox/${itemId}/dismiss`, {});
+}
+
 // Calendar
 export async function apiGetEvents(familyId, rangeStart, rangeEnd) {
   let url = `/calendar/events?family_id=${familyId}`;

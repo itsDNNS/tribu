@@ -5,6 +5,7 @@ import {
   apiGetContacts, apiImportContactsCsv,
   apiExportCalendarIcs, apiImportCalendarIcs, apiExportContactsCsv,
   apiGetActivity,
+  apiCreateQuickCapture, apiGetQuickCaptureInbox, apiConvertQuickCapture, apiDismissQuickCapture,
   apiGetTasks, apiCreateTask, apiUpdateTask, apiDeleteTask,
   apiListRecipes, apiCreateRecipe, apiUpdateRecipe, apiDeleteRecipe, apiAddRecipeIngredientsToShopping,
 } from '../../lib/api';
@@ -92,6 +93,23 @@ describe('Dashboard API', () => {
   it('apiGetActivity includes family_id and pagination', async () => {
     await apiGetActivity('7', 5, 10);
     expect(lastCall()[0]).toBe('/api/activity?family_id=7&limit=5&offset=10');
+  });
+
+  it('quick capture API supports create, list, convert, and dismiss', async () => {
+    await apiCreateQuickCapture({ family_id: 7, text: 'Buy milk' });
+    expect(lastCall()[0]).toBe('/api/quick-capture');
+    expect(lastCall()[1].method).toBe('POST');
+
+    await apiGetQuickCaptureInbox('7', 6, 2);
+    expect(lastCall()[0]).toBe('/api/quick-capture/inbox?family_id=7&limit=6&offset=2');
+
+    await apiConvertQuickCapture(11, { target_type: 'task' });
+    expect(lastCall()[0]).toBe('/api/quick-capture/inbox/11/convert');
+    expect(lastCall()[1].method).toBe('POST');
+
+    await apiDismissQuickCapture(11);
+    expect(lastCall()[0]).toBe('/api/quick-capture/inbox/11/dismiss');
+    expect(lastCall()[1].method).toBe('POST');
   });
 });
 

@@ -12,6 +12,7 @@ export function DataProvider({ children }) {
   const [tasks, setTasks] = useState([]);
   const [shoppingLists, setShoppingLists] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [quickCaptureInbox, setQuickCaptureInbox] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const lastEventIdRef = useRef(0);
@@ -51,6 +52,11 @@ export function DataProvider({ children }) {
     if (ok) setActivity(Array.isArray(data?.items) ? data.items : []);
   }, []);
 
+  const loadQuickCaptureInbox = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetQuickCaptureInbox(fid, 10, 0);
+    if (ok) setQuickCaptureInbox(Array.isArray(data?.items) ? data.items : []);
+  }, []);
+
   const loadNotifications = useCallback(async () => {
     const { ok, data } = await api.apiGetNotifications(50, 0);
     if (ok) {
@@ -70,6 +76,7 @@ export function DataProvider({ children }) {
     setTasks([]);
     setShoppingLists([]);
     setActivity([]);
+    setQuickCaptureInbox([]);
     setNotifications([]);
     setUnreadCount(0);
   }, []);
@@ -82,10 +89,11 @@ export function DataProvider({ children }) {
     tasks, setTasks,
     shoppingLists, setShoppingLists,
     activity, setActivity,
+    quickCaptureInbox, setQuickCaptureInbox,
     notifications, setNotifications,
     unreadCount, setUnreadCount,
     lastEventIdRef,
-    loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadNotifications,
+    loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, loadNotifications,
     resetData,
   };
 

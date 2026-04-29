@@ -14,6 +14,8 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "families:read": "View family members, invitations, and audit log",
     "families:write": "Manage members, invitations, roles, and passwords",
     "activity:read": "View public-safe household activity feed",
+    "quick_capture:read": "View quick capture inbox items",
+    "quick_capture:write": "Create and triage quick captures",
     "shopping:read": "View shopping lists and items",
     "shopping:write": "Create, update, and delete shopping lists and items",
     "profile:read": "View own profile and list personal access tokens",

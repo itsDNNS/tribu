@@ -61,5 +61,17 @@
   "module.dashboard.daily_loop_empty": "Plane ein Essen, ergänze den Einkauf oder lege eine wiederkehrende Aufgabe an, damit der Tag gut startet.",
   "module.dashboard.activity_title": "Letzte Aktivitäten",
   "module.dashboard.activity_empty": "Noch keine Haushaltsaktivitäten.",
-  "module.dashboard.activity_unknown_actor": "Jemand"
+  "module.dashboard.activity_unknown_actor": "Jemand",
+  "module.dashboard.quick_capture_title": "Schnell erfassen",
+  "module.dashboard.quick_capture_subtitle": "Gedanken festhalten und später einsortieren.",
+  "module.dashboard.quick_capture_placeholder": "Termin, Aufgabe oder Einkaufsnotiz notieren…",
+  "module.dashboard.quick_capture_save_inbox": "In Inbox speichern",
+  "module.dashboard.quick_capture_add_task": "Aufgabe",
+  "module.dashboard.quick_capture_add_shopping": "Einkauf",
+  "module.dashboard.quick_capture_inbox_title": "Inbox",
+  "module.dashboard.quick_capture_inbox_empty": "Nichts zum Einsortieren.",
+  "module.dashboard.quick_capture_to_task": "Aufgabe",
+  "module.dashboard.quick_capture_to_shopping": "Einkauf",
+  "module.dashboard.quick_capture_dismiss": "Verwerfen",
+  "module.dashboard.quick_capture_inbox_count": "{count} offene Schnellnotizen"
 }

@@ -49,4 +49,16 @@ test.describe('Dashboard', () => {
     await expect(activityCard).toContainText(`${testUser.displayName} created task "E2E Activity Task"`, { timeout: 10000 });
     await expect(activityCard).not.toContainText('private detail');
   });
+
+  test('captures a quick note and triages it from the dashboard inbox', async ({ authedPage: page }) => {
+    const quickCapture = page.getByRole('region', { name: 'Quick capture' });
+    await expect(quickCapture).toBeVisible({ timeout: 10000 });
+
+    await quickCapture.getByPlaceholder('Note an event, task, or shopping thought…').fill('Buy apples from market');
+    await quickCapture.getByRole('button', { name: 'Save to inbox' }).click();
+
+    await expect(quickCapture).toContainText('Buy apples from market', { timeout: 10000 });
+    await quickCapture.locator('.quick-capture-item-actions').getByRole('button', { name: 'Shopping' }).click();
+    await expect(quickCapture).not.toContainText('Buy apples from market', { timeout: 10000 });
+  });
 });

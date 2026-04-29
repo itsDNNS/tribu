@@ -22,7 +22,7 @@ function AppOrchestrator({ children }) {
 
   const { loggedIn, demoMode, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
   const { familyId, setFamilyId, families, setFamilies, setMyFamilyRole, setMyFamilyIsAdult, loadMembers, setMembers } = family;
-  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setActivity, setContacts, setBirthdays, setSummary } = data;
+  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setActivity, setQuickCaptureInbox, setContacts, setBirthdays, setSummary } = data;
   const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, restoreView, setIsMobile, setNavOrder, setTimeFormat, lang } = ui;
 
   // Wrap data loaders to inject familyId default and skip in demo mode
@@ -66,6 +66,11 @@ function AppOrchestrator({ children }) {
     return loadActivity(fid);
   }, [familyId, demoMode, loadActivity]);
 
+  const loadQuickCaptureInboxWrapped = useCallback(async (fid = familyId) => {
+    if (demoMode) return;
+    return loadQuickCaptureInbox(fid);
+  }, [familyId, demoMode, loadQuickCaptureInbox]);
+
   const loadNotificationsWrapped = useCallback(async () => {
     if (demoMode) return;
     return loadNotifications();
@@ -89,9 +94,9 @@ function AppOrchestrator({ children }) {
       setMyFamilyRole(selected.role);
       setMyFamilyIsAdult(selected.is_adult);
     }
-    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadActivity(fid)]);
+    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadActivity(fid), loadQuickCaptureInbox(fid)]);
     setLoading(false);
-  }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, setLoading, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult]);
+  }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, setLoading, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult]);
 
   const loadFamilyDataInBackground = useCallback((fid) => {
     void Promise.allSettled([
@@ -103,12 +108,13 @@ function AppOrchestrator({ children }) {
       loadTasks(fid),
       loadShoppingLists(fid),
       loadActivity(fid),
+      loadQuickCaptureInbox(fid),
       loadNavOrderWrapped(),
       api.apiGetTimeFormat().then(({ ok, data: tfData }) => {
         if (ok && tfData?.time_format) setTimeFormat(tfData.time_format);
       }),
     ]);
-  }, [loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadNavOrderWrapped, setTimeFormat]);
+  }, [loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, loadNavOrderWrapped, setTimeFormat]);
 
   const enterDemo = useCallback(() => {
     const demo = buildDemoData(lang);
@@ -123,12 +129,13 @@ function AppOrchestrator({ children }) {
     setTasks(demo.tasks);
     setShoppingLists(demo.shoppingLists);
     setActivity(demo.activity || []);
+    setQuickCaptureInbox(demo.quickCaptureInbox || []);
     setContacts(demo.contacts);
     setBirthdays(demo.birthdays);
     setSummary(demo.summary);
     setLoggedIn(true);
     setLoading(false);
-  }, [lang, setDemoMode, setMe, setFamilies, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult, setMembers, setEvents, setTasks, setShoppingLists, setActivity, setContacts, setBirthdays, setSummary, setLoggedIn, setLoading]);
+  }, [lang, setDemoMode, setMe, setFamilies, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult, setMembers, setEvents, setTasks, setShoppingLists, setActivity, setQuickCaptureInbox, setContacts, setBirthdays, setSummary, setLoggedIn, setLoading]);
 
   const logout = useCallback(async () => {
     await auth.logout();
@@ -334,6 +341,7 @@ function AppOrchestrator({ children }) {
     loadTasks: loadTasksWrapped,
     loadShoppingLists: loadShoppingListsWrapped,
     loadActivity: loadActivityWrapped,
+    loadQuickCaptureInbox: loadQuickCaptureInboxWrapped,
     loadNotifications: loadNotificationsWrapped,
     loadNavOrder: loadNavOrderWrapped,
     // Cross-domain

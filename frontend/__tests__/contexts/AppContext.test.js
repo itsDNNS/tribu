@@ -45,6 +45,7 @@ describe('AppProvider bootstrap', () => {
     api.apiGetBirthdays.mockResolvedValue({ ok: true, data: [] });
     api.apiGetShoppingLists.mockResolvedValue({ ok: true, data: [] });
     api.apiGetActivity.mockResolvedValue({ ok: true, data: { items: [] } });
+    api.apiGetQuickCaptureInbox.mockResolvedValue({ ok: true, data: { items: [] } });
     api.apiGetNavOrder.mockResolvedValue({ ok: true, data: { nav_order: ['dashboard'] } });
     api.apiGetTimeFormat.mockResolvedValue({ ok: true, data: { time_format: '24h' } });
     api.apiGetUnreadCount.mockResolvedValue({ ok: true, data: { count: 0 } });
@@ -66,5 +67,6 @@ describe('AppProvider bootstrap', () => {
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
     expect(api.apiGetTasks).toHaveBeenCalledWith('7');
     expect(api.apiGetActivity).toHaveBeenCalledWith('7', 10, 0);
+    expect(api.apiGetQuickCaptureInbox).toHaveBeenCalledWith('7', 10, 0);
   });
 });
