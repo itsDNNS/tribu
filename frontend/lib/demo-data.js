@@ -290,5 +290,24 @@ export function buildDemoData(lang = 'en') {
     ],
   };
 
-  return { me, families, members, events, tasks, contacts, birthdays, shoppingLists, summary };
+  const activity = [
+    {
+      id: nextId(),
+      actor_display_name: 'Anna',
+      action: 'checked',
+      object_type: 'shopping_item',
+      summary: lang === 'de' ? 'Anna hat "Hafermilch" abgehakt' : 'Anna checked off "Oat milk"',
+      created_at: dateAt(0, 8, 20),
+    },
+    {
+      id: nextId(),
+      actor_display_name: 'Dennis',
+      action: 'completed',
+      object_type: 'task',
+      summary: lang === 'de' ? 'Dennis hat Aufgabe "Blumen gießen" erledigt' : 'Dennis completed task "Water plants"',
+      created_at: dateAt(-1, 18, 15),
+    },
+  ];
+
+  return { me, families, members, events, tasks, contacts, birthdays, shoppingLists, activity, summary };
 }

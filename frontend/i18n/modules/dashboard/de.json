@@ -58,5 +58,8 @@
   "module.dashboard.daily_loop_open_meals": "Essen planen",
   "module.dashboard.daily_loop_open_shopping": "Einkauf öffnen",
   "module.dashboard.daily_loop_open_routines": "Routinen öffnen",
-  "module.dashboard.daily_loop_empty": "Plane ein Essen, ergänze den Einkauf oder lege eine wiederkehrende Aufgabe an, damit der Tag gut startet."
+  "module.dashboard.daily_loop_empty": "Plane ein Essen, ergänze den Einkauf oder lege eine wiederkehrende Aufgabe an, damit der Tag gut startet.",
+  "module.dashboard.activity_title": "Letzte Aktivitäten",
+  "module.dashboard.activity_empty": "Noch keine Haushaltsaktivitäten.",
+  "module.dashboard.activity_unknown_actor": "Jemand"
 }

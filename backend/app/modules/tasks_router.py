@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_adult, ensure_family_membership, to_utc_naive
+from app.core.activity import record_activity
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import Membership, RewardCurrency, Task, TokenTransaction, User
@@ -103,6 +104,19 @@ def create_task(
         token_require_confirmation=payload.token_require_confirmation,
     )
     db.add(task)
+    db.flush()
+    record_activity(
+        db,
+        family_id=task.family_id,
+        actor_user_id=user.id,
+        actor_display_name=user.display_name,
+        action="created",
+        object_type="task",
+        object_id=task.id,
+        object_label=task.title,
+        verb="created",
+        object_kind="task",
+    )
     db.commit()
     db.refresh(task)
     return task
@@ -168,6 +182,7 @@ def update_task(
         task.token_require_confirmation = payload.token_require_confirmation
 
     next_task = None
+    was_done = task.status == "done"
     if payload.status is not None:
         task.status = payload.status
         if payload.status == "done":
@@ -200,6 +215,19 @@ def update_task(
                     token_require_confirmation=task.token_require_confirmation,
                 )
                 db.add(next_task)
+        if payload.status == "done" and not was_done:
+            record_activity(
+                db,
+                family_id=task.family_id,
+                actor_user_id=user.id,
+                actor_display_name=user.display_name,
+                action="completed",
+                object_type="task",
+                object_id=task.id,
+                object_label=task.title,
+                verb="completed",
+                object_kind="task",
+            )
 
     db.commit()
     db.refresh(task)

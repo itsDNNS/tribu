@@ -801,6 +801,24 @@ class DashboardSummary(BaseModel):
     upcoming_birthdays: list[UpcomingBirthday] = Field(..., description="Upcoming birthdays within 28 days")
 
 
+class HouseholdActivityEntry(BaseModel):
+    """Public-safe household activity feed item."""
+    id: int = Field(..., description="Activity ID")
+    actor_display_name: Optional[str] = Field(None, description="Actor display name, null if unavailable")
+    action: str = Field(..., description="Stable action code")
+    object_type: str = Field(..., description="Stable object type code")
+    summary: str = Field(..., description="Short sanitized human-readable summary")
+    created_at: datetime = Field(..., description="Activity timestamp")
+
+
+class PaginatedHouseholdActivity(BaseModel):
+    """Paginated household activity feed."""
+    items: list[HouseholdActivityEntry] = Field(..., description="Activity entries")
+    total: int = Field(..., description="Total matching entries")
+    offset: int = Field(..., description="Pagination offset")
+    limit: int = Field(..., description="Pagination limit")
+
+
 # ---------------------------------------------------------------------------
 # Personal Access Tokens (PAT)
 # ---------------------------------------------------------------------------

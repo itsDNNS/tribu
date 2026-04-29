@@ -33,6 +33,7 @@ from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
+from app.modules.activity_router import router as activity_router
 from app.modules.families_router import router as families_router
 from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
@@ -169,6 +170,7 @@ TAG_METADATA = [
     {"name": "contacts", "description": "Contact management with CSV import/export. Auto-syncs birthday entries."},
     {"name": "birthdays", "description": "Family birthday tracking."},
     {"name": "dashboard", "description": "Aggregated dashboard with upcoming events (14 days) and birthdays (28 days)."},
+    {"name": "activity", "description": "Recent public-safe household activity for the current family."},
     {"name": "notifications", "description": "User notifications with SSE streaming, read/unread management, and notification preferences."},
     {"name": "tokens", "description": "Personal Access Token (PAT) management for API automation."},
     {"name": "backup", "description": "Database backup management — schedule, trigger, download, and delete. Admin only."},
@@ -588,6 +590,7 @@ app.include_router(families_router)
 app.include_router(calendar_router)
 app.include_router(birthdays_router)
 app.include_router(dashboard_router)
+app.include_router(activity_router)
 app.include_router(contacts_router)
 app.include_router(tasks_router)
 app.include_router(shopping_router)

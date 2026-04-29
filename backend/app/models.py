@@ -44,6 +44,7 @@ class Family(Base):
     invitations = relationship("FamilyInvitation", back_populates="family", cascade="all, delete-orphan")
     reward_currency = relationship("RewardCurrency", back_populates="family", uselist=False, cascade="all, delete-orphan")
     display_devices = relationship("DisplayDevice", back_populates="family", cascade="all, delete-orphan")
+    household_activities = relationship("HouseholdActivity", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -491,6 +492,26 @@ class AuditLog(Base):
     target_user_id = Column(Integer, nullable=True)
     details = Column(JSON, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class HouseholdActivity(Base):
+    __tablename__ = "household_activity"
+    __table_args__ = (
+        Index("ix_household_activity_family_created", "family_id", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    actor_display_name = Column(String(80), nullable=True)
+    action = Column(String(40), nullable=False)
+    object_type = Column(String(60), nullable=False)
+    object_id = Column(Integer, nullable=True)
+    summary = Column(String(240), nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    family = relationship("Family", back_populates="household_activities")
+    actor = relationship("User")
 
 
 class FamilyInvitation(Base):
