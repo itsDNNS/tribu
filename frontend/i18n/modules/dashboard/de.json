@@ -63,6 +63,8 @@
   "module.dashboard.activity_title": "Letzte Aktivitäten",
   "module.dashboard.activity_empty": "Noch keine Haushaltsaktivitäten.",
   "module.dashboard.activity_unknown_actor": "Jemand",
+  "module.activity.title": "Aktivitätsverlauf",
+  "module.activity.subtitle": "Sieh nach, was sich zuletzt im Haushalt geändert hat.",
   "module.dashboard.quick_capture_title": "Schnell erfassen",
   "module.dashboard.quick_capture_subtitle": "Gedanken festhalten und später einsortieren.",
   "module.dashboard.quick_capture_placeholder": "Termin, Aufgabe oder Einkaufsnotiz notieren…",

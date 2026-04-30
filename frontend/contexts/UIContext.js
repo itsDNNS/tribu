@@ -3,7 +3,7 @@ import { buildMessages, listLanguages } from '../lib/i18n';
 import { getTheme, listThemes } from '../lib/themes';
 import { buildUi } from '../lib/styles';
 
-export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'templates', 'meal_plans', 'recipes', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
+export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'shopping', 'tasks', 'activity', 'templates', 'meal_plans', 'recipes', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
 
 const UIContext = createContext(null);
 export const useUI = () => useContext(UIContext);

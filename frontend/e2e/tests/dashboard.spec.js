@@ -83,20 +83,23 @@ test.describe('Dashboard', () => {
     await expect(checklist).not.toBeVisible({ timeout: 10000 });
   });
 
-  test('shows household activity from recent task changes', async ({ authedPage: page, apiCtx, testUser }) => {
+  test('moves household activity to a dedicated history view', async ({ authedPage: page, apiCtx, testUser }) => {
     const familyId = await getFamilyId(apiCtx);
     await seedTask(apiCtx, familyId, {
       title: 'E2E Activity Task',
-      description: 'private detail should stay out of the dashboard feed',
+      description: 'private detail should stay out of the activity feed',
     });
 
     await page.reload();
     await page.locator('#main-content').waitFor({ timeout: 15000 });
 
-    const activityCard = page.getByRole('region', { name: 'Recent activity' });
-    await expect(activityCard).toBeVisible({ timeout: 10000 });
-    await expect(activityCard).toContainText(`${testUser.displayName} created task "E2E Activity Task"`, { timeout: 10000 });
-    await expect(activityCard).not.toContainText('private detail');
+    await expect(page.getByRole('region', { name: 'Recent activity' })).toHaveCount(0);
+
+    await navigateTo(page, 'Activity');
+    await expect(page.getByRole('heading', { name: 'Activity history' })).toBeVisible({ timeout: 10000 });
+    const activityFeed = page.getByRole('region', { name: 'Recent activity' });
+    await expect(activityFeed).toContainText(`${testUser.displayName} created task "E2E Activity Task"`, { timeout: 10000 });
+    await expect(activityFeed).not.toContainText('private detail');
   });
 
   test('captures a quick note and triages it from the dashboard inbox', async ({ authedPage: page }) => {

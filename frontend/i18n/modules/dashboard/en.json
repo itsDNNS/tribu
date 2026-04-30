@@ -63,6 +63,8 @@
   "module.dashboard.activity_title": "Recent activity",
   "module.dashboard.activity_empty": "No household activity yet.",
   "module.dashboard.activity_unknown_actor": "Someone",
+  "module.activity.title": "Activity history",
+  "module.activity.subtitle": "See the latest changes in your household.",
   "module.dashboard.quick_capture_title": "Quick capture",
   "module.dashboard.quick_capture_subtitle": "Save thoughts now and sort them later.",
   "module.dashboard.quick_capture_placeholder": "Note an event, task, or shopping thought…",

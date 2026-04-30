@@ -108,9 +108,9 @@ describe('DashboardView desktop bento layout', () => {
     mockApiGetDashboardLayout.mockReset();
     mockApiUpdateDashboardLayout.mockReset();
     mockApiResetDashboardLayout.mockReset();
-    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } });
-    mockApiUpdateDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['daily_loop', 'quick_capture', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } });
-    mockApiResetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } });
+    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'] } });
+    mockApiUpdateDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['daily_loop', 'quick_capture', 'events', 'tasks', 'birthdays', 'rewards'] } });
+    mockApiResetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'] } });
     sessionStorage.clear();
   });
 
@@ -125,7 +125,6 @@ describe('DashboardView desktop bento layout', () => {
       'events',
       'tasks',
       'birthdays',
-      'activity',
       'rewards',
     ]);
     expect(modules[1].querySelector('.bento-card')).toHaveAccessibleName('Today in motion');
@@ -156,7 +155,7 @@ describe('DashboardView desktop bento layout', () => {
   });
 
   it('loads a saved dashboard layout and persists keyboard-accessible module moves', async () => {
-    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['tasks', 'events', 'quick_capture', 'daily_loop', 'birthdays', 'activity', 'rewards'] } });
+    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['tasks', 'events', 'quick_capture', 'daily_loop', 'birthdays', 'rewards'] } });
 
     const { container } = render(<DashboardView />);
 
@@ -172,13 +171,12 @@ describe('DashboardView desktop bento layout', () => {
       'quick_capture',
       'daily_loop',
       'birthdays',
-      'activity',
       'rewards',
     ]));
   });
 
   it('resets the dashboard layout to the default order', async () => {
-    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['tasks', 'events', 'quick_capture', 'daily_loop', 'birthdays', 'activity', 'rewards'] } });
+    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['tasks', 'events', 'quick_capture', 'daily_loop', 'birthdays', 'rewards'] } });
 
     const { container } = render(<DashboardView />);
 
