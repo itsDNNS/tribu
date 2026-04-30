@@ -3,7 +3,7 @@ import { Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useFamily } from '../../contexts/FamilyContext';
-import { copyTextToClipboard } from '../../lib/helpers';
+import { copyTextToClipboard, parseServerInstant } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
@@ -88,7 +88,7 @@ export default function ApiTokensTab() {
 
   function formatDate(iso) {
     if (!iso) return null;
-    return new Date(iso).toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return parseServerInstant(iso).toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   function formatScopes(scopeStr) {

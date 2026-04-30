@@ -20,10 +20,14 @@ jest.mock('../../components/ConfirmDialog', () => ({ onConfirm }) => (
   </div>
 ));
 
-jest.mock('../../lib/helpers', () => ({
-  downloadBlob: jest.fn(),
-  errorText: (_detail, fallback) => fallback,
-}));
+jest.mock('../../lib/helpers', () => {
+  const actual = jest.requireActual('../../lib/helpers');
+  return {
+    ...actual,
+    downloadBlob: jest.fn(),
+    errorText: (_detail, fallback) => fallback,
+  };
+});
 
 jest.mock('../../lib/api', () => ({
   apiGetBackupConfig: jest.fn(),

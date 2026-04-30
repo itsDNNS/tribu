@@ -26,10 +26,19 @@ async function gotoDisplayWithToken(page, token) {
   }
 }
 
+function localDateTimeInputValue(date) {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+}
+
 test.describe('Display mode', () => {
   test('renders the paired wall display without normal app bootstrap or personal data', async ({ page, apiCtx, testUser }) => {
     const familyId = await getFamilyId(apiCtx);
-    await seedCalendarEvent(apiCtx, familyId, { title: 'Dinner Plan' });
+    const focusEventTime = new Date(Date.now() + 60 * 60 * 1000);
+    await seedCalendarEvent(apiCtx, familyId, {
+      title: 'Dinner Plan',
+      starts_at: localDateTimeInputValue(focusEventTime),
+    });
     const created = await createDisplayDevice(apiCtx, familyId, 'Kitchen Tablet');
 
     const requested = [];

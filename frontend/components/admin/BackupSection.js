@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { downloadBlob, errorText } from '../../lib/helpers';
+import { downloadBlob, errorText, parseServerInstant } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import ConfirmDialog from '../ConfirmDialog';
@@ -189,7 +189,7 @@ export default function BackupSection() {
               {status.latest_backup ? (
                 <>
                   <strong>{status.latest_backup.filename}</strong>
-                  <small>{new Date(status.latest_backup.created_at).toLocaleString()} · {formatBytes(status.latest_backup.size_bytes)}</small>
+                  <small>{parseServerInstant(status.latest_backup.created_at)?.toLocaleString()} · {formatBytes(status.latest_backup.size_bytes)}</small>
                 </>
               ) : (
                 <strong>{t(messages, 'backup_last_none')}</strong>
@@ -248,7 +248,7 @@ export default function BackupSection() {
           </div>
           {config?.last_backup && (
             <div className="adm-backup-last">
-              {t(messages, 'backup_last')}: {new Date(config.last_backup).toLocaleString()}
+              {t(messages, 'backup_last')}: {parseServerInstant(config.last_backup)?.toLocaleString()}
               {config.last_backup_status && ` (${config.last_backup_status})`}
             </div>
           )}
@@ -271,7 +271,7 @@ export default function BackupSection() {
             <div>
               <div className="adm-backup-filename">{b.filename}</div>
               <div className="adm-backup-meta">
-                {new Date(b.created_at).toLocaleString()} &middot; {formatBytes(b.size_bytes)}
+                {parseServerInstant(b.created_at)?.toLocaleString()} &middot; {formatBytes(b.size_bytes)}
                 {b.alembic_revision && ` · rev ${b.alembic_revision}`}
               </div>
             </div>

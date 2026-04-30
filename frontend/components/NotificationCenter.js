@@ -3,7 +3,7 @@ import { Bell, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, X } from 'lu
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
-import { timeAgo } from '../lib/helpers';
+import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
 
 const TYPE_ICONS = {
   event_reminder: CalendarDays,
@@ -70,7 +70,7 @@ export default function NotificationCenter({ onClose } = {}) {
     const older = [];
 
     notifications.forEach(n => {
-      const d = new Date(n.created_at);
+      const d = parseServerInstant(n.created_at);
       if (d >= todayStart) today.push(n);
       else if (d >= yesterdayStart) yesterday.push(n);
       else older.push(n);
@@ -145,7 +145,7 @@ export default function NotificationCenter({ onClose } = {}) {
                         {notif.title}
                       </div>
                       <span className="notif-time">
-                        {timeAgo(notif.created_at, lang)}
+                        {serverTimeAgo(notif.created_at, lang)}
                       </span>
                     </div>
                     {notif.body && (

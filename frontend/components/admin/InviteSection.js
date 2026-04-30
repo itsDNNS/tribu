@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Check, Copy, X, Link, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { copyTextToClipboard, errorText } from '../../lib/helpers';
+import { copyTextToClipboard, errorText, parseServerInstant } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import ConfirmDialog from '../ConfirmDialog';
@@ -102,7 +102,7 @@ export default function InviteSection() {
 
   function inviteStatus(inv) {
     if (inv.revoked) return { label: t(messages, 'invite_status_revoked'), color: 'var(--text-muted)' };
-    if (new Date(inv.expires_at) < new Date()) return { label: t(messages, 'invite_status_expired'), color: 'var(--text-muted)' };
+    if (parseServerInstant(inv.expires_at) < new Date()) return { label: t(messages, 'invite_status_expired'), color: 'var(--text-muted)' };
     if (inv.max_uses && inv.use_count >= inv.max_uses) return { label: t(messages, 'invite_status_used_up'), color: 'var(--text-muted)' };
     return { label: t(messages, 'invite_status_active'), color: 'var(--success)' };
   }
@@ -199,10 +199,10 @@ export default function InviteSection() {
                     ? t(messages, 'invite_uses').replace('{count}', inv.use_count).replace('{max}', inv.max_uses)
                     : t(messages, 'invite_uses_unlimited').replace('{count}', inv.use_count)
                   }
-                  {' · '}{new Date(inv.expires_at).toLocaleDateString()}
+                  {' · '}{parseServerInstant(inv.expires_at)?.toLocaleDateString()}
                 </div>
               </div>
-              {!inv.revoked && new Date(inv.expires_at) > new Date() && (
+              {!inv.revoked && parseServerInstant(inv.expires_at) > new Date() && (
                 <button className="btn-ghost adm-revoke-btn" onClick={() => handleRevoke(inv.id)}>
                   <Trash2 size={14} /> {t(messages, 'invite_revoke')}
                 </button>
