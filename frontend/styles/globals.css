@@ -755,6 +755,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-tasks { grid-column: span 6; }
 .bento-birthdays { grid-column: span 6; }
 .bento-activity { grid-column: span 6; }
+.activity-history-layout .bento-activity { grid-column: 1 / -1; }
+.activity-history-layout .activity-feed-list { max-width: 860px; }
 .bento-rewards { grid-column: span 6; }
 .bento-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md); }
 .bento-card-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }

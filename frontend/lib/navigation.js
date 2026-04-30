@@ -1,5 +1,6 @@
 import {
   Bell,
+  Activity,
   BookUser,
   BookOpen,
   CalendarDays,
@@ -18,6 +19,7 @@ export const PINNED_NAV_KEYS = new Set(['settings', 'admin']);
 
 export const NAV_ITEM_META = {
   dashboard: { icon: LayoutDashboard, labelKey: 'dashboard', mobileLabel: 'Home' },
+  activity: { icon: Activity, labelKey: 'activity' },
   calendar: { icon: CalendarDays, labelKey: 'calendar' },
   shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },

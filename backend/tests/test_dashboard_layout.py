@@ -78,7 +78,6 @@ def test_dashboard_layout_persists_normalizes_and_resets_per_user():
         "events",
         "tasks",
         "birthdays",
-        "activity",
         "rewards",
     ]
 
@@ -94,7 +93,6 @@ def test_dashboard_layout_persists_normalizes_and_resets_per_user():
         "quick_capture",
         "daily_loop",
         "birthdays",
-        "activity",
         "rewards",
     ]
 
@@ -129,8 +127,8 @@ def test_dashboard_layout_rejects_unknown_modules_and_enforces_scopes():
 
     invalid = client.put(
         "/nav/dashboard-layout",
-        json={"modules": ["tasks", "unknown"]},
+        json={"modules": ["tasks", "activity"]},
         headers=_auth(write_token),
     )
     assert invalid.status_code == 422
-    assert "unknown" in str(invalid.json())
+    assert "activity" in str(invalid.json())

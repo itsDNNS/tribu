@@ -14,8 +14,9 @@ function formatActivityTime(value, lang = 'en') {
   });
 }
 
-export default function HouseholdActivityFeed({ activity = [], messages = {}, lang = 'en' }) {
-  const entries = Array.isArray(activity) ? activity.slice(0, 5) : [];
+export default function HouseholdActivityFeed({ activity = [], messages = {}, lang = 'en', limit = 5 }) {
+  const allEntries = Array.isArray(activity) ? activity : [];
+  const entries = limit ? allEntries.slice(0, limit) : allEntries;
   const title = t(messages, 'module.dashboard.activity_title');
   const unknownActor = t(messages, 'module.dashboard.activity_unknown_actor');
 

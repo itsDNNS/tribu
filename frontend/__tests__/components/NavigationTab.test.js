@@ -23,6 +23,7 @@ const messages = {
   nav_reset: 'Zuruecksetzen',
   dashboard: 'Dashboard',
   calendar: 'Kalender',
+  activity: 'Aktivitäten',
   contacts: 'Kontakte',
   notifications: 'Benachrichtigungen',
   'module.shopping.name': 'Einkauf',
@@ -49,6 +50,7 @@ function baseState(overrides) {
 const LABEL_BY_KEY = {
   dashboard: 'Dashboard',
   calendar: 'Kalender',
+  activity: 'Aktivitäten',
   shopping: 'Einkauf',
   tasks: 'Aufgaben',
   templates: 'Vorlagen',

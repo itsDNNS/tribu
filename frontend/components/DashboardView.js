@@ -8,10 +8,9 @@ import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetDashboar
 import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
-import HouseholdActivityFeed from './HouseholdActivityFeed';
 import QuickCaptureCard from './QuickCaptureCard';
 
-const DEFAULT_DASHBOARD_LAYOUT = ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'];
+const DEFAULT_DASHBOARD_LAYOUT = ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'];
 
 function normalizeDashboardLayout(modules, availableModules = DEFAULT_DASHBOARD_LAYOUT) {
   const available = new Set(availableModules);
@@ -178,7 +177,7 @@ function ActivationPanel({ steps, completedCount, totalCount, messages, onDismis
 }
 
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, shoppingLists, activity, quickCaptureInbox, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
+  const { summary, me, members, tasks, events, shoppingLists, quickCaptureInbox, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
   const todayIso = useMemo(() => todayIsoDate(), []);
   const [mealsTodayCount, setMealsTodayCount] = useState(0);
   const [setupChecklist, setSetupChecklist] = useState(null);
@@ -598,10 +597,6 @@ export default function DashboardView() {
             })}
           </div>
         </div>
-        </div>
-
-        <div className="dashboard-module-shell" style={{ order: moduleOrder('activity') }} data-dashboard-module="activity">
-          <HouseholdActivityFeed activity={activity} messages={messages} lang={lang} />
         </div>
 
         {/* Rewards Widget */}

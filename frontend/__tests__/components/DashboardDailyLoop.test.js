@@ -13,8 +13,8 @@ jest.mock('../../lib/api', () => ({
   apiGetDashboardLayout: jest.fn(() => new Promise(() => {})),
   apiGetSetupChecklist: jest.fn(),
   apiListMealPlans: jest.fn(),
-  apiResetDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } })),
-  apiUpdateDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } })),
+  apiResetDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'] } })),
+  apiUpdateDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'] } })),
 }));
 
 jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
@@ -186,7 +186,7 @@ describe('DashboardView daily loop', () => {
     expect(await within(card).findByText('Plan a meal, add groceries or set a recurring task to start the daily loop.')).toBeVisible();
   });
 
-  it('shows household activity on the dashboard', async () => {
+  it('keeps household activity out of the permanent dashboard layout', async () => {
     mockAppState = baseApp({
       activity: [{
         id: 1,
@@ -198,7 +198,7 @@ describe('DashboardView daily loop', () => {
 
     render(<DashboardView />);
 
-    const card = screen.getByRole('region', { name: 'Recent activity' });
-    expect(within(card).getByText('Dennis completed task "Pay school lunch"')).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Recent activity' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Dennis completed task "Pay school lunch"')).not.toBeInTheDocument();
   });
 });

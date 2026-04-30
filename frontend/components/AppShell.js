@@ -7,6 +7,7 @@ import { announce } from '../lib/announce';
 import { isNavItemVisible, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
 import MemberAvatar from './MemberAvatar';
 import DashboardView from './DashboardView';
+import ActivityView from './ActivityView';
 import CalendarView from './calendar';
 import ContactsView from './ContactsView';
 import TasksView from './TasksView';
@@ -26,6 +27,7 @@ const MAX_BOTTOM_NAV = 5;
 
 const views = {
   dashboard: DashboardView,
+  activity: ActivityView,
   calendar: CalendarView,
   shopping: ShoppingView,
   contacts: ContactsView,

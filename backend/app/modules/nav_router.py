@@ -11,9 +11,9 @@ from app.core.errors import error_detail, UNKNOWN_NAV_KEYS
 
 router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})
 
-DEFAULT_NAV_ORDER = ["dashboard", "calendar", "shopping", "tasks", "templates", "meal_plans", "recipes", "contacts", "notifications", "settings", "admin"]
-KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "templates", "rewards", "gifts", "meal_plans", "recipes", "contacts", "notifications", "settings", "admin"}
-DEFAULT_DASHBOARD_LAYOUT = ["quick_capture", "daily_loop", "events", "tasks", "birthdays", "activity", "rewards"]
+DEFAULT_NAV_ORDER = ["dashboard", "calendar", "shopping", "tasks", "activity", "templates", "meal_plans", "recipes", "contacts", "notifications", "settings", "admin"]
+KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "activity", "templates", "rewards", "gifts", "meal_plans", "recipes", "contacts", "notifications", "settings", "admin"}
+DEFAULT_DASHBOARD_LAYOUT = ["quick_capture", "daily_loop", "events", "tasks", "birthdays", "rewards"]
 KNOWN_DASHBOARD_MODULES = set(DEFAULT_DASHBOARD_LAYOUT)
 
 
