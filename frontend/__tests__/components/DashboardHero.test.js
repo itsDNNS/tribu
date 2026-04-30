@@ -145,7 +145,7 @@ describe('DashboardView hero', () => {
     expect(container.querySelectorAll('.dashboard-header-actions .btn-icon')).toHaveLength(0);
   });
 
-  it('renders child-safe quick action pills and hides admin members chip for child members', () => {
+  it('renders child-safe quick action pills without duplicated header summary chips', () => {
     mockAppState = baseApp({ isChild: true, isAdmin: false });
     render(<DashboardView />);
     const region = screen.getByRole('group', { name: 'Quick actions' });
@@ -153,16 +153,15 @@ describe('DashboardView hero', () => {
     expect(within(region).getByRole('button', { name: 'Rewards' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Event' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Invite' })).not.toBeInTheDocument();
-
-    const chipGroup = screen.getByRole('group', { name: 'Family at a glance' });
-    expect(within(chipGroup).queryByTestId('hero-chip-members')).not.toBeInTheDocument();
-    expect(within(chipGroup).getByTestId('hero-chip-events')).toBeVisible();
-    expect(within(chipGroup).getByTestId('hero-chip-tasks')).toBeVisible();
+    expect(screen.queryByRole('group', { name: 'Family at a glance' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-chip-members')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-chip-events')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-chip-tasks')).not.toBeInTheDocument();
   });
 
 
 
-  it('does not expose invite actions or the members chip to non-admin adults', () => {
+  it('does not expose invite actions to non-admin adults', () => {
     mockAppState = baseApp({ isAdmin: false });
     render(<DashboardView />);
     const region = screen.getByRole('group', { name: 'Quick actions' });
@@ -170,10 +169,11 @@ describe('DashboardView hero', () => {
     expect(within(region).getByRole('button', { name: 'Task' })).toBeVisible();
     expect(within(region).getByRole('button', { name: 'Shopping' })).toBeVisible();
     expect(within(region).queryByRole('button', { name: 'Invite' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Family at a glance' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('hero-chip-members')).not.toBeInTheDocument();
   });
 
-  it('renders hero context chips for admin members, today events and open tasks using existing data', () => {
+  it('keeps family, event and task counts in the richer dashboard modules instead of header chips', () => {
     mockAppState = baseApp({
       members: [
         { user_id: 1, display_name: 'Dennis' },
@@ -196,18 +196,12 @@ describe('DashboardView hero', () => {
     });
     render(<DashboardView />);
 
-    const chipGroup = screen.getByRole('group', { name: 'Family at a glance' });
-    const membersChip = within(chipGroup).getByTestId('hero-chip-members');
-    expect(membersChip).toHaveTextContent('3');
-    expect(membersChip).toHaveTextContent('Members');
-
-    const eventsChip = within(chipGroup).getByTestId('hero-chip-events');
-    expect(eventsChip).toHaveTextContent('2');
-    expect(eventsChip).toHaveTextContent('Today');
-
-    const tasksChip = within(chipGroup).getByTestId('hero-chip-tasks');
-    expect(tasksChip).toHaveTextContent('2');
-    expect(tasksChip).toHaveTextContent('Open tasks');
+    expect(screen.queryByRole('group', { name: 'Family at a glance' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-chip-members')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-chip-events')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-chip-tasks')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Next events' })).toHaveTextContent('School run');
+    expect(screen.getByRole('region', { name: 'Open tasks' })).toHaveTextContent('Pack bags');
   });
 
   it('removes the standalone Family Stats bento card from the grid', () => {

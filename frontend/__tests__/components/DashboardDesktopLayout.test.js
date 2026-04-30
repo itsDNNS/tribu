@@ -134,6 +134,27 @@ describe('DashboardView desktop bento layout', () => {
     expect(modules[4].querySelector('.bento-card')).toHaveAccessibleName('Birthdays');
   });
 
+  it('keeps duplicated count summaries out of the dashboard header', async () => {
+    mockAppState = baseApp({
+      members: [
+        { user_id: 1, display_name: 'Dennis' },
+        { user_id: 2, display_name: 'Family member' },
+      ],
+      tasks: [{ id: 1, title: 'Take bins out', status: 'open' }],
+      summary: { next_events: [{ id: 1, title: 'Training', starts_at: '2030-01-01T10:00:00Z' }], upcoming_birthdays: [] },
+    });
+
+    const { container } = render(<DashboardView />);
+
+    await waitFor(() => expect(mockApiGetDashboardLayout).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('group', { name: 'Dashboard summary' })).not.toBeInTheDocument();
+    expect(container.querySelector('[data-testid="hero-chip-members"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-testid="hero-chip-events"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-testid="hero-chip-tasks"]')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Today you have 1 events/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1 open tasks/i)).not.toBeInTheDocument();
+  });
+
   it('loads a saved dashboard layout and persists keyboard-accessible module moves', async () => {
     mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['tasks', 'events', 'quick_capture', 'daily_loop', 'birthdays', 'activity', 'rewards'] } });
 
