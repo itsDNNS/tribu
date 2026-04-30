@@ -345,6 +345,7 @@ export default function AppShell() {
                   key={item.key}
                   className={`bottom-nav-overflow-item${activeView === item.key ? ' active' : ''}`}
                   onClick={() => navigate(item.key)}
+                  aria-current={activeView === item.key ? 'page' : undefined}
                 >
                   <item.icon size={20} aria-hidden="true" />
                   <span>{item.mobileLabel || item.label}</span>

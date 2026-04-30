@@ -564,6 +564,7 @@
   "pwa.update_action": "Aktualisieren",
   "pwa.install_prompt": "Tribu installieren für schnellen Zugriff",
   "pwa.install_action": "Installieren",
+  "pwa.install_dismiss": "Installationshinweis ausblenden",
   "display_title": "Displays",
   "display_intro": "Verknüpfe gemeinsame Bildschirme (Küchen-Tablet, Flur-Bilderrahmen) mit einer schreibgeschützten Familienübersicht.",
   "display_not_a_person": "Ein Display ist ein Gerät, keine Person — es hat keine E-Mail, kein Passwort und taucht nicht in der Mitgliederliste auf.",

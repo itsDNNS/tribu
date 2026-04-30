@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect } from 'react';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
+import { resolveInitialView } from '../lib/navigationState';
 import { AuthProvider, useAuth } from './AuthContext';
 import { FamilyProvider, useFamily } from './FamilyContext';
 import { DataProvider, useData } from './DataContext';
@@ -162,12 +163,14 @@ function AppOrchestrator({ children }) {
       setLang(match || 'en');
     }
     setProfileImage('');
-    // Hash takes priority (bookmarkable URLs), then sessionStorage
+    // Hash takes priority (bookmarkable URLs), then PWA shortcut query URLs, then sessionStorage.
     const VALID_VIEWS = new Set(DEFAULT_NAV_ORDER);
-    const rawHash = window.location.hash?.slice(1);
-    const hashView = rawHash && VALID_VIEWS.has(rawHash) ? rawHash : null;
-    const storedView = sessionStorage.getItem('tribu_view');
-    const savedView = hashView ?? (storedView && VALID_VIEWS.has(storedView) ? storedView : null);
+    const savedView = resolveInitialView({
+      hash: window.location.hash,
+      search: window.location.search,
+      storedView: sessionStorage.getItem('tribu_view'),
+      validViews: VALID_VIEWS,
+    });
     if (savedView) restoreView(savedView);
 
     // Listen for browser back/forward
