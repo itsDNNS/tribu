@@ -2856,9 +2856,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 }
 .display-home-header-event {
   display: grid;
-  grid-template-columns: 4.5rem 1fr;
+  grid-template-columns: 4.5rem 1fr auto;
   gap: 0.6rem;
-  align-items: baseline;
+  align-items: center;
   min-width: 0;
 }
 .display-home-header-when {
@@ -3023,6 +3023,35 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   font-weight: 500;
   word-break: break-word;
   min-width: 0;
+}
+.display-agenda-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  min-width: 0;
+}
+.display-event-participants {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.display-event-participants--compact {
+  justify-content: flex-end;
+}
+.display-event-participant-color {
+  --participant-color: var(--amethyst);
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 50%;
+  background: var(--participant-color);
+  border: 2px solid var(--void-elevated);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--participant-color) 45%, transparent);
+}
+.display-event-participant-color + .display-event-participant-color {
+  margin-left: -0.22rem;
 }
 .display-agenda-category {
   font-size: 0.75rem;

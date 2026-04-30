@@ -165,6 +165,45 @@ describe('DisplayDashboard — agenda grouping', () => {
     expect(focus).toHaveTextContent('Family dinner');
   });
 
+  test('shows participant color markers only for assigned display events', () => {
+    const fixedNow = new Date('2026-04-27T08:00:00');
+    renderWithFixedNow(
+      buildDashboard({
+        next_events: [
+          {
+            title: 'Soccer practice',
+            starts_at: isoLocal(new Date('2026-04-27T18:00:00')),
+            ends_at: null,
+            all_day: false,
+            color: '#10b981',
+            category: 'Sports',
+            participant_colors: ['#7c3aed', 'url(https://example.com/bad)', '#f43f5e'],
+          },
+          {
+            title: 'Dentist',
+            starts_at: isoLocal(new Date('2026-04-28T09:00:00')),
+            ends_at: null,
+            all_day: false,
+            color: '#f59e0b',
+            category: null,
+            participant_colors: [],
+          },
+        ],
+      }),
+      fixedNow
+    );
+
+    const events = screen.getByTestId('display-events');
+    const participantGroup = within(events).getByLabelText('2 participants');
+    expect(participantGroup).toHaveAttribute('data-testid', 'display-event-participants');
+    const dots = within(participantGroup).getAllByTestId('display-event-participant-color');
+    expect(dots).toHaveLength(2);
+    expect(dots[0]).toHaveStyle({ '--participant-color': '#7c3aed' });
+    expect(dots[1]).toHaveStyle({ '--participant-color': '#f43f5e' });
+    expect(participantGroup).not.toHaveStyle({ '--participant-color': 'url(https://example.com/bad)' });
+    expect(within(events).queryAllByTestId('display-event-participants')).toHaveLength(1);
+  });
+
   test('shows the friendly empty hearth message when no events', () => {
     renderWithFixedNow(
       buildDashboard({ next_events: [] }),

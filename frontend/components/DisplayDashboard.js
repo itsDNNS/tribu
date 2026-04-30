@@ -196,6 +196,7 @@ function HomeHeaderCard({ familyName, deviceName, timeLabel, dateLabel, timeIso,
                 <li key={idx} className="display-home-header-event">
                   <span className="display-home-header-when">{formatAgendaWhen(ev)}</span>
                   <span className="display-home-header-title">{ev.title}</span>
+                  <EventParticipantColors event={ev} compact />
                 </li>
               ))
             )}
@@ -406,10 +407,38 @@ function AgendaRow({ event, now }) {
     >
       <span className="display-agenda-when">{formatAgendaWhen(event)}</span>
       <span className="display-agenda-title">{event.title}</span>
-      {event.category && (
-        <span className="display-agenda-category">{event.category}</span>
-      )}
+      <span className="display-agenda-meta">
+        <EventParticipantColors event={event} />
+        {event.category && (
+          <span className="display-agenda-category">{event.category}</span>
+        )}
+      </span>
     </li>
+  );
+}
+
+function EventParticipantColors({ event, compact = false }) {
+  const colors = Array.isArray(event?.participant_colors)
+    ? event.participant_colors.map(sanitizeColor).filter(Boolean)
+    : [];
+  if (colors.length === 0) return null;
+  const label = colors.length === 1 ? '1 participant' : `${colors.length} participants`;
+  return (
+    <span
+      className={`display-event-participants${compact ? ' display-event-participants--compact' : ''}`}
+      aria-label={label}
+      data-testid="display-event-participants"
+    >
+      {colors.map((color, idx) => (
+        <span
+          key={`${color}-${idx}`}
+          className="display-event-participant-color"
+          style={{ '--participant-color': color }}
+          data-testid="display-event-participant-color"
+          aria-hidden="true"
+        />
+      ))}
+    </span>
   );
 }
 

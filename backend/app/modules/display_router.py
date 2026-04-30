@@ -20,6 +20,7 @@ account identifiers.
 """
 
 from datetime import date, timedelta
+import re
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -53,6 +54,38 @@ from app.security import generate_display_token
 
 admin_router = APIRouter(prefix="/families", tags=["display"], responses={**AUTH_RESPONSES})
 display_router = APIRouter(prefix="/display", tags=["display"], responses={**AUTH_RESPONSES})
+
+_HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-f]{3}|[0-9a-f]{6})$", re.IGNORECASE)
+
+
+def _sanitize_display_color(value: str | None) -> str | None:
+    if not isinstance(value, str):
+        return None
+    trimmed = value.strip()
+    return trimmed if _HEX_COLOR_RE.fullmatch(trimmed) else None
+
+
+def _participant_colors(assigned_to, member_colors_by_user_id: dict[int, str]) -> list[str]:
+    """Return display-safe member colors for an event assignment."""
+    if assigned_to == "all":
+        return list(dict.fromkeys(member_colors_by_user_id.values()))
+    if not isinstance(assigned_to, list):
+        return []
+
+    colors: list[str] = []
+    seen: set[str] = set()
+    for value in assigned_to:
+        if isinstance(value, bool):
+            continue
+        try:
+            user_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        color = member_colors_by_user_id.get(user_id)
+        if color and color not in seen:
+            seen.add(color)
+            colors.append(color)
+    return colors
 
 
 def _device_config(device: DisplayDevice) -> DisplayDeviceConfig:
@@ -279,8 +312,10 @@ def display_dashboard(
 
     memberships = (
         db.query(Membership)
+        .join(User, User.id == Membership.user_id)
         .options(joinedload(Membership.user))
         .filter(Membership.family_id == device.family_id)
+        .order_by(User.display_name.asc(), Membership.user_id.asc())
         .all()
     )
     members = [
@@ -292,6 +327,11 @@ def display_dashboard(
         for m in memberships
         if m.user
     ]
+    member_colors_by_user_id = {
+        int(m.user_id): color
+        for m in memberships
+        if (color := _sanitize_display_color(m.color))
+    }
 
     now = utcnow()
     range_end = now + timedelta(days=14)
@@ -330,6 +370,7 @@ def display_dashboard(
             color=o.get("color"),
             category=o.get("category"),
             icon=o.get("icon"),
+            participant_colors=_participant_colors(o.get("assigned_to"), member_colors_by_user_id),
         )
         for o in occurrences[:8]
     ]

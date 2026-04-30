@@ -78,6 +78,7 @@ def _seed_member_with_pat(
     family_id: int | None = None,
     email: str | None = None,
     profile_image: str | None = None,
+    color: str | None = None,
 ) -> tuple[str, int, int]:
     """Seed a user + family + membership + PAT. Returns (token, user_id, family_id)."""
     db = TestSession()
@@ -97,7 +98,7 @@ def _seed_member_with_pat(
         family_id = int(family.id)
     assert family_id is not None
 
-    db.add(Membership(user_id=user.id, family_id=family_id, role=role, is_adult=is_adult))
+    db.add(Membership(user_id=user.id, family_id=family_id, role=role, is_adult=is_adult, color=color))
 
     plain = f"{PAT_PREFIX}displaytest-{suffix}"
     lookup = hashlib.sha256(plain.encode()).hexdigest()
@@ -338,7 +339,7 @@ class TestDisplayRuntime:
         # Whitelist exactly the keys we expect.
         assert set(evt.keys()) == {
             "title", "starts_at", "ends_at", "all_day",
-            "occurrence_date", "color", "category", "icon",
+            "occurrence_date", "color", "category", "icon", "participant_colors",
         }, evt
         assert evt["icon"] == "soccer"
         # Defensive: forbidden fields must not appear in the event JSON.
@@ -352,6 +353,82 @@ class TestDisplayRuntime:
             assert forbidden not in events_json, forbidden
         # And the literal source_url must NEVER appear in the response.
         assert "leak.example.com" not in dash.text
+
+    def test_display_dashboard_event_participant_colors_are_display_safe(self):
+        """Expose only participant colors for assigned events, never user identifiers."""
+        admin_token, admin_user_id, family_id = _seed_member_with_pat(
+            "participantAdmin", role="admin", is_adult=True, color="#7c3aed"
+        )
+        _, kid_user_id, _ = _seed_member_with_pat(
+            "participantKid",
+            role="member",
+            is_adult=False,
+            family_id=family_id,
+            color="#f43f5e",
+        )
+        _, invalid_color_user_id, _ = _seed_member_with_pat(
+            "participantBadColor",
+            role="member",
+            is_adult=False,
+            family_id=family_id,
+            color="url(https://example.com/bad)",
+        )
+        _, outsider_user_id, _ = _seed_member_with_pat(
+            "participantOutsider", role="member", is_adult=False, color="#10b981"
+        )
+
+        from datetime import datetime, timedelta, timezone
+        from app.models import CalendarEvent
+
+        db = TestSession()
+        future = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
+        db.add(CalendarEvent(
+            family_id=family_id,
+            title="Two kids practice",
+            starts_at=future,
+            ends_at=future + timedelta(hours=1),
+            all_day=False,
+            assigned_to=[admin_user_id, kid_user_id, invalid_color_user_id, outsider_user_id, 999999],
+        ))
+        db.add(CalendarEvent(
+            family_id=family_id,
+            title="Family dinner",
+            starts_at=future + timedelta(hours=2),
+            ends_at=future + timedelta(hours=3),
+            all_day=False,
+            assigned_to="all",
+        ))
+        db.add(CalendarEvent(
+            family_id=family_id,
+            title="General reminder",
+            starts_at=future + timedelta(hours=4),
+            ends_at=future + timedelta(hours=5),
+            all_day=False,
+            assigned_to=None,
+        ))
+        db.commit()
+        db.close()
+
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Kitchen"},
+            headers=_auth(admin_token),
+        )
+        token = resp.json()["token"]
+
+        dash = client.get("/display/dashboard", headers=_auth(token))
+        assert dash.status_code == 200, dash.text
+        events = {event["title"]: event for event in dash.json()["next_events"]}
+
+        assert events["Two kids practice"]["participant_colors"] == ["#7c3aed", "#f43f5e"]
+        assert events["Family dinner"]["participant_colors"] == ["#7c3aed", "#f43f5e"]
+        assert events["General reminder"]["participant_colors"] == []
+
+        events_json = json_module.dumps(dash.json()["next_events"])
+        assert "assigned_to" not in events_json
+        assert "user_id" not in events_json
+        assert "#10b981" not in events_json
+        assert "url(https://example.com/bad)" not in events_json
 
 
 class TestDisplayTokenIsolation:

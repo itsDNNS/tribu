@@ -34,10 +34,27 @@ function localDateTimeInputValue(date) {
 test.describe('Display mode', () => {
   test('renders the paired wall display without normal app bootstrap or personal data', async ({ page, apiCtx, testUser }) => {
     const familyId = await getFamilyId(apiCtx);
+    const membersRes = await apiCtx.get(`/api/families/${familyId}/members`);
+    expect(membersRes.ok()).toBeTruthy();
+    const members = await membersRes.json();
+    const currentMember = members.find((member) => member.email === testUser.email);
+    expect(currentMember).toBeTruthy();
+
+    const colorRes = await apiCtx.patch(`/api/families/${familyId}/members/me/color`, {
+      data: { color: '#7c3aed' },
+    });
+    expect(colorRes.ok()).toBeTruthy();
+
     const focusEventTime = new Date(Date.now() + 60 * 60 * 1000);
     await seedCalendarEvent(apiCtx, familyId, {
       title: 'Dinner Plan',
       starts_at: localDateTimeInputValue(focusEventTime),
+      assigned_to: [currentMember.user_id],
+    });
+    await seedCalendarEvent(apiCtx, familyId, {
+      title: 'General Reminder',
+      starts_at: localDateTimeInputValue(new Date(Date.now() + 2 * 60 * 60 * 1000)),
+      assigned_to: null,
     });
     const created = await createDisplayDevice(apiCtx, familyId, 'Kitchen Tablet');
 
@@ -57,6 +74,9 @@ test.describe('Display mode', () => {
     // each region to avoid strict-mode ambiguity from the duplicate title.
     await expect(page.getByTestId('display-focus')).toContainText('Dinner Plan');
     await expect(page.getByTestId('display-events')).toContainText('Dinner Plan');
+    const participantMarkers = page.getByTestId('display-event-participants');
+    await expect(participantMarkers).toHaveCount(1);
+    await expect(participantMarkers.first()).toHaveAttribute('aria-label', '1 participant');
     await expect(page.getByText(testUser.displayName)).toBeVisible();
 
     await expect(page).toHaveURL(/\/display$/);
