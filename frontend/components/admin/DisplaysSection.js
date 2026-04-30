@@ -490,6 +490,16 @@ function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
     onChange({ layout_config: { columns: layout.columns, rows: layout.rows, widgets: nextWidgets } });
   }
 
+  function moveSlot(index, dx, dy) {
+    const widget = layout.widgets[index];
+    updateSlot(index, { x: widget.x + dx, y: widget.y + dy });
+  }
+
+  function resizeSlot(index, dw, dh) {
+    const widget = layout.widgets[index];
+    updateSlot(index, { w: widget.w + dw, h: widget.h + dh });
+  }
+
   return (
     <div className="adm-form-grid" data-testid="display-config-controls">
       <div className="form-field">
@@ -687,6 +697,88 @@ function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
                 data-testid={`display-slot-editor-row-${idx}-h`}
                 aria-label={`${t(messages, 'display_slot_h_label')} ${idx + 1}`}
               />
+              <div className="display-slot-visual-controls" aria-label={`${widgetLabel(widget.type, messages)} ${idx + 1}`}>
+                <button
+                  type="button"
+                  className="display-slot-control-btn"
+                  onClick={() => moveSlot(idx, 0, -1)}
+                  disabled={widget.y <= 0}
+                  data-testid={`display-slot-editor-row-${idx}-move-up`}
+                  aria-label={`${t(messages, 'display_slot_move_up')} ${idx + 1}`}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="display-slot-control-btn"
+                  onClick={() => moveSlot(idx, -1, 0)}
+                  disabled={widget.x <= 0}
+                  data-testid={`display-slot-editor-row-${idx}-move-left`}
+                  aria-label={`${t(messages, 'display_slot_move_left')} ${idx + 1}`}
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  className="display-slot-control-btn"
+                  onClick={() => moveSlot(idx, 1, 0)}
+                  disabled={widget.x >= layout.columns - widget.w}
+                  data-testid={`display-slot-editor-row-${idx}-move-right`}
+                  aria-label={`${t(messages, 'display_slot_move_right')} ${idx + 1}`}
+                >
+                  →
+                </button>
+                <button
+                  type="button"
+                  className="display-slot-control-btn"
+                  onClick={() => moveSlot(idx, 0, 1)}
+                  disabled={widget.y >= layout.rows - widget.h}
+                  data-testid={`display-slot-editor-row-${idx}-move-down`}
+                  aria-label={`${t(messages, 'display_slot_move_down')} ${idx + 1}`}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  className="display-slot-control-btn display-slot-control-btn--wide"
+                  onClick={() => resizeSlot(idx, 1, 0)}
+                  disabled={widget.w >= layout.columns - widget.x}
+                  data-testid={`display-slot-editor-row-${idx}-widen`}
+                  aria-label={`${t(messages, 'display_slot_widen')} ${idx + 1}`}
+                >
+                  +W
+                </button>
+                <button
+                  type="button"
+                  className="display-slot-control-btn display-slot-control-btn--wide"
+                  onClick={() => resizeSlot(idx, -1, 0)}
+                  disabled={widget.w <= 1}
+                  data-testid={`display-slot-editor-row-${idx}-narrow`}
+                  aria-label={`${t(messages, 'display_slot_narrow')} ${idx + 1}`}
+                >
+                  -W
+                </button>
+                <button
+                  type="button"
+                  className="display-slot-control-btn display-slot-control-btn--wide"
+                  onClick={() => resizeSlot(idx, 0, 1)}
+                  disabled={widget.h >= layout.rows - widget.y}
+                  data-testid={`display-slot-editor-row-${idx}-taller`}
+                  aria-label={`${t(messages, 'display_slot_taller')} ${idx + 1}`}
+                >
+                  +H
+                </button>
+                <button
+                  type="button"
+                  className="display-slot-control-btn display-slot-control-btn--wide"
+                  onClick={() => resizeSlot(idx, 0, -1)}
+                  disabled={widget.h <= 1}
+                  data-testid={`display-slot-editor-row-${idx}-shorter`}
+                  aria-label={`${t(messages, 'display_slot_shorter')} ${idx + 1}`}
+                >
+                  -H
+                </button>
+              </div>
             </div>
           ))}
         </div>
