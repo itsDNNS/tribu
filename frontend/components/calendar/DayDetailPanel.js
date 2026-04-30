@@ -52,6 +52,7 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
             </div>
           )}
           <input className="form-input" value={cal.editTitle} onChange={e => cal.setEditTitle(e.target.value)} required />
+          <input className="form-input" value={cal.editLocation} onChange={e => cal.setEditLocation(e.target.value)} placeholder={t(messages, 'module.calendar.location')} />
           <div className="cal-form-row">
             <input className="form-input cal-form-datetime" type="datetime-local" value={cal.editStartsAt} onChange={e => cal.setEditStartsAt(e.target.value)} required />
             <input className="form-input cal-form-datetime" type="datetime-local" value={cal.editEndsAt} onChange={e => cal.setEditEndsAt(e.target.value)} />
@@ -98,6 +99,7 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
           <div className="cal-form-section-title">{t(messages, 'module.calendar.quick_add')}</div>
           <form onSubmit={cal.createEvent} className="quick-add-form">
             <input className="form-input cal-form-input-lg" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={e => cal.setTitle(e.target.value)} required />
+            <input className="form-input" placeholder={t(messages, 'module.calendar.location')} value={cal.location} onChange={e => cal.setLocation(e.target.value)} />
             <div className="cal-form-row">
               <input className="form-input cal-form-datetime" type="datetime-local" value={cal.startsAt} onChange={e => cal.setStartsAt(e.target.value)} required />
               <input className="form-input cal-form-datetime" type="datetime-local" value={cal.endsAt} onChange={e => cal.setEndsAt(e.target.value)} />

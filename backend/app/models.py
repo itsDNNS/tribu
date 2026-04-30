@@ -74,6 +74,7 @@ class CalendarEvent(Base):
     family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
+    location = Column(String, nullable=True)
     starts_at = Column(DateTime, nullable=False)
     ends_at = Column(DateTime, nullable=True)
     all_day = Column(Boolean, nullable=False, default=False)

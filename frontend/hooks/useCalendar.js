@@ -29,6 +29,7 @@ export function useCalendar() {
   // Event form
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
   const [allDay, setAllDay] = useState(false);
@@ -48,6 +49,7 @@ export function useCalendar() {
   const [editStartsAt, setEditStartsAt] = useState('');
   const [editEndsAt, setEditEndsAt] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editLocation, setEditLocation] = useState('');
   const [editAllDay, setEditAllDay] = useState(false);
   const [editRecurrence, setEditRecurrence] = useState('');
   const [editRecurrenceEnd, setEditRecurrenceEnd] = useState('');
@@ -221,6 +223,7 @@ export function useCalendar() {
     const assignedPayload = assignedTo.includes('all') ? 'all' : assignedTo.length > 0 ? assignedTo.map(Number) : null;
     const payload = {
       family_id: Number(familyId), title, description: description || null,
+      location: location || null,
       starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
       recurrence: recurrence || null,
       recurrence_end: toIsoOrNull(recurrenceEnd),
@@ -243,7 +246,7 @@ export function useCalendar() {
       if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
-    setTitle(''); setDescription(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
+    setTitle(''); setDescription(''); setLocation(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
     setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]); setColor(''); setCategory('');
     const msg = t(messages, 'toast.event_created');
     toastSuccess(msg);
@@ -261,6 +264,7 @@ export function useCalendar() {
     const ea = ev.ends_at ? String(ev.ends_at).slice(0, 16) : '';
     setEditEndsAt(ea);
     setEditDescription(ev.description || '');
+    setEditLocation(ev.location || '');
     setEditAllDay(ev.all_day || false);
     setEditRecurrence(ev.recurrence || '');
     setEditRecurrenceEnd(ev.recurrence_end ? String(ev.recurrence_end).slice(0, 10) : '');
@@ -293,6 +297,7 @@ export function useCalendar() {
       starts_at: toIsoOrNull(editStartsAt),
       ends_at: toIsoOrNull(editEndsAt),
       description: editDescription || null,
+      location: editLocation || null,
       recurrence: editRecurrence || '',
       recurrence_end: editRecurrence ? toIsoOrNull(editRecurrenceEnd) : null,
       assigned_to: assignedPayload,
@@ -381,6 +386,7 @@ export function useCalendar() {
     selectedDate, setSelectedDate,
     title, setTitle,
     description, setDescription,
+    location, setLocation,
     startsAt, setStartsAt,
     endsAt, setEndsAt,
     allDay, setAllDay,
@@ -399,6 +405,7 @@ export function useCalendar() {
     editingEvent, startEdit, cancelEdit, saveEdit,
     editTitle, setEditTitle, editStartsAt, setEditStartsAt,
     editEndsAt, setEditEndsAt, editDescription, setEditDescription,
+    editLocation, setEditLocation,
     editAllDay, setEditAllDay,
     editRecurrence, setEditRecurrence,
     editRecurrenceEnd, setEditRecurrenceEnd,

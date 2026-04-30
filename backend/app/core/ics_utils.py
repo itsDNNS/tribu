@@ -39,6 +39,8 @@ def events_to_ics(events, calendar_name="Tribu") -> str:
 
         if ev.description:
             vevent.add("description", ev.description)
+        if getattr(ev, "location", None):
+            vevent.add("location", ev.location)
 
         if ev.all_day:
             dt_start = ev.starts_at.date() if isinstance(ev.starts_at, datetime) else ev.starts_at
@@ -214,6 +216,7 @@ def ics_to_event_dicts(
             "family_id": family_id,
             "title": summary.strip(),
             "description": str(component.get("description", "")).strip() or None,
+            "location": str(component.get("location", "")).strip() or None,
             "starts_at": starts_at,
             "ends_at": ends_at,
             "all_day": all_day,
