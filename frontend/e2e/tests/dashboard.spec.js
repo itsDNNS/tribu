@@ -1,5 +1,5 @@
 const { test, expect } = require('../helpers/fixtures');
-const { getFamilyId, seedTask } = require('../helpers/api-setup');
+const { getFamilyId, seedCalendarEvent, seedTask } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
 test.describe('Dashboard', () => {
@@ -89,6 +89,11 @@ test.describe('Dashboard', () => {
       title: 'E2E Activity Task',
       description: 'private detail should stay out of the activity feed',
     });
+    await seedCalendarEvent(apiCtx, familyId, {
+      title: 'E2E Calendar Activity',
+      description: 'calendar private detail should stay out',
+      location: 'calendar private location should stay out',
+    });
 
     await page.reload();
     await page.locator('#main-content').waitFor({ timeout: 15000 });
@@ -99,7 +104,9 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Activity history' })).toBeVisible({ timeout: 10000 });
     const activityFeed = page.getByRole('region', { name: 'Recent activity' });
     await expect(activityFeed).toContainText(`${testUser.displayName} created task "E2E Activity Task"`, { timeout: 10000 });
+    await expect(activityFeed).toContainText(`${testUser.displayName} created calendar event "E2E Calendar Activity"`, { timeout: 10000 });
     await expect(activityFeed).not.toContainText('private detail');
+    await expect(activityFeed).not.toContainText('calendar private location');
   });
 
   test('captures a quick note and triages it from the dashboard inbox', async ({ authedPage: page }) => {

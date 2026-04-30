@@ -186,6 +186,57 @@ def test_shopping_activity_and_family_boundaries():
     assert "private note" not in str(feed.json())
 
 
+def test_calendar_event_activity_is_recorded_public_safely():
+    token, family_id, _ = _seed_member("*", "calendar", display_name="Alex")
+    intruder_token, _, _ = _seed_member("*", "calendar-intruder", display_name="Other")
+
+    created = client.post(
+        "/calendar/events",
+        json={
+            "family_id": family_id,
+            "title": "  Piano lesson with a very very very long private-ish suffix that should be clipped  ",
+            "description": "teacher phone and door code should not leak",
+            "location": "Private home address should not leak",
+            "starts_at": "2026-05-01T15:00:00Z",
+            "ends_at": "2026-05-01T16:00:00Z",
+        },
+        headers=_auth(token),
+    )
+    assert created.status_code == 200, created.json()
+    event_id = created.json()["id"]
+
+    updated = client.patch(
+        f"/calendar/events/{event_id}",
+        json={"title": "Piano lesson", "description": "new private note"},
+        headers=_auth(token),
+    )
+    assert updated.status_code == 200, updated.json()
+
+    deleted = client.delete(f"/calendar/events/{event_id}", headers=_auth(token))
+    assert deleted.status_code == 200, deleted.json()
+
+    denied = client.get(f"/activity?family_id={family_id}", headers=_auth(intruder_token))
+    assert denied.status_code == 403
+
+    feed = client.get(f"/activity?family_id={family_id}&limit=10", headers=_auth(token))
+    assert feed.status_code == 200, feed.json()
+    data = feed.json()
+    assert data["total"] == 3
+    assert [(item["action"], item["object_type"]) for item in data["items"]] == [
+        ("deleted", "calendar_event"),
+        ("updated", "calendar_event"),
+        ("created", "calendar_event"),
+    ]
+    assert data["items"][0]["summary"] == 'Alex deleted calendar event "Piano lesson"'
+    assert data["items"][1]["summary"] == 'Alex updated calendar event "Piano lesson"'
+    assert data["items"][2]["summary"].startswith('Alex created calendar event "Piano lesson with a very very')
+    serialized = str(data)
+    assert "teacher phone" not in serialized
+    assert "door code" not in serialized
+    assert "Private home address" not in serialized
+    assert "new private note" not in serialized
+
+
 def test_activity_feed_orders_and_paginates():
     token, family_id, user_id = _seed_member("*", "pages")
     db = TestSession()

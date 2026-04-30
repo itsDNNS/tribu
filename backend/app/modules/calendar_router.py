@@ -6,6 +6,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import cache
+from app.core.activity import record_activity
 from app.core.clock import utcnow
 from app.core.calendar_subscriptions import (
     IcsSubscriptionError,
@@ -134,6 +135,45 @@ def calendar_feed_ics(
 
 def _subscription_label(source_name: str | None, source_url: str) -> str:
     return (source_name or "").strip() or hostname_from_url(source_url) or source_url
+
+
+MEANINGFUL_EVENT_ACTIVITY_FIELDS = {
+    "title",
+    "location",
+    "starts_at",
+    "ends_at",
+    "all_day",
+    "recurrence",
+    "recurrence_end",
+    "assigned_to",
+}
+
+
+def _calendar_event_snapshot(event: CalendarEvent) -> dict:
+    return {field: getattr(event, field) for field in MEANINGFUL_EVENT_ACTIVITY_FIELDS}
+
+
+def _record_calendar_activity(
+    db: Session,
+    *,
+    event: CalendarEvent,
+    user: User,
+    action: str,
+    object_label: str | None = None,
+    verb: str | None = None,
+) -> None:
+    record_activity(
+        db,
+        family_id=event.family_id,
+        actor_user_id=user.id,
+        actor_display_name=user.display_name,
+        action=action,
+        object_type="calendar_event",
+        object_id=event.id,
+        object_label=object_label or event.title,
+        verb=verb or action,
+        object_kind="calendar event",
+    )
 
 
 def _safe_subscription_error(exc: Exception) -> str:
@@ -738,6 +778,7 @@ def create_calendar_event(
     db.flush()
 
     _create_assignment_notifications(db, event, user.id)
+    _record_calendar_activity(db, event=event, user=user, action="created")
 
     db.commit()
     db.refresh(event)
@@ -771,6 +812,7 @@ def update_calendar_event(
         raise HTTPException(status_code=404, detail=error_detail(EVENT_NOT_FOUND))
 
     ensure_adult(db, user.id, event.family_id)
+    before = _calendar_event_snapshot(event)
 
     if payload.title is not None:
         event.title = payload.title
@@ -809,6 +851,9 @@ def update_calendar_event(
     if event.ends_at and event.ends_at < event.starts_at:
         raise HTTPException(status_code=400, detail=error_detail(END_BEFORE_START))
 
+    if _calendar_event_snapshot(event) != before:
+        _record_calendar_activity(db, event=event, user=user, action="updated")
+
     db.commit()
     db.refresh(event)
     cache.invalidate_pattern(f"tribu:dashboard:{event.family_id}:*")
@@ -842,10 +887,13 @@ def delete_calendar_event(
         if occurrence_date not in excluded:
             excluded.append(occurrence_date)
         event.excluded_dates = excluded
+        _record_calendar_activity(db, event=event, user=user, action="removed occurrence")
         db.commit()
         cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")
         return {"status": "occurrence_excluded", "event_id": event_id, "excluded_date": occurrence_date}
 
+    object_label = event.title
+    _record_calendar_activity(db, event=event, user=user, action="deleted", object_label=object_label)
     db.delete(event)
     db.commit()
     cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")
