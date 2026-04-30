@@ -84,6 +84,7 @@ class CalendarEvent(Base):
     assigned_to = Column(JSON, nullable=True)
     color = Column(String, nullable=True)
     category = Column(String, nullable=True)
+    icon = Column(String(50), nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(

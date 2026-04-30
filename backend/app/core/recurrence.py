@@ -86,6 +86,7 @@ def _event_to_dict(event) -> dict:
         "assigned_to": event.assigned_to,
         "color": event.color,
         "category": event.category,
+        "icon": event.icon,
         "created_by_user_id": event.created_by_user_id,
         "created_at": event.created_at,
     }

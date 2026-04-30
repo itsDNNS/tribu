@@ -4,6 +4,7 @@ import { useCalendar } from '../../hooks/useCalendar';
 import { t } from '../../lib/i18n';
 import { DeleteRecurringDialog, EventCard } from './CalendarHelpers';
 import { getMemberColor } from '../../lib/member-colors';
+import { getCalendarEventIcon } from '../../lib/calendar-icons';
 import DayDetailPanel from './DayDetailPanel';
 
 export default function CalendarView() {
@@ -14,10 +15,17 @@ export default function CalendarView() {
 
   const today = new Date();
   const formatCountLabel = (count, singular, plural) => `${count} ${count === 1 ? singular : plural}`;
-  const buildDayContentLabel = (birthdayCount, eventCount) => {
+  const buildDayContentLabel = (birthdayCount, regularEvents) => {
+    const eventCount = regularEvents.length;
+    const iconLabels = regularEvents
+      .map((ev) => getCalendarEventIcon(ev.icon)?.label)
+      .filter(Boolean);
     const parts = [];
     if (birthdayCount > 0) parts.push(formatCountLabel(birthdayCount, 'birthday', 'birthdays'));
-    if (eventCount > 0) parts.push(formatCountLabel(eventCount, 'event', 'events'));
+    if (eventCount > 0) {
+      const eventLabel = formatCountLabel(eventCount, 'event', 'events');
+      parts.push(iconLabels.length > 0 ? `${eventLabel}: ${iconLabels.join(', ')}` : eventLabel);
+    }
     return parts.join(', ');
   };
   const isToday = (day) => {
@@ -133,7 +141,7 @@ export default function CalendarView() {
                 const regularEvents = (c.events || []).filter((ev) => !ev._isBirthday);
                 const birthdayCount = birthdayEvents.length;
                 const regularEventCount = regularEvents.length;
-                const dayContentLabel = buildDayContentLabel(birthdayCount, regularEventCount);
+                const dayContentLabel = buildDayContentLabel(birthdayCount, regularEvents);
                 const dayLabel = dayDate
                   ? dayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' }) + (dayContentLabel ? `, ${dayContentLabel}` : '')
                   : undefined;
@@ -167,9 +175,20 @@ export default function CalendarView() {
                                 <Cake size={11} strokeWidth={2.4} aria-hidden="true" />
                               </div>
                             )}
-                            {regularEvents.slice(0, birthdayCount > 0 ? 2 : 3).map((ev, di) => (
-                              <div key={ev.id || di} className="calendar-day-dot" style={{ background: ev.color || getMemberColor(null, di) }} />
-                            ))}
+                            {regularEvents.slice(0, birthdayCount > 0 ? 2 : 3).map((ev, di) => {
+                              const eventIcon = getCalendarEventIcon(ev.icon);
+                              return eventIcon ? (
+                                <div
+                                  key={ev.id || di}
+                                  className="calendar-day-icon-indicator"
+                                  title={eventIcon.label}
+                                >
+                                  {eventIcon.emoji}
+                                </div>
+                              ) : (
+                                <div key={ev.id || di} className="calendar-day-dot" style={{ background: ev.color || getMemberColor(null, di) }} />
+                              );
+                            })}
                           </div>
                         )}
                       </>

@@ -9,6 +9,7 @@ from enum import Enum
 
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
+from app.core.calendar_icons import normalize_calendar_event_icon
 from app.core.notification_preferences import normalize_push_categories
 
 
@@ -363,10 +364,16 @@ class CalendarEventCreate(BaseModel):
     assigned_to: Optional[Union[list[int], str]] = Field(None, description="Assigned members: null (nobody), 'all' (whole family), or list of user IDs")
     color: Optional[str] = Field(None, description="Event color as hex string (e.g. '#7c3aed')")
     category: Optional[str] = Field(None, description="Event category label")
+    icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"family_id": 1, "title": "Family Dinner", "starts_at": "2026-03-01T18:00:00", "ends_at": "2026-03-01T20:00:00", "all_day": False, "recurrence": "weekly", "recurrence_end": "2026-06-01T00:00:00", "assigned_to": [1, 3]}]
     })
+
+    @field_validator("icon")
+    @classmethod
+    def validate_icon(cls, v: Optional[str]) -> Optional[str]:
+        return normalize_calendar_event_icon(v)
 
 
 class CalendarEventUpdate(BaseModel):
@@ -382,6 +389,12 @@ class CalendarEventUpdate(BaseModel):
     assigned_to: Optional[Union[list[int], str]] = Field(None, description="Assigned members: null (nobody), 'all' (whole family), or list of user IDs")
     color: Optional[str] = Field(None, description="Event color as hex string")
     category: Optional[str] = Field(None, description="Event category label")
+    icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
+
+    @field_validator("icon")
+    @classmethod
+    def validate_icon(cls, v: Optional[str]) -> Optional[str]:
+        return normalize_calendar_event_icon(v)
 
 
 class CalendarEventResponse(BaseModel):
@@ -403,6 +416,7 @@ class CalendarEventResponse(BaseModel):
     assigned_to: Optional[Union[list[int], str]] = Field(None, description="Assigned members: null, 'all', or list of user IDs")
     color: Optional[str] = Field(None, description="Event color as hex string")
     category: Optional[str] = Field(None, description="Event category label")
+    icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
     created_by_user_id: Optional[int] = Field(None, description="User who created the event")
     created_at: datetime = Field(..., description="Creation timestamp")
     source_type: str = Field("local", description="Where the event came from: 'local', 'import', or 'subscription'")
@@ -1788,6 +1802,7 @@ class DisplayDashboardEvent(BaseModel):
     occurrence_date: Optional[str] = Field(None, description="Date of this specific occurrence (YYYY-MM-DD) for recurring events")
     color: Optional[str] = Field(None, description="Event color as hex string, if set")
     category: Optional[str] = Field(None, description="Event category label")
+    icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
 
 
 class DisplayDashboardBirthday(BaseModel):

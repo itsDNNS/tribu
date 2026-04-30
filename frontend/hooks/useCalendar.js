@@ -42,6 +42,7 @@ export function useCalendar() {
   // Color and category
   const [color, setColor] = useState('');
   const [category, setCategory] = useState('');
+  const [icon, setIcon] = useState('');
 
   // Edit state
   const [editingEvent, setEditingEvent] = useState(null);
@@ -56,6 +57,7 @@ export function useCalendar() {
   const [editAssignedTo, setEditAssignedTo] = useState([]);
   const [editColor, setEditColor] = useState('');
   const [editCategory, setEditCategory] = useState('');
+  const [editIcon, setEditIcon] = useState('');
 
   // Delete confirmation for recurring events
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -230,6 +232,7 @@ export function useCalendar() {
       assigned_to: assignedPayload,
       color: color || null,
       category: category || null,
+      icon: icon || null,
     };
     if (demoMode) {
       const newEvent = { id: Date.now(), ...payload, is_recurring: !!recurrence, occurrence_date: null };
@@ -247,7 +250,7 @@ export function useCalendar() {
       await Promise.all([loadEventsForRange(), loadDashboard()]);
     }
     setTitle(''); setDescription(''); setLocation(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
-    setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]); setColor(''); setCategory('');
+    setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]); setColor(''); setCategory(''); setIcon('');
     const msg = t(messages, 'toast.event_created');
     toastSuccess(msg);
     announce(msg);
@@ -274,6 +277,7 @@ export function useCalendar() {
     else setEditAssignedTo([]);
     setEditColor(ev.color || '');
     setEditCategory(ev.category || '');
+    setEditIcon(ev.icon || '');
   }
 
   function cancelEdit() {
@@ -302,6 +306,7 @@ export function useCalendar() {
       recurrence_end: editRecurrence ? toIsoOrNull(editRecurrenceEnd) : null,
       assigned_to: assignedPayload,
       color: editColor || null,
+      icon: editIcon || null,
     };
     if (demoMode) {
       setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, ...payload } : ev));
@@ -395,6 +400,7 @@ export function useCalendar() {
     assignedTo, setAssignedTo,
     color, setColor,
     category, setCategory,
+    icon, setIcon,
     deleteConfirm, setDeleteConfirm,
     birthdayName, setBirthdayName,
     birthdayMonth, setBirthdayMonth,
@@ -412,6 +418,7 @@ export function useCalendar() {
     editAssignedTo, setEditAssignedTo,
     editColor, setEditColor,
     editCategory, setEditCategory,
+    editIcon, setEditIcon,
   };
 }
 

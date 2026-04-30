@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react';
 import { t } from '../../lib/i18n';
 import { RECURRENCE_OPTIONS, AssignChips, EventCard } from './CalendarHelpers';
 import { COLOR_PALETTE } from '../../lib/member-colors';
+import { CALENDAR_EVENT_ICON_OPTIONS } from '../../lib/calendar-icons';
 
 export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat, events, members, isChild, demoMode, setActiveView, isMobile }) {
   if (!cal.selectedDate) return null;
@@ -85,6 +86,15 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
               ))}
             </div>
           </div>
+          <div>
+            <label className="cal-form-label" htmlFor="calendar-edit-icon">{t(messages, 'module.calendar.icon')}</label>
+            <select id="calendar-edit-icon" className="form-input" value={cal.editIcon} onChange={e => cal.setEditIcon(e.target.value)}>
+              <option value="">{t(messages, 'module.calendar.icon_none')}</option>
+              {CALENDAR_EVENT_ICON_OPTIONS.map(option => (
+                <option key={option.key} value={option.key}>{option.emoji} {option.label}</option>
+              ))}
+            </select>
+          </div>
           <input className="form-input" value={cal.editDescription} onChange={e => cal.setEditDescription(e.target.value)} placeholder={t(messages, 'module.calendar.description')} />
           <div className="cal-form-actions">
             <button className="btn-sm" type="submit">{t(messages, 'save')}</button>
@@ -131,6 +141,15 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
                     aria-label={c} />
                 ))}
               </div>
+            </div>
+            <div>
+              <label className="cal-form-label" htmlFor="calendar-create-icon">{t(messages, 'module.calendar.icon')}</label>
+              <select id="calendar-create-icon" className="form-input" value={cal.icon} onChange={e => cal.setIcon(e.target.value)}>
+                <option value="">{t(messages, 'module.calendar.icon_none')}</option>
+                {CALENDAR_EVENT_ICON_OPTIONS.map(option => (
+                  <option key={option.key} value={option.key}>{option.emoji} {option.label}</option>
+                ))}
+              </select>
             </div>
             <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
           </form>

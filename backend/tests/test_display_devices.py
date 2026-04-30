@@ -300,6 +300,7 @@ class TestDisplayRuntime:
             assigned_to=[admin_user_id],
             color="#7c3aed",
             category="sports",
+            icon="soccer",
             created_by_user_id=admin_user_id,
             source_type="subscription",
             source_name="Coach Feed",
@@ -324,8 +325,9 @@ class TestDisplayRuntime:
         # Whitelist exactly the keys we expect.
         assert set(evt.keys()) == {
             "title", "starts_at", "ends_at", "all_day",
-            "occurrence_date", "color", "category",
+            "occurrence_date", "color", "category", "icon",
         }, evt
+        assert evt["icon"] == "soccer"
         # Defensive: forbidden fields must not appear in the event JSON.
         events_json = json_module.dumps(body["next_events"])
         for forbidden in (

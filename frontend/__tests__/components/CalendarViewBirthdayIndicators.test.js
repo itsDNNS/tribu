@@ -117,4 +117,17 @@ describe('CalendarView birthday month indicators', () => {
     expect(eventDay.querySelector('.calendar-day-birthday-indicator')).not.toBeInTheDocument();
     expect(eventDay.querySelectorAll('.calendar-day-dot')).toHaveLength(1);
   });
+
+  it('shows allowlisted event icons instead of regular dots in month cells', () => {
+    mockUseCalendar.mockReturnValue(baseCalendar([
+      emptyCell(),
+      monthCell(4, [{ id: 77, title: 'Soccer practice', color: '#16a34a', icon: 'soccer' }]),
+    ]));
+
+    render(<CalendarView />);
+
+    const eventDay = screen.getByRole('button', { name: /May 4, 1 event: Soccer training/i });
+    expect(eventDay.querySelector('.calendar-day-icon-indicator')).toHaveTextContent('⚽');
+    expect(eventDay.querySelector('.calendar-day-dot')).not.toBeInTheDocument();
+  });
 });

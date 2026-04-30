@@ -3,6 +3,7 @@ import { Cake, Download, MapPin, Pencil, Repeat, Rss, Trash2 } from 'lucide-reac
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
+import { getCalendarEventIcon } from '../../lib/calendar-icons';
 import AssignedBadges from '../AssignedBadges';
 
 export const RECURRENCE_OPTIONS = [
@@ -111,12 +112,14 @@ export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onE
   const editable = !!onEdit && !ev._isBirthday && !isImported;
   const cardClickable = editable;
   const mapsLinks = mapsLinksForLocation(ev.location);
+  const eventIcon = !ev._isBirthday ? getCalendarEventIcon(ev.icon) : null;
 
   return (
     <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index), cursor: cardClickable ? 'pointer' : undefined }} onClick={() => cardClickable && onEdit(ev)}>
       <div style={{ flex: 1 }}>
         <div className="event-card-title">
           {ev._isBirthday && <Cake size={14} style={{ color: '#f43f5e', flexShrink: 0 }} aria-hidden="true" />}
+          {eventIcon && <span className="event-card-icon" aria-label={eventIcon.label}>{eventIcon.emoji}</span>}
           {ev.title}
           {ev.is_recurring && <Repeat size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />}
           {isImported && (
