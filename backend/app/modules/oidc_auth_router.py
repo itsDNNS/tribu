@@ -33,7 +33,8 @@ from sqlalchemy.orm import Session
 
 from app.core import oidc as oidc_core
 from app.core.clock import utcnow
-from app.core.config import COOKIE_MAX_AGE, COOKIE_NAME, COOKIE_SECURE
+from app.core.config import COOKIE_SECURE
+from app.core.auth_sessions import issue_session_cookies
 from app.core.errors import (
     OIDC_ID_TOKEN_INVALID,
     OIDC_INVALID_CALLBACK,
@@ -44,7 +45,7 @@ from app.core.errors import (
 from app.core.utils import audit_log as _audit, resolve_base_url
 from app.database import get_db
 from app.models import FamilyInvitation, Membership, OIDCIdentity, User
-from app.security import JWT_SECRET, create_access_token
+from app.security import JWT_SECRET
 
 logger = logging.getLogger(__name__)
 
@@ -531,14 +532,9 @@ def callback(
     # transaction (identity link + membership + timestamp).
     oidc_core.record_successful_sso_login(db)
 
-    db.commit()
-
-    jwt_token = create_access_token(user_id=user.id, email=user.email)
     redirect_to = _safe_redirect(flow.get("redirect_to"))
     response = RedirectResponse(url=redirect_to, status_code=303)
-    response.set_cookie(
-        COOKIE_NAME, jwt_token, httponly=True, samesite="lax",
-        secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
-    )
+    issue_session_cookies(response, db, user)
+    db.commit()
     _clear_flow_cookie(response)
     return response

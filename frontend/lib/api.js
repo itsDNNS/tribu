@@ -1,9 +1,15 @@
 const API = '/api';
 
-async function request(path, options = {}) {
+async function request(path, options = {}, allowRefresh = true) {
   const res = await fetch(`${API}${path}`, { credentials: 'include', ...options });
   let data;
   try { data = await res.json(); } catch { data = null; }
+
+  if (res.status === 401 && allowRefresh && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
+    const refreshed = await request('/auth/refresh', { method: 'POST' }, false);
+    if (refreshed.ok) return request(path, options, false);
+  }
+
   return { ok: res.ok, status: res.status, data };
 }
 

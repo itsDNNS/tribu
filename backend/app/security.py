@@ -44,8 +44,9 @@ def verify_password(plain: str, hashed: str | None) -> bool:
 # ---------------------------------------------------------------------------
 
 def create_access_token(user_id: int, email: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS)
-    payload = {"sub": str(user_id), "email": email, "exp": expire}
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(hours=JWT_EXPIRE_HOURS)
+    payload = {"sub": str(user_id), "email": email, "iat": now.timestamp(), "exp": expire}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
 
 
@@ -58,6 +59,7 @@ def decode_token(token: str):
 # ---------------------------------------------------------------------------
 
 PAT_PREFIX = "tribu_pat_"
+REFRESH_TOKEN_PREFIX = "tribu_rt_"
 
 
 def generate_pat() -> tuple[str, str, str]:
@@ -122,6 +124,24 @@ def pat_lookup_key(plain: str) -> str:
 
 def is_pat(token: str) -> bool:
     return token.startswith(PAT_PREFIX)
+
+
+def generate_refresh_token() -> tuple[str, str, str]:
+    raw = secrets.token_urlsafe(32)
+    plain = f"{REFRESH_TOKEN_PREFIX}{raw}"
+    return plain, hash_refresh_token(plain), refresh_token_lookup_key(plain)
+
+
+def hash_refresh_token(plain: str) -> str:
+    return hash_pat(plain)
+
+
+def verify_refresh_token(plain: str, stored_hash: str) -> bool:
+    return verify_pat(plain, stored_hash)
+
+
+def refresh_token_lookup_key(plain: str) -> str:
+    return hashlib.sha256(plain.encode()).hexdigest()
 
 
 # ---------------------------------------------------------------------------
