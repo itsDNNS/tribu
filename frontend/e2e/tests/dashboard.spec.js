@@ -9,6 +9,16 @@ test.describe('Dashboard', () => {
     await expect(greeting).toContainText(testUser.displayName);
   });
 
+  test('keeps duplicate summary counts out of the dashboard header', async ({ authedPage: page }) => {
+    await expect(page.getByRole('group', { name: 'Quick actions' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('group', { name: 'Family at a glance' })).toHaveCount(0);
+    await expect(page.getByTestId('hero-chip-members')).toHaveCount(0);
+    await expect(page.getByTestId('hero-chip-events')).toHaveCount(0);
+    await expect(page.getByTestId('hero-chip-tasks')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Next events' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
+  });
+
   test('quick-action pills navigate to correct views', async ({ authedPage: page }) => {
     const quickActions = page.getByRole('group', { name: 'Quick actions' });
     await quickActions.waitFor({ timeout: 10000 });

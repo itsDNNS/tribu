@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ListChecks, Cake, Users, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -232,13 +232,6 @@ export default function DashboardView() {
     return () => { cancelled = true; };
   }, [demoMode]);
 
-  const todayEventCount = (summary.next_events || []).filter((ev) => {
-    const d = parseDate(ev.starts_at);
-    if (!d) return false;
-    const now = new Date();
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-  }).length;
-
   const adultQuickActions = [
     { key: 'event', label: t(messages, 'module.dashboard.quick_event'), icon: Calendar, onClick: () => setActiveView('calendar') },
     { key: 'task', label: t(messages, 'module.dashboard.quick_task'), icon: CheckSquare, onClick: () => setActiveView('tasks') },
@@ -253,12 +246,6 @@ export default function DashboardView() {
         { key: 'rewards', label: t(messages, 'module.dashboard.quick_rewards'), icon: CheckCircle, onClick: () => setActiveView('rewards') },
       ]
     : adultQuickActions;
-
-  const heroChips = [
-    ...(isAdmin ? [{ key: 'members', testId: 'hero-chip-members', value: members.length, label: t(messages, 'module.dashboard.chip_members'), icon: Users, onClick: () => setActiveView('admin') }] : []),
-    { key: 'events', testId: 'hero-chip-events', value: todayEventCount, label: t(messages, 'module.dashboard.chip_today_events'), icon: CalendarClock, onClick: () => setActiveView('calendar') },
-    { key: 'tasks', testId: 'hero-chip-tasks', value: openTasks.length, label: t(messages, 'module.dashboard.chip_open_tasks'), icon: ListChecks, onClick: () => setActiveView('tasks') },
-  ];
 
   const safeShoppingLists = Array.isArray(shoppingLists) ? shoppingLists : [];
   const hasShoppingContent = safeShoppingLists.some((list) => {
@@ -398,17 +385,6 @@ export default function DashboardView() {
     }
   };
 
-  const summaryText = (() => {
-    let s = todayEventCount > 0
-      ? t(messages, 'module.dashboard.summary_events').replace('{count}', todayEventCount)
-      : t(messages, 'module.dashboard.summary_no_events');
-    if (openTasks.length > 0) {
-      s += t(messages, 'module.dashboard.summary_tasks').replace('{count}', openTasks.length);
-    } else {
-      s += '.';
-    }
-    return s;
-  })();
   const availableDashboardModules = isChild
     ? DEFAULT_DASHBOARD_LAYOUT.filter((module) => module !== 'quick_capture')
     : DEFAULT_DASHBOARD_LAYOUT;
@@ -420,7 +396,6 @@ export default function DashboardView() {
       <div className="view-header">
         <div>
           <h1 className="view-title">{getGreeting(messages)}, {me?.display_name || 'User'}</h1>
-          <div className="view-subtitle">{summaryText}</div>
         </div>
         <div className="dashboard-header-actions">
           <div className="view-date">{todayStr}</div>
@@ -460,29 +435,6 @@ export default function DashboardView() {
           </ol>
         </section>
       )}
-
-      <div
-        className="hero-context-chips"
-        role="group"
-        aria-label={t(messages, 'module.dashboard.context_chips_label')}
-      >
-        {heroChips.map((chip) => {
-          const Icon = chip.icon;
-          return (
-            <button
-              key={chip.key}
-              type="button"
-              className="hero-chip"
-              data-testid={chip.testId}
-              onClick={chip.onClick}
-            >
-              <span className="hero-chip-icon" aria-hidden="true"><Icon size={14} /></span>
-              <span className="hero-chip-value">{chip.value}</span>
-              <span className="hero-chip-label">{chip.label}</span>
-            </button>
-          );
-        })}
-      </div>
 
       <div
         className="dashboard-quick-actions"
