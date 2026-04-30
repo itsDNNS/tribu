@@ -55,6 +55,25 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Admin' })).toBeVisible({ timeout: 10000 });
   });
 
+  test('daily check-in tiles navigate without separate pill buttons', async ({ authedPage: page }) => {
+    const dailyLoop = page.getByRole('region', { name: 'Today in motion' });
+    await expect(dailyLoop).toBeVisible({ timeout: 10000 });
+    await expect(dailyLoop.locator('.daily-loop-action')).toHaveCount(0);
+
+    await dailyLoop.getByRole('button', { name: 'Plan meals' }).click();
+    await expect(page.getByRole('heading', { name: 'Meal plan' })).toBeVisible({ timeout: 10000 });
+
+    await navigateTo(page, 'Home');
+    await page.getByRole('region', { name: 'Today in motion' }).waitFor({ timeout: 10000 });
+    await page.getByRole('region', { name: 'Today in motion' }).getByRole('button', { name: 'Open shopping' }).click();
+    await expect(page.locator('.shopping-lists-panel')).toBeVisible({ timeout: 10000 });
+
+    await navigateTo(page, 'Home');
+    await page.getByRole('region', { name: 'Today in motion' }).waitFor({ timeout: 10000 });
+    await page.getByRole('region', { name: 'Today in motion' }).getByRole('button', { name: 'Open routines' }).click();
+    await expect(page.locator('.tasks-filter-tabs')).toBeVisible({ timeout: 10000 });
+  });
+
   test('shows and dismisses the first-week setup checklist', async ({ authedPage: page }) => {
     const checklist = page.getByRole('region', { name: 'Set up your first week' });
     await expect(checklist).toBeVisible({ timeout: 10000 });
