@@ -1,7 +1,7 @@
 
 from app.core.clock import utcnow
 
-from sqlalchemy import Column, Date, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text
+from sqlalchemy import Column, Date, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -66,6 +66,7 @@ class Family(Base):
     quick_capture_items = relationship("QuickCaptureItem", back_populates="family", cascade="all, delete-orphan")
     setup_checklist = relationship("FamilySetupChecklist", back_populates="family", uselist=False, cascade="all, delete-orphan")
     webhook_endpoints = relationship("WebhookEndpoint", back_populates="family", cascade="all, delete-orphan")
+    school_timetables = relationship("SchoolTimetable", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -337,6 +338,86 @@ class PersonalAccessToken(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="personal_access_tokens")
+
+
+class SchoolTimetable(Base):
+    __tablename__ = "school_timetables"
+    __table_args__ = (Index("ix_school_timetables_family_name", "family_id", "name"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(160), nullable=False)
+    class_label = Column(String(80), nullable=True)
+    include_saturday = Column(Boolean, nullable=False, default=False, server_default="false")
+    notes = Column(Text, nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="school_timetables")
+    periods = relationship(
+        "SchoolTimetablePeriod",
+        back_populates="timetable",
+        cascade="all, delete-orphan",
+        order_by="SchoolTimetablePeriod.position",
+    )
+    lessons = relationship(
+        "SchoolTimetableLesson",
+        back_populates="timetable",
+        cascade="all, delete-orphan",
+    )
+    assignments = relationship(
+        "SchoolTimetableAssignment",
+        back_populates="timetable",
+        cascade="all, delete-orphan",
+        order_by="SchoolTimetableAssignment.id",
+    )
+
+
+class SchoolTimetableAssignment(Base):
+    __tablename__ = "school_timetable_assignments"
+    __table_args__ = (UniqueConstraint("timetable_id", "member_user_id", name="uq_school_timetable_member"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    timetable_id = Column(Integer, ForeignKey("school_timetables.id", ondelete="CASCADE"), nullable=False, index=True)
+    member_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    timetable = relationship("SchoolTimetable", back_populates="assignments")
+    member = relationship("User")
+
+
+class SchoolTimetablePeriod(Base):
+    __tablename__ = "school_timetable_periods"
+    __table_args__ = (UniqueConstraint("timetable_id", "position", name="uq_school_timetable_period_position"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    timetable_id = Column(Integer, ForeignKey("school_timetables.id", ondelete="CASCADE"), nullable=False, index=True)
+    position = Column(Integer, nullable=False)
+    label = Column(String(80), nullable=False)
+    start_time = Column(Time, nullable=False)
+    end_time = Column(Time, nullable=False)
+    kind = Column(String(20), nullable=False, default="lesson", server_default="lesson")
+    break_label = Column(String(120), nullable=True)
+
+    timetable = relationship("SchoolTimetable", back_populates="periods")
+    lessons = relationship("SchoolTimetableLesson", back_populates="period")
+
+
+class SchoolTimetableLesson(Base):
+    __tablename__ = "school_timetable_lessons"
+    __table_args__ = (UniqueConstraint("timetable_id", "weekday", "period_id", name="uq_school_timetable_lesson_slot"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    timetable_id = Column(Integer, ForeignKey("school_timetables.id", ondelete="CASCADE"), nullable=False, index=True)
+    weekday = Column(Integer, nullable=False, index=True)
+    period_id = Column(Integer, ForeignKey("school_timetable_periods.id", ondelete="CASCADE"), nullable=False, index=True)
+    subject = Column(String(160), nullable=False)
+    room = Column(String(80), nullable=True)
+    teacher = Column(String(120), nullable=True)
+    color = Column(String(20), nullable=True)
+
+    timetable = relationship("SchoolTimetable", back_populates="lessons")
+    period = relationship("SchoolTimetablePeriod", back_populates="lessons")
 
 
 class DisplayDevice(Base):

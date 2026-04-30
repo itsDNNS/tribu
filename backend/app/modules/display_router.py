@@ -33,7 +33,17 @@ from app.core.recurrence import expand_event
 from app.core.scopes import require_scope
 from app.core.display_layouts import normalize_config
 from app.database import get_db
-from app.models import CalendarEvent, DisplayDevice, Family, FamilyBirthday, Membership, User
+from app.models import (
+    CalendarEvent,
+    DisplayDevice,
+    Family,
+    FamilyBirthday,
+    Membership,
+    SchoolTimetable,
+    SchoolTimetableAssignment,
+    SchoolTimetableLesson,
+    User,
+)
 from app.schemas import (
     AUTH_RESPONSES,
     NOT_FOUND_RESPONSE,
@@ -41,6 +51,9 @@ from app.schemas import (
     DisplayDashboardEvent,
     DisplayDashboardMember,
     DisplayDashboardResponse,
+    DisplaySchoolTimetableGroup,
+    DisplaySchoolTimetableLesson,
+    SchoolTimetableMemberResponse,
     DisplayDeviceCreate,
     DisplayDeviceCreatedResponse,
     DisplayDeviceResponse,
@@ -393,6 +406,62 @@ def display_dashboard(
             ))
     upcoming_birthdays.sort(key=lambda x: x.days_until)
 
+    membership_by_user_id = {m.user_id: m for m in memberships}
+    today_weekday = today.isoweekday()
+    today_school_timetables: list[DisplaySchoolTimetableGroup] = []
+    if 1 <= today_weekday <= 6:
+        timetables = (
+            db.query(SchoolTimetable)
+            .options(
+                joinedload(SchoolTimetable.periods),
+                joinedload(SchoolTimetable.lessons).joinedload(SchoolTimetableLesson.period),
+                joinedload(SchoolTimetable.assignments).joinedload(SchoolTimetableAssignment.member),
+            )
+            .filter(SchoolTimetable.family_id == device.family_id)
+            .order_by(SchoolTimetable.name.asc())
+            .all()
+        )
+        for timetable in timetables:
+            if today_weekday == 6 and not timetable.include_saturday:
+                continue
+            lessons_by_period_id = {
+                lesson.period_id: lesson
+                for lesson in timetable.lessons
+                if lesson.weekday == today_weekday
+            }
+            display_lessons: list[DisplaySchoolTimetableLesson] = []
+            for period in sorted(timetable.periods, key=lambda p: p.position):
+                lesson = lessons_by_period_id.get(period.id)
+                if period.kind == "break" or lesson is not None:
+                    display_lessons.append(DisplaySchoolTimetableLesson(
+                        period_label=period.label,
+                        start_time=period.start_time,
+                        end_time=period.end_time,
+                        kind=period.kind,
+                        break_label=period.break_label,
+                        subject=lesson.subject if lesson else None,
+                        color=lesson.color if lesson else None,
+                    ))
+            if not display_lessons:
+                continue
+            children = []
+            for assignment in timetable.assignments:
+                member = assignment.member
+                membership = membership_by_user_id.get(assignment.member_user_id)
+                if not member or not membership:
+                    continue
+                children.append(SchoolTimetableMemberResponse(
+                    display_name=member.display_name,
+                    color=membership.color,
+                    profile_image=sanitize_profile_image_data_url(member.profile_image),
+                ))
+            today_school_timetables.append(DisplaySchoolTimetableGroup(
+                name=timetable.name,
+                class_label=timetable.class_label,
+                children=children,
+                lessons=display_lessons,
+            ))
+
     return DisplayDashboardResponse(
         family_id=device.family_id,
         family_name=family_name,
@@ -400,5 +469,6 @@ def display_dashboard(
         members=members,
         next_events=next_events,
         upcoming_birthdays=upcoming_birthdays,
+        today_school_timetables=today_school_timetables,
         config=_device_config(device),
     )

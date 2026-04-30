@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Stundenpläne",
+  "module.school_timetables.subtitle": "Wöchentliche Klassenpläne für die Kinder",
+  "module.school_timetables.add": "Stundenplan hinzufügen",
+  "module.school_timetables.save": "Stundenplan speichern",
+  "module.school_timetables.delete": "Löschen",
+  "module.school_timetables.class_label": "Klasse",
+  "module.school_timetables.include_saturday": "Mit Samstag",
+  "module.school_timetables.assigned_children": "Zugeordnete Kinder",
+  "module.school_timetables.periods": "Stunden und Pausen",
+  "module.school_timetables.lessons": "Fächer",
+  "module.school_timetables.empty": "Noch keine Stundenpläne.",
+  "module.school_timetables.display_title": "Schule heute"
+}

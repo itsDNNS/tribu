@@ -30,6 +30,7 @@ function buildDashboard(overrides = {}) {
     ],
     next_events: [],
     upcoming_birthdays: [],
+    today_school_timetables: [],
     ...overrides,
   };
 }
@@ -464,5 +465,40 @@ describe('DisplayDashboard — configurable display layouts', () => {
 
     expect(screen.getByTestId('display-widget-identity')).toBeInTheDocument();
     expect(screen.queryByTestId('display-widget-admin')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('DisplayDashboard — school timetables', () => {
+  test('renders today school timetable groups without account identifiers', () => {
+    renderWithFixedNow(
+      buildDashboard({
+        today_school_timetables: [
+          {
+            name: 'Twins timetable',
+            class_label: '4b',
+            children: [
+              { display_name: 'Anna', color: '#7c3aed', profile_image: null },
+              { display_name: 'Mia', color: '#f43f5e', profile_image: null },
+            ],
+            lessons: [
+              { period_label: '1', start_time: '08:00:00', end_time: '08:45:00', kind: 'lesson', subject: 'Math' },
+              { period_label: 'Break', start_time: '08:45:00', end_time: '09:00:00', kind: 'break', break_label: 'Big break' },
+            ],
+          },
+        ],
+      }),
+      new Date('2026-04-27T08:00:00')
+    );
+
+    const school = screen.getByTestId('display-school-today');
+    expect(school).toHaveTextContent('Twins timetable');
+    expect(school).toHaveTextContent('4b');
+    expect(school).toHaveTextContent('Anna');
+    expect(school).toHaveTextContent('Mia');
+    expect(school).toHaveTextContent('Math');
+    expect(school).toHaveTextContent('Big break');
+    expect(document.body).not.toHaveTextContent(/@example\.com/);
+    expect(document.body).not.toHaveTextContent(/user_id/i);
   });
 });

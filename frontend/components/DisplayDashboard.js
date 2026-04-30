@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, Cake, Users } from 'lucide-react';
+import { Calendar, Cake, GraduationCap, Users } from 'lucide-react';
 
 /**
  * Glanceable wall/tablet layout for a paired display device.
@@ -60,6 +60,7 @@ export default function DisplayDashboard({ me, dashboard }) {
     todayEvents,
     upcomingEvents,
     members: Array.isArray(dashboard.members) ? dashboard.members : [],
+    schoolTimetables: Array.isArray(dashboard.today_school_timetables) ? dashboard.today_school_timetables : [],
   };
 
   return (
@@ -131,7 +132,7 @@ function renderWidget(type, context, density) {
     case 'focus':
       return <FocusCard focus={context.focus} />;
     case 'agenda':
-      return <AgendaCard eventGroups={context.eventGroups} now={context.now} />;
+      return <AgendaCard eventGroups={context.eventGroups} now={context.now} schoolTimetables={context.schoolTimetables} />;
     case 'birthdays':
       return <BirthdaysCard celebration={context.celebration} />;
     case 'members':
@@ -235,13 +236,14 @@ function ClockCard({ timeLabel, dateLabel, timeIso }) {
   );
 }
 
-function AgendaCard({ eventGroups, now }) {
+function AgendaCard({ eventGroups, now, schoolTimetables = [] }) {
   return (
     <div className="display-card display-horizon" data-testid="display-events" aria-live="polite">
       <header className="display-section-header">
         <Calendar size={22} aria-hidden="true" />
         <h2>Family agenda</h2>
       </header>
+      {schoolTimetables.length > 0 && <SchoolToday timetables={schoolTimetables} />}
       {eventGroups.length === 0 ? (
         <EmptyHearth message="The hearth is quiet — nothing scheduled in the next 14 days." />
       ) : (
@@ -262,6 +264,46 @@ function AgendaCard({ eventGroups, now }) {
         </ol>
       )}
     </div>
+  );
+}
+
+function SchoolToday({ timetables }) {
+  return (
+    <section className="display-school-today" data-testid="display-school-today" aria-label="School today">
+      <div className="display-school-today-title">
+        <GraduationCap size={18} aria-hidden="true" />
+        <span>School today</span>
+      </div>
+      <div className="display-school-groups">
+        {timetables.map((group, groupIdx) => (
+          <article key={`${group.name}-${groupIdx}`} className="display-school-group">
+            <div className="display-school-group-head">
+              <strong>{group.name}</strong>
+              {group.class_label && <span>{group.class_label}</span>}
+            </div>
+            <div className="display-school-children">
+              {(group.children || []).map((child, idx) => (
+                <span
+                  key={`${child.display_name}-${idx}`}
+                  className="display-school-child"
+                  style={{ '--child-color': sanitizeColor(child.color) || fallbackTint(idx) }}
+                >
+                  {child.display_name}
+                </span>
+              ))}
+            </div>
+            <ol className="display-school-lessons">
+              {(group.lessons || []).slice(0, 6).map((lesson, idx) => (
+                <li key={`${lesson.period_label}-${idx}`} className={`display-school-lesson display-school-lesson--${lesson.kind}`}>
+                  <span className="display-school-lesson-time">{formatTimeRange(lesson.start_time, lesson.end_time)}</span>
+                  <span className="display-school-lesson-title">{lesson.kind === 'break' ? (lesson.break_label || 'Break') : lesson.subject}</span>
+                </li>
+              ))}
+            </ol>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -610,11 +652,16 @@ function formatTimeOfDay(d) {
 }
 
 function formatBigDate(d) {
-  return d.toLocaleDateString(undefined, {
+  return new Intl.DateTimeFormat(undefined, {
     weekday: 'long',
-    day: '2-digit',
+    day: 'numeric',
     month: 'long',
-  });
+  }).format(d);
+}
+
+function formatTimeRange(start, end) {
+  const trim = (value) => String(value || '').slice(0, 5);
+  return `${trim(start)}-${trim(end)}`;
 }
 
 function eventEnd(event, start) {
