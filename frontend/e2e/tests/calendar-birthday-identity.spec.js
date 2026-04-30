@@ -24,6 +24,12 @@ async function openCalendarDay(page, day) {
   await page.keyboard.press('Enter');
 }
 
+async function expectBirthdayCakeIndicator(page, day) {
+  const birthdayDay = page.getByRole('button', { name: new RegExp(`${day}.*birthday`, 'i') }).first();
+  await expect(birthdayDay.locator('.calendar-day-birthday-indicator')).toBeVisible();
+  await expect(birthdayDay.locator('.calendar-day-dot')).toHaveCount(0);
+}
+
 test.describe('Birthday identity regression', () => {
   test('calendar keeps duplicate-name contact birthdays separate and tracks rename/delete correctly', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
@@ -37,6 +43,7 @@ test.describe('Birthday identity regression', () => {
     await page.reload();
     await navigateTo(page, 'Calendar');
     await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+    await expectBirthdayCakeIndicator(page, day);
     await openCalendarDay(page, day);
 
     await expect(page.locator('.day-detail-events .event-card-title', { hasText: name })).toHaveCount(2);
