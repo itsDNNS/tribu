@@ -152,16 +152,27 @@ describe('DashboardView daily loop', () => {
     expect(within(card).getByTestId('daily-loop-routines')).toHaveTextContent('2');
   });
 
-  it('navigates from daily loop actions to meals, shopping and routines', async () => {
+  it('navigates from full daily loop tiles without nested pill buttons', async () => {
     const setActiveView = jest.fn();
     mockAppState = baseApp({ setActiveView });
 
     render(<DashboardView />);
 
     const card = screen.getByRole('region', { name: 'Today in motion' });
-    fireEvent.click(within(card).getByRole('button', { name: 'Plan meals' }));
-    fireEvent.click(within(card).getByRole('button', { name: 'Open shopping' }));
-    fireEvent.click(within(card).getByRole('button', { name: 'Open routines' }));
+    expect(card.querySelectorAll('.daily-loop-action')).toHaveLength(0);
+
+    const mealsTile = within(card).getByRole('button', { name: 'Plan meals' });
+    const shoppingTile = within(card).getByRole('button', { name: 'Open shopping' });
+    const routinesTile = within(card).getByRole('button', { name: 'Open routines' });
+    expect(mealsTile).toHaveClass('daily-loop-item');
+    expect(shoppingTile).toHaveClass('daily-loop-item');
+    expect(routinesTile).toHaveClass('daily-loop-item');
+
+    mealsTile.focus();
+    expect(mealsTile).toHaveFocus();
+    fireEvent.click(mealsTile);
+    fireEvent.click(shoppingTile);
+    fireEvent.click(routinesTile);
 
     expect(setActiveView).toHaveBeenCalledWith('meal_plans');
     expect(setActiveView).toHaveBeenCalledWith('shopping');

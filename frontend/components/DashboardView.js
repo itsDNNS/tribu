@@ -99,14 +99,19 @@ function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, me
         {items.map((item) => {
           const Icon = item.icon;
           return (
-            <div key={item.key} className="daily-loop-item">
+            <button
+              key={item.key}
+              type="button"
+              className="daily-loop-item"
+              aria-label={item.actionLabel}
+              onClick={item.onClick}
+            >
               <span className="daily-loop-icon" aria-hidden="true"><Icon size={16} /></span>
-              <div className="daily-loop-copy">
+              <span className="daily-loop-copy">
                 <span className="daily-loop-value" data-testid={`daily-loop-${item.key}`}>{item.value}</span>
                 <span className="daily-loop-label">{item.label}</span>
-              </div>
-              <button type="button" className="daily-loop-action" onClick={item.onClick}>{item.actionLabel}</button>
-            </div>
+              </span>
+            </button>
           );
         })}
       </div>
