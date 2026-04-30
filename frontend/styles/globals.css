@@ -762,8 +762,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .bento-more:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
 .daily-loop-header { align-items: flex-start; margin-bottom: var(--space-sm); }
 .daily-loop-subtitle { margin: 6px 0 0; color: var(--text-muted); font-size: 0.9rem; }
-.daily-loop-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-sm); }
-.daily-loop-item { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-sm); padding: var(--space-md); border-radius: var(--radius-md); background: rgba(120, 130, 180, 0.06); border: 1px solid rgba(120, 130, 180, 0.08); }
+.daily-loop-list { display: grid; grid-template-columns: 1fr; gap: var(--space-sm); }
+.daily-loop-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); background: rgba(120, 130, 180, 0.06); border: 1px solid rgba(120, 130, 180, 0.08); }
 .daily-loop-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--radius-pill); background: rgba(139, 92, 246, 0.12); color: var(--amethyst); }
 .daily-loop-copy { display: flex; flex-direction: column; min-width: 0; }
 .daily-loop-value { font-family: 'JetBrains Mono', monospace; font-size: 1.35rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
