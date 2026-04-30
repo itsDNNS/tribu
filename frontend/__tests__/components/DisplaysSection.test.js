@@ -67,6 +67,14 @@ const messages = {
   display_slot_y_label: 'Row',
   display_slot_w_label: 'Width',
   display_slot_h_label: 'Height',
+  display_slot_move_up: 'Move up',
+  display_slot_move_down: 'Move down',
+  display_slot_move_left: 'Move left',
+  display_slot_move_right: 'Move right',
+  display_slot_widen: 'Widen',
+  display_slot_narrow: 'Narrow',
+  display_slot_taller: 'Make taller',
+  display_slot_shorter: 'Make shorter',
   display_widget_home_header: 'Home header',
   display_widget_identity: 'Home title',
   display_widget_clock: 'Clock',
@@ -270,6 +278,36 @@ describe('DisplaysSection layout composer', () => {
 
     const livePreview = screen.getByTestId('display-live-preview');
     expect(livePreview).toHaveTextContent(/members/);
+  });
+
+  test('visual slot controls move and resize slots without editing coordinates manually', async () => {
+    await openCreateForm();
+
+    const row0 = screen.getByTestId('display-slot-editor-row-0');
+    fireEvent.click(within(row0).getByTestId('display-slot-editor-row-0-move-right'));
+    fireEvent.click(within(row0).getByTestId('display-slot-editor-row-0-widen'));
+    fireEvent.click(within(row0).getByTestId('display-slot-editor-row-0-move-down'));
+    fireEvent.click(within(row0).getByTestId('display-slot-editor-row-0-shorter'));
+
+    expect(within(row0).getByTestId('display-slot-editor-row-0-x')).toHaveValue(1);
+    expect(within(row0).getByTestId('display-slot-editor-row-0-y')).toHaveValue(1);
+    expect(within(row0).getByTestId('display-slot-editor-row-0-w')).toHaveValue(2);
+    expect(within(row0).getByTestId('display-slot-editor-row-0-h')).toHaveValue(1);
+    expect(screen.getByTestId('display-live-preview')).toHaveTextContent(/2×1 @ \(1,1\)/);
+  });
+
+  test('visual slot controls disable moves and sizes that would leave the grid', async () => {
+    await openCreateForm();
+
+    const row0 = screen.getByTestId('display-slot-editor-row-0');
+    expect(within(row0).getByTestId('display-slot-editor-row-0-move-left')).toBeDisabled();
+    expect(within(row0).getByTestId('display-slot-editor-row-0-move-up')).toBeDisabled();
+
+    fireEvent.change(within(row0).getByTestId('display-slot-editor-row-0-x'), {
+      target: { value: '2' },
+    });
+    expect(within(row0).getByTestId('display-slot-editor-row-0-move-right')).toBeDisabled();
+    expect(within(row0).getByTestId('display-slot-editor-row-0-widen')).toBeDisabled();
   });
 
   test('create payload includes layout_config when the slot editor was touched', async () => {

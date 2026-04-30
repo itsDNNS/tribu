@@ -3666,7 +3666,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .display-slot-editor-head,
 .display-slot-editor-row {
   display: grid;
-  grid-template-columns: 28px minmax(140px, 2.4fr) repeat(4, minmax(60px, 1fr));
+  grid-template-columns: 28px minmax(140px, 2.4fr) repeat(4, minmax(60px, 1fr)) minmax(168px, 1.8fr);
   align-items: center;
   gap: 8px;
 }
@@ -3733,6 +3733,43 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   min-width: 0;
 }
 
+.display-slot-visual-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(30px, 1fr));
+  gap: 4px;
+  align-items: center;
+}
+
+.display-slot-control-btn {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.display-slot-control-btn:hover:not(:disabled),
+.display-slot-control-btn:focus-visible:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: rgba(124, 58, 237, 0.45);
+  outline: none;
+}
+
+.display-slot-control-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.display-slot-control-btn--wide {
+  font-size: 0.68rem;
+}
+
 [data-theme="light"] .display-slot-editor {
   background: rgba(0, 0, 0, 0.025);
   border-color: rgba(0, 0, 0, 0.08);
@@ -3758,6 +3795,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   }
   .display-slot-editor-row .display-slot-editor-type {
     grid-column: 2 / -1;
+  }
+  .display-slot-visual-controls {
+    grid-column: 1 / -1;
   }
 }
 
