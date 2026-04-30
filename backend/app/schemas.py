@@ -1802,9 +1802,9 @@ class DisplayDashboardEvent(BaseModel):
 
     Mirrors only the fields the glanceable layout actually renders.
     Drops user IDs (created_by_user_id, assigned_to), refresh URLs
-    (source_url), and other operational metadata that has no display
-    purpose and would constitute additional surface area on a token
-    leak.
+    (source_url), and other operational metadata. Participant colors
+    are derived server-side from the assignment list so the display can
+    show who is involved without exposing identifiers.
     """
     title: str = Field(..., description="Event title")
     starts_at: datetime = Field(..., description="Start date/time")
@@ -1814,6 +1814,7 @@ class DisplayDashboardEvent(BaseModel):
     color: Optional[str] = Field(None, description="Event color as hex string, if set")
     category: Optional[str] = Field(None, description="Event category label")
     icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
+    participant_colors: list[str] = Field(default_factory=list, description="Display-safe participant member colors")
 
 
 class DisplayDashboardBirthday(BaseModel):
