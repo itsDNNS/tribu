@@ -34,6 +34,29 @@ describe('HouseholdActivityFeed', () => {
     expect(screen.queryByText('123')).not.toBeInTheDocument();
   });
 
+  it('renders calendar-related activity entries', () => {
+    render(
+      <HouseholdActivityFeed
+        messages={messages}
+        lang="en"
+        activity={[
+          {
+            id: 8,
+            actor_display_name: 'Alex',
+            summary: 'Alex created calendar event "Piano lesson"',
+            object_type: 'calendar_event',
+            object_id: 456,
+            created_at: '2026-05-01T15:00:00Z',
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Alex created calendar event "Piano lesson"')).toBeInTheDocument();
+    expect(screen.queryByText('calendar_event')).not.toBeInTheDocument();
+    expect(screen.queryByText('456')).not.toBeInTheDocument();
+  });
+
   it('renders an empty state', () => {
     render(<HouseholdActivityFeed messages={messages} activity={[]} />);
     expect(screen.getByText('No household activity yet.')).toBeInTheDocument();
