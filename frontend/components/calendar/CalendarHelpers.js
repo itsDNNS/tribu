@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Cake, Download, Pencil, Repeat, Rss, Trash2 } from 'lucide-react';
+import { Cake, Download, MapPin, Pencil, Repeat, Rss, Trash2 } from 'lucide-react';
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
@@ -13,6 +13,15 @@ export const RECURRENCE_OPTIONS = [
   { value: 'monthly', key: 'module.calendar.repeat_monthly' },
   { value: 'yearly', key: 'module.calendar.repeat_yearly' },
 ];
+
+export function mapsLinksForLocation(location) {
+  const query = encodeURIComponent((location || '').trim());
+  if (!query) return null;
+  return {
+    google: `https://www.google.com/maps/search/?api=1&query=${query}`,
+    openStreetMap: `https://www.openstreetmap.org/search?query=${query}`,
+  };
+}
 
 export function DeleteRecurringDialog({ event, messages, onDeleteThis, onDeleteAll, onCancel }) {
   const firstBtnRef = useRef(null);
@@ -101,6 +110,7 @@ export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onE
   const isImported = sourceType === 'import' || sourceType === 'subscription';
   const editable = !!onEdit && !ev._isBirthday && !isImported;
   const cardClickable = editable;
+  const mapsLinks = mapsLinksForLocation(ev.location);
 
   return (
     <div className="day-event-card" style={{ borderColor: ev.color || getMemberColor(null, index), cursor: cardClickable ? 'pointer' : undefined }} onClick={() => cardClickable && onEdit(ev)}>
@@ -125,6 +135,22 @@ export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onE
           )}
         </div>
         <div className="event-card-meta">{prettyDate(ev.starts_at, lang, timeFormat)}</div>
+        {ev.location && (
+          <div className="event-card-location">
+            <MapPin size={13} aria-hidden="true" />
+            <span>{ev.location}</span>
+            {mapsLinks && (
+              <span className="event-card-map-links">
+                <a href={mapsLinks.google} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                  {t(messages, 'module.calendar.open_google_maps')}
+                </a>
+                <a href={mapsLinks.openStreetMap} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                  {t(messages, 'module.calendar.open_openstreetmap')}
+                </a>
+              </span>
+            )}
+          </div>
+        )}
         {isImported && (
           <div className="event-card-source-hint">{t(messages, 'module.calendar.source_readonly_hint')}</div>
         )}

@@ -7,6 +7,7 @@ jest.mock('../../contexts/ToastContext', () => ({
 }));
 
 jest.mock('../../lib/api', () => ({
+  apiCreateEvent: jest.fn(() => Promise.resolve({ ok: true, data: {} })),
   apiUpdateEvent: jest.fn(() => Promise.resolve({ ok: true, data: {} })),
   apiGetEvents: jest.fn(() => Promise.resolve({ ok: true, data: [] })),
 }));
@@ -99,6 +100,7 @@ describe('useCalendar edit flow', () => {
       starts_at: '2026-04-21T09:00:00',
       ends_at: '2026-04-21T09:30:00',
       description: 'sync',
+      location: 'Club house, Field 2',
       all_day: false,
       recurrence: 'weekly',
       recurrence_end: '2026-12-31T00:00:00',
@@ -110,6 +112,7 @@ describe('useCalendar edit flow', () => {
 
     expect(result.current.editingEvent).toEqual(expect.objectContaining({ id: 10 }));
     expect(result.current.editTitle).toBe('Weekly standup');
+    expect(result.current.editLocation).toBe('Club house, Field 2');
     expect(result.current.editRecurrence).toBe('weekly');
     expect(result.current.editRecurrenceEnd).toBe('2026-12-31');
     // AssignChips compares against numeric member.user_id via
@@ -144,7 +147,7 @@ describe('useCalendar edit flow', () => {
     expect(result.current.editingEvent).toBeNull();
   });
 
-  it('saveEdit payload includes recurrence, assigned_to, color, category', async () => {
+  it('saveEdit payload includes recurrence, assigned_to, color, category, and location', async () => {
     const ctx = setupAppContext({ demoMode: false });
     const { useCalendar } = require('../../hooks/useCalendar');
     const api = require('../../lib/api');
@@ -152,7 +155,7 @@ describe('useCalendar edit flow', () => {
 
     act(() => result.current.startEdit({
       id: 42, title: 'Dentist', starts_at: '2026-05-01T10:00:00', ends_at: null,
-      description: '', all_day: false, recurrence: '', recurrence_end: null,
+      description: '', location: 'Old clinic', all_day: false, recurrence: '', recurrence_end: null,
       assigned_to: null, color: null, category: null, is_recurring: false,
     }));
     act(() => {
@@ -160,6 +163,7 @@ describe('useCalendar edit flow', () => {
       result.current.setEditAssignedTo(['7']);
       result.current.setEditColor('#22d3ee');
       result.current.setEditCategory('health');
+      result.current.setEditLocation('Main Street Clinic');
     });
 
     await act(async () => {
@@ -170,6 +174,7 @@ describe('useCalendar edit flow', () => {
       recurrence: 'monthly',
       assigned_to: [7],
       color: '#22d3ee',
+      location: 'Main Street Clinic',
     }));
     // all_day and category are intentionally omitted from the PATCH
     // because no edit UI exposes them; backend no-change semantics
@@ -178,6 +183,29 @@ describe('useCalendar edit flow', () => {
     expect(api.apiUpdateEvent.mock.calls[0][1]).not.toHaveProperty('category');
     expect(result.current.editingEvent).toBeNull();
     expect(ctx.loadDashboard).toHaveBeenCalled();
+  });
+
+  it('createEvent sends an optional location and resets it after save', async () => {
+    setupAppContext({ demoMode: false });
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const api = require('../../lib/api');
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => {
+      result.current.setTitle('Football practice');
+      result.current.setStartsAt('2026-05-12T16:00');
+      result.current.setLocation('Sports Park, Field 2');
+    });
+
+    await act(async () => {
+      await result.current.createEvent({ preventDefault: () => {} });
+    });
+
+    expect(api.apiCreateEvent).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Football practice',
+      location: 'Sports Park, Field 2',
+    }));
+    expect(result.current.location).toBe('');
   });
 
   it('saveEdit does not wipe the dialog if the user switched events mid-save', async () => {

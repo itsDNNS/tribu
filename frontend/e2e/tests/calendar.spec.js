@@ -8,23 +8,34 @@ test.describe('Calendar', () => {
     await expect(page.locator('.calendar-grid-wrapper')).toBeVisible({ timeout: 10000 });
   });
 
-  test('create and view an event', async ({ authedPage: page }) => {
+  test('create and view an event with route planning links', async ({ authedPage: page }) => {
     await navigateTo(page, 'Calendar');
     await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
 
     // Click on day 15
     await page.locator('.calendar-day:not(.other-month)', { hasText: /^15$/ }).first().click();
 
-    // Fill event title in the form that appears
-    const titleInput = page.locator('input[placeholder="New event..."]');
+    // Fill event title and location in the form that appears
+    const form = page.locator('.day-detail-panel .quick-add-form');
+    const titleInput = form.locator('input[placeholder="New event..."]');
     await titleInput.waitFor({ timeout: 5000 });
     await titleInput.fill('E2E Test Event');
+    await form.locator('input[placeholder="Location or address"]').fill('Sports Park, Field 2');
 
     // Submit
-    await page.locator('button[type="submit"]').first().click();
+    await form.locator('button[type="submit"]').click();
 
-    // Event should appear
+    // Event should appear with location and provider-neutral map links
     await expect(page.getByText('E2E Test Event')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Sports Park, Field 2')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open in Google Maps' })).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/search/?api=1&query=Sports%20Park%2C%20Field%202',
+    );
+    await expect(page.getByRole('link', { name: 'Open in OpenStreetMap' })).toHaveAttribute(
+      'href',
+      'https://www.openstreetmap.org/search?query=Sports%20Park%2C%20Field%202',
+    );
   });
 
   test('desktop event form gives date-time fields enough room for time entry', async ({ authedPage: page }) => {

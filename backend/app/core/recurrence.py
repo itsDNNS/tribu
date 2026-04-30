@@ -77,6 +77,7 @@ def _event_to_dict(event) -> dict:
         "family_id": event.family_id,
         "title": event.title,
         "description": event.description,
+        "location": event.location,
         "starts_at": event.starts_at,
         "ends_at": event.ends_at,
         "all_day": event.all_day,

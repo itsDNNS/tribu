@@ -723,6 +723,7 @@ def create_calendar_event(
         family_id=payload.family_id,
         title=payload.title,
         description=payload.description,
+        location=(payload.location or "").strip() or None,
         starts_at=starts_at,
         ends_at=ends_at,
         all_day=payload.all_day,
@@ -775,6 +776,8 @@ def update_calendar_event(
         event.title = payload.title
     if payload.description is not None:
         event.description = payload.description
+    if "location" in payload.model_fields_set:
+        event.location = (payload.location or "").strip() or None
     if payload.starts_at is not None:
         event.starts_at = to_utc_naive(payload.starts_at)
     if payload.ends_at is not None:

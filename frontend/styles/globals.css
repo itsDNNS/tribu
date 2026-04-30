@@ -1049,6 +1049,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 
 .event-card-title { font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
 .event-card-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+.event-card-location { font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.event-card-map-links { display: inline-flex; gap: 8px; margin-left: 2px; }
+.event-card-map-links a { color: var(--amethyst-light); text-decoration: none; font-weight: 500; }
+.event-card-map-links a:hover { text-decoration: underline; }
 .event-card-action { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 8px; flex-shrink: 0; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); transition: all 0.2s; }
 .event-card-action:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
 
