@@ -11,6 +11,7 @@ For contributor workflow inside the repository, treat this file as the canonical
 - [Roadmap](https://github.com/itsDNNS/tribu/wiki/Roadmap)
 - [Self-Hosting Guide](docs/self-hosting.md)
 - [Security Policy](SECURITY.md)
+- [Defensive Review Checklist](docs/defensive-review-checklist.md)
 
 ## Before you start
 
@@ -185,7 +186,8 @@ Recommended PR structure:
 1. Summary
 2. File placement / architecture notes
 3. Test plan
-4. Screenshots or recordings for meaningful UI changes
+4. Defensive review notes for auth, integration, export, backup, self-hosted, or shared-device changes
+5. Screenshots or recordings for meaningful UI changes
 
 ## Documentation updates are part of the job
 
