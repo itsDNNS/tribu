@@ -77,6 +77,7 @@ def _seed_member_with_pat(
     scopes: str = "*",
     family_id: int | None = None,
     email: str | None = None,
+    profile_image: str | None = None,
 ) -> tuple[str, int, int]:
     """Seed a user + family + membership + PAT. Returns (token, user_id, family_id)."""
     db = TestSession()
@@ -84,6 +85,7 @@ def _seed_member_with_pat(
         email=email or f"display-{suffix}@example.com",
         password_hash=hash_password("password"),
         display_name=f"User {suffix}",
+        profile_image=profile_image,
     )
     db.add(user)
     db.flush()
@@ -251,13 +253,21 @@ class TestDisplayRuntime:
         assert "secret-admin@example.com" not in raw
         assert "secret-kid@example.com" not in raw
 
-    def test_display_dashboard_member_fields_are_minimal(self):
-        """Only display_name + color. No user_id, is_adult, profile_image, role."""
+    def test_display_dashboard_member_fields_are_display_safe_with_avatar(self):
+        """Only display_name + color + profile_image. No user_id, is_adult, role, email."""
+        avatar = "data:image/png;base64,iVBORw0KGgo="
         admin_token, _, family_id = _seed_member_with_pat(
-            "minAdmin", role="admin", is_adult=True
+            "minAdmin", role="admin", is_adult=True, profile_image=avatar
         )
         _seed_member_with_pat(
             "minKid", role="member", is_adult=False, family_id=family_id
+        )
+        _seed_member_with_pat(
+            "badAvatar",
+            role="member",
+            is_adult=False,
+            family_id=family_id,
+            profile_image="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
         )
 
         resp = client.post(
@@ -272,11 +282,14 @@ class TestDisplayRuntime:
         body = dash.json()
         assert body["members"], "expected at least one member"
         for m in body["members"]:
-            assert set(m.keys()) == {"display_name", "color"}, m
+            assert set(m.keys()) == {"display_name", "color", "profile_image"}, m
+        assert any(m["profile_image"] == avatar for m in body["members"])
+        assert any(m["profile_image"] is None for m in body["members"])
+        assert "image/svg+xml" not in dash.text
         # Defensive: even if a future serializer leaks, the field
         # NAMES themselves must not appear in the JSON for a member.
         members_json = json_module.dumps(body["members"])
-        for forbidden in ("user_id", "is_adult", "profile_image", "role", "email"):
+        for forbidden in ("user_id", "is_adult", "role", "email"):
             assert forbidden not in members_json, forbidden
 
     def test_display_dashboard_event_fields_are_display_safe(self):

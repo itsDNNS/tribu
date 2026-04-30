@@ -46,6 +46,7 @@ from app.schemas import (
     DisplayDeviceUpdate,
     DisplayDeviceConfig,
     DisplayMeResponse,
+    sanitize_profile_image_data_url,
 )
 from app.security import generate_display_token
 
@@ -286,6 +287,7 @@ def display_dashboard(
         DisplayDashboardMember(
             display_name=m.user.display_name,
             color=m.color,
+            profile_image=sanitize_profile_image_data_url(m.user.profile_image),
         )
         for m in memberships
         if m.user

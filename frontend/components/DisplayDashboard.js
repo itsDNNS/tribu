@@ -8,8 +8,9 @@ import { Calendar, Cake, Users } from 'lucide-react';
  * controls are rendered. The component receives only the data
  * returned by `/display/dashboard`, which is already a curated
  * server-side projection: `family_name`, `device_name`, `members`
- * (display_name + optional color only — no user_id, email, or
- * profile image), display-safe events, and birthday countdowns.
+ * (display_name + optional color/profile_image only — no user_id,
+ * email, role, or admin metadata), display-safe events, and birthday
+ * countdowns.
  *
  * Layout follows the "Tribu Hearth" three-column grid in landscape
  * (Pulse | Horizon | Tribe) and collapses to a single vertical stack
@@ -298,7 +299,7 @@ function MembersCard({ members, imminentNames }) {
                 style={{ '--member-tint': tint }}
                 data-testid="display-member"
               >
-                <span className="display-member-avatar" aria-hidden="true">{initials(m.display_name)}</span>
+                <DisplayMemberAvatar member={m} />
                 <span className="display-member-name">{m.display_name}</span>
                 {isCelebrant && (
                   <span className="display-member-badge" aria-label="Birthday soon" title="Birthday soon">🎂</span>
@@ -311,6 +312,24 @@ function MembersCard({ members, imminentNames }) {
         <EmptyHearth tone="soft" message="No family members yet." />
       )}
     </div>
+  );
+}
+
+function DisplayMemberAvatar({ member }) {
+  if (member?.profile_image) {
+    return (
+      <img
+        className="display-member-avatar"
+        src={member.profile_image}
+        alt={member.display_name || ''}
+      />
+    );
+  }
+
+  return (
+    <span className="display-member-avatar" aria-hidden="true">
+      {initials(member?.display_name)}
+    </span>
   );
 }
 

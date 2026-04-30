@@ -24,9 +24,9 @@ function buildDashboard(overrides = {}) {
     family_name: 'Mueller',
     device_name: 'Kitchen Tablet',
     members: [
-      { display_name: 'Anna', color: '#7c3aed' },
-      { display_name: 'Mia', color: null },
-      { display_name: 'Grandma Ilse', color: '#f43f5e' },
+      { display_name: 'Anna', color: '#7c3aed', profile_image: 'data:image/png;base64,anna' },
+      { display_name: 'Mia', color: null, profile_image: null },
+      { display_name: 'Grandma Ilse', color: '#f43f5e', profile_image: null },
     ],
     next_events: [],
     upcoming_birthdays: [],
@@ -226,13 +226,16 @@ describe('DisplayDashboard — celebration + members', () => {
     expect(ilse.className).toMatch(/display-member--celebrant/);
   });
 
-  test('renders avatar initials for each member without exposing IDs', () => {
+  test('renders configured member avatar images and falls back to initials without exposing IDs', () => {
     renderWithFixedNow(buildDashboard(), new Date('2026-04-27T08:00:00'));
 
     const members = screen.getByTestId('display-members');
     expect(within(members).getByText('Anna')).toBeInTheDocument();
     expect(within(members).getByText('Mia')).toBeInTheDocument();
-    // Initial cells render uppercase initials only; never show IDs.
+    const annaAvatar = within(members).getByRole('img', { name: 'Anna' });
+    expect(annaAvatar).toHaveAttribute('src', 'data:image/png;base64,anna');
+    expect(within(members).getByText('M')).toBeInTheDocument();
+    expect(within(members).getByText('GI')).toBeInTheDocument();
     expect(members.textContent).not.toMatch(/\bID:/i);
     expect(members.textContent).not.toMatch(/\buser_id\b/i);
   });
