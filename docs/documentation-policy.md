@@ -17,6 +17,7 @@ The GitHub Wiki is the primary documentation entry point for Tribu users, self-h
 | `SECURITY.md` | Repo | Security policy and responsible disclosure | Keep in repo because GitHub surfaces it directly |
 | `docs/self-hosting.md` | Repo | Self-hosting and operations | Replace detailed copy with a pointer stub to the Wiki guide |
 | `docs/home-assistant.md` | Repo | Home Assistant integration setup | Replace detailed copy with a pointer stub to the Wiki guide |
+| `docs/defensive-review-checklist.md` | Repo | Maintainer defensive review process for auth, integrations, exports, backups, shared devices, and self-hosting | Keep repo-local and link from `SECURITY.md`/`CONTRIBUTING.md` because it is part of PR workflow |
 | `Home` | Wiki | Documentation entry point | Make it the primary docs index |
 | `Self-Hosting` | Wiki | Installation, configuration, operations, updates, troubleshooting | Primary source of truth |
 | `Home Assistant` | Wiki | REST sensors, webhook automations, dashboard card, privacy notes | Primary source of truth |
