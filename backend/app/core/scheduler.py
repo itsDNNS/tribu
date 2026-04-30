@@ -11,6 +11,7 @@ from app.core import cache
 from app.core.backup import create_backup, enforce_retention
 from app.core.clock import utcnow
 from app.core.push import send_push_for_user
+from app.core.notification_preferences import should_push_notification_type
 from app.core.recurrence import expand_event
 from app.database import SessionLocal
 from app.models import (
@@ -229,7 +230,8 @@ def _check_notifications():
                     return
 
             push_result = None
-            if pref.push_enabled:
+            push_allowed, push_skip_reason = should_push_notification_type(pref, ntype)
+            if push_allowed:
                 try:
                     push_result = send_push_for_user(db, uid, title, body, link)
                 except Exception as exc:
@@ -244,11 +246,12 @@ def _check_notifications():
             log.last_attempt_at = now
 
             if push_result is None:
-                # Push disabled — in-app delivery is the only channel and it
-                # succeeded the moment we created the Notification row.
+                # Push disabled, category disabled, or unknown for this type.
+                # In-app delivery is the only active channel and succeeded the
+                # moment we created the Notification row.
                 log.status = "delivered"
                 log.delivered_at = now
-                log.last_error = None
+                log.last_error = f"push_skipped:{push_skip_reason}" if push_skip_reason else None
                 return
 
             if push_result.attempted == 0:
@@ -299,7 +302,7 @@ def _check_notifications():
                 db.query(CalendarEvent)
                 .filter(
                     CalendarEvent.family_id.in_(fam_ids),
-                    CalendarEvent.all_day == False,
+                    CalendarEvent.all_day.is_(False),
                     CalendarEvent.starts_at <= window,
                     or_(
                         CalendarEvent.starts_at > now,
@@ -340,7 +343,7 @@ def _check_notifications():
                 .filter(
                     Task.family_id.in_(fam_ids),
                     Task.status == "open",
-                    Task.due_date != None,
+                    Task.due_date.isnot(None),
                     Task.due_date < now,
                 )
                 .all()

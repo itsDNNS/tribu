@@ -9,6 +9,8 @@ from enum import Enum
 
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
+from app.core.notification_preferences import normalize_push_categories
+
 
 # ---------------------------------------------------------------------------
 # Shared error response model & reusable OpenAPI response dicts
@@ -1085,6 +1087,12 @@ class NotificationPreferenceResponse(BaseModel):
     quiet_start: Optional[str] = Field(None, description="Quiet hours start (HH:MM format)")
     quiet_end: Optional[str] = Field(None, description="Quiet hours end (HH:MM format)")
     push_enabled: bool = Field(False, description="Whether push notifications are enabled")
+    push_categories: dict[str, bool] = Field(default_factory=dict, description="Per-category browser push preferences")
+
+    @field_validator("push_categories", mode="before")
+    @classmethod
+    def normalize_categories(cls, v):
+        return normalize_push_categories(v)
 
 
 class NotificationPreferenceUpdate(BaseModel):
@@ -1094,6 +1102,12 @@ class NotificationPreferenceUpdate(BaseModel):
     quiet_start: Optional[str] = Field(None, description="Quiet hours start (HH:MM)")
     quiet_end: Optional[str] = Field(None, description="Quiet hours end (HH:MM)")
     push_enabled: Optional[bool] = Field(None, description="Enable/disable push notifications")
+    push_categories: Optional[dict[str, bool]] = Field(None, description="Per-category browser push preferences")
+
+    @field_validator("push_categories", mode="before")
+    @classmethod
+    def normalize_categories(cls, v):
+        return normalize_push_categories(v)
 
 
 class PushSubscriptionCreate(BaseModel):

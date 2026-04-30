@@ -471,6 +471,7 @@ class NotificationPreference(Base):
     quiet_start = Column(String, nullable=True)
     quiet_end = Column(String, nullable=True)
     push_enabled = Column(Boolean, nullable=False, default=False, server_default="false")
+    push_categories = Column(JSON, nullable=False, default=dict, server_default="{}")
 
 
 class PushSubscription(Base):

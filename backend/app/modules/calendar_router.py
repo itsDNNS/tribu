@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,15 +17,18 @@ from app.core.calendar_subscriptions import (
 )
 from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership, to_utc_naive
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
+from app.core.notification_preferences import should_push_notification_type
+from app.core.push import send_push_for_user
 from app.core.recurrence import VALID_RECURRENCES, expand_event
 from app.core.scopes import require_scope
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
-from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync, Membership, Notification, User
+from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync, Membership, Notification, NotificationPreference, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, CalendarIcsSubscribe, CalendarSubscriptionCreate, CalendarSubscriptionResponse, PaginatedCalendarEvents
 from app.core.errors import error_detail, EVENT_NOT_FOUND, END_BEFORE_START, INVALID_RECURRENCE
 
 router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -917,11 +921,18 @@ def _create_assignment_notifications(db: Session, event: CalendarEvent, actor_us
     for uid in user_ids:
         if uid == actor_user_id:
             continue
-        db.add(Notification(
+        notification = Notification(
             user_id=uid,
             family_id=event.family_id,
             type="event_assigned",
             title=event.title,
             body=None,
             link=f"/calendar?event={event.id}",
-        ))
+        )
+        db.add(notification)
+        pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == uid).first()
+        if pref and should_push_notification_type(pref, notification.type)[0]:
+            try:
+                send_push_for_user(db, uid, notification.title, notification.body or "You were assigned to an event.", notification.link)
+            except Exception:
+                logger.exception("Push notification failed for event assignment user %s", uid)

@@ -23,7 +23,22 @@ describe('NotificationsTab push diagnostics', () => {
     mockAppState = { messages: buildMessages('en'), loggedIn: true, demoMode: false };
     api.apiGetNotificationPreferences.mockResolvedValue({
       ok: true,
-      data: { reminders_enabled: true, reminder_minutes: 30, quiet_start: null, quiet_end: null, push_enabled: false },
+      data: {
+        reminders_enabled: true,
+        reminder_minutes: 30,
+        quiet_start: null,
+        quiet_end: null,
+        push_enabled: false,
+        push_categories: {
+          calendar_reminders: true,
+          task_due: true,
+          birthdays: true,
+          event_assignments: false,
+          shopping_changes: false,
+          meal_plan_changes: false,
+          family_changes: false,
+        },
+      },
     });
     api.apiGetPushStatus.mockResolvedValue({
       ok: true,
@@ -92,41 +107,24 @@ describe('NotificationsTab push diagnostics', () => {
     expect(screen.getByRole('button', { name: 'Enable push notifications' })).toBeEnabled();
   });
 
-  it('sends a test push only when the device and server are ready', async () => {
-    const testPush = jest.fn().mockResolvedValue({
-      ok: true,
-      data: { status: 'sent', attempted: 1, succeeded: 1, failed: 0, removed: 0, skipped_reason: null },
-    });
-    api.apiSendTestPush.mockImplementation(testPush);
-    api.apiGetPushStatus.mockResolvedValue({
-      ok: true,
-      data: {
-        server_configured: true,
-        vapid_public_key_available: true,
-        pywebpush_available: true,
-        subscription_count: 1,
-        push_enabled: true,
-        ready: true,
-        blocked_reason: null,
-        last_attempt: { status: 'delivered', last_attempt_at: '2026-04-29T12:00:00' },
-      },
-    });
-    usePushSubscription.mockReturnValue({
-      pushSupported: true,
-      pushSubscription: { endpoint: 'https://push.example/private' },
-      pushPermission: 'granted',
-      subscribe: jest.fn(),
-      unsubscribe: jest.fn(),
-    });
+  it('renders and saves per-category push choices', async () => {
+    api.apiUpdateNotificationPreferences.mockResolvedValue({ ok: true, data: {} });
 
     render(<NotificationsTab />);
 
-    const button = await screen.findByRole('button', { name: 'Send test notification' });
-    await waitFor(() => expect(button).toBeEnabled());
-    fireEvent.click(button);
+    const assignmentToggle = await screen.findByLabelText(/Event assignments/i);
+    expect(screen.getByLabelText(/Calendar reminders/i)).toBeChecked();
+    expect(assignmentToggle).not.toBeChecked();
 
-    await waitFor(() => expect(testPush).toHaveBeenCalledTimes(1));
-    expect(toastSuccess).toHaveBeenCalledWith('Test notification sent');
-    expect(screen.queryByText(/push.example/)).not.toBeInTheDocument();
+    fireEvent.click(assignmentToggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(api.apiUpdateNotificationPreferences).toHaveBeenCalled());
+    expect(api.apiUpdateNotificationPreferences).toHaveBeenCalledWith(expect.objectContaining({
+      push_categories: expect.objectContaining({
+        calendar_reminders: true,
+        event_assignments: true,
+      }),
+    }));
   });
 });

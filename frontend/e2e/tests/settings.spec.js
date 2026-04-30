@@ -50,6 +50,9 @@ test.describe('Settings', () => {
 
     await expect(page.getByText('Server push is not configured')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Ask an admin to add VAPID keys on the server and restart Tribu.')).toBeVisible();
+    await expect(page.getByText('Push me for')).toBeVisible();
+    await expect(page.getByText('Calendar reminders')).toBeVisible();
+    await expect(page.getByText('Event assignments')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enable push notifications' })).toBeDisabled();
   });
 
