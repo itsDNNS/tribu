@@ -10,8 +10,11 @@ jest.mock('../../contexts/AppContext', () => ({
 }));
 
 jest.mock('../../lib/api', () => ({
+  apiGetDashboardLayout: jest.fn(() => new Promise(() => {})),
   apiGetSetupChecklist: jest.fn(),
   apiListMealPlans: jest.fn(),
+  apiResetDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } })),
+  apiUpdateDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } })),
 }));
 
 jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {

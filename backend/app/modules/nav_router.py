@@ -6,13 +6,15 @@ from app.core.deps import current_user
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import User, UserNavOrder
-from app.schemas import AUTH_RESPONSES, NavOrderResponse, NavOrderUpdate
+from app.schemas import AUTH_RESPONSES, DashboardLayoutResponse, DashboardLayoutUpdate, NavOrderResponse, NavOrderUpdate
 from app.core.errors import error_detail, UNKNOWN_NAV_KEYS
 
 router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})
 
 DEFAULT_NAV_ORDER = ["dashboard", "calendar", "shopping", "tasks", "templates", "meal_plans", "recipes", "contacts", "notifications", "settings", "admin"]
 KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "templates", "rewards", "gifts", "meal_plans", "recipes", "contacts", "notifications", "settings", "admin"}
+DEFAULT_DASHBOARD_LAYOUT = ["quick_capture", "daily_loop", "events", "tasks", "birthdays", "activity", "rewards"]
+KNOWN_DASHBOARD_MODULES = set(DEFAULT_DASHBOARD_LAYOUT)
 
 
 @router.get(
@@ -53,3 +55,70 @@ def update_nav_order(payload: NavOrderUpdate, user: User = Depends(current_user)
     db.commit()
     cache.invalidate(f"tribu:nav_order:{user.id}")
     return NavOrderResponse(nav_order=row.nav_order)
+
+
+@router.get(
+    "/dashboard-layout",
+    response_model=DashboardLayoutResponse,
+    summary="Get dashboard module layout",
+    description="Return the current user's custom dashboard module order, or the default if not set.",
+    response_description="Dashboard module layout",
+)
+def get_dashboard_layout(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:read")):
+    def _load():
+        row = db.query(UserNavOrder).filter(UserNavOrder.user_id == user.id).first()
+        modules = row.dashboard_layout if row and row.dashboard_layout else DEFAULT_DASHBOARD_LAYOUT
+        return {"modules": _normalize_dashboard_modules(modules)}
+    data = cache.get_or_set(f"tribu:dashboard_layout:{user.id}", 600, _load)
+    return DashboardLayoutResponse(**data)
+
+
+@router.put(
+    "/dashboard-layout",
+    response_model=DashboardLayoutResponse,
+    summary="Update dashboard module layout",
+    description="Save a custom dashboard module order for the current user.",
+    response_description="Updated dashboard module layout",
+)
+def update_dashboard_layout(payload: DashboardLayoutUpdate, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:write")):
+    modules = _validate_dashboard_modules(payload.modules)
+    row = db.query(UserNavOrder).filter(UserNavOrder.user_id == user.id).first()
+    if row:
+        row.dashboard_layout = modules
+    else:
+        row = UserNavOrder(user_id=user.id, nav_order=DEFAULT_NAV_ORDER, dashboard_layout=modules)
+        db.add(row)
+    db.commit()
+    cache.invalidate(f"tribu:dashboard_layout:{user.id}")
+    return DashboardLayoutResponse(modules=row.dashboard_layout)
+
+
+@router.delete(
+    "/dashboard-layout",
+    response_model=DashboardLayoutResponse,
+    summary="Reset dashboard module layout",
+    description="Reset the current user's dashboard module order back to the default.",
+    response_description="Default dashboard module layout",
+)
+def reset_dashboard_layout(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:write")):
+    row = db.query(UserNavOrder).filter(UserNavOrder.user_id == user.id).first()
+    if row:
+        row.dashboard_layout = None
+        db.commit()
+    cache.invalidate(f"tribu:dashboard_layout:{user.id}")
+    return DashboardLayoutResponse(modules=DEFAULT_DASHBOARD_LAYOUT)
+
+
+def _normalize_dashboard_modules(modules: list[str]) -> list[str]:
+    seen = []
+    for module in modules:
+        if module in KNOWN_DASHBOARD_MODULES and module not in seen:
+            seen.append(module)
+    return seen + [module for module in DEFAULT_DASHBOARD_LAYOUT if module not in seen]
+
+
+def _validate_dashboard_modules(modules: list[str]) -> list[str]:
+    invalid = [module for module in modules if module not in KNOWN_DASHBOARD_MODULES]
+    if invalid:
+        raise HTTPException(status_code=422, detail=error_detail(UNKNOWN_NAV_KEYS, keys=', '.join(invalid)))
+    return _normalize_dashboard_modules(modules)

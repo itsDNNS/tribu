@@ -81,4 +81,28 @@ test.describe('Dashboard', () => {
     await quickCapture.locator('.quick-capture-item-actions').getByRole('button', { name: 'Shopping' }).click();
     await expect(quickCapture).not.toContainText('Buy apples from market', { timeout: 10000 });
   });
+
+  test('customizes dashboard module order and keeps it after reload', async ({ authedPage: page }) => {
+    const tasksModule = page.locator('[data-dashboard-module="tasks"]');
+    const eventsModule = page.locator('[data-dashboard-module="events"]');
+    await expect(tasksModule).toBeVisible({ timeout: 10000 });
+    await expect(eventsModule).toHaveCSS('order', '2');
+    await expect(tasksModule).toHaveCSS('order', '3');
+
+    await page.getByRole('button', { name: 'Customize layout' }).click();
+    await page.getByRole('button', { name: 'Move Open tasks up' }).click();
+
+    await expect(tasksModule).toHaveCSS('order', '2');
+    await expect(eventsModule).toHaveCSS('order', '3');
+
+    await page.reload();
+    await page.locator('#main-content').waitFor({ timeout: 15000 });
+    await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '2');
+    await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '3');
+
+    await page.getByRole('button', { name: 'Customize layout' }).click();
+    await page.getByRole('button', { name: 'Reset layout' }).click();
+    await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '2');
+    await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '3');
+  });
 });

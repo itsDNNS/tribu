@@ -16,8 +16,11 @@ jest.mock('../../lib/i18n', () => ({
 jest.mock('../../lib/api', () => ({
   apiCompleteSetupChecklistStep: jest.fn(() => Promise.resolve({ ok: true, data: { dismissed: false, show_on_dashboard: false, completed_count: 1, total_count: 1, steps: [] } })),
   apiDismissSetupChecklist: jest.fn(() => Promise.resolve({ ok: true })),
+  apiGetDashboardLayout: jest.fn(() => new Promise(() => {})),
   apiGetSetupChecklist: jest.fn(() => Promise.resolve({ ok: false })),
   apiListMealPlans: jest.fn(() => Promise.resolve({ ok: true, data: [] })),
+  apiResetDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } })),
+  apiUpdateDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } })),
 }));
 
 jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
