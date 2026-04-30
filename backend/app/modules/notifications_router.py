@@ -8,6 +8,7 @@ from app.core import cache
 from app.core.deps import current_user
 from app.core.scopes import require_scope
 from app.core.push import get_vapid_public_key, is_pywebpush_available, is_vapid_configured, send_push_for_user
+from app.core.notification_preferences import normalize_push_categories
 from app.database import get_db, SessionLocal
 from app.models import Notification, NotificationPreference, NotificationSentLog, PushSubscription, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushStatusResponse, PushSubscriptionCreate, PushTestResponse, PushUnsubscribe
@@ -351,8 +352,17 @@ def get_preferences(user: User = Depends(current_user), db: Session = Depends(ge
     def _load():
         pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
         if not pref:
-            return {"reminders_enabled": True, "reminder_minutes": 30, "quiet_start": None, "quiet_end": None, "push_enabled": False}
-        return NotificationPreferenceResponse.model_validate(pref).model_dump()
+            return {
+                "reminders_enabled": True,
+                "reminder_minutes": 30,
+                "quiet_start": None,
+                "quiet_end": None,
+                "push_enabled": False,
+                "push_categories": normalize_push_categories(None),
+            }
+        data = NotificationPreferenceResponse.model_validate(pref).model_dump()
+        data["push_categories"] = normalize_push_categories(data.get("push_categories"))
+        return data
     data = cache.get_or_set(f"tribu:notif_prefs:{user.id}", 600, _load)
     return NotificationPreferenceResponse(**data)
 

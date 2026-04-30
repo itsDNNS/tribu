@@ -6,6 +6,30 @@ import { t } from '../../lib/i18n';
 import usePushSubscription from '../../hooks/usePushSubscription';
 import * as api from '../../lib/api';
 
+const PUSH_CATEGORY_DEFAULTS = {
+  calendar_reminders: true,
+  task_due: true,
+  birthdays: true,
+  event_assignments: false,
+  shopping_changes: false,
+  meal_plan_changes: false,
+  family_changes: false,
+};
+
+const PUSH_CATEGORY_ROWS = [
+  ['calendar_reminders', 'push_category_calendar_reminders', 'push_category_calendar_reminders_desc'],
+  ['task_due', 'push_category_task_due', 'push_category_task_due_desc'],
+  ['birthdays', 'push_category_birthdays', 'push_category_birthdays_desc'],
+  ['event_assignments', 'push_category_event_assignments', 'push_category_event_assignments_desc'],
+  ['shopping_changes', 'push_category_shopping_changes', 'push_category_shopping_changes_desc'],
+  ['meal_plan_changes', 'push_category_meal_plan_changes', 'push_category_meal_plan_changes_desc'],
+  ['family_changes', 'push_category_family_changes', 'push_category_family_changes_desc'],
+];
+
+function normalizePushCategories(value) {
+  return { ...PUSH_CATEGORY_DEFAULTS, ...(value || {}) };
+}
+
 function pushStatusCopy(messages, pushStatus, pushSupported, pushPermission, pushSubscription) {
   if (!pushSupported) {
     return {
@@ -62,7 +86,13 @@ export default function NotificationsTab() {
   const { success: toastSuccess } = useToast();
   const { pushSupported, pushSubscription, pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushSubscription(loggedIn, demoMode);
 
-  const [notifPrefs, setNotifPrefs] = useState({ reminders_enabled: true, reminder_minutes: 30, quiet_start: '', quiet_end: '' });
+  const [notifPrefs, setNotifPrefs] = useState({
+    reminders_enabled: true,
+    reminder_minutes: 30,
+    quiet_start: '',
+    quiet_end: '',
+    push_categories: normalizePushCategories(null),
+  });
   const [pushStatus, setPushStatus] = useState(null);
   const [pushBusy, setPushBusy] = useState(false);
 
@@ -74,6 +104,7 @@ export default function NotificationsTab() {
       reminder_minutes: res.data.reminder_minutes,
       quiet_start: res.data.quiet_start || '',
       quiet_end: res.data.quiet_end || '',
+      push_categories: normalizePushCategories(res.data.push_categories),
     });
   }, [loggedIn, demoMode]);
 
@@ -199,6 +230,31 @@ export default function NotificationsTab() {
             <div className="set-push-header">
               <BellRing size={16} />
               <span className="set-push-title">{t(messages, 'push_notifications')}</span>
+            </div>
+            <div className="set-push-category-section">
+              <div className="set-push-category-title">{t(messages, 'push_categories_title')}</div>
+              <p className="set-push-category-help">{t(messages, 'push_categories_help')}</p>
+              <div className="set-push-category-list">
+                {PUSH_CATEGORY_ROWS.map(([key, labelKey, descKey]) => (
+                  <label className="set-push-category-row" key={key}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(notifPrefs.push_categories?.[key])}
+                      onChange={(e) => setNotifPrefs((p) => ({
+                        ...p,
+                        push_categories: {
+                          ...normalizePushCategories(p.push_categories),
+                          [key]: e.target.checked,
+                        },
+                      }))}
+                    />
+                    <span>
+                      <strong>{t(messages, labelKey)}</strong>
+                      <small>{t(messages, descKey)}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
             {statusCopy && (
               <div className={`set-push-diagnostic set-push-diagnostic-${statusCopy.tone}`}>

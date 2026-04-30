@@ -66,12 +66,13 @@ def _seed_user(db, email: str = "rel@example.com") -> tuple[User, Family]:
     return user, fam
 
 
-def _set_pref(db, user_id: int, *, push_enabled: bool = False) -> None:
+def _set_pref(db, user_id: int, *, push_enabled: bool = False, push_categories: dict | None = None) -> None:
     pref = NotificationPreference(
         user_id=user_id,
         reminders_enabled=True,
         reminder_minutes=30,
         push_enabled=push_enabled,
+        push_categories=push_categories,
     )
     db.add(pref)
     db.flush()
@@ -284,6 +285,94 @@ def test_transient_push_failure_keeps_one_notification_and_retries(monkeypatch):
     assert call_count["n"] == third_baseline, "delivered logs must not retry push"
 
 
+def test_disabled_push_category_keeps_in_app_reminder_and_skips_push(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "category-off@example.com")
+        _set_pref(db, user.id, push_enabled=True, push_categories={"calendar_reminders": False})
+        now = datetime(2026, 4, 25, 12, 0, 0)
+        ev = CalendarEvent(
+            family_id=fam.id,
+            title="Quiet appointment",
+            starts_at=now + timedelta(minutes=10),
+            all_day=False,
+        )
+        db.add(ev)
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_now(monkeypatch, now)
+
+    from app.core import scheduler as scheduler_module
+
+    calls = {"n": 0}
+
+    def fake_push(db, uid, title, body, url=None):
+        calls["n"] += 1
+        raise AssertionError("disabled category must not attempt browser push")
+
+    monkeypatch.setattr(scheduler_module, "send_push_for_user", fake_push)
+    scheduler_module._check_notifications()
+
+    db = TestSession()
+    try:
+        notifs = db.query(Notification).filter(Notification.user_id == user_id).all()
+        logs = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).all()
+        assert len(notifs) == 1
+        assert notifs[0].type == "event_reminder"
+        assert len(logs) == 1
+        assert logs[0].status == "delivered"
+        assert logs[0].last_error == "push_skipped:category_disabled:calendar_reminders"
+        assert calls["n"] == 0
+    finally:
+        db.close()
+
+
+def test_enabled_push_category_sends_push(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "category-on@example.com")
+        _set_pref(db, user.id, push_enabled=True, push_categories={"calendar_reminders": True})
+        now = datetime(2026, 4, 25, 12, 0, 0)
+        ev = CalendarEvent(
+            family_id=fam.id,
+            title="Push appointment",
+            starts_at=now + timedelta(minutes=10),
+            all_day=False,
+        )
+        db.add(ev)
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_now(monkeypatch, now)
+
+    from app.core import push as push_module
+    from app.core import scheduler as scheduler_module
+
+    calls = {"n": 0}
+
+    def fake_push(db, uid, title, body, url=None):
+        calls["n"] += 1
+        return push_module.PushResult(attempted=1, succeeded=1)
+
+    monkeypatch.setattr(scheduler_module, "send_push_for_user", fake_push)
+    scheduler_module._check_notifications()
+
+    db = TestSession()
+    try:
+        logs = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).all()
+        assert len(logs) == 1
+        assert logs[0].status == "delivered"
+        assert logs[0].last_error is None
+        assert calls["n"] == 1
+    finally:
+        db.close()
+
+
 def test_recurring_event_occurrence_creates_one_reminder(monkeypatch):
     """Recurring events are virtual occurrences, but each occurrence still
     needs a deterministic reminder key and idempotent delivery."""
@@ -477,5 +566,90 @@ def test_task_due_creates_one_log_then_does_not_duplicate(monkeypatch):
         assert len(logs) == 1
         assert logs[0].trigger_key.startswith(f"task:{task_id}:")
         assert logs[0].status == "delivered"
+    finally:
+        db.close()
+
+
+def test_event_assignment_push_respects_category_preference(monkeypatch):
+    db = TestSession()
+    calls = []
+
+    def fake_push(db, uid, title, body, url=None):
+        calls.append({"uid": uid, "title": title, "body": body, "url": url})
+
+    from app.modules import calendar_router
+
+    monkeypatch.setattr(calendar_router, "send_push_for_user", fake_push)
+    try:
+        actor, fam = _seed_user(db, "assign-actor@example.com")
+        assigned = User(email="assign-target@example.com", password_hash=hash_password("p"), display_name="Target")
+        db.add(assigned)
+        db.flush()
+        db.add(Membership(user_id=assigned.id, family_id=fam.id, role="member", is_adult=False))
+        _set_pref(
+            db,
+            assigned.id,
+            push_enabled=True,
+            push_categories={"event_assignments": True},
+        )
+        event = CalendarEvent(
+            family_id=fam.id,
+            title="Dentist",
+            starts_at=datetime(2026, 4, 25, 12, 0, 0),
+            assigned_to=[assigned.id],
+        )
+        db.add(event)
+        db.flush()
+
+        calendar_router._create_assignment_notifications(db, event, actor.id)
+        db.flush()
+
+        assert db.query(Notification).filter(Notification.user_id == assigned.id).count() == 1
+        assert calls == [{
+            "uid": assigned.id,
+            "title": "Dentist",
+            "body": "You were assigned to an event.",
+            "url": f"/calendar?event={event.id}",
+        }]
+    finally:
+        db.close()
+
+
+def test_event_assignment_disabled_category_keeps_in_app_without_push(monkeypatch):
+    db = TestSession()
+    calls = []
+
+    def fake_push(db, uid, title, body, url=None):
+        calls.append(uid)
+
+    from app.modules import calendar_router
+
+    monkeypatch.setattr(calendar_router, "send_push_for_user", fake_push)
+    try:
+        actor, fam = _seed_user(db, "assign-off-actor@example.com")
+        assigned = User(email="assign-off-target@example.com", password_hash=hash_password("p"), display_name="Target")
+        db.add(assigned)
+        db.flush()
+        db.add(Membership(user_id=assigned.id, family_id=fam.id, role="member", is_adult=False))
+        _set_pref(
+            db,
+            assigned.id,
+            push_enabled=True,
+            push_categories={"event_assignments": False},
+        )
+        event = CalendarEvent(
+            family_id=fam.id,
+            title="Training",
+            starts_at=datetime(2026, 4, 25, 12, 0, 0),
+            assigned_to=[assigned.id],
+        )
+        db.add(event)
+        db.flush()
+
+        calendar_router._create_assignment_notifications(db, event, actor.id)
+        db.flush()
+
+        assert db.query(Notification).filter(Notification.user_id == assigned.id).count() == 1
+        assert calls == []
     finally:
         db.close()
