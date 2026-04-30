@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, User
+from app.models import Family, Membership, PersonalAccessToken, SchoolTimetable, SchoolTimetableAssignment, SchoolTimetableLesson, SchoolTimetablePeriod, User
 from app.security import PAT_PREFIX, hash_password
 
 
@@ -745,3 +745,124 @@ class TestHomeHeaderWidget:
         assert resp.status_code == 200, resp.text
         types = [w["type"] for w in resp.json()["device"]["layout_config"]["widgets"]]
         assert types == ["agenda"]
+
+
+# ---------------------------------------------------------------------------
+# School timetables
+# ---------------------------------------------------------------------------
+
+
+def _seed_child(family_id: int, suffix: str, *, color: str | None = None) -> int:
+    db = TestSession()
+    child = User(
+        email=f"school-child-{suffix}@example.com",
+        password_hash=hash_password("password"),
+        display_name=f"Child {suffix}",
+    )
+    db.add(child)
+    db.flush()
+    db.add(Membership(user_id=child.id, family_id=family_id, role="member", is_adult=False, color=color))
+    child_id = child.id
+    db.commit()
+    db.close()
+    return child_id
+
+
+def _school_payload(family_id: int, child_ids: list[int], *, include_saturday: bool = False) -> dict:
+    return {
+        "family_id": family_id,
+        "name": "Class 4b",
+        "class_label": "4b",
+        "include_saturday": include_saturday,
+        "assigned_member_user_ids": child_ids,
+        "periods": [
+            {"position": 1, "label": "1", "start_time": "08:00", "end_time": "08:45", "kind": "lesson"},
+            {"position": 2, "label": "Break", "start_time": "08:45", "end_time": "09:00", "kind": "break", "break_label": "Big break"},
+            {"position": 3, "label": "2", "start_time": "09:00", "end_time": "09:45", "kind": "lesson"},
+        ],
+        "lessons": [
+            {"weekday": weekday, "period_position": 1, "subject": "Math", "room": "A1", "teacher": "Ms Ada"}
+            for weekday in range(1, 7 if include_saturday else 6)
+        ],
+    }
+
+
+class TestSchoolTimetables:
+    def test_adult_can_create_shared_class_timetable_for_twins(self):
+        admin_token, _, family_id = _seed_member_with_pat(
+            "schoolAdmin", role="admin", is_adult=True, scopes="school_timetables:read,school_timetables:write"
+        )
+        child_a = _seed_child(family_id, "A", color="#7c3aed")
+        child_b = _seed_child(family_id, "B", color="#f43f5e")
+
+        resp = client.post(
+            "/school-timetables",
+            json=_school_payload(family_id, [child_a, child_b]),
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["class_label"] == "4b"
+        assert body["assigned_member_user_ids"] == [child_a, child_b]
+        assert [m["display_name"] for m in body["assigned_members"]] == ["Child A", "Child B"]
+        assert [p["kind"] for p in body["periods"]] == ["lesson", "break", "lesson"]
+
+        listed = client.get(f"/school-timetables?family_id={family_id}", headers=_auth(admin_token))
+        assert listed.status_code == 200, listed.text
+        assert listed.json()[0]["lessons"][0]["subject"] == "Math"
+
+    def test_rejects_adult_members_as_child_assignments(self):
+        admin_token, admin_user_id, family_id = _seed_member_with_pat(
+            "schoolAdultAssignment", role="admin", is_adult=True, scopes="school_timetables:write"
+        )
+        payload = _school_payload(family_id, [admin_user_id])
+
+        resp = client.post("/school-timetables", json=payload, headers=_auth(admin_token))
+        assert resp.status_code == 400
+        assert "child family members" in resp.text
+
+    def test_saturday_lessons_require_opt_in(self):
+        admin_token, _, family_id = _seed_member_with_pat(
+            "schoolSaturday", role="admin", is_adult=True, scopes="school_timetables:write"
+        )
+        child_id = _seed_child(family_id, "Saturday")
+        payload = _school_payload(family_id, [child_id])
+        payload["lessons"].append({"weekday": 6, "period_position": 1, "subject": "Club"})
+
+        resp = client.post("/school-timetables", json=payload, headers=_auth(admin_token))
+        assert resp.status_code == 400
+        assert "Saturday" in resp.text
+
+    def test_display_dashboard_includes_today_school_timetable_without_ids(self, monkeypatch):
+        import app.modules.display_router as display_router
+
+        class FixedDate(display_router.date):
+            @classmethod
+            def today(cls):
+                return cls(2026, 4, 27)
+
+        monkeypatch.setattr(display_router, "date", FixedDate)
+
+        admin_token, _, family_id = _seed_member_with_pat("schoolDisplay", role="admin", is_adult=True)
+        child_a = _seed_child(family_id, "TwinA", color="#7c3aed")
+        child_b = _seed_child(family_id, "TwinB", color="#f43f5e")
+        create = client.post(
+            "/school-timetables",
+            json=_school_payload(family_id, [child_a, child_b], include_saturday=True),
+            headers=_auth(admin_token),
+        )
+        assert create.status_code == 200, create.text
+        token = _mint_display_token(family_id, "Kitchen School")
+
+        resp = client.get("/display/dashboard", headers=_auth(token))
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert "today_school_timetables" in body
+        rendered = json_module.dumps(body["today_school_timetables"])
+        assert "Child TwinA" in rendered
+        assert "Child TwinB" in rendered
+        assert "Math" in rendered
+        assert "Ms Ada" not in rendered
+        assert "A1" not in rendered
+        assert str(child_a) not in rendered
+        assert "@example.com" not in rendered

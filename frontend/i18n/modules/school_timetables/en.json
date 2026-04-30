@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "School timetables",
+  "module.school_timetables.subtitle": "Weekly class schedules for the kids",
+  "module.school_timetables.add": "Add timetable",
+  "module.school_timetables.save": "Save timetable",
+  "module.school_timetables.delete": "Delete",
+  "module.school_timetables.class_label": "Class",
+  "module.school_timetables.include_saturday": "Includes Saturday",
+  "module.school_timetables.assigned_children": "Assigned children",
+  "module.school_timetables.periods": "Periods and breaks",
+  "module.school_timetables.lessons": "Lessons",
+  "module.school_timetables.empty": "No school timetables yet.",
+  "module.school_timetables.display_title": "School today"
+}

@@ -30,6 +30,8 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "gifts:write": "Create, update, and delete gift list entries",
     "meal_plans:read": "View weekly meal plans",
     "meal_plans:write": "Create, update, and delete meal plan entries; push ingredients to shopping lists",
+    "school_timetables:read": "View children's school timetables",
+    "school_timetables:write": "Create, update, and delete children's school timetables",
     "recipes:read": "View family recipes",
     "recipes:write": "Create, update, and delete recipes; push recipe ingredients to shopping lists",
     "admin:read": "View backup config, admin settings, automation webhooks, and system status",

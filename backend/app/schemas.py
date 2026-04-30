@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import Optional, Union
 from urllib.parse import urlparse
 
@@ -1187,7 +1187,7 @@ class NavOrderResponse(BaseModel):
 
 class NavOrderUpdate(BaseModel):
     """Update navigation bar order."""
-    nav_order: list[str] = Field(min_length=1, max_length=10, description="Ordered list of view keys")
+    nav_order: list[str] = Field(min_length=1, max_length=20, description="Ordered list of view keys")
 
 
 class DashboardLayoutResponse(BaseModel):
@@ -1712,6 +1712,108 @@ class RecipeAddToShoppingResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# School timetables
+# ---------------------------------------------------------------------------
+
+class SchoolTimetablePeriodBase(BaseModel):
+    position: int = Field(..., ge=1, le=20, description="Ordered period/break position in the school day")
+    label: str = Field(..., min_length=1, max_length=80, description="User-facing period label")
+    start_time: time = Field(..., description="Local start time")
+    end_time: time = Field(..., description="Local end time")
+    kind: str = Field("lesson", description="Either 'lesson' or 'break'")
+    break_label: Optional[str] = Field(None, max_length=120, description="Optional break label")
+
+
+class SchoolTimetablePeriodCreate(SchoolTimetablePeriodBase):
+    pass
+
+
+class SchoolTimetablePeriodResponse(SchoolTimetablePeriodBase):
+    id: int
+
+
+class SchoolTimetableLessonBase(BaseModel):
+    weekday: int = Field(..., ge=1, le=6, description="ISO weekday, Monday=1 through Saturday=6")
+    period_position: int = Field(..., ge=1, le=20, description="Position of the configured period this lesson belongs to")
+    subject: str = Field(..., min_length=1, max_length=160)
+    room: Optional[str] = Field(None, max_length=80)
+    teacher: Optional[str] = Field(None, max_length=120)
+    color: Optional[str] = Field(None, max_length=20)
+
+
+class SchoolTimetableLessonCreate(SchoolTimetableLessonBase):
+    pass
+
+
+class SchoolTimetableLessonResponse(SchoolTimetableLessonBase):
+    id: int
+    period_id: int
+
+
+class SchoolTimetableMemberResponse(BaseModel):
+    display_name: str
+    color: Optional[str] = None
+    profile_image: Optional[str] = None
+
+
+class SchoolTimetableBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    class_label: Optional[str] = Field(None, max_length=80)
+    include_saturday: bool = False
+    notes: Optional[str] = None
+    assigned_member_user_ids: list[int] = Field(default_factory=list)
+    periods: list[SchoolTimetablePeriodCreate] = Field(default_factory=list)
+    lessons: list[SchoolTimetableLessonCreate] = Field(default_factory=list)
+
+
+class SchoolTimetableCreate(SchoolTimetableBase):
+    family_id: int
+
+
+class SchoolTimetableUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=160)
+    class_label: Optional[str] = Field(None, max_length=80)
+    include_saturday: Optional[bool] = None
+    notes: Optional[str] = None
+    assigned_member_user_ids: Optional[list[int]] = None
+    periods: Optional[list[SchoolTimetablePeriodCreate]] = None
+    lessons: Optional[list[SchoolTimetableLessonCreate]] = None
+
+
+class SchoolTimetableResponse(BaseModel):
+    id: int
+    family_id: int
+    name: str
+    class_label: Optional[str]
+    include_saturday: bool
+    notes: Optional[str]
+    assigned_member_user_ids: list[int]
+    assigned_members: list[SchoolTimetableMemberResponse]
+    periods: list[SchoolTimetablePeriodResponse]
+    lessons: list[SchoolTimetableLessonResponse]
+    created_by_user_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+
+
+class DisplaySchoolTimetableLesson(BaseModel):
+    period_label: str
+    start_time: time
+    end_time: time
+    kind: str
+    break_label: Optional[str] = None
+    subject: Optional[str] = None
+    color: Optional[str] = None
+
+
+class DisplaySchoolTimetableGroup(BaseModel):
+    name: str
+    class_label: Optional[str] = None
+    children: list[SchoolTimetableMemberResponse]
+    lessons: list[DisplaySchoolTimetableLesson]
+
+
+# ---------------------------------------------------------------------------
 # Display Devices (issue #172)
 #
 # A display device is a dedicated identity for a shared-home screen
@@ -1838,6 +1940,7 @@ class DisplayDashboardResponse(BaseModel):
     members: list[DisplayDashboardMember] = Field(..., description="Family members (display name, color, and avatar only)")
     next_events: list[DisplayDashboardEvent] = Field(..., description="Upcoming events within 14 days (display-safe fields only)")
     upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
+    today_school_timetables: list[DisplaySchoolTimetableGroup] = Field(default_factory=list, description="Display-safe school timetable groups for today")
     config: DisplayDeviceConfig = Field(..., description="Resolved display render config")
 
 

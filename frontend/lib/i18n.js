@@ -23,12 +23,14 @@ import mealPlansDe from '../i18n/modules/meal_plans/de.json';
 import mealPlansEn from '../i18n/modules/meal_plans/en.json';
 import recipesDe from '../i18n/modules/recipes/de.json';
 import recipesEn from '../i18n/modules/recipes/en.json';
+import schoolTimetablesDe from '../i18n/modules/school_timetables/de.json';
+import schoolTimetablesEn from '../i18n/modules/school_timetables/en.json';
 import weeklyPlanDe from '../i18n/modules/weekly_plan/de.json';
 import weeklyPlanEn from '../i18n/modules/weekly_plan/en.json';
 
 const moduleLocales = {
-  de: [calendarDe, dashboardDe, contactsDe, tasksDe, templatesDe, shoppingDe, birthdaysDe, rewardsDe, giftsDe, mealPlansDe, recipesDe, weeklyPlanDe],
-  en: [calendarEn, dashboardEn, contactsEn, tasksEn, templatesEn, shoppingEn, birthdaysEn, rewardsEn, giftsEn, mealPlansEn, recipesEn, weeklyPlanEn],
+  de: [calendarDe, dashboardDe, contactsDe, tasksDe, templatesDe, shoppingDe, birthdaysDe, rewardsDe, giftsDe, mealPlansDe, recipesDe, schoolTimetablesDe, weeklyPlanDe],
+  en: [calendarEn, dashboardEn, contactsEn, tasksEn, templatesEn, shoppingEn, birthdaysEn, rewardsEn, giftsEn, mealPlansEn, recipesEn, schoolTimetablesEn, weeklyPlanEn],
 };
 
 const coreLocales = { de: coreDe, en: coreEn };

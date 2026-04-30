@@ -15,6 +15,7 @@ import TemplatesView from './TemplatesView';
 import RewardsView from './RewardsView';
 import GiftsView from './GiftsView';
 import MealPlansView from './MealPlansView';
+import SchoolTimetablesView from './SchoolTimetablesView';
 import RecipesView from './RecipesView';
 import ShoppingView from './ShoppingView';
 import SettingsView from './settings';
@@ -36,6 +37,7 @@ const views = {
   rewards: RewardsView,
   gifts: GiftsView,
   meal_plans: MealPlansView,
+  school_timetables: SchoolTimetablesView,
   recipes: RecipesView,
   notifications: NotificationCenter,
   settings: SettingsView,

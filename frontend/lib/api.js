@@ -741,6 +741,24 @@ export function apiAddRecipeIngredientsToShopping(recipeId, shoppingListId, ingr
   return post(`/recipes/${recipeId}/add-to-shopping`, body);
 }
 
+// School timetables
+export function apiListSchoolTimetables(familyId) {
+  const params = new URLSearchParams({ family_id: String(familyId) });
+  return request(`/school-timetables?${params.toString()}`);
+}
+
+export function apiCreateSchoolTimetable(payload) {
+  return post('/school-timetables', payload);
+}
+
+export function apiUpdateSchoolTimetable(timetableId, payload) {
+  return patch(`/school-timetables/${timetableId}`, payload);
+}
+
+export function apiDeleteSchoolTimetable(timetableId) {
+  return del(`/school-timetables/${timetableId}`);
+}
+
 // ──────────────────────────────────────────────────────────────
 // Display Devices (issue #172)
 //
