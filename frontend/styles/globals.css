@@ -1029,6 +1029,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .calendar-day-num { font-size: 0.88rem; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
 .calendar-day-dots { display: flex; align-items: center; gap: 3px; min-height: 11px; }
 .calendar-day-dot { width: 5px; height: 5px; border-radius: 50%; }
+.calendar-day-icon-indicator { width: 14px; height: 14px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; background: var(--bg-muted); flex: 0 0 auto; }
 .calendar-day-birthday-indicator { width: 13px; height: 13px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: #f43f5e; background: color-mix(in srgb, #f43f5e 12%, transparent); flex: 0 0 auto; }
 .day-detail-panel { padding: var(--space-lg); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); align-self: start; }
 .day-detail-date { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--space-xs); }
@@ -1072,6 +1073,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .assigned-badge { width: 20px; height: 20px; border-radius: 50%; font-size: 0.6rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; color: #fff; }
 
 .event-card-title { font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
+.event-card-icon { flex-shrink: 0; line-height: 1; }
 .event-card-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
 .event-card-location { font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .event-card-map-links { display: inline-flex; gap: 8px; margin-left: 2px; }

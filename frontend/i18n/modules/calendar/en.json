@@ -51,6 +51,8 @@
   "module.calendar.color": "Event color",
   "module.calendar.color_none": "No color",
   "module.calendar.category": "Category",
+  "module.calendar.icon": "Event icon",
+  "module.calendar.icon_none": "No icon",
   "module.calendar.edit_event": "Edit event",
   "module.calendar.description": "Description",
   "module.calendar.location": "Location or address",

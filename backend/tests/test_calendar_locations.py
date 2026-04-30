@@ -115,3 +115,61 @@ def test_create_list_update_and_clear_calendar_event_location():
         assert event.location is None
     finally:
         db.close()
+
+
+def test_create_update_clear_and_reject_calendar_event_icons():
+    token, family_id = _seed_adult()
+    client = TestClient(app)
+
+    created = client.post(
+        "/calendar/events",
+        json={
+            "family_id": family_id,
+            "title": "Football practice",
+            "starts_at": "2026-05-12T16:00:00",
+            "icon": "soccer",
+        },
+        headers=_auth_headers(token),
+    )
+    assert created.status_code == 200, created.text
+    body = created.json()
+    assert body["icon"] == "soccer"
+
+    listed = client.get(f"/calendar/events?family_id={family_id}", headers=_auth_headers(token))
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["items"][0]["icon"] == "soccer"
+
+    updated = client.patch(
+        f"/calendar/events/{body['id']}",
+        json={"icon": "dentist"},
+        headers=_auth_headers(token),
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["icon"] == "dentist"
+
+    cleared = client.patch(
+        f"/calendar/events/{body['id']}",
+        json={"icon": None},
+        headers=_auth_headers(token),
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["icon"] is None
+
+    invalid = client.post(
+        "/calendar/events",
+        json={
+            "family_id": family_id,
+            "title": "Unsafe icon",
+            "starts_at": "2026-05-13T16:00:00",
+            "icon": "<svg/onload=alert(1)>",
+        },
+        headers=_auth_headers(token),
+    )
+    assert invalid.status_code == 422, invalid.text
+
+    db = TestSession()
+    try:
+        event = db.query(CalendarEvent).filter(CalendarEvent.id == body["id"]).one()
+        assert event.icon is None
+    finally:
+        db.close()

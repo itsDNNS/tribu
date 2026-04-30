@@ -107,6 +107,7 @@ describe('useCalendar edit flow', () => {
       assigned_to: [7],
       color: '#7c3aed',
       category: 'work',
+      icon: 'music',
       is_recurring: true,
     }));
 
@@ -120,6 +121,7 @@ describe('useCalendar edit flow', () => {
     expect(result.current.editAssignedTo).toEqual([7]);
     expect(result.current.editColor).toBe('#7c3aed');
     expect(result.current.editCategory).toBe('work');
+    expect(result.current.editIcon).toBe('music');
   });
 
   it('startEdit preserves an "all" assignment instead of coercing it to an array', () => {
@@ -147,7 +149,7 @@ describe('useCalendar edit flow', () => {
     expect(result.current.editingEvent).toBeNull();
   });
 
-  it('saveEdit payload includes recurrence, assigned_to, color, category, and location', async () => {
+  it('saveEdit payload includes recurrence, assigned_to, color, category, icon, and location', async () => {
     const ctx = setupAppContext({ demoMode: false });
     const { useCalendar } = require('../../hooks/useCalendar');
     const api = require('../../lib/api');
@@ -163,6 +165,7 @@ describe('useCalendar edit flow', () => {
       result.current.setEditAssignedTo(['7']);
       result.current.setEditColor('#22d3ee');
       result.current.setEditCategory('health');
+      result.current.setEditIcon('dentist');
       result.current.setEditLocation('Main Street Clinic');
     });
 
@@ -174,6 +177,7 @@ describe('useCalendar edit flow', () => {
       recurrence: 'monthly',
       assigned_to: [7],
       color: '#22d3ee',
+      icon: 'dentist',
       location: 'Main Street Clinic',
     }));
     // all_day and category are intentionally omitted from the PATCH
@@ -195,6 +199,7 @@ describe('useCalendar edit flow', () => {
       result.current.setTitle('Football practice');
       result.current.setStartsAt('2026-05-12T16:00');
       result.current.setLocation('Sports Park, Field 2');
+      result.current.setIcon('soccer');
     });
 
     await act(async () => {
@@ -204,8 +209,10 @@ describe('useCalendar edit flow', () => {
     expect(api.apiCreateEvent).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Football practice',
       location: 'Sports Park, Field 2',
+      icon: 'soccer',
     }));
     expect(result.current.location).toBe('');
+    expect(result.current.icon).toBe('');
   });
 
   it('saveEdit does not wipe the dialog if the user switched events mid-save', async () => {

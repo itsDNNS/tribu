@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core import cache
 from app.core.activity import record_activity
 from app.core.clock import utcnow
+from app.core.calendar_icons import normalize_calendar_event_icon
 from app.core.calendar_subscriptions import (
     IcsSubscriptionError,
     fetch_ics_text,
@@ -150,6 +151,7 @@ MEANINGFUL_EVENT_ACTIVITY_FIELDS = {
     "recurrence",
     "recurrence_end",
     "assigned_to",
+    "icon",
 }
 
 
@@ -776,6 +778,7 @@ def create_calendar_event(
         assigned_to=payload.assigned_to,
         color=payload.color,
         category=payload.category,
+        icon=payload.icon,
         created_by_user_id=user.id,
     )
     db.add(event)
@@ -851,6 +854,8 @@ def update_calendar_event(
         event.color = payload.color or None
     if payload.category is not None:
         event.category = payload.category or None
+    if "icon" in payload.model_fields_set:
+        event.icon = normalize_calendar_event_icon(payload.icon)
 
     if event.ends_at and event.ends_at < event.starts_at:
         raise HTTPException(status_code=400, detail=error_detail(END_BEFORE_START))

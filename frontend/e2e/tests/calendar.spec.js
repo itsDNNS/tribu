@@ -13,7 +13,7 @@ test.describe('Calendar', () => {
     await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
 
     // Click on day 15
-    await page.locator('.calendar-day:not(.other-month)', { hasText: /^15$/ }).first().click();
+    await page.getByRole('button', { name: /^[A-Za-z]+ 15(?:,|$)/ }).click();
 
     // Fill event title and location in the form that appears
     const form = page.locator('.day-detail-panel .quick-add-form');
@@ -21,12 +21,15 @@ test.describe('Calendar', () => {
     await titleInput.waitFor({ timeout: 5000 });
     await titleInput.fill('E2E Test Event');
     await form.locator('input[placeholder="Location or address"]').fill('Sports Park, Field 2');
+    await form.locator('#calendar-create-icon').selectOption('soccer');
 
     // Submit
     await form.locator('button[type="submit"]').click();
 
     // Event should appear with location and provider-neutral map links
     await expect(page.getByText('E2E Test Event')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.calendar-day-icon-indicator', { hasText: '⚽' })).toBeVisible();
+    await expect(page.locator('.event-card-icon').filter({ hasText: '⚽' })).toBeVisible();
     await expect(page.getByText('Sports Park, Field 2')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open in Google Maps' })).toHaveAttribute(
       'href',
@@ -43,7 +46,7 @@ test.describe('Calendar', () => {
     await navigateTo(page, 'Calendar');
     await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
 
-    await page.locator('.calendar-day:not(.other-month)', { hasText: /^15$/ }).first().click();
+    await page.getByRole('button', { name: /^[A-Za-z]+ 15(?:,|$)/ }).click();
 
     const form = page.locator('.day-detail-panel .quick-add-form');
     await expect(form).toBeVisible({ timeout: 5000 });
@@ -81,7 +84,7 @@ test.describe('Calendar', () => {
     await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
 
     // Click on day 20
-    await page.locator('.calendar-day:not(.other-month)', { hasText: /^20$/ }).first().click();
+    await page.getByRole('button', { name: /^[A-Za-z]+ 20(?:,|$)/ }).click();
 
     // Wait for event to appear
     await expect(page.getByText('Delete Me')).toBeVisible({ timeout: 10000 });

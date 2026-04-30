@@ -327,6 +327,7 @@ def display_dashboard(
             occurrence_date=o.get("occurrence_date"),
             color=o.get("color"),
             category=o.get("category"),
+            icon=o.get("icon"),
         )
         for o in occurrences[:8]
     ]
