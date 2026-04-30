@@ -3087,6 +3087,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   width: clamp(64px, 6vw, 84px);
   height: clamp(64px, 6vw, 84px);
   border-radius: 50%;
+  object-fit: cover;
   display: inline-flex;
   align-items: center;
   justify-content: center;

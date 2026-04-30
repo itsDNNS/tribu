@@ -7,7 +7,7 @@ import re
 
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, ValidationError, field_validator
 
 from app.core.calendar_icons import normalize_calendar_event_icon
 from app.core.notification_preferences import normalize_push_categories
@@ -129,6 +129,16 @@ class ProfileImageUpdate(BaseModel):
             raise ValueError(f"Image too large ({len(decoded)} bytes). Maximum: {_PROFILE_IMAGE_MAX_BYTES} bytes (2 MB)")
 
         return v
+
+
+def sanitize_profile_image_data_url(value: Optional[str]) -> Optional[str]:
+    """Return a validated avatar data URL, or None for legacy/corrupt values."""
+    if not value:
+        return None
+    try:
+        return ProfileImageUpdate(profile_image=value).profile_image
+    except ValidationError:
+        return None
 
 
 class LeaveFamilyRequest(BaseModel):
@@ -1776,14 +1786,15 @@ class DisplayMeResponse(BaseModel):
 class DisplayDashboardMember(BaseModel):
     """Family member info safe for a public-ish home display.
 
-    Intentionally minimal: only the visible chip data (display name +
-    optional color). Excludes user_id, email, is_adult, profile image,
-    role, and any other personal/admin metadata so a token leak from a
-    wall tablet cannot reveal account identifiers, link members back
-    to a User row, or expose family role structure.
+    Intentionally narrow: only visible chip data (display name,
+    optional color, and optional avatar image). Excludes user_id,
+    email, is_adult, role, and any other personal/admin metadata so a
+    token leak from a wall tablet cannot reveal account identifiers,
+    link members back to a User row, or expose family role structure.
     """
     display_name: str = Field(..., description="Display name (rendered on the wall display)")
     color: Optional[str] = Field(None, description="Personal color hex code, if set")
+    profile_image: Optional[str] = Field(None, description="Avatar image data URL, if set")
 
 
 class DisplayDashboardEvent(BaseModel):
@@ -1818,13 +1829,12 @@ class DisplayDashboardResponse(BaseModel):
     Family-bound by the display token: the device cannot pass a
     different ``family_id`` to widen its view. Contains only fields
     safe to render on a wall screen — no emails, no user IDs, no
-    profile images, no admin data, no PAT scopes, no audit-log
-    fragments, no source URLs.
+    admin data, no PAT scopes, no audit-log fragments, no source URLs.
     """
     family_id: int = Field(..., description="Family ID (the display is bound to this family)")
     family_name: str = Field(..., description="Family name")
     device_name: str = Field(..., description="Name of the display device requesting the dashboard")
-    members: list[DisplayDashboardMember] = Field(..., description="Family members (display name + color only)")
+    members: list[DisplayDashboardMember] = Field(..., description="Family members (display name, color, and avatar only)")
     next_events: list[DisplayDashboardEvent] = Field(..., description="Upcoming events within 14 days (display-safe fields only)")
     upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
     config: DisplayDeviceConfig = Field(..., description="Resolved display render config")
