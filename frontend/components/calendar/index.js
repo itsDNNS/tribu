@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Cake, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useCalendar } from '../../hooks/useCalendar';
 import { t } from '../../lib/i18n';
@@ -13,6 +13,13 @@ export default function CalendarView() {
   const weekdays = t(messages, 'module.calendar.weekdays').split(',');
 
   const today = new Date();
+  const formatCountLabel = (count, singular, plural) => `${count} ${count === 1 ? singular : plural}`;
+  const buildDayContentLabel = (birthdayCount, eventCount) => {
+    const parts = [];
+    if (birthdayCount > 0) parts.push(formatCountLabel(birthdayCount, 'birthday', 'birthdays'));
+    if (eventCount > 0) parts.push(formatCountLabel(eventCount, 'event', 'events'));
+    return parts.join(', ');
+  };
   const isToday = (day) => {
     return day === today.getDate()
       && cal.calendarMonth.getMonth() === today.getMonth()
@@ -122,8 +129,13 @@ export default function CalendarView() {
                 const dayDate = !c.empty
                   ? new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth(), c.day)
                   : null;
+                const birthdayEvents = (c.events || []).filter((ev) => ev._isBirthday);
+                const regularEvents = (c.events || []).filter((ev) => !ev._isBirthday);
+                const birthdayCount = birthdayEvents.length;
+                const regularEventCount = regularEvents.length;
+                const dayContentLabel = buildDayContentLabel(birthdayCount, regularEventCount);
                 const dayLabel = dayDate
-                  ? dayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' }) + (c.count > 0 ? `, ${t(messages, 'aria.events').replace('{count}', c.count)}` : '')
+                  ? dayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' }) + (dayContentLabel ? `, ${dayContentLabel}` : '')
                   : undefined;
 
                 return (
@@ -148,10 +160,15 @@ export default function CalendarView() {
                     {!c.empty && (
                       <>
                         <span className="calendar-day-num">{c.day}</span>
-                        {c.count > 0 && (
+                        {(birthdayCount > 0 || regularEventCount > 0) && (
                           <div className="calendar-day-dots" aria-hidden="true">
-                            {(c.events || []).slice(0, 3).map((ev, di) => (
-                              <div key={di} className="calendar-day-dot" style={{ background: ev.color || getMemberColor(null, di) }} />
+                            {birthdayCount > 0 && (
+                              <div className="calendar-day-birthday-indicator" title={formatCountLabel(birthdayCount, 'birthday', 'birthdays')}>
+                                <Cake size={11} strokeWidth={2.4} aria-hidden="true" />
+                              </div>
+                            )}
+                            {regularEvents.slice(0, birthdayCount > 0 ? 2 : 3).map((ev, di) => (
+                              <div key={ev.id || di} className="calendar-day-dot" style={{ background: ev.color || getMemberColor(null, di) }} />
                             ))}
                           </div>
                         )}
