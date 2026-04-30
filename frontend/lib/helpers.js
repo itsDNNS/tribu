@@ -10,13 +10,34 @@ export function toIsoOrNull(localValue) {
 }
 
 /**
- * Parse a datetime string from the API.
- * Backend stores naive local time (no timezone).
- * Browsers interpret strings without Z as local time, which is correct here.
+ * Parse a local wall-clock datetime from the API.
+ *
+ * Calendar events and other user-entered date/time fields intentionally store
+ * naive local time, so strings without a timezone must stay local here.
  */
 export function parseDate(value) {
   if (!value) return null;
   return new Date(String(value));
+}
+
+const NAIVE_API_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?$/;
+const EXPLICIT_TIMEZONE_RE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+
+/**
+ * Parse a server-generated instant from the API.
+ *
+ * Some backend/database timestamps are serialized as UTC-naive strings, for
+ * example "2026-04-30T14:35:00". Browsers interpret those as local time, which
+ * shifts activity/audit/notification metadata by the local UTC offset. Treat
+ * only full date-time strings without an explicit timezone as UTC instants.
+ * Date-only and local wall-clock fields should continue to use parseDate().
+ */
+export function parseServerInstant(value) {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  const normalized = NAIVE_API_DATETIME_RE.test(s) && !EXPLICIT_TIMEZONE_RE.test(s) ? `${s}Z` : s;
+  return new Date(normalized);
 }
 
 export function prettyDate(value, lang = 'en', timeFormat = '24h') {
@@ -51,9 +72,10 @@ export async function copyTextToClipboard(value) {
   }
 }
 
-export function timeAgo(dateStr, lang) {
+export function serverTimeAgo(dateStr, lang) {
   const now = new Date();
-  const date = new Date(dateStr);
+  const date = parseServerInstant(dateStr);
+  if (!date || Number.isNaN(date.getTime())) return '';
   const diff = Math.floor((now - date) / 1000);
   if (diff < 60) return lang === 'de' ? 'Gerade eben' : 'Just now';
   if (diff < 3600) {
@@ -67,6 +89,8 @@ export function timeAgo(dateStr, lang) {
   const d = Math.floor(diff / 86400);
   return lang === 'de' ? `vor ${d} Tag${d > 1 ? 'en' : ''}` : `${d}d ago`;
 }
+
+export const timeAgo = serverTimeAgo;
 
 export function errorText(detail, fallback, messages) {
   if (!detail) return fallback;

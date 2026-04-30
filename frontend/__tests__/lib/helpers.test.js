@@ -1,4 +1,4 @@
-import { toIsoOrNull, prettyDate, errorText, copyTextToClipboard } from '../../lib/helpers';
+import { toIsoOrNull, prettyDate, parseDate, parseServerInstant, serverTimeAgo, errorText, copyTextToClipboard } from '../../lib/helpers';
 
 describe('toIsoOrNull', () => {
   it('returns null for falsy values', () => {
@@ -10,6 +10,33 @@ describe('toIsoOrNull', () => {
   it('returns ISO string for valid date', () => {
     const result = toIsoOrNull('2026-03-15T10:00');
     expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+  });
+});
+
+describe('server timestamp helpers', () => {
+  it('treats UTC-naive API datetimes as UTC instants', () => {
+    expect(parseServerInstant('2026-04-30T14:35:00').toISOString()).toBe('2026-04-30T14:35:00.000Z');
+  });
+
+  it('preserves explicit timezone offsets from API datetimes', () => {
+    expect(parseServerInstant('2026-04-30T16:35:00+02:00').toISOString()).toBe('2026-04-30T14:35:00.000Z');
+  });
+
+  it('leaves local wall-clock datetimes to parseDate', () => {
+    const local = parseDate('2026-04-30T14:35:00');
+    expect(local.getHours()).toBe(14);
+    expect(local.getMinutes()).toBe(35);
+  });
+
+  it('does not treat date-only values as UTC-naive date-times', () => {
+    expect(parseServerInstant('2026-04-30').toISOString()).toBe('2026-04-30T00:00:00.000Z');
+  });
+
+  it('uses UTC-aware parsing for relative server timestamps', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-04-30T14:40:00Z'));
+    expect(serverTimeAgo('2026-04-30T14:35:00', 'en')).toBe('5m ago');
+    expect(serverTimeAgo('2026-04-30T14:35:00', 'de')).toBe('vor 5 Min.');
+    jest.useRealTimers();
   });
 });
 

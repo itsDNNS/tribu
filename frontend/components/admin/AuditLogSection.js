@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
+import { parseServerInstant } from '../../lib/helpers';
 
 const ACTION_KEYS = {
   member_created: 'audit_action_member_created',
@@ -62,7 +63,7 @@ export default function AuditLogSection() {
         {entries.map((e) => (
           <div key={e.id} className="audit-entry">
             <span className="audit-time">
-              {new Date(e.created_at).toLocaleString()}
+              {parseServerInstant(e.created_at)?.toLocaleString()}
             </span>
             <span className="audit-action-badge">{formatAction(e)}</span>
             {e.target_display_name && (

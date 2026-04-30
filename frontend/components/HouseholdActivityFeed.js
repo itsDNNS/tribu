@@ -1,9 +1,9 @@
 import { Activity } from 'lucide-react';
 import { t } from '../lib/i18n';
-import { parseDate } from '../lib/helpers';
+import { parseServerInstant } from '../lib/helpers';
 
 function formatActivityTime(value, lang = 'en') {
-  const parsed = parseDate(value);
+  const parsed = parseServerInstant(value);
   if (!parsed || Number.isNaN(parsed.getTime())) return '';
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   return parsed.toLocaleString(locale, {

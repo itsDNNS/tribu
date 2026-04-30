@@ -4,7 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { useRewards } from '../hooks/useRewards';
 import { CurrencyIcon } from '../lib/currency-icons';
 import { t } from '../lib/i18n';
-import { parseDate } from '../lib/helpers';
+import { parseServerInstant } from '../lib/helpers';
 import MemberAvatar from './MemberAvatar';
 import * as api from '../lib/api';
 
@@ -311,7 +311,7 @@ export default function RewardsView() {
           <button className="btn-ghost rewards-history-back" onClick={() => setTab('overview')}>&larr; {t(messages, 'module.rewards.tab_overview')}</button>
           {rw.transactions.map(tx => {
             const memberName = members.find(m => m.user_id === tx.user_id)?.display_name || '?';
-            const date = parseDate(tx.created_at).toLocaleDateString();
+            const date = parseServerInstant(tx.created_at).toLocaleDateString();
             return (
               <div key={tx.id} className="glass-sm rewards-row rewards-history-row">
                 {tx.kind === 'earn' ? <ArrowUpCircle size={14} style={{ color: 'var(--success)' }} /> : <ArrowDownCircle size={14} style={{ color: 'var(--danger)' }} />}

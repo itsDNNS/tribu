@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { Users, ShieldCheck, Upload, CheckCircle, Globe, AlertCircle, Play } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { errorText } from '../lib/helpers';
+import { errorText, parseServerInstant } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
@@ -230,7 +230,7 @@ export default function SetupWizard() {
               <CheckCircle size={48} style={{ color: 'var(--success)', marginBottom: 12 }} />
               <h2 style={{ margin: '0 0 8px', fontSize: '1.2rem' }}>{t(messages, 'setup_restore_success')}</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 16 }}>
-                {restoreMeta.created_at && t(messages, 'setup_restore_date').replace('{date}', new Date(restoreMeta.created_at).toLocaleDateString())}
+                {restoreMeta.created_at && t(messages, 'setup_restore_date').replace('{date}', parseServerInstant(restoreMeta.created_at)?.toLocaleDateString())}
               </p>
               <button className="btn-primary" style={{ width: '100%' }} onClick={finishRestore}>
                 {t(messages, 'setup_restore_login')}

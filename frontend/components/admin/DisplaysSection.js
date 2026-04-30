@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Check, Copy, X, Monitor, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { copyTextToClipboard, errorText } from '../../lib/helpers';
+import { copyTextToClipboard, errorText, parseServerInstant } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import ConfirmDialog from '../ConfirmDialog';
@@ -218,9 +218,9 @@ export default function DisplaysSection() {
                 </div>
                 <div className="adm-list-item-meta">
                   {device.last_used_at
-                    ? t(messages, 'display_last_used').replace('{when}', new Date(device.last_used_at).toLocaleString())
+                    ? t(messages, 'display_last_used').replace('{when}', parseServerInstant(device.last_used_at)?.toLocaleString())
                     : t(messages, 'display_never_used')}
-                  {' · '}{t(messages, 'display_created').replace('{when}', new Date(device.created_at).toLocaleDateString())}
+                  {' · '}{t(messages, 'display_created').replace('{when}', parseServerInstant(device.created_at)?.toLocaleDateString())}
                   {' · '}{displayModeLabel(device.display_mode, messages)} · {layoutPresetLabel(device.layout_preset, messages)} · {device.refresh_interval_seconds || 60}s
                 </div>
                 {!device.revoked_at && (
