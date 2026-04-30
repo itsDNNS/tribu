@@ -40,7 +40,7 @@ export function PWABanners() {
           <button className="pwa-banner__action" onClick={pwa.triggerInstall}>
             {t(messages, 'pwa.install_action')}
           </button>
-          <button className="pwa-banner__dismiss" onClick={pwa.dismissInstall} aria-label="Dismiss">
+          <button className="pwa-banner__dismiss" onClick={pwa.dismissInstall} aria-label={t(messages, 'pwa.install_dismiss')}>
             &times;
           </button>
         </div>

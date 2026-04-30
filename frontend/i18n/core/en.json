@@ -564,6 +564,7 @@
   "pwa.update_action": "Update",
   "pwa.install_prompt": "Install Tribu for quick access",
   "pwa.install_action": "Install",
+  "pwa.install_dismiss": "Dismiss install prompt",
   "display_title": "Displays",
   "display_intro": "Pair shared screens (kitchen tablet, hallway frame) with a read-only family dashboard.",
   "display_not_a_person": "A display is a device, not a person — it has no email, no password, and does not appear in your member list.",
