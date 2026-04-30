@@ -51,8 +51,12 @@ test.describe('Settings', () => {
     await expect(page.getByText('Server push is not configured')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Ask an admin to add VAPID keys on the server and restart Tribu.')).toBeVisible();
     await expect(page.getByText('Push me for')).toBeVisible();
-    await expect(page.getByText('Calendar reminders')).toBeVisible();
-    await expect(page.getByText('Event assignments')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Calendar & appointments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tasks' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Family' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+    await expect(page.getByLabel(/Calendar reminders/i)).toBeVisible();
+    await expect(page.getByLabel(/Event assignments/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enable push notifications' })).toBeDisabled();
   });
 
@@ -67,7 +71,7 @@ test.describe('Settings', () => {
     }
 
     await page.getByLabel('Name').fill('Home Assistant');
-    await page.getByLabel('Webhook URL').fill('https://ha.example/api/webhook/private-token?secret=private');
+    await page.getByLabel('Webhook URL').fill('https://ha.example/api/webhook/private-token?secret=abc123');
     await page.getByLabel('Optionaler Secret Header').fill('X-Tribu-Secret');
     await page.getByPlaceholder('Secret Wert').fill('super-secret');
     await page.getByRole('button', { name: 'Webhook hinzufügen' }).click();

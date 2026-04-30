@@ -16,14 +16,34 @@ const PUSH_CATEGORY_DEFAULTS = {
   family_changes: false,
 };
 
-const PUSH_CATEGORY_ROWS = [
-  ['calendar_reminders', 'push_category_calendar_reminders', 'push_category_calendar_reminders_desc'],
-  ['task_due', 'push_category_task_due', 'push_category_task_due_desc'],
-  ['birthdays', 'push_category_birthdays', 'push_category_birthdays_desc'],
-  ['event_assignments', 'push_category_event_assignments', 'push_category_event_assignments_desc'],
-  ['shopping_changes', 'push_category_shopping_changes', 'push_category_shopping_changes_desc'],
-  ['meal_plan_changes', 'push_category_meal_plan_changes', 'push_category_meal_plan_changes_desc'],
-  ['family_changes', 'push_category_family_changes', 'push_category_family_changes_desc'],
+const PUSH_CATEGORY_GROUPS = [
+  {
+    titleKey: 'push_group_calendar',
+    rows: [
+      ['calendar_reminders', 'push_category_calendar_reminders', 'push_category_calendar_reminders_desc'],
+      ['event_assignments', 'push_category_event_assignments', 'push_category_event_assignments_desc'],
+    ],
+  },
+  {
+    titleKey: 'push_group_tasks',
+    rows: [
+      ['task_due', 'push_category_task_due', 'push_category_task_due_desc'],
+    ],
+  },
+  {
+    titleKey: 'push_group_family',
+    rows: [
+      ['birthdays', 'push_category_birthdays', 'push_category_birthdays_desc'],
+      ['family_changes', 'push_category_family_changes', 'push_category_family_changes_desc'],
+    ],
+  },
+  {
+    titleKey: 'push_group_home',
+    rows: [
+      ['shopping_changes', 'push_category_shopping_changes', 'push_category_shopping_changes_desc'],
+      ['meal_plan_changes', 'push_category_meal_plan_changes', 'push_category_meal_plan_changes_desc'],
+    ],
+  },
 ];
 
 function normalizePushCategories(value) {
@@ -234,25 +254,35 @@ export default function NotificationsTab() {
             <div className="set-push-category-section">
               <div className="set-push-category-title">{t(messages, 'push_categories_title')}</div>
               <p className="set-push-category-help">{t(messages, 'push_categories_help')}</p>
-              <div className="set-push-category-list">
-                {PUSH_CATEGORY_ROWS.map(([key, labelKey, descKey]) => (
-                  <label className="set-push-category-row" key={key}>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(notifPrefs.push_categories?.[key])}
-                      onChange={(e) => setNotifPrefs((p) => ({
-                        ...p,
-                        push_categories: {
-                          ...normalizePushCategories(p.push_categories),
-                          [key]: e.target.checked,
-                        },
-                      }))}
-                    />
-                    <span>
-                      <strong>{t(messages, labelKey)}</strong>
-                      <small>{t(messages, descKey)}</small>
-                    </span>
-                  </label>
+              <div className="set-push-category-groups">
+                {PUSH_CATEGORY_GROUPS.map((group) => (
+                  <section className="set-push-category-group" key={group.titleKey} aria-labelledby={`${group.titleKey}-heading`}>
+                    <h4 className="set-push-category-group-title" id={`${group.titleKey}-heading`}>
+                      {t(messages, group.titleKey)}
+                    </h4>
+                    <div className="set-push-category-list">
+                      {group.rows.map(([key, labelKey, descKey]) => (
+                        <label className="set-push-category-row" key={key}>
+                          <span className="set-push-category-copy">
+                            <strong>{t(messages, labelKey)}</strong>
+                            <small>{t(messages, descKey)}</small>
+                          </span>
+                          <input
+                            className="set-push-category-control"
+                            type="checkbox"
+                            checked={Boolean(notifPrefs.push_categories?.[key])}
+                            onChange={(e) => setNotifPrefs((p) => ({
+                              ...p,
+                              push_categories: {
+                                ...normalizePushCategories(p.push_categories),
+                                [key]: e.target.checked,
+                              },
+                            }))}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </div>

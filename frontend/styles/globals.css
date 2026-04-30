@@ -1428,6 +1428,26 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .set-push-diagnostic p { margin: 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; }
 .set-push-diagnostic-warning { border-color: color-mix(in srgb, var(--warning) 38%, var(--glass-border)); }
 .set-push-diagnostic-success { border-color: color-mix(in srgb, var(--success) 38%, var(--glass-border)); }
+.set-push-category-section { display: grid; gap: var(--space-sm); margin-bottom: var(--space-md); padding: var(--space-md); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--void-surface) 70%, transparent); }
+.set-push-category-title { font-size: 0.9rem; font-weight: 700; }
+.set-push-category-help { margin: -2px 0 2px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.5; }
+.set-push-category-groups { display: grid; gap: var(--space-md); }
+.set-push-category-group { display: grid; gap: 8px; }
+.set-push-category-group-title { margin: 0; font-size: 0.74rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase; }
+.set-push-category-list { display: grid; gap: 8px; }
+.set-push-category-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-height: 52px; padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); background: var(--glass-bg); cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.15s; }
+.set-push-category-row:hover { border-color: color-mix(in srgb, var(--amethyst) 42%, var(--glass-border)); background: color-mix(in srgb, var(--amethyst) 8%, var(--glass-bg)); }
+.set-push-category-row:focus-within { outline: 2px solid color-mix(in srgb, var(--amethyst) 72%, transparent); outline-offset: 2px; }
+.set-push-category-copy { display: grid; gap: 3px; min-width: 0; }
+.set-push-category-copy strong { font-size: 0.86rem; line-height: 1.25; }
+.set-push-category-copy small { color: var(--text-muted); font-size: 0.76rem; line-height: 1.4; }
+.set-push-category-control { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; }
+
+@media (max-width: 520px) {
+  .set-push-category-section { padding: var(--space-sm); }
+  .set-push-category-row { align-items: flex-start; gap: var(--space-sm); padding: 12px; min-height: 56px; }
+  .set-push-category-control { margin-top: 2px; }
+}
 
 /* NavigationTab */
 .set-nav-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; margin-bottom: var(--space-md); }
