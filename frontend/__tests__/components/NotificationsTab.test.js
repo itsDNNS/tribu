@@ -107,16 +107,23 @@ describe('NotificationsTab push diagnostics', () => {
     expect(screen.getByRole('button', { name: 'Enable push notifications' })).toBeEnabled();
   });
 
-  it('renders and saves per-category push choices', async () => {
+  it('renders grouped category preferences and saves row-level choices', async () => {
     api.apiUpdateNotificationPreferences.mockResolvedValue({ ok: true, data: {} });
 
     render(<NotificationsTab />);
 
-    const assignmentToggle = await screen.findByLabelText(/Event assignments/i);
+    expect(await screen.findByRole('heading', { name: 'Calendar & appointments' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Tasks' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Family' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Home' })).toBeInTheDocument();
+
+    const assignmentToggle = screen.getByLabelText(/Event assignments/i);
     expect(screen.getByLabelText(/Calendar reminders/i)).toBeChecked();
     expect(assignmentToggle).not.toBeChecked();
 
-    fireEvent.click(assignmentToggle);
+    fireEvent.click(screen.getByText(/Events where someone assigns or mentions you/i));
+    expect(assignmentToggle).toBeChecked();
+
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(api.apiUpdateNotificationPreferences).toHaveBeenCalled());
