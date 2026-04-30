@@ -1,15 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ListChecks, Cake, Users, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, Users, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
-import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetSetupChecklist, apiListMealPlans } from '../lib/api';
+import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetDashboardLayout, apiGetSetupChecklist, apiListMealPlans, apiResetDashboardLayout, apiUpdateDashboardLayout } from '../lib/api';
 import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
 import HouseholdActivityFeed from './HouseholdActivityFeed';
 import QuickCaptureCard from './QuickCaptureCard';
+
+const DEFAULT_DASHBOARD_LAYOUT = ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'];
+
+function normalizeDashboardLayout(modules, availableModules = DEFAULT_DASHBOARD_LAYOUT) {
+  const available = new Set(availableModules);
+  const ordered = [];
+  (Array.isArray(modules) ? modules : []).forEach((module) => {
+    if (available.has(module) && !ordered.includes(module)) ordered.push(module);
+  });
+  return ordered.concat(availableModules.filter((module) => !ordered.includes(module)));
+}
 
 function todayIsoDate() {
   const now = new Date();
@@ -166,6 +177,8 @@ export default function DashboardView() {
   const todayIso = useMemo(() => todayIsoDate(), []);
   const [mealsTodayCount, setMealsTodayCount] = useState(0);
   const [setupChecklist, setSetupChecklist] = useState(null);
+  const [layoutEditing, setLayoutEditing] = useState(false);
+  const [dashboardLayout, setDashboardLayout] = useState(DEFAULT_DASHBOARD_LAYOUT);
 
   const openTasks = tasks.filter((task) => task.status === 'open');
   const shoppingOpenCount = useMemo(() => countOpenShoppingItems(shoppingLists), [shoppingLists]);
@@ -204,6 +217,20 @@ export default function DashboardView() {
     });
     return () => { cancelled = true; };
   }, [familyId, demoMode, isChild]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (demoMode) {
+      setDashboardLayout(DEFAULT_DASHBOARD_LAYOUT);
+      return () => { cancelled = true; };
+    }
+    apiGetDashboardLayout().then((res) => {
+      if (!cancelled && res?.ok) setDashboardLayout(normalizeDashboardLayout(res.data?.modules));
+    }).catch(() => {
+      if (!cancelled) setDashboardLayout(DEFAULT_DASHBOARD_LAYOUT);
+    });
+    return () => { cancelled = true; };
+  }, [demoMode]);
 
   const todayEventCount = (summary.next_events || []).filter((ev) => {
     const d = parseDate(ev.starts_at);
@@ -349,6 +376,28 @@ export default function DashboardView() {
     if (response?.ok) setSetupChecklist(response.data);
   };
 
+  const moveDashboardModule = async (moduleKey, direction) => {
+    const current = normalizeDashboardLayout(dashboardLayout, availableDashboardModules);
+    const index = current.indexOf(moduleKey);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return;
+    const next = [...current];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    setDashboardLayout(next);
+    if (!demoMode) {
+      const response = await apiUpdateDashboardLayout(next).catch(() => null);
+      if (response?.ok) setDashboardLayout(normalizeDashboardLayout(response.data?.modules, availableDashboardModules));
+    }
+  };
+
+  const resetDashboardModules = async () => {
+    setDashboardLayout(DEFAULT_DASHBOARD_LAYOUT);
+    if (!demoMode) {
+      const response = await apiResetDashboardLayout().catch(() => null);
+      if (response?.ok) setDashboardLayout(normalizeDashboardLayout(response.data?.modules, availableDashboardModules));
+    }
+  };
+
   const summaryText = (() => {
     let s = todayEventCount > 0
       ? t(messages, 'module.dashboard.summary_events').replace('{count}', todayEventCount)
@@ -360,6 +409,11 @@ export default function DashboardView() {
     }
     return s;
   })();
+  const availableDashboardModules = isChild
+    ? DEFAULT_DASHBOARD_LAYOUT.filter((module) => module !== 'quick_capture')
+    : DEFAULT_DASHBOARD_LAYOUT;
+  const orderedDashboardLayout = normalizeDashboardLayout(dashboardLayout, availableDashboardModules);
+  const moduleOrder = (moduleKey) => orderedDashboardLayout.indexOf(moduleKey);
 
   return (
     <div>
@@ -370,8 +424,42 @@ export default function DashboardView() {
         </div>
         <div className="dashboard-header-actions">
           <div className="view-date">{todayStr}</div>
+          <button type="button" className="dashboard-layout-toggle" onClick={() => setLayoutEditing((current) => !current)}>
+            <Settings2 size={15} aria-hidden="true" />
+            <span>{t(messages, 'module.dashboard.customize_layout')}</span>
+          </button>
         </div>
       </div>
+
+      {layoutEditing && (
+        <section className="dashboard-layout-panel" aria-label={t(messages, 'module.dashboard.customize_layout')}>
+          <div className="dashboard-layout-panel-header">
+            <div>
+              <h2>{t(messages, 'module.dashboard.customize_layout')}</h2>
+              <p>{t(messages, 'module.dashboard.customize_layout_hint')}</p>
+            </div>
+            <button type="button" className="dashboard-layout-reset" onClick={resetDashboardModules}>
+              <RotateCcw size={14} aria-hidden="true" />
+              {t(messages, 'module.dashboard.reset_layout')}
+            </button>
+          </div>
+          <ol className="dashboard-layout-list">
+            {orderedDashboardLayout.map((moduleKey, index) => (
+              <li key={moduleKey} className="dashboard-layout-item">
+                <span>{t(messages, `module.dashboard.module_${moduleKey}`)}</span>
+                <span className="dashboard-layout-controls">
+                  <button type="button" onClick={() => moveDashboardModule(moduleKey, -1)} disabled={index === 0} aria-label={t(messages, 'module.dashboard.move_module_up').replace('{module}', t(messages, `module.dashboard.module_${moduleKey}`))}>
+                    <ArrowUp size={14} aria-hidden="true" />
+                  </button>
+                  <button type="button" onClick={() => moveDashboardModule(moduleKey, 1)} disabled={index === orderedDashboardLayout.length - 1} aria-label={t(messages, 'module.dashboard.move_module_down').replace('{module}', t(messages, `module.dashboard.module_${moduleKey}`))}>
+                    <ArrowDown size={14} aria-hidden="true" />
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <div
         className="hero-context-chips"
@@ -430,26 +518,31 @@ export default function DashboardView() {
 
       <div className="bento-grid">
         {!isChild && (
-          <QuickCaptureCard
-            familyId={familyId}
-            inbox={quickCaptureInbox}
-            messages={messages}
-            loadQuickCaptureInbox={loadQuickCaptureInbox}
-            loadTasks={loadTasks}
-            loadShoppingLists={loadShoppingLists}
-            loadActivity={loadActivity}
-          />
+          <div className="dashboard-module-shell" style={{ order: moduleOrder('quick_capture') }} data-dashboard-module="quick_capture">
+            <QuickCaptureCard
+              familyId={familyId}
+              inbox={quickCaptureInbox}
+              messages={messages}
+              loadQuickCaptureInbox={loadQuickCaptureInbox}
+              loadTasks={loadTasks}
+              loadShoppingLists={loadShoppingLists}
+              loadActivity={loadActivity}
+            />
+          </div>
         )}
 
-        <DailyLoopCard
-          mealsTodayCount={mealsTodayCount}
-          shoppingOpenCount={shoppingOpenCount}
-          routineDueCount={routineDueCount}
-          messages={messages}
-          setActiveView={setActiveView}
-        />
+        <div className="dashboard-module-shell" style={{ order: moduleOrder('daily_loop') }} data-dashboard-module="daily_loop">
+          <DailyLoopCard
+            mealsTodayCount={mealsTodayCount}
+            shoppingOpenCount={shoppingOpenCount}
+            routineDueCount={routineDueCount}
+            messages={messages}
+            setActiveView={setActiveView}
+          />
+        </div>
 
         {/* Events Card */}
+        <div className="dashboard-module-shell" style={{ order: moduleOrder('events') }} data-dashboard-module="events">
         <div className="bento-card bento-events" role="region" aria-label={t(messages, 'next_events')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><CalendarClock size={16} aria-hidden="true" /> {t(messages, 'next_events')}</h2>
@@ -484,8 +577,10 @@ export default function DashboardView() {
             })}
           </div>
         </div>
+        </div>
 
         {/* Tasks Card */}
+        <div className="dashboard-module-shell" style={{ order: moduleOrder('tasks') }} data-dashboard-module="tasks">
         <div className="bento-card bento-tasks" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><ListChecks size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.open_tasks')}</h2>
@@ -513,8 +608,10 @@ export default function DashboardView() {
             })}
           </div>
         </div>
+        </div>
 
         {/* Birthdays Card */}
+        <div className="dashboard-module-shell" style={{ order: moduleOrder('birthdays') }} data-dashboard-module="birthdays">
         <div className="bento-card bento-birthdays" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
           <div className="bento-card-header">
             <h2 className="bento-card-title"><Cake size={16} aria-hidden="true" /> {t(messages, 'upcoming_birthdays_4w')}</h2>
@@ -544,11 +641,16 @@ export default function DashboardView() {
             })}
           </div>
         </div>
+        </div>
 
-        <HouseholdActivityFeed activity={activity} messages={messages} lang={lang} />
+        <div className="dashboard-module-shell" style={{ order: moduleOrder('activity') }} data-dashboard-module="activity">
+          <HouseholdActivityFeed activity={activity} messages={messages} lang={lang} />
+        </div>
 
         {/* Rewards Widget */}
-        <RewardsDashboardWidget />
+        <div className="dashboard-module-shell" style={{ order: moduleOrder('rewards') }} data-dashboard-module="rewards">
+          <RewardsDashboardWidget />
+        </div>
       </div>
     </div>
   );

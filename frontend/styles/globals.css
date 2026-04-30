@@ -705,6 +705,17 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 .view-subtitle { color: var(--text-secondary); font-size: 0.88rem; margin-top: 2px; }
 .view-date { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--text-secondary); background: rgba(255,255,255,0.03); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border); }
 .dashboard-header-actions { display: flex; align-items: center; gap: var(--space-sm); }
+.dashboard-layout-toggle, .dashboard-layout-reset { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; border: 1px solid var(--glass-border); border-radius: var(--radius-pill); padding: 8px 13px; background: rgba(255,255,255,0.03); color: var(--text-primary); font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+.dashboard-layout-toggle:hover, .dashboard-layout-reset:hover { background: rgba(255,255,255,0.06); border-color: rgba(120, 130, 180, 0.28); }
+.dashboard-layout-panel { margin: calc(-1 * var(--space-sm)) 0 var(--space-md); padding: var(--space-md); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); background: rgba(255,255,255,0.025); }
+.dashboard-layout-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-md); }
+.dashboard-layout-panel h2 { margin: 0; font-size: 1rem; }
+.dashboard-layout-panel p { margin: 5px 0 0; color: var(--text-muted); font-size: 0.86rem; }
+.dashboard-layout-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--space-sm); margin: 0; padding: 0; }
+.dashboard-layout-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding: 10px 12px; border: 1px solid rgba(120, 130, 180, 0.12); border-radius: var(--radius-md); background: rgba(120, 130, 180, 0.06); color: var(--text-primary); font-size: 0.88rem; }
+.dashboard-layout-controls { display: inline-flex; align-items: center; gap: 5px; }
+.dashboard-layout-controls button { display: inline-flex; align-items: center; justify-content: center; width: 34px; min-width: 34px; height: 34px; border: 0; border-radius: var(--radius-pill); background: var(--void-surface); color: var(--text-primary); cursor: pointer; }
+.dashboard-layout-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
 .dashboard-quick-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .quick-action-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; min-height: 44px; border-radius: var(--radius-pill); border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03); color: var(--text-primary); font-family: inherit; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
 .quick-action-pill:hover { background: rgba(255,255,255,0.06); border-color: rgba(120, 130, 180, 0.35); }
@@ -727,6 +738,15 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    BENTO GRID (Dashboard)
    ═══════════════════════════════════════════ */
 .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--space-md); row-gap: var(--space-lg); }
+.dashboard-module-shell { display: flex; min-width: 0; }
+.dashboard-module-shell > .bento-card { width: 100%; }
+.dashboard-module-shell[data-dashboard-module="daily_loop"],
+.dashboard-module-shell[data-dashboard-module="quick_capture"],
+.dashboard-module-shell[data-dashboard-module="events"],
+.dashboard-module-shell[data-dashboard-module="tasks"],
+.dashboard-module-shell[data-dashboard-module="birthdays"],
+.dashboard-module-shell[data-dashboard-module="activity"],
+.dashboard-module-shell[data-dashboard-module="rewards"] { grid-column: span 6; }
 .bento-card { padding: var(--space-lg); background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); transition: all 0.2s; }
 .bento-card:hover { border-color: rgba(120, 130, 180, 0.2); }
 .bento-daily-loop { grid-column: span 6; }
@@ -1696,8 +1716,15 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
    RESPONSIVE
    ═══════════════════════════════════════════ */
 @media (max-width: 1100px) {
-  .bento-daily-loop, .bento-quick-capture { grid-column: span 12; }
-  .bento-events, .bento-tasks, .bento-birthdays, .bento-activity, .bento-rewards { grid-column: span 6; }
+  .bento-daily-loop, .bento-quick-capture,
+  .dashboard-module-shell[data-dashboard-module="daily_loop"],
+  .dashboard-module-shell[data-dashboard-module="quick_capture"] { grid-column: span 12; }
+  .bento-events, .bento-tasks, .bento-birthdays, .bento-activity, .bento-rewards,
+  .dashboard-module-shell[data-dashboard-module="events"],
+  .dashboard-module-shell[data-dashboard-module="tasks"],
+  .dashboard-module-shell[data-dashboard-module="birthdays"],
+  .dashboard-module-shell[data-dashboard-module="activity"],
+  .dashboard-module-shell[data-dashboard-module="rewards"] { grid-column: span 6; }
   .daily-loop-list { grid-template-columns: 1fr; }
   .calendar-layout { grid-template-columns: 1fr; }
 }
@@ -1709,7 +1736,14 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   .mobile-header { display: flex; }
   .bottom-nav { display: block; }
   .bento-grid { grid-template-columns: 1fr; row-gap: var(--space-md); }
-  .bento-events, .bento-tasks, .bento-birthdays, .bento-activity, .bento-rewards, .bento-daily-loop, .bento-quick-capture { grid-column: span 1; }
+  .bento-events, .bento-tasks, .bento-birthdays, .bento-activity, .bento-rewards, .bento-daily-loop, .bento-quick-capture,
+  .dashboard-module-shell[data-dashboard-module="events"],
+  .dashboard-module-shell[data-dashboard-module="tasks"],
+  .dashboard-module-shell[data-dashboard-module="birthdays"],
+  .dashboard-module-shell[data-dashboard-module="activity"],
+  .dashboard-module-shell[data-dashboard-module="rewards"],
+  .dashboard-module-shell[data-dashboard-module="daily_loop"],
+  .dashboard-module-shell[data-dashboard-module="quick_capture"] { grid-column: span 1; }
   .daily-loop-list { grid-template-columns: 1fr; }
   .daily-loop-item { grid-template-columns: auto 1fr; }
   .daily-loop-action { grid-column: 1 / -1; justify-self: stretch; text-align: center; }

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardView from '../../components/DashboardView';
 
@@ -14,9 +14,16 @@ jest.mock('../../lib/i18n', () => ({
   t: (messages, key) => messages?.[key] || key,
 }));
 
+const mockApiGetDashboardLayout = jest.fn();
+const mockApiUpdateDashboardLayout = jest.fn();
+const mockApiResetDashboardLayout = jest.fn();
+
 jest.mock('../../lib/api', () => ({
+  apiGetDashboardLayout: (...args) => mockApiGetDashboardLayout(...args),
   apiGetSetupChecklist: jest.fn().mockResolvedValue({ ok: true, data: null }),
   apiListMealPlans: jest.fn().mockResolvedValue({ ok: true, data: [] }),
+  apiResetDashboardLayout: (...args) => mockApiResetDashboardLayout(...args),
+  apiUpdateDashboardLayout: (...args) => mockApiUpdateDashboardLayout(...args),
 }));
 
 jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
@@ -56,6 +63,19 @@ const messages = {
   'module.dashboard.daily_loop_open_shopping': 'Open shopping',
   'module.dashboard.daily_loop_open_routines': 'Open routines',
   'module.dashboard.daily_loop_empty': 'Plan a meal, add groceries or set a recurring task to start the daily loop.',
+  'module.dashboard.customize_layout': 'Customize layout',
+  'module.dashboard.customize_layout_hint': 'Move dashboard modules into the order that fits your day.',
+  'module.dashboard.reset_layout': 'Reset layout',
+  'module.dashboard.move_module_up': 'Move {module} up',
+  'module.dashboard.move_module_down': 'Move {module} down',
+  'module.dashboard.module_quick_capture': 'Quick capture',
+  'module.dashboard.module_daily_loop': 'Today in motion',
+  'module.dashboard.module_events': 'Next events',
+  'module.dashboard.module_tasks': 'Open tasks',
+  'module.dashboard.module_birthdays': 'Birthdays',
+  'module.dashboard.module_activity': 'Recent activity',
+  'module.dashboard.module_rewards': 'Rewards',
+  'module.dashboard.quick_capture_title': 'Quick capture',
   next_events: 'Next events',
   upcoming_birthdays_4w: 'Birthdays',
 };
@@ -85,23 +105,68 @@ function baseApp(overrides = {}) {
 describe('DashboardView desktop bento layout', () => {
   beforeEach(() => {
     mockAppState = baseApp();
+    mockApiGetDashboardLayout.mockReset();
+    mockApiUpdateDashboardLayout.mockReset();
+    mockApiResetDashboardLayout.mockReset();
+    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } });
+    mockApiUpdateDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['daily_loop', 'quick_capture', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } });
+    mockApiResetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'activity', 'rewards'] } });
+    sessionStorage.clear();
   });
 
-  it('keeps the current desktop module order', () => {
+  it('keeps the current desktop module order', async () => {
     const { container } = render(<DashboardView />);
 
-    const modules = Array.from(container.querySelectorAll('.bento-grid > .bento-card'));
-    expect(modules[0]).toHaveClass('bento-quick-capture');
-    expect(modules[1]).toHaveClass('bento-daily-loop');
-    expect(modules[1]).toHaveAccessibleName('Today in motion');
-    expect(modules[2]).toHaveClass('bento-events');
-    expect(modules[2]).toHaveAccessibleName('Next events');
-    expect(modules[3]).toHaveClass('bento-tasks');
-    expect(modules[3]).toHaveAccessibleName('Open tasks');
-    expect(modules[4]).toHaveClass('bento-birthdays');
-    expect(modules[4]).toHaveAccessibleName('Birthdays');
-    expect(modules[5]).toHaveClass('bento-activity');
-    expect(modules[6]).toHaveClass('bento-rewards');
+    await waitFor(() => expect(mockApiGetDashboardLayout).toHaveBeenCalledTimes(1));
+    const modules = Array.from(container.querySelectorAll('.bento-grid > [data-dashboard-module]'));
+    expect(modules.map((module) => module.getAttribute('data-dashboard-module'))).toEqual([
+      'quick_capture',
+      'daily_loop',
+      'events',
+      'tasks',
+      'birthdays',
+      'activity',
+      'rewards',
+    ]);
+    expect(modules[1].querySelector('.bento-card')).toHaveAccessibleName('Today in motion');
+    expect(modules[2].querySelector('.bento-card')).toHaveAccessibleName('Next events');
+    expect(modules[3].querySelector('.bento-card')).toHaveAccessibleName('Open tasks');
+    expect(modules[4].querySelector('.bento-card')).toHaveAccessibleName('Birthdays');
+  });
+
+  it('loads a saved dashboard layout and persists keyboard-accessible module moves', async () => {
+    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['tasks', 'events', 'quick_capture', 'daily_loop', 'birthdays', 'activity', 'rewards'] } });
+
+    const { container } = render(<DashboardView />);
+
+    await waitFor(() => expect(container.querySelector('[data-dashboard-module="tasks"]')).toHaveStyle({ order: '0' }));
+    expect(container.querySelector('[data-dashboard-module="events"]')).toHaveStyle({ order: '1' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Customize layout' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move Open tasks down' }));
+
+    await waitFor(() => expect(mockApiUpdateDashboardLayout).toHaveBeenCalledWith([
+      'events',
+      'tasks',
+      'quick_capture',
+      'daily_loop',
+      'birthdays',
+      'activity',
+      'rewards',
+    ]));
+  });
+
+  it('resets the dashboard layout to the default order', async () => {
+    mockApiGetDashboardLayout.mockResolvedValue({ ok: true, data: { modules: ['tasks', 'events', 'quick_capture', 'daily_loop', 'birthdays', 'activity', 'rewards'] } });
+
+    const { container } = render(<DashboardView />);
+
+    await waitFor(() => expect(container.querySelector('[data-dashboard-module="tasks"]')).toHaveStyle({ order: '0' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Customize layout' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset layout' }));
+
+    await waitFor(() => expect(mockApiResetDashboardLayout).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(container.querySelector('[data-dashboard-module="quick_capture"]')).toHaveStyle({ order: '0' }));
   });
 
   it('keeps the loading skeleton in the same card order', () => {
@@ -125,8 +190,8 @@ describe('DashboardView desktop bento layout', () => {
     expect(css).toMatch(/\.bento-tasks\s*\{\s*grid-column:\s*span 6;\s*\}/);
     expect(css).toMatch(/\.bento-birthdays\s*\{\s*grid-column:\s*span 6;\s*\}/);
     expect(css).toMatch(/\.bento-rewards\s*\{\s*grid-column:\s*span 6;\s*\}/);
-    expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.bento-daily-loop, \.bento-quick-capture \{ grid-column: span 12; \}/);
-    expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-activity, \.bento-rewards \{ grid-column: span 6; \}/);
-    expect(css).toMatch(/@media \(max-width: 768px\)[\s\S]*\.bento-events, \.bento-tasks, \.bento-birthdays, \.bento-activity, \.bento-rewards, \.bento-daily-loop, \.bento-quick-capture \{ grid-column: span 1; \}/);
+    expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.dashboard-module-shell\[data-dashboard-module="daily_loop"\],[\s\S]*\.dashboard-module-shell\[data-dashboard-module="quick_capture"\] \{ grid-column: span 12; \}/);
+    expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.dashboard-module-shell\[data-dashboard-module="events"\],[\s\S]*\.dashboard-module-shell\[data-dashboard-module="rewards"\] \{ grid-column: span 6; \}/);
+    expect(css).toMatch(/@media \(max-width: 768px\)[\s\S]*\.dashboard-module-shell\[data-dashboard-module="events"\],[\s\S]*\.dashboard-module-shell\[data-dashboard-module="quick_capture"\] \{ grid-column: span 1; \}/);
   });
 });

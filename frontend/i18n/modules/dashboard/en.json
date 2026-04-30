@@ -99,5 +99,17 @@
   "module.dashboard.setup_step_phone_sync_title": "Review phone sync",
   "module.dashboard.setup_step_phone_sync_desc": "Connect calendar or contacts sync for the devices that need it.",
   "module.dashboard.setup_step_backup_guidance_title": "Review backup guidance",
-  "module.dashboard.setup_step_backup_guidance_desc": "Check backup and restore guidance before the household depends on Tribu daily."
+  "module.dashboard.setup_step_backup_guidance_desc": "Check backup and restore guidance before the household depends on Tribu daily.",
+  "module.dashboard.customize_layout": "Customize layout",
+  "module.dashboard.customize_layout_hint": "Move dashboard modules into the order that fits your day.",
+  "module.dashboard.reset_layout": "Reset layout",
+  "module.dashboard.move_module_up": "Move {module} up",
+  "module.dashboard.move_module_down": "Move {module} down",
+  "module.dashboard.module_quick_capture": "Quick capture",
+  "module.dashboard.module_daily_loop": "Today in motion",
+  "module.dashboard.module_events": "Next events",
+  "module.dashboard.module_tasks": "Open tasks",
+  "module.dashboard.module_birthdays": "Birthdays",
+  "module.dashboard.module_activity": "Recent activity",
+  "module.dashboard.module_rewards": "Rewards"
 }

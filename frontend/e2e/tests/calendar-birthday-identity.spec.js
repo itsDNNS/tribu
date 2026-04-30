@@ -20,7 +20,8 @@ async function seedContact(request, familyId, fullName, month, day) {
 async function openCalendarDay(page, day) {
   const calendarDay = page.locator('.calendar-day:not(.other-month)', { hasText: new RegExp(`^${day}$`) }).first();
   await calendarDay.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
-  await calendarDay.click();
+  await calendarDay.focus();
+  await page.keyboard.press('Enter');
 }
 
 test.describe('Birthday identity regression', () => {

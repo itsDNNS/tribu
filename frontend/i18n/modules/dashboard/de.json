@@ -99,5 +99,17 @@
   "module.dashboard.setup_step_phone_sync_title": "Phone Sync prüfen",
   "module.dashboard.setup_step_phone_sync_desc": "Richte Kalender- oder Kontakt-Sync für die passenden Geräte ein.",
   "module.dashboard.setup_step_backup_guidance_title": "Backup-Hinweise prüfen",
-  "module.dashboard.setup_step_backup_guidance_desc": "Prüfe Backup und Wiederherstellung, bevor Tribu täglich genutzt wird."
+  "module.dashboard.setup_step_backup_guidance_desc": "Prüfe Backup und Wiederherstellung, bevor Tribu täglich genutzt wird.",
+  "module.dashboard.customize_layout": "Layout anpassen",
+  "module.dashboard.customize_layout_hint": "Sortiere die Dashboard-Module so, wie sie zu eurem Alltag passen.",
+  "module.dashboard.reset_layout": "Layout zurücksetzen",
+  "module.dashboard.move_module_up": "{module} nach oben verschieben",
+  "module.dashboard.move_module_down": "{module} nach unten verschieben",
+  "module.dashboard.module_quick_capture": "Schnell erfassen",
+  "module.dashboard.module_daily_loop": "Heute im Griff",
+  "module.dashboard.module_events": "Nächste Termine",
+  "module.dashboard.module_tasks": "Offene Aufgaben",
+  "module.dashboard.module_birthdays": "Geburtstage",
+  "module.dashboard.module_activity": "Letzte Aktivitäten",
+  "module.dashboard.module_rewards": "Rewards"
 }

@@ -117,6 +117,22 @@ export function apiGetDashboard(familyId) {
   return request(`/dashboard/summary?family_id=${familyId}`);
 }
 
+export function apiGetDashboardLayout() {
+  return request('/nav/dashboard-layout');
+}
+
+export function apiUpdateDashboardLayout(modules) {
+  return request('/nav/dashboard-layout', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modules }),
+  });
+}
+
+export function apiResetDashboardLayout() {
+  return request('/nav/dashboard-layout', { method: 'DELETE' });
+}
+
 export function apiGetActivity(familyId, limit = 10, offset = 0) {
   return request(`/activity?family_id=${familyId}&limit=${limit}&offset=${offset}`);
 }

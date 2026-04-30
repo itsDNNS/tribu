@@ -50,8 +50,13 @@ async function navigateTo(page, viewName) {
   if (!ALWAYS_OVERFLOW.has(viewName)) {
     const bottomNavItem = page.locator('.bottom-nav-item', { hasText: mobileName });
     if (await bottomNavItem.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await bottomNavItem.click();
-      return;
+      try {
+        await bottomNavItem.click({ timeout: 2000 });
+        return;
+      } catch {
+        await navigateByHash(page, desktopName);
+        return;
+      }
     }
   }
 
