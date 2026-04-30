@@ -21,10 +21,27 @@ class User(Base):
     profile_image = Column(String, nullable=True)
     must_change_password = Column(Boolean, nullable=False, default=False, server_default="false")
     has_completed_onboarding = Column(Boolean, nullable=False, default=False, server_default="false")
+    session_invalidated_at = Column(DateTime(timezone=True), nullable=True)
 
     memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
     personal_access_tokens = relationship("PersonalAccessToken", back_populates="user", cascade="all, delete-orphan")
     oidc_identities = relationship("OIDCIdentity", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_lookup = Column(String(64), unique=True, nullable=False, index=True)
+    token_hash = Column(String(256), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    last_used_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True, index=True)
+
+    user = relationship("User", back_populates="sessions")
 
 
 class Family(Base):

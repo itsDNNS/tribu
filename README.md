@@ -237,6 +237,8 @@ services:
       REDIS_URL: redis://valkey:6379/0
       JWT_SECRET: ${JWT_SECRET}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-24}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
     depends_on: [postgres, valkey]
     ports: ["8000:8000"]
     volumes:
@@ -258,8 +260,10 @@ Set two environment variables (generate with `openssl rand -hex 32`):
 
 | Variable | Description |
 |----------|-------------|
-| `JWT_SECRET` | Random 64-char hex string for JWT signing |
+| `JWT_SECRET` | Random 64-char hex string for JWT signing. Keep it stable in the persisted `.env` so routine container updates do not invalidate active sessions. |
 | `POSTGRES_PASSWORD` | Random 32-char hex string for the database |
+
+Tribu uses a short-lived httpOnly access cookie plus a revocable httpOnly refresh cookie. By default the access cookie lasts 24 hours and active browser sessions can refresh for 30 days (`REFRESH_TOKEN_EXPIRE_DAYS`). Explicit logout, account deletion, password changes, refresh expiry, and intentional `JWT_SECRET` rotation still end sessions.
 
 Deploy the stack, open [localhost:3000](http://localhost:3000), and register.
 

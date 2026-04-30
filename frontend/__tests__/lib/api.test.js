@@ -46,10 +46,23 @@ describe('Auth API', () => {
     expect(lastCall()[0]).toBe('/api/auth/logout');
   });
 
-  it('apiGetMe sends GET', async () => {
-    await apiGetMe();
-    expect(lastCall()[0]).toBe('/api/auth/me');
-    expect(lastCall()[1].credentials).toBe('include');
+  it('apiGetMe refreshes once and retries after an expired access cookie', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ email: 'session@example.com' }) });
+
+    const result = await apiGetMe();
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toEqual({ email: 'session@example.com' });
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual([
+      '/api/auth/me',
+      '/api/auth/refresh',
+      '/api/auth/me',
+    ]);
+    expect(global.fetch.mock.calls[1][1].method).toBe('POST');
+    expect(global.fetch.mock.calls[1][1].credentials).toBe('include');
   });
 
   it('apiUpdateProfileImage sends PATCH', async () => {

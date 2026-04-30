@@ -21,6 +21,7 @@ from slowapi.util import get_remote_address
 
 
 from app.core.deps import current_user
+from app.core.auth_sessions import clear_session_cookies, issue_session_cookies, revoke_refresh_session, rotate_refresh_session
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.core.errors import (
     error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT,
@@ -30,7 +31,7 @@ from app.core.errors import (
 )
 from app.core import oidc as oidc_core
 from app.database import get_db, SessionLocal
-from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User
+from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User, UserSession
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
@@ -66,9 +67,9 @@ from app.schemas import (
     ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest,
 )
 from app.core import cache
-from app.core.utils import get_setting
-from app.security import create_access_token, hash_password, verify_password
-from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE, VERSION
+from app.core.utils import get_setting, utcnow
+from app.security import hash_password, verify_password
+from app.core.config import REFRESH_COOKIE_NAME, VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -360,14 +361,9 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
 
     membership = Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True)
     db.add(membership)
-    db.commit()
-
-    token = create_access_token(user_id=user.id, email=user.email)
     response = JSONResponse(content={"status": "ok"})
-    response.set_cookie(
-        COOKIE_NAME, token, httponly=True, samesite="lax",
-        secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
-    )
+    issue_session_cookies(response, db, user)
+    db.commit()
     return response
 
 
@@ -392,12 +388,9 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
 
-    token = create_access_token(user_id=user.id, email=user.email)
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
-    response.set_cookie(
-        COOKIE_NAME, token, httponly=True, samesite="lax",
-        secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
-    )
+    issue_session_cookies(response, db, user)
+    db.commit()
     return response
 
 
@@ -408,9 +401,32 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     description="Clear the authentication cookie. No authentication required.",
     response_description="Logout successful",
 )
-def logout():
+def logout(request: Request, db: Session = Depends(get_db)):
+    revoke_refresh_session(db, request.cookies.get(REFRESH_COOKIE_NAME))
     response = JSONResponse(content={"status": "ok"})
-    response.delete_cookie(COOKIE_NAME, path="/")
+    clear_session_cookies(response)
+    return response
+
+
+@app.post(
+    "/auth/refresh",
+    tags=["auth"],
+    summary="Refresh session",
+    description=(
+        "Rotate the httpOnly refresh cookie and issue a new short-lived auth cookie. "
+        "Used by the web app to stay signed in across routine restarts while preserving explicit logout and expiry."
+    ),
+    responses={401: {"model": ErrorResponse, "description": "Refresh session expired or invalid"}},
+    response_description="Session refreshed",
+)
+def refresh_session(request: Request, db: Session = Depends(get_db)):
+    response = JSONResponse(content={"status": "ok"})
+    refresh_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if not refresh_token or not rotate_refresh_session(response, db, refresh_token):
+        response = JSONResponse(content={"detail": error_detail(INVALID_CREDENTIALS)}, status_code=401)
+        clear_session_cookies(response)
+        return response
+    db.commit()
     return response
 
 
@@ -445,8 +461,16 @@ def change_password(
         raise HTTPException(status_code=400, detail=error_detail(OLD_PASSWORD_INCORRECT))
     user.password_hash = hash_password(payload.new_password)
     user.must_change_password = False
+    now = utcnow()
+    user.session_invalidated_at = now
+    db.query(UserSession).filter(
+        UserSession.user_id == user.id,
+        UserSession.revoked_at.is_(None),
+    ).update({UserSession.revoked_at: now}, synchronize_session=False)
     db.commit()
-    return {"status": "ok"}
+    response = JSONResponse(content={"status": "ok"})
+    clear_session_cookies(response)
+    return response
 
 
 @app.patch(
@@ -557,7 +581,10 @@ def leave_family(
     db.commit()
     cache.invalidate(f"tribu:members:{fid}")
     cache.invalidate_pattern("tribu:families:*")
-    return {"status": "ok", "family_deleted": family_deleted, "user_deleted": user_deleted}
+    response = JSONResponse(content={"status": "ok", "family_deleted": family_deleted, "user_deleted": user_deleted})
+    if user_deleted:
+        clear_session_cookies(response)
+    return response
 
 
 @app.delete(
@@ -613,7 +640,9 @@ def delete_account(
     for fid in family_ids:
         cache.invalidate(f"tribu:members:{fid}")
     cache.invalidate_pattern("tribu:families:*")
-    return {"status": "ok", "families_deleted": families_deleted}
+    response = JSONResponse(content={"status": "ok", "families_deleted": families_deleted})
+    clear_session_cookies(response)
+    return response
 
 
 # ---------------------------------------------------------------------------

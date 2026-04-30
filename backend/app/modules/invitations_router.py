@@ -16,14 +16,15 @@ from slowapi.util import get_remote_address
 from app.core import oidc as oidc_core
 from app.core.deps import current_user, ensure_family_admin
 from app.core.scopes import require_scope
-from app.core.config import COOKIE_NAME, COOKIE_MAX_AGE, COOKIE_SECURE
+from app.core.config import COOKIE_SECURE
+from app.core.auth_sessions import issue_session_cookies
 from app.database import get_db
 from app.models import Family, FamilyInvitation, Membership, User
 from app.schemas import (
     AUTH_RESPONSES, NOT_FOUND_RESPONSE, BaseUrlUpdate, InvitationCreate, InvitationResponse,
     InviteInfoResponse, RegisterWithInviteRequest,
 )
-from app.security import create_access_token, hash_password
+from app.security import hash_password
 from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, PASSWORD_LOGIN_DISABLED
 
 from fastapi.responses import JSONResponse
@@ -263,14 +264,9 @@ def register_with_invite(
     _audit(db, invitation.family_id, None, "invite_used",
            target_user_id=user.id,
            details={"email": user.email, "invite_id": invitation.id})
-    db.commit()
-
-    token = create_access_token(user_id=user.id, email=user.email)
     response = JSONResponse(content={"status": "ok"})
-    response.set_cookie(
-        COOKIE_NAME, token, httponly=True, samesite="lax",
-        secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
-    )
+    issue_session_cookies(response, db, user)
+    db.commit()
     return response
 
 

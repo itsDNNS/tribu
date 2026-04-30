@@ -7,4 +7,7 @@ VERSION = resolve_app_version()
 
 COOKIE_NAME = "tribu_token"
 COOKIE_MAX_AGE = JWT_EXPIRE_HOURS * 3600
+REFRESH_COOKIE_NAME = "tribu_refresh"
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+REFRESH_COOKIE_MAX_AGE = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
 COOKIE_SECURE = os.getenv("SECURE_COOKIES", "false").lower() == "true"

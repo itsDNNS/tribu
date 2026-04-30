@@ -1,4 +1,4 @@
-from datetime import UTC, date
+from datetime import UTC, date, datetime
 import jwt
 
 from app.core.utils import utcnow
@@ -103,6 +103,15 @@ def _resolve_user(request: Request, token_str: str, db: Session) -> User:
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(USER_NOT_FOUND))
+    if user.session_invalidated_at is not None:
+        issued_at = payload.get("iat")
+        if not isinstance(issued_at, (int, float)):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
+        invalidated_at = user.session_invalidated_at
+        if invalidated_at.tzinfo is None:
+            invalidated_at = invalidated_at.replace(tzinfo=UTC)
+        if datetime.fromtimestamp(issued_at, UTC) < invalidated_at:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
     request.state.pat_scopes = None
     return user
 
