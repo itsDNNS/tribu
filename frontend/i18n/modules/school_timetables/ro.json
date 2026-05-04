@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Orarul școlii",
+  "module.school_timetables.subtitle": "Programul săptămânal al cursurilor pentru copii",
+  "module.school_timetables.add": "Adăugați orarul",
+  "module.school_timetables.save": "Salvați orarul",
+  "module.school_timetables.delete": "Ștergeți",
+  "module.school_timetables.class_label": "Clasa",
+  "module.school_timetables.include_saturday": "Include sâmbăta",
+  "module.school_timetables.assigned_children": "Copii alocați",
+  "module.school_timetables.periods": "Perioade și pauze",
+  "module.school_timetables.lessons": "Lecții",
+  "module.school_timetables.empty": "Încă nu există program de școală.",
+  "module.school_timetables.display_title": "Şcoala azi"
+}

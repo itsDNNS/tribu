@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Školské rozvrhy",
+  "module.school_timetables.subtitle": "Týždenný rozvrh hodín pre deti",
+  "module.school_timetables.add": "Pridať rozvrh",
+  "module.school_timetables.save": "Uložiť rozvrh",
+  "module.school_timetables.delete": "Odstrániť",
+  "module.school_timetables.class_label": "triedy",
+  "module.school_timetables.include_saturday": "Zahŕňa sobotu",
+  "module.school_timetables.assigned_children": "Pridelené deti",
+  "module.school_timetables.periods": "Obdobia a prestávky",
+  "module.school_timetables.lessons": "Lekcie",
+  "module.school_timetables.empty": "Zatiaľ žiadne školské rozvrhy.",
+  "module.school_timetables.display_title": "Dnes škola"
+}

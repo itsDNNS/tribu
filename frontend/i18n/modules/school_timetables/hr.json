@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Školski rasporedi",
+  "module.school_timetables.subtitle": "Tjedni rasporedi nastave za djecu",
+  "module.school_timetables.add": "Dodajte raspored",
+  "module.school_timetables.save": "Spremi raspored",
+  "module.school_timetables.delete": "Izbriši",
+  "module.school_timetables.class_label": "Klasa",
+  "module.school_timetables.include_saturday": "Uključuje subotu",
+  "module.school_timetables.assigned_children": "Dodijeljena djeca",
+  "module.school_timetables.periods": "Razdoblja i pauze",
+  "module.school_timetables.lessons": "Lekcije",
+  "module.school_timetables.empty": "Još nema školskih rasporeda.",
+  "module.school_timetables.display_title": "Škola danas"
+}

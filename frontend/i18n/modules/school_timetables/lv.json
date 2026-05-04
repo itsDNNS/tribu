@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Skolu stundu grafiki",
+  "module.school_timetables.subtitle": "Iknedēļas nodarbību grafiki bērniem",
+  "module.school_timetables.add": "Pievienojiet grafiku",
+  "module.school_timetables.save": "Saglabājiet grafiku",
+  "module.school_timetables.delete": "Dzēst",
+  "module.school_timetables.class_label": "Klase",
+  "module.school_timetables.include_saturday": "Ietver sestdienu",
+  "module.school_timetables.assigned_children": "Piešķirti bērni",
+  "module.school_timetables.periods": "Periodi un pārtraukumi",
+  "module.school_timetables.lessons": "Nodarbības",
+  "module.school_timetables.empty": "Vēl nav skolas stundu saraksta.",
+  "module.school_timetables.display_title": "Skola šodien"
+}

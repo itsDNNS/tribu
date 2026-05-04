@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Skolens skemaer",
+  "module.school_timetables.subtitle": "Ugentlige klasseskemaer for børnene",
+  "module.school_timetables.add": "Tilføj tidsplan",
+  "module.school_timetables.save": "Gem tidsplan",
+  "module.school_timetables.delete": "Slet",
+  "module.school_timetables.class_label": "Klasse",
+  "module.school_timetables.include_saturday": "Inkluderer lørdag",
+  "module.school_timetables.assigned_children": "Tildelte børn",
+  "module.school_timetables.periods": "Perioder og pauser",
+  "module.school_timetables.lessons": "Lektioner",
+  "module.school_timetables.empty": "Ingen skoleskema endnu.",
+  "module.school_timetables.display_title": "Skole i dag"
+}

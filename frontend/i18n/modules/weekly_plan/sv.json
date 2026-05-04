@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Veckoplan",
+  "module.weekly_plan.subtitle": "Utskriftsklar översikt för kalender, uppgifter, måltider, shopping och födelsedagar.",
+  "module.weekly_plan.this_week": "Denna vecka",
+  "module.weekly_plan.next_week": "Nästa vecka",
+  "module.weekly_plan.previous_week": "Föregående vecka",
+  "module.weekly_plan.print": "Skriv ut",
+  "module.weekly_plan.back_dashboard": "Tillbaka till instrumentpanelen",
+  "module.weekly_plan.events": "Händelser",
+  "module.weekly_plan.tasks": "Arbetsuppgifter och rutiner",
+  "module.weekly_plan.meals": "Måltider",
+  "module.weekly_plan.shopping": "Shoppingpåminnelser",
+  "module.weekly_plan.birthdays": "Födelsedagar",
+  "module.weekly_plan.empty_section": "Inget planerat",
+  "module.weekly_plan.no_due_date": "Inget förfallodatum",
+  "module.weekly_plan.filters": "Filter",
+  "module.weekly_plan.filter_member": "Medlem",
+  "module.weekly_plan.filter_all_members": "Alla medlemmar",
+  "module.weekly_plan.filter_sections": "Avsnitt"
+}

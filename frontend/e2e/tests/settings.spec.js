@@ -36,11 +36,27 @@ test.describe('Settings', () => {
       'Nederlands',
       'Polski',
       'Português',
+      'Svenska',
+      'Dansk',
+      'Norsk bokmål',
+      'Suomi',
+      'Čeština',
+      'Slovenčina',
+      'Magyar',
+      'Română',
+      'Ελληνικά',
+      'Български',
+      'Hrvatski',
+      'Slovenščina',
+      'Lietuvių',
+      'Latviešu',
+      'Eesti',
+      'Gaeilge',
     ]);
 
-    await languageButtons.filter({ hasText: 'Español' }).click({ force: true });
-    await expect(page.locator('.settings-section-title', { hasText: 'Idioma' })).toBeVisible();
-    await expect(page.locator('.lang-toggle .lang-btn.active')).toHaveText('Español');
+    await languageButtons.filter({ hasText: 'Svenska' }).click({ force: true });
+    await expect(page.locator('.settings-section-title', { hasText: 'Språk' })).toBeVisible();
+    await expect(page.locator('.lang-toggle .lang-btn.active')).toHaveText('Svenska');
   });
 
   test('switch theme and verify data-theme attribute', async ({ authedPage: page }) => {

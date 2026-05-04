@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Iskolai órarendek",
+  "module.school_timetables.subtitle": "Heti órarend a gyerekeknek",
+  "module.school_timetables.add": "Órarend hozzáadása",
+  "module.school_timetables.save": "Mentse el a menetrendet",
+  "module.school_timetables.delete": "Törölje",
+  "module.school_timetables.class_label": "osztály",
+  "module.school_timetables.include_saturday": "A szombatot tartalmazza",
+  "module.school_timetables.assigned_children": "Hozzárendelt gyerekek",
+  "module.school_timetables.periods": "Időszakok és szünetek",
+  "module.school_timetables.lessons": "Leckék",
+  "module.school_timetables.empty": "Még nincs iskolai órarend.",
+  "module.school_timetables.display_title": "Iskola ma"
+}

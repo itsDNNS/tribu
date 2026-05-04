@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Viikkosuunnitelma",
+  "module.weekly_plan.subtitle": "Tulostusvalmis yleiskatsaus kalenteria, tehtäviä, aterioita, ostoksia ja syntymäpäiviä varten.",
+  "module.weekly_plan.this_week": "Tällä viikolla",
+  "module.weekly_plan.next_week": "Ensi viikolla",
+  "module.weekly_plan.previous_week": "Edellinen viikko",
+  "module.weekly_plan.print": "Tulosta",
+  "module.weekly_plan.back_dashboard": "Takaisin kojelautaan",
+  "module.weekly_plan.events": "Tapahtumat",
+  "module.weekly_plan.tasks": "Tehtävät ja rutiinit",
+  "module.weekly_plan.meals": "Ateriat",
+  "module.weekly_plan.shopping": "Ostosmuistutukset",
+  "module.weekly_plan.birthdays": "Syntymäpäivät",
+  "module.weekly_plan.empty_section": "Ei mitään suunniteltua",
+  "module.weekly_plan.no_due_date": "Ei eräpäivää",
+  "module.weekly_plan.filters": "Suodattimet",
+  "module.weekly_plan.filter_member": "jäsen",
+  "module.weekly_plan.filter_all_members": "Kaikki jäsenet",
+  "module.weekly_plan.filter_sections": "Osat"
+}

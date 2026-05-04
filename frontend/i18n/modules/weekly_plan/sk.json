@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Týždenný plán",
+  "module.weekly_plan.subtitle": "Prehľad pripravený na tlač pre kalendár, úlohy, jedlá, nákupy a narodeniny.",
+  "module.weekly_plan.this_week": "Tento týždeň",
+  "module.weekly_plan.next_week": "Budúci týždeň",
+  "module.weekly_plan.previous_week": "Predchádzajúci týždeň",
+  "module.weekly_plan.print": "Tlačiť",
+  "module.weekly_plan.back_dashboard": "Späť na palubnú dosku",
+  "module.weekly_plan.events": "Udalosti",
+  "module.weekly_plan.tasks": "Úlohy a rutiny",
+  "module.weekly_plan.meals": "Jedlá",
+  "module.weekly_plan.shopping": "Nákupné pripomienky",
+  "module.weekly_plan.birthdays": "narodeniny",
+  "module.weekly_plan.empty_section": "Nič plánované",
+  "module.weekly_plan.no_due_date": "Bez dátumu splatnosti",
+  "module.weekly_plan.filters": "Filtre",
+  "module.weekly_plan.filter_member": "člen",
+  "module.weekly_plan.filter_all_members": "Všetci členovia",
+  "module.weekly_plan.filter_sections": "Sekcie"
+}

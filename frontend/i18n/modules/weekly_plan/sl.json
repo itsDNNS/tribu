@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Tedenski načrt",
+  "module.weekly_plan.subtitle": "Pregled koledarja, opravil, obrokov, nakupovanja in rojstnih dni, pripravljen za tiskanje.",
+  "module.weekly_plan.this_week": "Ta teden",
+  "module.weekly_plan.next_week": "Naslednji teden",
+  "module.weekly_plan.previous_week": "Prejšnji teden",
+  "module.weekly_plan.print": "Tiskanje",
+  "module.weekly_plan.back_dashboard": "Nazaj na nadzorno ploščo",
+  "module.weekly_plan.events": "Dogodki",
+  "module.weekly_plan.tasks": "Naloge in rutine",
+  "module.weekly_plan.meals": "Obroki",
+  "module.weekly_plan.shopping": "Nakupovalni opomniki",
+  "module.weekly_plan.birthdays": "Rojstni dnevi",
+  "module.weekly_plan.empty_section": "Nič načrtovanega",
+  "module.weekly_plan.no_due_date": "Brez roka",
+  "module.weekly_plan.filters": "Filtri",
+  "module.weekly_plan.filter_member": "član",
+  "module.weekly_plan.filter_all_members": "Vsi člani",
+  "module.weekly_plan.filter_sections": "Oddelki"
+}

@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Skolans scheman",
+  "module.school_timetables.subtitle": "Veckoklassscheman för barnen",
+  "module.school_timetables.add": "Lägg till tidtabell",
+  "module.school_timetables.save": "Spara tidtabell",
+  "module.school_timetables.delete": "Ta bort",
+  "module.school_timetables.class_label": "Klass",
+  "module.school_timetables.include_saturday": "Inkluderar lördag",
+  "module.school_timetables.assigned_children": "Tilldelade barn",
+  "module.school_timetables.periods": "Perioder och pauser",
+  "module.school_timetables.lessons": "Lektioner",
+  "module.school_timetables.empty": "Inga skolscheman ännu.",
+  "module.school_timetables.display_title": "Skola idag"
+}

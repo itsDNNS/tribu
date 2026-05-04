@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Nedēļas plāns",
+  "module.weekly_plan.subtitle": "Drukāšanai gatavs kalendāra, uzdevumu, maltīšu, iepirkšanās un dzimšanas dienu pārskats.",
+  "module.weekly_plan.this_week": "Šonedēļ",
+  "module.weekly_plan.next_week": "Nākamnedēļ",
+  "module.weekly_plan.previous_week": "Iepriekšējā nedēļa",
+  "module.weekly_plan.print": "Drukāt",
+  "module.weekly_plan.back_dashboard": "Atpakaļ uz informācijas paneli",
+  "module.weekly_plan.events": "Pasākumi",
+  "module.weekly_plan.tasks": "Uzdevumi un rutīnas",
+  "module.weekly_plan.meals": "Maltītes",
+  "module.weekly_plan.shopping": "Iepirkšanās atgādinājumi",
+  "module.weekly_plan.birthdays": "Dzimšanas dienas",
+  "module.weekly_plan.empty_section": "Nekas nav plānots",
+  "module.weekly_plan.no_due_date": "Nav izpildes datuma",
+  "module.weekly_plan.filters": "Filtri",
+  "module.weekly_plan.filter_member": "Biedrs",
+  "module.weekly_plan.filter_all_members": "Visi dalībnieki",
+  "module.weekly_plan.filter_sections": "Sadaļas"
+}

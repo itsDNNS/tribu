@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Mokyklos tvarkaraščiai",
+  "module.school_timetables.subtitle": "Savaitės pamokų tvarkaraščiai vaikams",
+  "module.school_timetables.add": "Pridėti tvarkaraštį",
+  "module.school_timetables.save": "Išsaugokite tvarkaraštį",
+  "module.school_timetables.delete": "Ištrinti",
+  "module.school_timetables.class_label": "Klasė",
+  "module.school_timetables.include_saturday": "Apima šeštadienį",
+  "module.school_timetables.assigned_children": "Paskirti vaikai",
+  "module.school_timetables.periods": "Laikotarpiai ir pertraukos",
+  "module.school_timetables.lessons": "Pamokos",
+  "module.school_timetables.empty": "Dar nėra mokyklos tvarkaraščių.",
+  "module.school_timetables.display_title": "Šiandien mokykla"
+}
