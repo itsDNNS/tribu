@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Училищни разписания",
+  "module.school_timetables.subtitle": "Седмични графици за заниманията на децата",
+  "module.school_timetables.add": "Добавете разписание",
+  "module.school_timetables.save": "Запазете графика",
+  "module.school_timetables.delete": "Изтриване",
+  "module.school_timetables.class_label": "Клас",
+  "module.school_timetables.include_saturday": "Включва събота",
+  "module.school_timetables.assigned_children": "Назначени деца",
+  "module.school_timetables.periods": "Периоди и почивки",
+  "module.school_timetables.lessons": "Уроци",
+  "module.school_timetables.empty": "Все още няма училищни разписания.",
+  "module.school_timetables.display_title": "Училище днес"
+}

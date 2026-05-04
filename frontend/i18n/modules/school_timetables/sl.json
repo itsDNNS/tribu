@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Šolski urniki",
+  "module.school_timetables.subtitle": "Tedenski urnik pouka za otroke",
+  "module.school_timetables.add": "Dodajte urnik",
+  "module.school_timetables.save": "Shranite urnik",
+  "module.school_timetables.delete": "Izbriši",
+  "module.school_timetables.class_label": "Razred",
+  "module.school_timetables.include_saturday": "Vključuje soboto",
+  "module.school_timetables.assigned_children": "Dodeljeni otroci",
+  "module.school_timetables.periods": "Obdobja in odmori",
+  "module.school_timetables.lessons": "Lekcije",
+  "module.school_timetables.empty": "Šolskih urnikov še ni.",
+  "module.school_timetables.display_title": "Šola danes"
+}

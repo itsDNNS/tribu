@@ -3,14 +3,30 @@
 // UI supports multiple locales; demo sample content currently ships in English and German.
 
 const DATE_LOCALES = {
+  bg: 'bg-BG',
+  cs: 'cs-CZ',
+  da: 'da-DK',
   de: 'de-DE',
+  el: 'el-GR',
   en: 'en-US',
   es: 'es-ES',
+  et: 'et-EE',
+  fi: 'fi-FI',
   fr: 'fr-FR',
-  pt: 'pt-BR',
+  ga: 'ga-IE',
+  hr: 'hr-HR',
+  hu: 'hu-HU',
   it: 'it-IT',
+  lt: 'lt-LT',
+  lv: 'lv-LV',
+  nb: 'nb-NO',
   nl: 'nl-NL',
   pl: 'pl-PL',
+  pt: 'pt-BR',
+  ro: 'ro-RO',
+  sk: 'sk-SK',
+  sl: 'sl-SI',
+  sv: 'sv-SE',
 };
 
 function today() {

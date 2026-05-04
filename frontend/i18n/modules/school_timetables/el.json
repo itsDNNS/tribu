@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Σχολικά ωράρια",
+  "module.school_timetables.subtitle": "Εβδομαδιαίο πρόγραμμα μαθημάτων για τα παιδιά",
+  "module.school_timetables.add": "Προσθήκη χρονοδιαγράμματος",
+  "module.school_timetables.save": "Αποθήκευση χρονοδιαγράμματος",
+  "module.school_timetables.delete": "Διαγραφή",
+  "module.school_timetables.class_label": "Τάξη",
+  "module.school_timetables.include_saturday": "Περιλαμβάνει το Σάββατο",
+  "module.school_timetables.assigned_children": "Ορισμένα παιδιά",
+  "module.school_timetables.periods": "Περίοδοι και διαλείμματα",
+  "module.school_timetables.lessons": "Μαθήματα",
+  "module.school_timetables.empty": "Δεν υπάρχουν ακόμη σχολικά ωράρια.",
+  "module.school_timetables.display_title": "Σχολείο σήμερα"
+}

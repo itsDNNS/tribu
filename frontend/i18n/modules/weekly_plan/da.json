@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Ugeplan",
+  "module.weekly_plan.subtitle": "Printklar oversigt til kalender, opgaver, måltider, indkøb og fødselsdage.",
+  "module.weekly_plan.this_week": "Denne uge",
+  "module.weekly_plan.next_week": "Næste uge",
+  "module.weekly_plan.previous_week": "Forrige uge",
+  "module.weekly_plan.print": "Udskriv",
+  "module.weekly_plan.back_dashboard": "Tilbage til dashboard",
+  "module.weekly_plan.events": "Begivenheder",
+  "module.weekly_plan.tasks": "Opgaver og rutiner",
+  "module.weekly_plan.meals": "Måltider",
+  "module.weekly_plan.shopping": "Shopping påmindelser",
+  "module.weekly_plan.birthdays": "Fødselsdage",
+  "module.weekly_plan.empty_section": "Intet planlagt",
+  "module.weekly_plan.no_due_date": "Ingen forfaldsdato",
+  "module.weekly_plan.filters": "Filtre",
+  "module.weekly_plan.filter_member": "Medlem",
+  "module.weekly_plan.filter_all_members": "Alle medlemmer",
+  "module.weekly_plan.filter_sections": "Afsnit"
+}

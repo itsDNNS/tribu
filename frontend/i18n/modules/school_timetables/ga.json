@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Amchláir scoile",
+  "module.school_timetables.subtitle": "Sceideal ranganna seachtainiúla do na páistí",
+  "module.school_timetables.add": "Cuir amchlár leis",
+  "module.school_timetables.save": "Sábháil amchlár",
+  "module.school_timetables.delete": "Scrios",
+  "module.school_timetables.class_label": "Aicme",
+  "module.school_timetables.include_saturday": "Dé Sathairn san áireamh",
+  "module.school_timetables.assigned_children": "Leanaí sannta",
+  "module.school_timetables.periods": "Tréimhsí agus sosanna",
+  "module.school_timetables.lessons": "Ceachtanna",
+  "module.school_timetables.empty": "Níl aon amchláir scoile fós.",
+  "module.school_timetables.display_title": "Scoil inniu"
+}

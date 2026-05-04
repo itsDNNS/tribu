@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <strong>Self-hosted</strong>&nbsp;&nbsp;&bull;&nbsp;&nbsp;Docker Compose&nbsp;&nbsp;&bull;&nbsp;&nbsp;Demo mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;Wall display mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;CalDAV/CardDAV sync&nbsp;&nbsp;&bull;&nbsp;&nbsp;8 languages&nbsp;&nbsp;&bull;&nbsp;&nbsp;MIT licensed
+  <strong>Self-hosted</strong>&nbsp;&nbsp;&bull;&nbsp;&nbsp;Docker Compose&nbsp;&nbsp;&bull;&nbsp;&nbsp;Demo mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;Wall display mode&nbsp;&nbsp;&bull;&nbsp;&nbsp;CalDAV/CardDAV sync&nbsp;&nbsp;&bull;&nbsp;&nbsp;24 languages&nbsp;&nbsp;&bull;&nbsp;&nbsp;MIT licensed
 </p>
 
 <p align="center">
@@ -100,7 +100,7 @@ It is built for the real rhythm of household life: planning the week, sharing re
 - **Safe for kitchen tablets and wall screens:** pair a dedicated display device instead of leaving a parent account signed in
 - **Syncs with the devices people already use:** CalDAV and CardDAV support for phones and compatible clients
 - **Easy to explore before committing:** interactive demo mode with realistic sample data, no backend required
-- **Multilingual and extensible:** English, German, Spanish, French, Portuguese, Italian, Dutch, and Polish out of the box, with plugin support for features, themes, and languages
+- **Multilingual and extensible:** 24 UI languages across Germanic, Romance, Slavic, Baltic, Balkan, Greek, and Irish coverage, with plugin support for features, themes, and languages
 
 ## Best fit for
 
@@ -187,7 +187,7 @@ This is ideal for the “always visible” family screen in the kitchen, hallway
 | **Rewards** | Family token economy with earning rules, reward catalog, child progress bars, and Lucide icons |
 | **Search** | Global search across events, tasks, shopping, contacts, and birthdays (`Cmd+K`) |
 | **Themes** | Morning Mist (light) and Dark |
-| **i18n** | English, German, Spanish, French, Portuguese, Italian, Dutch, and Polish out of the box, lazy-loaded per module |
+| **i18n** | 24 UI languages across Germanic, Romance, Slavic, Baltic, Balkan, Greek, and Irish coverage, lazy-loaded per module |
 | **Demo mode** | Try the full UI with realistic sample data, no server setup required |
 | **Security** | httpOnly cookies, rate limiting, scoped PATs, and non-root containers |
 

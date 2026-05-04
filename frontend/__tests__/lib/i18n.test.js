@@ -47,7 +47,32 @@ describe('i18n no empty strings', () => {
   });
 });
 
-const expectedLanguages = ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt'];
+const expectedLanguages = [
+  'bg',
+  'cs',
+  'da',
+  'de',
+  'el',
+  'en',
+  'es',
+  'et',
+  'fi',
+  'fr',
+  'ga',
+  'hr',
+  'hu',
+  'it',
+  'lt',
+  'lv',
+  'nb',
+  'nl',
+  'pl',
+  'pt',
+  'ro',
+  'sk',
+  'sl',
+  'sv',
+];
 
 const projectRoot = path.join(process.cwd(), '..');
 const i18nRoot = path.join(process.cwd(), 'i18n');
@@ -83,6 +108,7 @@ function protectedLiteralSet(value) {
   const text = String(value);
   const patterns = [
     /\b[a-z_]+:(?:read|write)\b/g,
+    /\bopenid\b/g,
     /\b(?:BEGIN|END):VCALENDAR\b/g,
     /\b(?:full_name|birthday_month|birthday_day)\b/g,
     /\bfull_name,email,phone,birthday_month,birthday_day\b/g,
@@ -123,7 +149,7 @@ describe('i18n language pack completeness', () => {
 });
 
 describe('listLanguages()', () => {
-  it('lists the first international language pack with native names', () => {
+  it('lists the expanded European language pack with native names', () => {
     const languages = listLanguages();
     expect(languages.map((lang) => lang.key).sort()).toEqual(expectedLanguages);
     expect(languages).toEqual(
@@ -134,6 +160,22 @@ describe('listLanguages()', () => {
         expect.objectContaining({ key: 'it', nativeName: 'Italiano' }),
         expect.objectContaining({ key: 'nl', nativeName: 'Nederlands' }),
         expect.objectContaining({ key: 'pl', nativeName: 'Polski' }),
+        expect.objectContaining({ key: 'sv', nativeName: 'Svenska' }),
+        expect.objectContaining({ key: 'da', nativeName: 'Dansk' }),
+        expect.objectContaining({ key: 'nb', nativeName: 'Norsk bokmål' }),
+        expect.objectContaining({ key: 'fi', nativeName: 'Suomi' }),
+        expect.objectContaining({ key: 'cs', nativeName: 'Čeština' }),
+        expect.objectContaining({ key: 'sk', nativeName: 'Slovenčina' }),
+        expect.objectContaining({ key: 'hu', nativeName: 'Magyar' }),
+        expect.objectContaining({ key: 'ro', nativeName: 'Română' }),
+        expect.objectContaining({ key: 'el', nativeName: 'Ελληνικά' }),
+        expect.objectContaining({ key: 'bg', nativeName: 'Български' }),
+        expect.objectContaining({ key: 'hr', nativeName: 'Hrvatski' }),
+        expect.objectContaining({ key: 'sl', nativeName: 'Slovenščina' }),
+        expect.objectContaining({ key: 'lt', nativeName: 'Lietuvių' }),
+        expect.objectContaining({ key: 'lv', nativeName: 'Latviešu' }),
+        expect.objectContaining({ key: 'et', nativeName: 'Eesti' }),
+        expect.objectContaining({ key: 'ga', nativeName: 'Gaeilge' }),
       ])
     );
   });
@@ -163,6 +205,22 @@ describe('buildMessages()', () => {
     expect(buildMessages('it')['module.dashboard.name']).toBe('Cruscotto');
     expect(buildMessages('nl')['module.dashboard.name']).toBe('Dashboard');
     expect(buildMessages('pl')['module.dashboard.name']).toBe('Pulpit');
+    expect(buildMessages('sv')['module.dashboard.name']).toBe('Instrumentpanel');
+    expect(buildMessages('da')['module.dashboard.name']).toBe('Dashboard');
+    expect(buildMessages('nb')['module.dashboard.name']).toBe('Dashbord');
+    expect(buildMessages('fi')['module.dashboard.name']).toBe('Kojelauta');
+    expect(buildMessages('cs')['module.dashboard.name']).toBe('Dashboard');
+    expect(buildMessages('sk')['module.dashboard.name']).toBe('Dashboard');
+    expect(buildMessages('hu')['module.dashboard.name']).toBe('Irányítópult');
+    expect(buildMessages('ro')['module.dashboard.name']).toBe('Tabloul de bord');
+    expect(buildMessages('el')['module.dashboard.name']).toBe('Ταμπλό');
+    expect(buildMessages('bg')['module.dashboard.name']).toBe('Табло за управление');
+    expect(buildMessages('hr')['module.dashboard.name']).toBe('Nadzorna ploča');
+    expect(buildMessages('sl')['module.dashboard.name']).toBe('Nadzorna plošča');
+    expect(buildMessages('lt')['module.dashboard.name']).toBe('Prietaisų skydelis');
+    expect(buildMessages('lv')['module.dashboard.name']).toBe('Informācijas panelis');
+    expect(buildMessages('et')['module.dashboard.name']).toBe('Armatuurlaud');
+    expect(buildMessages('ga')['module.dashboard.name']).toBe('Deais');
   });
 
   it('falls back to DE for unknown language', () => {

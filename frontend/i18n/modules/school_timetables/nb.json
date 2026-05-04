@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Skoleruter",
+  "module.school_timetables.subtitle": "Ukentlige timeplaner for barna",
+  "module.school_timetables.add": "Legg til timeplan",
+  "module.school_timetables.save": "Lagre timeplan",
+  "module.school_timetables.delete": "Slett",
+  "module.school_timetables.class_label": "Klasse",
+  "module.school_timetables.include_saturday": "Inkluderer lørdag",
+  "module.school_timetables.assigned_children": "Tildelte barn",
+  "module.school_timetables.periods": "Perioder og pauser",
+  "module.school_timetables.lessons": "Leksjoner",
+  "module.school_timetables.empty": "Ingen skoletider ennå.",
+  "module.school_timetables.display_title": "Skole i dag"
+}
