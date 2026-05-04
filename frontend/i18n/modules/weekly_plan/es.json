@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Plan semanal",
+  "module.weekly_plan.subtitle": "Resumen listo para imprimir de calendario, tareas, comidas, compras y cumpleaños.",
+  "module.weekly_plan.this_week": "Esta semana",
+  "module.weekly_plan.next_week": "Próxima semana",
+  "module.weekly_plan.previous_week": "Semana anterior",
+  "module.weekly_plan.print": "Imprimir",
+  "module.weekly_plan.back_dashboard": "Volver al panel",
+  "module.weekly_plan.events": "Eventos",
+  "module.weekly_plan.tasks": "Tareas y rutinas",
+  "module.weekly_plan.meals": "Comidas",
+  "module.weekly_plan.shopping": "Recordatorios de compras",
+  "module.weekly_plan.birthdays": "Cumpleaños",
+  "module.weekly_plan.empty_section": "Nada planificado",
+  "module.weekly_plan.no_due_date": "Sin fecha límite",
+  "module.weekly_plan.filters": "Filtros",
+  "module.weekly_plan.filter_member": "Miembro",
+  "module.weekly_plan.filter_all_members": "Todos los miembros",
+  "module.weekly_plan.filter_sections": "Secciones"
+}

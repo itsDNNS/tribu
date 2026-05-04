@@ -16,6 +16,33 @@ test.describe('Settings', () => {
     await expect(page.locator('.profile-email')).toContainText(testUser.email);
   });
 
+  test('renders the full language pack and switches to a new language', async ({ authedPage: page }) => {
+    await navigateTo(page, 'Settings');
+
+    const accountItem = page.locator('.settings-mobile-item', { hasText: 'Account' });
+    if (await accountItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await accountItem.click();
+    }
+
+    await page.locator('.profile-name').waitFor({ timeout: 10000 });
+
+    const languageButtons = page.locator('.lang-toggle .lang-btn');
+    await expect(languageButtons).toHaveText([
+      'Deutsch',
+      'English',
+      'Español',
+      'Français',
+      'Italiano',
+      'Nederlands',
+      'Polski',
+      'Português',
+    ]);
+
+    await languageButtons.filter({ hasText: 'Español' }).click({ force: true });
+    await expect(page.locator('.settings-section-title', { hasText: 'Idioma' })).toBeVisible();
+    await expect(page.locator('.lang-toggle .lang-btn.active')).toHaveText('Español');
+  });
+
   test('switch theme and verify data-theme attribute', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 

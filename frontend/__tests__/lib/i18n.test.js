@@ -1,4 +1,7 @@
-import { buildMessages, t } from '../../lib/i18n';
+import fs from 'fs';
+import path from 'path';
+
+import { buildMessages, listLanguages, t } from '../../lib/i18n';
 
 import coreEn from '../../i18n/core/en.json';
 import coreDe from '../../i18n/core/de.json';
@@ -43,11 +46,83 @@ describe('i18n no empty strings', () => {
   });
 });
 
+const expectedLanguages = ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt'];
+
+const i18nRoot = path.join(process.cwd(), 'i18n');
+const englishLocaleFiles = fs
+  .readdirSync(i18nRoot, { recursive: true })
+  .filter((file) => file.endsWith('/en.json'))
+  .sort();
+
+function readLocale(relativePath) {
+  return JSON.parse(fs.readFileSync(path.join(i18nRoot, relativePath), 'utf8'));
+}
+
+function placeholderSet(value) {
+  return Array.from(String(value).matchAll(/\{\{[^{}]+\}\}|\{[^{}]+\}|%[sd]/g), (match) => match[0]).sort();
+}
+
+function protectedLiteralSet(value) {
+  const text = String(value);
+  const patterns = [
+    /\b[a-z_]+:(?:read|write)\b/g,
+    /\b(?:BEGIN|END):VCALENDAR\b/g,
+    /\b(?:full_name|birthday_month|birthday_day)\b/g,
+    /\bfull_name,email,phone,birthday_month,birthday_day\b/g,
+    /\bDELETE\b/g,
+  ];
+  return patterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => match[0])).sort();
+}
+
+describe('i18n language pack completeness', () => {
+  it('ships every English locale file for every supported language', () => {
+    for (const enFile of englishLocaleFiles) {
+      for (const lang of expectedLanguages) {
+        expect(fs.existsSync(path.join(i18nRoot, enFile.replace('/en.json', `/${lang}.json`)))).toBe(true);
+      }
+    }
+  });
+
+  it('keeps keys and placeholders aligned with English', () => {
+    for (const enFile of englishLocaleFiles) {
+      const en = readLocale(enFile);
+      const enKeys = Object.keys(en).sort();
+      for (const lang of expectedLanguages) {
+        const locale = readLocale(enFile.replace('/en.json', `/${lang}.json`));
+        expect(Object.keys(locale).sort()).toEqual(enKeys);
+        for (const key of enKeys) {
+          expect(String(locale[key]).trim()).not.toBe('');
+          expect(placeholderSet(locale[key])).toEqual(placeholderSet(en[key]));
+          expect(protectedLiteralSet(locale[key])).toEqual(protectedLiteralSet(en[key]));
+        }
+      }
+    }
+  });
+});
+
+describe('listLanguages()', () => {
+  it('lists the first international language pack with native names', () => {
+    const languages = listLanguages();
+    expect(languages.map((lang) => lang.key).sort()).toEqual(expectedLanguages);
+    expect(languages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'es', nativeName: 'Español' }),
+        expect.objectContaining({ key: 'fr', nativeName: 'Français' }),
+        expect.objectContaining({ key: 'pt', nativeName: 'Português' }),
+        expect.objectContaining({ key: 'it', nativeName: 'Italiano' }),
+        expect.objectContaining({ key: 'nl', nativeName: 'Nederlands' }),
+        expect.objectContaining({ key: 'pl', nativeName: 'Polski' }),
+      ])
+    );
+  });
+});
+
 describe('buildMessages()', () => {
-  it('EN and DE produce the same set of keys', () => {
+  it('all supported languages produce the same set of keys as English', () => {
     const enKeys = Object.keys(buildMessages('en')).sort();
-    const deKeys = Object.keys(buildMessages('de')).sort();
-    expect(enKeys).toEqual(deKeys);
+    for (const lang of expectedLanguages) {
+      expect(Object.keys(buildMessages(lang)).sort()).toEqual(enKeys);
+    }
   });
 
   it('merges core and module translations', () => {
@@ -59,10 +134,19 @@ describe('buildMessages()', () => {
     expect(en['module.contacts.name']).toBe('Contacts');
   });
 
+  it('returns translated messages for the new languages', () => {
+    expect(buildMessages('es')['module.dashboard.name']).toBe('Panel');
+    expect(buildMessages('fr')['module.dashboard.name']).toBe('Tableau de bord');
+    expect(buildMessages('pt')['module.dashboard.name']).toBe('Painel');
+    expect(buildMessages('it')['module.dashboard.name']).toBe('Cruscotto');
+    expect(buildMessages('nl')['module.dashboard.name']).toBe('Dashboard');
+    expect(buildMessages('pl')['module.dashboard.name']).toBe('Pulpit');
+  });
+
   it('falls back to DE for unknown language', () => {
-    const fr = buildMessages('fr');
+    const unknown = buildMessages('xx');
     const de = buildMessages('de');
-    expect(fr).toEqual(de);
+    expect(unknown).toEqual(de);
   });
 });
 

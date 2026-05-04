@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Horarios escolares",
+  "module.school_timetables.subtitle": "Horarios semanales de clases para los niños",
+  "module.school_timetables.add": "Añadir horario",
+  "module.school_timetables.save": "Guardar horario",
+  "module.school_timetables.delete": "Eliminar",
+  "module.school_timetables.class_label": "Clase",
+  "module.school_timetables.include_saturday": "Incluye sábado",
+  "module.school_timetables.assigned_children": "Niños asignados",
+  "module.school_timetables.periods": "Periodos y descansos",
+  "module.school_timetables.lessons": "Clases",
+  "module.school_timetables.empty": "Aún no hay horarios escolares.",
+  "module.school_timetables.display_title": "Colegio hoy"
+}

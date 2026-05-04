@@ -1,6 +1,17 @@
 // Demo data for Tribu — realistic family content
 // All dates are generated relative to "now" so the demo always feels fresh.
-// Supports 'de' (German) and 'en' (English) locales.
+// UI supports multiple locales; demo sample content currently ships in English and German.
+
+const DATE_LOCALES = {
+  de: 'de-DE',
+  en: 'en-US',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  pt: 'pt-BR',
+  it: 'it-IT',
+  nl: 'nl-NL',
+  pl: 'pl-PL',
+};
 
 function today() {
   return new Date();
@@ -16,7 +27,7 @@ function dateAt(dayOffset, hour = 9, minute = 0) {
 function birthdayIn(days, lang = 'en') {
   const d = today();
   d.setDate(d.getDate() + days);
-  const locale = lang === 'de' ? 'de-DE' : 'en-US';
+  const locale = DATE_LOCALES[lang] || DATE_LOCALES.en;
   return { month: d.getMonth() + 1, day: d.getDate(), occurs_on: d.toLocaleDateString(locale, { day: 'numeric', month: 'long' }) };
 }
 

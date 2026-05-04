@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Schoolroosters",
+  "module.school_timetables.subtitle": "Wekelijkse lesroosters voor de kinderen",
+  "module.school_timetables.add": "Voeg tijdschema toe",
+  "module.school_timetables.save": "Tijdschema opslaan",
+  "module.school_timetables.delete": "Verwijderen",
+  "module.school_timetables.class_label": "Klasse",
+  "module.school_timetables.include_saturday": "Inclusief zaterdag",
+  "module.school_timetables.assigned_children": "Toegewezen kinderen",
+  "module.school_timetables.periods": "Perioden en pauzes",
+  "module.school_timetables.lessons": "Lessen",
+  "module.school_timetables.empty": "Er zijn nog geen schoolroosters.",
+  "module.school_timetables.display_title": "School vandaag"
+}

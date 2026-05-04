@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Plany lekcji",
+  "module.school_timetables.subtitle": "Tygodniowe rozkłady lekcji dla dzieci",
+  "module.school_timetables.add": "Dodaj plan lekcji",
+  "module.school_timetables.save": "Zapisz plan lekcji",
+  "module.school_timetables.delete": "Usuń",
+  "module.school_timetables.class_label": "Klasa",
+  "module.school_timetables.include_saturday": "Obejmuje sobotę",
+  "module.school_timetables.assigned_children": "Przypisane dzieci",
+  "module.school_timetables.periods": "Lekcje i przerwy",
+  "module.school_timetables.lessons": "Lekcje",
+  "module.school_timetables.empty": "Brak planów lekcji.",
+  "module.school_timetables.display_title": "Szkoła dzisiaj"
+}
