@@ -3,7 +3,7 @@ import { User, Palette, Globe, Check, AlertTriangle, LogOut, Trash2 } from 'luci
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
-import { t, languageCompleteness } from '../../lib/i18n';
+import { t } from '../../lib/i18n';
 import { COLOR_PALETTE } from '../../lib/member-colors';
 import * as api from '../../lib/api';
 import SecuritySection from './SecuritySection';
@@ -132,49 +132,33 @@ export default function AccountTab() {
       {/* Theme */}
       <div className="settings-section">
         <div className="settings-section-title"><Palette size={16} /> {t(messages, 'theme')}</div>
-        <div className="theme-grid">
+        <div className="theme-grid" role="group" aria-label={t(messages, 'theme')}>
           {availableThemes.map((th) => {
             const preview = THEME_PREVIEWS[th.key] || {};
             const isActive = theme === th.key;
             return (
-              <div
+              <button
                 key={th.key}
+                type="button"
+                aria-pressed={isActive}
                 className={`theme-item${isActive ? ' active' : ' theme-item-inactive'}`}
                 onClick={() => setTheme(th.key)}
               >
-                <div
+                <span
+                  aria-hidden="true"
                   className="theme-preview"
                   style={{
                     background: `linear-gradient(135deg, ${preview.bg || '#111'} 50%, ${preview.surface || '#222'} 50%)`,
                     boxShadow: isActive ? `0 0 0 2px ${preview.accent || 'var(--amethyst)'}` : undefined,
                   }}
                 />
-                <div className="theme-item-info">
-                  <div className="theme-item-name">{th.name}</div>
-                  <div className="theme-item-desc">{(THEME_DESCS[lang] || THEME_DESCS.en)[th.key] || ''}</div>
-                </div>
-              </div>
+                <span className="theme-item-info">
+                  <span className="theme-item-name">{th.name}</span>
+                  <span className="theme-item-desc">{(THEME_DESCS[lang] || THEME_DESCS.en)[th.key] || ''}</span>
+                </span>
+              </button>
             );
           })}
-        </div>
-        <div className="set-field-group">
-          <div className="set-subheading">
-            {t(messages, 'installed_themes')}
-          </div>
-          <div className="pack-list">
-            {availableThemes.map((th) => (
-              <div key={th.key} className="pack-card settings-subsection">
-                <div className="pack-card-header">
-                  <span className="pack-card-name">{th.name}</span>
-                  {theme === th.key && <span className="pack-badge">{t(messages, 'pack_active')}</span>}
-                </div>
-                <div className="pack-meta">
-                  <span>{t(messages, 'pack_version')} {th.version}</span>
-                  <span>{t(messages, 'pack_author')}: {th.author}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -193,35 +177,6 @@ export default function AccountTab() {
               {l.nativeName}
             </button>
           ))}
-        </div>
-        <div className="set-field-group">
-          <div className="set-subheading">
-            {t(messages, 'installed_languages')}
-          </div>
-          <div className="pack-list">
-            {availableLanguages.map((l) => {
-              const comp = languageCompleteness(l.key);
-              return (
-                <div key={l.key} className="pack-card settings-subsection">
-                  <div className="pack-card-header">
-                    <span className="pack-card-name">{l.nativeName}</span>
-                    {lang === l.key && <span className="pack-badge">{t(messages, 'pack_active')}</span>}
-                  </div>
-                  <div className="pack-meta">
-                    <span>{t(messages, 'pack_version')} {l.version}</span>
-                    <span>{t(messages, 'pack_author')}: {l.author}</span>
-                  </div>
-                  <div className="pack-progress-row">
-                    <span className="pack-progress-label">{t(messages, 'pack_completeness')}</span>
-                    <div className="pack-progress">
-                      <div className="pack-progress-fill" style={{ width: `${comp.percent}%` }} />
-                    </div>
-                    <span className="pack-progress-value">{comp.percent}%</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
       {/* Security */}
