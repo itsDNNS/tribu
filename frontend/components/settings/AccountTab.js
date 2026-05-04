@@ -179,12 +179,14 @@ export default function AccountTab() {
       </div>
 
       {/* Language */}
-      <div className="settings-section">
+      <div className="settings-section language-settings-section">
         <div className="settings-section-title"><Globe size={16} /> {t(messages, 'language')}</div>
-        <div className="lang-toggle">
+        <div className="lang-toggle" role="group" aria-label={t(messages, 'language')}>
           {availableLanguages.map((l) => (
             <button
               key={l.key}
+              type="button"
+              aria-pressed={lang === l.key}
               className={`lang-btn${lang === l.key ? ' active' : ''}`}
               onClick={() => setLang(l.key)}
             >

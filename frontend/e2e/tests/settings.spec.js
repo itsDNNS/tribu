@@ -54,9 +54,28 @@ test.describe('Settings', () => {
       'Gaeilge',
     ]);
 
-    await languageButtons.filter({ hasText: 'Svenska' }).click({ force: true });
+    async function expectLanguageSectionContained() {
+      const metrics = await page.evaluate(() => ({
+        documentWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+        viewportWidth: document.documentElement.clientWidth,
+        languageSectionWidth: document.querySelector('.language-settings-section')?.getBoundingClientRect().width ?? 0,
+        settingsGridWidth: document.querySelector('.settings-grid')?.getBoundingClientRect().width ?? 0,
+        languageToggleWidth: document.querySelector('.lang-toggle')?.getBoundingClientRect().width ?? 0,
+      }));
+      expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+      expect(metrics.languageSectionWidth).toBeLessThanOrEqual(metrics.settingsGridWidth + 1);
+      expect(metrics.languageToggleWidth).toBeLessThanOrEqual(metrics.languageSectionWidth + 1);
+    }
+
+    await expectLanguageSectionContained();
+
+    const swedishButton = languageButtons.filter({ hasText: 'Svenska' });
+    await expect(swedishButton).toBeVisible();
+    await swedishButton.click();
     await expect(page.locator('.settings-section-title', { hasText: 'Språk' })).toBeVisible();
     await expect(page.locator('.lang-toggle .lang-btn.active')).toHaveText('Svenska');
+
+    await expectLanguageSectionContained();
   });
 
   test('switch theme and verify data-theme attribute', async ({ authedPage: page }) => {
