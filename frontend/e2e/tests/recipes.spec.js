@@ -61,6 +61,7 @@ test.describe('Recipes', () => {
     await expect(page.locator('.recipe-scale-preview').getByText('400 g')).toBeVisible();
     await expect(page.locator('.recipe-scale-preview').getByText('600 ml')).toBeVisible();
     await expect(page.getByRole('dialog', { name: 'Edit recipe' })).toBeVisible();
+    await page.locator('.recipe-push-list').selectOption({ label: 'Recipe Shopping List' });
     await page.locator('.recipe-push-btn').click();
     await expect(page.getByLabel('Notifications').getByText('2 ingredients pushed to the shopping list')).toBeVisible({ timeout: 10000 });
     await page.locator('.recipe-form-actions-right').getByRole('button', { name: 'Cancel' }).click();

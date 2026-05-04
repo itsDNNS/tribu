@@ -19,7 +19,7 @@ node_modules/
 .internal/
 
 # Agent memory (session context)
-tasks/
+/tasks/
 
 # Playwright
 e2e/test-results/

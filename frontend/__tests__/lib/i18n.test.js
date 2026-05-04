@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -48,7 +49,23 @@ describe('i18n no empty strings', () => {
 
 const expectedLanguages = ['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt'];
 
+const projectRoot = path.join(process.cwd(), '..');
 const i18nRoot = path.join(process.cwd(), 'i18n');
+
+function gitIgnoreRule(relativePath) {
+  try {
+    return execFileSync('git', ['check-ignore', '-v', relativePath], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  } catch (error) {
+    if (error.status === 1) {
+      return '';
+    }
+    throw error;
+  }
+}
 const englishLocaleFiles = fs
   .readdirSync(i18nRoot, { recursive: true })
   .filter((file) => file.endsWith('/en.json'))
@@ -75,6 +92,11 @@ function protectedLiteralSet(value) {
 }
 
 describe('i18n language pack completeness', () => {
+  it('keeps the task module locale directory trackable by git', () => {
+    expect(gitIgnoreRule('frontend/i18n/modules/tasks/sv.json')).toBe('');
+    expect(gitIgnoreRule('tasks/session.json')).toContain('/tasks/');
+  });
+
   it('ships every English locale file for every supported language', () => {
     for (const enFile of englishLocaleFiles) {
       for (const lang of expectedLanguages) {
