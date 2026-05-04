@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
   POSTGRES_PASSWORD: testpassword
   JWT_SECRET: e2e-test-secret-key
