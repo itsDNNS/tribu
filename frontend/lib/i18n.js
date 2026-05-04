@@ -408,11 +408,3 @@ const languageMeta = {
 export function listLanguages() {
   return Object.entries(languageMeta).map(([key, meta]) => ({ key, ...meta }));
 }
-
-export function languageCompleteness(lang) {
-  const ref = buildMessages('en');
-  const target = buildMessages(lang);
-  const total = Object.keys(ref).length;
-  const translated = Object.keys(ref).filter((k) => target[k]).length;
-  return { total, translated, percent: total > 0 ? Math.round((translated / total) * 100) : 0 };
-}

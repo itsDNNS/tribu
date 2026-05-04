@@ -16,7 +16,7 @@ test.describe('Settings', () => {
     await expect(page.locator('.profile-email')).toContainText(testUser.email);
   });
 
-  test('renders the full language pack and switches to a new language', async ({ authedPage: page }) => {
+  test('keeps Account settings focused on preference selectors without duplicate pack inventory', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
     const accountItem = page.locator('.settings-mobile-item', { hasText: 'Account' });
@@ -25,6 +25,10 @@ test.describe('Settings', () => {
     }
 
     await page.locator('.profile-name').waitFor({ timeout: 10000 });
+
+    await expect(page.locator('.set-subheading', { hasText: 'Installed themes' })).toHaveCount(0);
+    await expect(page.locator('.set-subheading', { hasText: 'Installed languages' })).toHaveCount(0);
+    await expect(page.locator('.pack-card')).toHaveCount(0);
 
     const languageButtons = page.locator('.lang-toggle .lang-btn');
     await expect(languageButtons).toHaveText([
