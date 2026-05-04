@@ -2,6 +2,26 @@ const { test, expect } = require('../helpers/fixtures');
 const { getFamilyId, seedCalendarEvent, seedTask } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
+function parseRgb(value) {
+  const match = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!match) throw new Error(`Unsupported color value: ${value}`);
+  return match.slice(1, 4).map(Number);
+}
+
+function relativeLuminance([r, g, b]) {
+  const [rs, gs, bs] = [r, g, b].map((channel) => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return (0.2126 * rs) + (0.7152 * gs) + (0.0722 * bs);
+}
+
+function contrastRatio(foreground, background) {
+  const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background));
+  const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 test.describe('Dashboard', () => {
   test('shows greeting with username', async ({ authedPage: page, testUser }) => {
     const greeting = page.locator('.view-title');
@@ -143,5 +163,53 @@ test.describe('Dashboard', () => {
     await page.getByRole('button', { name: 'Reset layout' }).click();
     await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '2');
     await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '3');
+  });
+
+  test('keeps weekly plan cards and filters readable in all themes', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    await seedCalendarEvent(apiCtx, familyId, { title: 'Weekly contrast event' });
+    await seedTask(apiCtx, familyId, { title: 'Weekly contrast task' });
+
+    for (const theme of ['light', 'dark', 'midnight-glass']) {
+      await page.evaluate((themeKey) => {
+        window.localStorage.setItem('tribu_theme', themeKey);
+      }, theme);
+      await page.reload();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme, { timeout: 10000 });
+      await page.locator('#main-content').waitFor({ timeout: 15000 });
+      await page.getByTestId('quick-action-weekly-plan').click();
+      await expect(page.getByRole('heading', { name: 'Weekly plan' })).toBeVisible({ timeout: 10000 });
+
+      const checks = await page.evaluate(() => {
+        const selectors = [
+          '.weekly-plan-header h1',
+          '.weekly-plan-header p',
+          '.weekly-plan-member-filter span',
+          '.weekly-plan-member-filter select',
+          '.weekly-plan-section-filters label',
+          '.weekly-plan-section h2',
+          '.weekly-plan-section li strong',
+          '.weekly-plan-section li span',
+        ];
+        return selectors.map((selector) => {
+          const element = document.querySelector(selector);
+          const surface = element?.closest('.weekly-plan-header, .weekly-plan-section li, .weekly-plan-section, .weekly-plan-filters') || element;
+          const elementStyle = window.getComputedStyle(element);
+          const surfaceStyle = window.getComputedStyle(surface);
+          return {
+            selector,
+            color: elementStyle.color,
+            backgroundColor: surfaceStyle.backgroundColor,
+          };
+        });
+      });
+
+      for (const check of checks) {
+        expect(check.color, `${theme} ${check.selector} color`).toBeTruthy();
+        expect(check.backgroundColor, `${theme} ${check.selector} background`).toBeTruthy();
+        const ratio = contrastRatio(parseRgb(check.color), parseRgb(check.backgroundColor));
+        expect(ratio, `${theme} ${check.selector} contrast`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   });
 });

@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import fs from 'fs';
+import path from 'path';
 import WeeklyPlanView, { buildWeeklyPlanSections, getWeekRange } from '../../components/WeeklyPlanView';
 import { apiGetEvents } from '../../lib/api';
 
@@ -181,5 +183,27 @@ describe('WeeklyPlanView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back to dashboard' }));
     expect(setActiveView).toHaveBeenCalledWith('dashboard');
     expect(screen.queryByRole('link', { name: /share/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('weekly plan theme CSS contract', () => {
+  it('keeps print-card surfaces paired with readable foreground tokens in every app theme', () => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'styles', 'globals.css'), 'utf8');
+    const weeklyPlanStart = css.indexOf('/* ─── Weekly plan print view ─── */');
+    const weeklyPlanEnd = css.indexOf('/* ─── Dashboard activation panel ─── */');
+
+    expect(weeklyPlanStart).toBeGreaterThanOrEqual(0);
+    expect(weeklyPlanEnd).toBeGreaterThan(weeklyPlanStart);
+
+    const weeklyCss = css.slice(weeklyPlanStart, weeklyPlanEnd);
+
+    expect(weeklyCss).toContain('--weekly-plan-surface: #ffffff');
+    expect(weeklyCss).toContain('--weekly-plan-text-primary: #1a1520');
+    expect(weeklyCss).toContain('--weekly-plan-text-secondary: #5e5673');
+    expect(weeklyCss).toContain('background: var(--weekly-plan-surface)');
+    expect(weeklyCss).toContain('color: var(--weekly-plan-text-primary)');
+    expect(weeklyCss).toContain('color: var(--weekly-plan-text-secondary)');
+    expect(weeklyCss).not.toContain('.weekly-plan-section li strong { color: var(--text-primary);');
+    expect(weeklyCss).not.toContain('.weekly-plan-section li span { color: var(--text-secondary);');
   });
 });
