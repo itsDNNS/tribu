@@ -1,0 +1,20 @@
+{
+  "module.weekly_plan.title": "Piano settimanale",
+  "module.weekly_plan.subtitle": "Panoramica pronta per la stampa di calendario, attività, pasti, acquisti e compleanni.",
+  "module.weekly_plan.this_week": "Questa settimana",
+  "module.weekly_plan.next_week": "La prossima settimana",
+  "module.weekly_plan.previous_week": "La settimana precedente",
+  "module.weekly_plan.print": "Stampa",
+  "module.weekly_plan.back_dashboard": "Torna al cruscotto",
+  "module.weekly_plan.events": "Eventi",
+  "module.weekly_plan.tasks": "Compiti e routine",
+  "module.weekly_plan.meals": "Pasti",
+  "module.weekly_plan.shopping": "Promemoria per gli acquisti",
+  "module.weekly_plan.birthdays": "Compleanni",
+  "module.weekly_plan.empty_section": "Niente di pianificato",
+  "module.weekly_plan.no_due_date": "Nessuna data di scadenza",
+  "module.weekly_plan.filters": "Filtri",
+  "module.weekly_plan.filter_member": "Membro",
+  "module.weekly_plan.filter_all_members": "Tutti i membri",
+  "module.weekly_plan.filter_sections": "Sezioni"
+}

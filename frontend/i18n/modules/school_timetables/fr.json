@@ -1,0 +1,14 @@
+{
+  "module.school_timetables.name": "Emplois du temps scolaires",
+  "module.school_timetables.subtitle": "Horaires hebdomadaires des cours pour les enfants",
+  "module.school_timetables.add": "Ajouter un emploi du temps",
+  "module.school_timetables.save": "Enregistrer l’emploi du temps",
+  "module.school_timetables.delete": "Supprimer",
+  "module.school_timetables.class_label": "Classe",
+  "module.school_timetables.include_saturday": "Inclut le samedi",
+  "module.school_timetables.assigned_children": "Enfants attribués",
+  "module.school_timetables.periods": "Périodes et pauses",
+  "module.school_timetables.lessons": "Cours",
+  "module.school_timetables.empty": "Aucun emploi du temps scolaire pour l’instant.",
+  "module.school_timetables.display_title": "École aujourd’hui"
+}

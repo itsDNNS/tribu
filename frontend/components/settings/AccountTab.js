@@ -182,8 +182,15 @@ export default function AccountTab() {
       <div className="settings-section">
         <div className="settings-section-title"><Globe size={16} /> {t(messages, 'language')}</div>
         <div className="lang-toggle">
-          <button className={`lang-btn${lang === 'de' ? ' active' : ''}`} onClick={() => setLang('de')}>Deutsch</button>
-          <button className={`lang-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')}>English</button>
+          {availableLanguages.map((l) => (
+            <button
+              key={l.key}
+              className={`lang-btn${lang === l.key ? ' active' : ''}`}
+              onClick={() => setLang(l.key)}
+            >
+              {l.nativeName}
+            </button>
+          ))}
         </div>
         <div className="set-field-group">
           <div className="set-subheading">
