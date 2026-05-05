@@ -33,7 +33,7 @@ test.describe('Meal plan', () => {
 
     try {
       const familyId = await getFamilyId(workerUser.api);
-      await seedShoppingList(workerUser.api, familyId, 'Weekly Groceries');
+      const targetList = await seedShoppingList(workerUser.api, familyId, 'Weekly Groceries');
       const today = formatIsoDate(new Date());
 
       await seedMealPlan(workerUser.api, familyId, {
@@ -62,9 +62,17 @@ test.describe('Meal plan', () => {
 
       await expect(page.getByText('Pancakes')).toBeVisible({ timeout: 90000 });
       await expect(page.getByText('Pasta')).toBeVisible({ timeout: 90000 });
+      const pushResponse = page.waitForResponse((response) => (
+        response.url().includes('/api/meal-plans/week/add-to-shopping')
+        && response.request().method() === 'POST'
+      ));
+      await expect(page.locator('.meal-week-shopping-list')).toHaveValue(String(targetList.id));
       await page
         .getByRole('button', { name: 'Push all ingredients from this week to a shopping list' })
         .click();
+      const response = await pushResponse;
+      expect(response.ok()).toBeTruthy();
+      await expect(page.getByLabel('Notifications').getByText('3 ingredients pushed to the shopping list')).toBeVisible({ timeout: 30000 });
 
       await navigateTo(page, 'Shopping');
 
