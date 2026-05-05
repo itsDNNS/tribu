@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Добавете първия елемент",
   "module.shopping.templates": "Шаблони",
   "module.shopping.new_template": "Нов шаблон",
+  "module.shopping.show_templates": "Показване на шаблони",
+  "module.shopping.hide_templates": "Скриване на шаблони",
   "module.shopping.template_name_placeholder": "напр. Седмични хранителни стоки",
   "module.shopping.template_item_name_placeholder": "Шаблонен елемент",
   "module.shopping.template_item_spec_placeholder": "Сума/подробности",

@@ -180,7 +180,7 @@ function AppOrchestrator({ children }) {
     };
     window.addEventListener('popstate', onPopState);
 
-    const onResize = () => setIsMobile(window.innerWidth < 768);
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
     onResize();
     window.addEventListener('resize', onResize);
 

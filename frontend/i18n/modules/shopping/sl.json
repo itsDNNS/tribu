@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Dodajte prvi element",
   "module.shopping.templates": "Predloge",
   "module.shopping.new_template": "Nova predloga",
+  "module.shopping.show_templates": "Prikaži predloge",
+  "module.shopping.hide_templates": "Skrij predloge",
   "module.shopping.template_name_placeholder": "npr. Tedenska živila",
   "module.shopping.template_item_name_placeholder": "Element predloge",
   "module.shopping.template_item_spec_placeholder": "Znesek/podrobnosti",

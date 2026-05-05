@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Legg til første element",
   "module.shopping.templates": "Maler",
   "module.shopping.new_template": "Ny mal",
+  "module.shopping.show_templates": "Vis maler",
+  "module.shopping.hide_templates": "Skjul maler",
   "module.shopping.template_name_placeholder": "f.eks. Ukentlige dagligvarer",
   "module.shopping.template_item_name_placeholder": "Malelement",
   "module.shopping.template_item_spec_placeholder": "Beløp/detaljer",

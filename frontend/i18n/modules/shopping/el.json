@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Προσθήκη πρώτου στοιχείου",
   "module.shopping.templates": "Πρότυπα",
   "module.shopping.new_template": "Νέο πρότυπο",
+  "module.shopping.show_templates": "Εμφάνιση προτύπων",
+  "module.shopping.hide_templates": "Απόκρυψη προτύπων",
   "module.shopping.template_name_placeholder": "π.χ. Εβδομαδιαία παντοπωλεία",
   "module.shopping.template_item_name_placeholder": "Στοιχείο προτύπου",
   "module.shopping.template_item_spec_placeholder": "Ποσό/λεπτομέρειες",

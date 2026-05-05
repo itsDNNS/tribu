@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Pridėkite pirmąjį elementą",
   "module.shopping.templates": "Šablonai",
   "module.shopping.new_template": "Naujas šablonas",
+  "module.shopping.show_templates": "Rodyti šablonus",
+  "module.shopping.hide_templates": "Slėpti šablonus",
   "module.shopping.template_name_placeholder": "pvz. Savaitės bakalėjos",
   "module.shopping.template_item_name_placeholder": "Šablono elementas",
   "module.shopping.template_item_spec_placeholder": "Suma / detalės",

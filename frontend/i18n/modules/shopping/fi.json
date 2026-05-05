@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Lisää ensimmäinen kohde",
   "module.shopping.templates": "Mallit",
   "module.shopping.new_template": "Uusi malli",
+  "module.shopping.show_templates": "Näytä mallit",
+  "module.shopping.hide_templates": "Piilota mallit",
   "module.shopping.template_name_placeholder": "esim. Viikoittaiset päivittäistavarat",
   "module.shopping.template_item_name_placeholder": "Mallikohde",
   "module.shopping.template_item_spec_placeholder": "Määrä/tiedot",

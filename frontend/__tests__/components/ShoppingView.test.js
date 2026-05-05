@@ -30,6 +30,8 @@ const messages = {
   'module.shopping.no_lists': 'No shopping lists yet',
   'module.shopping.templates': 'Templates',
   'module.shopping.new_template': 'New template',
+  'module.shopping.show_templates': 'Show templates',
+  'module.shopping.hide_templates': 'Hide templates',
   'module.shopping.template_name_placeholder': 'e.g. Weekly groceries',
   'module.shopping.template_item_name_placeholder': 'Template item',
   'module.shopping.template_item_spec_placeholder': 'Amount/details',
@@ -46,7 +48,7 @@ const messages = {
   'aria.add_item': 'Add item',
 };
 
-function setup(overrides = {}) {
+function setup(overrides = {}, appOverrides = {}) {
   mockAppState = {
     familyId: '1',
     families: [{ family_id: 1, family_name: 'Test Family' }],
@@ -54,6 +56,7 @@ function setup(overrides = {}) {
     messages,
     isMobile: false,
     isChild: false,
+    ...appOverrides,
   };
   mockShoppingState = {
     shoppingLists: [{ id: 10, name: 'Groceries', item_count: 0, checked_count: 0 }],
@@ -174,4 +177,60 @@ describe('ShoppingView templates', () => {
 
     await waitFor(() => expect(mockShoppingState.updateTemplate).toHaveBeenCalledWith(5, expect.objectContaining({ name: 'Weekly restock' })));
   });
+});
+
+
+describe('ShoppingView mobile store flow', () => {
+  test('keeps templates collapsed by default on mobile and expands them for planning', () => {
+    const { rerender } = setup({}, { isMobile: true });
+
+    expect(screen.getByRole('heading', { name: 'Templates' })).toBeInTheDocument();
+    expect(screen.queryByText('Weekly groceries')).not.toBeInTheDocument();
+
+    const toggle = screen.getByRole('button', { name: 'Show templates' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+
+    expect(screen.getByRole('button', { name: 'Hide templates' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Weekly groceries')).toBeInTheDocument();
+
+    const itemsPanel = document.querySelector('.shopping-items-panel');
+    const templatesPanel = document.querySelector('.shopping-templates-panel');
+    expect(itemsPanel.compareDocumentPosition(templatesPanel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    rerender(<ShoppingView />);
+    expect(screen.getByText('Weekly groceries')).toBeInTheDocument();
+  });
+
+  test('blurs the quick-add input when checking items on mobile', () => {
+    setup({
+      uncheckedItems: [{ id: 1, name: 'Apples', spec: '6', category: 'Produce', checked: false }],
+      checkedItems: [],
+      items: [{ id: 1, name: 'Apples', spec: '6', category: 'Produce', checked: false }],
+    }, { isMobile: true });
+
+    const input = screen.getByPlaceholderText('Add an item...');
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    const item = screen.getByRole('checkbox', { name: 'Apples' });
+    fireEvent.pointerDown(item);
+    fireEvent.click(item);
+
+    expect(document.activeElement).not.toBe(input);
+    expect(mockShoppingState.toggleItem).toHaveBeenCalledWith(1, false);
+  });
+});
+
+
+test('mobile template toggle closes an open template form when hiding templates', () => {
+  setup({}, { isMobile: true });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Show templates' }));
+  fireEvent.click(screen.getByRole('button', { name: 'New template' }));
+  expect(screen.getByPlaceholderText('e.g. Weekly groceries')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Hide templates' }));
+  expect(screen.queryByPlaceholderText('e.g. Weekly groceries')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Show templates' })).toHaveAttribute('aria-expanded', 'false');
 });

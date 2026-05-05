@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Tilføj første vare",
   "module.shopping.templates": "Skabeloner",
   "module.shopping.new_template": "Ny skabelon",
+  "module.shopping.show_templates": "Vis skabeloner",
+  "module.shopping.hide_templates": "Skjul skabeloner",
   "module.shopping.template_name_placeholder": "f.eks. Ugentlige dagligvarer",
   "module.shopping.template_item_name_placeholder": "Skabelonelement",
   "module.shopping.template_item_spec_placeholder": "Beløb/detaljer",

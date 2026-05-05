@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Add first item",
   "module.shopping.templates": "Templates",
   "module.shopping.new_template": "New template",
+  "module.shopping.show_templates": "Show templates",
+  "module.shopping.hide_templates": "Hide templates",
   "module.shopping.template_name_placeholder": "e.g. Weekly groceries",
   "module.shopping.template_item_name_placeholder": "Template item",
   "module.shopping.template_item_spec_placeholder": "Amount/details",

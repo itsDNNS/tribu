@@ -5,6 +5,13 @@ const { navigateTo } = require('../helpers/navigation');
 test.describe('Shopping', () => {
   test.setTimeout(90000);
 
+  async function expandTemplatesIfCollapsed(page) {
+    const showTemplates = page.getByRole('button', { name: 'Show templates' });
+    if (await showTemplates.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await showTemplates.click();
+    }
+  }
+
   test('create a shopping list', async ({ authedPage: page }) => {
     await navigateTo(page, 'Shopping');
 
@@ -100,6 +107,7 @@ test.describe('Shopping', () => {
     await navigateTo(page, 'Shopping');
 
     await page.getByText('Template Target List').click();
+    await expandTemplatesIfCollapsed(page);
     await page.getByRole('button', { name: 'New template' }).click();
     await page.locator('input[placeholder="e.g. Weekly groceries"]').fill('Weekly groceries');
     await page.locator('input[placeholder="Template item"]').first().fill('Milk');
@@ -142,6 +150,7 @@ test.describe('Shopping', () => {
     await navigateTo(page, 'Shopping');
 
     await page.getByText('Seeded Template Target').click();
+    await expandTemplatesIfCollapsed(page);
     await page.getByRole('button', { name: 'Add to list: Seeded weekly groceries' }).click();
 
     await expect(page.locator('[role="checkbox"][aria-label="Oats"]')).toBeVisible({ timeout: 10000 });
@@ -165,4 +174,79 @@ test.describe('Shopping', () => {
 
     await expect(page.getByText('Delete This List')).not.toBeVisible({ timeout: 10000 });
   });
+
+  test('mobile in-store layout prioritizes active items and keeps keyboard focus out of the checklist', async ({ authedPage: page, apiCtx }) => {
+    const viewport = page.viewportSize();
+    test.skip(!viewport || viewport.width >= 768, 'Mobile-only shopping layout check');
+
+    const familyId = await getFamilyId(apiCtx);
+    const list = await seedShoppingList(apiCtx, familyId, 'Mobile Market List');
+    await seedShoppingItem(apiCtx, list.id, 'Apples', '6', 'Produce');
+    await seedShoppingItem(apiCtx, list.id, 'Milk', '2 L', 'Dairy');
+    await seedShoppingTemplate(apiCtx, familyId, 'Mobile breakfast plan', [
+      { name: 'Eggs', spec: '12', category: 'Dairy' },
+    ]);
+
+    await navigateTo(page, 'Shopping');
+    await page.reload();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+    await navigateTo(page, 'Shopping');
+    await page.getByText('Mobile Market List').click();
+
+    const itemsPanel = page.locator('.shopping-items-panel');
+    const templatesPanel = page.locator('.shopping-templates-panel');
+    await expect(itemsPanel).toBeVisible({ timeout: 10000 });
+    await expect(templatesPanel).toBeVisible({ timeout: 10000 });
+
+    const [itemsBox, templatesBox] = await Promise.all([
+      itemsPanel.boundingBox(),
+      templatesPanel.boundingBox(),
+    ]);
+    expect(itemsBox.y).toBeLessThan(templatesBox.y);
+
+    await expect(page.getByText('Mobile breakfast plan')).not.toBeVisible();
+    await page.getByRole('button', { name: 'Show templates' }).click();
+    await expect(page.getByText('Mobile breakfast plan')).toBeVisible({ timeout: 10000 });
+
+    const quickAdd = page.locator('input[placeholder="Add an item..."]');
+    await quickAdd.focus();
+    await expect(quickAdd).toBeFocused();
+    await page.locator('[role="checkbox"][aria-label="Apples"]').click();
+    await expect(quickAdd).not.toBeFocused();
+
+    await quickAdd.fill('Bananas');
+    await expect(quickAdd).toBeFocused();
+    await page.getByRole('button', { name: 'Add item' }).click();
+    await expect(quickAdd).not.toBeFocused();
+    await expect(page.locator('[role="checkbox"][aria-label="Bananas"]')).toBeVisible({ timeout: 10000 });
+  });
+
+
+  test('768px shopping breakpoint keeps items before templates in DOM order', async ({ authedPage: page, apiCtx }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+    const familyId = await getFamilyId(apiCtx);
+    const list = await seedShoppingList(apiCtx, familyId, 'Breakpoint Market List');
+    await seedShoppingItem(apiCtx, list.id, 'Tea', '1 box', 'Pantry');
+    await seedShoppingTemplate(apiCtx, familyId, 'Breakpoint planning template', [
+      { name: 'Coffee', spec: '1 bag', category: 'Pantry' },
+    ]);
+
+    await navigateTo(page, 'Shopping');
+    await page.reload();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+    await navigateTo(page, 'Shopping');
+    await page.getByText('Breakpoint Market List').click();
+
+    await expect(page.locator('.shopping-items-panel')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.shopping-templates-panel')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Breakpoint planning template')).not.toBeVisible();
+
+    const ordering = await page.evaluate(() => {
+      const items = document.querySelector('.shopping-items-panel');
+      const templates = document.querySelector('.shopping-templates-panel');
+      return Boolean(items && templates && (items.compareDocumentPosition(templates) & Node.DOCUMENT_POSITION_FOLLOWING));
+    });
+    expect(ordering).toBe(true);
+  });
+
 });
