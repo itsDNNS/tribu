@@ -146,3 +146,61 @@ def test_password_change_revokes_refresh_sessions():
 
     refresh = client.post("/auth/refresh")
     assert refresh.status_code == 401
+
+def test_unknown_refresh_token_does_not_clear_potentially_rotated_cookies():
+    _seed_user()
+    client.cookies.set("tribu_token", "fresh-access", domain="testserver.local", path="/")
+    client.cookies.set("tribu_refresh", "stale-refresh", domain="testserver.local", path="/")
+
+    refresh = client.post("/auth/refresh")
+
+    assert refresh.status_code == 401
+    set_cookie = refresh.headers.get("set-cookie", "")
+    assert 'tribu_token=""' not in set_cookie
+    assert 'tribu_refresh=""' not in set_cookie
+
+
+def test_revoked_refresh_token_clears_session_cookies():
+    _seed_user()
+    login = client.post(
+        "/auth/login",
+        json={"email": "session@example.com", "password": "Secure1Pass"},
+    )
+    assert login.status_code == 200
+    db = TestSession()
+    try:
+        session = db.query(UserSession).one()
+        session.revoked_at = datetime.now(timezone.utc)
+        db.commit()
+    finally:
+        db.close()
+
+    refresh = client.post("/auth/refresh")
+
+    assert refresh.status_code == 401
+    set_cookie = refresh.headers.get("set-cookie", "")
+    assert 'tribu_token=""' in set_cookie
+    assert 'tribu_refresh=""' in set_cookie
+
+
+def test_expired_refresh_token_clears_session_cookies():
+    _seed_user()
+    login = client.post(
+        "/auth/login",
+        json={"email": "session@example.com", "password": "Secure1Pass"},
+    )
+    assert login.status_code == 200
+    db = TestSession()
+    try:
+        session = db.query(UserSession).one()
+        session.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+        db.commit()
+    finally:
+        db.close()
+
+    refresh = client.post("/auth/refresh")
+
+    assert refresh.status_code == 401
+    set_cookie = refresh.headers.get("set-cookie", "")
+    assert 'tribu_token=""' in set_cookie
+    assert 'tribu_refresh=""' in set_cookie

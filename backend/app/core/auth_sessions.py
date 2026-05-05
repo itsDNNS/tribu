@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import Literal
 
 from fastapi import Response
 from sqlalchemy.orm import Session
@@ -57,32 +58,54 @@ def clear_session_cookies(response: Response) -> None:
     response.delete_cookie(REFRESH_COOKIE_NAME, path="/auth/refresh")
 
 
-def rotate_refresh_session(response: Response, db: Session, refresh_token: str) -> User | None:
+RefreshRotationResult = Literal["ok", "stale", "invalid"]
+
+
+def rotate_refresh_session(response: Response, db: Session, refresh_token: str) -> RefreshRotationResult:
     session = (
         db.query(UserSession)
         .filter(UserSession.token_lookup == refresh_token_lookup_key(refresh_token))
         .first()
     )
-    if not session or session.revoked_at is not None:
-        return None
+    if not session:
+        return "stale"
+    if session.revoked_at is not None:
+        return "invalid"
     now = utcnow()
     if session.expires_at <= now:
         session.revoked_at = now
         db.commit()
-        return None
+        return "invalid"
     if not verify_refresh_token(refresh_token, session.token_hash):
-        return None
+        return "invalid"
     user = db.query(User).filter(User.id == session.user_id).first()
     if not user:
         session.revoked_at = now
         db.commit()
-        return None
+        return "invalid"
 
     next_token, next_hash, next_lookup = generate_refresh_token()
-    session.token_lookup = next_lookup
-    session.token_hash = next_hash
-    session.last_used_at = now
-    session.expires_at = now + timedelta(seconds=REFRESH_COOKIE_MAX_AGE)
+    next_expires_at = now + timedelta(seconds=REFRESH_COOKIE_MAX_AGE)
+    updated = (
+        db.query(UserSession)
+        .filter(
+            UserSession.id == session.id,
+            UserSession.token_lookup == refresh_token_lookup_key(refresh_token),
+            UserSession.revoked_at.is_(None),
+        )
+        .update(
+            {
+                UserSession.token_lookup: next_lookup,
+                UserSession.token_hash: next_hash,
+                UserSession.last_used_at: now,
+                UserSession.expires_at: next_expires_at,
+            },
+            synchronize_session=False,
+        )
+    )
+    if updated != 1:
+        db.rollback()
+        return "stale"
 
     access_token = create_access_token(user_id=user.id, email=user.email)
     response.set_cookie(
@@ -93,7 +116,7 @@ def rotate_refresh_session(response: Response, db: Session, refresh_token: str) 
         REFRESH_COOKIE_NAME, next_token, httponly=True, samesite="lax",
         secure=COOKIE_SECURE, max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
     )
-    return user
+    return "ok"
 
 
 def revoke_refresh_session(db: Session, refresh_token: str | None) -> None:
