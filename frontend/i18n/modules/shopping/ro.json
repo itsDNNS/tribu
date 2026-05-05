@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Adăugați primul articol",
   "module.shopping.templates": "Șabloane",
   "module.shopping.new_template": "Șablon nou",
+  "module.shopping.show_templates": "Afișează șabloanele",
+  "module.shopping.hide_templates": "Ascunde șabloanele",
   "module.shopping.template_name_placeholder": "de ex. Băcănii săptămânale",
   "module.shopping.template_item_name_placeholder": "Element șablon",
   "module.shopping.template_item_spec_placeholder": "Suma/detalii",

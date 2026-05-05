@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Přidejte první položku",
   "module.shopping.templates": "Šablony",
   "module.shopping.new_template": "Nová šablona",
+  "module.shopping.show_templates": "Zobrazit šablony",
+  "module.shopping.hide_templates": "Skrýt šablony",
   "module.shopping.template_name_placeholder": "např. Týdenní potraviny",
   "module.shopping.template_item_name_placeholder": "Položka šablony",
   "module.shopping.template_item_spec_placeholder": "Částka/podrobnosti",

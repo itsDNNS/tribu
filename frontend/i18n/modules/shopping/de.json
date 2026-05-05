@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Ersten Artikel hinzufügen",
   "module.shopping.templates": "Vorlagen",
   "module.shopping.new_template": "Neue Vorlage",
+  "module.shopping.show_templates": "Vorlagen anzeigen",
+  "module.shopping.hide_templates": "Vorlagen ausblenden",
   "module.shopping.template_name_placeholder": "z.B. Wocheneinkauf",
   "module.shopping.template_item_name_placeholder": "Vorlagenartikel",
   "module.shopping.template_item_spec_placeholder": "Menge/Details",

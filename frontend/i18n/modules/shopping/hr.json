@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Dodajte prvu stavku",
   "module.shopping.templates": "Predlošci",
   "module.shopping.new_template": "Novi predložak",
+  "module.shopping.show_templates": "Prikaži predloške",
+  "module.shopping.hide_templates": "Sakrij predloške",
   "module.shopping.template_name_placeholder": "npr. Tjedne namirnice",
   "module.shopping.template_item_name_placeholder": "Stavka predloška",
   "module.shopping.template_item_spec_placeholder": "Iznos/pojedinosti",

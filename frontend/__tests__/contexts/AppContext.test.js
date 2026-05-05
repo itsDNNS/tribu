@@ -6,12 +6,13 @@ import * as api from '../../lib/api';
 jest.mock('../../lib/api');
 
 function Probe() {
-  const { loading, loggedIn, familyId } = useApp();
+  const { loading, loggedIn, familyId, isMobile } = useApp();
   return (
     <div>
       <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
       <span data-testid="logged-in">{loggedIn ? 'yes' : 'no'}</span>
       <span data-testid="family-id">{familyId}</span>
+      <span data-testid="is-mobile">{isMobile ? 'mobile' : 'desktop'}</span>
     </div>
   );
 }
@@ -51,6 +52,18 @@ describe('AppProvider bootstrap', () => {
     api.apiGetUnreadCount.mockResolvedValue({ ok: true, data: { count: 0 } });
     api.apiGetNotifications.mockResolvedValue({ ok: true, data: [] });
     api.connectNotificationStream.mockReturnValue({ close: jest.fn() });
+  });
+
+  test('treats the 768px CSS breakpoint as mobile runtime state', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 768 });
+
+    render(
+      <AppProvider>
+        <Probe />
+      </AppProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('is-mobile')).toHaveTextContent('mobile'));
   });
 
   test('does not keep the app shell blocked by slow secondary data loaders', async () => {

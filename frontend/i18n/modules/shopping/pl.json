@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Dodaj pierwszy produkt",
   "module.shopping.templates": "Szablony",
   "module.shopping.new_template": "Nowy szablon",
+  "module.shopping.show_templates": "Pokaż szablony",
+  "module.shopping.hide_templates": "Ukryj szablony",
   "module.shopping.template_name_placeholder": "np. Zakupy tygodniowe",
   "module.shopping.template_item_name_placeholder": "Produkt w szablonie",
   "module.shopping.template_item_spec_placeholder": "Ilość/szczegóły",

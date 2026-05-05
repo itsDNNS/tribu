@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Adicione o primeiro item",
   "module.shopping.templates": "Modelos",
   "module.shopping.new_template": "Novo modelo",
+  "module.shopping.show_templates": "Mostrar modelos",
+  "module.shopping.hide_templates": "Ocultar modelos",
   "module.shopping.template_name_placeholder": "por exemplo Compras semanais",
   "module.shopping.template_item_name_placeholder": "Item de modelo",
   "module.shopping.template_item_spec_placeholder": "Valor/detalhes",

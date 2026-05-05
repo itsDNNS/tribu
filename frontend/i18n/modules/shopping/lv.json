@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Pievienojiet pirmo vienumu",
   "module.shopping.templates": "Veidnes",
   "module.shopping.new_template": "Jauna veidne",
+  "module.shopping.show_templates": "Rādīt veidnes",
+  "module.shopping.hide_templates": "Slēpt veidnes",
   "module.shopping.template_name_placeholder": "piem. Iknedēļas pārtikas preces",
   "module.shopping.template_item_name_placeholder": "Veidnes vienums",
   "module.shopping.template_item_spec_placeholder": "Summa/detaļas",

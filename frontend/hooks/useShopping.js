@@ -40,7 +40,7 @@ export function findReusableCheckedItem(items, payload) {
 export function useShopping() {
   const {
     shoppingLists, setShoppingLists, familyId, messages,
-    loadShoppingLists, demoMode,
+    loadShoppingLists, demoMode, isMobile,
   } = useApp();
   const { error: toastError } = useToast();
 
@@ -265,7 +265,7 @@ export function useShopping() {
     setNewItemName('');
     setNewItemSpec('');
     setNewItemCategory('');
-    itemInputRef.current?.focus();
+    if (!isMobile) itemInputRef.current?.focus();
   }
 
   async function toggleItem(id, currentChecked) {

@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Aggiungi il primo elemento",
   "module.shopping.templates": "Modelli",
   "module.shopping.new_template": "Nuovo modello",
+  "module.shopping.show_templates": "Mostra modelli",
+  "module.shopping.hide_templates": "Nascondi modelli",
   "module.shopping.template_name_placeholder": "ad es. Generi alimentari settimanali",
   "module.shopping.template_item_name_placeholder": "Elemento modello",
   "module.shopping.template_item_spec_placeholder": "Importo/dettagli",

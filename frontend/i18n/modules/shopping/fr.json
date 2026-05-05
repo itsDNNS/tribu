@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Ajouter le premier article",
   "module.shopping.templates": "Modèles",
   "module.shopping.new_template": "Nouveau modèle",
+  "module.shopping.show_templates": "Afficher les modèles",
+  "module.shopping.hide_templates": "Masquer les modèles",
   "module.shopping.template_name_placeholder": "p. ex. Courses de la semaine",
   "module.shopping.template_item_name_placeholder": "Article du modèle",
   "module.shopping.template_item_spec_placeholder": "Quantité/détails",

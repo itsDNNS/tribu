@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Cuir an chéad mhír leis",
   "module.shopping.templates": "Teimpléid",
   "module.shopping.new_template": "Teimpléad nua",
+  "module.shopping.show_templates": "Taispeáin teimpléid",
+  "module.shopping.hide_templates": "Folaigh teimpléid",
   "module.shopping.template_name_placeholder": "e.g. Earraí grósaeireachta seachtainiúla",
   "module.shopping.template_item_name_placeholder": "Mír teimpléad",
   "module.shopping.template_item_spec_placeholder": "Méid/sonraí",

@@ -31,7 +31,7 @@ const ALWAYS_OVERFLOW = new Set(['Settings', 'Admin']);
  */
 async function navigateTo(page, viewName) {
   const viewport = page.viewportSize();
-  const isMobile = viewport ? viewport.width < 768 : false;
+  const isMobile = viewport ? viewport.width <= 768 : false;
 
   const desktopName = Object.entries(MOBILE_ALIASES)
     .find(([, mobile]) => mobile === viewName)?.[0] || viewName;

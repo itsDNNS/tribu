@@ -22,6 +22,8 @@
   "module.shopping.add_first_item": "Lägg till första objektet",
   "module.shopping.templates": "Mallar",
   "module.shopping.new_template": "Ny mall",
+  "module.shopping.show_templates": "Visa mallar",
+  "module.shopping.hide_templates": "Dölj mallar",
   "module.shopping.template_name_placeholder": "t.ex. Inköp varje vecka",
   "module.shopping.template_item_name_placeholder": "Mallobjekt",
   "module.shopping.template_item_spec_placeholder": "Belopp/detaljer",

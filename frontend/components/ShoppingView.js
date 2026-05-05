@@ -60,6 +60,14 @@ function ShoppingCategoryGroup({ group, collapsed, onToggle, children }) {
   );
 }
 
+function blurActiveTextInput() {
+  if (typeof document === 'undefined') return;
+  const active = document.activeElement;
+  if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) {
+    active.blur();
+  }
+}
+
 function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) {
   const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
   const memberIdx = addedBy ? members.indexOf(addedBy) : 0;
@@ -78,6 +86,7 @@ function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) 
       aria-checked={checked}
       aria-label={item.name}
       tabIndex={0}
+      onPointerDown={blurActiveTextInput}
       onClick={() => onToggle(item.id, item.checked)}
       onKeyDown={handleKeyDown}
     >
@@ -247,9 +256,14 @@ export default function ShoppingView() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [templatesExpanded, setTemplatesExpanded] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const itemSuggestions = Array.from(new Set((sh.items || []).map((item) => item.name).filter(Boolean))).sort((a, b) => a.localeCompare(b));
   const uncheckedGroups = groupItemsByCategory(sh.uncheckedItems, messages);
+  const templatesVisible = !isMobile || templatesExpanded || showTemplateForm;
+  const templatesToggleLabel = templatesVisible
+    ? t(messages, 'module.shopping.hide_templates')
+    : t(messages, 'module.shopping.show_templates');
 
   function toggleCategory(category) {
     setCollapsedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
@@ -257,6 +271,7 @@ export default function ShoppingView() {
 
   function openTemplateForm(template = null) {
     setEditingTemplate(template);
+    setTemplatesExpanded(true);
     setShowTemplateForm(true);
   }
 
@@ -368,18 +383,35 @@ export default function ShoppingView() {
         </div>
 
         {/* Templates Panel */}
-        {!isChild && (
+        {!isChild && !isMobile && (
           <section className="shopping-templates-panel" aria-label={t(messages, 'module.shopping.templates')}>
             <div className="shopping-templates-header">
               <h2>{t(messages, 'module.shopping.templates')}</h2>
-              <button
-                className="shopping-add-list-btn"
-                type="button"
-                onClick={() => openTemplateForm()}
-              >
-                <Plus size={16} aria-hidden="true" />
-                <span>{t(messages, 'module.shopping.new_template')}</span>
-              </button>
+              <div className="shopping-templates-actions">
+                {isMobile && (
+                  <button
+                    className="btn-ghost shopping-template-toggle"
+                    type="button"
+                    aria-expanded={templatesVisible}
+                    onClick={() => {
+                      if (templatesVisible) closeTemplateForm();
+                      setTemplatesExpanded((prev) => !prev);
+                    }}
+                  >
+                    {templatesToggleLabel}
+                  </button>
+                )}
+                {templatesVisible && (
+                  <button
+                    className="shopping-add-list-btn"
+                    type="button"
+                    onClick={() => openTemplateForm()}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                    <span>{t(messages, 'module.shopping.new_template')}</span>
+                  </button>
+                )}
+              </div>
             </div>
             {showTemplateForm && (
               <ShoppingTemplateForm
@@ -390,18 +422,20 @@ export default function ShoppingView() {
                 onCancel={closeTemplateForm}
               />
             )}
-            <div className="shopping-template-list">
-              {(sh.templates || []).map((template) => (
-                <ShoppingTemplateCard
-                  key={template.id}
-                  template={template}
-                  messages={messages}
-                  onApply={sh.applyTemplate}
-                  onEdit={openTemplateForm}
-                  onDelete={sh.deleteTemplate}
-                />
-              ))}
-            </div>
+            {templatesVisible && (
+              <div className="shopping-template-list">
+                {(sh.templates || []).map((template) => (
+                  <ShoppingTemplateCard
+                    key={template.id}
+                    template={template}
+                    messages={messages}
+                    onApply={sh.applyTemplate}
+                    onEdit={openTemplateForm}
+                    onDelete={sh.deleteTemplate}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         )}
 
@@ -516,6 +550,63 @@ export default function ShoppingView() {
               <p>{t(messages, 'module.shopping.no_lists')}</p>
             </div>
           )}
+
+        {/* Templates Panel */}
+        {!isChild && isMobile && (
+          <section className="shopping-templates-panel" aria-label={t(messages, 'module.shopping.templates')}>
+            <div className="shopping-templates-header">
+              <h2>{t(messages, 'module.shopping.templates')}</h2>
+              <div className="shopping-templates-actions">
+                {isMobile && (
+                  <button
+                    className="btn-ghost shopping-template-toggle"
+                    type="button"
+                    aria-expanded={templatesVisible}
+                    onClick={() => {
+                      if (templatesVisible) closeTemplateForm();
+                      setTemplatesExpanded((prev) => !prev);
+                    }}
+                  >
+                    {templatesToggleLabel}
+                  </button>
+                )}
+                {templatesVisible && (
+                  <button
+                    className="shopping-add-list-btn"
+                    type="button"
+                    onClick={() => openTemplateForm()}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                    <span>{t(messages, 'module.shopping.new_template')}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+            {showTemplateForm && (
+              <ShoppingTemplateForm
+                key={editingTemplate?.id || 'new'}
+                messages={messages}
+                initialTemplate={editingTemplate}
+                onSubmit={submitTemplate}
+                onCancel={closeTemplateForm}
+              />
+            )}
+            {templatesVisible && (
+              <div className="shopping-template-list">
+                {(sh.templates || []).map((template) => (
+                  <ShoppingTemplateCard
+                    key={template.id}
+                    template={template}
+                    messages={messages}
+                    onApply={sh.applyTemplate}
+                    onEdit={openTemplateForm}
+                    onDelete={sh.deleteTemplate}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
         </div>
       </div>
     </div>
