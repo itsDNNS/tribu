@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
 import { prettyDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
+import { TASK_RECURRENCE_OPTIONS } from '../lib/taskRecurrenceOptions';
 import MemberAvatar from './MemberAvatar';
 import ConfirmDialog from './ConfirmDialog';
 import TaskEditDialog from './TaskEditDialog';
@@ -85,12 +86,11 @@ export default function TasksView() {
                       <option value="high">{t(messages, 'module.tasks.priority.high')}</option>
                     </select>
                     <select className="form-input task-form-input" value={tk.taskRecurrence} onChange={(e) => tk.setTaskRecurrence(e.target.value)}>
-                      <option value="">{t(messages, 'module.tasks.recurrence.none')}</option>
-                      <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
-                      <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
-                      <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
-                      <option value="monthly_first_sunday">{t(messages, 'module.tasks.recurrence.monthly_first_sunday')}</option>
-                      <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
+                      {TASK_RECURRENCE_OPTIONS.map((value) => (
+                        <option key={value || 'none'} value={value}>
+                          {t(messages, value ? `module.tasks.recurrence.${value}` : 'module.tasks.recurrence.none')}
+                        </option>
+                      ))}
                     </select>
                     <select className="form-input task-form-input" value={tk.taskAssignee} onChange={(e) => tk.setTaskAssignee(e.target.value)}>
                       <option value="">{t(messages, 'module.tasks.unassigned')}</option>
