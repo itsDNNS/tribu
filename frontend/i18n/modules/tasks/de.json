@@ -41,5 +41,11 @@
   "module.tasks.sort": "Aufgaben sortieren",
   "module.tasks.sort.created": "Neueste zuerst",
   "module.tasks.sort.priority": "Priorität",
-  "module.tasks.sort.assignee": "Person"
+  "module.tasks.sort.assignee": "Person",
+  "module.tasks.recurrence.monthly_first_monday": "Erster Montag monatlich",
+  "module.tasks.recurrence.monthly_first_tuesday": "Erster Dienstag monatlich",
+  "module.tasks.recurrence.monthly_first_wednesday": "Erster Mittwoch monatlich",
+  "module.tasks.recurrence.monthly_first_thursday": "Erster Donnerstag monatlich",
+  "module.tasks.recurrence.monthly_first_friday": "Erster Freitag monatlich",
+  "module.tasks.recurrence.monthly_first_saturday": "Erster Samstag monatlich"
 }

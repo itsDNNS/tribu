@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { X } from 'lucide-react';
 import { t } from '../lib/i18n';
+import { TASK_RECURRENCE_OPTIONS } from '../lib/taskRecurrenceOptions';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 
 export default function TaskEditDialog({
@@ -77,18 +78,13 @@ export default function TaskEditDialog({
               <option value="normal">{t(messages, 'module.tasks.priority.normal')}</option>
               <option value="high">{t(messages, 'module.tasks.priority.high')}</option>
             </select>
-            <select
-              className="form-input"
-              value={form.recurrence}
-              onChange={(e) => setForm({ ...form, recurrence: e.target.value })}
-              aria-label={t(messages, 'module.tasks.recurrence')}
-            >
-              <option value="">{t(messages, 'module.tasks.recurrence.none')}</option>
-              <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
-              <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
-              <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
-              <option value="monthly_first_sunday">{t(messages, 'module.tasks.recurrence.monthly_first_sunday')}</option>
-              <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
+            <select className="form-input" value={form.recurrence} onChange={(e) => setForm({ ...form, recurrence: e.target.value })}
+              aria-label={t(messages, 'module.tasks.recurrence')}>
+              {TASK_RECURRENCE_OPTIONS.map((value) => (
+                <option key={value || 'none'} value={value}>
+                  {t(messages, value ? `module.tasks.recurrence.${value}` : 'module.tasks.recurrence.none')}
+                </option>
+              ))}
             </select>
             <select
               className="form-input"

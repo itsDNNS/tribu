@@ -80,7 +80,15 @@ def _seed_admin() -> tuple[str, int, int]:
         db.close()
 
 
-def test_first_sunday_monthly_creates_next_occurrence_on_completion():
+@pytest.mark.parametrize(
+    ("recurrence", "current_due", "expected_due"),
+    [
+        ("monthly_first_monday", datetime(2026, 6, 1, 9, 0), datetime(2026, 7, 6, 9, 0)),
+        ("monthly_first_wednesday", datetime(2026, 6, 3, 9, 0), datetime(2026, 7, 1, 9, 0)),
+        ("monthly_first_sunday", datetime(2026, 6, 7, 9, 0), datetime(2026, 7, 5, 9, 0)),
+    ],
+)
+def test_first_weekday_monthly_creates_next_occurrence_on_completion(recurrence, current_due, expected_due):
     token, family_id, user_id = _seed_admin()
     db = TestSession()
     try:
@@ -88,8 +96,8 @@ def test_first_sunday_monthly_creates_next_occurrence_on_completion():
             family_id=family_id,
             title="Run Ansible updates",
             priority="normal",
-            due_date=datetime(2026, 6, 7, 9, 0),
-            recurrence="monthly_first_sunday",
+            due_date=current_due,
+            recurrence=recurrence,
             assigned_to_user_id=user_id,
             created_by_user_id=user_id,
         )
@@ -105,7 +113,7 @@ def test_first_sunday_monthly_creates_next_occurrence_on_completion():
     db = TestSession()
     try:
         next_task = db.query(Task).filter(Task.id != task_id, Task.title == "Run Ansible updates").one()
-        assert next_task.recurrence == "monthly_first_sunday"
-        assert next_task.due_date == datetime(2026, 7, 5, 9, 0)
+        assert next_task.recurrence == recurrence
+        assert next_task.due_date == expected_due
     finally:
         db.close()

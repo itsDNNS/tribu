@@ -20,13 +20,22 @@ router = APIRouter(prefix="/tasks", tags=["tasks"], responses={**AUTH_RESPONSES}
 
 VALID_PRIORITIES = {"low", "normal", "high"}
 VALID_STATUSES = {"open", "done"}
-VALID_RECURRENCES = {"daily", "weekly", "monthly", "monthly_first_sunday", "yearly"}
+FIRST_WEEKDAY_RECURRENCES = {
+    "monthly_first_monday": 0,
+    "monthly_first_tuesday": 1,
+    "monthly_first_wednesday": 2,
+    "monthly_first_thursday": 3,
+    "monthly_first_friday": 4,
+    "monthly_first_saturday": 5,
+    "monthly_first_sunday": 6,
+}
+VALID_RECURRENCES = {"daily", "weekly", "monthly", "yearly", *FIRST_WEEKDAY_RECURRENCES.keys()}
 
 
-def _first_sunday_of_month(year: int, month: int, base_time: datetime) -> datetime:
+def _first_weekday_of_month(year: int, month: int, weekday: int, base_time: datetime) -> datetime:
     first_day = datetime(year, month, 1, base_time.hour, base_time.minute, base_time.second, base_time.microsecond)
-    days_until_sunday = (6 - first_day.weekday()) % 7
-    return first_day + timedelta(days=days_until_sunday)
+    days_until_weekday = (weekday - first_day.weekday()) % 7
+    return first_day + timedelta(days=days_until_weekday)
 
 
 def _next_month(year: int, month: int) -> tuple[int, int]:
@@ -43,9 +52,9 @@ def _compute_next_due(current_due: Optional[datetime], recurrence: str) -> datet
         return base + timedelta(weeks=1)
     if recurrence == "monthly":
         return base + relativedelta(months=1)
-    if recurrence == "monthly_first_sunday":
+    if recurrence in FIRST_WEEKDAY_RECURRENCES:
         year, month = _next_month(base.year, base.month)
-        return _first_sunday_of_month(year, month, base)
+        return _first_weekday_of_month(year, month, FIRST_WEEKDAY_RECURRENCES[recurrence], base)
     if recurrence == "yearly":
         return base + relativedelta(years=1)
     return base
