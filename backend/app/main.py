@@ -422,12 +422,18 @@ def logout(request: Request, db: Session = Depends(get_db)):
     response_description="Session refreshed",
 )
 def refresh_session(request: Request, db: Session = Depends(get_db)):
-    response = JSONResponse(content={"status": "ok"})
     refresh_token = request.cookies.get(REFRESH_COOKIE_NAME)
-    if not refresh_token or not rotate_refresh_session(response, db, refresh_token):
+    if not refresh_token:
         response = JSONResponse(content={"detail": error_detail(INVALID_CREDENTIALS)}, status_code=401)
         clear_session_cookies(response)
         return response
+    response = JSONResponse(content={"status": "ok"})
+    result = rotate_refresh_session(response, db, refresh_token)
+    if result != "ok":
+        failure = JSONResponse(content={"detail": error_detail(INVALID_CREDENTIALS)}, status_code=401)
+        if result == "invalid":
+            clear_session_cookies(failure)
+        return failure
     db.commit()
     return response
 

@@ -1,13 +1,29 @@
 const API = '/api';
 
+let refreshInFlight = null;
+let logoutInFlight = false;
+
+function refreshSession() {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        return await request('/auth/refresh', { method: 'POST' }, false);
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+  }
+  return refreshInFlight;
+}
+
 async function request(path, options = {}, allowRefresh = true) {
   const res = await fetch(`${API}${path}`, { credentials: 'include', ...options });
   let data;
   try { data = await res.json(); } catch { data = null; }
 
-  if (res.status === 401 && allowRefresh && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
-    const refreshed = await request('/auth/refresh', { method: 'POST' }, false);
-    if (refreshed.ok) return request(path, options, false);
+  if (res.status === 401 && allowRefresh && !logoutInFlight && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
+    const refreshed = await refreshSession();
+    if (refreshed.ok && !logoutInFlight) return request(path, options, false);
   }
 
   return { ok: res.ok, status: res.status, data };
@@ -52,8 +68,14 @@ export function apiRegister(email, password, display_name, family_name) {
   return post('/auth/register', { email, password, display_name, family_name });
 }
 
-export function apiLogout() {
-  return post('/auth/logout');
+export async function apiLogout() {
+  logoutInFlight = true;
+  try {
+    if (refreshInFlight) await refreshInFlight.catch(() => null);
+    return await post('/auth/logout');
+  } finally {
+    logoutInFlight = false;
+  }
 }
 
 export function apiGetMe() {

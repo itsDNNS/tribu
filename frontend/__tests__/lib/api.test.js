@@ -46,6 +46,109 @@ describe('Auth API', () => {
     expect(lastCall()[0]).toBe('/api/auth/logout');
   });
 
+  it('apiLogout waits for an in-flight refresh before clearing the session', async () => {
+    const pendingRefresh = {};
+    pendingRefresh.promise = new Promise((resolve) => { pendingRefresh.resolve = resolve; });
+    global.fetch = jest.fn((url) => {
+      if (url === '/api/auth/refresh') return pendingRefresh.promise;
+      if (url === '/api/auth/me') return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) });
+      if (url === '/api/auth/logout') return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) });
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 1 }) });
+    });
+
+    const me = apiGetMe();
+    await Promise.resolve();
+    await Promise.resolve();
+    const logout = apiLogout();
+    await Promise.resolve();
+
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual(['/api/auth/me', '/api/auth/refresh']);
+
+    pendingRefresh.resolve({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'invalid' }) });
+    await Promise.all([me, logout]);
+
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual(['/api/auth/me', '/api/auth/refresh', '/api/auth/logout']);
+  });
+
+  it('apiLogout prevents retries after a successful in-flight refresh', async () => {
+    const pendingRefresh = {};
+    pendingRefresh.promise = new Promise((resolve) => { pendingRefresh.resolve = resolve; });
+    global.fetch = jest.fn((url) => {
+      if (url === '/api/auth/refresh') return pendingRefresh.promise;
+      if (url === '/api/auth/me') return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) });
+      if (url === '/api/auth/logout') return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) });
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 1 }) });
+    });
+
+    const me = apiGetMe();
+    await Promise.resolve();
+    await Promise.resolve();
+    const logout = apiLogout();
+    await Promise.resolve();
+
+    pendingRefresh.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) });
+    const [meResult] = await Promise.all([me, logout]);
+
+    expect(meResult.status).toBe(401);
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual(['/api/auth/me', '/api/auth/refresh', '/api/auth/logout']);
+  });
+
+  it('apiLogout blocks new refresh attempts while logout is in flight', async () => {
+    const pendingLogout = {};
+    pendingLogout.promise = new Promise((resolve) => { pendingLogout.resolve = resolve; });
+    global.fetch = jest.fn((url) => {
+      if (url === '/api/auth/logout') return pendingLogout.promise;
+      if (url === '/api/auth/me') return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) });
+      if (url === '/api/auth/refresh') return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) });
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 1 }) });
+    });
+
+    const logout = apiLogout();
+    await Promise.resolve();
+    const me = await apiGetMe();
+
+    expect(me.status).toBe(401);
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual(['/api/auth/logout', '/api/auth/me']);
+
+    pendingLogout.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) });
+    await logout;
+  });
+
+  it('shares one refresh request across concurrent expired access cookie responses', async () => {
+    const pendingRefresh = {};
+    pendingRefresh.promise = new Promise((resolve) => { pendingRefresh.resolve = resolve; });
+    const attempts = new Map();
+    global.fetch = jest.fn((url) => {
+      if (url === '/api/auth/refresh') return pendingRefresh.promise;
+      const count = attempts.get(url) || 0;
+      attempts.set(url, count + 1);
+      if (url === '/api/auth/me') {
+        if (count === 0) return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) });
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ email: 'session@example.com' }) });
+      }
+      if (url === '/api/dashboard/summary?family_id=7') {
+        if (count === 0) return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) });
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ today: [] }) });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 1 }) });
+    });
+
+    const me = apiGetMe();
+    const dashboard = apiGetDashboard('7');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(global.fetch.mock.calls.filter(([url]) => url === '/api/auth/refresh')).toHaveLength(1);
+
+    pendingRefresh.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) });
+    const results = await Promise.all([me, dashboard]);
+
+    expect(results.map((result) => result.status)).toEqual([200, 200]);
+    expect(results[0].data).toEqual({ email: 'session@example.com' });
+    expect(results[1].data).toEqual({ today: [] });
+    expect(global.fetch.mock.calls.filter(([url]) => url === '/api/auth/refresh')).toHaveLength(1);
+  });
+
   it('apiGetMe refreshes once and retries after an expired access cookie', async () => {
     global.fetch = jest.fn()
       .mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) })
