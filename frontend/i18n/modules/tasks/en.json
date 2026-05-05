@@ -31,5 +31,15 @@
   "module.tasks.edit_title": "Edit task",
   "module.tasks.save": "Save",
   "module.tasks.cancel": "Cancel",
-  "module.tasks.updated": "Task updated"
+  "module.tasks.updated": "Task updated",
+  "module.tasks.recurrence.monthly_first_sunday": "First Sunday monthly",
+  "module.tasks.refine": "Filter and sort tasks",
+  "module.tasks.filter_assignee": "Filter by assignee",
+  "module.tasks.filter_assignee_all": "All assignees",
+  "module.tasks.filter_priority": "Filter by priority",
+  "module.tasks.filter_priority_all": "All priorities",
+  "module.tasks.sort": "Sort tasks",
+  "module.tasks.sort.created": "Newest first",
+  "module.tasks.sort.priority": "Priority",
+  "module.tasks.sort.assignee": "Assignee"
 }

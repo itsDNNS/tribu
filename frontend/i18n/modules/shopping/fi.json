@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Peruuta",
   "module.shopping.apply_template": "Lisää luetteloon",
   "module.shopping.edit_template": "Muokkaa mallia",
-  "module.shopping.delete_template": "Poista malli"
+  "module.shopping.delete_template": "Poista malli",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

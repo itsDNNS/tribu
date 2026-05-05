@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Annuller",
   "module.shopping.apply_template": "Tilføj til listen",
   "module.shopping.edit_template": "Rediger skabelon",
-  "module.shopping.delete_template": "Slet skabelon"
+  "module.shopping.delete_template": "Slet skabelon",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

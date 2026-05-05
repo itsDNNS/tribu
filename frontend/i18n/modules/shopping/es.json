@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Cancelar",
   "module.shopping.apply_template": "Añadir a la lista",
   "module.shopping.edit_template": "Editar plantilla",
-  "module.shopping.delete_template": "Eliminar plantilla"
+  "module.shopping.delete_template": "Eliminar plantilla",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

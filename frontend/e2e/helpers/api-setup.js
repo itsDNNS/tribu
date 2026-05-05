@@ -65,9 +65,9 @@ async function seedShoppingList(request, familyId, name = 'Test List') {
   return res.json();
 }
 
-async function seedShoppingItem(request, listId, name = 'Milk', spec = '') {
+async function seedShoppingItem(request, listId, name = 'Milk', spec = '', category = null) {
   const res = await request.post(`/api/shopping/lists/${listId}/items`, {
-    data: { name, spec },
+    data: { name, spec, category },
   });
   if (!res.ok()) {
     throw new Error(`POST /api/shopping/lists/${listId}/items failed (${res.status()}): ${await res.text()}`);

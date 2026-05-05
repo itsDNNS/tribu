@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Check, Trash2, X, ShoppingCart, Pencil } from 'lucide-react';
+import { Plus, Check, Trash2, X, ShoppingCart, Pencil, ChevronDown } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useShopping } from '../hooks/useShopping';
 import { t } from '../lib/i18n';
@@ -16,6 +16,48 @@ function normaliseTemplateItems(items) {
       category: item.category?.trim() || null,
     }))
     .filter((item) => item.name);
+}
+
+function categoryLabel(messages, category) {
+  return category || t(messages, 'module.shopping.uncategorized');
+}
+
+function groupItemsByCategory(items, messages) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const key = item.category?.trim() || '';
+    if (!groups.has(key)) {
+      groups.set(key, { key, label: categoryLabel(messages, key), items: [] });
+    }
+    groups.get(key).items.push(item);
+  });
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      items: [...group.items].sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function ShoppingCategoryGroup({ group, collapsed, onToggle, children }) {
+  const itemsId = `shopping-category-${(group.key || 'uncategorized').toLowerCase().replace(/[^a-z0-9_-]+/g, '-')}-items`;
+
+  return (
+    <section className="shopping-category-group" aria-label={group.label}>
+      <button
+        className="shopping-category-header"
+        type="button"
+        onClick={() => onToggle(group.key)}
+        aria-controls={itemsId}
+        aria-expanded={!collapsed}
+      >
+        <ChevronDown className={collapsed ? 'shopping-category-icon collapsed' : 'shopping-category-icon'} size={14} aria-hidden="true" />
+        <span>{group.label}</span>
+        <span className="shopping-category-count">{group.items.length}</span>
+      </button>
+      {!collapsed && <div id={itemsId} className="shopping-category-items">{children}</div>}
+    </section>
+  );
 }
 
 function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) {
@@ -205,7 +247,13 @@ export default function ShoppingView() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [collapsedCategories, setCollapsedCategories] = useState({});
   const itemSuggestions = Array.from(new Set((sh.items || []).map((item) => item.name).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const uncheckedGroups = groupItemsByCategory(sh.uncheckedItems, messages);
+
+  function toggleCategory(category) {
+    setCollapsedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
+  }
 
   function openTemplateForm(template = null) {
     setEditingTemplate(template);
@@ -383,6 +431,12 @@ export default function ShoppingView() {
                     value={sh.newItemSpec}
                     onChange={(e) => sh.setNewItemSpec(e.target.value)}
                   />
+                  <input
+                    className="quick-add-input shopping-category-input"
+                    placeholder={t(messages, 'module.shopping.item_category_placeholder')}
+                    value={sh.newItemCategory}
+                    onChange={(e) => sh.setNewItemCategory(e.target.value)}
+                  />
                   <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_item')}>
                     <Plus size={22} />
                   </button>
@@ -401,16 +455,25 @@ export default function ShoppingView() {
                     )}
                   </div>
                 )}
-                {sh.uncheckedItems.map((item) => (
-                  <ShoppingItem
-                    key={item.id}
-                    item={item}
-                    checked={false}
-                    members={members}
-                    messages={messages}
-                    onToggle={sh.toggleItem}
-                    onDelete={isChild ? null : sh.deleteItem}
-                  />
+                {uncheckedGroups.map((group) => (
+                  <ShoppingCategoryGroup
+                    key={group.key || 'uncategorized'}
+                    group={group}
+                    collapsed={!!collapsedCategories[group.key]}
+                    onToggle={toggleCategory}
+                  >
+                    {group.items.map((item) => (
+                      <ShoppingItem
+                        key={item.id}
+                        item={item}
+                        checked={false}
+                        members={members}
+                        messages={messages}
+                        onToggle={sh.toggleItem}
+                        onDelete={isChild ? null : sh.deleteItem}
+                      />
+                    ))}
+                  </ShoppingCategoryGroup>
                 ))}
 
                 {/* Checked Section */}

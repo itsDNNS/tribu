@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Tühista",
   "module.shopping.apply_template": "Lisa nimekirja",
   "module.shopping.edit_template": "Muuda malli",
-  "module.shopping.delete_template": "Kustuta mall"
+  "module.shopping.delete_template": "Kustuta mall",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

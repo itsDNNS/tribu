@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Cealaigh",
   "module.shopping.apply_template": "Cuir leis an liosta",
   "module.shopping.edit_template": "Cuir teimpléad in eagar",
-  "module.shopping.delete_template": "Scrios teimpléad"
+  "module.shopping.delete_template": "Scrios teimpléad",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Odustani",
   "module.shopping.apply_template": "Dodaj na popis",
   "module.shopping.edit_template": "Uredi predložak",
-  "module.shopping.delete_template": "Izbriši predložak"
+  "module.shopping.delete_template": "Izbriši predložak",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

@@ -87,6 +87,7 @@ export default function TaskEditDialog({
               <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
               <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
               <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
+              <option value="monthly_first_sunday">{t(messages, 'module.tasks.recurrence.monthly_first_sunday')}</option>
               <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
             </select>
             <select

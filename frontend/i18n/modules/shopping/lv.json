@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Atcelt",
   "module.shopping.apply_template": "Pievienot sarakstam",
   "module.shopping.edit_template": "Rediģēt veidni",
-  "module.shopping.delete_template": "Dzēst veidni"
+  "module.shopping.delete_template": "Dzēst veidni",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

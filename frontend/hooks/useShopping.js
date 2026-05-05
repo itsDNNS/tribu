@@ -49,6 +49,7 @@ export function useShopping() {
   const [newListName, setNewListName] = useState('');
   const [newItemName, setNewItemName] = useState('');
   const [newItemSpec, setNewItemSpec] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState('');
   const [showCreateList, setShowCreateList] = useState(false);
   const [templates, setTemplates] = useState([]);
   const itemInputRef = useRef(null);
@@ -209,7 +210,11 @@ export function useShopping() {
   async function addItem(e) {
     e.preventDefault();
     if (!newItemName.trim() || !activeListId) return;
-    const payload = { name: formatShoppingItemName(newItemName), spec: cleanOptionalText(newItemSpec) };
+    const payload = {
+      name: formatShoppingItemName(newItemName),
+      spec: cleanOptionalText(newItemSpec),
+      category: cleanOptionalText(newItemCategory),
+    };
     const reusableCheckedItem = findReusableCheckedItem(items, payload);
     if (demoMode) {
       if (reusableCheckedItem) {
@@ -259,6 +264,7 @@ export function useShopping() {
     }
     setNewItemName('');
     setNewItemSpec('');
+    setNewItemCategory('');
     itemInputRef.current?.focus();
   }
 
@@ -435,6 +441,7 @@ export function useShopping() {
     newListName, setNewListName,
     newItemName, setNewItemName,
     newItemSpec, setNewItemSpec,
+    newItemCategory, setNewItemCategory,
     showCreateList, setShowCreateList,
     templates,
     itemInputRef,
