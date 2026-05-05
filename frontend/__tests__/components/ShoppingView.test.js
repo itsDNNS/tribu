@@ -19,6 +19,7 @@ const messages = {
   'module.shopping.list_name_placeholder': 'e.g. Grocery Store',
   'module.shopping.item_name_placeholder': 'Add an item...',
   'module.shopping.item_spec_placeholder': 'e.g. 500g, organic',
+  'module.shopping.item_category_placeholder': 'Category or aisle',
   'module.shopping.no_items': 'No items yet',
   'module.shopping.add_first_item': 'Add first item',
   'module.shopping.checked_section': 'Checked',
@@ -68,6 +69,8 @@ function setup(overrides = {}) {
     setNewItemName: jest.fn(),
     newItemSpec: '',
     setNewItemSpec: jest.fn(),
+    newItemCategory: '',
+    setNewItemCategory: jest.fn(),
     showCreateList: false,
     setShowCreateList: jest.fn(),
     itemInputRef: { current: null },
@@ -109,6 +112,29 @@ describe('ShoppingView quick add', () => {
     expect(input).toHaveAttribute('list', 'shopping-item-suggestions');
     const options = Array.from(document.querySelectorAll('#shopping-item-suggestions option')).map((option) => option.value);
     expect(options).toEqual(['Bread', 'Milk']);
+  });
+
+  test('adds a category field and groups items into collapsible category sections', () => {
+    setup({
+      uncheckedItems: [
+        { id: 1, name: 'Salmon', spec: null, category: 'Fish', checked: false },
+        { id: 2, name: 'Carrots', spec: null, category: 'Vegetables', checked: false },
+        { id: 3, name: 'Chocolate', spec: null, category: 'Sweets', checked: false },
+      ],
+      checkedItems: [],
+      items: [
+        { id: 1, name: 'Salmon', spec: null, category: 'Fish', checked: false },
+        { id: 2, name: 'Carrots', spec: null, category: 'Vegetables', checked: false },
+        { id: 3, name: 'Chocolate', spec: null, category: 'Sweets', checked: false },
+      ],
+    });
+
+    expect(screen.getByPlaceholderText('Category or aisle')).toBeInTheDocument();
+    const vegetablesToggle = screen.getByRole('button', { name: /Vegetables/i });
+    expect(vegetablesToggle).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(vegetablesToggle);
+    expect(vegetablesToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('checkbox', { name: 'Carrots' })).not.toBeInTheDocument();
   });
 });
 

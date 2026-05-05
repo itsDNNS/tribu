@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Avbryt",
   "module.shopping.apply_template": "Legg til i listen",
   "module.shopping.edit_template": "Rediger mal",
-  "module.shopping.delete_template": "Slett mal"
+  "module.shopping.delete_template": "Slett mal",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

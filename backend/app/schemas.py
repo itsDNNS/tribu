@@ -544,7 +544,7 @@ class TaskCreate(BaseModel):
     description: Optional[str] = Field(None, description="Task description")
     priority: str = Field("normal", description="Priority: 'low', 'normal', or 'high'")
     due_date: Optional[datetime] = Field(None, description="Due date (ISO 8601)")
-    recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'biweekly', 'monthly', or 'yearly'")
+    recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'monthly', 'monthly_first_sunday', or 'yearly'")
     assigned_to_user_id: Optional[int] = Field(None, description="User ID to assign the task to")
     token_reward_amount: Optional[int] = Field(None, ge=0, description="Tokens awarded on completion")
     token_require_confirmation: bool = Field(True, description="Require adult confirmation before awarding tokens")

@@ -34,6 +34,9 @@ export function useTasks() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [taskFilter, setTaskFilter] = useState('open');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [taskSort, setTaskSort] = useState('created');
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDesc, setTaskDesc] = useState('');
   const [taskDueDate, setTaskDueDate] = useState('');
@@ -45,8 +48,28 @@ export function useTasks() {
   const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
 
   const filteredTasks = useMemo(
-    () => tasks.filter((tk) => taskFilter === 'all' || tk.status === taskFilter),
-    [tasks, taskFilter],
+    () => {
+      const priorityRank = { high: 0, normal: 1, low: 2 };
+      const filtered = tasks.filter((tk) => (
+        (taskFilter === 'all' || tk.status === taskFilter)
+        && (!priorityFilter || tk.priority === priorityFilter)
+        && (!assigneeFilter || String(tk.assigned_to_user_id || '') === String(assigneeFilter))
+      ));
+      return [...filtered].sort((a, b) => {
+        if (taskSort === 'priority') {
+          const left = priorityRank[a.priority] ?? 99;
+          const right = priorityRank[b.priority] ?? 99;
+          if (left !== right) return left - right;
+        }
+        if (taskSort === 'assignee') {
+          const left = String(a.assigned_to_user_id || '');
+          const right = String(b.assigned_to_user_id || '');
+          if (left !== right) return left.localeCompare(right);
+        }
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      });
+    },
+    [tasks, taskFilter, priorityFilter, assigneeFilter, taskSort],
   );
 
   async function createTask(e) {
@@ -151,6 +174,9 @@ export function useTasks() {
 
   return {
     taskFilter, setTaskFilter,
+    priorityFilter, setPriorityFilter,
+    assigneeFilter, setAssigneeFilter,
+    taskSort, setTaskSort,
     taskTitle, setTaskTitle,
     taskDesc, setTaskDesc,
     taskDueDate, setTaskDueDate,

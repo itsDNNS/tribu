@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Mégse",
   "module.shopping.apply_template": "Hozzáadás a listához",
   "module.shopping.edit_template": "Sablon szerkesztése",
-  "module.shopping.delete_template": "Sablon törlése"
+  "module.shopping.delete_template": "Sablon törlése",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Avbryt",
   "module.shopping.apply_template": "Lägg till i listan",
   "module.shopping.edit_template": "Redigera mall",
-  "module.shopping.delete_template": "Ta bort mall"
+  "module.shopping.delete_template": "Ta bort mall",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

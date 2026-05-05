@@ -63,8 +63,9 @@ test.describe('Tasks', () => {
 
   test('filter tabs work (All / Open / Done)', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
-    await seedTask(apiCtx, familyId, { title: 'Still Open' });
-    const doneTask = await seedTask(apiCtx, familyId, { title: 'Already Done' });
+    await seedTask(apiCtx, familyId, { title: 'Still Open', priority: 'low' });
+    const doneTask = await seedTask(apiCtx, familyId, { title: 'Already Done', priority: 'high' });
+    await seedTask(apiCtx, familyId, { title: 'High Priority Open', priority: 'high' });
     await completeTask(apiCtx, doneTask.id);
 
     await navigateTo(page, 'Tasks');
@@ -85,7 +86,13 @@ test.describe('Tasks', () => {
     // "Open" tab
     await page.locator('.tasks-filter-btn', { hasText: 'Open' }).click();
     await expect(page.getByText('Still Open')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('High Priority Open')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Already Done')).not.toBeVisible({ timeout: 3000 });
+
+    await page.getByLabel('Filter by priority', { exact: true }).selectOption('high');
+    await expect(page.getByText('High Priority Open')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Still Open')).not.toBeVisible({ timeout: 3000 });
+    await page.getByLabel('Filter by priority', { exact: true }).selectOption('');
 
     // "Done" tab
     await page.locator('.tasks-filter-btn', { hasText: 'Done' }).click();

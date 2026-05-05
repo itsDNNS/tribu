@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Zrušit",
   "module.shopping.apply_template": "Přidat do seznamu",
   "module.shopping.edit_template": "Upravit šablonu",
-  "module.shopping.delete_template": "Smazat šablonu"
+  "module.shopping.delete_template": "Smazat šablonu",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

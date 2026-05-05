@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Abbrechen",
   "module.shopping.apply_template": "Zur Liste hinzufügen",
   "module.shopping.edit_template": "Vorlage bearbeiten",
-  "module.shopping.delete_template": "Vorlage löschen"
+  "module.shopping.delete_template": "Vorlage löschen",
+  "module.shopping.item_category": "Kategorie",
+  "module.shopping.item_category_placeholder": "Kategorie oder Gang",
+  "module.shopping.uncategorized": "Ohne Kategorie"
 }

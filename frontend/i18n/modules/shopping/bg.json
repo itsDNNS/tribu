@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Отказ",
   "module.shopping.apply_template": "Добавяне към списъка",
   "module.shopping.edit_template": "Редактиране на шаблон",
-  "module.shopping.delete_template": "Изтриване на шаблон"
+  "module.shopping.delete_template": "Изтриване на шаблон",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

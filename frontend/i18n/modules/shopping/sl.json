@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Prekliči",
   "module.shopping.apply_template": "Dodaj na seznam",
   "module.shopping.edit_template": "Uredi predlogo",
-  "module.shopping.delete_template": "Izbriši predlogo"
+  "module.shopping.delete_template": "Izbriši predlogo",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

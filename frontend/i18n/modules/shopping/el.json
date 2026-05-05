@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Ακύρωση",
   "module.shopping.apply_template": "Προσθήκη στη λίστα",
   "module.shopping.edit_template": "Επεξεργασία προτύπου",
-  "module.shopping.delete_template": "Διαγραφή προτύπου"
+  "module.shopping.delete_template": "Διαγραφή προτύπου",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

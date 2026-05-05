@@ -32,5 +32,8 @@
   "module.shopping.cancel_template": "Atšaukti",
   "module.shopping.apply_template": "Pridėti į sąrašą",
   "module.shopping.edit_template": "Redaguoti šabloną",
-  "module.shopping.delete_template": "Ištrinti šabloną"
+  "module.shopping.delete_template": "Ištrinti šabloną",
+  "module.shopping.item_category": "Category",
+  "module.shopping.item_category_placeholder": "Category or aisle",
+  "module.shopping.uncategorized": "Uncategorized"
 }

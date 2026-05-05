@@ -27,8 +27,10 @@ test.describe('Shopping', () => {
     await page.getByText('Item Test List').click();
     await page.locator('input[placeholder="Add an item..."]').fill('Bread');
     await page.locator('.shopping-spec-input').fill('whole wheat');
+    await page.locator('.shopping-category-input').fill('Bakery');
     await page.locator('[aria-label="Add item"]').click();
 
+    await expect(page.getByRole('button', { name: /Bakery/ })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[role="checkbox"][aria-label="Bread"]')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('whole wheat')).toBeVisible();
   });
@@ -61,7 +63,8 @@ test.describe('Shopping', () => {
   test('toggle an item checked / unchecked', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
     const list = await seedShoppingList(apiCtx, familyId, 'Toggle List');
-    await seedShoppingItem(apiCtx, list.id, 'Apples');
+    await seedShoppingItem(apiCtx, list.id, 'Apples', '', 'Produce');
+    await seedShoppingItem(apiCtx, list.id, 'Pasta', '', 'Pantry');
 
     await navigateTo(page, 'Shopping');
     await page.reload();
@@ -69,6 +72,12 @@ test.describe('Shopping', () => {
     await navigateTo(page, 'Shopping');
 
     await page.getByText('Toggle List').click();
+
+    const produceGroup = page.getByRole('button', { name: /Produce/ });
+    await expect(produceGroup).toBeVisible({ timeout: 10000 });
+    await produceGroup.click();
+    await expect(page.locator('[role="checkbox"][aria-label="Apples"]')).not.toBeVisible({ timeout: 5000 });
+    await produceGroup.click();
 
     const item = page.locator('[role="checkbox"][aria-label="Apples"]');
     await expect(item).toBeVisible({ timeout: 10000 });

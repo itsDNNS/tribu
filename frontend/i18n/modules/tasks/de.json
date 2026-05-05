@@ -31,5 +31,15 @@
   "module.tasks.edit_title": "Aufgabe bearbeiten",
   "module.tasks.save": "Speichern",
   "module.tasks.cancel": "Abbrechen",
-  "module.tasks.updated": "Aufgabe aktualisiert"
+  "module.tasks.updated": "Aufgabe aktualisiert",
+  "module.tasks.recurrence.monthly_first_sunday": "Erster Sonntag monatlich",
+  "module.tasks.refine": "Aufgaben filtern und sortieren",
+  "module.tasks.filter_assignee": "Nach Person filtern",
+  "module.tasks.filter_assignee_all": "Alle Personen",
+  "module.tasks.filter_priority": "Nach Priorität filtern",
+  "module.tasks.filter_priority_all": "Alle Prioritäten",
+  "module.tasks.sort": "Aufgaben sortieren",
+  "module.tasks.sort.created": "Neueste zuerst",
+  "module.tasks.sort.priority": "Priorität",
+  "module.tasks.sort.assignee": "Person"
 }

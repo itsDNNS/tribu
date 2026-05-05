@@ -18,6 +18,7 @@ def make_event(**kwargs):
         "family_id": 1,
         "title": "Test Event",
         "description": None,
+        "location": None,
         "starts_at": datetime(2026, 3, 2, 16, 0),  # Monday
         "ends_at": datetime(2026, 3, 2, 17, 0),
         "all_day": False,
@@ -27,6 +28,7 @@ def make_event(**kwargs):
         "assigned_to": None,
         "color": None,
         "category": None,
+        "icon": None,
         "created_by_user_id": 1,
         "created_at": datetime(2026, 1, 1),
     }

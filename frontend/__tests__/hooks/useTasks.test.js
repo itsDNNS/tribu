@@ -6,7 +6,7 @@ const mockContext = {
   tasks: [
     { id: 1, title: 'Task A', status: 'open', priority: 'normal' },
     { id: 2, title: 'Task B', status: 'done', priority: 'high' },
-    { id: 3, title: 'Task C', status: 'open', priority: 'low' },
+    { id: 3, title: 'Task C', status: 'open', priority: 'low', assigned_to_user_id: 7 },
   ],
   familyId: '1',
   members: [],
@@ -48,6 +48,28 @@ describe('useTasks', () => {
     act(() => result.current.setTaskFilter('done'));
     expect(result.current.filteredTasks).toHaveLength(1);
     expect(result.current.filteredTasks[0].title).toBe('Task B');
+  });
+
+  it('filters open tasks by assignee and priority', () => {
+    const { result } = renderHook(() => useTasks());
+
+    act(() => result.current.setAssigneeFilter('7'));
+    expect(result.current.filteredTasks).toHaveLength(1);
+    expect(result.current.filteredTasks[0].title).toBe('Task C');
+
+    act(() => result.current.setPriorityFilter('high'));
+    expect(result.current.filteredTasks).toHaveLength(0);
+  });
+
+  it('sorts tasks by priority when requested', () => {
+    const { result } = renderHook(() => useTasks());
+
+    act(() => {
+      result.current.setTaskFilter('all');
+      result.current.setTaskSort('priority');
+    });
+
+    expect(result.current.filteredTasks.map((task) => task.title)).toEqual(['Task B', 'Task A', 'Task C']);
   });
 
   it('resets form fields after successful create', async () => {

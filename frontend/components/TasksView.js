@@ -89,6 +89,7 @@ export default function TasksView() {
                       <option value="daily">{t(messages, 'module.tasks.recurrence.daily')}</option>
                       <option value="weekly">{t(messages, 'module.tasks.recurrence.weekly')}</option>
                       <option value="monthly">{t(messages, 'module.tasks.recurrence.monthly')}</option>
+                      <option value="monthly_first_sunday">{t(messages, 'module.tasks.recurrence.monthly_first_sunday')}</option>
                       <option value="yearly">{t(messages, 'module.tasks.recurrence.yearly')}</option>
                     </select>
                     <select className="form-input task-form-input" value={tk.taskAssignee} onChange={(e) => tk.setTaskAssignee(e.target.value)}>
@@ -111,6 +112,40 @@ export default function TasksView() {
               <button className={`tasks-filter-btn${tk.taskFilter === 'done' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('done')} aria-pressed={tk.taskFilter === 'done'}>{t(messages, 'module.tasks.done')}</button>
             </div>
             <div className="tasks-count">{tk.filteredTasks.length} {t(messages, 'module.tasks.name')}</div>
+            <div className="tasks-refine-controls" role="group" aria-label={t(messages, 'module.tasks.refine')}>
+              <select
+                className="form-input tasks-refine-input"
+                value={tk.assigneeFilter}
+                onChange={(e) => tk.setAssigneeFilter(e.target.value)}
+                aria-label={t(messages, 'module.tasks.filter_assignee')}
+              >
+                <option value="">{t(messages, 'module.tasks.filter_assignee_all')}</option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={String(m.user_id)}>{m.display_name}</option>
+                ))}
+              </select>
+              <select
+                className="form-input tasks-refine-input"
+                value={tk.priorityFilter}
+                onChange={(e) => tk.setPriorityFilter(e.target.value)}
+                aria-label={t(messages, 'module.tasks.filter_priority')}
+              >
+                <option value="">{t(messages, 'module.tasks.filter_priority_all')}</option>
+                <option value="high">{t(messages, 'module.tasks.priority.high')}</option>
+                <option value="normal">{t(messages, 'module.tasks.priority.normal')}</option>
+                <option value="low">{t(messages, 'module.tasks.priority.low')}</option>
+              </select>
+              <select
+                className="form-input tasks-refine-input"
+                value={tk.taskSort}
+                onChange={(e) => tk.setTaskSort(e.target.value)}
+                aria-label={t(messages, 'module.tasks.sort')}
+              >
+                <option value="created">{t(messages, 'module.tasks.sort.created')}</option>
+                <option value="priority">{t(messages, 'module.tasks.sort.priority')}</option>
+                <option value="assignee">{t(messages, 'module.tasks.sort.assignee')}</option>
+              </select>
+            </div>
           </div>
 
           {/* Task List */}
