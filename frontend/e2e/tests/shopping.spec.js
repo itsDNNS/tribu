@@ -211,6 +211,14 @@ test.describe('Shopping', () => {
     const quickAdd = page.locator('input[placeholder="Add an item..."]');
     await quickAdd.focus();
     await expect(quickAdd).toBeFocused();
+    await expect(quickAdd).not.toHaveAttribute('list', 'shopping-item-suggestions');
+
+    await quickAdd.fill('Mi');
+    await expect(quickAdd).toHaveAttribute('list', 'shopping-item-suggestions');
+    await expect.poll(async () => page.locator('#shopping-item-suggestions option').evaluateAll((options) => options.map((option) => option.value))).toEqual(['Milk']);
+
+    await quickAdd.clear();
+    await expect(quickAdd).not.toHaveAttribute('list', 'shopping-item-suggestions');
     await page.locator('[role="checkbox"][aria-label="Apples"]').click();
     await expect(quickAdd).not.toBeFocused();
 

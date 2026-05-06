@@ -258,7 +258,13 @@ export default function ShoppingView() {
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [templatesExpanded, setTemplatesExpanded] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState({});
-  const itemSuggestions = Array.from(new Set((sh.items || []).map((item) => item.name).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const itemSuggestionQuery = sh.newItemName.trim().toLocaleLowerCase();
+  const itemSuggestions = itemSuggestionQuery
+    ? Array.from(new Set((sh.items || [])
+        .map((item) => item.name)
+        .filter((name) => name && name.toLocaleLowerCase().includes(itemSuggestionQuery))))
+        .sort((a, b) => a.localeCompare(b))
+    : [];
   const uncheckedGroups = groupItemsByCategory(sh.uncheckedItems, messages);
   const templatesVisible = !isMobile || templatesExpanded || showTemplateForm;
   const templatesToggleLabel = templatesVisible
@@ -453,7 +459,7 @@ export default function ShoppingView() {
                     value={sh.newItemName}
                     onChange={(e) => sh.setNewItemName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sh.itemInputRef.current?.form?.requestSubmit(); } }}
-                    list="shopping-item-suggestions"
+                    {...(itemSuggestions.length > 0 ? { list: 'shopping-item-suggestions' } : {})}
                     required
                   />
                   <datalist id="shopping-item-suggestions">
