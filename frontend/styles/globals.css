@@ -1663,10 +1663,24 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
   -webkit-backdrop-filter: none !important;
 }
 
+:root[data-display-mode="standalone"] .sidebar,
+:root[data-display-mode="standalone"] .bottom-nav,
+:root[data-display-mode="standalone"] .search-overlay,
+:root[data-display-mode="standalone"] .bottom-nav-overflow {
+  background: var(--void-surface);
+}
+
 [data-theme="light"] .bottom-nav-overflow {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 -4px 24px -4px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-display-mode="standalone"][data-theme="light"] .sidebar,
+:root[data-display-mode="standalone"][data-theme="light"] .bottom-nav,
+:root[data-display-mode="standalone"][data-theme="light"] .search-overlay,
+:root[data-display-mode="standalone"][data-theme="light"] .bottom-nav-overflow {
+  background: var(--void-surface);
 }
 
 [data-theme="light"] .bottom-nav-overflow-item:hover {
