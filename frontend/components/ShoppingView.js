@@ -258,6 +258,8 @@ export default function ShoppingView() {
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [templatesExpanded, setTemplatesExpanded] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [itemSuggestionsOpen, setItemSuggestionsOpen] = useState(false);
+  const [activeItemSuggestion, setActiveItemSuggestion] = useState(null);
   const itemSuggestionQuery = sh.newItemName.trim().toLocaleLowerCase();
   const itemSuggestions = itemSuggestionQuery
     ? Array.from(new Set((sh.items || [])
@@ -270,6 +272,53 @@ export default function ShoppingView() {
   const templatesToggleLabel = templatesVisible
     ? t(messages, 'module.shopping.hide_templates')
     : t(messages, 'module.shopping.show_templates');
+  const showItemSuggestions = itemSuggestionsOpen && itemSuggestions.length > 0;
+  const selectedItemSuggestion = showItemSuggestions && activeItemSuggestion !== null
+    ? itemSuggestions[Math.min(activeItemSuggestion, itemSuggestions.length - 1)]
+    : null;
+
+  function closeItemSuggestions() {
+    setItemSuggestionsOpen(false);
+    setActiveItemSuggestion(null);
+  }
+
+  function selectItemSuggestion(name) {
+    sh.setNewItemName(name);
+    closeItemSuggestions();
+    sh.itemInputRef.current?.focus();
+  }
+
+  function handleItemSuggestionKeyDown(e) {
+    if (e.key === 'Enter') {
+      if (selectedItemSuggestion) {
+        e.preventDefault();
+        selectItemSuggestion(selectedItemSuggestion);
+        return;
+      }
+      e.preventDefault();
+      sh.itemInputRef.current?.form?.requestSubmit();
+      return;
+    }
+
+    if (!showItemSuggestions) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveItemSuggestion((current) => {
+        if (current === null) return 0;
+        return Math.min(current + 1, itemSuggestions.length - 1);
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveItemSuggestion((current) => {
+        if (current === null) return itemSuggestions.length - 1;
+        return Math.max(current - 1, 0);
+      });
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeItemSuggestions();
+    }
+  }
 
   function toggleCategory(category) {
     setCollapsedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
@@ -452,19 +501,58 @@ export default function ShoppingView() {
               {/* Quick-Add Bar */}
               {!isChild && (
                 <form onSubmit={sh.addItem} className="quick-add-bar">
-                  <input
-                    ref={sh.itemInputRef}
-                    className="quick-add-input"
-                    placeholder={t(messages, 'module.shopping.item_name_placeholder')}
-                    value={sh.newItemName}
-                    onChange={(e) => sh.setNewItemName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sh.itemInputRef.current?.form?.requestSubmit(); } }}
-                    {...(itemSuggestions.length > 0 ? { list: 'shopping-item-suggestions' } : {})}
-                    required
-                  />
-                  <datalist id="shopping-item-suggestions">
-                    {itemSuggestions.map((name) => <option key={name} value={name}>{name}</option>)}
-                  </datalist>
+                  <div
+                    className="shopping-item-suggest-field"
+                    onBlur={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget)) closeItemSuggestions();
+                    }}
+                  >
+                    <input
+                      ref={sh.itemInputRef}
+                      className="quick-add-input"
+                      placeholder={t(messages, 'module.shopping.item_name_placeholder')}
+                      value={sh.newItemName}
+                      onChange={(e) => {
+                        sh.setNewItemName(e.target.value);
+                        setItemSuggestionsOpen(true);
+                        setActiveItemSuggestion(null);
+                      }}
+                      onFocus={() => setItemSuggestionsOpen(true)}
+                      onKeyDown={handleItemSuggestionKeyDown}
+                      autoComplete="off"
+                      aria-autocomplete="list"
+                      aria-expanded={showItemSuggestions}
+                      aria-controls="shopping-item-suggestions"
+                      {...(selectedItemSuggestion ? { 'aria-activedescendant': `shopping-item-suggestion-${activeItemSuggestion}` } : {})}
+                      required
+                    />
+                    {showItemSuggestions && (
+                      <div
+                        id="shopping-item-suggestions"
+                        className="shopping-item-suggestions"
+                        role="listbox"
+                        aria-label={t(messages, 'module.shopping.item_name_placeholder')}
+                      >
+                        {itemSuggestions.map((name, index) => (
+                          <button
+                            id={`shopping-item-suggestion-${index}`}
+                            key={name}
+                            className={`shopping-item-suggestion${selectedItemSuggestion === name ? ' active' : ''}`}
+                            type="button"
+                            role="option"
+                            aria-selected={selectedItemSuggestion === name}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onPointerDown={(e) => e.preventDefault()}
+                            onMouseEnter={() => setActiveItemSuggestion(index)}
+                            onFocus={() => setActiveItemSuggestion(index)}
+                            onClick={() => selectItemSuggestion(name)}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <input
                     className="quick-add-input shopping-spec-input"
                     placeholder={t(messages, 'module.shopping.item_spec_placeholder')}

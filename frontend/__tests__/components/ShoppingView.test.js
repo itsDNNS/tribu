@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ShoppingView from '../../components/ShoppingView';
 
@@ -113,7 +113,7 @@ describe('ShoppingView quick add', () => {
 
     const input = screen.getByPlaceholderText('Add an item...');
     expect(input).not.toHaveAttribute('list');
-    expect(document.querySelectorAll('#shopping-item-suggestions option')).toHaveLength(0);
+    expect(screen.queryByRole('listbox', { name: 'Add an item...' })).not.toBeInTheDocument();
   });
 
   test('keeps quick-add suggestions inactive for whitespace-only input', () => {
@@ -127,7 +127,7 @@ describe('ShoppingView quick add', () => {
 
     const input = screen.getByPlaceholderText('Add an item...');
     expect(input).not.toHaveAttribute('list');
-    expect(document.querySelectorAll('#shopping-item-suggestions option')).toHaveLength(0);
+    expect(screen.queryByRole('listbox', { name: 'Add an item...' })).not.toBeInTheDocument();
   });
 
   test('filters quick-add suggestions after typed input', () => {
@@ -143,10 +143,60 @@ describe('ShoppingView quick add', () => {
     });
 
     const input = screen.getByPlaceholderText('Add an item...');
+    fireEvent.focus(input);
 
-    expect(input).toHaveAttribute('list', 'shopping-item-suggestions');
-    const options = Array.from(document.querySelectorAll('#shopping-item-suggestions option')).map((option) => option.value);
+    expect(input).not.toHaveAttribute('list');
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    const options = screen.getAllByRole('option').map((option) => option.textContent);
     expect(options).toEqual(['Milk']);
+  });
+
+  test('supports keyboard selection in the app-controlled quick-add suggestions', () => {
+    setup({
+      newItemName: 'm',
+      items: [
+        { id: 1, name: 'Milk', spec: null, checked: true },
+        { id: 2, name: 'Muesli', spec: null, checked: false },
+      ],
+    });
+
+    const input = screen.getByPlaceholderText('Add an item...');
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+    expect(input).toHaveAttribute('aria-activedescendant', 'shopping-item-suggestion-0');
+    expect(screen.getByRole('option', { name: 'Milk' })).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveAttribute('aria-activedescendant', 'shopping-item-suggestion-1');
+    expect(screen.getByRole('option', { name: 'Muesli' })).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mockShoppingState.setNewItemName).toHaveBeenCalledWith('Muesli');
+  });
+
+  test('reopens quick-add suggestions as an opaque app-controlled list after clearing and typing again', () => {
+    const { rerender } = setup({
+      newItemName: 'mi',
+      items: [
+        { id: 1, name: 'Milk', spec: null, checked: true },
+        { id: 2, name: 'Bread', spec: null, checked: false },
+      ],
+    });
+
+    const input = screen.getByPlaceholderText('Add an item...');
+    fireEvent.focus(input);
+    expect(screen.getByRole('listbox', { name: 'Add an item...' })).toHaveClass('shopping-item-suggestions');
+
+    mockShoppingState.newItemName = '';
+    rerender(<ShoppingView />);
+    expect(screen.queryByRole('listbox', { name: 'Add an item...' })).not.toBeInTheDocument();
+
+    mockShoppingState.newItemName = 'br';
+    rerender(<ShoppingView />);
+    fireEvent.focus(screen.getByPlaceholderText('Add an item...'));
+    expect(screen.getByRole('option', { name: 'Bread' })).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Add an item...' })).toHaveClass('shopping-item-suggestions');
   });
 
   test('adds a category field and groups items into collapsible category sections', () => {
@@ -242,7 +292,7 @@ describe('ShoppingView mobile store flow', () => {
     }, { isMobile: true });
 
     const input = screen.getByPlaceholderText('Add an item...');
-    input.focus();
+    act(() => input.focus());
     expect(document.activeElement).toBe(input);
 
     const item = screen.getByRole('checkbox', { name: 'Apples' });
