@@ -100,7 +100,7 @@ function setup(overrides = {}, appOverrides = {}) {
 }
 
 describe('ShoppingView quick add', () => {
-  test('offers checked items as quick-add suggestions', () => {
+  test('keeps quick-add suggestions inactive until the user types a real query', () => {
     setup({
       items: [
         { id: 1, name: 'Milk', spec: null, checked: true },
@@ -112,9 +112,41 @@ describe('ShoppingView quick add', () => {
     });
 
     const input = screen.getByPlaceholderText('Add an item...');
+    expect(input).not.toHaveAttribute('list');
+    expect(document.querySelectorAll('#shopping-item-suggestions option')).toHaveLength(0);
+  });
+
+  test('keeps quick-add suggestions inactive for whitespace-only input', () => {
+    setup({
+      newItemName: '  ',
+      items: [
+        { id: 1, name: 'Milk', spec: null, checked: true },
+        { id: 2, name: 'Bread', spec: null, checked: false },
+      ],
+    });
+
+    const input = screen.getByPlaceholderText('Add an item...');
+    expect(input).not.toHaveAttribute('list');
+    expect(document.querySelectorAll('#shopping-item-suggestions option')).toHaveLength(0);
+  });
+
+  test('filters quick-add suggestions after typed input', () => {
+    setup({
+      newItemName: 'mi',
+      items: [
+        { id: 1, name: 'Milk', spec: null, checked: true },
+        { id: 2, name: 'Bread', spec: null, checked: false },
+        { id: 3, name: 'Milk', spec: null, checked: false },
+      ],
+      checkedItems: [{ id: 1, name: 'Milk', spec: null, checked: true }],
+      uncheckedItems: [{ id: 2, name: 'Bread', spec: null, checked: false }, { id: 3, name: 'Milk', spec: null, checked: false }],
+    });
+
+    const input = screen.getByPlaceholderText('Add an item...');
+
     expect(input).toHaveAttribute('list', 'shopping-item-suggestions');
     const options = Array.from(document.querySelectorAll('#shopping-item-suggestions option')).map((option) => option.value);
-    expect(options).toEqual(['Bread', 'Milk']);
+    expect(options).toEqual(['Milk']);
   });
 
   test('adds a category field and groups items into collapsible category sections', () => {
