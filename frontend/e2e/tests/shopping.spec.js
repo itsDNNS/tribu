@@ -229,6 +229,37 @@ test.describe('Shopping', () => {
     await expect(page.locator('[role="checkbox"][aria-label="Bananas"]')).toBeVisible({ timeout: 10000 });
   });
 
+  test('mobile shopping menu stays opaque while quick add is focused', async ({ authedPage: page, apiCtx }) => {
+    const viewport = page.viewportSize();
+    test.skip(!viewport || viewport.width >= 768, 'Mobile-only shopping menu opacity check');
+
+    const familyId = await getFamilyId(apiCtx);
+    await seedShoppingList(apiCtx, familyId, 'Opaque Menu Market List');
+
+    await navigateTo(page, 'Shopping');
+    await page.reload();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+    await navigateTo(page, 'Shopping');
+    await page.getByText('Opaque Menu Market List').click();
+
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.setAttribute('data-display-mode', 'standalone');
+    });
+
+    const quickAdd = page.locator('input[placeholder="Add an item..."]');
+    await quickAdd.focus();
+    await expect(quickAdd).toBeFocused();
+
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    const sidebar = page.locator('.sidebar.mobile-open');
+    await expect(sidebar).toBeVisible();
+
+    const sidebarBackground = await sidebar.evaluate((element) => getComputedStyle(element).backgroundColor);
+    const alphaMatch = sidebarBackground.match(/rgba?\(([^)]+)\)/);
+    const alpha = alphaMatch?.[1]?.split(',').map((part) => Number(part.trim()))[3] ?? 1;
+    expect(alpha).toBe(1);
+  });
 
   test('768px shopping breakpoint keeps items before templates in DOM order', async ({ authedPage: page, apiCtx }) => {
     await page.setViewportSize({ width: 768, height: 900 });
