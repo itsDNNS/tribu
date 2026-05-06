@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AppShell from '../../components/AppShell';
@@ -124,5 +126,11 @@ describe('AppShell mobile bottom navigation', () => {
     fireEvent.click(adminItem);
     expect(setActiveView).toHaveBeenCalledWith('admin');
     expect(document.querySelector('.bottom-nav-overflow')).not.toBeInTheDocument();
+  });
+
+  it('keeps the opened mobile sidebar on an opaque theme surface', () => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'styles', 'globals.css'), 'utf8');
+
+    expect(css).toMatch(/@media \(max-width: 768px\) \{[\s\S]*\.sidebar\.mobile-open \{ transform: translateX\(0\); background: var\(--void-surface\); \}/);
   });
 });

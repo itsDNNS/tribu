@@ -229,7 +229,7 @@ test.describe('Shopping', () => {
     await expect(page.locator('[role="checkbox"][aria-label="Bananas"]')).toBeVisible({ timeout: 10000 });
   });
 
-  test('mobile shopping menu stays opaque while quick add is focused', async ({ authedPage: page, apiCtx }) => {
+  test('mobile shopping menu stays opaque while quick add is focused and reopened', async ({ authedPage: page, apiCtx }) => {
     const viewport = page.viewportSize();
     test.skip(!viewport || viewport.width >= 768, 'Mobile-only shopping menu opacity check');
 
@@ -244,21 +244,31 @@ test.describe('Shopping', () => {
 
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-theme', 'light');
-      document.documentElement.setAttribute('data-display-mode', 'standalone');
+      document.documentElement.removeAttribute('data-display-mode');
     });
 
     const quickAdd = page.locator('input[placeholder="Add an item..."]');
     await quickAdd.focus();
     await expect(quickAdd).toBeFocused();
 
-    await page.getByRole('button', { name: 'Open menu' }).click();
     const sidebar = page.locator('.sidebar.mobile-open');
-    await expect(sidebar).toBeVisible();
+    const assertOpaqueSidebar = async () => {
+      const sidebarBackground = await sidebar.evaluate((element) => getComputedStyle(element).backgroundColor);
+      const alphaMatch = sidebarBackground.match(/rgba?\(([^)]+)\)/);
+      const alpha = alphaMatch?.[1]?.split(',').map((part) => Number(part.trim()))[3] ?? 1;
+      expect(alpha).toBe(1);
+    };
 
-    const sidebarBackground = await sidebar.evaluate((element) => getComputedStyle(element).backgroundColor);
-    const alphaMatch = sidebarBackground.match(/rgba?\(([^)]+)\)/);
-    const alpha = alphaMatch?.[1]?.split(',').map((part) => Number(part.trim()))[3] ?? 1;
-    expect(alpha).toBe(1);
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await expect(sidebar).toBeVisible();
+    await assertOpaqueSidebar();
+
+    await page.mouse.click(350, 120);
+    await expect(sidebar).toBeHidden();
+
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await expect(sidebar).toBeVisible();
+    await assertOpaqueSidebar();
   });
 
   test('768px shopping breakpoint keeps items before templates in DOM order', async ({ authedPage: page, apiCtx }) => {

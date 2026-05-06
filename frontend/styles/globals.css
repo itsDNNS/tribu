@@ -1767,7 +1767,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 
 @media (max-width: 768px) {
   .sidebar { position: fixed; left: 0; top: 0; width: 260px; min-width: 260px; transform: translateX(-100%); transition: transform 0.3s var(--ease-out-expo); z-index: 60; padding-top: env(safe-area-inset-top); }
-  .sidebar.mobile-open { transform: translateX(0); }
+  .sidebar.mobile-open { transform: translateX(0); background: var(--void-surface); }
   .main-content { margin-left: 0; width: 100%; padding: var(--space-md); padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
   .mobile-header { display: flex; }
   .bottom-nav { display: block; }
