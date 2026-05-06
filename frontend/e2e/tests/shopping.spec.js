@@ -214,11 +214,26 @@ test.describe('Shopping', () => {
     await expect(quickAdd).not.toHaveAttribute('list', 'shopping-item-suggestions');
 
     await quickAdd.fill('Mi');
-    await expect(quickAdd).toHaveAttribute('list', 'shopping-item-suggestions');
-    await expect.poll(async () => page.locator('#shopping-item-suggestions option').evaluateAll((options) => options.map((option) => option.value))).toEqual(['Milk']);
+    await expect(quickAdd).not.toHaveAttribute('list', 'shopping-item-suggestions');
+    const suggestionList = page.locator('#shopping-item-suggestions');
+    await expect(suggestionList).toBeVisible();
+    await expect.poll(async () => suggestionList.getByRole('option').evaluateAll((options) => options.map((option) => option.textContent))).toEqual(['Milk']);
+    await expect.poll(async () => suggestionList.evaluate((element) => {
+      const color = getComputedStyle(element).backgroundColor;
+      const alpha = color.match(/rgba?\(([^)]+)\)/)?.[1]?.split(',').map((part) => Number(part.trim()))[3] ?? 1;
+      return alpha;
+    })).toBe(1);
 
     await quickAdd.clear();
-    await expect(quickAdd).not.toHaveAttribute('list', 'shopping-item-suggestions');
+    await expect(suggestionList).toBeHidden();
+    await quickAdd.fill('Mi');
+    await expect(suggestionList).toBeVisible();
+    await expect.poll(async () => suggestionList.evaluate((element) => {
+      const color = getComputedStyle(element).backgroundColor;
+      const alpha = color.match(/rgba?\(([^)]+)\)/)?.[1]?.split(',').map((part) => Number(part.trim()))[3] ?? 1;
+      return alpha;
+    })).toBe(1);
+    await quickAdd.clear();
     await page.locator('[role="checkbox"][aria-label="Apples"]').click();
     await expect(quickAdd).not.toBeFocused();
 
