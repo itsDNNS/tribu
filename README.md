@@ -93,25 +93,31 @@ A read-only household display for a kitchen tablet or hallway screen. Pair a dis
 
 Plan meals next to the rest of the week, keep recurring recipes nearby, and move ingredients toward the shopping list without opening another planning app.
 
-**4. Phone sync**
+**4. School timetables**
+
+<img src="docs/assets/screenshot-school-timetables.png" alt="School timetable planning in Tribu" width="100%" />
+
+Keep each child's school week next to the rest of the family calendar, with lesson times, breaks, and assigned children in one place.
+
+**5. Phone sync**
 
 <img src="docs/assets/screenshot-phone-sync.png" alt="CalDAV and CardDAV phone sync settings" width="100%" />
 
 Sync calendars and contacts through CalDAV and CardDAV. iOS works with the built-in Calendar and Contacts apps. Android works through a DAV-compatible client such as DAVx5.
 
-**5. Home Assistant and webhooks**
+**6. Home Assistant and webhooks**
 
 <img src="docs/assets/screenshot-home-assistant-webhooks.png" alt="Automation webhook settings for Home Assistant" width="100%" />
 
 Send selected Tribu events to automation tools such as Home Assistant through scoped webhooks with redacted endpoint details and secret headers.
 
-**6. Birthdays and gift ideas**
+**7. Birthdays and gift ideas**
 
 <img src="docs/assets/screenshot-gifts.png" alt="Gift ideas and birthdays in Tribu" width="100%" />
 
 Keep birthdays and gift ideas close to the rest of household planning instead of maintaining another spreadsheet.
 
-**7. Recipes for the week**
+**8. Recipes for the week**
 
 <img src="docs/assets/screenshot-recipes.png" alt="Recipes in Tribu" width="100%" />
 
