@@ -173,7 +173,7 @@
           </article>
           <article class="card">
             <h3>Keep phones connected</h3>
-            <p>CalDAV and CardDAV sync bring calendars and contacts into the devices people already check.</p>
+            <p>CalDAV and CardDAV sync work with iPhone and iPad built-in apps, and with Android through DAV-compatible clients such as DAVx5.</p>
           </article>
         </div>
       </div>
@@ -220,6 +220,7 @@ curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/docker/.env.exampl
 cp .env.example .env
 # Fill in JWT_SECRET and POSTGRES_PASSWORD
 docker compose up -d</code></pre>
+          <p>Before exposing Tribu to the internet, put it behind HTTPS, set <code>SECURE_COOKIES=true</code>, keep secrets stable, and test backup restore.</p>
         </div>
         <div>
           <h2>Connect the home you already run.</h2>
@@ -242,12 +243,12 @@ docker compose up -d</code></pre>
     <section class="section">
       <div class="wrap">
         <div class="section-header">
-          <h2>Explore before you deploy.</h2>
-          <p>Open Tribu and choose Try demo on the login page to explore realistic household data before setting up your own family workspace.</p>
+          <h2>Explore before creating a real workspace.</h2>
+          <p>After starting Tribu, choose Try demo on the login page to explore realistic household data before setting up your own family workspace.</p>
         </div>
         <div class="grid-3">
-          <article class="card"><h3>Demo mode</h3><p>Try the full UI without a production setup.</p></article>
-          <article class="card"><h3>Versioned releases</h3><p>Use published releases and GHCR images instead of guessing from source.</p></article>
+          <article class="card"><h3>Demo mode</h3><p>Try the main workflows with sample data after starting the app.</p></article>
+          <article class="card"><h3>Versioned releases</h3><p>Install from tagged releases and published GHCR images.</p></article>
           <article class="card"><h3>Public docs</h3><p>Start with the Wiki for setup, operations, integrations, and troubleshooting.</p></article>
         </div>
       </div>

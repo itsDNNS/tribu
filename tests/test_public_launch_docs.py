@@ -2,6 +2,7 @@
 
 from html.parser import HTMLParser
 from pathlib import Path
+import json
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +13,12 @@ FEATURE_MATRIX = ROOT / "docs" / "feature-matrix.md"
 DIRECTORY_DRAFT = ROOT / "docs" / "self-hosted-directory-submission.md"
 FOLLOW_UPS = ROOT / "docs" / "public-launch-follow-up-issues.md"
 POLICY = ROOT / "docs" / "documentation-policy.md"
+SECURITY = ROOT / "SECURITY.md"
+EN_MESSAGES = ROOT / "frontend" / "i18n" / "core" / "en.json"
+LOCALE_DIR = ROOT / "frontend" / "i18n" / "core"
+COMPOSE = ROOT / "docker" / "docker-compose.yml"
+DEV_COMPOSE = ROOT / "docker" / "docker-compose.dev.yml"
+E2E_WORKFLOW = ROOT / ".github" / "workflows" / "e2e.yml"
 
 FORBIDDEN_PUBLIC_TERMS = (
     "oikos",
@@ -58,7 +65,7 @@ class MetaParser(HTMLParser):
 
 
 def read_public_text():
-    paths = [README, DOCS_INDEX, FEATURE_MATRIX, DIRECTORY_DRAFT, FOLLOW_UPS, POLICY]
+    paths = [README, DOCS_INDEX, FEATURE_MATRIX, DIRECTORY_DRAFT, FOLLOW_UPS, POLICY, SECURITY, EN_MESSAGES]
     return "\n".join(path.read_text(encoding="utf-8") for path in paths)
 
 
@@ -156,3 +163,80 @@ def test_documentation_policy_tracks_launch_docs():
         "docs/public-launch-follow-up-issues.md",
     ):
         assert path in policy
+
+
+def test_public_compose_is_image_only_and_uses_shared_database_password():
+    compose = COMPOSE.read_text(encoding="utf-8")
+    dev_compose = DEV_COMPOSE.read_text(encoding="utf-8")
+    workflow = E2E_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "build:" not in compose
+    assert "postgresql://tribu:***@postgres" not in compose
+    assert "postgresql://tribu:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/tribu" in compose
+    assert "ghcr.io/itsdnns/tribu-backend:latest" in compose
+    assert "ghcr.io/itsdnns/tribu-frontend:latest" in compose
+    assert "build:" in dev_compose
+    assert "docker-compose.dev.yml" in workflow
+
+
+def test_public_launch_copy_avoids_validated_overclaims():
+    public_text = read_public_text()
+    forbidden_phrases = (
+        "lazy-loaded locale packs",
+        "Explore before you deploy",
+        "Try the full UI without a production setup",
+        "guessing from source",
+        "non-root containers",
+        "run all processes under that user",
+        "Your data stays on your server. Always.",
+        "never shared with third parties",
+        "native Calendar and Contacts apps on iOS and Android",
+    )
+    for phrase in forbidden_phrases:
+        assert phrase not in public_text
+
+    landing = DOCS_INDEX.read_text(encoding="utf-8")
+    assert "Try the main workflows with sample data after starting the app." in landing
+    assert "Android through DAV-compatible clients such as DAVx5" in landing
+    assert "SECURE_COOKIES=true" in landing
+
+    readme = README.read_text(encoding="utf-8")
+    assert "secrets.token_hex(32)" in readme
+    assert "secrets.token_hex(16)" in readme
+    assert "env.write_text(text)" in readme
+    assert "postgresql://tribu:${POSTGRES_PASSWORD}@postgres:5432/tribu" in readme
+
+    security = SECURITY.read_text(encoding="utf-8")
+    assert "frontend image runs as the dedicated non-root `tribu` user" in security
+    assert "backend image creates the same user and the entrypoint drops privileges" in security
+
+    en_messages = EN_MESSAGES.read_text(encoding="utf-8")
+    assert "Household data stays on your server" in en_messages
+    assert "Admin-only update checks may contact GitHub for release metadata" in en_messages
+
+
+def test_locale_privacy_and_phone_sync_claims_are_caveated():
+    locale_files = sorted(LOCALE_DIR.glob("*.json"))
+    assert locale_files
+
+    for locale_file in locale_files:
+        messages = json.loads(locale_file.read_text(encoding="utf-8"))
+        combined_privacy = f"{messages.get('auth_footer', '')} {messages.get('privacy_note', '')}".lower()
+        phone_intro = messages.get("phone_sync_intro", "")
+
+        assert "davx5" in phone_intro.lower(), f"{locale_file.name} must caveat Android DAV sync"
+        assert "github" in combined_privacy, f"{locale_file.name} must disclose admin release checks"
+
+    old_claims = (
+        "iOS and Android",
+        "iOS und Android",
+        "iOS y Android",
+        "iOS et Android",
+        "iOS e Android",
+        "iOS en Android",
+        "iOS și Android",
+    )
+    for locale_file in locale_files:
+        phone_intro = json.loads(locale_file.read_text(encoding="utf-8")).get("phone_sync_intro", "")
+        for claim in old_claims:
+            assert claim not in phone_intro, f"{locale_file.name} keeps old native Android wording"

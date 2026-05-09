@@ -75,7 +75,7 @@ cd tribu
 cp docker/.env.example docker/.env
 # Fill in JWT_SECRET and POSTGRES_PASSWORD
 cd docker
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 Then open `http://localhost:3000`.

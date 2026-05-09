@@ -38,7 +38,7 @@ These are focused follow-up issues that can be created from the public launch re
 
 **Problem:** Family calendars often include school PDFs, appointment files, public ICS subscriptions, and source-specific colors.
 
-**Scope:** Explore event attachments, public ICS/webcal subscriptions, per-source color and visibility, and multi-account external calendar management beyond the current phone sync story.
+**Scope:** Explore event attachments, webcal handling, background feed polling, per-source color and visibility, and multi-account external calendar management beyond the current manual external ICS feed support and phone sync story.
 
 **Acceptance criteria:** Remote inputs are treated as untrusted, source URLs do not leak to display surfaces, file limits are defined, and DAV/export behavior is documented.
 
