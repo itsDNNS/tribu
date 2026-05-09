@@ -19,9 +19,6 @@ services:
 
   backend:
     image: ghcr.io/itsdnns/tribu-backend:latest
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
     container_name: tribu-backend
     restart: unless-stopped
     environment:
@@ -50,9 +47,6 @@ services:
 
   frontend:
     image: ghcr.io/itsdnns/tribu-frontend:latest
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
     container_name: tribu-frontend
     restart: unless-stopped
     depends_on:

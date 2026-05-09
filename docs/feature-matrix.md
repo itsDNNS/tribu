@@ -7,7 +7,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Area | Capability | Notes |
 |---|---|---|
 | Dashboard | Daily household overview | Events, open tasks, birthdays, activity, quick actions, and family context. |
-| Calendar | Shared calendar | Month and week views, recurring events, ICS import and export, day detail panels, and phone sync through CalDAV. |
+| Calendar | Shared calendar | Month and week views, recurring events, ICS import and export, external ICS feed import with manual refresh, day detail panels, and phone sync through CalDAV. |
 | Tasks | Responsibilities and routines | Assignees, priorities, due dates, recurrence, templates, and overdue tracking. |
 | Shopping | Shared lists | Multiple lists, categories, progress, quick add, and real-time updates. |
 | Contacts | Family address book | Contact cards, CSV import and export, birthday extraction, and CardDAV sync. |
@@ -25,8 +25,8 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Phone sync | CalDAV and CardDAV | Calendar and contact sync for phones and DAV-compatible clients. |
 | Integrations | Home Assistant, webhooks, API tokens | Automation hooks for self-hosted homes. |
 | Self-hosting | Docker Compose and GHCR images | PostgreSQL, Valkey, frontend, backend, backups, reverse proxy, and update docs. |
-| Security model | Family boundaries | httpOnly cookies, scoped PATs, display tokens, non-root containers, and security policy. |
-| Internationalization | 24 UI languages | Lazy-loaded language packs across the app. |
+| Security model | Family boundaries | httpOnly cookies, scoped PATs, display tokens, a non-root frontend container, backend privilege drop when supported, and security policy. |
+| Internationalization | 24 UI languages | Bundled locale packs across the app. |
 
 ## Planned or under evaluation
 
@@ -38,7 +38,7 @@ These are product areas worth evaluating as focused follow-up issues. They shoul
 | Household notes | Lightweight notes for family knowledge, checklists, and pinned reminders. | Keep notes close to household workflows and avoid becoming a full wiki clone. |
 | Budget tracking | Recurring income and expenses, monthly trends, and CSV export. | Treat financial data as sensitive and design export, visibility, and retention carefully. |
 | Calendar attachments | Attach images, PDFs, and documents to events where useful. | Enforce file limits, allowed types, backup behavior, and DAV/export expectations. |
-| Public calendar subscriptions | ICS or webcal subscriptions with source colors and visibility. | Treat remote calendar input as untrusted and keep source URLs private. |
+| Calendar source management | webcal handling, source colors, background polling, visibility controls, and richer external calendar management. | Treat remote calendar input as untrusted and keep source URLs private. |
 | Backup controls | Download, restore, scheduling, retention, and status inside admin flows. | Keep restore paths safe, auditable, and hard to trigger accidentally. |
 | OpenAPI docs | Public API contract for integrations. | Document scoped tokens, examples, and redaction rules before encouraging automation. |
 

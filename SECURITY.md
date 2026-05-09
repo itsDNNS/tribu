@@ -16,7 +16,7 @@ We will acknowledge reports within 48 hours and provide a timeline for fixes.
 | Rate limiting | 10/min for registration, 20/min for login (slowapi) |
 | CORS | Restricted to `localhost`, `127.0.0.1`, and `192.168.x.x` via regex |
 | Data isolation | All queries filtered by `family_id` with membership verification |
-| Docker containers | Non-root user (`tribu`) in both backend and frontend images |
+| Docker containers | Frontend runs as `tribu`; backend creates `tribu` and drops privileges with `gosu` when supported |
 | Docker networking | PostgreSQL and Valkey are not exposed to the host and stay inside the Docker network |
 | Build process | Multi-stage frontend build, `.dockerignore` files for both services |
 | CSV import | Row limit (500), range checks on month/day fields, email format validation |
@@ -60,13 +60,13 @@ Follow these steps before exposing Tribu to the internet:
 | Limitation | Context |
 |------------|---------|
 | No HTTPS in dev | Cookies use `secure=false` for local development. Set `SECURE_COOKIES=true` in `.env` when behind TLS. |
-| No CSRF token | `SameSite=Lax` on cookies provides sufficient protection against cross-origin form submissions. |
+| No CSRF token | `SameSite=Lax` mitigates common cross-origin form submissions. Reassess if cross-site or embedded use cases are added. |
 | No email verification | Registration does not require email confirmation. |
 | No account lockout | Failed login attempts are rate-limited but do not lock accounts. |
 
 ## Docker Security
 
-Both the backend and frontend Dockerfiles create a dedicated non-root user (`tribu`) and run all processes under that user. The Docker Compose configuration does not expose database or cache ports to the host, keeping PostgreSQL and Valkey accessible only within the Docker network.
+The frontend image runs as the dedicated non-root `tribu` user. The backend image creates the same user and the entrypoint drops privileges with `gosu` when the runtime supports it; in constrained environments where `gosu` is unavailable, the backend logs that it is running as root. The Docker Compose configuration does not expose database or cache ports to the host, keeping PostgreSQL and Valkey accessible only within the Docker network.
 
 Build artifacts are minimized through:
 - Multi-stage builds for the frontend (build step separated from runtime)

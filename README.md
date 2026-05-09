@@ -126,7 +126,7 @@ See the [Wiki](https://github.com/itsDNNS/tribu/wiki) for setup guides and the b
 | Keep phones connected | CalDAV and CardDAV sync for calendars and contacts |
 | Automate the household | Home Assistant package, webhooks, scoped API tokens |
 | Run it yourself | Docker Compose, GHCR images, backup docs, reverse proxy docs, MIT license |
-| Use it in your language | 24 UI languages with lazy-loaded locale packs |
+| Use it in your language | 24 UI languages |
 
 ## Phone Sync
 
@@ -189,7 +189,7 @@ services:
     container_name: tribu-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://tribu:***@postgres:5432/tribu
+      DATABASE_URL: postgresql://tribu:${POSTGRES_PASSWORD}@postgres:5432/tribu
       REDIS_URL: redis://valkey:6379/0
       JWT_SECRET: ${JWT_SECRET}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
@@ -219,10 +219,19 @@ Set two environment variables before deploying:
 | `JWT_SECRET` | Random 64-character hex string for JWT signing. Keep it stable in the persisted `.env` so routine updates do not end active sessions. |
 | `POSTGRES_PASSWORD` | Random 32-character hex string for the database. |
 
-Generate each value with:
+Generate the values and write them into `.env`:
 
 ```bash
-openssl rand -hex 32
+python3 - <<'PY'
+from pathlib import Path
+import secrets
+
+env = Path(".env")
+text = env.read_text()
+text = text.replace("JWT_SECRET=", f"JWT_SECRET={secrets.token_hex(32)}", 1)
+text = text.replace("POSTGRES_PASSWORD=", f"POSTGRES_PASSWORD={secrets.token_hex(16)}", 1)
+env.write_text(text)
+PY
 ```
 
 Deploy the stack, open [localhost:3000](http://localhost:3000), and register. The first user becomes the family admin.

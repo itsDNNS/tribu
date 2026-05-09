@@ -25,7 +25,7 @@ jobs:
 
       - name: Start services
         working-directory: docker
-        run: docker compose up --build -d
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
 
       - name: Wait for backend health
         run: |
@@ -37,7 +37,7 @@ jobs:
             fi
             if [ $i -eq 60 ]; then
               echo "Backend failed to start"
-              docker compose -f docker/docker-compose.yml logs backend
+              docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml logs backend
               exit 1
             fi
             sleep 2
@@ -53,7 +53,7 @@ jobs:
             fi
             if [ $i -eq 60 ]; then
               echo "Frontend failed to start"
-              docker compose -f docker/docker-compose.yml logs frontend
+              docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml logs frontend
               exit 1
             fi
             sleep 2
@@ -98,4 +98,4 @@ jobs:
       - name: Teardown
         if: always()
         working-directory: docker
-        run: docker compose down -v
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
