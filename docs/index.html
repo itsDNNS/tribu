@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tribu | Self-hosted family organizer</title>
+  <meta name="description" content="Tribu is a self-hosted family organizer for calendars, tasks, shopping, contacts, birthdays, meals, rewards, reminders, and a read-only shared home display.">
+  <link rel="canonical" href="https://itsdnns.github.io/tribu/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Tribu">
+  <meta property="og:title" content="Tribu | Self-hosted family organizer">
+  <meta property="og:description" content="A calm home base for busy households. Plan the week, share tasks, keep shopping in sync, and run it on your own server.">
+  <meta property="og:url" content="https://itsdnns.github.io/tribu/">
+  <meta property="og:image" content="https://itsdnns.github.io/tribu/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Tribu | Self-hosted family organizer">
+  <meta name="twitter:description" content="Calendar, tasks, shopping, contacts, birthdays, meals, rewards, reminders, and a read-only shared home display.">
+  <meta name="twitter:image" content="https://itsdnns.github.io/tribu/assets/og-image.png">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #fbf7f0;
+      --surface: #fffdfa;
+      --surface-strong: #ffffff;
+      --ink: #1f2933;
+      --muted: #667085;
+      --line: #eadfd0;
+      --accent: #256d63;
+      --accent-strong: #174d45;
+      --accent-soft: #dff5ee;
+      --rose: #b65c6a;
+      --gold: #c48a2c;
+      --shadow: 0 24px 80px rgba(49, 38, 24, 0.12);
+      --radius: 28px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(37, 109, 99, 0.14), transparent 36rem),
+        radial-gradient(circle at 85% 12%, rgba(196, 138, 44, 0.14), transparent 28rem),
+        var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    a { color: inherit; }
+    img { display: block; max-width: 100%; }
+    .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(18px);
+      background: rgba(251, 247, 240, 0.82);
+      border-bottom: 1px solid rgba(234, 223, 208, 0.7);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 72px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 800; letter-spacing: -0.03em; }
+    .brand img { width: 36px; height: 36px; }
+    .nav-links { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; justify-content: flex-end; font-size: 0.95rem; color: var(--muted); }
+    .nav-links a { text-decoration: none; }
+    .nav-links a:hover { color: var(--accent-strong); }
+    .hero { padding: 86px 0 64px; }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr); gap: 54px; align-items: center; }
+    .eyebrow { display: inline-flex; gap: 8px; align-items: center; padding: 8px 14px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; font-size: 0.88rem; }
+    h1, h2, h3 { letter-spacing: -0.04em; line-height: 1.05; margin: 0; }
+    h1 { font-size: clamp(3rem, 6vw, 5.9rem); margin-top: 24px; max-width: 780px; }
+    h2 { font-size: clamp(2.2rem, 4vw, 3.7rem); }
+    h3 { font-size: 1.35rem; }
+    .lead { font-size: clamp(1.12rem, 2vw, 1.35rem); color: #475467; max-width: 640px; margin: 24px 0 0; }
+    .actions { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 12px 18px; border-radius: 14px; text-decoration: none; font-weight: 800; border: 1px solid transparent; }
+    .button.primary { background: var(--accent); color: #fff; box-shadow: 0 12px 30px rgba(37, 109, 99, 0.24); }
+    .button.secondary { background: rgba(255,255,255,0.72); border-color: var(--line); color: var(--ink); }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+    .tag { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,0.58); color: #596579; font-weight: 700; font-size: 0.82rem; }
+    .mockup { position: relative; }
+    .mockup-card { background: var(--surface-strong); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); transform: rotate(1deg); }
+    .mockup-card img { border-radius: calc(var(--radius) - 10px); border: 1px solid #eee4d7; }
+    .phone { position: absolute; width: 31%; left: -7%; bottom: -12%; border-radius: 24px; border: 8px solid #22272f; box-shadow: 0 22px 48px rgba(31, 41, 51, 0.28); overflow: hidden; background: #22272f; }
+    .section { padding: 76px 0; }
+    .section-header { max-width: 760px; margin-bottom: 34px; }
+    .section-header p { color: var(--muted); font-size: 1.1rem; margin: 14px 0 0; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: center; }
+    .grid-2 > *, .hero-grid > *, .workflow > * { min-width: 0; }
+    .card { background: rgba(255,255,255,0.74); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 12px 36px rgba(49, 38, 24, 0.06); }
+    .card p { color: var(--muted); margin: 12px 0 0; }
+    .workflow { display: grid; grid-template-columns: 0.72fr 1fr; gap: 24px; align-items: center; }
+    .workflow img { border-radius: 26px; border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .list { margin: 18px 0 0; padding-left: 20px; color: #475467; }
+    .list li + li { margin-top: 8px; }
+    .install { background: #12221f; color: #eef8f4; border-radius: 32px; padding: 34px; box-shadow: var(--shadow); }
+    .install p { color: #b8cbc4; }
+    pre { overflow-x: auto; margin: 20px 0 0; background: #091513; color: #d7f7ed; border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 18px; font-size: 0.92rem; }
+    .feature-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .feature-list span { display: block; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,0.7); font-weight: 700; color: #344054; }
+    .footer { padding: 46px 0 70px; color: var(--muted); }
+    .footer a { color: var(--accent-strong); font-weight: 700; }
+    @media (max-width: 860px) {
+      .hero { padding-top: 54px; }
+      .hero-grid, .grid-2, .workflow { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
+      .phone { position: relative; left: auto; bottom: auto; width: 52%; margin: -40px auto 0; }
+      .nav-inner { align-items: flex-start; flex-direction: column; padding: 14px 0; }
+      .feature-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top" aria-label="Tribu home"><img src="assets/logo.svg" alt="">Tribu</a>
+      <div class="nav-links" aria-label="Primary navigation">
+        <a href="#why">Why Tribu</a>
+        <a href="#workflows">Workflows</a>
+        <a href="#self-hosting">Self-hosting</a>
+        <a href="https://github.com/itsDNNS/tribu">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="eyebrow">Self-hosted family organizer</span>
+          <h1>Bring the household into one calm place.</h1>
+          <p class="lead">Tribu helps families plan the week, share tasks, keep shopping in sync, remember birthdays, manage meals, and run a read-only shared dashboard from their own server.</p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/itsDNNS/tribu#quick-start">Deploy with Docker Compose</a>
+            <a class="button secondary" href="https://github.com/itsDNNS/tribu">View on GitHub</a>
+          </div>
+          <div class="tags" aria-label="Tribu capabilities">
+            <span class="tag">Demo mode</span>
+            <span class="tag">Shared display</span>
+            <span class="tag">CalDAV/CardDAV</span>
+            <span class="tag">Home Assistant</span>
+            <span class="tag">24 languages</span>
+            <span class="tag">MIT licensed</span>
+          </div>
+        </div>
+        <div class="mockup" aria-label="Tribu screenshots">
+          <div class="mockup-card">
+            <img src="assets/screenshot-light.png" alt="Tribu desktop dashboard with household cards">
+          </div>
+          <div class="phone">
+            <img src="assets/screenshot-mobile.png" alt="Tribu mobile dashboard">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="why">
+      <div class="wrap">
+        <div class="section-header">
+          <h2>Built for real family life.</h2>
+          <p>Calendar apps, shopping lists, school reminders, chats, and sticky notes all solve one slice. Tribu puts the daily moving parts where the household can see them.</p>
+        </div>
+        <div class="grid-3">
+          <article class="card">
+            <h3>See today clearly</h3>
+            <p>Events, open tasks, birthdays, shopping, reminders, rewards, and activity live in one shared dashboard.</p>
+          </article>
+          <article class="card">
+            <h3>Put it where people pass by</h3>
+            <p>Pair a read-only kitchen tablet or wall screen without leaving a personal account signed in.</p>
+          </article>
+          <article class="card">
+            <h3>Keep phones connected</h3>
+            <p>CalDAV and CardDAV sync bring calendars and contacts into the devices people already check.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="workflows">
+      <div class="wrap workflow">
+        <div>
+          <h2>One product for the ordinary things that decide the week.</h2>
+          <ul class="list">
+            <li>Plan appointments, school events, routines, and meals.</li>
+            <li>Assign tasks and keep recurring chores visible.</li>
+            <li>Share shopping lists while people are out.</li>
+            <li>Keep recipes, gifts, contacts, and birthdays close to the rest of planning.</li>
+            <li>Search across the household when you need something fast.</li>
+          </ul>
+        </div>
+        <img src="assets/screenshot-calendar.png" alt="Tribu calendar view">
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap grid-2">
+        <img src="assets/screenshot-shopping.png" alt="Tribu shopping list view">
+        <div>
+          <h2>From dinner plan to grocery run.</h2>
+          <p class="lead">Meal plans, recipes, shopping lists, and task ownership sit in the same home base, so planning dinner does not become another scattered workflow.</p>
+          <div class="actions">
+            <a class="button secondary" href="https://github.com/itsDNNS/tribu/wiki/Meal-Planning-and-Recipes">Meal planning docs</a>
+            <a class="button secondary" href="https://github.com/itsDNNS/tribu/wiki/Shopping-Lists">Shopping docs</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="self-hosting">
+      <div class="wrap grid-2">
+        <div class="install">
+          <h2>Self-hosted where it counts.</h2>
+          <p>Run Tribu with Docker Compose, published GHCR images, PostgreSQL, and Valkey. Keep family data on your server while the app stays focused on the household using it.</p>
+          <pre><code>mkdir tribu && cd tribu
+curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/docker/docker-compose.yml
+curl -LO https://raw.githubusercontent.com/itsDNNS/tribu/main/docker/.env.example
+cp .env.example .env
+# Fill in JWT_SECRET and POSTGRES_PASSWORD
+docker compose up -d</code></pre>
+        </div>
+        <div>
+          <h2>Connect the home you already run.</h2>
+          <div class="feature-list" aria-label="Integration features">
+            <span>Home Assistant package</span>
+            <span>Webhook automations</span>
+            <span>Scoped API tokens</span>
+            <span>CalDAV and CardDAV</span>
+            <span>Backup and restore docs</span>
+            <span>Reverse proxy guidance</span>
+          </div>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/itsDNNS/tribu/wiki/Self-Hosting">Read the install guide</a>
+            <a class="button secondary" href="https://github.com/itsDNNS/tribu/wiki/Home-Assistant">Home Assistant guide</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="section-header">
+          <h2>Explore before you deploy.</h2>
+          <p>Open Tribu and choose Try demo on the login page to explore realistic household data before setting up your own family workspace.</p>
+        </div>
+        <div class="grid-3">
+          <article class="card"><h3>Demo mode</h3><p>Try the full UI without a production setup.</p></article>
+          <article class="card"><h3>Versioned releases</h3><p>Use published releases and GHCR images instead of guessing from source.</p></article>
+          <article class="card"><h3>Public docs</h3><p>Start with the Wiki for setup, operations, integrations, and troubleshooting.</p></article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p><strong>Tribu</strong> is MIT licensed and built for families who want less scattered planning without giving up control of their data.</p>
+      <p><a href="https://github.com/itsDNNS/tribu">GitHub</a> · <a href="https://github.com/itsDNNS/tribu/wiki">Documentation</a> · <a href="https://github.com/itsDNNS/tribu/releases">Releases</a> · <a href="https://github.com/itsDNNS/tribu/discussions">Discussions</a></p>
+    </div>
+  </footer>
+</body>
+</html>
