@@ -501,4 +501,26 @@ describe('DisplayDashboard — school timetables', () => {
     expect(document.body).not.toHaveTextContent(/@example\.com/);
     expect(document.body).not.toHaveTextContent(/user_id/i);
   });
+
+  test('uses the display payload period label when a break has no custom label', () => {
+    renderWithFixedNow(
+      buildDashboard({
+        today_school_timetables: [
+          {
+            name: 'German timetable',
+            class_label: '4b',
+            children: [{ display_name: 'Mia', color: '#f43f5e', profile_image: null }],
+            lessons: [
+              { period_label: 'Pause', start_time: '08:45:00', end_time: '09:00:00', kind: 'break', break_label: null },
+            ],
+          },
+        ],
+      }),
+      new Date('2026-04-27T08:00:00')
+    );
+
+    const school = screen.getByTestId('display-school-today');
+    expect(school).toHaveTextContent('Pause');
+    expect(school).not.toHaveTextContent('Break');
+  });
 });

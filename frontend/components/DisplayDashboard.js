@@ -296,7 +296,7 @@ function SchoolToday({ timetables }) {
               {(group.lessons || []).slice(0, 6).map((lesson, idx) => (
                 <li key={`${lesson.period_label}-${idx}`} className={`display-school-lesson display-school-lesson--${lesson.kind}`}>
                   <span className="display-school-lesson-time">{formatTimeRange(lesson.start_time, lesson.end_time)}</span>
-                  <span className="display-school-lesson-title">{lesson.kind === 'break' ? (lesson.break_label || 'Break') : lesson.subject}</span>
+                  <span className="display-school-lesson-title">{lesson.kind === 'break' ? (lesson.break_label || lesson.period_label || '') : lesson.subject}</span>
                 </li>
               ))}
             </ol>
