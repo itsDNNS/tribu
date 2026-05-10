@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from datetime import datetime, timedelta
 
 import pytest
@@ -291,6 +292,39 @@ def test_provider_unavailable_is_safe_and_does_not_leak_secret(monkeypatch):
     assert resp.json()["status"] == "failed"
     assert resp.json()["error"] == "provider_unavailable"
     assert "placeholder-token" not in str(resp.json())
+
+
+def test_send_failure_log_does_not_echo_destination_secret(monkeypatch, caplog):
+    token, family_id, user_id = _seed_member()
+    secret_url = "ntfy://ntfy.sh/private-topic?token=secret-token-123"
+    db = TestSession()
+    try:
+        dest = _destination(family_id, user_id, target_url_secret=secret_url)
+        db.add(dest)
+        db.commit()
+        dest_id = dest.id
+    finally:
+        db.close()
+
+    from app.core import notification_destinations as destinations_core
+
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+
+    def failing_send(url, _payload):
+        raise RuntimeError(f"send failed for {url}")
+
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", failing_send)
+
+    with caplog.at_level(logging.WARNING, logger="app.core.notification_destinations"):
+        resp = client.post(f"/notification-destinations/{dest_id}/test", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["status"] == "failed"
+    assert resp.json()["error"] == "send_failed"
+    assert "Notification destination delivery failed" in caplog.text
+    assert secret_url not in caplog.text
+    assert "secret-token-123" not in caplog.text
+    assert "private-topic" not in caplog.text
 
 
 def test_scheduler_dispatches_once_across_users_and_retries(monkeypatch):

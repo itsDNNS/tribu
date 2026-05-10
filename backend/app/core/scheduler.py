@@ -200,10 +200,7 @@ def _check_notifications():
                 try:
                     dispatch_family_notification(**destination_dispatch)
                 except Exception:
-                    logger.exception(
-                        "Family notification destination dispatch failed for %s",
-                        destination_dispatch["trigger_key"],
-                    )
+                    logger.warning("Family notification destination dispatch failed")
 
         def adopt_legacy_log(
             uid: int,

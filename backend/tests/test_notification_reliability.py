@@ -8,6 +8,7 @@ assert how the scheduler treats trigger keys, retries, and push results.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import logging
 
 import pytest
 from sqlalchemy import create_engine, event
@@ -454,6 +455,44 @@ def test_destination_dispatch_runs_after_in_app_and_push_delivery(monkeypatch):
     scheduler_module._check_notifications()
 
     assert calls == ["push", "destination"]
+
+
+def test_destination_dispatch_failure_does_not_log_trigger_key(monkeypatch, caplog):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "destination-log@example.com")
+        _set_pref(db, user.id, push_enabled=False)
+        now = datetime(2026, 4, 25, 12, 0, 0)
+        ev = CalendarEvent(
+            family_id=fam.id,
+            title="Sensitive appointment",
+            starts_at=now + timedelta(minutes=10),
+            all_day=False,
+        )
+        db.add(ev)
+        db.commit()
+    finally:
+        db.close()
+
+    _freeze_now(monkeypatch, now)
+
+    from app.core import scheduler as scheduler_module
+
+    captured_trigger_keys = []
+
+    def failing_destination_dispatch(**kwargs):
+        captured_trigger_keys.append(kwargs["trigger_key"])
+        raise RuntimeError(f"destination send failed for {kwargs['trigger_key']}")
+
+    monkeypatch.setattr(scheduler_module, "dispatch_family_notification", failing_destination_dispatch)
+
+    with caplog.at_level(logging.WARNING, logger="app.core.scheduler"):
+        scheduler_module._check_notifications()
+
+    assert captured_trigger_keys
+    assert "Family notification destination dispatch failed" in caplog.text
+    for trigger_key in captured_trigger_keys:
+        assert trigger_key not in caplog.text
 
 
 def test_recurring_event_occurrence_creates_one_reminder(monkeypatch):

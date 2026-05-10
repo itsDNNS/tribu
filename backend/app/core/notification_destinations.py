@@ -198,7 +198,7 @@ def _deliver_claimed(db, destination: NotificationDestination, delivery: Notific
         delivery.status = "failed"
         delivery.last_error = "timeout"
     except Exception:
-        logger.exception("Notification destination delivery failed for destination %s", destination.id)
+        logger.warning("Notification destination delivery failed for destination %s", destination.id)
         delivery.status = "failed"
         delivery.last_error = "send_failed"
     else:
