@@ -13,7 +13,7 @@ const TYPE_ICONS = {
 };
 
 export default function NotificationCenter({ onClose } = {}) {
-  const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView } = useApp();
+  const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
   const closeBtnRef = useRef(null);
 
   useEffect(() => {
@@ -58,6 +58,14 @@ export default function NotificationCenter({ onClose } = {}) {
       setActiveView(notif.link);
     }
   }
+
+  function handleConfigureHouseholdNotifications() {
+    if (typeof window !== 'undefined') sessionStorage.setItem('tribu_settings_tab', 'notification_destinations');
+    if (onClose) onClose();
+    setActiveView('settings');
+  }
+
+  const canManageHouseholdDestinations = !onClose && isAdmin && !isChild && !demoMode;
 
   // Group notifications by time period
   const groups = (() => {
@@ -112,6 +120,17 @@ export default function NotificationCenter({ onClose } = {}) {
               <CheckCheck size={16} /> {t(messages, 'notifications_mark_all_read')}
             </button>
           )}
+        </div>
+      )}
+
+      {canManageHouseholdDestinations && (
+        <div className="notif-empty notification-destination-callout">
+          <Bell size={24} className="notif-empty-icon" />
+          <p><strong>{t(messages, 'notifications_external_destinations_title')}</strong></p>
+          <p>{t(messages, 'notifications_external_destinations_help')}</p>
+          <button type="button" className="bento-empty-action" onClick={handleConfigureHouseholdNotifications}>
+            {t(messages, 'notifications_external_destinations_action')}
+          </button>
         </div>
       )}
 

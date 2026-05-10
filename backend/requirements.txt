@@ -18,3 +18,4 @@ httpx==0.28.1
 radicale==3.7.1
 a2wsgi==1.10.7
 apprise==1.10.0
+cryptography==46.0.7

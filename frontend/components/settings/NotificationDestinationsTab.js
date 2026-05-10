@@ -23,7 +23,7 @@ export default function NotificationDestinationsTab() {
   const { familyId, messages } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const [destinations, setDestinations] = useState([]);
-  const [providerStatus, setProviderStatus] = useState({ available: true });
+  const [providerStatus, setProviderStatus] = useState({ available: null });
   const [form, setForm] = useState(emptyForm);
   const [busy, setBusy] = useState(false);
 
@@ -36,6 +36,7 @@ export default function NotificationDestinationsTab() {
   const loadProviderStatus = useCallback(async () => {
     const res = await api.apiGetNotificationDestinationProviderStatus();
     if (res.ok) setProviderStatus(res.data || { available: false });
+    else setProviderStatus({ available: false });
   }, []);
 
   useEffect(() => { loadProviderStatus(); }, [loadProviderStatus]);
@@ -55,7 +56,7 @@ export default function NotificationDestinationsTab() {
 
   async function handleCreate(event) {
     event.preventDefault();
-    if (!familyId || !providerStatus.available) return;
+    if (!familyId) return;
     setBusy(true);
     try {
       const res = await api.apiCreateNotificationDestination({
@@ -84,6 +85,8 @@ export default function NotificationDestinationsTab() {
   }
 
   async function handleDelete(destination) {
+    const message = t(messages, 'notification_destinations_delete_confirm').replace('{name}', destination.name);
+    if (!window.confirm(message)) return;
     const res = await api.apiDeleteNotificationDestination(destination.id);
     if (res.ok) {
       toastSuccess(t(messages, 'notification_destinations_deleted'));
@@ -95,15 +98,16 @@ export default function NotificationDestinationsTab() {
     const res = await api.apiTestNotificationDestination(destination.id);
     if (res.ok) {
       const delivered = res.data?.status === 'delivered';
-      toastSuccess(t(messages, delivered ? 'notification_destinations_test_sent' : 'notification_destinations_test_failed'));
+      if (delivered) toastSuccess(t(messages, 'notification_destinations_test_sent'));
+      else toastError(t(messages, 'notification_destinations_test_failed'));
       await loadDestinations();
     } else {
       toastError(t(messages, 'notification_destinations_test_failed'));
     }
   }
 
-  const providerAvailable = providerStatus?.available !== false;
-  const canSubmit = providerAvailable && !busy && familyId && form.name.trim() && form.target_url_secret.trim() && form.events.length > 0;
+  const providerAvailable = providerStatus?.available === true;
+  const canSubmit = !busy && familyId && form.name.trim() && form.target_url_secret.trim() && form.events.length > 0;
 
   return (
     <div className="settings-grid">
@@ -204,7 +208,7 @@ export default function NotificationDestinationsTab() {
                   <button className="btn-ghost" onClick={() => handleToggle(destination)}>
                     {t(messages, destination.active ? 'notification_destinations_disable' : 'notification_destinations_enable')}
                   </button>
-                  <button className="btn-sm" onClick={() => handleTest(destination)}>{t(messages, 'notification_destinations_send_test')}</button>
+                  <button className="btn-sm" disabled={!providerAvailable || busy} onClick={() => handleTest(destination)}>{t(messages, 'notification_destinations_send_test')}</button>
                   <button
                     className="btn-ghost"
                     aria-label={t(messages, 'notification_destinations_delete_label').replace('{name}', destination.name)}

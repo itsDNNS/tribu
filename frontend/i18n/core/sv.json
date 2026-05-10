@@ -693,5 +693,9 @@
   "notification_destinations_disable": "Disable",
   "notification_destinations_enable": "Enable",
   "notification_destinations_send_test": "Send test",
-  "notification_destinations_delete_label": "Delete {name}"
+  "notification_destinations_delete_label": "Delete {name}",
+  "notification_destinations_delete_confirm": "Delete notification destination {name}?",
+  "notifications_external_destinations_title": "Send reminders outside Tribu",
+  "notifications_external_destinations_help": "Admins can add Gotify, ntfy, Telegram, Matrix, or email destinations for household reminders.",
+  "notifications_external_destinations_action": "Configure household notifications"
 }

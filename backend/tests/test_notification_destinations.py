@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import socket
+import types
 from datetime import datetime, timedelta
 
 import pytest
@@ -46,6 +48,9 @@ def _set_sqlite_pragma(dbapi_conn, _):
 def setup_db(monkeypatch):
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    monkeypatch.setenv("NOTIFICATION_DESTINATION_SECRET_KEY", "notification-destination-test-key")
+    monkeypatch.delenv("NOTIFICATION_DESTINATION_ALLOWED_HOSTS", raising=False)
+    monkeypatch.delenv("NOTIFICATION_DESTINATION_ALLOW_PRIVATE_HOSTS", raising=False)
 
     def _override():
         db = TestSession()
@@ -131,6 +136,7 @@ def _destination(family_id: int, user_id: int, **overrides) -> NotificationDesti
 
 def test_admin_crud_redacts_secret_and_audits_safe_metadata():
     token, family_id, _ = _seed_member()
+    raw_url = "ntfy://ntfy.sh/placeholder-topic?token=placeholder-token"
 
     created = client.post(
         "/notification-destinations",
@@ -138,7 +144,7 @@ def test_admin_crud_redacts_secret_and_audits_safe_metadata():
         json={
             "family_id": family_id,
             "name": "Kitchen ntfy",
-            "target_url_secret": "ntfy://ntfy.sh/placeholder-topic?token=placeholder-token",
+            "target_url_secret": raw_url,
             "events": ["calendar.reminder", "task.reminder"],
             "active": True,
             "respect_quiet_hours": True,
@@ -154,6 +160,19 @@ def test_admin_crud_redacts_secret_and_audits_safe_metadata():
     assert "placeholder-token" not in str(body)
     assert "placeholder-topic" not in str(body)
     assert "target_url_secret" not in body
+
+    db = TestSession()
+    try:
+        stored = db.get(NotificationDestination, body["id"]).target_url_secret
+    finally:
+        db.close()
+
+    from app.core.notification_destinations import reveal_target_url
+
+    assert stored.startswith("enc:v1:")
+    assert raw_url not in stored
+    assert "placeholder-token" not in stored
+    assert reveal_target_url(stored) == raw_url
 
     listed = client.get(f"/notification-destinations?family_id={family_id}", headers=_auth(token))
     assert listed.status_code == 200, listed.json()
@@ -191,7 +210,7 @@ def test_admin_authorization_cross_family_and_pat_scope_split():
         json={
             "family_id": family_id,
             "name": "Gotify",
-            "target_url_secret": "gotify://host.example/token",
+            "target_url_secret": "mailto://user@example.com",
             "events": ["calendar.reminder"],
         },
     )
@@ -209,12 +228,173 @@ def test_admin_authorization_cross_family_and_pat_scope_split():
     assert denied_adult.status_code == 403
 
     denied_outsider = client.delete(f"/notification-destinations/{dest_id}", headers=_auth(outsider_token))
-    assert denied_outsider.status_code == 403
+    assert denied_outsider.status_code == 404
     assert "token" not in str(denied_outsider.json()).lower()
 
 
 @pytest.mark.parametrize("url", [
-    "https://example.com/hook?token=secret-token",
+    "gotify://127.0.0.1/secret-token",
+    "ntfy://localhost/private-topic?token=secret-token",
+    "smtp://169.254.169.254:25?user=secret-token",
+    "gotify://100.64.0.1/secret-token",
+    "mailto://user@127.0.0.1",
+])
+def test_rejects_private_destination_hosts_without_echoing_secret(url):
+    token, family_id, _ = _seed_member()
+
+    resp = client.post(
+        "/notification-destinations",
+        headers=_auth(token),
+        json={
+            "family_id": family_id,
+            "name": "Unsafe internal",
+            "target_url_secret": url,
+            "events": ["calendar.reminder"],
+        },
+    )
+
+    assert resp.status_code == 422
+    body = str(resp.json())
+    assert "secret-token" not in body
+    assert "private-topic" not in body
+
+
+def test_telegram_destination_token_is_not_treated_as_destination_host(monkeypatch):
+    token, family_id, _ = _seed_member()
+
+    def fail_if_resolved(*_args, **_kwargs):
+        raise AssertionError("Telegram token should not be resolved as a hostname at save time")
+
+    from app.core import notification_destinations as destinations_core
+
+    monkeypatch.setattr(destinations_core.socket, "getaddrinfo", fail_if_resolved)
+
+    resp = client.post(
+        "/notification-destinations",
+        headers=_auth(token),
+        json={
+            "family_id": family_id,
+            "name": "Telegram reminders",
+            "target_url_secret": "tgram://123456:placeholder-token/987654321",
+            "events": ["calendar.reminder"],
+        },
+    )
+
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["url_redacted"] == "tgram://[redacted]"
+
+
+def test_rejects_network_destination_when_hostname_cannot_be_resolved(monkeypatch):
+    token, family_id, _ = _seed_member()
+
+    def unresolved(*_args, **_kwargs):
+        raise socket.gaierror("name not known")
+
+    from app.core import notification_destinations as destinations_core
+
+    monkeypatch.setattr(destinations_core.socket, "getaddrinfo", unresolved)
+
+    resp = client.post(
+        "/notification-destinations",
+        headers=_auth(token),
+        json={
+            "family_id": family_id,
+            "name": "Unresolved Gotify",
+            "target_url_secret": "gotify://unresolved.example.test/secret-token",
+            "events": ["calendar.reminder"],
+        },
+    )
+
+    assert resp.status_code == 422
+    assert "secret-token" not in str(resp.json())
+
+
+def test_apprise_send_revalidates_dns_resolution_at_notify_time(monkeypatch):
+    from app.core import notification_destinations as destinations_core
+
+    class FakeServer:
+        pass
+
+    class FakeApprise:
+        def __init__(self):
+            self.servers = [FakeServer()]
+
+        def add(self, _url):
+            return True
+
+        def notify(self, *, title, body):
+            assert title
+            assert body
+            destinations_core.socket.getaddrinfo("rebind.example", 443, proto=socket.IPPROTO_TCP)
+            return True
+
+    def fake_import_module(name):
+        assert name == "apprise"
+        return types.SimpleNamespace(Apprise=FakeApprise)
+
+    def rebound_to_private(*_args, **_kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("127.0.0.1", 443))]
+
+    monkeypatch.setattr(destinations_core.importlib, "import_module", fake_import_module)
+    monkeypatch.setattr(destinations_core.socket, "getaddrinfo", rebound_to_private)
+
+    with pytest.raises(ValueError):
+        destinations_core._send_with_apprise(
+            "gotify://rebind.example/secret-token",
+            {"title": "Test", "body": "Body", "link": None},
+        )
+
+
+def test_private_destination_host_can_be_enabled_with_explicit_allowlist(monkeypatch):
+    token, family_id, _ = _seed_member()
+    monkeypatch.setenv("NOTIFICATION_DESTINATION_ALLOWED_HOSTS", "127.0.0.1")
+
+    resp = client.post(
+        "/notification-destinations",
+        headers=_auth(token),
+        json={
+            "family_id": family_id,
+            "name": "Allowed local Gotify",
+            "target_url_secret": "gotify://127.0.0.1/secret-token",
+            "events": ["calendar.reminder"],
+        },
+    )
+
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["url_redacted"] == "gotify://[redacted]"
+
+
+def test_existing_private_destination_url_is_blocked_at_delivery_time(monkeypatch):
+    token, family_id, user_id = _seed_member()
+    db = TestSession()
+    try:
+        dest = _destination(family_id, user_id, target_url_secret="gotify://127.0.0.1/secret-token")
+        db.add(dest)
+        db.commit()
+        dest_id = dest.id
+    finally:
+        db.close()
+
+    from app.core import notification_destinations as destinations_core
+
+    calls = []
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+
+    def fail_if_called(url, payload):
+        calls.append((url, payload))
+        return True
+
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", fail_if_called)
+
+    resp = client.post(f"/notification-destinations/{dest_id}/test", headers=_auth(token))
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["status"] == "failed"
+    assert resp.json()["error"] == "invalid_url"
+    assert calls == []
+
+
+@pytest.mark.parametrize("url", [
+    "https://example.com/hook?token=***",
     "file:///tmp/secret-token",
     "json://localhost",
 ])
@@ -242,7 +422,7 @@ def test_provider_status_and_test_send_with_mocked_sender(monkeypatch):
     token, family_id, user_id = _seed_member()
     db = TestSession()
     try:
-        dest = _destination(family_id, user_id, target_url_secret="mailto://user@mail.example")
+        dest = _destination(family_id, user_id, target_url_secret="mailto://user@example.com")
         db.add(dest)
         db.commit()
         dest_id = dest.id
@@ -267,7 +447,7 @@ def test_provider_status_and_test_send_with_mocked_sender(monkeypatch):
     resp = client.post(f"/notification-destinations/{dest_id}/test", headers=_auth(token))
     assert resp.status_code == 200, resp.json()
     assert resp.json()["status"] == "delivered"
-    assert calls[0][0] == "mailto://user@mail.example"
+    assert calls[0][0] == "mailto://user@example.com"
     assert calls[0][1]["event_type"] == "notification.test"
     assert "password" not in str(resp.json())
 

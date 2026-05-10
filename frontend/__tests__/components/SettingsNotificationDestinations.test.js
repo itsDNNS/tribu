@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import SettingsView from '../../components/settings';
 import { buildMessages } from '../../lib/i18n';
@@ -46,5 +46,19 @@ describe('Settings notification destinations visibility', () => {
       expect(screen.queryByRole('button', { name: 'Household notifications' })).not.toBeInTheDocument();
       unmount();
     }
+  });
+
+  it('resets the active tab when the current tab becomes hidden', () => {
+    mockAppState = baseState();
+    const { rerender } = render(<SettingsView />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Household notifications' }));
+    expect(screen.getByText('Notification destination panel')).toBeInTheDocument();
+
+    mockAppState = baseState({ isAdmin: false });
+    rerender(<SettingsView />);
+
+    expect(screen.queryByText('Notification destination panel')).not.toBeInTheDocument();
+    expect(screen.getByText('Account panel')).toBeInTheDocument();
   });
 });
