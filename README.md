@@ -77,35 +77,51 @@ Tribu runs with Docker Compose, published GHCR images, PostgreSQL, Valkey, and c
 
 <br>
 
-**1. Daily mobile check-in**
+**1. Shared Home Display**
 
-<p align="center">
-  <img src="docs/assets/screenshot-mobile.png" alt="Mobile dashboard" width="320" />
-</p>
+<img src="docs/assets/screenshot-shared-display.png" alt="Shared Home Display on a kitchen tablet" width="100%" />
+
+A read-only household display for a kitchen tablet or hallway screen. Pair a display device, give it a revocable display token, and show the day without leaving a personal account signed in.
 
 **2. Desktop planning view**
 
 <img src="docs/assets/screenshot-light.png" alt="Dashboard in the Morning Mist theme" width="100%" />
 
-**3. Calendar for school, appointments, and routines**
+**3. Meals, recipes, and shopping**
 
-<img src="docs/assets/screenshot-calendar.png" alt="Calendar view" width="100%" />
+<img src="docs/assets/screenshot-meal-plans.png" alt="Meal planning with recipes and ingredients" width="100%" />
 
-**4. Shopping lists that stay useful while people are out**
+Plan meals next to the rest of the week, keep recurring recipes nearby, and move ingredients toward the shopping list without opening another planning app.
 
-<img src="docs/assets/screenshot-shopping.png" alt="Shopping view" width="100%" />
+**4. School timetables**
 
-**5. Tasks with ownership, priority, due dates, recurrence, and templates**
+<img src="docs/assets/screenshot-school-timetables.png" alt="School timetable planning in Tribu" width="100%" />
 
-<img src="docs/assets/screenshot-tasks.png" alt="Tasks view" width="100%" />
+Keep each child's school week next to the rest of the family calendar, with lesson times, breaks, and assigned children in one place.
 
-**6. Rewards for routines and momentum**
+**5. Phone sync**
 
-<img src="docs/assets/screenshot-rewards.png" alt="Rewards view" width="100%" />
+<img src="docs/assets/screenshot-phone-sync.png" alt="CalDAV and CardDAV phone sync settings" width="100%" />
 
-**7. Demo and onboarding before anyone commits to a setup**
+Sync calendars and contacts through CalDAV and CardDAV. iOS works with the built-in Calendar and Contacts apps. Android works through a DAV-compatible client such as DAVx5.
 
-<img src="docs/assets/screenshot-auth.png" alt="Login and demo entry" width="100%" />
+**6. Home Assistant and webhooks**
+
+<img src="docs/assets/screenshot-home-assistant-webhooks.png" alt="Automation webhook settings for Home Assistant" width="100%" />
+
+Send selected Tribu events to automation tools such as Home Assistant through scoped webhooks with redacted endpoint details and secret headers.
+
+**7. Birthdays and gift ideas**
+
+<img src="docs/assets/screenshot-gifts.png" alt="Gift ideas and birthdays in Tribu" width="100%" />
+
+Keep birthdays and gift ideas close to the rest of household planning instead of maintaining another spreadsheet.
+
+**8. Recipes for the week**
+
+<img src="docs/assets/screenshot-recipes.png" alt="Recipes in Tribu" width="100%" />
+
+Keep family recipes organized, searchable, and ready for meal planning.
 
 See the [Wiki](https://github.com/itsDNNS/tribu/wiki) for setup guides and the broader product documentation.
 

@@ -11,12 +11,12 @@ import {
 import { t } from '../lib/i18n';
 
 const WEEKDAYS = [
-  { value: 1, short: 'Mo', full: 'Montag' },
-  { value: 2, short: 'Di', full: 'Dienstag' },
-  { value: 3, short: 'Mi', full: 'Mittwoch' },
-  { value: 4, short: 'Do', full: 'Donnerstag' },
-  { value: 5, short: 'Fr', full: 'Freitag' },
-  { value: 6, short: 'Sa', full: 'Samstag' },
+  { value: 1, shortKey: 'module.school_timetables.weekday.monday.short', fullKey: 'module.school_timetables.weekday.monday.full' },
+  { value: 2, shortKey: 'module.school_timetables.weekday.tuesday.short', fullKey: 'module.school_timetables.weekday.tuesday.full' },
+  { value: 3, shortKey: 'module.school_timetables.weekday.wednesday.short', fullKey: 'module.school_timetables.weekday.wednesday.full' },
+  { value: 4, shortKey: 'module.school_timetables.weekday.thursday.short', fullKey: 'module.school_timetables.weekday.thursday.full' },
+  { value: 5, shortKey: 'module.school_timetables.weekday.friday.short', fullKey: 'module.school_timetables.weekday.friday.full' },
+  { value: 6, shortKey: 'module.school_timetables.weekday.saturday.short', fullKey: 'module.school_timetables.weekday.saturday.full' },
 ];
 
 const SUBJECT_PALETTE = [
@@ -31,7 +31,7 @@ const SUBJECT_PALETTE = [
 
 const DEFAULT_PERIODS = [
   { position: 1, label: '1', start_time: '08:00', end_time: '08:45', kind: 'lesson', break_label: '' },
-  { position: 2, label: 'Break', start_time: '08:45', end_time: '09:00', kind: 'break', break_label: 'Pause' },
+  { position: 2, label: '', start_time: '08:45', end_time: '09:00', kind: 'break', break_label: '' },
   { position: 3, label: '2', start_time: '09:00', end_time: '09:45', kind: 'lesson', break_label: '' },
 ];
 
@@ -55,6 +55,10 @@ function normalizeTime(value) {
 
 function lessonKey(weekday, position) {
   return `${weekday}:${position}`;
+}
+
+function formatMessage(template, values = {}) {
+  return String(template).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '');
 }
 
 function buildLessonMap(lessons) {
@@ -90,7 +94,7 @@ function payloadFromForm(form, familyId) {
       start_time: normalizeTime(p.start_time),
       end_time: normalizeTime(p.end_time),
       kind: p.kind === 'break' ? 'break' : 'lesson',
-      break_label: p.kind === 'break' ? (p.break_label || p.label || 'Break') : null,
+      break_label: p.kind === 'break' ? (p.break_label?.trim() || null) : null,
     })),
     lessons: (form.lessons || [])
       .filter((l) => l.subject && l.subject.trim())
@@ -119,7 +123,10 @@ export default function SchoolTimetablesView() {
     () => (members || []).filter((m) => !m.is_adult),
     [members]
   );
-  const visibleWeekdays = WEEKDAYS.filter((d) => d.value <= 5 || form.include_saturday);
+  const msg = (key, fallback) => t(messages, key, fallback);
+  const visibleWeekdays = WEEKDAYS
+    .filter((d) => d.value <= 5 || form.include_saturday)
+    .map((d) => ({ ...d, short: msg(d.shortKey), full: msg(d.fullKey) }));
   const lessonMap = buildLessonMap(form.lessons);
   const activeMobileDay = visibleWeekdays.find((d) => d.value === mobileDay) || visibleWeekdays[0];
 
@@ -214,7 +221,7 @@ export default function SchoolTimetablesView() {
         ...current,
         periods: [
           ...current.periods,
-          { position, label: kind === 'break' ? 'Break' : String(position), start_time: '12:00', end_time: '12:45', kind, break_label: kind === 'break' ? 'Pause' : '' },
+          { position, label: kind === 'break' ? '' : String(position), start_time: '12:00', end_time: '12:45', kind, break_label: '' },
         ],
       };
     });
@@ -246,7 +253,7 @@ export default function SchoolTimetablesView() {
 
   async function save() {
     if (!form.name.trim()) {
-      setStatus('Bitte einen Namen vergeben.');
+      setStatus(msg('module.school_timetables.name_required'));
       return;
     }
     setSaving(true);
@@ -257,10 +264,10 @@ export default function SchoolTimetablesView() {
       : await apiCreateSchoolTimetable(payload);
     setSaving(false);
     if (!result.ok) {
-      setStatus(result.data?.detail || 'Speichern fehlgeschlagen.');
+      setStatus(result.data?.detail || msg('module.school_timetables.save_failed'));
       return;
     }
-    setStatus('Gespeichert.');
+    setStatus(msg('module.school_timetables.saved'));
     await load();
     selectTimetable(result.data);
   }
@@ -269,7 +276,7 @@ export default function SchoolTimetablesView() {
     if (!selectedId) return;
     const result = await apiDeleteSchoolTimetable(selectedId);
     if (!result.ok) {
-      setStatus(result.data?.detail || 'Löschen fehlgeschlagen.');
+      setStatus(result.data?.detail || msg('module.school_timetables.delete_failed'));
       return;
     }
     setCreating(false);
@@ -290,7 +297,7 @@ export default function SchoolTimetablesView() {
         </div>
         <div className="school-empty-rich">
           <div className="school-empty-icon-wrap"><GraduationCap size={32} aria-hidden="true" /></div>
-          <p>School timetables are available in family mode.</p>
+          <p>{msg('module.school_timetables.demo_blocked')}</p>
         </div>
       </div>
     );
@@ -317,21 +324,21 @@ export default function SchoolTimetablesView() {
           <div className="school-empty-icon-wrap" aria-hidden="true"><GraduationCap size={36} /></div>
           <h2 className="school-empty-title">{t(messages, 'module.school_timetables.empty')}</h2>
           <p className="school-empty-body">
-            Lege einen Wochenplan an, damit Fächer, Pausen und Stundenzeiten übersichtlich an einem Ort liegen.
+            {msg('module.school_timetables.empty_body')}
           </p>
           <button type="button" className="btn-primary school-empty-cta" onClick={startNew}>
-            <Sparkles size={16} aria-hidden="true" /> Ersten Stundenplan erstellen
+            <Sparkles size={16} aria-hidden="true" /> {msg('module.school_timetables.empty_cta')}
           </button>
         </div>
       ) : (
         <div className="school-layout">
-          <aside className="school-list-card" aria-label="Stundenpläne">
+          <aside className="school-list-card" aria-label={msg('module.school_timetables.list_label')}>
             <div className="school-list-header">
-              <span className="school-list-title">Pläne</span>
+              <span className="school-list-title">{msg('module.school_timetables.list_title')}</span>
               <span className="school-list-count">{timetables.length}</span>
             </div>
             {timetables.length === 0 && creating && (
-              <p className="muted school-list-empty">Neuer Plan in Bearbeitung…</p>
+              <p className="muted school-list-empty">{msg('module.school_timetables.list_empty_creating')}</p>
             )}
             <div className="school-list-items">
               {timetables.map((item) => {
@@ -346,9 +353,9 @@ export default function SchoolTimetablesView() {
                   >
                     <div className="school-list-item-name">{item.name}</div>
                     <div className="school-list-item-meta">
-                      <span className="school-list-item-class">{item.class_label || 'Ohne Klasse'}</span>
+                      <span className="school-list-item-class">{item.class_label || msg('module.school_timetables.no_class')}</span>
                       {(item.assigned_members || []).length > 0 && (
-                        <span className="school-list-item-children" aria-label="Zugeordnete Kinder">
+                        <span className="school-list-item-children" aria-label={msg('module.school_timetables.assigned_children')}>
                           {item.assigned_members.map((m, i) => (
                             <MemberAvatar key={m.user_id ?? i} member={m} index={i} size={20} />
                           ))}
@@ -370,7 +377,7 @@ export default function SchoolTimetablesView() {
                     className="form-input"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Klasse 4b"
+                    placeholder={msg('module.school_timetables.name_placeholder')}
                   />
                 </label>
                 <label className="school-field">
@@ -397,14 +404,14 @@ export default function SchoolTimetablesView() {
             </section>
 
             <section className="school-editor-section">
-              <h2 className="school-section-title">Für wen ist dieser Plan?</h2>
+              <h2 className="school-section-title">{msg('module.school_timetables.assigned_children_heading')}</h2>
               <div
                 className="school-children-row"
                 role="group"
                 aria-label={t(messages, 'module.school_timetables.assigned_children')}
               >
                 {childCandidates.length === 0 ? (
-                  <p className="muted">Keine Kinder in der Familie gefunden.</p>
+                  <p className="muted">{msg('module.school_timetables.no_children')}</p>
                 ) : childCandidates.map((member, i) => {
                   const active = (form.assigned_member_user_ids || []).includes(member.user_id);
                   return (
@@ -413,7 +420,7 @@ export default function SchoolTimetablesView() {
                       type="button"
                       role="checkbox"
                       aria-checked={active}
-                      aria-label={`${member.display_name}${active ? ' zugeordnet' : ''}`}
+                      aria-label={active ? formatMessage(msg('module.school_timetables.child_assigned_aria'), { name: member.display_name }) : member.display_name}
                       className={`school-child-chip${active ? ' active' : ''}`}
                       onClick={() => toggleMember(member.user_id)}
                     >
@@ -433,10 +440,10 @@ export default function SchoolTimetablesView() {
             <section className="school-editor-section school-grid-section">
               <div className="school-section-head">
                 <h2 className="school-section-title">{t(messages, 'module.school_timetables.lessons')}</h2>
-                <p className="school-section-hint">Tippe in eine Zelle, um ein Fach einzutragen.</p>
+                <p className="school-section-hint">{msg('module.school_timetables.lesson_hint')}</p>
               </div>
 
-              <div className="school-day-pager" role="tablist" aria-label="Wochentag wählen">
+              <div className="school-day-pager" role="tablist" aria-label={msg('module.school_timetables.choose_weekday')}>
                 {visibleWeekdays.map((day) => (
                   <button
                     key={day.value}
@@ -454,7 +461,7 @@ export default function SchoolTimetablesView() {
               <div
                 className="school-grid"
                 role="grid"
-                aria-label="Stundenplan"
+                aria-label={msg('module.school_timetables.grid_label')}
                 style={{ '--school-columns': visibleWeekdays.length }}
               >
                 <div className="school-grid-corner" role="presentation" />
@@ -479,10 +486,10 @@ export default function SchoolTimetablesView() {
                         </div>
                         <div
                           className="school-grid-break-bar"
-                          aria-label={`Pause ${time}`}
+                          aria-label={formatMessage(msg('module.school_timetables.break_aria'), { time })}
                         >
                           <Coffee size={14} aria-hidden="true" />
-                          <span>{period.break_label || period.label || 'Pause'}</span>
+                          <span>{period.break_label || msg('module.school_timetables.period_kind_break')}</span>
                         </div>
                       </div>
                     );
@@ -498,7 +505,7 @@ export default function SchoolTimetablesView() {
                         const subject = lesson?.subject || '';
                         const palette = subjectPalette(subject);
                         const cellStyle = palette ? { '--st-bg': palette.bg, '--st-fg': palette.fg } : undefined;
-                        const cellLabel = `${day.full}, ${period.label}. Stunde${subject ? ', ' + subject : ', leer'}`;
+                        const cellLabel = formatMessage(msg('module.school_timetables.cell_aria'), { day: day.full, period: period.label, subject: subject || msg('module.school_timetables.empty_cell') });
                         return (
                           <div
                             key={`${day.value}-${period.position}`}
@@ -521,7 +528,7 @@ export default function SchoolTimetablesView() {
                 })}
               </div>
 
-              <div className="school-day-list" aria-label={`Plan für ${activeMobileDay?.full || ''}`}>
+              <div className="school-day-list" aria-label={formatMessage(msg('module.school_timetables.day_plan_aria'), { day: activeMobileDay?.full || '' })}>
                 {form.periods.map((period) => {
                   const time = `${normalizeTime(period.start_time)}–${normalizeTime(period.end_time)}`;
                   if (period.kind === 'break') {
@@ -530,7 +537,7 @@ export default function SchoolTimetablesView() {
                         <div className="school-day-list-time">{time}</div>
                         <div className="school-grid-break-bar">
                           <Coffee size={14} aria-hidden="true" />
-                          <span>{period.break_label || 'Pause'}</span>
+                          <span>{period.break_label || msg('module.school_timetables.period_kind_break')}</span>
                         </div>
                       </div>
                     );
@@ -554,8 +561,8 @@ export default function SchoolTimetablesView() {
                         className="school-cell-input school-day-list-input"
                         value={subject}
                         onChange={(e) => updateLesson(activeMobileDay.value, Number(period.position), e.target.value)}
-                        placeholder="Fach eintragen"
-                        aria-label={`Fach ${activeMobileDay.full} ${period.label}. Stunde`}
+                        placeholder={msg('module.school_timetables.mobile_subject_placeholder')}
+                        aria-label={formatMessage(msg('module.school_timetables.mobile_subject_aria'), { day: activeMobileDay.full, period: period.label })}
                       />
                     </div>
                   );
@@ -573,37 +580,37 @@ export default function SchoolTimetablesView() {
                   <div key={index} className={`school-period-row school-period-row--${period.kind}`}>
                     <input
                       className="form-input school-period-label"
-                      aria-label="Bezeichnung"
+                      aria-label={msg('module.school_timetables.period_label_aria')}
                       value={period.label}
                       onChange={(e) => updatePeriod(index, 'label', e.target.value)}
                     />
                     <select
                       className="form-input school-period-kind"
-                      aria-label="Art"
+                      aria-label={msg('module.school_timetables.period_kind_aria')}
                       value={period.kind}
                       onChange={(e) => updatePeriod(index, 'kind', e.target.value)}
                     >
-                      <option value="lesson">Stunde</option>
-                      <option value="break">Pause</option>
+                      <option value="lesson">{msg('module.school_timetables.period_kind_lesson')}</option>
+                      <option value="break">{msg('module.school_timetables.period_kind_break')}</option>
                     </select>
                     <input
                       className="form-input school-period-time"
                       type="time"
-                      aria-label="Beginn"
+                      aria-label={msg('module.school_timetables.period_start_aria')}
                       value={normalizeTime(period.start_time)}
                       onChange={(e) => updatePeriod(index, 'start_time', e.target.value)}
                     />
                     <input
                       className="form-input school-period-time"
                       type="time"
-                      aria-label="Ende"
+                      aria-label={msg('module.school_timetables.period_end_aria')}
                       value={normalizeTime(period.end_time)}
                       onChange={(e) => updatePeriod(index, 'end_time', e.target.value)}
                     />
                     <button
                       type="button"
                       className="school-period-remove"
-                      aria-label="Eintrag entfernen"
+                      aria-label={msg('module.school_timetables.period_remove_aria')}
                       onClick={() => removePeriod(index)}
                     >
                       <Trash2 size={14} aria-hidden="true" />
@@ -612,10 +619,10 @@ export default function SchoolTimetablesView() {
                 ))}
                 <div className="school-periods-actions">
                   <button type="button" className="btn-ghost" onClick={() => addPeriod('lesson')}>
-                    <Plus size={14} aria-hidden="true" /> Stunde
+                    <Plus size={14} aria-hidden="true" /> {msg('module.school_timetables.add_lesson')}
                   </button>
                   <button type="button" className="btn-ghost" onClick={() => addPeriod('break')}>
-                    <Coffee size={14} aria-hidden="true" /> Pause
+                    <Coffee size={14} aria-hidden="true" /> {msg('module.school_timetables.add_break')}
                   </button>
                 </div>
               </div>

@@ -17,6 +17,8 @@ node_modules/
 
 # Internal docs (not for the repo)
 .internal/
+tmp-marketing-research/
+tmp-marketing-research-collector.py
 
 # Agent memory (session context)
 /tasks/
