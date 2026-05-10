@@ -20,6 +20,7 @@ from app.core.errors import (
     error_detail,
 )
 from app.core.scopes import require_scope
+from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.ws_broadcast import broadcast_item_added
 from app.database import get_db
 from app.models import Membership, Recipe, ShoppingItem, ShoppingList, User
@@ -374,5 +375,16 @@ def add_recipe_ingredients_to_shopping(
         broadcast_item_added(
             shopping_list.id,
             ShoppingItemResponse.model_validate(item).model_dump(mode="json"),
+        )
+    if created:
+        dispatch_shopping_destination_event(
+            family_id=recipe.family_id,
+            event_type="shopping.item.changed",
+            title="Recipe ingredients added",
+            body=f'{user.display_name or "Someone"} added {len(created)} ingredients from "{recipe.title}" to "{shopping_list.name}".',
+            link=f"/shopping?list={shopping_list.id}",
+            source_type="shopping_list",
+            source_id=shopping_list.id,
+            action="recipe_added",
         )
     return RecipeAddToShoppingResponse(added_count=len(created))

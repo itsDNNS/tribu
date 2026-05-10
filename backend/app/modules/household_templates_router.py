@@ -8,6 +8,7 @@ from app.core.activity import record_activity
 from app.core.deps import current_user, ensure_adult
 from app.core.errors import error_detail, SHOPPING_LIST_NOT_FOUND
 from app.core.scopes import require_scope
+from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.database import get_db
 from app.models import HouseholdTemplate, ShoppingItem, ShoppingList, Task, User
 from app.schemas import (
@@ -146,19 +147,19 @@ def _resolve_shopping_list(
     user_id: int,
     shopping_items: list[dict[str, Any]],
     payload: HouseholdTemplateApplyRequest,
-) -> ShoppingList | None:
+) -> tuple[ShoppingList | None, bool]:
     if payload.shopping_list_id is not None:
         shopping_list = db.query(ShoppingList).filter(ShoppingList.id == payload.shopping_list_id).first()
         if not shopping_list or shopping_list.family_id != family_id:
             raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
-        return shopping_list if shopping_items else None
+        return (shopping_list, False) if shopping_items else (None, False)
     if not shopping_items:
-        return None
+        return None, False
     name = (payload.shopping_list_name or "Template groceries").strip()
     shopping_list = ShoppingList(family_id=family_id, name=name, created_by_user_id=user_id)
     db.add(shopping_list)
     db.flush()
-    return shopping_list
+    return shopping_list, True
 
 
 def _apply_template(
@@ -186,7 +187,7 @@ def _apply_template(
         db.add(task)
         created_tasks.append(task)
 
-    shopping_list = _resolve_shopping_list(
+    shopping_list, shopping_list_created = _resolve_shopping_list(
         db,
         family_id=family_id,
         user_id=user.id,
@@ -229,6 +230,28 @@ def _apply_template(
         db.refresh(item)
     if shopping_list is not None:
         db.refresh(shopping_list)
+        if shopping_list_created:
+            dispatch_shopping_destination_event(
+                family_id=family_id,
+                event_type="shopping.list.changed",
+                title="Shopping list created",
+                body=f'{user.display_name or "Someone"} created shopping list "{shopping_list.name}" from a household template.',
+                link=f"/shopping?list={shopping_list.id}",
+                source_type="shopping_list",
+                source_id=shopping_list.id,
+                action="household_template_list_created",
+            )
+        if created_shopping_items:
+            dispatch_shopping_destination_event(
+                family_id=family_id,
+                event_type="shopping.item.changed",
+                title="Shopping items added",
+                body=f'{user.display_name or "Someone"} added {len(created_shopping_items)} items from a household template to "{shopping_list.name}".',
+                link=f"/shopping?list={shopping_list.id}",
+                source_type="shopping_list",
+                source_id=shopping_list.id,
+                action="household_template_added",
+            )
     return HouseholdTemplateApplyResponse(
         template_id=template_id,
         created_task_count=len(created_tasks),

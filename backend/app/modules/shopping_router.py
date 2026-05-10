@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -18,7 +16,7 @@ from app.core.ws_broadcast import (
     broadcast_list_created,
     broadcast_list_deleted,
 )
-from app.core.notification_destinations import dispatch_family_notification
+from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.webhooks import dispatch_webhook_event
 from app.schemas import (
     AUTH_RESPONSES,
@@ -43,7 +41,6 @@ from app.core.errors import (
 )
 
 router = APIRouter(prefix="/shopping", tags=["shopping"], responses={**AUTH_RESPONSES})
-logger = logging.getLogger(__name__)
 
 
 def _clean_optional_text(value: str | None) -> str | None:
@@ -87,35 +84,6 @@ def _list_response(sl: ShoppingList) -> ShoppingListResponse:
         item_count=total,
         checked_count=checked,
     )
-
-
-def _dispatch_shopping_destination_event(
-    *,
-    family_id: int,
-    event_type: str,
-    title: str,
-    body: str,
-    link: str,
-    source_type: str,
-    source_id: int,
-    action: str,
-) -> None:
-    try:
-        dispatch_family_notification(
-            family_id=family_id,
-            event_type=event_type,
-            title=title,
-            body=body,
-            link=link,
-            source_type=source_type,
-            source_id=source_id,
-            trigger_key=f"{source_type}:{source_id}:{action}:{utcnow().isoformat()}",
-            eligible_users=None,
-        )
-    except Exception:
-        # External destinations must never block the saved shopping action.
-        logger.warning("Shopping notification destination dispatch failed")
-        return
 
 
 def _template_response(template: ShoppingTemplate) -> ShoppingTemplateResponse:
@@ -291,7 +259,7 @@ def apply_template(
         db.refresh(item)
         broadcast_item_added(sl.id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
     if created_items:
-        _dispatch_shopping_destination_event(
+        dispatch_shopping_destination_event(
             family_id=sl.family_id,
             event_type="shopping.item.changed",
             title="Shopping items added",
@@ -374,7 +342,7 @@ def create_list(
         event_type="shopping.list.created",
         data={"list_id": sl.id, "name": sl.name, "created_by_user_id": user.id},
     )
-    _dispatch_shopping_destination_event(
+    dispatch_shopping_destination_event(
         family_id=sl.family_id,
         event_type="shopping.list.changed",
         title="Shopping list created",
@@ -409,7 +377,7 @@ def delete_list(
     db.delete(sl)
     db.commit()
     broadcast_list_deleted(family_id, list_id)
-    _dispatch_shopping_destination_event(
+    dispatch_shopping_destination_event(
         family_id=family_id,
         event_type="shopping.list.changed",
         title="Shopping list deleted",
@@ -501,7 +469,7 @@ def add_item(
             event_type="shopping.item.updated",
             data={"list_id": list_id, "item_id": checked_match.id, "name": checked_match.name, "checked": checked_match.checked},
         )
-        _dispatch_shopping_destination_event(
+        dispatch_shopping_destination_event(
             family_id=sl.family_id,
             event_type="shopping.item.changed",
             title="Shopping item restored",
@@ -543,7 +511,7 @@ def add_item(
         event_type="shopping.item.created",
         data={"list_id": list_id, "item_id": item.id, "name": item.name, "checked": item.checked},
     )
-    _dispatch_shopping_destination_event(
+    dispatch_shopping_destination_event(
         family_id=sl.family_id,
         event_type="shopping.item.changed",
         title="Shopping item added",
@@ -619,7 +587,7 @@ def update_item(
         item_action = "unchecked"
     else:
         item_action = "updated"
-    _dispatch_shopping_destination_event(
+    dispatch_shopping_destination_event(
         family_id=sl.family_id,
         event_type="shopping.item.changed",
         title="Shopping item updated",
@@ -655,7 +623,7 @@ def delete_item(
     db.delete(item)
     db.commit()
     broadcast_item_deleted(list_id, item_id)
-    _dispatch_shopping_destination_event(
+    dispatch_shopping_destination_event(
         family_id=sl.family_id,
         event_type="shopping.item.changed",
         title="Shopping item deleted",
@@ -691,4 +659,15 @@ def clear_checked(
     ).delete(synchronize_session="fetch")
     db.commit()
     broadcast_items_cleared(list_id, deleted)
+    if deleted:
+        dispatch_shopping_destination_event(
+            family_id=sl.family_id,
+            event_type="shopping.item.changed",
+            title="Shopping items cleared",
+            body=f'{user.display_name or "Someone"} cleared {deleted} checked items from "{sl.name}".',
+            link=f"/shopping?list={list_id}",
+            source_type="shopping_list",
+            source_id=list_id,
+            action="clear_checked",
+        )
     return {"status": "ok", "deleted_count": deleted}

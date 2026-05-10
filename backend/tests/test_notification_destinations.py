@@ -6,7 +6,7 @@ import hashlib
 import logging
 import socket
 import types
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,8 +23,12 @@ from app.models import (
     Membership,
     NotificationDestination,
     NotificationDestinationDelivery,
+    HouseholdTemplate,
+    MealPlan,
     NotificationPreference,
     PersonalAccessToken,
+    QuickCaptureItem,
+    Recipe,
     ShoppingItem,
     ShoppingList,
     ShoppingTemplate,
@@ -136,6 +140,42 @@ def _destination(family_id: int, user_id: int, **overrides) -> NotificationDesti
     }
     data.update(overrides)
     return NotificationDestination(**data)
+
+
+def _capture_destination_calls(monkeypatch) -> list[dict]:
+    from app.core import notification_destinations as destinations_core
+
+    calls = []
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", lambda _url, payload: calls.append(payload) or True)
+    return calls
+
+
+def _seed_shopping_destination(family_id: int, user_id: int) -> None:
+    db = TestSession()
+    try:
+        db.add(
+            _destination(
+                family_id,
+                user_id,
+                target_url_secret="mailto://shopping-coverage@example.com",
+                events=["shopping.list.changed", "shopping.item.changed"],
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def _seed_shopping_list(family_id: int, user_id: int, name: str = "Coverage list") -> int:
+    db = TestSession()
+    try:
+        shopping_list = ShoppingList(family_id=family_id, name=name, created_by_user_id=user_id)
+        db.add(shopping_list)
+        db.commit()
+        return shopping_list.id
+    finally:
+        db.close()
 
 
 def test_admin_crud_redacts_secret_and_audits_safe_metadata():
@@ -797,6 +837,186 @@ def test_shopping_template_apply_sends_item_destination_after_items_are_saved(mo
     assert calls[0]["source_id"] == list_id
     assert calls[0]["title"] == "Shopping items added"
     assert "2 items" in calls[0]["body"]
+
+
+def test_recipe_add_to_shopping_sends_item_destination(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,recipes:write")
+    list_id = _seed_shopping_list(family_id, user_id, "Recipe list")
+    _seed_shopping_destination(family_id, user_id)
+    db = TestSession()
+    try:
+        recipe = Recipe(
+            family_id=family_id,
+            title="Pancakes",
+            ingredients=[{"name": "Flour", "amount": 250, "unit": "g"}, {"name": "Milk", "amount": 1, "unit": "l"}],
+            created_by_user_id=user_id,
+        )
+        db.add(recipe)
+        db.commit()
+        recipe_id = recipe.id
+    finally:
+        db.close()
+
+    calls = _capture_destination_calls(monkeypatch)
+    resp = client.post(
+        f"/recipes/{recipe_id}/add-to-shopping",
+        headers=_auth(token),
+        json={"shopping_list_id": list_id, "ingredient_names": ["Flour", "Milk"]},
+    )
+
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["added_count"] == 2
+    assert [call["event_type"] for call in calls] == ["shopping.item.changed"]
+    assert calls[0]["source_type"] == "shopping_list"
+    assert calls[0]["source_id"] == list_id
+    assert calls[0]["trigger_key"].split(":")[2] == "recipe_added"
+    assert "2 ingredients" in calls[0]["body"]
+
+
+def test_meal_plan_add_to_shopping_sends_single_and_week_item_destinations(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,meal_plans:write")
+    list_id = _seed_shopping_list(family_id, user_id, "Meal plan list")
+    _seed_shopping_destination(family_id, user_id)
+    db = TestSession()
+    try:
+        single = MealPlan(
+            family_id=family_id,
+            plan_date=date(2026, 5, 11),
+            slot="noon",
+            meal_name="Soup",
+            ingredients=[{"name": "Carrot", "amount": 2, "unit": "pcs"}],
+            created_by_user_id=user_id,
+        )
+        weekly = MealPlan(
+            family_id=family_id,
+            plan_date=date(2026, 5, 12),
+            slot="evening",
+            meal_name="Pasta",
+            ingredients=[{"name": "Pasta", "amount": 500, "unit": "g"}],
+            created_by_user_id=user_id,
+        )
+        db.add_all([single, weekly])
+        db.commit()
+        single_id = single.id
+    finally:
+        db.close()
+
+    calls = _capture_destination_calls(monkeypatch)
+    single_resp = client.post(
+        f"/meal-plans/{single_id}/add-to-shopping",
+        headers=_auth(token),
+        json={"shopping_list_id": list_id},
+    )
+    week_resp = client.post(
+        "/meal-plans/week/add-to-shopping",
+        headers=_auth(token),
+        json={"family_id": family_id, "week_start": "2026-05-11", "shopping_list_id": list_id},
+    )
+
+    assert single_resp.status_code == 200, single_resp.json()
+    assert week_resp.status_code == 200, week_resp.json()
+    assert [call["event_type"] for call in calls] == ["shopping.item.changed", "shopping.item.changed"]
+    assert [call["trigger_key"].split(":")[2] for call in calls] == ["meal_plan_added", "meal_plan_week_added"]
+    assert calls[0]["source_id"] == list_id
+    assert calls[1]["source_id"] == list_id
+
+
+def test_household_template_apply_sends_list_and_item_destinations(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,household_templates:write")
+    _seed_shopping_destination(family_id, user_id)
+    db = TestSession()
+    try:
+        template = HouseholdTemplate(
+            family_id=family_id,
+            name="Party prep",
+            task_items=[],
+            shopping_items=[{"name": "Juice boxes", "spec": "12", "category": "Drinks"}],
+            created_by_user_id=user_id,
+        )
+        db.add(template)
+        db.commit()
+        template_id = template.id
+    finally:
+        db.close()
+
+    calls = _capture_destination_calls(monkeypatch)
+    resp = client.post(
+        f"/household-templates/{template_id}/apply",
+        headers=_auth(token),
+        json={"target_date": "2026-05-11", "shopping_list_name": "Party shop"},
+    )
+
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["created_shopping_count"] == 1
+    assert [call["event_type"] for call in calls] == ["shopping.list.changed", "shopping.item.changed"]
+    assert [call["trigger_key"].split(":")[2] for call in calls] == ["household_template_list_created", "household_template_added"]
+    assert calls[0]["source_id"] == resp.json()["shopping_list_id"]
+    assert calls[1]["source_id"] == resp.json()["shopping_list_id"]
+
+
+def test_quick_capture_shopping_routes_send_destinations(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,quick_capture:write")
+    _seed_shopping_destination(family_id, user_id)
+    db = TestSession()
+    try:
+        inbox = QuickCaptureItem(family_id=family_id, text="Dish soap", created_by_user_id=user_id)
+        db.add(inbox)
+        db.commit()
+        inbox_id = inbox.id
+    finally:
+        db.close()
+
+    calls = _capture_destination_calls(monkeypatch)
+    direct = client.post(
+        "/quick-capture",
+        headers=_auth(token),
+        json={"family_id": family_id, "text": "Bananas", "destination": "shopping"},
+    )
+    converted = client.post(
+        f"/quick-capture/inbox/{inbox_id}/convert",
+        headers=_auth(token),
+        json={"destination": "shopping"},
+    )
+
+    assert direct.status_code == 200, direct.json()
+    assert converted.status_code == 200, converted.json()
+    assert [call["event_type"] for call in calls] == [
+        "shopping.list.changed",
+        "shopping.item.changed",
+        "shopping.item.changed",
+    ]
+    assert [call["trigger_key"].split(":")[2] for call in calls] == [
+        "quick_capture_list_created",
+        "quick_capture_added",
+        "quick_capture_added",
+    ]
+
+
+def test_clear_checked_shopping_items_sends_item_destination(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:write")
+    list_id = _seed_shopping_list(family_id, user_id, "Checked list")
+    _seed_shopping_destination(family_id, user_id)
+    db = TestSession()
+    try:
+        db.add_all([
+            ShoppingItem(list_id=list_id, name="Done one", checked=True, added_by_user_id=user_id),
+            ShoppingItem(list_id=list_id, name="Done two", checked=True, added_by_user_id=user_id),
+            ShoppingItem(list_id=list_id, name="Keep", checked=False, added_by_user_id=user_id),
+        ])
+        db.commit()
+    finally:
+        db.close()
+
+    calls = _capture_destination_calls(monkeypatch)
+    resp = client.delete(f"/shopping/lists/{list_id}/checked", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["deleted_count"] == 2
+    assert [call["event_type"] for call in calls] == ["shopping.item.changed"]
+    assert calls[0]["source_type"] == "shopping_list"
+    assert calls[0]["source_id"] == list_id
+    assert calls[0]["trigger_key"].split(":")[2] == "clear_checked"
+    assert "cleared 2 checked items" in calls[0]["body"]
 
 
 def test_shopping_destination_respects_household_quiet_hours(monkeypatch):
