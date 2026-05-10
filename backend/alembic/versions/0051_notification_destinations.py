@@ -1,17 +1,17 @@
 """add notification destinations
 
-Revision ID: 0051_add_notification_destinations
+Revision ID: 0051_notification_destinations
 Revises: 0050_add_school_timetables
 Create Date: 2026-05-10 09:00:00.000000
 """
 
 from typing import Sequence, Union
-
 from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0051_add_notification_destinations"
+revision: str = "0051_notification_destinations"
+
 down_revision: Union[str, None] = "0050_add_school_timetables"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
