@@ -204,6 +204,41 @@ def test_changing_task_due_date_changes_trigger_key():
     assert _task_trigger_key(base_id, d1) != _task_trigger_key(base_id, d2)
 
 
+def test_overdue_task_respects_reminders_enabled(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "task-disabled@example.com")
+        pref = NotificationPreference(
+            user_id=user.id,
+            reminders_enabled=False,
+            reminder_minutes=30,
+            push_enabled=False,
+        )
+        task = Task(
+            family_id=fam.id,
+            title="Overdue but muted",
+            status="open",
+            due_date=datetime(2026, 4, 25, 11, 0, 0),
+        )
+        db.add_all([pref, task])
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_now(monkeypatch, datetime(2026, 4, 25, 12, 0, 0))
+    from app.core.scheduler import _check_notifications
+
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        assert db.query(Notification).filter(Notification.user_id == user_id).count() == 0
+        assert db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).count() == 0
+    finally:
+        db.close()
+
+
 def test_transient_push_failure_keeps_one_notification_and_retries(monkeypatch):
     """If push fails on every endpoint the in-app notification is still
     created (only once), the log is marked failed, attempts increment, and
@@ -371,6 +406,54 @@ def test_enabled_push_category_sends_push(monkeypatch):
         assert calls["n"] == 1
     finally:
         db.close()
+
+
+def test_destination_dispatch_runs_after_in_app_and_push_delivery(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "destination-order@example.com")
+        _set_pref(db, user.id, push_enabled=True, push_categories={"calendar_reminders": True})
+        now = datetime(2026, 4, 25, 12, 0, 0)
+        ev = CalendarEvent(
+            family_id=fam.id,
+            title="Checkup",
+            starts_at=now + timedelta(minutes=10),
+            all_day=False,
+        )
+        db.add(ev)
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_now(monkeypatch, now)
+
+    from app.core import push as push_module
+    from app.core import scheduler as scheduler_module
+
+    calls = []
+
+    def fake_push(db, uid, title, body, url=None):
+        calls.append("push")
+        return push_module.PushResult(attempted=1, succeeded=1)
+
+    def fake_destination_dispatch(**_kwargs):
+        check_db = TestSession()
+        try:
+            assert check_db.query(Notification).filter(Notification.user_id == user_id).count() == 1
+            log = check_db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).one()
+            assert log.status == "delivered"
+            assert log.delivered_at is not None
+        finally:
+            check_db.close()
+        calls.append("destination")
+
+    monkeypatch.setattr(scheduler_module, "send_push_for_user", fake_push)
+    monkeypatch.setattr(scheduler_module, "dispatch_family_notification", fake_destination_dispatch)
+
+    scheduler_module._check_notifications()
+
+    assert calls == ["push", "destination"]
 
 
 def test_recurring_event_occurrence_creates_one_reminder(monkeypatch):

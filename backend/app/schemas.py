@@ -10,6 +10,8 @@ from enum import Enum
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, ValidationError, field_validator
 
 from app.core.calendar_icons import normalize_calendar_event_icon
+from app.core.notification_destinations import clean_events as clean_notification_destination_events
+from app.core.notification_destinations import validate_target_url as validate_notification_destination_url
 from app.core.notification_preferences import normalize_push_categories
 
 
@@ -2103,3 +2105,87 @@ class WebhookDeliveryResponse(BaseModel):
 class WebhookTestResponse(BaseModel):
     status: str
     delivery: WebhookDeliveryResponse
+
+
+# ---------------------------------------------------------------------------
+# Human notification destinations
+# ---------------------------------------------------------------------------
+
+
+class NotificationDestinationCreate(BaseModel):
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(..., min_length=1, max_length=120, description="Destination display name")
+    provider: str = Field("apprise", description="Destination provider")
+    target_url_secret: str = Field(..., min_length=3, max_length=2000, description="Apprise destination URL")
+    events: list[str] = Field(default_factory=list, description="Subscribed reminder event types")
+    active: bool = Field(True, description="Whether deliveries are enabled")
+    respect_quiet_hours: bool = Field(True, description="Whether household quiet hours suppress this destination")
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, value: str) -> str:
+        if value != "apprise":
+            raise ValueError("Unsupported notification destination provider")
+        return value
+
+    @field_validator("target_url_secret")
+    @classmethod
+    def validate_target_url(cls, value: str) -> str:
+        return validate_notification_destination_url(value)
+
+    @field_validator("events")
+    @classmethod
+    def validate_events(cls, value: list[str]) -> list[str]:
+        return clean_notification_destination_events(value)
+
+
+class NotificationDestinationUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=120)
+    target_url_secret: Optional[str] = Field(None, min_length=0, max_length=2000)
+    events: Optional[list[str]] = None
+    active: Optional[bool] = None
+    respect_quiet_hours: Optional[bool] = None
+
+    @field_validator("target_url_secret")
+    @classmethod
+    def validate_target_url(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or value == "":
+            return value
+        return validate_notification_destination_url(value)
+
+    @field_validator("events")
+    @classmethod
+    def validate_events(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        if value is None:
+            return None
+        return clean_notification_destination_events(value)
+
+
+class NotificationDestinationResponse(BaseModel):
+    id: int
+    family_id: int
+    name: str
+    provider: str
+    url_redacted: str
+    events: list[str]
+    active: bool
+    respect_quiet_hours: bool
+    has_secret: bool
+    created_at: datetime
+    updated_at: datetime
+    last_attempted_at: Optional[datetime] = None
+    last_success_at: Optional[datetime] = None
+    last_status: str
+    last_error: Optional[str] = None
+
+
+class NotificationDestinationProviderStatusResponse(BaseModel):
+    provider: str
+    available: bool
+    allowed_schemes: list[str]
+    events: list[str]
+
+
+class NotificationDestinationTestResponse(BaseModel):
+    status: str
+    error: Optional[str] = None

@@ -45,6 +45,12 @@ See [Self-Hosting: Single Sign-On](https://github.com/itsDNNS/tribu/wiki/Self-Ho
 
 See [Self-Hosting: Push Notifications](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#push-notifications-optional).
 
+## Household Notification Destinations (Optional)
+
+Admins can add Apprise-backed destinations for human-readable household reminders, such as Gotify, ntfy, Telegram, Matrix, or email. Use placeholder examples in public docs and screenshots, for example `ntfy://ntfy.sh/family-topic` or `gotify://host.example/token`, not real tokens.
+
+External destinations are another place where household data is visible. Delivery depends on the destination platform and is not guaranteed. If Apprise is not installed in the backend image, Tribu keeps in-app and browser push notifications working and shows the destination provider as unavailable. Database backups can contain raw Apprise destination secrets under the app's existing backup model.
+
 ## Phone Sync (CalDAV / CardDAV)
 
 See [Self-Hosting: Phone Sync](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#phone-sync-caldav--carddav).

@@ -598,6 +598,31 @@ export function apiListWebhookDeliveries(endpointId, limit = 20) {
   return request(`/webhooks/${endpointId}/deliveries?limit=${limit}`);
 }
 
+// Household notification destinations
+export function apiListNotificationDestinations(familyId) {
+  return request(`/notification-destinations?family_id=${familyId}`);
+}
+
+export function apiGetNotificationDestinationProviderStatus() {
+  return request('/notification-destinations/provider/status');
+}
+
+export function apiCreateNotificationDestination(payload) {
+  return post('/notification-destinations', payload);
+}
+
+export function apiUpdateNotificationDestination(destinationId, payload) {
+  return patch(`/notification-destinations/${destinationId}`, payload);
+}
+
+export function apiDeleteNotificationDestination(destinationId) {
+  return del(`/notification-destinations/${destinationId}`);
+}
+
+export function apiTestNotificationDestination(destinationId) {
+  return post(`/notification-destinations/${destinationId}/test`, {});
+}
+
 // OIDC / SSO — public
 export function apiGetOidcPublicConfig() {
   return request('/auth/oidc/public-config');
