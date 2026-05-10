@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { User, Navigation, Bell, BellRing, Database, Key, Heart, Smartphone, ChevronRight, ArrowLeft, PlugZap } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
@@ -27,14 +27,25 @@ const TABS = [
 export default function SettingsView() {
   const { messages, isMobile, isChild, isAdmin, demoMode } = useApp();
   const visibleTabs = TABS.filter(tab => tab.visible({ isAdmin, isChild, demoMode }));
-  const [activeTab, setActiveTab] = useState(isMobile ? null : visibleTabs[0]?.key || 'account');
+  const [activeTab, setActiveTabState] = useState(() => {
+    if (isMobile) return null;
+    const requested = typeof window !== 'undefined' ? sessionStorage.getItem('tribu_settings_tab') : null;
+    return visibleTabs.some(tab => tab.key === requested) ? requested : visibleTabs[0]?.key || 'account';
+  });
+  const setActiveTab = useCallback((tabKey) => {
+    if (tabKey && typeof window !== 'undefined') sessionStorage.setItem('tribu_settings_tab', tabKey);
+    setActiveTabState(tabKey);
+  }, []);
 
-  // When switching from mobile to desktop, ensure a tab is selected
+  // Keep the selected tab valid as device layout and role visibility change.
   useEffect(() => {
-    if (!isMobile && activeTab === null) {
-      setActiveTab(visibleTabs[0]?.key || 'account');
+    const activeVisible = activeTab !== null && visibleTabs.some(tab => tab.key === activeTab);
+    if (isMobile) {
+      if (activeTab !== null && !activeVisible) setActiveTab(null);
+      return;
     }
-  }, [isMobile, activeTab, visibleTabs]);
+    if (!activeVisible) setActiveTab(visibleTabs[0]?.key || 'account');
+  }, [isMobile, activeTab, visibleTabs, setActiveTab]);
 
   const activeTabConfig = visibleTabs.find(tab => tab.key === activeTab);
   const ActiveComponent = activeTabConfig?.component;

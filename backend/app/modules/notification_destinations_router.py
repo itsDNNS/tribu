@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import current_user, ensure_family_admin
 from app.core.notification_destinations import (
     destination_response,
+    protect_target_url,
     provider_status,
     redact_target_url,
     send_test_notification,
@@ -11,7 +12,7 @@ from app.core.notification_destinations import (
 from app.core.scopes import require_scope
 from app.core.utils import audit_log, ensure_any_admin
 from app.database import get_db
-from app.models import NotificationDestination, User
+from app.models import Membership, NotificationDestination, User
 from app.schemas import (
     AUTH_RESPONSES,
     NOT_FOUND_RESPONSE,
@@ -29,6 +30,19 @@ def _get_destination_or_404(db: Session, destination_id: int) -> NotificationDes
     destination = db.query(NotificationDestination).filter(NotificationDestination.id == destination_id).first()
     if not destination:
         raise HTTPException(status_code=404, detail="Notification destination not found")
+    return destination
+
+
+def _get_destination_for_user_or_404(db: Session, destination_id: int, user_id: int) -> NotificationDestination:
+    destination = _get_destination_or_404(db, destination_id)
+    membership = (
+        db.query(Membership)
+        .filter(Membership.user_id == user_id, Membership.family_id == destination.family_id)
+        .first()
+    )
+    if not membership:
+        raise HTTPException(status_code=404, detail="Notification destination not found")
+    ensure_family_admin(db, user_id, destination.family_id)
     return destination
 
 
@@ -97,7 +111,7 @@ def create_destination(
         family_id=payload.family_id,
         name=payload.name.strip(),
         provider="apprise",
-        target_url_secret=payload.target_url_secret,
+        target_url_secret=protect_target_url(payload.target_url_secret),
         events=payload.events,
         active=payload.active,
         respect_quiet_hours=payload.respect_quiet_hours,
@@ -125,13 +139,12 @@ def update_destination(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
 ):
-    destination = _get_destination_or_404(db, destination_id)
-    ensure_family_admin(db, user.id, destination.family_id)
+    destination = _get_destination_for_user_or_404(db, destination_id, user.id)
     updates = payload.model_dump(exclude_unset=True)
     if "name" in updates and payload.name is not None:
         destination.name = payload.name.strip()
     if "target_url_secret" in updates and payload.target_url_secret:
-        destination.target_url_secret = payload.target_url_secret
+        destination.target_url_secret = protect_target_url(payload.target_url_secret)
     if "events" in updates and payload.events is not None:
         destination.events = payload.events
     if "active" in updates and payload.active is not None:
@@ -159,8 +172,7 @@ def delete_destination(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
 ):
-    destination = _get_destination_or_404(db, destination_id)
-    ensure_family_admin(db, user.id, destination.family_id)
+    destination = _get_destination_for_user_or_404(db, destination_id, user.id)
     family_id = destination.family_id
     details = _audit_details(destination, "deleted")
     db.delete(destination)
@@ -182,8 +194,7 @@ def test_destination(
     db: Session = Depends(get_db),
     _scope=require_scope("admin:write"),
 ):
-    destination = _get_destination_or_404(db, destination_id)
-    ensure_family_admin(db, user.id, destination.family_id)
+    destination = _get_destination_for_user_or_404(db, destination_id, user.id)
     audit_log(db, destination.family_id, user.id, "notification_destination_tested", details=_audit_details(destination, "tested"))
     db.commit()
     delivery = send_test_notification(destination.id)

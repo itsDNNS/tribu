@@ -100,6 +100,82 @@ describe('NotificationDestinationsTab', () => {
     render(<NotificationDestinationsTab />);
 
     expect(await screen.findByText('Apprise is not available on this server')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add destination' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Household Gotify' } });
+    fireEvent.change(screen.getByLabelText('Apprise URL'), { target: { value: 'gotify://host.example/placeholder-token' } });
+    expect(screen.getByRole('button', { name: 'Add destination' })).not.toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Add destination' }));
+    await waitFor(() => expect(api.apiCreateNotificationDestination).toHaveBeenCalledTimes(1));
+  });
+
+  it('disables test sends while the provider is unavailable', async () => {
+    api.apiGetNotificationDestinationProviderStatus.mockResolvedValue({ ok: true, data: { available: false } });
+    api.apiListNotificationDestinations.mockResolvedValue({
+      ok: true,
+      data: [{
+        id: 9,
+        name: 'Household Gotify',
+        provider: 'apprise',
+        url_redacted: 'gotify://[redacted]',
+        events: ['calendar.reminder'],
+        active: true,
+        respect_quiet_hours: true,
+        has_secret: true,
+        last_status: 'never',
+      }],
+    });
+
+    render(<NotificationDestinationsTab />);
+
+    expect(await screen.findByText('Household Gotify')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send test' })).toBeDisabled();
+  });
+
+  it('shows failed test notifications as errors instead of success toasts', async () => {
+    api.apiListNotificationDestinations.mockResolvedValue({
+      ok: true,
+      data: [{
+        id: 9,
+        name: 'Household Gotify',
+        provider: 'apprise',
+        url_redacted: 'gotify://[redacted]',
+        events: ['calendar.reminder'],
+        active: true,
+        respect_quiet_hours: true,
+        has_secret: true,
+        last_status: 'never',
+      }],
+    });
+    api.apiTestNotificationDestination.mockResolvedValue({ ok: true, data: { status: 'failed', error: 'send_failed' } });
+
+    render(<NotificationDestinationsTab />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Send test' }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Test notification failed'));
+    expect(toastSuccess).not.toHaveBeenCalledWith('Test notification failed');
+  });
+
+  it('asks for confirmation before deleting a destination', async () => {
+    api.apiListNotificationDestinations.mockResolvedValue({
+      ok: true,
+      data: [{
+        id: 9,
+        name: 'Household Gotify',
+        provider: 'apprise',
+        url_redacted: 'gotify://[redacted]',
+        events: ['calendar.reminder'],
+        active: true,
+        respect_quiet_hours: true,
+        has_secret: true,
+        last_status: 'never',
+      }],
+    });
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(<NotificationDestinationsTab />);
+    fireEvent.click(await screen.findByLabelText('Delete Household Gotify'));
+
+    expect(confirmSpy).toHaveBeenCalledWith('Delete notification destination Household Gotify?');
+    expect(api.apiDeleteNotificationDestination).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 });

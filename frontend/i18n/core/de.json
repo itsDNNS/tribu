@@ -693,5 +693,9 @@
   "notification_destinations_disable": "Deaktivieren",
   "notification_destinations_enable": "Aktivieren",
   "notification_destinations_send_test": "Test senden",
-  "notification_destinations_delete_label": "{name} löschen"
+  "notification_destinations_delete_label": "{name} löschen",
+  "notification_destinations_delete_confirm": "Benachrichtigungsziel {name} löschen?",
+  "notifications_external_destinations_title": "Erinnerungen außerhalb von Tribu senden",
+  "notifications_external_destinations_help": "Admins können Gotify, ntfy, Telegram, Matrix oder E-Mail-Ziele für Haushaltserinnerungen hinzufügen.",
+  "notifications_external_destinations_action": "Haushaltsbenachrichtigungen konfigurieren"
 }
