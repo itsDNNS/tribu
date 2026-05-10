@@ -12,6 +12,7 @@ from app.core.backup import create_backup, enforce_retention
 from app.core.clock import utcnow
 from app.core.push import send_push_for_user
 from app.core.notification_preferences import should_push_notification_type
+from app.core.notification_destinations import EligibleReminderUser, dispatch_family_notification
 from app.core.recurrence import expand_event
 from app.database import SessionLocal
 from app.models import (
@@ -120,8 +121,10 @@ def _check_notifications():
 
         memberships = db.query(Membership).all()
         user_families: dict[int, list[int]] = {}
+        family_users: dict[int, list[int]] = {}
         for m in memberships:
             user_families.setdefault(m.user_id, []).append(m.family_id)
+            family_users.setdefault(m.family_id, []).append(m.user_id)
 
         prefs_map: dict[int, NotificationPreference] = {}
         for pref in db.query(NotificationPreference).all():
@@ -142,6 +145,62 @@ def _check_notifications():
                 )
                 .first()
             )
+
+        def eligible_reminder_users(fid: int, starts_at: datetime | None = None) -> list[EligibleReminderUser]:
+            users: list[EligibleReminderUser] = []
+            for candidate_uid in family_users.get(fid, []):
+                pref = get_pref(candidate_uid)
+                if not pref.reminders_enabled:
+                    continue
+                if starts_at is not None:
+                    window = now + timedelta(minutes=pref.reminder_minutes)
+                    if starts_at <= now or starts_at > window:
+                        continue
+                users.append(
+                    EligibleReminderUser(
+                        user_id=candidate_uid,
+                        in_quiet_hours=_in_quiet_hours(pref.quiet_start, pref.quiet_end, now),
+                    )
+                )
+            return users
+
+        dispatched_destination_keys: set[tuple[str, str, int, str]] = set()
+        pending_destination_dispatches = []
+
+        def dispatch_destination_once(
+            *,
+            event_type: str,
+            fid: int,
+            title: str,
+            body: str,
+            link: str | None,
+            source_type: str,
+            source_id: int,
+            trigger_key: str,
+            eligible_users: list[EligibleReminderUser],
+        ) -> None:
+            key = (event_type, source_type, source_id, trigger_key)
+            if key in dispatched_destination_keys:
+                return
+            dispatched_destination_keys.add(key)
+            pending_destination_dispatches.append({
+                "family_id": fid,
+                "event_type": event_type,
+                "title": title,
+                "body": body,
+                "link": link,
+                "source_type": source_type,
+                "source_id": source_id,
+                "trigger_key": trigger_key,
+                "eligible_users": eligible_users,
+            })
+
+        def dispatch_pending_destinations() -> None:
+            for destination_dispatch in pending_destination_dispatches:
+                try:
+                    dispatch_family_notification(**destination_dispatch)
+                except Exception:
+                    logger.warning("Family notification destination dispatch failed")
 
         def adopt_legacy_log(
             uid: int,
@@ -197,6 +256,8 @@ def _check_notifications():
             push if push is enabled and the previous attempt failed.
             """
             pref = get_pref(uid)
+            if not pref.reminders_enabled:
+                return
             if _in_quiet_hours(pref.quiet_start, pref.quiet_end, now):
                 return
 
@@ -327,12 +388,25 @@ def _check_notifications():
                     if starts_at <= now or starts_at > window:
                         continue
                     mins = int((starts_at - now).total_seconds() / 60)
+                    body = f"Starts in {mins} minutes"
+                    trigger_key = _event_trigger_key(ev.id, starts_at)
+                    dispatch_destination_once(
+                        event_type="calendar.reminder",
+                        fid=ev.family_id,
+                        title=ev.title,
+                        body=body,
+                        link="calendar",
+                        source_type="event",
+                        source_id=ev.id,
+                        trigger_key=trigger_key,
+                        eligible_users=eligible_reminder_users(ev.family_id, starts_at),
+                    )
                     deliver(
                         uid, ev.family_id, "event_reminder",
                         ev.title,
-                        f"Starts in {mins} minutes",
+                        body,
                         "calendar", "event", ev.id,
-                        _event_trigger_key(ev.id, starts_at),
+                        trigger_key,
                     )
 
 
@@ -349,12 +423,24 @@ def _check_notifications():
                 .all()
             )
             for task in overdue:
+                trigger_key = _task_trigger_key(task.id, task.due_date)
+                dispatch_destination_once(
+                    event_type="task.reminder",
+                    fid=task.family_id,
+                    title=task.title,
+                    body="Task is overdue",
+                    link="tasks",
+                    source_type="task",
+                    source_id=task.id,
+                    trigger_key=trigger_key,
+                    eligible_users=eligible_reminder_users(task.family_id),
+                )
                 deliver(
                     uid, task.family_id, "task_due",
                     task.title,
                     "Task is overdue",
                     "tasks", "task", task.id,
-                    _task_trigger_key(task.id, task.due_date),
+                    trigger_key,
                 )
 
         # 3. Birthday reminders (tomorrow)
@@ -372,18 +458,35 @@ def _check_notifications():
                 .all()
             )
             for bd in birthdays:
+                body = f"Birthday tomorrow ({tomorrow.strftime('%b %d')})"
+                trigger_key = _birthday_trigger_key(bd.id, tomorrow)
+                dispatch_destination_once(
+                    event_type="birthday.reminder",
+                    fid=bd.family_id,
+                    title=bd.person_name,
+                    body=body,
+                    link="dashboard",
+                    source_type="birthday",
+                    source_id=bd.id,
+                    trigger_key=trigger_key,
+                    eligible_users=eligible_reminder_users(bd.family_id),
+                )
                 deliver(
                     uid, bd.family_id, "birthday",
                     bd.person_name,
-                    f"Birthday tomorrow ({tomorrow.strftime('%b %d')})",
+                    body,
                     "dashboard", "birthday", bd.id,
-                    _birthday_trigger_key(bd.id, tomorrow),
+                    trigger_key,
                 )
 
         db.commit()
         # Invalidate notification count caches for affected users
         for uid in user_families:
             cache.invalidate(f"tribu:notif_count:{uid}")
+        # Dispatch external household destinations only after in-app and
+        # browser push delivery state is persisted. Apprise targets are remote
+        # calls and must not sit in front of existing delivery channels.
+        dispatch_pending_destinations()
         logger.info("Notification check completed.")
 
     except Exception:

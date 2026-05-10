@@ -66,6 +66,7 @@ class Family(Base):
     quick_capture_items = relationship("QuickCaptureItem", back_populates="family", cascade="all, delete-orphan")
     setup_checklist = relationship("FamilySetupChecklist", back_populates="family", uselist=False, cascade="all, delete-orphan")
     webhook_endpoints = relationship("WebhookEndpoint", back_populates="family", cascade="all, delete-orphan")
+    notification_destinations = relationship("NotificationDestination", back_populates="family", cascade="all, delete-orphan")
     school_timetables = relationship("SchoolTimetable", back_populates="family", cascade="all, delete-orphan")
 
 
@@ -735,6 +736,62 @@ class WebhookDelivery(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     endpoint = relationship("WebhookEndpoint", back_populates="deliveries")
+
+
+class NotificationDestination(Base):
+    __tablename__ = "notification_destinations"
+    __table_args__ = (Index("ix_notification_destinations_family_active", "family_id", "active"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    provider = Column(String(30), nullable=False, default="apprise", server_default="apprise")
+    target_url_secret = Column(Text, nullable=False)
+    events = Column(JSON, nullable=False, default=list, server_default="[]")
+    active = Column(Boolean, nullable=False, default=True, server_default="true")
+    respect_quiet_hours = Column(Boolean, nullable=False, default=True, server_default="true")
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+    last_attempted_at = Column(DateTime, nullable=True)
+    last_success_at = Column(DateTime, nullable=True)
+    last_status = Column(String(20), nullable=False, default="never", server_default="never")
+    last_error = Column(String(80), nullable=True)
+
+    family = relationship("Family", back_populates="notification_destinations")
+    created_by = relationship("User")
+    deliveries = relationship("NotificationDestinationDelivery", back_populates="destination", cascade="all, delete-orphan")
+
+
+class NotificationDestinationDelivery(Base):
+    __tablename__ = "notification_destination_deliveries"
+    __table_args__ = (
+        UniqueConstraint(
+            "destination_id",
+            "event_type",
+            "source_type",
+            "source_id",
+            "trigger_key",
+            name="uq_notification_destination_delivery_trigger",
+        ),
+        Index("ix_notification_destination_deliveries_destination_created", "destination_id", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    destination_id = Column(Integer, ForeignKey("notification_destinations.id", ondelete="CASCADE"), nullable=False, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(80), nullable=False)
+    source_type = Column(String(40), nullable=False)
+    source_id = Column(Integer, nullable=False)
+    trigger_key = Column(String(200), nullable=False)
+    status = Column(String(20), nullable=False, default="pending", server_default="pending")
+    attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    last_attempted_at = Column(DateTime, nullable=True)
+    last_success_at = Column(DateTime, nullable=True)
+    last_error = Column(String(80), nullable=True)
+
+    destination = relationship("NotificationDestination", back_populates="deliveries")
 
 
 # ── Reward System ─────────────────────────────────────────

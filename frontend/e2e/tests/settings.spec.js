@@ -107,11 +107,11 @@ test.describe('Settings', () => {
   test('shows push diagnostics when server push is not configured', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    const notificationsItem = page.locator('.settings-mobile-item', { hasText: 'Notifications' });
+    const notificationsItem = page.locator('.settings-mobile-item').filter({ hasText: /^Notifications$/ });
     if (await notificationsItem.isVisible({ timeout: 2000 }).catch(() => false)) {
       await notificationsItem.click();
     } else {
-      await page.locator('.settings-sidebar-item', { hasText: 'Notifications' }).click();
+      await page.locator('.settings-sidebar-item').filter({ hasText: /^Notifications$/ }).click();
     }
 
     await expect(page.getByText('Server push is not configured')).toBeVisible({ timeout: 10000 });
@@ -137,15 +137,35 @@ test.describe('Settings', () => {
     }
 
     await page.getByLabel('Name').fill('Home Assistant');
-    await page.getByLabel('Webhook URL').fill('https://ha.example/api/webhook/private-token?secret=abc123');
+    await page.getByLabel('Webhook URL').fill('https://ha.example/api/webhook/placeholder-token');
     await page.getByLabel('Optionaler Secret Header').fill('X-Tribu-Secret');
-    await page.getByPlaceholder('Secret Wert').fill('super-secret');
+    await page.getByPlaceholder('Secret Wert').fill('placeholder-secret');
     await page.getByRole('button', { name: 'Webhook hinzufügen' }).click();
 
     await expect(page.getByText('https://ha.example/[redacted]')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Secret Header: X-Tribu-Secret')).toBeVisible();
-    await expect(page.getByText(/private-token/)).toHaveCount(0);
-    await expect(page.getByText(/super-secret/)).toHaveCount(0);
+    await expect(page.getByText(/placeholder-token/)).toHaveCount(0);
+    await expect(page.getByText(/placeholder-secret/)).toHaveCount(0);
+  });
+
+  test('creates a household notification destination without exposing the Apprise URL', async ({ authedPage: page }) => {
+    await navigateTo(page, 'Settings');
+
+    const destinationsItem = page.locator('.settings-mobile-item', { hasText: 'Household notifications' });
+    if (await destinationsItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await destinationsItem.click();
+    } else {
+      await page.locator('.settings-sidebar-item', { hasText: 'Household notifications' }).click();
+    }
+
+    await expect(page.getByText(/Destination URLs may contain passwords or tokens/)).toBeVisible();
+    await page.getByLabel('Name').fill('Kitchen ntfy');
+    await page.getByLabel('Apprise URL').fill('ntfy://ntfy.sh/tribu-e2e-placeholder');
+    await page.getByRole('button', { name: 'Add destination' }).click();
+
+    await expect(page.getByText('Kitchen ntfy')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('ntfy://[redacted]')).toBeVisible();
+    await expect(page.getByText(/tribu-e2e-placeholder/)).toHaveCount(0);
   });
 
 });

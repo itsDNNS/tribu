@@ -61,6 +61,7 @@ from app.modules.school_timetables_router import router as school_timetables_rou
 from app.modules.display_router import admin_router as display_admin_router, display_router as display_runtime_router
 from app.modules.mobile_router import router as mobile_router
 from app.modules.webhooks_router import router as webhooks_router
+from app.modules.notification_destinations_router import router as notification_destinations_router
 from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import ws_broadcast
 from app.schemas import (
@@ -181,6 +182,7 @@ TAG_METADATA = [
     {"name": "activity", "description": "Recent public-safe household activity for the current family."},
     {"name": "household_templates", "description": "Reusable household planning templates for tasks and shopping lists."},
     {"name": "notifications", "description": "User notifications with SSE streaming, read/unread management, and notification preferences."},
+    {"name": "notification-destinations", "description": "Admin-managed household notification destinations for human reminders."},
     {"name": "tokens", "description": "Personal Access Token (PAT) management for API automation."},
     {"name": "backup", "description": "Database backup management — schedule, trigger, download, and delete. Admin only."},
     {"name": "invitations", "description": "Family invitation links — create, list, revoke, and accept."},
@@ -251,7 +253,7 @@ def _redact_validation_errors(value):
     if isinstance(value, list):
         return [_redact_validation_errors(item) for item in value]
     if isinstance(value, dict):
-        sensitive_input = any(part in {"url", "secret_header_value"} for part in value.get("loc", []))
+        sensitive_input = any(part in {"url", "secret_header_value", "target_url_secret"} for part in value.get("loc", []))
         redacted = {}
         for key, item in value.items():
             if key == "input" and sensitive_input:
@@ -689,6 +691,7 @@ app.include_router(display_admin_router)
 app.include_router(display_runtime_router)
 app.include_router(mobile_router)
 app.include_router(webhooks_router)
+app.include_router(notification_destinations_router)
 
 
 # ---------------------------------------------------------------------------

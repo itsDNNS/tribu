@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Navigation, Bell, Database, Key, Heart, Smartphone, ChevronRight, ArrowLeft, PlugZap } from 'lucide-react';
+import { User, Navigation, Bell, BellRing, Database, Key, Heart, Smartphone, ChevronRight, ArrowLeft, PlugZap } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import AccountTab from './AccountTab';
@@ -8,6 +8,7 @@ import NotificationsTab from './NotificationsTab';
 import DataTab from './DataTab';
 import ApiTokensTab from './ApiTokensTab';
 import WebhooksTab from './WebhooksTab';
+import NotificationDestinationsTab from './NotificationDestinationsTab';
 import PhoneSyncTab from './PhoneSyncTab';
 import AboutTab from './AboutTab';
 
@@ -19,12 +20,13 @@ const TABS = [
   { key: 'data',          labelKey: 'data_management',       icon: Database,   component: DataTab,          visible: ({ isChild, demoMode }) => !isChild && !demoMode, group: 'personal' },
   { key: 'tokens',        labelKey: 'api_tokens',            icon: Key,        component: ApiTokensTab,     visible: ({ isChild, demoMode }) => !isChild && !demoMode, group: 'system' },
   { key: 'webhooks',      labelKey: 'automation_webhooks',   icon: PlugZap,    component: WebhooksTab,      visible: ({ isChild, demoMode }) => !isChild && !demoMode, group: 'system' },
+  { key: 'notification_destinations', labelKey: 'household_notifications', icon: BellRing, component: NotificationDestinationsTab, visible: ({ isAdmin, isChild, demoMode }) => isAdmin && !isChild && !demoMode, group: 'system' },
   { key: 'about',         labelKey: 'about_support',         icon: Heart,      component: AboutTab,         visible: () => true,                              group: 'system' },
 ];
 
 export default function SettingsView() {
-  const { messages, isMobile, isChild, demoMode } = useApp();
-  const visibleTabs = TABS.filter(tab => tab.visible({ isChild, demoMode }));
+  const { messages, isMobile, isChild, isAdmin, demoMode } = useApp();
+  const visibleTabs = TABS.filter(tab => tab.visible({ isAdmin, isChild, demoMode }));
   const [activeTab, setActiveTab] = useState(isMobile ? null : visibleTabs[0]?.key || 'account');
 
   // When switching from mobile to desktop, ensure a tab is selected
