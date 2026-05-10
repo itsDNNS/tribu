@@ -672,7 +672,7 @@
   "notification_destinations_name_placeholder": "Kitchen ntfy",
   "notification_destinations_url": "Apprise URL",
   "notification_destinations_examples": "Examples: ntfy://ntfy.sh/family-topic, gotify://host.example/token, tgram://bot-token/chat-id. Use placeholders in docs and never paste shared secrets into screenshots.",
-  "notification_destinations_events": "Reminder types",
+  "notification_destinations_events": "Typy událostí",
   "notification_destinations_event_calendar": "Calendar reminders",
   "notification_destinations_event_task": "Task reminders",
   "notification_destinations_event_birthday": "Birthday reminders",
@@ -695,7 +695,9 @@
   "notification_destinations_send_test": "Send test",
   "notification_destinations_delete_label": "Delete {name}",
   "notification_destinations_delete_confirm": "Delete notification destination {name}?",
-  "notifications_external_destinations_title": "Send reminders outside Tribu",
-  "notifications_external_destinations_help": "Admins can add Gotify, ntfy, Telegram, Matrix, or email destinations for household reminders.",
-  "notifications_external_destinations_action": "Configure household notifications"
+  "notifications_external_destinations_title": "Posílejte připomínky a nákupy mimo Tribu",
+  "notifications_external_destinations_help": "Administrátoři mohou přidat cíle Gotify, ntfy, Telegram, Matrix nebo e-mail pro domácí připomínky a vybranou nákupní aktivitu.",
+  "notifications_external_destinations_action": "Configure household notifications",
+  "notification_destinations_event_shopping_list": "Změny nákupních seznamů",
+  "notification_destinations_event_shopping_item": "Změny nákupních položek"
 }

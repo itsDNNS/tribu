@@ -9,6 +9,8 @@ const DESTINATION_EVENTS = [
   ['calendar.reminder', 'notification_destinations_event_calendar'],
   ['task.reminder', 'notification_destinations_event_task'],
   ['birthday.reminder', 'notification_destinations_event_birthday'],
+  ['shopping.list.changed', 'notification_destinations_event_shopping_list'],
+  ['shopping.item.changed', 'notification_destinations_event_shopping_item'],
 ];
 
 const emptyForm = {

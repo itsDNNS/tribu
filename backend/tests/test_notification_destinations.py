@@ -25,6 +25,10 @@ from app.models import (
     NotificationDestinationDelivery,
     NotificationPreference,
     PersonalAccessToken,
+    ShoppingItem,
+    ShoppingList,
+    ShoppingTemplate,
+    ShoppingTemplateItem,
     User,
 )
 from app.security import PAT_PREFIX, hash_password
@@ -552,6 +556,345 @@ def test_scheduler_dispatches_once_across_users_and_retries(monkeypatch):
         assert len(deliveries) == 1
         assert deliveries[0].status == "delivered"
         assert deliveries[0].attempts == 1
+    finally:
+        db.close()
+
+
+def test_provider_status_and_crud_accept_shopping_event_destinations():
+    token, family_id, _ = _seed_member()
+
+    status = client.get("/notification-destinations/provider/status", headers=_auth(token))
+    assert status.status_code == 200
+    assert "shopping.list.changed" in status.json()["events"]
+    assert "shopping.item.changed" in status.json()["events"]
+
+    created = client.post(
+        "/notification-destinations",
+        headers=_auth(token),
+        json={
+            "family_id": family_id,
+            "name": "Shopping channel",
+            "target_url_secret": "mailto://shopping@example.com",
+            "events": ["shopping.list.changed", "shopping.item.changed"],
+        },
+    )
+    assert created.status_code == 200, created.json()
+    assert created.json()["events"] == ["shopping.item.changed", "shopping.list.changed"]
+
+    invalid = client.post(
+        "/notification-destinations",
+        headers=_auth(token),
+        json={
+            "family_id": family_id,
+            "name": "Audit channel",
+            "target_url_secret": "mailto://audit@example.com",
+            "events": ["audit.log.created"],
+        },
+    )
+    assert invalid.status_code == 422
+
+
+def test_shopping_list_destination_delivery_runs_after_saved_change(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
+    db = TestSession()
+    try:
+        db.add(_destination(family_id, user_id, target_url_secret="mailto://shopping@example.com", events=["shopping.list.changed"]))
+        db.commit()
+    finally:
+        db.close()
+
+    from app.core import notification_destinations as destinations_core
+
+    calls = []
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+
+    def fake_send(_url, payload):
+        check_db = TestSession()
+        try:
+            saved = check_db.get(ShoppingList, payload["source_id"])
+            assert saved is not None
+            assert saved.name == "Groceries"
+        finally:
+            check_db.close()
+        calls.append(payload)
+        return True
+
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", fake_send)
+
+    resp = client.post(
+        "/shopping/lists",
+        headers=_auth(token),
+        json={"family_id": family_id, "name": "Groceries"},
+    )
+
+    assert resp.status_code == 200, resp.json()
+    assert len(calls) == 1
+    assert calls[0]["event_type"] == "shopping.list.changed"
+    assert calls[0]["source_type"] == "shopping_list"
+    assert calls[0]["title"] == "Shopping list created"
+    assert calls[0]["link"] == f"/shopping?list={resp.json()['id']}"
+
+    db = TestSession()
+    try:
+        deliveries = db.query(NotificationDestinationDelivery).all()
+        assert len(deliveries) == 1
+        assert deliveries[0].status == "delivered"
+    finally:
+        db.close()
+
+
+def test_shopping_item_destination_failure_is_isolated_and_filters_destinations(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
+    created_list = client.post(
+        "/shopping/lists",
+        headers=_auth(token),
+        json={"family_id": family_id, "name": "Errands"},
+    )
+    assert created_list.status_code == 200, created_list.json()
+    list_id = created_list.json()["id"]
+
+    db = TestSession()
+    try:
+        db.add_all([
+            _destination(family_id, user_id, name="Matching", target_url_secret="mailto://shopping@example.com", events=["shopping.item.changed"]),
+            _destination(family_id, user_id, name="Inactive", active=False, target_url_secret="mailto://inactive@example.com", events=["shopping.item.changed"]),
+            _destination(family_id, user_id, name="Reminder only", target_url_secret="mailto://reminder@example.com", events=["calendar.reminder"]),
+        ])
+        db.commit()
+    finally:
+        db.close()
+
+    from app.core import notification_destinations as destinations_core
+
+    calls = []
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+
+    def failing_send(_url, payload):
+        calls.append(payload)
+        raise RuntimeError("destination down")
+
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", failing_send)
+
+    resp = client.post(
+        f"/shopping/lists/{list_id}/items",
+        headers=_auth(token),
+        json={"name": "Milk"},
+    )
+
+    assert resp.status_code == 200, resp.json()
+    assert len(calls) == 1
+    assert calls[0]["event_type"] == "shopping.item.changed"
+    assert calls[0]["source_type"] == "shopping_item"
+    assert calls[0]["title"] == "Shopping item added"
+
+    db = TestSession()
+    try:
+        saved_item = db.get(ShoppingItem, resp.json()["id"])
+        assert saved_item is not None
+        assert saved_item.name == "Milk"
+        deliveries = db.query(NotificationDestinationDelivery).all()
+        assert len(deliveries) == 1
+        assert deliveries[0].status == "failed"
+        assert deliveries[0].last_error == "send_failed"
+    finally:
+        db.close()
+
+
+def test_shopping_item_destination_update_actions_include_unchecked(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
+    created_list = client.post(
+        "/shopping/lists",
+        headers=_auth(token),
+        json={"family_id": family_id, "name": "Market"},
+    )
+    assert created_list.status_code == 200, created_list.json()
+    list_id = created_list.json()["id"]
+
+    db = TestSession()
+    try:
+        db.add(_destination(family_id, user_id, target_url_secret="mailto://items@example.com", events=["shopping.item.changed"]))
+        db.commit()
+    finally:
+        db.close()
+
+    from app.core import notification_destinations as destinations_core
+
+    calls = []
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", lambda _url, payload: calls.append(payload) or True)
+
+    created_item = client.post(
+        f"/shopping/lists/{list_id}/items",
+        headers=_auth(token),
+        json={"name": "Apples"},
+    )
+    assert created_item.status_code == 200, created_item.json()
+    item_id = created_item.json()["id"]
+
+    checked = client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"checked": True})
+    assert checked.status_code == 200, checked.json()
+
+    unchecked = client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"checked": False})
+    assert unchecked.status_code == 200, unchecked.json()
+
+    assert [call["trigger_key"].split(":")[2] for call in calls] == ["created", "checked", "unchecked"]
+    assert calls[-1]["body"] == 'User admin unchecked "Apples" on "Market".'
+
+
+def test_shopping_template_apply_sends_item_destination_after_items_are_saved(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
+    created_list = client.post(
+        "/shopping/lists",
+        headers=_auth(token),
+        json={"family_id": family_id, "name": "Weekly shop"},
+    )
+    assert created_list.status_code == 200, created_list.json()
+    list_id = created_list.json()["id"]
+
+    db = TestSession()
+    try:
+        template = ShoppingTemplate(family_id=family_id, name="Breakfast", created_by_user_id=user_id)
+        db.add(template)
+        db.flush()
+        db.add_all([
+            ShoppingTemplateItem(template_id=template.id, name="Milk", position=0),
+            ShoppingTemplateItem(template_id=template.id, name="Oats", position=1),
+        ])
+        db.add(_destination(family_id, user_id, target_url_secret="mailto://template@example.com", events=["shopping.item.changed"]))
+        db.commit()
+        template_id = template.id
+    finally:
+        db.close()
+
+    from app.core import notification_destinations as destinations_core
+
+    calls = []
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+
+    def fake_send(_url, payload):
+        check_db = TestSession()
+        try:
+            saved_items = check_db.query(ShoppingItem).filter(ShoppingItem.list_id == list_id).all()
+            assert {item.name for item in saved_items} == {"Milk", "Oats"}
+        finally:
+            check_db.close()
+        calls.append(payload)
+        return True
+
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", fake_send)
+
+    applied = client.post(
+        f"/shopping/templates/{template_id}/apply",
+        headers=_auth(token),
+        json={"list_id": list_id},
+    )
+
+    assert applied.status_code == 200, applied.json()
+    assert applied.json()["added_count"] == 2
+    assert len(calls) == 1
+    assert calls[0]["event_type"] == "shopping.item.changed"
+    assert calls[0]["source_type"] == "shopping_list"
+    assert calls[0]["source_id"] == list_id
+    assert calls[0]["title"] == "Shopping items added"
+    assert "2 items" in calls[0]["body"]
+
+
+def test_shopping_destination_respects_household_quiet_hours(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
+    _, _, other_user_id = _seed_member(family_id=family_id, suffix="quiet-member")
+    now = datetime(2026, 5, 10, 1, 30, 0)
+
+    db = TestSession()
+    try:
+        db.add_all([
+            NotificationPreference(user_id=user_id, reminders_enabled=True, reminder_minutes=30, quiet_start="22:00", quiet_end="06:00"),
+            NotificationPreference(user_id=other_user_id, reminders_enabled=True, reminder_minutes=30, quiet_start="22:00", quiet_end="06:00"),
+            _destination(
+                family_id,
+                user_id,
+                name="Quiet shopping channel",
+                target_url_secret="mailto://quiet@example.com",
+                events=["shopping.list.changed"],
+                respect_quiet_hours=True,
+            ),
+        ])
+        db.commit()
+    finally:
+        db.close()
+
+    from app.core import notification_destinations as destinations_core
+
+    calls = []
+    monkeypatch.setattr(destinations_core, "utcnow", lambda: now)
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", lambda _url, payload: calls.append(payload) or True)
+
+    resp = client.post(
+        "/shopping/lists",
+        headers=_auth(token),
+        json={"family_id": family_id, "name": "Quiet groceries"},
+    )
+
+    assert resp.status_code == 200, resp.json()
+    assert calls == []
+
+    db = TestSession()
+    try:
+        saved = db.get(ShoppingList, resp.json()["id"])
+        assert saved is not None
+        destination = db.query(NotificationDestination).filter(NotificationDestination.name == "Quiet shopping channel").one()
+        assert destination.last_status == "quiet_hours"
+        assert destination.last_error == "quiet_hours"
+        assert db.query(NotificationDestinationDelivery).count() == 0
+    finally:
+        db.close()
+
+
+def test_shopping_destination_sends_when_any_household_member_is_awake(monkeypatch):
+    token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
+    _, _, other_user_id = _seed_member(family_id=family_id, suffix="awake-member")
+    now = datetime(2026, 5, 10, 22, 30, 0)
+
+    db = TestSession()
+    try:
+        db.add_all([
+            NotificationPreference(user_id=user_id, reminders_enabled=True, reminder_minutes=30, quiet_start="22:00", quiet_end="23:00"),
+            NotificationPreference(user_id=other_user_id, reminders_enabled=True, reminder_minutes=30, quiet_start="23:00", quiet_end="06:00"),
+            _destination(
+                family_id,
+                user_id,
+                name="Awake shopping channel",
+                target_url_secret="mailto://awake@example.com",
+                events=["shopping.list.changed"],
+                respect_quiet_hours=True,
+            ),
+        ])
+        db.commit()
+    finally:
+        db.close()
+
+    from app.core import notification_destinations as destinations_core
+
+    calls = []
+    monkeypatch.setattr(destinations_core, "utcnow", lambda: now)
+    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
+    monkeypatch.setattr(destinations_core, "_send_with_apprise", lambda _url, payload: calls.append(payload) or True)
+
+    resp = client.post(
+        "/shopping/lists",
+        headers=_auth(token),
+        json={"family_id": family_id, "name": "Awake groceries"},
+    )
+
+    assert resp.status_code == 200, resp.json()
+    assert len(calls) == 1
+    assert calls[0]["event_type"] == "shopping.list.changed"
+
+    db = TestSession()
+    try:
+        destination = db.query(NotificationDestination).filter(NotificationDestination.name == "Awake shopping channel").one()
+        assert destination.last_status == "delivered"
+        assert db.query(NotificationDestinationDelivery).count() == 1
     finally:
         db.close()
 

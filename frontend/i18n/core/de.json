@@ -672,7 +672,7 @@
   "notification_destinations_name_placeholder": "Küchen-ntfy",
   "notification_destinations_url": "Apprise-URL",
   "notification_destinations_examples": "Beispiele: ntfy://ntfy.sh/family-topic, gotify://host.example/token, tgram://bot-token/chat-id. Nutze in Doku und Screenshots Platzhalter statt echter Secrets.",
-  "notification_destinations_events": "Erinnerungstypen",
+  "notification_destinations_events": "Ereignistypen",
   "notification_destinations_event_calendar": "Kalendererinnerungen",
   "notification_destinations_event_task": "Aufgabenerinnerungen",
   "notification_destinations_event_birthday": "Geburtstagserinnerungen",
@@ -695,7 +695,9 @@
   "notification_destinations_send_test": "Test senden",
   "notification_destinations_delete_label": "{name} löschen",
   "notification_destinations_delete_confirm": "Benachrichtigungsziel {name} löschen?",
-  "notifications_external_destinations_title": "Erinnerungen außerhalb von Tribu senden",
-  "notifications_external_destinations_help": "Admins können Gotify, ntfy, Telegram, Matrix oder E-Mail-Ziele für Haushaltserinnerungen hinzufügen.",
-  "notifications_external_destinations_action": "Haushaltsbenachrichtigungen konfigurieren"
+  "notifications_external_destinations_title": "Erinnerungen und Einkäufe außerhalb von Tribu senden",
+  "notifications_external_destinations_help": "Admins können Gotify-, ntfy-, Telegram-, Matrix- oder E-Mail-Ziele für Haushaltserinnerungen und ausgewählte Einkaufsaktivität hinzufügen.",
+  "notifications_external_destinations_action": "Haushaltsbenachrichtigungen konfigurieren",
+  "notification_destinations_event_shopping_list": "Änderungen an Einkaufslisten",
+  "notification_destinations_event_shopping_item": "Änderungen an Einkaufsartikeln"
 }

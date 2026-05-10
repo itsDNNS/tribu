@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.clock import utcnow
 from app.database import SessionLocal
-from app.models import NotificationDestination, NotificationDestinationDelivery
+from app.models import Membership, NotificationDestination, NotificationDestinationDelivery, NotificationPreference
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,8 @@ ALLOWED_APPRISE_SCHEMES = {
 
 NETWORK_TARGET_SCHEMES = {"gotify", "gotifys", "ntfy", "ntfys", "matrix", "matrixs", "mailto", "mailtos", "smtp", "smtps"}
 REMINDER_EVENT_TYPES = {"calendar.reminder", "task.reminder", "birthday.reminder"}
+SHOPPING_EVENT_TYPES = {"shopping.list.changed", "shopping.item.changed"}
+DESTINATION_EVENT_TYPES = REMINDER_EVENT_TYPES | SHOPPING_EVENT_TYPES
 TEST_EVENT_TYPE = "notification.test"
 ENCRYPTED_TARGET_PREFIX = "enc:v1:"
 DEFAULT_CONNECT_TIMEOUT_SECONDS = 4.0
@@ -196,7 +198,7 @@ def _guard_apprise_egress_resolution():
 
 
 def clean_events(events: list[str], *, allow_test: bool = False) -> list[str]:
-    allowed = set(REMINDER_EVENT_TYPES)
+    allowed = set(DESTINATION_EVENT_TYPES)
     if allow_test:
         allowed.add(TEST_EVENT_TYPE)
     cleaned = sorted({event.strip() for event in (events or []) if event and event.strip()})
@@ -250,7 +252,7 @@ def provider_status() -> dict[str, Any]:
         "provider": "apprise",
         "available": is_provider_available(),
         "allowed_schemes": sorted(ALLOWED_APPRISE_SCHEMES),
-        "events": sorted(REMINDER_EVENT_TYPES),
+        "events": sorted(DESTINATION_EVENT_TYPES),
     }
 
 
@@ -411,6 +413,46 @@ def send_test_notification(destination_id: int) -> NotificationDestinationDelive
         db.close()
 
 
+def _in_quiet_hours(quiet_start: str | None, quiet_end: str | None, now: datetime) -> bool:
+    if not quiet_start or not quiet_end:
+        return False
+    try:
+        start_h, start_m = map(int, quiet_start.split(":"))
+        end_h, end_m = map(int, quiet_end.split(":"))
+    except (ValueError, AttributeError):
+        return False
+
+    current_minutes = now.hour * 60 + now.minute
+    start_minutes = start_h * 60 + start_m
+    end_minutes = end_h * 60 + end_m
+
+    if start_minutes <= end_minutes:
+        return start_minutes <= current_minutes < end_minutes
+    return current_minutes >= start_minutes or current_minutes < end_minutes
+
+
+def _family_destination_users(db, family_id: int, now: datetime) -> list[EligibleReminderUser]:
+    memberships = db.query(Membership).filter(Membership.family_id == family_id).all()
+    if not memberships:
+        return []
+    user_ids = [membership.user_id for membership in memberships]
+    prefs = {
+        pref.user_id: pref
+        for pref in db.query(NotificationPreference).filter(NotificationPreference.user_id.in_(user_ids)).all()
+    }
+    return [
+        EligibleReminderUser(
+            user_id=uid,
+            in_quiet_hours=_in_quiet_hours(
+                prefs[uid].quiet_start if uid in prefs else None,
+                prefs[uid].quiet_end if uid in prefs else None,
+                now,
+            ),
+        )
+        for uid in user_ids
+    ]
+
+
 def dispatch_family_notification(
     *,
     family_id: int,
@@ -421,9 +463,11 @@ def dispatch_family_notification(
     source_type: str,
     source_id: int,
     trigger_key: str,
-    eligible_users: list[EligibleReminderUser],
+    eligible_users: list[EligibleReminderUser] | None = None,
 ) -> list[NotificationDestinationDelivery]:
-    if event_type not in REMINDER_EVENT_TYPES or not eligible_users:
+    if event_type not in DESTINATION_EVENT_TYPES:
+        return []
+    if event_type in REMINDER_EVENT_TYPES and not eligible_users:
         return []
 
     payload = {
@@ -444,13 +488,16 @@ def dispatch_family_notification(
             .filter(NotificationDestination.family_id == family_id)
             .all()
         )
+        quiet_hour_users = eligible_users
+        if quiet_hour_users is None:
+            quiet_hour_users = _family_destination_users(db, family_id, utcnow())
         deliveries: list[NotificationDestinationDelivery] = []
         for destination in destinations:
             if not destination.active:
                 continue
             if event_type not in (destination.events or []):
                 continue
-            if destination.respect_quiet_hours and not any(not user.in_quiet_hours for user in eligible_users):
+            if destination.respect_quiet_hours and quiet_hour_users and not any(not user.in_quiet_hours for user in quiet_hour_users):
                 _mark_destination(destination, status="quiet_hours", now=utcnow(), error="quiet_hours")
                 db.commit()
                 continue

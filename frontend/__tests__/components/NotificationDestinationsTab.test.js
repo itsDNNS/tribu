@@ -36,7 +36,7 @@ describe('NotificationDestinationsTab', () => {
         name: 'Kitchen ntfy',
         provider: 'apprise',
         url_redacted: 'ntfy://[redacted]',
-        events: ['calendar.reminder', 'task.reminder'],
+        events: ['calendar.reminder', 'task.reminder', 'shopping.item.changed'],
         active: true,
         respect_quiet_hours: true,
         has_secret: true,
@@ -51,6 +51,7 @@ describe('NotificationDestinationsTab', () => {
     expect(screen.getByText(/Destination URLs may contain passwords or tokens/)).toBeInTheDocument();
     expect(screen.queryByText(/placeholder-token/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/placeholder-topic/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Shopping item changes/).length).toBeGreaterThan(0);
   });
 
   it('creates a destination and sends safe test notifications', async () => {
@@ -58,6 +59,8 @@ describe('NotificationDestinationsTab', () => {
 
     fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Household Gotify' } });
     fireEvent.change(screen.getByLabelText('Apprise URL'), { target: { value: 'gotify://host.example/placeholder-token' } });
+    expect(screen.getByLabelText('Shopping list changes')).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText('Shopping item changes'));
     fireEvent.click(screen.getByRole('button', { name: 'Add destination' }));
 
     await waitFor(() => expect(api.apiCreateNotificationDestination).toHaveBeenCalledTimes(1));
@@ -65,8 +68,9 @@ describe('NotificationDestinationsTab', () => {
       family_id: 1,
       name: 'Household Gotify',
       target_url_secret: 'gotify://host.example/placeholder-token',
-      events: expect.arrayContaining(['calendar.reminder']),
+      events: expect.arrayContaining(['calendar.reminder', 'shopping.item.changed']),
     }));
+    expect(api.apiCreateNotificationDestination.mock.calls[0][0].events).not.toContain('shopping.list.changed');
     expect(toastSuccess).toHaveBeenCalledWith('Notification destination saved');
 
     api.apiListNotificationDestinations.mockResolvedValue({

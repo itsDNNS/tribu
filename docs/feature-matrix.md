@@ -18,7 +18,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Templates | Repeatable household plans | Reusable task and routine templates. |
 | Gifts | Gift planning | Gift ideas and planning around family dates. |
 | Rewards | Family motivation | Token economy, reward catalog, earning rules, and progress. |
-| Notifications | In-app, browser push, and external reminder destinations | Household activity, overdue tasks, upcoming events, and Apprise-backed human reminder channels with encrypted destination URLs and private-host guardrails. |
+| Notifications | In-app, browser push, and external destinations | Household activity, overdue tasks, upcoming events, and Apprise-backed human channels for reminders plus opt-in shopping activity with encrypted destination URLs and private-host guardrails. |
 | Activity | Household timeline | Recent changes and quick context. |
 | Search | Global search | Fast lookup across core household data. |
 | Shared Home Display | Read-only household screen | Pairable device tokens for kitchen tablets, hallway screens, and wall displays. |
