@@ -27,6 +27,7 @@ from app.core.errors import (
     error_detail,
 )
 from app.core.scopes import require_scope
+from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.ws_broadcast import broadcast_item_added
 from app.database import get_db
 from app.models import MealPlan, Membership, ShoppingItem, ShoppingList, User
@@ -473,6 +474,17 @@ def add_week_ingredients_to_shopping(
             shopping_list.id,
             ShoppingItemResponse.model_validate(item).model_dump(mode="json"),
         )
+    if created:
+        dispatch_shopping_destination_event(
+            family_id=payload.family_id,
+            event_type="shopping.item.changed",
+            title="Meal plan ingredients added",
+            body=f'{user.display_name or "Someone"} added {len(created)} ingredients from the meal plan week to "{shopping_list.name}".',
+            link=f"/shopping?list={shopping_list.id}",
+            source_type="shopping_list",
+            source_id=shopping_list.id,
+            action="meal_plan_week_added",
+        )
     return MealPlanAddToShoppingResponse(added_count=len(created))
 
 
@@ -543,5 +555,16 @@ def add_ingredients_to_shopping(
         broadcast_item_added(
             shopping_list.id,
             ShoppingItemResponse.model_validate(item).model_dump(mode="json"),
+        )
+    if created:
+        dispatch_shopping_destination_event(
+            family_id=plan.family_id,
+            event_type="shopping.item.changed",
+            title="Meal ingredients added",
+            body=f'{user.display_name or "Someone"} added {len(created)} ingredients from "{plan.meal_name}" to "{shopping_list.name}".',
+            link=f"/shopping?list={shopping_list.id}",
+            source_type="shopping_list",
+            source_id=shopping_list.id,
+            action="meal_plan_added",
         )
     return MealPlanAddToShoppingResponse(added_count=len(created))

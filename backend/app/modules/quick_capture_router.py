@@ -7,6 +7,7 @@ from app.core.activity import record_activity
 from app.core.deps import current_user, ensure_adult
 from app.core.errors import error_detail
 from app.core.scopes import require_scope
+from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
 from app.models import QuickCaptureItem, ShoppingItem, ShoppingList, Task, User
@@ -44,7 +45,7 @@ def _shopping_item_response(item: ShoppingItem) -> ShoppingItemResponse:
     return ShoppingItemResponse.model_validate(item)
 
 
-def _get_or_create_quick_list(db: Session, family_id: int, user_id: int) -> ShoppingList:
+def _get_or_create_quick_list(db: Session, family_id: int, user_id: int) -> tuple[ShoppingList, bool]:
     shopping_list = (
         db.query(ShoppingList)
         .filter(ShoppingList.family_id == family_id, ShoppingList.name == QUICK_CAPTURE_SHOPPING_LIST_NAME)
@@ -52,7 +53,7 @@ def _get_or_create_quick_list(db: Session, family_id: int, user_id: int) -> Shop
         .first()
     )
     if shopping_list:
-        return shopping_list
+        return shopping_list, False
     shopping_list = ShoppingList(
         family_id=family_id,
         name=QUICK_CAPTURE_SHOPPING_LIST_NAME,
@@ -60,7 +61,7 @@ def _get_or_create_quick_list(db: Session, family_id: int, user_id: int) -> Shop
     )
     db.add(shopping_list)
     db.flush()
-    return shopping_list
+    return shopping_list, True
 
 
 def _create_task(db: Session, *, family_id: int, user: User, text: str) -> Task:
@@ -87,8 +88,8 @@ def _create_task(db: Session, *, family_id: int, user: User, text: str) -> Task:
     return task
 
 
-def _create_shopping_item(db: Session, *, family_id: int, user: User, text: str) -> ShoppingItem:
-    shopping_list = _get_or_create_quick_list(db, family_id, user.id)
+def _create_shopping_item(db: Session, *, family_id: int, user: User, text: str) -> tuple[ShoppingItem, ShoppingList, bool]:
+    shopping_list, shopping_list_created = _get_or_create_quick_list(db, family_id, user.id)
     item = ShoppingItem(
         list_id=shopping_list.id,
         name=text,
@@ -108,13 +109,44 @@ def _create_shopping_item(db: Session, *, family_id: int, user: User, text: str)
         verb="added",
         object_kind="to shopping",
     )
-    return item
+    return item, shopping_list, shopping_list_created
 
 
 def _created_payload(destination: QuickCaptureDestination, created_item: Task | ShoppingItem) -> QuickCaptureResponse:
     if destination == QuickCaptureDestination.task:
         return QuickCaptureResponse(destination=destination, created_item=_task_response(created_item))
     return QuickCaptureResponse(destination=destination, created_item=_shopping_item_response(created_item))
+
+
+def _dispatch_quick_capture_shopping_events(
+    *,
+    family_id: int,
+    user: User,
+    shopping_list: ShoppingList,
+    item: ShoppingItem,
+    shopping_list_created: bool,
+) -> None:
+    if shopping_list_created:
+        dispatch_shopping_destination_event(
+            family_id=family_id,
+            event_type="shopping.list.changed",
+            title="Shopping list created",
+            body=f'{user.display_name or "Someone"} created shopping list "{shopping_list.name}" from quick capture.',
+            link=f"/shopping?list={shopping_list.id}",
+            source_type="shopping_list",
+            source_id=shopping_list.id,
+            action="quick_capture_list_created",
+        )
+    dispatch_shopping_destination_event(
+        family_id=family_id,
+        event_type="shopping.item.changed",
+        title="Shopping item added",
+        body=f'{user.display_name or "Someone"} added "{item.name}" to "{shopping_list.name}" from quick capture.',
+        link=f"/shopping?list={shopping_list.id}",
+        source_type="shopping_item",
+        source_id=item.id,
+        action="quick_capture_added",
+    )
 
 
 @router.post(
@@ -145,14 +177,22 @@ def create_quick_capture(
         return _created_payload(payload.destination, task)
 
     if payload.destination == QuickCaptureDestination.shopping:
-        item = _create_shopping_item(db, family_id=payload.family_id, user=user, text=text)
+        item, shopping_list, shopping_list_created = _create_shopping_item(db, family_id=payload.family_id, user=user, text=text)
         db.commit()
         db.refresh(item)
+        db.refresh(shopping_list)
         dispatch_webhook_event(
             db,
             family_id=payload.family_id,
             event_type="shopping.item.created",
             data={"list_id": item.list_id, "item_id": item.id, "name": item.name, "source": "quick_capture"},
+        )
+        _dispatch_quick_capture_shopping_events(
+            family_id=payload.family_id,
+            user=user,
+            shopping_list=shopping_list,
+            item=item,
+            shopping_list_created=shopping_list_created,
         )
         return _created_payload(payload.destination, item)
 
@@ -229,10 +269,12 @@ def convert_quick_capture_item(
     if payload.destination == QuickCaptureDestination.inbox:
         raise HTTPException(status_code=400, detail=error_detail("INVALID_QUICK_CAPTURE_DESTINATION"))
 
+    shopping_list = None
+    shopping_list_created = False
     if payload.destination == QuickCaptureDestination.task:
         created = _create_task(db, family_id=item.family_id, user=user, text=item.text)
     else:
-        created = _create_shopping_item(db, family_id=item.family_id, user=user, text=item.text)
+        created, shopping_list, shopping_list_created = _create_shopping_item(db, family_id=item.family_id, user=user, text=item.text)
 
     item.status = "converted"
     item.converted_to = payload.destination.value
@@ -240,6 +282,15 @@ def convert_quick_capture_item(
     db.commit()
     db.refresh(item)
     db.refresh(created)
+    if payload.destination == QuickCaptureDestination.shopping and shopping_list is not None:
+        db.refresh(shopping_list)
+        _dispatch_quick_capture_shopping_events(
+            family_id=item.family_id,
+            user=user,
+            shopping_list=shopping_list,
+            item=created,
+            shopping_list_created=shopping_list_created,
+        )
     return QuickCaptureConvertResponse(
         status=item.status,
         converted_to=payload.destination,
