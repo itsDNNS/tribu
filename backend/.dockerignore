@@ -6,3 +6,9 @@ tests
 *.md
 .venv
 .pytest_cache
+test-*.db
+.ruff_cache/
+coverage/
+htmlcov/
+start-dev.sh
+radicale-data/

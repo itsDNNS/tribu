@@ -6,7 +6,7 @@ WORKDIR /app
 # refuses to run if package.json and package-lock.json disagree. This
 # pins the audit posture of the build to whatever was committed.
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund --include=dev
+RUN npm ci --no-audit --no-fund --omit=dev
 
 
 FROM node:22-alpine AS builder
@@ -32,7 +32,9 @@ ENV NEXT_PUBLIC_APP_BUILD_DATE=$NEXT_PUBLIC_APP_BUILD_DATE
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN npm run build
+RUN npm run build \
+    && cp -a .next/standalone /tmp/standalone \
+    && rm -rf /tmp/standalone/node_modules/@img /tmp/standalone/node_modules/sharp
 
 
 FROM node:22-alpine AS runner
@@ -52,7 +54,7 @@ RUN addgroup -S tribu && adduser -S tribu -G tribu
 # copied alongside it because Next's standalone server expects them
 # at fixed paths.
 COPY --from=builder --chown=tribu:tribu /app/public ./public
-COPY --from=builder --chown=tribu:tribu /app/.next/standalone ./
+COPY --from=builder --chown=tribu:tribu /tmp/standalone ./
 COPY --from=builder --chown=tribu:tribu /app/.next/static ./.next/static
 
 USER tribu

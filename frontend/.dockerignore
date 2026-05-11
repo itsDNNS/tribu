@@ -4,3 +4,10 @@ node_modules
 .git
 *.md
 .eslintrc*
+__tests__/
+e2e/
+coverage/
+playwright-report/
+test-results/
+jest.config.js
+playwright.config.js
