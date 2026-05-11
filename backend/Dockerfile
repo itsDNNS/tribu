@@ -8,13 +8,17 @@ ENV APP_VERSION=${APP_VERSION}
 ENV APP_BUILD_NUMBER=${APP_BUILD_NUMBER}
 ENV APP_GIT_SHA=${APP_GIT_SHA}
 ENV APP_BUILD_DATE=${APP_BUILD_DATE}
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_COMPILE=1
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client gosu && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --no-compile -r requirements.txt \
+    && find /usr/local/lib/python*/site-packages -type d -name __pycache__ -prune -exec rm -rf {} + \
+    && find /usr/local/lib/python*/site-packages -type d \( -name tests -o -name test \) -prune -exec rm -rf {} +
 
 COPY alembic.ini .
 COPY alembic ./alembic
