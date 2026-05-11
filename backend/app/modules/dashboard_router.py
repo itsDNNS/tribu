@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from app.core.utils import utcnow
+from app.core.clock import local_today, local_wall_now, utcnow
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -32,7 +32,7 @@ def dashboard_summary(
     ensure_family_membership(db, user.id, family_id)
 
     def _load():
-        now = utcnow()
+        now = local_wall_now(utcnow())
         range_end = now + timedelta(days=14)
 
         non_recurring = (
@@ -65,7 +65,7 @@ def dashboard_summary(
         next_events = [CalendarEventResponse(**o).model_dump() for o in all_occurrences[:8]]
 
         birthdays = db.query(FamilyBirthday).filter(FamilyBirthday.family_id == family_id).all()
-        today = date.today()
+        today = local_today()
         upcoming = []
         for b in birthdays:
             occurs_on = next_birthday_date(b.month, b.day, today)
@@ -85,6 +85,6 @@ def dashboard_summary(
             "upcoming_birthdays": upcoming,
         }
 
-    key = f"tribu:dashboard:{family_id}:{date.today()}"
+    key = f"tribu:dashboard:{family_id}:{local_today()}"
     data = cache.get_or_set(key, 60, _load)
     return DashboardSummary(**data)

@@ -47,6 +47,10 @@ def _set_sqlite_pragma(dbapi_conn, _):
 
 @pytest.fixture(autouse=True)
 def setup_db(monkeypatch):
+    monkeypatch.setenv("TZ", "Europe/Berlin")
+    from app.core.clock import app_timezone
+
+    app_timezone.cache_clear()
     Base.metadata.create_all(bind=engine)
     # Make ``SessionLocal()`` inside the scheduler hand out the in-memory
     # test session so we don't need to spin up the real engine.
@@ -54,6 +58,7 @@ def setup_db(monkeypatch):
 
     monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
     yield
+    app_timezone.cache_clear()
     Base.metadata.drop_all(bind=engine)
 
 
@@ -67,13 +72,24 @@ def _seed_user(db, email: str = "rel@example.com") -> tuple[User, Family]:
     return user, fam
 
 
-def _set_pref(db, user_id: int, *, push_enabled: bool = False, push_categories: dict | None = None) -> None:
+def _set_pref(
+    db,
+    user_id: int,
+    *,
+    push_enabled: bool = False,
+    push_categories: dict | None = None,
+    reminder_minutes: int = 30,
+    quiet_start: str | None = None,
+    quiet_end: str | None = None,
+) -> None:
     pref = NotificationPreference(
         user_id=user_id,
         reminders_enabled=True,
-        reminder_minutes=30,
+        reminder_minutes=reminder_minutes,
         push_enabled=push_enabled,
         push_categories=push_categories,
+        quiet_start=quiet_start,
+        quiet_end=quiet_end,
     )
     db.add(pref)
     db.flush()
@@ -83,6 +99,246 @@ def _freeze_now(monkeypatch, now: datetime) -> None:
     from app.core import scheduler as scheduler_module
 
     monkeypatch.setattr(scheduler_module, "utcnow", lambda: now)
+    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: now)
+    monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
+
+
+def _freeze_scheduler_clocks(monkeypatch, *, audit_now: datetime, wall_now: datetime) -> None:
+    from app.core import scheduler as scheduler_module
+
+    monkeypatch.setattr(scheduler_module, "utcnow", lambda: audit_now)
+    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: wall_now)
+
+
+def test_event_reminder_uses_configured_local_wall_clock_and_utc_audit_timestamps(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "tz-positive@example.com")
+        _set_pref(db, user.id, push_enabled=False, reminder_minutes=60)
+        event = CalendarEvent(
+            family_id=fam.id,
+            title="Bambini Turnier Michelbach",
+            starts_at=datetime(2026, 5, 9, 9, 15, 0),
+            all_day=False,
+        )
+        db.add(event)
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    audit_now = datetime(2026, 5, 9, 6, 15, 0)
+    wall_now = datetime(2026, 5, 9, 8, 15, 0)
+    _freeze_scheduler_clocks(monkeypatch, audit_now=audit_now, wall_now=wall_now)
+
+    from app.core.scheduler import _check_notifications
+
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        notification = db.query(Notification).filter(Notification.user_id == user_id).one()
+        log = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).one()
+        assert notification.body == "Starts in 60 minutes"
+        assert log.last_attempt_at == audit_now
+        assert log.delivered_at == audit_now
+    finally:
+        db.close()
+
+
+def test_event_reminder_does_not_fire_late_when_utc_clock_matches_future_window(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "tz-negative@example.com")
+        _set_pref(db, user.id, push_enabled=False, reminder_minutes=60)
+        db.add(CalendarEvent(
+            family_id=fam.id,
+            title="Late wall-clock reminder",
+            starts_at=datetime(2026, 5, 9, 9, 15, 0),
+            all_day=False,
+        ))
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_scheduler_clocks(
+        monkeypatch,
+        audit_now=datetime(2026, 5, 9, 8, 15, 0),
+        wall_now=datetime(2026, 5, 9, 10, 15, 0),
+    )
+
+    from app.core.scheduler import _check_notifications
+
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        assert db.query(Notification).filter(Notification.user_id == user_id).count() == 0
+        assert db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).count() == 0
+    finally:
+        db.close()
+
+
+def test_event_reminder_quiet_hours_are_evaluated_in_local_wall_time(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "tz-quiet@example.com")
+        _set_pref(
+            db,
+            user.id,
+            push_enabled=False,
+            reminder_minutes=30,
+            quiet_start="08:00",
+            quiet_end="09:00",
+        )
+        db.add(CalendarEvent(
+            family_id=fam.id,
+            title="Quiet local appointment",
+            starts_at=datetime(2026, 5, 9, 8, 30, 0),
+            all_day=False,
+        ))
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_scheduler_clocks(
+        monkeypatch,
+        audit_now=datetime(2026, 5, 9, 6, 15, 0),
+        wall_now=datetime(2026, 5, 9, 8, 15, 0),
+    )
+
+    from app.core.scheduler import _check_notifications
+
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        assert db.query(Notification).filter(Notification.user_id == user_id).count() == 0
+        assert db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).count() == 0
+    finally:
+        db.close()
+
+
+def test_event_reminder_fires_at_real_offset_across_spring_dst_gap(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "tz-spring@example.com")
+        _set_pref(db, user.id, push_enabled=False, reminder_minutes=60)
+        db.add(CalendarEvent(
+            family_id=fam.id,
+            title="Spring tournament",
+            starts_at=datetime(2026, 3, 29, 3, 15, 0),
+            all_day=False,
+        ))
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_scheduler_clocks(
+        monkeypatch,
+        audit_now=datetime(2026, 3, 29, 0, 15, 0),
+        wall_now=datetime(2026, 3, 29, 1, 15, 0),
+    )
+
+    from app.core.scheduler import _check_notifications
+
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        notification = db.query(Notification).filter(Notification.user_id == user_id).one()
+        log = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).one()
+        assert notification.body == "Starts in 60 minutes"
+        assert log.last_attempt_at == datetime(2026, 3, 29, 0, 15, 0)
+    finally:
+        db.close()
+
+
+def test_recurring_event_reminder_prefilter_keeps_spring_dst_gap_occurrence(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "tz-spring-recurring@example.com")
+        _set_pref(db, user.id, push_enabled=False, reminder_minutes=60)
+        db.add(CalendarEvent(
+            family_id=fam.id,
+            title="Daily spring practice",
+            starts_at=datetime(2026, 3, 28, 3, 15, 0),
+            recurrence="daily",
+            recurrence_end=datetime(2026, 3, 30, 3, 15, 0),
+            all_day=False,
+        ))
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_scheduler_clocks(
+        monkeypatch,
+        audit_now=datetime(2026, 3, 29, 0, 15, 0),
+        wall_now=datetime(2026, 3, 29, 1, 15, 0),
+    )
+
+    from app.core.scheduler import _check_notifications
+
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        notification = db.query(Notification).filter(Notification.user_id == user_id).one()
+        assert notification.title == "Daily spring practice"
+        assert notification.body == "Starts in 60 minutes"
+    finally:
+        db.close()
+
+
+def test_event_reminder_does_not_fire_on_first_repeated_hour_before_fall_dst(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "tz-fall@example.com")
+        _set_pref(db, user.id, push_enabled=False, reminder_minutes=30)
+        db.add(CalendarEvent(
+            family_id=fam.id,
+            title="Fall appointment",
+            starts_at=datetime(2026, 10, 25, 3, 0, 0),
+            all_day=False,
+        ))
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    from app.core.scheduler import _check_notifications
+
+    _freeze_scheduler_clocks(
+        monkeypatch,
+        audit_now=datetime(2026, 10, 25, 0, 30, 0),
+        wall_now=datetime(2026, 10, 25, 2, 30, 0),
+    )
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        assert db.query(Notification).filter(Notification.user_id == user_id).count() == 0
+        assert db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).count() == 0
+    finally:
+        db.close()
+
+    _freeze_scheduler_clocks(
+        monkeypatch,
+        audit_now=datetime(2026, 10, 25, 1, 30, 0),
+        wall_now=datetime(2026, 10, 25, 2, 30, 0),
+    )
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        notification = db.query(Notification).filter(Notification.user_id == user_id).one()
+        assert notification.body == "Starts in 30 minutes"
+    finally:
+        db.close()
 
 
 def test_event_reminder_idempotent_across_runs(monkeypatch):

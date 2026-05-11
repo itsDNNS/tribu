@@ -211,6 +211,7 @@ services:
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
       JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-24}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      TZ: ${TZ:-}
     depends_on: [postgres, valkey]
     ports: ["8000:8000"]
     volumes:
@@ -228,12 +229,13 @@ volumes:
   tribu_backups:
 ```
 
-Set two environment variables before deploying:
+Set the required secrets before deploying. Set `TZ` as well when you want family calendar times and reminders to use a local household timezone instead of UTC:
 
 | Variable | Description |
 |---|---|
 | `JWT_SECRET` | Random 64-character hex string for JWT signing. Keep it stable in the persisted `.env` so routine updates do not end active sessions. |
 | `POSTGRES_PASSWORD` | Random 32-character hex string for the database. |
+| `TZ` | Optional IANA timezone for family calendar/task times and reminder windows, for example `Europe/Berlin`. If unset or invalid, Tribu falls back to UTC. Audit timestamps remain UTC. |
 
 Generate the values and write them into `.env`:
 

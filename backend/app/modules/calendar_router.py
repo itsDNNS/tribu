@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core import cache
 from app.core.activity import record_activity
-from app.core.clock import utcnow
+from app.core.clock import to_local_wall_naive, utcnow
 from app.core.calendar_icons import normalize_calendar_event_icon
 from app.core.calendar_subscriptions import (
     IcsSubscriptionError,
@@ -16,7 +16,7 @@ from app.core.calendar_subscriptions import (
     hostname_from_url,
     validate_subscription_url,
 )
-from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership, to_utc_naive
+from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.notification_preferences import should_push_notification_type
 from app.core.push import send_push_for_user
@@ -52,8 +52,8 @@ def list_calendar_events(
     ensure_family_membership(db, user.id, family_id)
 
     if range_start and range_end:
-        range_start = to_utc_naive(range_start)
-        range_end = to_utc_naive(range_end)
+        range_start = to_local_wall_naive(range_start)
+        range_end = to_local_wall_naive(range_end)
 
         non_recurring = (
             db.query(CalendarEvent)
@@ -755,15 +755,15 @@ def create_calendar_event(
 ):
     ensure_adult(db, user.id, payload.family_id)
 
-    starts_at = to_utc_naive(payload.starts_at)
-    ends_at = to_utc_naive(payload.ends_at)
+    starts_at = to_local_wall_naive(payload.starts_at)
+    ends_at = to_local_wall_naive(payload.ends_at)
     if ends_at and ends_at < starts_at:
         raise HTTPException(status_code=400, detail=error_detail(END_BEFORE_START))
 
     if payload.recurrence is not None and payload.recurrence not in VALID_RECURRENCES:
         raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
 
-    recurrence_end = to_utc_naive(payload.recurrence_end) if payload.recurrence_end else None
+    recurrence_end = to_local_wall_naive(payload.recurrence_end) if payload.recurrence_end else None
 
     event = CalendarEvent(
         family_id=payload.family_id,
@@ -828,9 +828,9 @@ def update_calendar_event(
     if "location" in payload.model_fields_set:
         event.location = (payload.location or "").strip() or None
     if payload.starts_at is not None:
-        event.starts_at = to_utc_naive(payload.starts_at)
+        event.starts_at = to_local_wall_naive(payload.starts_at)
     if payload.ends_at is not None:
-        event.ends_at = to_utc_naive(payload.ends_at)
+        event.ends_at = to_local_wall_naive(payload.ends_at)
     if payload.all_day is not None:
         event.all_day = payload.all_day
 
@@ -843,7 +843,7 @@ def update_calendar_event(
         else:
             event.recurrence = payload.recurrence
     if payload.recurrence_end is not None:
-        event.recurrence_end = to_utc_naive(payload.recurrence_end)
+        event.recurrence_end = to_local_wall_naive(payload.recurrence_end)
 
     if payload.assigned_to is not None:
         old_assigned = event.assigned_to

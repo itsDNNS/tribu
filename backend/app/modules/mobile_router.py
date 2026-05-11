@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import current_user, ensure_family_membership
 from app.core.errors import error_detail, INSUFFICIENT_SCOPE
 from app.core.recurrence import expand_event
-from app.core.utils import utcnow
+from app.core.clock import local_today, utcnow
 from app.database import get_db
 from app.models import CalendarEvent, Membership, Notification, QuickCaptureItem, ShoppingItem, ShoppingList, Task, User
 from app.schemas import AUTH_RESPONSES
@@ -229,7 +229,7 @@ def mobile_daily_snapshot(
     _scope=Depends(require_mobile_daily_scopes),
 ):
     ensure_family_membership(db, user.id, family_id)
-    day = snapshot_date or date.today()
+    day = snapshot_date or local_today()
     start, end = _day_bounds(day)
 
     memberships = (
