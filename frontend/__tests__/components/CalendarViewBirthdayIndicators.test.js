@@ -130,4 +130,21 @@ describe('CalendarView birthday month indicators', () => {
     expect(eventDay.querySelector('.calendar-day-icon-indicator')).toHaveTextContent('⚽');
     expect(eventDay.querySelector('.calendar-day-dot')).not.toBeInTheDocument();
   });
+
+  it('reserves the indicator row for days without events so date numbers stay aligned', () => {
+    mockUseCalendar.mockReturnValue(baseCalendar([
+      emptyCell(),
+      monthCell(4, [{ id: 77, title: 'Soccer training', color: '#16a34a', icon: 'soccer' }]),
+      monthCell(5, []),
+    ]));
+
+    render(<CalendarView />);
+
+    const iconDay = screen.getByRole('button', { name: /May 4, 1 event: Soccer training/i });
+    const plainDay = screen.getByRole('button', { name: /^May 5$/i });
+
+    expect(iconDay.querySelector('.calendar-day-dots')).toBeInTheDocument();
+    expect(plainDay.querySelector('.calendar-day-dots')).toBeInTheDocument();
+    expect(plainDay.querySelector('.calendar-day-dots')).toBeEmptyDOMElement();
+  });
 });
