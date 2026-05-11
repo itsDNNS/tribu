@@ -41,6 +41,54 @@ test.describe('Calendar', () => {
     );
   });
 
+  test('month date numbers stay aligned with and without event icons', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const now = new Date();
+    const candidateDays = [21, 22, 23, 24, 25, 26, 27].filter((day) => {
+      const iconDate = new Date(now.getFullYear(), now.getMonth(), day, 9, 0, 0);
+      const plainDate = new Date(now.getFullYear(), now.getMonth(), day + 1, 9, 0, 0);
+      return plainDate.getMonth() === now.getMonth() && iconDate.getDay() !== 0 && iconDate.getDay() !== 6;
+    });
+
+    await navigateTo(page, 'Calendar');
+    await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+
+    let iconDayNumber;
+    let plainDayNumber;
+    for (const day of candidateDays) {
+      const iconCandidate = page.locator('.calendar-day:not(.empty)').filter({ has: page.locator('.calendar-day-num', { hasText: new RegExp(`^${day}$`) }) }).first();
+      const plainCandidate = page.locator('.calendar-day:not(.empty)').filter({ has: page.locator('.calendar-day-num', { hasText: new RegExp(`^${day + 1}$`) }) }).first();
+      if (await iconCandidate.locator('.calendar-day-dots > *').count() === 0 && await plainCandidate.locator('.calendar-day-dots > *').count() === 0) {
+        iconDayNumber = day;
+        plainDayNumber = day + 1;
+        break;
+      }
+    }
+    expect(iconDayNumber).toBeDefined();
+    expect(plainDayNumber).toBeDefined();
+
+    const iconDate = new Date(now.getFullYear(), now.getMonth(), iconDayNumber, 9, 0, 0);
+    await seedCalendarEvent(apiCtx, familyId, {
+      title: 'Alignment Soccer',
+      starts_at: iconDate.toISOString(),
+      icon: 'soccer',
+    });
+
+    await page.reload();
+    await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+
+    const iconDay = page.locator('.calendar-day:not(.empty)').filter({ has: page.locator('.calendar-day-num', { hasText: new RegExp(`^${iconDayNumber}$`) }) }).first();
+    const plainDay = page.locator('.calendar-day:not(.empty)').filter({ has: page.locator('.calendar-day-num', { hasText: new RegExp(`^${plainDayNumber}$`) }) }).first();
+    await expect(iconDay.locator('.calendar-day-icon-indicator').first()).toBeVisible({ timeout: 10000 });
+    await expect(plainDay.locator('.calendar-day-dots > *')).toHaveCount(0);
+
+    const iconBox = await iconDay.locator('.calendar-day-num').boundingBox();
+    const plainBox = await plainDay.locator('.calendar-day-num').boundingBox();
+    expect(iconBox).not.toBeNull();
+    expect(plainBox).not.toBeNull();
+    expect(Math.abs(iconBox.y - plainBox.y)).toBeLessThanOrEqual(0.5);
+  });
+
   test('desktop event form gives date-time fields enough room for time entry', async ({ authedPage: page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await navigateTo(page, 'Calendar');

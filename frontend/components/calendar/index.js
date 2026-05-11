@@ -168,29 +168,27 @@ export default function CalendarView() {
                     {!c.empty && (
                       <>
                         <span className="calendar-day-num">{c.day}</span>
-                        {(birthdayCount > 0 || regularEventCount > 0) && (
-                          <div className="calendar-day-dots" aria-hidden="true">
-                            {birthdayCount > 0 && (
-                              <div className="calendar-day-birthday-indicator" title={formatCountLabel(birthdayCount, 'birthday', 'birthdays')}>
-                                <Cake size={11} strokeWidth={2.4} aria-hidden="true" />
+                        <div className="calendar-day-dots" aria-hidden="true">
+                          {birthdayCount > 0 && (
+                            <div className="calendar-day-birthday-indicator" title={formatCountLabel(birthdayCount, 'birthday', 'birthdays')}>
+                              <Cake size={11} strokeWidth={2.4} aria-hidden="true" />
+                            </div>
+                          )}
+                          {regularEvents.slice(0, birthdayCount > 0 ? 2 : 3).map((ev, di) => {
+                            const eventIcon = getCalendarEventIcon(ev.icon);
+                            return eventIcon ? (
+                              <div
+                                key={ev.id || di}
+                                className="calendar-day-icon-indicator"
+                                title={eventIcon.label}
+                              >
+                                {eventIcon.emoji}
                               </div>
-                            )}
-                            {regularEvents.slice(0, birthdayCount > 0 ? 2 : 3).map((ev, di) => {
-                              const eventIcon = getCalendarEventIcon(ev.icon);
-                              return eventIcon ? (
-                                <div
-                                  key={ev.id || di}
-                                  className="calendar-day-icon-indicator"
-                                  title={eventIcon.label}
-                                >
-                                  {eventIcon.emoji}
-                                </div>
-                              ) : (
-                                <div key={ev.id || di} className="calendar-day-dot" style={{ background: ev.color || getMemberColor(null, di) }} />
-                              );
-                            })}
-                          </div>
-                        )}
+                            ) : (
+                              <div key={ev.id || di} className="calendar-day-dot" style={{ background: ev.color || getMemberColor(null, di) }} />
+                            );
+                          })}
+                        </div>
                       </>
                     )}
                   </button>
