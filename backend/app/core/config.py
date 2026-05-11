@@ -5,10 +5,6 @@ from app.security import JWT_EXPIRE_HOURS
 
 VERSION = resolve_app_version()
 
-# Calendar/task business times are stored as local wall-clock values.
-# Audit timestamps remain UTC via app.core.clock.utcnow().
-TRIBU_TIMEZONE = os.getenv("TRIBU_TIMEZONE", "Europe/Berlin")
-
 COOKIE_NAME = "tribu_token"
 COOKIE_MAX_AGE = JWT_EXPIRE_HOURS * 3600
 REFRESH_COOKIE_NAME = "tribu_refresh"

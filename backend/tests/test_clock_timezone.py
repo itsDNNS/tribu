@@ -1,9 +1,47 @@
 from datetime import UTC, datetime, timezone, timedelta
 
-from app.core.clock import local_today, local_wall_now, local_wall_to_utc_naive, to_local_wall_naive
+import pytest
+
+from app.core.clock import app_timezone, local_today, local_wall_now, local_wall_to_utc_naive, to_local_wall_naive
 
 
-def test_local_wall_now_uses_configured_tribu_timezone():
+@pytest.fixture(autouse=True)
+def configured_timezone(monkeypatch):
+    monkeypatch.setenv("TZ", "Europe/Berlin")
+    app_timezone.cache_clear()
+    yield
+    app_timezone.cache_clear()
+
+
+def test_app_timezone_uses_standard_tz_environment_variable(monkeypatch):
+    monkeypatch.setenv("TZ", "America/New_York")
+    app_timezone.cache_clear()
+
+    assert app_timezone().key == "America/New_York"
+
+
+def test_app_timezone_falls_back_to_utc_without_tz(monkeypatch):
+    monkeypatch.delenv("TZ", raising=False)
+    app_timezone.cache_clear()
+
+    assert app_timezone().key == "UTC"
+
+
+def test_app_timezone_falls_back_to_utc_for_empty_tz(monkeypatch):
+    monkeypatch.setenv("TZ", "")
+    app_timezone.cache_clear()
+
+    assert app_timezone().key == "UTC"
+
+
+def test_app_timezone_falls_back_to_utc_for_invalid_tz(monkeypatch):
+    monkeypatch.setenv("TZ", "not-a-zone")
+    app_timezone.cache_clear()
+
+    assert app_timezone().key == "UTC"
+
+
+def test_local_wall_now_uses_configured_timezone():
     utc_instant = datetime(2026, 5, 9, 6, 15, 0)
 
     assert local_wall_now(utc_instant).isoformat() == "2026-05-09T08:15:00"

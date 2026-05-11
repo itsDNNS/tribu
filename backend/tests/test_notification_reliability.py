@@ -47,6 +47,10 @@ def _set_sqlite_pragma(dbapi_conn, _):
 
 @pytest.fixture(autouse=True)
 def setup_db(monkeypatch):
+    monkeypatch.setenv("TZ", "Europe/Berlin")
+    from app.core.clock import app_timezone
+
+    app_timezone.cache_clear()
     Base.metadata.create_all(bind=engine)
     # Make ``SessionLocal()`` inside the scheduler hand out the in-memory
     # test session so we don't need to spin up the real engine.
@@ -54,6 +58,7 @@ def setup_db(monkeypatch):
 
     monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
     yield
+    app_timezone.cache_clear()
     Base.metadata.drop_all(bind=engine)
 
 
@@ -248,6 +253,43 @@ def test_event_reminder_fires_at_real_offset_across_spring_dst_gap(monkeypatch):
         log = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).one()
         assert notification.body == "Starts in 60 minutes"
         assert log.last_attempt_at == datetime(2026, 3, 29, 0, 15, 0)
+    finally:
+        db.close()
+
+
+def test_recurring_event_reminder_prefilter_keeps_spring_dst_gap_occurrence(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "tz-spring-recurring@example.com")
+        _set_pref(db, user.id, push_enabled=False, reminder_minutes=60)
+        db.add(CalendarEvent(
+            family_id=fam.id,
+            title="Daily spring practice",
+            starts_at=datetime(2026, 3, 28, 3, 15, 0),
+            recurrence="daily",
+            recurrence_end=datetime(2026, 3, 30, 3, 15, 0),
+            all_day=False,
+        ))
+        db.commit()
+        user_id = user.id
+    finally:
+        db.close()
+
+    _freeze_scheduler_clocks(
+        monkeypatch,
+        audit_now=datetime(2026, 3, 29, 0, 15, 0),
+        wall_now=datetime(2026, 3, 29, 1, 15, 0),
+    )
+
+    from app.core.scheduler import _check_notifications
+
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        notification = db.query(Notification).filter(Notification.user_id == user_id).one()
+        assert notification.title == "Daily spring practice"
+        assert notification.body == "Starts in 60 minutes"
     finally:
         db.close()
 

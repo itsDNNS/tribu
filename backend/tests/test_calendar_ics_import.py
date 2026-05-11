@@ -39,7 +39,11 @@ def _set_sqlite_pragma(dbapi_conn, _):
 
 
 @pytest.fixture(autouse=True)
-def setup_db():
+def setup_db(monkeypatch):
+    monkeypatch.setenv("TZ", "Europe/Berlin")
+    from app.core.clock import app_timezone
+
+    app_timezone.cache_clear()
     Base.metadata.create_all(bind=engine)
 
     def _override():
@@ -51,6 +55,7 @@ def setup_db():
 
     app.dependency_overrides[get_db] = _override
     yield
+    app_timezone.cache_clear()
     app.dependency_overrides.pop(get_db, None)
     Base.metadata.drop_all(bind=engine)
 

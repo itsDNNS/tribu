@@ -1,8 +1,7 @@
+import os
 from datetime import UTC, date, datetime, time
 from functools import lru_cache
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
-from app.core.config import TRIBU_TIMEZONE
 
 
 def utcnow() -> datetime:
@@ -12,7 +11,7 @@ def utcnow() -> datetime:
 
 @lru_cache(maxsize=8)
 def app_timezone(name: str | None = None) -> ZoneInfo:
-    timezone_name = (name or TRIBU_TIMEZONE or "Europe/Berlin").strip() or "Europe/Berlin"
+    timezone_name = (name or os.getenv("TZ") or "UTC").strip() or "UTC"
     try:
         return ZoneInfo(timezone_name)
     except ZoneInfoNotFoundError:
