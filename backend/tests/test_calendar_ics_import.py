@@ -84,14 +84,14 @@ def _auth_headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _ics(uid: str, summary: str = "Standup", dtstart: str = "20260310T090000") -> str:
+def _ics(uid: str, summary: str = "Standup", dtstart: str = "20260310T090000", dtend: str = "20260310T093000") -> str:
     return (
         "BEGIN:VCALENDAR\r\n"
         "VERSION:2.0\r\n"
         "BEGIN:VEVENT\r\n"
         f"SUMMARY:{summary}\r\n"
         f"DTSTART:{dtstart}\r\n"
-        "DTEND:20260310T093000\r\n"
+        f"DTEND:{dtend}\r\n"
         "DTSTAMP:20260101T000000\r\n"
         f"UID:{uid}\r\n"
         "END:VEVENT\r\n"
@@ -125,6 +125,21 @@ class TestUidPreservation:
         assert valid[0]["source_name"] == "Apple Holidays"
         assert valid[0]["source_url"] == "https://example.com/holidays.ics"
         assert valid[0]["imported_at"] is not None
+
+    def test_aware_ics_datetimes_convert_to_configured_local_wall_time(self):
+        valid, errors = ics_to_event_dicts(
+            _ics(
+                "berlin-match@example.com",
+                dtstart="20260509T071500Z",
+                dtend="20260509T083000Z",
+            ),
+            family_id=1,
+            user_id=1,
+        )
+
+        assert errors == []
+        assert valid[0]["starts_at"].isoformat() == "2026-05-09T09:15:00"
+        assert valid[0]["ends_at"].isoformat() == "2026-05-09T10:30:00"
 
 
 # --- integration (endpoint) --------------------------------------------

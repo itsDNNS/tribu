@@ -2,6 +2,7 @@
 
 from datetime import datetime, date, timedelta
 
+from app.core.clock import to_local_wall_naive
 from app.core.utils import utcnow
 
 from icalendar import Calendar, Event
@@ -136,7 +137,7 @@ def ics_to_event_dicts(
             starts_at = datetime(dtstart_val.year, dtstart_val.month, dtstart_val.day)
         else:
             if dtstart_val.tzinfo:
-                starts_at = dtstart_val.astimezone(tz=None).replace(tzinfo=None)
+                starts_at = to_local_wall_naive(dtstart_val)
             else:
                 starts_at = dtstart_val
 
@@ -149,7 +150,7 @@ def ics_to_event_dicts(
             else:
                 if isinstance(dtend_val, datetime):
                     if dtend_val.tzinfo:
-                        ends_at = dtend_val.astimezone(tz=None).replace(tzinfo=None)
+                        ends_at = to_local_wall_naive(dtend_val)
                     else:
                         ends_at = dtend_val
 
@@ -182,7 +183,7 @@ def ics_to_event_dicts(
                 until_val = until_list[0]
                 if isinstance(until_val, datetime):
                     if until_val.tzinfo:
-                        recurrence_end = until_val.astimezone(tz=None).replace(tzinfo=None)
+                        recurrence_end = to_local_wall_naive(until_val)
                     else:
                         recurrence_end = until_val
                 elif isinstance(until_val, date):

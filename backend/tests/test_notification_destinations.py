@@ -582,6 +582,8 @@ def test_scheduler_dispatches_once_across_users_and_retries(monkeypatch):
     monkeypatch.setattr(destinations_core, "_send_with_apprise", lambda url, payload: calls.append(payload) or True)
     monkeypatch.setattr(scheduler_module, "send_push_for_user", lambda *_, **__: None)
     monkeypatch.setattr(scheduler_module, "utcnow", lambda: now)
+    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: now)
+    monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
 
     scheduler_module._check_notifications()
     scheduler_module._check_notifications()
@@ -1153,6 +1155,8 @@ def test_disabled_category_and_quiet_hours_aggregation(monkeypatch):
     monkeypatch.setattr(destinations_core, "_send_with_apprise", lambda url, payload: calls.append(payload) or True)
     monkeypatch.setattr(scheduler_module, "send_push_for_user", lambda *_, **__: None)
     monkeypatch.setattr(scheduler_module, "utcnow", lambda: now)
+    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: now)
+    monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
 
     scheduler_module._check_notifications()
 

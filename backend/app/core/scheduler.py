@@ -9,7 +9,7 @@ from sqlalchemy import or_
 
 from app.core import cache
 from app.core.backup import create_backup, enforce_retention
-from app.core.clock import utcnow
+from app.core.clock import local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
 from app.core.push import send_push_for_user
 from app.core.notification_preferences import should_push_notification_type
 from app.core.notification_destinations import EligibleReminderUser, dispatch_family_notification
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 BACKUP_JOB_ID = "scheduled_backup"
 NOTIFICATION_JOB_ID = "check_notifications"
+DST_TRANSITION_BUFFER = timedelta(hours=3)
 
 _scheduler: BackgroundScheduler | None = None
 
@@ -116,7 +117,8 @@ def _birthday_trigger_key(birthday_id: int, target_date) -> str:
 def _check_notifications():
     db = SessionLocal()
     try:
-        now = utcnow()
+        audit_now = utcnow()
+        now = local_wall_now(audit_now)
         tomorrow = now.date() + timedelta(days=1)
 
         memberships = db.query(Membership).all()
@@ -146,16 +148,23 @@ def _check_notifications():
                 .first()
             )
 
+        def _reminder_due_for_pref(starts_at: datetime, pref: NotificationPreference) -> bool:
+            starts_at_utc = local_wall_to_utc_naive(starts_at)
+            window_utc = audit_now + timedelta(minutes=pref.reminder_minutes)
+            return audit_now < starts_at_utc <= window_utc
+
+        def _minutes_until(starts_at: datetime) -> int:
+            starts_at_utc = local_wall_to_utc_naive(starts_at)
+            return int((starts_at_utc - audit_now).total_seconds() / 60)
+
         def eligible_reminder_users(fid: int, starts_at: datetime | None = None) -> list[EligibleReminderUser]:
             users: list[EligibleReminderUser] = []
             for candidate_uid in family_users.get(fid, []):
                 pref = get_pref(candidate_uid)
                 if not pref.reminders_enabled:
                     continue
-                if starts_at is not None:
-                    window = now + timedelta(minutes=pref.reminder_minutes)
-                    if starts_at <= now or starts_at > window:
-                        continue
+                if starts_at is not None and not _reminder_due_for_pref(starts_at, pref):
+                    continue
                 users.append(
                     EligibleReminderUser(
                         user_id=candidate_uid,
@@ -215,7 +224,7 @@ def _check_notifications():
             the reminder was already surfaced, so adopting the log avoids
             creating a duplicate in-app notification after upgrade.
             """
-            start_of_day = datetime(now.year, now.month, now.day)
+            start_of_day, _ = local_day_bounds_as_utc_naive(now.date())
             legacy = (
                 db.query(NotificationSentLog)
                 .filter(
@@ -232,8 +241,8 @@ def _check_notifications():
                 return False
             legacy.trigger_key = trigger_key
             legacy.status = "delivered"
-            legacy.delivered_at = legacy.delivered_at or legacy.sent_at or now
-            legacy.last_attempt_at = legacy.last_attempt_at or legacy.sent_at or now
+            legacy.delivered_at = legacy.delivered_at or legacy.sent_at or audit_now
+            legacy.last_attempt_at = legacy.last_attempt_at or legacy.sent_at or audit_now
             legacy.last_error = None
             return True
 
@@ -298,20 +307,20 @@ def _check_notifications():
                 except Exception as exc:
                     logger.exception("Push notification failed for user %s", uid)
                     log.delivery_attempts = (log.delivery_attempts or 0) + 1
-                    log.last_attempt_at = now
+                    log.last_attempt_at = audit_now
                     log.last_error = f"unexpected: {type(exc).__name__}: {exc}"[:500]
                     log.status = "failed"
                     return
 
             log.delivery_attempts = (log.delivery_attempts or 0) + 1
-            log.last_attempt_at = now
+            log.last_attempt_at = audit_now
 
             if push_result is None:
                 # Push disabled, category disabled, or unknown for this type.
                 # In-app delivery is the only active channel and succeeded the
                 # moment we created the Notification row.
                 log.status = "delivered"
-                log.delivered_at = now
+                log.delivered_at = audit_now
                 log.last_error = f"push_skipped:{push_skip_reason}" if push_skip_reason else None
                 return
 
@@ -320,7 +329,7 @@ def _check_notifications():
                 # In-app notification still landed, so the reminder reached
                 # the user via the only channel that was active.
                 log.status = "delivered"
-                log.delivered_at = now
+                log.delivered_at = audit_now
                 log.last_error = (
                     f"push_skipped:{push_result.skipped_reason}"
                     if push_result.skipped_reason
@@ -330,7 +339,7 @@ def _check_notifications():
 
             if push_result.succeeded > 0:
                 log.status = "delivered"
-                log.delivered_at = now
+                log.delivered_at = audit_now
                 log.last_error = (
                     "; ".join(push_result.errors)[:500] if push_result.errors else None
                 )
@@ -339,7 +348,7 @@ def _check_notifications():
                 # notification exists and there is no transient endpoint left
                 # to retry, so the reminder is complete.
                 log.status = "delivered"
-                log.delivered_at = now
+                log.delivered_at = audit_now
                 log.last_error = (
                     f"push_removed_subscriptions:{push_result.removed}"
                     if push_result.removed
@@ -358,7 +367,7 @@ def _check_notifications():
             pref = get_pref(uid)
             if not pref.reminders_enabled:
                 continue
-            window = now + timedelta(minutes=pref.reminder_minutes)
+            window = now + timedelta(minutes=pref.reminder_minutes) + DST_TRANSITION_BUFFER
             events = (
                 db.query(CalendarEvent)
                 .filter(
@@ -387,7 +396,9 @@ def _check_notifications():
                     starts_at = occurrence["starts_at"]
                     if starts_at <= now or starts_at > window:
                         continue
-                    mins = int((starts_at - now).total_seconds() / 60)
+                    if not _reminder_due_for_pref(starts_at, pref):
+                        continue
+                    mins = _minutes_until(starts_at)
                     body = f"Starts in {mins} minutes"
                     trigger_key = _event_trigger_key(ev.id, starts_at)
                     dispatch_destination_once(

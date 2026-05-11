@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy.exc import IntegrityError
 
-from app.core.clock import utcnow
+from app.core.clock import local_wall_now, utcnow
 from app.database import SessionLocal
 from app.models import Membership, NotificationDestination, NotificationDestinationDelivery, NotificationPreference
 
@@ -490,7 +490,7 @@ def dispatch_family_notification(
         )
         quiet_hour_users = eligible_users
         if quiet_hour_users is None:
-            quiet_hour_users = _family_destination_users(db, family_id, utcnow())
+            quiet_hour_users = _family_destination_users(db, family_id, local_wall_now(utcnow()))
         deliveries: list[NotificationDestinationDelivery] = []
         for destination in destinations:
             if not destination.active:

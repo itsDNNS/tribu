@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 
-from app.core.utils import utcnow
+from app.core.clock import local_wall_now, to_local_wall_naive, utcnow
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.deps import current_user, ensure_adult, ensure_family_membership, to_utc_naive
+from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.activity import record_activity
 from app.core.webhooks import dispatch_webhook_event
 from app.core.scopes import require_scope
@@ -45,7 +45,7 @@ def _next_month(year: int, month: int) -> tuple[int, int]:
 
 
 def _compute_next_due(current_due: Optional[datetime], recurrence: str) -> datetime:
-    base = current_due if current_due else utcnow()
+    base = current_due if current_due else local_wall_now(utcnow())
     if recurrence == "daily":
         return base + timedelta(days=1)
     if recurrence == "weekly":
@@ -121,7 +121,7 @@ def create_task(
         title=payload.title,
         description=payload.description,
         priority=payload.priority,
-        due_date=to_utc_naive(payload.due_date),
+        due_date=to_local_wall_naive(payload.due_date),
         recurrence=payload.recurrence,
         assigned_to_user_id=payload.assigned_to_user_id,
         created_by_user_id=user.id,
@@ -202,7 +202,7 @@ def update_task(
     if payload.description is not None:
         task.description = payload.description
     if payload.due_date is not None:
-        task.due_date = to_utc_naive(payload.due_date)
+        task.due_date = to_local_wall_naive(payload.due_date)
     if payload.recurrence is not None:
         task.recurrence = payload.recurrence
     if payload.assigned_to_user_id is not None:

@@ -211,6 +211,7 @@ services:
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
       JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-24}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      TRIBU_TIMEZONE: ${TRIBU_TIMEZONE:-Europe/Berlin}
     depends_on: [postgres, valkey]
     ports: ["8000:8000"]
     volumes:
@@ -234,6 +235,7 @@ Set two environment variables before deploying:
 |---|---|
 | `JWT_SECRET` | Random 64-character hex string for JWT signing. Keep it stable in the persisted `.env` so routine updates do not end active sessions. |
 | `POSTGRES_PASSWORD` | Random 32-character hex string for the database. |
+| `TRIBU_TIMEZONE` | IANA timezone for family calendar/task times and reminder windows. Defaults to `Europe/Berlin`; audit timestamps remain UTC. |
 
 Generate the values and write them into `.env`:
 

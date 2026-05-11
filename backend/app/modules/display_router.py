@@ -26,7 +26,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.clock import utcnow
+from app.core.clock import local_today, local_wall_now, utcnow
 from app.core.deps import current_display_device, current_user, ensure_family_admin, next_birthday_date
 from app.core.errors import DISPLAY_DEVICE_NOT_FOUND, error_detail
 from app.core.recurrence import expand_event
@@ -346,7 +346,7 @@ def display_dashboard(
         if (color := _sanitize_display_color(m.color))
     }
 
-    now = utcnow()
+    now = local_wall_now(utcnow())
     range_end = now + timedelta(days=14)
 
     non_recurring = (
@@ -388,7 +388,7 @@ def display_dashboard(
         for o in occurrences[:8]
     ]
 
-    today = date.today()
+    today = local_today()
     birthdays = (
         db.query(FamilyBirthday)
         .filter(FamilyBirthday.family_id == device.family_id)
