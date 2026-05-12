@@ -869,6 +869,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--void); color: var(--
 @media (max-width: 960px) {
   .today-command-grid { grid-template-columns: 1fr; }
   .today-command-header { flex-direction: column; align-items: stretch; }
+  .today-command-header > div:first-child,
+  .dashboard-header-actions { flex: 0 1 auto; min-width: 0; }
   .today-status-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 

@@ -67,6 +67,37 @@ test.describe('Dashboard', () => {
     expect(searchBox.width).toBeGreaterThanOrEqual(280);
   });
 
+  test('keeps mobile dashboard header and cards tightly stacked', async ({ authedPage: page }) => {
+    await page.setViewportSize({ width: 485, height: 873 });
+    await expect(page.getByRole('group', { name: 'Quick actions' })).toBeVisible({ timeout: 10000 });
+
+    const dateLine = page.locator('.today-command-family');
+    const dashboardSearch = page.locator('.dashboard-search-btn');
+    const layoutToggle = page.locator('.dashboard-layout-toggle');
+    const nextUp = page.locator('.next-up-card');
+    const statusCard = page.locator('.today-status-card');
+
+    const boxes = await Promise.all([
+      dateLine.boundingBox(),
+      dashboardSearch.boundingBox(),
+      layoutToggle.boundingBox(),
+      nextUp.boundingBox(),
+      statusCard.boundingBox(),
+    ]);
+    for (const box of boxes) expect(box).not.toBeNull();
+
+    const [dateBox, searchBox, layoutBox, nextUpBox, statusBox] = boxes;
+    const firstActionTop = Math.min(searchBox.y, layoutBox.y);
+    const lastActionBottom = Math.max(searchBox.y + searchBox.height, layoutBox.y + layoutBox.height);
+    const dateToActionsGap = firstActionTop - (dateBox.y + dateBox.height);
+    const actionsToNextUpGap = nextUpBox.y - lastActionBottom;
+    const nextUpToStatusGap = statusBox.y - (nextUpBox.y + nextUpBox.height);
+
+    expect(dateToActionsGap).toBeLessThanOrEqual(32);
+    expect(actionsToNextUpGap).toBeLessThanOrEqual(32);
+    expect(nextUpToStatusGap).toBeLessThanOrEqual(32);
+  });
+
   test('quick-action pills navigate to correct views', async ({ authedPage: page }) => {
     const quickActions = page.getByRole('group', { name: 'Quick actions' });
     await quickActions.waitFor({ timeout: 10000 });
