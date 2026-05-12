@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Atvērtie uzdevumi",
   "module.dashboard.module_birthdays": "Dzimšanas dienas",
   "module.dashboard.module_activity": "Pēdējā darbība",
-  "module.dashboard.module_rewards": "Atlīdzības"
+  "module.dashboard.module_rewards": "Atlīdzības",
+  "module.dashboard.next_up_cta": "Skatīt šodienu"
 }

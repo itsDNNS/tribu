@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Odprte naloge",
   "module.dashboard.module_birthdays": "Rojstni dnevi",
   "module.dashboard.module_activity": "Nedavna dejavnost",
-  "module.dashboard.module_rewards": "Nagrade"
+  "module.dashboard.module_rewards": "Nagrade",
+  "module.dashboard.next_up_cta": "Prikaži danes"
 }

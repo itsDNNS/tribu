@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Otvorené úlohy",
   "module.dashboard.module_birthdays": "narodeniny",
   "module.dashboard.module_activity": "Nedávna aktivita",
-  "module.dashboard.module_rewards": "Odmeny"
+  "module.dashboard.module_rewards": "Odmeny",
+  "module.dashboard.next_up_cta": "Zobraziť dnešok"
 }

@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Nyitott feladatok",
   "module.dashboard.module_birthdays": "Születésnapok",
   "module.dashboard.module_activity": "Legutóbbi tevékenység",
-  "module.dashboard.module_rewards": "Jutalmak"
+  "module.dashboard.module_rewards": "Jutalmak",
+  "module.dashboard.next_up_cta": "Mai nap megtekintése"
 }

@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Tascanna a oscailt",
   "module.dashboard.module_birthdays": "Breithlaethanta",
   "module.dashboard.module_activity": "Gníomhaíocht le déanaí",
-  "module.dashboard.module_rewards": "luach saothair"
+  "module.dashboard.module_rewards": "luach saothair",
+  "module.dashboard.next_up_cta": "Féach ar inniu"
 }

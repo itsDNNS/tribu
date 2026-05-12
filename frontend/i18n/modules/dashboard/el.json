@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Ανοίξτε τις εργασίες",
   "module.dashboard.module_birthdays": "Γενέθλια",
   "module.dashboard.module_activity": "Πρόσφατη δραστηριότητα",
-  "module.dashboard.module_rewards": "Ανταμοιβές"
+  "module.dashboard.module_rewards": "Ανταμοιβές",
+  "module.dashboard.next_up_cta": "Δείτε σήμερα"
 }

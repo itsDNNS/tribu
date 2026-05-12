@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw, Clock3, MapPin } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw, MapPin } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -97,9 +97,12 @@ function formatEventTime(value, locale, timeFormat) {
   return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
 }
 
-function TodayStatusItem({ label, value, testId }) {
+function TodayStatusItem({ label, value, testId, icon: Icon, tone }) {
   return (
-    <div className="today-status-item">
+    <div className={`today-status-item today-status-item-${tone}`}>
+      <span className="today-status-icon" aria-hidden="true">
+        <Icon size={20} strokeWidth={2.1} />
+      </span>
       <span className="today-status-value" data-testid={testId}>{value}</span>
       <span className="today-status-label">{label}</span>
     </div>
@@ -122,13 +125,21 @@ function NextUpCard({ event, locale, lang, timeFormat, messages, members, setAct
       <div className="next-up-eyebrow">{t(messages, 'module.dashboard.next_up_title')}</div>
       {event ? (
         <button type="button" className="next-up-button" onClick={goToEvent}>
-          <span className="next-up-time"><Clock3 size={16} aria-hidden="true" /> {formatEventTime(event.starts_at, locale, timeFormat)}</span>
-          <span className="next-up-title">{event.title}</span>
-          <span className="next-up-meta">
-            <span>{prettyDate(event.starts_at, lang, timeFormat)}</span>
-            {event.location && <span><MapPin size={14} aria-hidden="true" /> {event.location}</span>}
-            {assignedMember && <span>{assignedMember.display_name}</span>}
+          <span className="next-up-time-chip">
+            <span>{formatEventTime(event.starts_at, locale, timeFormat)}</span>
           </span>
+          <span className="next-up-details">
+            <span className="next-up-title">{event.title}</span>
+            <span className="next-up-meta">
+              {assignedMember && <span>{assignedMember.display_name}</span>}
+              {event.location && <span><MapPin size={14} aria-hidden="true" /> {event.location}</span>}
+              <span>{prettyDate(event.starts_at, lang, timeFormat)}</span>
+            </span>
+          </span>
+          <span className="next-up-visual" aria-hidden="true">
+            <span className="next-up-visual-orb"><CalendarClock size={34} /></span>
+          </span>
+          <span className="next-up-cta">{t(messages, 'module.dashboard.next_up_cta')} <span aria-hidden="true">›</span></span>
         </button>
       ) : (
         <div className="next-up-clear">
@@ -487,6 +498,8 @@ export default function DashboardView() {
     : DEFAULT_DASHBOARD_LAYOUT;
   const orderedDashboardLayout = normalizeDashboardLayout(dashboardLayout, availableDashboardModules);
   const moduleOrder = (moduleKey) => orderedDashboardLayout.indexOf(moduleKey);
+  const heroName = me?.display_name || currentFamily?.family_name || 'User';
+  const heroFamilyName = currentFamily?.family_name && currentFamily.family_name !== heroName ? currentFamily.family_name : null;
 
   return (
     <div className="dashboard-today-page">
@@ -494,8 +507,10 @@ export default function DashboardView() {
         <div className="today-command-header">
           <div>
             <div className="today-command-kicker">{t(messages, 'module.dashboard.today_kicker')}</div>
-            <h1 className="view-title">{getGreeting(messages)}, {me?.display_name || 'User'}</h1>
-            {currentFamily && <p className="today-command-family">{currentFamily.family_name}</p>}
+            <h1 className="view-title today-command-title">
+              {getGreeting(messages)}, <span>{heroName}</span>{heroFamilyName && <span className="today-command-family-inline"> · {heroFamilyName}</span>} <span className="today-command-wave" aria-hidden="true">👋</span>
+            </h1>
+            <p className="today-command-family">{todayStr}</p>
           </div>
           <div className="dashboard-header-actions">
             <div className="view-date">{todayStr}</div>
@@ -517,11 +532,14 @@ export default function DashboardView() {
             setActiveView={setActiveView}
             isChild={isChild}
           />
-          <div className="today-status-grid" role="group" aria-label={t(messages, 'module.dashboard.today_status_label')}>
-            <TodayStatusItem label={t(messages, 'module.dashboard.today_status_events')} value={todayEventCount} testId="today-status-events" />
-            <TodayStatusItem label={t(messages, 'module.dashboard.today_status_tasks')} value={openTaskCount} testId="today-status-tasks" />
-            <TodayStatusItem label={t(messages, 'module.dashboard.today_status_shopping')} value={shoppingOpenCount} testId="today-status-shopping" />
-            <TodayStatusItem label={t(messages, 'module.dashboard.today_status_birthdays')} value={birthdaySoonCount} testId="today-status-birthdays" />
+          <div className="today-status-card" role="group" aria-label={t(messages, 'module.dashboard.today_status_label')}>
+            <div className="today-status-heading">{t(messages, 'module.dashboard.today_status_label')}</div>
+            <div className="today-status-grid">
+              <TodayStatusItem icon={Calendar} tone="events" label={t(messages, 'module.dashboard.today_status_events')} value={todayEventCount} testId="today-status-events" />
+              <TodayStatusItem icon={CheckCircle} tone="tasks" label={t(messages, 'module.dashboard.today_status_tasks')} value={openTaskCount} testId="today-status-tasks" />
+              <TodayStatusItem icon={ShoppingCart} tone="shopping" label={t(messages, 'module.dashboard.today_status_shopping')} value={shoppingOpenCount} testId="today-status-shopping" />
+              <TodayStatusItem icon={Cake} tone="birthdays" label={t(messages, 'module.dashboard.today_status_birthdays')} value={birthdaySoonCount} testId="today-status-birthdays" />
+            </div>
           </div>
         </div>
 

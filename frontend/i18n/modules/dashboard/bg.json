@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Отворени задачи",
   "module.dashboard.module_birthdays": "Рождени дни",
   "module.dashboard.module_activity": "Скорошна дейност",
-  "module.dashboard.module_rewards": "Награди"
+  "module.dashboard.module_rewards": "Награди",
+  "module.dashboard.next_up_cta": "Вижте днес"
 }

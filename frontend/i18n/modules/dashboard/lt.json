@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Atviros užduotys",
   "module.dashboard.module_birthdays": "Gimtadieniai",
   "module.dashboard.module_activity": "Naujausia veikla",
-  "module.dashboard.module_rewards": "Apdovanojimai"
+  "module.dashboard.module_rewards": "Apdovanojimai",
+  "module.dashboard.next_up_cta": "Peržiūrėti šiandieną"
 }
