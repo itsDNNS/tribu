@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Avatud ülesanded",
   "module.dashboard.module_birthdays": "Sünnipäevad",
   "module.dashboard.module_activity": "Hiljutine tegevus",
-  "module.dashboard.module_rewards": "Preemiad"
+  "module.dashboard.module_rewards": "Preemiad",
+  "module.dashboard.next_up_cta": "Vaata tänast"
 }

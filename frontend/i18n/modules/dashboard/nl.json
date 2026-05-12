@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Openstaande taken",
   "module.dashboard.module_birthdays": "Verjaardagen",
   "module.dashboard.module_activity": "Recente activiteit",
-  "module.dashboard.module_rewards": "Beloningen"
+  "module.dashboard.module_rewards": "Beloningen",
+  "module.dashboard.next_up_cta": "Vandaag bekijken"
 }

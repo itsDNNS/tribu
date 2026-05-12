@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Deschide sarcini",
   "module.dashboard.module_birthdays": "Zile de naștere",
   "module.dashboard.module_activity": "Activitate recentă",
-  "module.dashboard.module_rewards": "Recompense"
+  "module.dashboard.module_rewards": "Recompense",
+  "module.dashboard.next_up_cta": "Vezi azi"
 }

@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Otwarte zadania",
   "module.dashboard.module_birthdays": "Urodziny",
   "module.dashboard.module_activity": "Ostatnia aktywność",
-  "module.dashboard.module_rewards": "Nagrody"
+  "module.dashboard.module_rewards": "Nagrody",
+  "module.dashboard.next_up_cta": "Zobacz dziś"
 }

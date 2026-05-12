@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Open tasks",
   "module.dashboard.module_birthdays": "Birthdays",
   "module.dashboard.module_activity": "Recent activity",
-  "module.dashboard.module_rewards": "Rewards"
+  "module.dashboard.module_rewards": "Rewards",
+  "module.dashboard.next_up_cta": "View today"
 }

@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Tareas abiertas",
   "module.dashboard.module_birthdays": "Cumpleaños",
   "module.dashboard.module_activity": "Actividad reciente",
-  "module.dashboard.module_rewards": "Recompensas"
+  "module.dashboard.module_rewards": "Recompensas",
+  "module.dashboard.next_up_cta": "Ver hoy"
 }

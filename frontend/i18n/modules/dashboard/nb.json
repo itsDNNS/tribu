@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Åpne oppgaver",
   "module.dashboard.module_birthdays": "Bursdager",
   "module.dashboard.module_activity": "Nylig aktivitet",
-  "module.dashboard.module_rewards": "Belønninger"
+  "module.dashboard.module_rewards": "Belønninger",
+  "module.dashboard.next_up_cta": "Se i dag"
 }

@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Öppna uppgifter",
   "module.dashboard.module_birthdays": "Födelsedagar",
   "module.dashboard.module_activity": "Senaste aktiviteten",
-  "module.dashboard.module_rewards": "Belöningar"
+  "module.dashboard.module_rewards": "Belöningar",
+  "module.dashboard.next_up_cta": "Visa idag"
 }

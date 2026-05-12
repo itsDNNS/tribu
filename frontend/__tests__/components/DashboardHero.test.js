@@ -45,6 +45,7 @@ const messages = {
   'module.dashboard.today_command_center': 'Today command center',
   'module.dashboard.today_kicker': 'Today at home',
   'module.dashboard.next_up_title': 'Next up',
+  'module.dashboard.next_up_cta': 'View today',
   'module.dashboard.next_up_empty': 'Nothing else scheduled',
   'module.dashboard.next_up_empty_hint': 'Use quick capture to park anything the family should remember.',
   'module.dashboard.today_status_events': 'Events today',
@@ -148,8 +149,15 @@ describe('DashboardView hero', () => {
     expect(nextUp).toHaveTextContent('School run');
     expect(nextUp).toHaveTextContent('Main gate');
     expect(nextUp).toHaveTextContent('08:15');
+    expect(nextUp.querySelector('.next-up-time-chip')).toHaveTextContent('08:15');
+    expect(nextUp.querySelector('.next-up-visual')).toBeInTheDocument();
+    expect(nextUp.querySelector('.next-up-cta')).toHaveTextContent('View today');
 
     const statusGroup = within(commandCenter).getByRole('group', { name: 'Today status' });
+    expect(statusGroup).toHaveClass('today-status-card');
+    expect(within(statusGroup).getByText('Today status')).toBeVisible();
+    expect(statusGroup.querySelectorAll('.today-status-item')).toHaveLength(4);
+    expect(statusGroup.querySelectorAll('.today-status-icon')).toHaveLength(4);
     expect(within(statusGroup).getByTestId('today-status-events')).toHaveTextContent('2');
     expect(within(statusGroup).getByTestId('today-status-tasks')).toHaveTextContent('2');
     expect(within(statusGroup).getByTestId('today-status-shopping')).toHaveTextContent('5');

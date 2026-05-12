@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Otvoreni zadaci",
   "module.dashboard.module_birthdays": "rođendani",
   "module.dashboard.module_activity": "Nedavna aktivnost",
-  "module.dashboard.module_rewards": "Nagrade"
+  "module.dashboard.module_rewards": "Nagrade",
+  "module.dashboard.next_up_cta": "Pogledaj danas"
 }

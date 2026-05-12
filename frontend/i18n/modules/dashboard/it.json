@@ -113,5 +113,6 @@
   "module.dashboard.module_tasks": "Attività aperte",
   "module.dashboard.module_birthdays": "Compleanni",
   "module.dashboard.module_activity": "Attività recente",
-  "module.dashboard.module_rewards": "Premi"
+  "module.dashboard.module_rewards": "Premi",
+  "module.dashboard.next_up_cta": "Vedi oggi"
 }
