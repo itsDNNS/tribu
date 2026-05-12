@@ -1,4 +1,4 @@
-import { Inbox, ListChecks, Send, ShoppingCart, X } from 'lucide-react';
+import { ListChecks, CalendarDays, ShoppingCart, Utensils, StickyNote, X } from 'lucide-react';
 import { useState } from 'react';
 import { apiCreateQuickCapture, apiConvertQuickCapture, apiDismissQuickCapture } from '../lib/api';
 import { t } from '../lib/i18n';
@@ -7,6 +7,7 @@ export default function QuickCaptureCard({
   familyId,
   inbox = [],
   messages,
+  setActiveView,
   loadQuickCaptureInbox,
   loadTasks,
   loadShoppingLists,
@@ -42,6 +43,10 @@ export default function QuickCaptureCard({
     }
   }
 
+  function openView(view) {
+    if (typeof setActiveView === 'function') setActiveView(view);
+  }
+
   async function convertItem(itemId, destination) {
     setTriagingId(itemId);
     try {
@@ -63,47 +68,64 @@ export default function QuickCaptureCard({
   }
 
   const inboxItems = Array.isArray(inbox) ? inbox : [];
-  const openItems = inboxItems.slice(0, 3);
+  const openItems = inboxItems.filter((item) => item && (!item.status || item.status === 'open'));
+  const visibleOpenItems = openItems.slice(0, 3);
+  const openItemCount = openItems.length;
+  const cardClassName = openItemCount > 0
+    ? 'bento-card bento-quick-capture has-quick-capture-inbox'
+    : 'bento-card bento-quick-capture';
 
   return (
-    <section className="bento-card bento-quick-capture" role="region" aria-label={t(messages, 'module.dashboard.quick_capture_title')}>
+    <section className={cardClassName} role="region" aria-label={t(messages, 'module.dashboard.quick_capture_title')}>
       <div className="bento-card-header quick-capture-header">
-        <div>
-          <h2 className="bento-card-title"><Send size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_capture_title')}</h2>
-          <p className="quick-capture-subtitle">{t(messages, 'module.dashboard.quick_capture_subtitle')}</p>
-        </div>
-        <span className="quick-capture-count" aria-label={t(messages, 'module.dashboard.quick_capture_inbox_count').replace('{count}', inboxItems.length)}>
-          <Inbox size={14} aria-hidden="true" /> {inboxItems.length}
-        </span>
+        <h2 className="bento-card-title">{t(messages, 'module.dashboard.quick_capture_title')}</h2>
       </div>
 
-      <div className="quick-capture-form">
+      <div className="quick-capture-form quick-capture-form--command">
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
+          aria-label={t(messages, 'module.dashboard.quick_capture_placeholder')}
           placeholder={t(messages, 'module.dashboard.quick_capture_placeholder')}
-          rows={3}
+          rows={1}
           maxLength={240}
           className="quick-capture-input"
         />
         <div className="quick-capture-actions">
-          <button type="button" className="btn-sm quick-capture-primary" onClick={() => capture('inbox')} disabled={!canSubmit}>
-            <Inbox size={14} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_capture_save_inbox')}
-          </button>
-          <button type="button" className="btn-sm" onClick={() => capture('task')} disabled={!canSubmit}>
+          <button type="button" className="btn-sm quick-capture-action-task" onClick={() => capture('task')} disabled={!canSubmit}>
             <ListChecks size={14} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_capture_add_task')}
           </button>
-          <button type="button" className="btn-sm" onClick={() => capture('shopping')} disabled={!canSubmit}>
+          <button type="button" className="btn-sm quick-capture-action-event" onClick={() => openView('calendar')}>
+            <CalendarDays size={14} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_event')}
+          </button>
+          <button type="button" className="btn-sm quick-capture-action-shopping" onClick={() => capture('shopping')} disabled={!canSubmit}>
             <ShoppingCart size={14} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_capture_add_shopping')}
+          </button>
+          <button type="button" className="btn-sm quick-capture-action-meal" onClick={() => openView('meal_plans')}>
+            <Utensils size={14} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_meal')}
+          </button>
+          <button type="button" className="btn-sm quick-capture-action-note" onClick={() => capture('inbox')} disabled={!canSubmit}>
+            <StickyNote size={14} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_note')}
           </button>
         </div>
       </div>
 
-      <div className="quick-capture-inbox">
-        <div className="quick-capture-inbox-title">{t(messages, 'module.dashboard.quick_capture_inbox_title')}</div>
-        {openItems.length === 0 ? (
+      {openItemCount > 0 ? <details className="quick-capture-inbox">
+        <summary
+          className="quick-capture-inbox-title"
+          aria-label={t(messages, 'module.dashboard.quick_capture_inbox_count').replace('{count}', openItemCount)}
+        >
+          <span className="quick-capture-inbox-label">{t(messages, 'module.dashboard.quick_capture_inbox_title')}</span>
+          <span
+            className="quick-capture-inbox-summary"
+            aria-hidden="true"
+          >
+            {openItemCount}
+          </span>
+        </summary>
+        {visibleOpenItems.length === 0 ? (
           <div className="bento-empty quick-capture-empty">{t(messages, 'module.dashboard.quick_capture_inbox_empty')}</div>
-        ) : openItems.map((item) => (
+        ) : visibleOpenItems.map((item) => (
           <div key={item.id} className="quick-capture-item">
             <div className="quick-capture-item-text">{item.text}</div>
             <div className="quick-capture-item-actions">
@@ -119,7 +141,7 @@ export default function QuickCaptureCard({
             </div>
           </div>
         ))}
-      </div>
+      </details> : null}
     </section>
   );
 }

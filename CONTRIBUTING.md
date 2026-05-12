@@ -143,6 +143,15 @@ cd frontend
 npm run e2e
 ```
 
+If Docker/PostgreSQL are not available locally, use the self-contained E2E
+runner. It starts a temporary SQLite-backed backend on port 8100 and a Next.js
+frontend on port 3100, then runs Playwright against that isolated app:
+
+```bash
+cd frontend
+npm run e2e:local
+```
+
 ### Backend
 
 ```bash

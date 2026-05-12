@@ -50,6 +50,8 @@ services:
     image: ghcr.io/itsdnns/tribu-frontend:latest
     container_name: tribu-frontend
     restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:8000
     depends_on:
       - backend
     ports:

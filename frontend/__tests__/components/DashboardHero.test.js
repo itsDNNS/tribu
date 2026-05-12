@@ -37,29 +37,17 @@ const messages = {
   'module.dashboard.empty_birthdays': 'No birthdays',
   'module.dashboard.days': 'days',
   'module.dashboard.quick_event': 'Event',
-  'module.dashboard.quick_task': 'Task',
-  'module.dashboard.quick_shopping': 'Shopping',
-  'module.dashboard.quick_invite': 'Invite',
-  'module.dashboard.quick_weekly_plan': 'Weekly plan',
-  'module.dashboard.quick_actions_label': 'Quick actions',
   'module.dashboard.today_command_center': 'Today command center',
-  'module.dashboard.today_kicker': 'Today at home',
   'module.dashboard.next_up_title': 'Next up',
-  'module.dashboard.next_up_cta': 'View today',
   'module.dashboard.next_up_empty': 'Nothing else scheduled',
   'module.dashboard.next_up_empty_hint': 'Use quick capture to park anything the family should remember.',
-  'module.dashboard.today_status_events': 'Events today',
-  'module.dashboard.today_status_tasks': 'Open tasks',
-  'module.dashboard.today_status_shopping': 'Shopping open',
-  'module.dashboard.today_status_birthdays': 'Birthdays soon',
+  'module.dashboard.today_status_events': 'Events',
+  'module.dashboard.today_status_tasks': 'Tasks',
+  'module.dashboard.today_status_shopping': 'Shopping',
+  'module.dashboard.today_status_birthdays': 'Birthdays',
   'module.dashboard.today_status_label': 'Today status',
   'search.placeholder': 'Search tasks, shopping, events...',
-  'module.dashboard.quick_my_tasks': 'My tasks',
-  'module.dashboard.quick_rewards': 'Rewards',
-  'module.dashboard.context_chips_label': 'Family at a glance',
-  'module.dashboard.chip_members': 'Members',
-  'module.dashboard.chip_today_events': 'Today',
-  'module.dashboard.chip_open_tasks': 'Open tasks',
+  notifications: 'Notifications',
   'module.dashboard.activation_title': 'Get your household started',
   'module.dashboard.activation_subtitle': 'A few quick steps so the whole family can use Tribu together.',
   'module.dashboard.activation_step_invite_title': 'Invite your family',
@@ -117,6 +105,7 @@ function todayAt(hour = 10, minute = 0) {
 describe('DashboardView hero', () => {
   beforeEach(() => {
     mockAppState = baseApp();
+    sessionStorage.clear();
   });
 
   it('renders a Today command center with next-up context and household status counts', () => {
@@ -145,6 +134,7 @@ describe('DashboardView hero', () => {
     render(<DashboardView />);
 
     const commandCenter = screen.getByRole('region', { name: 'Today command center' });
+    expect(within(commandCenter).queryByText('Today at home')).not.toBeInTheDocument();
     expect(within(commandCenter).getByRole('heading', { name: /Dennis/i })).toBeVisible();
     const nextUp = within(commandCenter).getByRole('region', { name: 'Next up' });
     expect(nextUp).toHaveTextContent('School run');
@@ -152,7 +142,13 @@ describe('DashboardView hero', () => {
     expect(nextUp).toHaveTextContent('08:15');
     expect(nextUp.querySelector('.next-up-time-chip')).toHaveTextContent('08:15');
     expect(nextUp.querySelector('.next-up-visual')).toBeInTheDocument();
-    expect(nextUp.querySelector('.next-up-cta')).toHaveTextContent('View today');
+    const nextUpButton = within(nextUp).getByRole('button', { name: /School run/i });
+    expect(nextUpButton).toHaveClass('next-up-content');
+    fireEvent.click(nextUpButton);
+    expect(mockAppState.setActiveView).toHaveBeenCalledWith('calendar');
+    const focusedDate = new Date(sessionStorage.getItem('tribu_calendar_focus'));
+    expect(focusedDate.getHours()).toBe(8);
+    expect(focusedDate.getMinutes()).toBe(15);
 
     const statusGroup = within(commandCenter).getByRole('group', { name: 'Today status' });
     expect(statusGroup).toHaveClass('today-status-card');
@@ -193,6 +189,7 @@ describe('DashboardView hero', () => {
     const nextUp = within(commandCenter).getByRole('region', { name: 'Next up' });
     expect(nextUp).toHaveTextContent('Nothing else scheduled');
     expect(nextUp).toHaveTextContent('Use quick capture to park anything the family should remember.');
+    expect(within(nextUp).getByRole('button', { name: 'Open calendar' })).toBeVisible();
   });
 
   it('keeps the greeting with the user display name', () => {
@@ -201,36 +198,10 @@ describe('DashboardView hero', () => {
     expect(heading).toHaveTextContent('Dennis');
   });
 
-  it('renders a labeled quick action pill row for adult users', () => {
-    render(<DashboardView />);
-    const region = screen.getByRole('group', { name: 'Quick actions' });
-    expect(within(region).getByRole('button', { name: 'Event' })).toBeVisible();
-    expect(within(region).getByRole('button', { name: 'Task' })).toBeVisible();
-    expect(within(region).getByRole('button', { name: 'Shopping' })).toBeVisible();
-    expect(within(region).getByRole('button', { name: 'Invite' })).toBeVisible();
-    expect(within(region).getByRole('button', { name: 'Weekly plan' })).toBeVisible();
-  });
-
-  it('navigates from the labeled quick action pills to the correct views', () => {
-    const setActiveView = jest.fn();
-    mockAppState = baseApp({ setActiveView });
-    render(<DashboardView />);
-    const region = screen.getByRole('group', { name: 'Quick actions' });
-    fireEvent.click(within(region).getByRole('button', { name: 'Event' }));
-    fireEvent.click(within(region).getByRole('button', { name: 'Task' }));
-    fireEvent.click(within(region).getByRole('button', { name: 'Shopping' }));
-    fireEvent.click(within(region).getByRole('button', { name: 'Invite' }));
-    fireEvent.click(within(region).getByRole('button', { name: 'Weekly plan' }));
-    expect(setActiveView).toHaveBeenCalledWith('calendar');
-    expect(setActiveView).toHaveBeenCalledWith('tasks');
-    expect(setActiveView).toHaveBeenCalledWith('shopping');
-    expect(setActiveView).toHaveBeenCalledWith('admin');
-    expect(setActiveView).toHaveBeenCalledWith('weekly_plan');
-  });
-
   it('does not render the icon-only header quick action buttons anymore', () => {
     const { container } = render(<DashboardView />);
     expect(container.querySelectorAll('.dashboard-header-actions .btn-icon')).toHaveLength(0);
+    expect(screen.queryByRole('group', { name: 'Quick actions' })).not.toBeInTheDocument();
   });
 
   it('moves global search into the dashboard header and removes the duplicated date chip', () => {
@@ -247,12 +218,22 @@ describe('DashboardView hero', () => {
     expect(onOpenSearch).toHaveBeenCalledTimes(1);
   });
 
-  it('renders child-safe quick action pills without duplicated header summary chips', () => {
+  it('exposes notifications beside layout controls when wired by the shell', () => {
+    const onOpenNotifications = jest.fn();
+    const { container } = render(<DashboardView onOpenNotifications={onOpenNotifications} unreadCount={4} />);
+
+    const headerActions = container.querySelector('.dashboard-header-actions');
+    const notifications = within(headerActions).getByRole('button', { name: 'Notifications' });
+    expect(notifications).toHaveClass('dashboard-notifications-action');
+    expect(notifications).toHaveTextContent('4');
+    fireEvent.click(notifications);
+    expect(onOpenNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render child quick action pills or duplicated header summary chips', () => {
     mockAppState = baseApp({ isChild: true, isAdmin: false });
     render(<DashboardView />);
-    const region = screen.getByRole('group', { name: 'Quick actions' });
-    expect(within(region).getByRole('button', { name: 'My tasks' })).toBeVisible();
-    expect(within(region).getByRole('button', { name: 'Rewards' })).toBeVisible();
+    expect(screen.queryByRole('group', { name: 'Quick actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Event' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Invite' })).not.toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Family at a glance' })).not.toBeInTheDocument();
@@ -266,11 +247,8 @@ describe('DashboardView hero', () => {
   it('does not expose invite actions to non-admin adults', () => {
     mockAppState = baseApp({ isAdmin: false });
     render(<DashboardView />);
-    const region = screen.getByRole('group', { name: 'Quick actions' });
-    expect(within(region).getByRole('button', { name: 'Event' })).toBeVisible();
-    expect(within(region).getByRole('button', { name: 'Task' })).toBeVisible();
-    expect(within(region).getByRole('button', { name: 'Shopping' })).toBeVisible();
-    expect(within(region).queryByRole('button', { name: 'Invite' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Quick actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Invite' })).not.toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Family at a glance' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('hero-chip-members')).not.toBeInTheDocument();
   });

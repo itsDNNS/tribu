@@ -144,8 +144,8 @@ export default function AuthPage() {
           {t(messages, 'landing.trust_privacy')}
         </div>
         <div className="landing-trust-badge">
-          <Github size={16} aria-hidden="true" />
-          {t(messages, 'landing.trust_opensource')}
+          <Users size={16} aria-hidden="true" />
+          {t(messages, 'landing.trust_families')}
         </div>
       </section>
 

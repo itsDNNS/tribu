@@ -41,6 +41,7 @@ describe('service worker runtime cache guard', () => {
     expect(sandbox.shouldRuntimeCache(get, new URL('https://tribu.example.test/api/auth/me'), response)).toBe(false);
     expect(sandbox.shouldRuntimeCache(get, new URL('https://tribu.example.test/dav/user/cal'), response)).toBe(false);
     expect(sandbox.shouldRuntimeCache(get, new URL('https://tribu.example.test/ws/shopping/1'), response)).toBe(false);
+    expect(sandbox.shouldRuntimeCache(get, new URL('https://tribu.example.test/sw.js'), response)).toBe(false);
   });
 
   it('allows safe same-origin GET pages and rejects non-GET or failed responses', () => {
@@ -48,5 +49,14 @@ describe('service worker runtime cache guard', () => {
     expect(sandbox.shouldRuntimeCache({ method: 'GET' }, new URL('https://tribu.example.test/'), { ok: true })).toBe(true);
     expect(sandbox.shouldRuntimeCache({ method: 'POST' }, new URL('https://tribu.example.test/'), { ok: true })).toBe(false);
     expect(sandbox.shouldRuntimeCache({ method: 'GET' }, new URL('https://tribu.example.test/'), { ok: false })).toBe(false);
+  });
+
+  it('detects local dev hosts so Next chunks are not cache-first during development', () => {
+    const sandbox = loadServiceWorker();
+    expect(typeof sandbox.isLocalDevHost).toBe('function');
+
+    expect(sandbox.isLocalDevHost(new URL('http://localhost:3000/_next/static/chunks/app.js'))).toBe(true);
+    expect(sandbox.isLocalDevHost(new URL('http://127.0.0.1:3000/_next/static/chunks/app.js'))).toBe(true);
+    expect(sandbox.isLocalDevHost(new URL('https://tribu.example.test/_next/static/chunks/app.js'))).toBe(false);
   });
 });

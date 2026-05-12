@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tribu-v6';
+const CACHE_NAME = 'tribu-v7';
 const STATIC_ASSETS = ['/manifest.json', '/offline.html'];
 
 self.addEventListener('install', (event) => {
@@ -26,6 +26,7 @@ function isSensitiveRuntimeRoute(url) {
   const path = url.pathname;
   if (url.search) return true;
   return (
+    path === '/sw.js' ||
     path === '/display' || path.startsWith('/display/') ||
     path === '/invite' || path.startsWith('/invite/') ||
     path === '/auth' || path.startsWith('/auth/') ||
@@ -33,6 +34,10 @@ function isSensitiveRuntimeRoute(url) {
     path === '/dav' || path.startsWith('/dav/') ||
     path === '/ws' || path.startsWith('/ws/')
   );
+}
+
+function isLocalDevHost(url) {
+  return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
 }
 
 function shouldRuntimeCache(request, url, response) {
@@ -57,6 +62,11 @@ self.addEventListener('fetch', (event) => {
 
   // Cache-first for hashed static assets (_next/static has content hashes in filenames)
   if (url.pathname.startsWith('/_next/static/')) {
+    if (isLocalDevHost(url)) {
+      event.respondWith(fetch(request, { cache: 'no-store' }));
+      return;
+    }
+
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;

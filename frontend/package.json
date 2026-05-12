@@ -8,6 +8,7 @@
     "start": "node -e \"const fs=require('fs'); require(fs.existsSync('server.js') ? './server.js' : './.next/standalone/server.js')\"",
     "test": "jest",
     "e2e": "playwright test",
+    "e2e:local": "../scripts/e2e-local.sh",
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui"
   },

@@ -41,15 +41,20 @@ const messages = {
   'module.dashboard.open_tasks': 'Open tasks',
   'module.dashboard.all': 'All',
   'module.dashboard.empty_events': 'No upcoming events',
-  'module.dashboard.empty_events_action': 'Open calendar',
   'module.dashboard.empty_tasks': 'All done!',
   'module.dashboard.empty_tasks_action': 'Create task',
   'module.tasks.no_tasks': 'No tasks yet',
   'module.dashboard.empty_birthdays': 'No birthdays',
   'module.dashboard.days': 'days',
   'module.dashboard.quick_event': 'Event',
-  'module.dashboard.quick_task': 'Task',
-  'module.dashboard.quick_contact': 'Contact',
+  'module.dashboard.daily_loop_title': 'Today loop',
+  'module.dashboard.daily_loop_meals': 'Meals planned',
+  'module.dashboard.daily_loop_shopping': 'Shopping open',
+  'module.dashboard.daily_loop_routines': 'Routines due',
+  'module.dashboard.daily_loop_open_meals': 'Plan meals',
+  'module.dashboard.daily_loop_open_shopping': 'Open shopping',
+  'module.dashboard.daily_loop_open_routines': 'Open routines',
+  'module.dashboard.daily_loop_empty': 'Nothing pressing today.',
   'module.dashboard.activation_title': 'Get your household started',
   'module.dashboard.activation_subtitle': 'A few quick steps so the whole family can use Tribu together.',
   'module.dashboard.activation_step_invite_title': 'Invite your family',
@@ -122,6 +127,15 @@ describe('DashboardView activation panel', () => {
     expect(screen.getByTestId('activation-step-event')).toHaveTextContent('Add your first event');
     expect(screen.getByTestId('activation-step-task')).toHaveTextContent('Add your first task');
     expect(screen.getByTestId('activation-step-shopping')).toHaveTextContent('Start a shopping list');
+  });
+
+  it('places the setup checklist after the primary dashboard cards', () => {
+    const { container } = render(<DashboardView />);
+
+    const moduleKeys = Array.from(container.querySelectorAll('.bento-grid > [data-dashboard-module]')).map((module) => module.getAttribute('data-dashboard-module'));
+
+    expect(moduleKeys.slice(0, 3)).toEqual(['quick_capture', 'daily_loop', 'events']);
+    expect(moduleKeys.at(-1)).toBe('setup_checklist');
   });
 
   it('navigates activation actions to the owning modules', () => {

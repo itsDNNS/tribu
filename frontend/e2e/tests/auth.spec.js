@@ -25,11 +25,16 @@ test.describe('Authentication', () => {
   });
 
   test('logout', async ({ authedPage: page }) => {
-    // On mobile, the sidebar logout is hidden; use the mobile-header one
     const viewport = page.viewportSize();
     const isMobile = viewport ? viewport.width < 768 : false;
     if (isMobile) {
-      await page.locator('.mobile-header [aria-label="Log out"]').click();
+      const mobileHeaderLogout = page.locator('.mobile-header [aria-label="Log out"]');
+      if (await mobileHeaderLogout.isVisible()) {
+        await mobileHeaderLogout.click();
+      } else {
+        await page.locator('.mobile-hamburger').click();
+        await page.locator('.sidebar-user [aria-label="Log out"]').click();
+      }
     } else {
       await page.locator('.sidebar-user [aria-label="Log out"]').click();
     }

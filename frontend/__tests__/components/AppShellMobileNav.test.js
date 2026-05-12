@@ -68,7 +68,7 @@ const messages = {
   'module.rewards.name': 'Rewards',
   'module.gifts.name': 'Gifts',
   'module.school_timetables.name': 'School',
-  'module.weekly_plan.name': 'Weekly',
+  'module.weekly_plan.title': 'Weekly plan',
   'search.title': 'Search',
   'search.placeholder': 'Search Tribu',
 };
@@ -175,6 +175,14 @@ describe('AppShell mobile bottom navigation', () => {
     expect(container.querySelector('.sidebar-search-btn')).toBeInTheDocument();
   });
 
+  it('keeps desktop sidebar navigation scrollable with a fixed footer block', () => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'styles', 'globals.css'), 'utf8');
+
+    expect(css).toMatch(/\.sidebar-content \{[^}]*flex: 1 1 auto;[^}]*min-height: 0;[^}]*overflow-y: auto;/);
+    expect(css).toMatch(/\.sidebar-footer \{[^}]*flex: 0 0 auto;[^}]*padding: 0 var\(--space-md\) var\(--space-md\);/);
+    expect(css).toMatch(/\.sidebar\.collapsed \.sidebar-footer \{[^}]*padding: 0 var\(--space-sm\) var\(--space-sm\);/);
+  });
+
   it('groups desktop navigation around household jobs and keeps system items separate', () => {
     mockAppState = baseState({ isMobile: false });
     render(<AppShell />);
@@ -183,6 +191,7 @@ describe('AppShell mobile bottom navigation', () => {
     expect(mainNav).toBeInTheDocument();
     expect(within(mainNav).getByRole('region', { name: 'Today' })).toHaveTextContent('Dashboard');
     expect(within(mainNav).getByRole('region', { name: 'Plan' })).toHaveTextContent('Calendar');
+    expect(within(mainNav).getByRole('region', { name: 'Plan' })).toHaveTextContent('Weekly plan');
     expect(within(mainNav).getByRole('region', { name: 'Lists' })).toHaveTextContent('Tasks');
     expect(within(mainNav).getByRole('region', { name: 'Lists' })).toHaveTextContent('Shopping');
     expect(within(mainNav).getByRole('region', { name: 'People' })).toHaveTextContent('Contacts');

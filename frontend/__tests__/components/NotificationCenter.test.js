@@ -57,4 +57,45 @@ describe('NotificationCenter external destination callout', () => {
 
     expect(screen.queryByRole('button', { name: 'Configure household notifications' })).not.toBeInTheDocument();
   });
+
+  it('localizes scheduler notification body fallbacks', () => {
+    mockAppState = baseState({
+      messages: buildMessages('de'),
+      lang: 'de',
+      notifications: [
+        {
+          id: 1,
+          type: 'event_reminder',
+          title: 'Musikschule',
+          body: 'Starts in 15 minutes',
+          read: false,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 2,
+          type: 'task_due',
+          title: 'Müll rausbringen',
+          body: 'Task is overdue',
+          read: false,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 3,
+          type: 'birthday',
+          title: 'Oma',
+          body: 'Birthday tomorrow (May 13)',
+          read: false,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(<NotificationCenter />);
+
+    expect(screen.getByText('Beginnt in 15 Minuten')).toBeVisible();
+    expect(screen.getByText('Aufgabe ist überfällig')).toBeVisible();
+    expect(screen.getByText('Geburtstag morgen (May 13)')).toBeVisible();
+    expect(screen.queryByText('Starts in 15 minutes')).not.toBeInTheDocument();
+    expect(screen.queryByText('Task is overdue')).not.toBeInTheDocument();
+  });
 });

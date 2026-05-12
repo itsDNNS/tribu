@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw, MapPin, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Bell, CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Settings2, ArrowUp, ArrowDown, RotateCcw, MapPin, Search } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -18,7 +18,25 @@ function normalizeDashboardLayout(modules, availableModules = DEFAULT_DASHBOARD_
   (Array.isArray(modules) ? modules : []).forEach((module) => {
     if (available.has(module) && !ordered.includes(module)) ordered.push(module);
   });
-  return ordered.concat(availableModules.filter((module) => !ordered.includes(module)));
+  const normalized = [...ordered];
+  availableModules.forEach((module, defaultIndex) => {
+    if (normalized.includes(module)) return;
+    if (module === 'daily_loop' && normalized.includes('quick_capture')) {
+      normalized.splice(normalized.indexOf('quick_capture') + 1, 0, module);
+      return;
+    }
+    let insertAt = normalized.length;
+    for (let i = defaultIndex + 1; i < availableModules.length; i += 1) {
+      const nextDefaultModule = availableModules[i];
+      const nextIndex = normalized.indexOf(nextDefaultModule);
+      if (nextIndex !== -1) {
+        insertAt = nextIndex;
+        break;
+      }
+    }
+    normalized.splice(insertAt, 0, module);
+  });
+  return normalized;
 }
 
 function todayIsoDate() {
@@ -49,15 +67,6 @@ function countOpenShoppingItems(lists) {
   }, 0);
 }
 
-function countDueRoutines(tasks, today = todayIsoDate()) {
-  return (Array.isArray(tasks) ? tasks : []).filter((task) => {
-    if (!task || task.status !== 'open' || !task.recurrence) return false;
-    const dueDate = normalizeDateOnly(task.due_date);
-    return Boolean(dueDate) && dueDate <= today;
-  }).length;
-}
-
-
 function getEventOccurrenceDate(event) {
   return normalizeDateOnly(event?.starts_at) || normalizeDateOnly(event?.occurrence_date);
 }
@@ -87,6 +96,14 @@ function getOpenTaskCount(tasks) {
   return (Array.isArray(tasks) ? tasks : []).filter((task) => task?.status === 'open').length;
 }
 
+function countDueRoutines(tasks, today = todayIsoDate()) {
+  return (Array.isArray(tasks) ? tasks : []).filter((task) => {
+    if (task?.status !== 'open' || !task?.recurrence) return false;
+    const dueDate = normalizeDateOnly(task.due_date);
+    return Boolean(dueDate) && dueDate <= today;
+  }).length;
+}
+
 function getUpcomingBirthdayCount(summary) {
   return Array.isArray(summary?.upcoming_birthdays) ? summary.upcoming_birthdays.length : 0;
 }
@@ -97,15 +114,81 @@ function formatEventTime(value, locale, timeFormat) {
   return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
 }
 
-function TodayStatusItem({ label, value, testId, icon: Icon, tone }) {
+function TodayStatusItem({ label, value, testId, icon: Icon, tone, onClick }) {
   return (
-    <div className={`today-status-item today-status-item-${tone}`}>
+    <button type="button" className={`today-status-item today-status-item-${tone}`} onClick={onClick}>
       <span className="today-status-icon" aria-hidden="true">
         <Icon size={20} strokeWidth={2.1} />
       </span>
       <span className="today-status-value" data-testid={testId}>{value}</span>
       <span className="today-status-label">{label}</span>
-    </div>
+    </button>
+  );
+}
+
+function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, messages, setActiveView }) {
+  const items = [
+    {
+      key: 'meals',
+      icon: Utensils,
+      value: mealsTodayCount,
+      label: t(messages, 'module.dashboard.daily_loop_meals'),
+      action: t(messages, 'module.dashboard.daily_loop_open_meals'),
+      onClick: () => setActiveView('meal_plans'),
+    },
+    {
+      key: 'shopping',
+      icon: ShoppingCart,
+      value: shoppingOpenCount,
+      label: t(messages, 'module.dashboard.daily_loop_shopping'),
+      action: t(messages, 'module.dashboard.daily_loop_open_shopping'),
+      onClick: () => setActiveView('shopping'),
+    },
+    {
+      key: 'routines',
+      icon: ListChecks,
+      value: routineDueCount,
+      label: t(messages, 'module.dashboard.daily_loop_routines'),
+      action: t(messages, 'module.dashboard.daily_loop_open_routines'),
+      onClick: () => setActiveView('tasks'),
+    },
+  ];
+  const hasAttention = items.some((item) => item.value > 0);
+
+  return (
+    <section className="bento-card bento-daily-loop" role="region" aria-label={t(messages, 'module.dashboard.daily_loop_title')}>
+      <div className="bento-card-header daily-loop-header">
+        <div>
+          <h2 className="bento-card-title">{t(messages, 'module.dashboard.daily_loop_title')}</h2>
+        </div>
+      </div>
+      <div className="daily-loop-actions">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`daily-loop-action daily-loop-action-${item.key}`}
+              onClick={item.onClick}
+              aria-label={`${item.label}: ${item.action}`}
+            >
+              <span className="daily-loop-action-art" aria-hidden="true">
+                <Icon size={24} />
+              </span>
+              <span className="daily-loop-action-copy">
+                <span className="daily-loop-action-value">{item.value}</span>
+                <span className="daily-loop-action-label">{item.label}</span>
+              </span>
+              <span className="daily-loop-action-link">{item.action}</span>
+            </button>
+          );
+        })}
+      </div>
+      {!hasAttention && (
+        <p className="daily-loop-empty">{t(messages, 'module.dashboard.daily_loop_empty')}</p>
+      )}
+    </section>
   );
 }
 
@@ -124,7 +207,7 @@ function NextUpCard({ event, locale, lang, timeFormat, messages, members, setAct
     <section className={`next-up-card${event ? '' : ' next-up-empty'}`} role="region" aria-label={t(messages, 'module.dashboard.next_up_title')}>
       <div className="next-up-eyebrow">{t(messages, 'module.dashboard.next_up_title')}</div>
       {event ? (
-        <button type="button" className="next-up-button" onClick={goToEvent}>
+        <button type="button" className="next-up-content" onClick={goToEvent}>
           <span className="next-up-time-chip">
             <span>{formatEventTime(event.starts_at, locale, timeFormat)}</span>
           </span>
@@ -139,7 +222,6 @@ function NextUpCard({ event, locale, lang, timeFormat, messages, members, setAct
           <span className="next-up-visual" aria-hidden="true">
             <span className="next-up-visual-orb"><CalendarClock size={34} /></span>
           </span>
-          <span className="next-up-cta">{t(messages, 'module.dashboard.next_up_cta')} <span aria-hidden="true">›</span></span>
         </button>
       ) : (
         <div className="next-up-clear">
@@ -153,68 +235,6 @@ function NextUpCard({ event, locale, lang, timeFormat, messages, members, setAct
         </div>
       )}
     </section>
-  );
-}
-
-function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, messages, setActiveView }) {
-  const hasDailyInputs = mealsTodayCount > 0 || shoppingOpenCount > 0 || routineDueCount > 0;
-  const items = [
-    {
-      key: 'meals',
-      icon: Utensils,
-      value: mealsTodayCount,
-      label: t(messages, 'module.dashboard.daily_loop_meals'),
-      actionLabel: t(messages, 'module.dashboard.daily_loop_open_meals'),
-      onClick: () => setActiveView('meal_plans'),
-    },
-    {
-      key: 'shopping',
-      icon: ShoppingCart,
-      value: shoppingOpenCount,
-      label: t(messages, 'module.dashboard.daily_loop_shopping'),
-      actionLabel: t(messages, 'module.dashboard.daily_loop_open_shopping'),
-      onClick: () => setActiveView('shopping'),
-    },
-    {
-      key: 'routines',
-      icon: ListChecks,
-      value: routineDueCount,
-      label: t(messages, 'module.dashboard.daily_loop_routines'),
-      actionLabel: t(messages, 'module.dashboard.daily_loop_open_routines'),
-      onClick: () => setActiveView('tasks'),
-    },
-  ];
-
-  return (
-    <div className="bento-card bento-daily-loop" role="region" aria-label={t(messages, 'module.dashboard.daily_loop_title')}>
-      <div className="bento-card-header daily-loop-header">
-        <div>
-          <h2 className="bento-card-title"><Sparkles size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.daily_loop_title')}</h2>
-          <p className="daily-loop-subtitle">{t(messages, 'module.dashboard.daily_loop_subtitle')}</p>
-        </div>
-      </div>
-      <div className="daily-loop-list">
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.key}
-              type="button"
-              className="daily-loop-item"
-              aria-label={item.actionLabel}
-              onClick={item.onClick}
-            >
-              <span className="daily-loop-icon" aria-hidden="true"><Icon size={16} /></span>
-              <span className="daily-loop-copy">
-                <span className="daily-loop-value" data-testid={`daily-loop-${item.key}`}>{item.value}</span>
-                <span className="daily-loop-label">{item.label}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      {!hasDailyInputs && <div className="daily-loop-empty">{t(messages, 'module.dashboard.daily_loop_empty')}</div>}
-    </div>
   );
 }
 
@@ -275,42 +295,28 @@ function ActivationPanel({ steps, completedCount, totalCount, messages, onDismis
   );
 }
 
-export default function DashboardView({ onOpenSearch } = {}) {
+export default function DashboardView({ onOpenSearch, onOpenNotifications, unreadCount = 0, notificationButtonRef = null, onDashboardLayoutActionChange } = {}) {
   const { summary, me, members, tasks, events, shoppingLists, quickCaptureInbox, familyId, families, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
   const todayIso = useMemo(() => todayIsoDate(), []);
-  const [mealsTodayCount, setMealsTodayCount] = useState(0);
   const [setupChecklist, setSetupChecklist] = useState(null);
   const [layoutEditing, setLayoutEditing] = useState(false);
   const [dashboardLayout, setDashboardLayout] = useState(DEFAULT_DASHBOARD_LAYOUT);
+  const [mealsTodayCount, setMealsTodayCount] = useState(0);
+  const customizeLayoutLabel = t(messages, 'module.dashboard.customize_layout');
+  const toggleDashboardLayoutEditing = useCallback(() => {
+    setLayoutEditing((current) => !current);
+  }, []);
 
   const openTasks = tasks.filter((task) => task.status === 'open');
   const shoppingOpenCount = useMemo(() => countOpenShoppingItems(shoppingLists), [shoppingLists]);
-  const routineDueCount = useMemo(() => countDueRoutines(tasks, todayIso), [tasks, todayIso]);
   const todayEventCount = useMemo(() => countTodayEvents(events, summary, todayIso), [events, summary, todayIso]);
   const openTaskCount = useMemo(() => getOpenTaskCount(tasks), [tasks]);
+  const routineDueCount = useMemo(() => countDueRoutines(tasks, todayIso), [tasks, todayIso]);
   const birthdaySoonCount = getUpcomingBirthdayCount(summary);
   const nextUpEvent = Array.isArray(summary?.next_events) ? summary.next_events[0] : null;
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const todayStr = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const currentFamily = Array.isArray(families) ? families.find((family) => String(family.family_id) === String(familyId)) : null;
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!familyId || demoMode) {
-      setMealsTodayCount(0);
-      return () => { cancelled = true; };
-    }
-
-    apiListMealPlans(familyId, todayIso, todayIso).then((res) => {
-      if (cancelled) return;
-      const items = Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data) ? res.data : [];
-      setMealsTodayCount(items.length);
-    }).catch(() => {
-      if (!cancelled) setMealsTodayCount(0);
-    });
-
-    return () => { cancelled = true; };
-  }, [familyId, demoMode, todayIso]);
 
   useEffect(() => {
     let cancelled = false;
@@ -340,20 +346,29 @@ export default function DashboardView({ onOpenSearch } = {}) {
     return () => { cancelled = true; };
   }, [demoMode]);
 
-  const adultQuickActions = [
-    { key: 'event', label: t(messages, 'module.dashboard.quick_event'), icon: Calendar, onClick: () => setActiveView('calendar') },
-    { key: 'task', label: t(messages, 'module.dashboard.quick_task'), icon: CheckSquare, onClick: () => setActiveView('tasks') },
-    { key: 'shopping', label: t(messages, 'module.dashboard.quick_shopping'), icon: ShoppingCart, onClick: () => setActiveView('shopping') },
-    { key: 'weekly-plan', label: t(messages, 'module.dashboard.quick_weekly_plan'), icon: Printer, onClick: () => setActiveView('weekly_plan') },
-    ...(isAdmin ? [{ key: 'invite', label: t(messages, 'module.dashboard.quick_invite'), icon: UserPlus, onClick: () => setActiveView('admin') }] : []),
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    if (!familyId || demoMode) {
+      setMealsTodayCount(0);
+      return () => { cancelled = true; };
+    }
+    apiListMealPlans(familyId, todayIso, todayIso).then((res) => {
+      if (!cancelled) setMealsTodayCount(res?.ok && Array.isArray(res.data) ? res.data.length : 0);
+    }).catch(() => {
+      if (!cancelled) setMealsTodayCount(0);
+    });
+    return () => { cancelled = true; };
+  }, [familyId, demoMode, todayIso]);
 
-  const quickActions = isChild
-    ? [
-        { key: 'my-tasks', label: t(messages, 'module.dashboard.quick_my_tasks'), icon: CheckSquare, onClick: () => setActiveView('tasks') },
-        { key: 'rewards', label: t(messages, 'module.dashboard.quick_rewards'), icon: CheckCircle, onClick: () => setActiveView('rewards') },
-      ]
-    : adultQuickActions;
+  useEffect(() => {
+    if (typeof onDashboardLayoutActionChange !== 'function') return undefined;
+    onDashboardLayoutActionChange({
+      label: customizeLayoutLabel,
+      pressed: layoutEditing,
+      onClick: toggleDashboardLayoutEditing,
+    });
+    return () => onDashboardLayoutActionChange(null);
+  }, [customizeLayoutLabel, layoutEditing, onDashboardLayoutActionChange, toggleDashboardLayoutEditing]);
 
   const safeShoppingLists = Array.isArray(shoppingLists) ? shoppingLists : [];
   const hasShoppingContent = safeShoppingLists.some((list) => {
@@ -506,7 +521,6 @@ export default function DashboardView({ onOpenSearch } = {}) {
       <section className="today-command-center" role="region" aria-label={t(messages, 'module.dashboard.today_command_center')}>
         <div className="today-command-header">
           <div>
-            <div className="today-command-kicker">{t(messages, 'module.dashboard.today_kicker')}</div>
             <h1 className="view-title today-command-title">
               {getGreeting(messages)}, <span>{heroName}</span>{heroFamilyName && <span className="today-command-family-inline"> · {heroFamilyName}</span>} <span className="today-command-wave" aria-hidden="true">👋</span>
             </h1>
@@ -525,9 +539,31 @@ export default function DashboardView({ onOpenSearch } = {}) {
                 <kbd className="dashboard-search-kbd">⌘K</kbd>
               </button>
             )}
-            <button type="button" className="dashboard-layout-toggle" onClick={() => setLayoutEditing((current) => !current)}>
-              <Settings2 size={15} aria-hidden="true" />
-              <span>{t(messages, 'module.dashboard.customize_layout')}</span>
+            {typeof onOpenNotifications === 'function' && (
+              <button
+                ref={notificationButtonRef}
+                type="button"
+                className="dashboard-icon-action dashboard-notifications-action"
+                onClick={onOpenNotifications}
+                aria-label={t(messages, 'notifications')}
+              >
+                <Bell size={17} aria-hidden="true" />
+                {unreadCount > 0 && (
+                  <span className="dashboard-action-badge">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            )}
+            <button
+              type="button"
+              className="dashboard-layout-toggle"
+              onClick={toggleDashboardLayoutEditing}
+              aria-label={customizeLayoutLabel}
+              aria-pressed={layoutEditing}
+              title={customizeLayoutLabel}
+            >
+              <Settings2 size={17} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -546,35 +582,14 @@ export default function DashboardView({ onOpenSearch } = {}) {
           <div className="today-status-card" role="group" aria-label={t(messages, 'module.dashboard.today_status_label')}>
             <div className="today-status-heading">{t(messages, 'module.dashboard.today_status_label')}</div>
             <div className="today-status-grid">
-              <TodayStatusItem icon={Calendar} tone="events" label={t(messages, 'module.dashboard.today_status_events')} value={todayEventCount} testId="today-status-events" />
-              <TodayStatusItem icon={CheckCircle} tone="tasks" label={t(messages, 'module.dashboard.today_status_tasks')} value={openTaskCount} testId="today-status-tasks" />
-              <TodayStatusItem icon={ShoppingCart} tone="shopping" label={t(messages, 'module.dashboard.today_status_shopping')} value={shoppingOpenCount} testId="today-status-shopping" />
-              <TodayStatusItem icon={Cake} tone="birthdays" label={t(messages, 'module.dashboard.today_status_birthdays')} value={birthdaySoonCount} testId="today-status-birthdays" />
+              <TodayStatusItem icon={Calendar} tone="events" label={t(messages, 'module.dashboard.today_status_events')} value={todayEventCount} testId="today-status-events" onClick={() => setActiveView('calendar')} />
+              <TodayStatusItem icon={CheckCircle} tone="tasks" label={t(messages, 'module.dashboard.today_status_tasks')} value={openTaskCount} testId="today-status-tasks" onClick={() => setActiveView('tasks')} />
+              <TodayStatusItem icon={ShoppingCart} tone="shopping" label={t(messages, 'module.dashboard.today_status_shopping')} value={shoppingOpenCount} testId="today-status-shopping" onClick={() => setActiveView('shopping')} />
+              <TodayStatusItem icon={Cake} tone="birthdays" label={t(messages, 'module.dashboard.today_status_birthdays')} value={birthdaySoonCount} testId="today-status-birthdays" onClick={() => setActiveView('contacts')} />
             </div>
           </div>
         </div>
 
-        <div
-          className="dashboard-quick-actions"
-          role="group"
-          aria-label={t(messages, 'module.dashboard.quick_actions_label')}
-        >
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.key}
-                type="button"
-                className="quick-action-pill"
-                data-testid={`quick-action-${action.key}`}
-                onClick={action.onClick}
-              >
-                <Icon size={16} aria-hidden="true" />
-                <span>{action.label}</span>
-              </button>
-            );
-          })}
-        </div>
       </section>
 
       {layoutEditing && (
@@ -606,16 +621,6 @@ export default function DashboardView({ onOpenSearch } = {}) {
           </ol>
         </section>
       )}
-      {showActivationPanel && (
-        <ActivationPanel
-          steps={checklistSteps}
-          completedCount={checklistCompletedCount}
-          totalCount={checklistTotalCount}
-          messages={messages}
-          onDismiss={handleDismissSetupChecklist}
-        />
-      )}
-
       <div className="bento-grid">
         {!isChild && (
           <div className="dashboard-module-shell" style={{ order: moduleOrder('quick_capture') }} data-dashboard-module="quick_capture">
@@ -623,6 +628,7 @@ export default function DashboardView({ onOpenSearch } = {}) {
               familyId={familyId}
               inbox={quickCaptureInbox}
               messages={messages}
+              setActiveView={setActiveView}
               loadQuickCaptureInbox={loadQuickCaptureInbox}
               loadTasks={loadTasks}
               loadShoppingLists={loadShoppingLists}
@@ -643,26 +649,22 @@ export default function DashboardView({ onOpenSearch } = {}) {
 
         {/* Events Card */}
         <div className="dashboard-module-shell" style={{ order: moduleOrder('events') }} data-dashboard-module="events">
-        <div className="bento-card bento-events" role="region" aria-label={t(messages, 'next_events')}>
+        <div className="bento-card bento-events bento-card-illustrated" role="region" aria-label={t(messages, 'next_events')}>
+          <span className="bento-card-visual bento-card-visual-events" aria-hidden="true">
+            <CalendarClock size={30} />
+          </span>
           <div className="bento-card-header">
-            <h2 className="bento-card-title"><CalendarClock size={16} aria-hidden="true" /> {t(messages, 'next_events')}</h2>
-            <button className="bento-more" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.all')}</button>
+            <h2 className="bento-card-title">{t(messages, 'next_events')}</h2>
           </div>
           <div className="event-list">
             {summary.next_events?.length === 0 && (
               <div className="bento-empty">
                 <span>{t(messages, 'module.dashboard.empty_events')}</span>
-                {!isChild && <button className="bento-empty-action" onClick={() => setActiveView('calendar')}>{t(messages, 'module.dashboard.empty_events_action')}</button>}
               </div>
             )}
             {summary.next_events?.slice(0, 4).map((ev, i) => {
-              const goToEvent = () => {
-                const d = parseDate(ev.starts_at);
-                if (d) sessionStorage.setItem('tribu_calendar_focus', d.toISOString());
-                setActiveView('calendar');
-              };
               return (
-              <div key={ev.id} className="event-item" style={{ cursor: 'pointer' }} onClick={goToEvent} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToEvent(); } }}>
+              <div key={ev.id} className="event-item">
                 <div className="event-time">{parseDate(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}</div>
                 <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
                 <div className="event-info">
@@ -676,15 +678,22 @@ export default function DashboardView({ onOpenSearch } = {}) {
               );
             })}
           </div>
+          <div className="bento-card-footer">
+            <button type="button" className="bento-card-action" onClick={() => setActiveView('calendar')}>
+              {t(messages, 'module.dashboard.view_calendar')}
+            </button>
+          </div>
         </div>
         </div>
 
         {/* Tasks Card */}
         <div className="dashboard-module-shell" style={{ order: moduleOrder('tasks') }} data-dashboard-module="tasks">
-        <div className="bento-card bento-tasks" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
+        <div className="bento-card bento-tasks bento-card-illustrated" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
+          <span className="bento-card-visual bento-card-visual-tasks" aria-hidden="true">
+            <ListChecks size={30} />
+          </span>
           <div className="bento-card-header">
-            <h2 className="bento-card-title"><ListChecks size={16} aria-hidden="true" /> {t(messages, 'module.dashboard.open_tasks')}</h2>
-            <button className="bento-more" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.all')}</button>
+            <h2 className="bento-card-title">{t(messages, 'module.dashboard.open_tasks')}</h2>
           </div>
           <div className="task-preview-list">
             {openTasks.length === 0 && (
@@ -707,14 +716,22 @@ export default function DashboardView({ onOpenSearch } = {}) {
               );
             })}
           </div>
+          <div className="bento-card-footer">
+            <button type="button" className="bento-card-action" onClick={() => setActiveView('tasks')}>
+              {t(messages, 'module.dashboard.view_tasks')}
+            </button>
+          </div>
         </div>
         </div>
 
         {/* Birthdays Card */}
         <div className="dashboard-module-shell" style={{ order: moduleOrder('birthdays') }} data-dashboard-module="birthdays">
-        <div className="bento-card bento-birthdays" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
+        <div className="bento-card bento-birthdays bento-card-illustrated" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
+          <span className="bento-card-visual bento-card-visual-birthdays" aria-hidden="true">
+            <Cake size={30} />
+          </span>
           <div className="bento-card-header">
-            <h2 className="bento-card-title"><Cake size={16} aria-hidden="true" /> {t(messages, 'upcoming_birthdays_4w')}</h2>
+            <h2 className="bento-card-title">{t(messages, 'upcoming_birthdays_4w')}</h2>
           </div>
           <div className="birthday-list">
             {summary.upcoming_birthdays?.length === 0 && (
@@ -740,6 +757,11 @@ export default function DashboardView({ onOpenSearch } = {}) {
               );
             })}
           </div>
+          <div className="bento-card-footer">
+            <button type="button" className="bento-card-action" onClick={() => setActiveView('contacts')}>
+              {t(messages, 'module.dashboard.view_birthdays')}
+            </button>
+          </div>
         </div>
         </div>
 
@@ -747,6 +769,18 @@ export default function DashboardView({ onOpenSearch } = {}) {
         <div className="dashboard-module-shell" style={{ order: moduleOrder('rewards') }} data-dashboard-module="rewards">
           <RewardsDashboardWidget />
         </div>
+
+        {showActivationPanel && (
+          <div className="dashboard-module-shell dashboard-activation-shell" data-dashboard-module="setup_checklist">
+            <ActivationPanel
+              steps={checklistSteps}
+              completedCount={checklistCompletedCount}
+              totalCount={checklistTotalCount}
+              messages={messages}
+              onDismiss={handleDismissSetupChecklist}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

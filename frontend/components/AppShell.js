@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Bell, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, MoreHorizontal, Search } from 'lucide-react';
+import { Bell, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, MoreHorizontal, Search, Settings2 } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
@@ -55,7 +55,8 @@ function DashboardSkeleton() {
         </div>
       </div>
       <div className="bento-grid">
-        <div className="bento-daily-loop skeleton skeleton-card" style={{ minHeight: 170 }} />
+        <div className="bento-quick-capture skeleton skeleton-card" style={{ minHeight: 220 }} />
+        <div className="bento-daily-loop skeleton skeleton-card" style={{ minHeight: 140 }} />
         <div className="bento-events skeleton skeleton-card" style={{ minHeight: 180 }} />
         <div className="bento-tasks skeleton skeleton-card" style={{ minHeight: 180 }} />
         <div className="bento-birthdays skeleton skeleton-card" style={{ minHeight: 180 }} />
@@ -66,13 +67,16 @@ function DashboardSkeleton() {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, tasks, shoppingLists, unreadCount, logout, demoMode, loading, navOrder, profileImage } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, switchFamily, tasks, shoppingLists, unreadCount, logout, demoMode, loading, navOrder, profileImage } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const [familyMenuOpen, setFamilyMenuOpen] = useState(false);
+  const [dashboardLayoutAction, setDashboardLayoutAction] = useState(null);
   const overflowRef = useRef(null);
+  const familySwitcherRef = useRef(null);
   const bellBtnRef = useRef(null);
   const notifPanelRef = useRef(null);
 
@@ -165,10 +169,25 @@ export default function AppShell() {
   const navigate = useCallback((key) => {
     setActiveView(key);
     setOverflowOpen(false);
+    setFamilyMenuOpen(false);
     if (isMobile) setMobileOpen(false);
     const item = itemRegistry[key];
     if (item) announce(item.label);
   }, [setActiveView, isMobile, itemRegistry]);
+
+  const handleDashboardLayoutActionChange = useCallback((action) => {
+    setDashboardLayoutAction(action);
+  }, []);
+
+  useEffect(() => {
+    if (activeView !== 'dashboard') setDashboardLayoutAction(null);
+  }, [activeView]);
+
+  const handleFamilySelect = useCallback((nextFamilyId) => {
+    setFamilyMenuOpen(false);
+    if (String(nextFamilyId) === String(familyId)) return;
+    switchFamily?.(String(nextFamilyId));
+  }, [familyId, switchFamily]);
 
   // Close overflow popover on outside click
   useEffect(() => {
@@ -182,19 +201,31 @@ export default function AppShell() {
     return () => document.removeEventListener('pointerdown', handleClick);
   }, [overflowOpen]);
 
-  // Escape key closes mobile sidebar, overflow, and notification panel
   useEffect(() => {
-    if (!mobileOpen && !overflowOpen && !notifPanelOpen) return;
+    if (!familyMenuOpen) return;
+    function handleClick(e) {
+      if (familySwitcherRef.current && !familySwitcherRef.current.contains(e.target)) {
+        setFamilyMenuOpen(false);
+      }
+    }
+    document.addEventListener('pointerdown', handleClick);
+    return () => document.removeEventListener('pointerdown', handleClick);
+  }, [familyMenuOpen]);
+
+  // Escape key closes mobile sidebar, overflow, family switcher, and notification panel
+  useEffect(() => {
+    if (!mobileOpen && !overflowOpen && !familyMenuOpen && !notifPanelOpen) return;
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
         if (notifPanelOpen) { closeNotifPanel(); return; }
+        setFamilyMenuOpen(false);
         setMobileOpen(false);
         setOverflowOpen(false);
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [mobileOpen, overflowOpen, notifPanelOpen]);
+  }, [mobileOpen, overflowOpen, familyMenuOpen, notifPanelOpen]);
 
   function closeNotifPanel() {
     setNotifPanelOpen(false);
@@ -248,18 +279,6 @@ export default function AppShell() {
               {!collapsed && <kbd className="sidebar-search-kbd">⌘K</kbd>}
             </button>
           )}
-          {!collapsed && currentFamily && (
-            <div className="family-switcher">
-              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{currentFamily.family_name}</span>
-              <div className="family-avatars">
-                {members.slice(0, 4).map((m, i) => (
-                  <MemberAvatar key={m.user_id} member={m} index={i} size={24} />
-                ))}
-              </div>
-              <ChevronDown size={16} style={{ color: 'var(--text-muted)', marginLeft: 4 }} aria-hidden="true" />
-            </div>
-          )}
-
           <nav className="nav-groups" aria-label={t(messages, 'aria.main_navigation')}>
             {dailyNavGroups.map((group) => (
               <section className={`nav-section nav-section-${group.key}`} aria-label={group.label} key={group.key}>
@@ -302,14 +321,49 @@ export default function AppShell() {
             )}
           </nav>
 
+        </div>
+
+        <div className="sidebar-footer">
           <div className="sidebar-divider" />
 
           <div className="sidebar-user">
-            <MemberAvatar member={members.find(m => m.user_id === me?.user_id) || { display_name: me?.display_name, profile_image: profileImage }} size={36} />
-            {!collapsed && (
-              <div className="sidebar-user-info">
-                <div className="sidebar-user-name">{me?.display_name || 'User'}</div>
-                <div className="sidebar-user-role">{isAdmin ? 'Admin' : isChild ? t(messages, 'child') : t(messages, 'member')}</div>
+            <button
+              type="button"
+              className="sidebar-profile-button"
+              onClick={() => navigate('settings')}
+              aria-label={me?.display_name || 'User'}
+            >
+              <MemberAvatar member={members.find(m => m.user_id === me?.user_id) || { display_name: me?.display_name, profile_image: profileImage }} size={36} />
+            </button>
+            {!collapsed && currentFamily && (
+              <div className="sidebar-family-menu" ref={familySwitcherRef}>
+                <button
+                  type="button"
+                  className="family-switcher"
+                  onClick={() => families.length > 1 && setFamilyMenuOpen((open) => !open)}
+                  aria-label={currentFamily.family_name}
+                  aria-haspopup={families.length > 1 ? 'listbox' : undefined}
+                  aria-expanded={families.length > 1 ? familyMenuOpen : undefined}
+                >
+                  <span className="family-switcher-name">{currentFamily.family_name}</span>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </button>
+                {familyMenuOpen && families.length > 1 && (
+                  <div className="family-switcher-menu" role="listbox" aria-label={t(messages, 'family_name')}>
+                    {families.map((family) => (
+                      <button
+                        key={family.family_id}
+                        type="button"
+                        className={`family-switcher-option${String(family.family_id) === String(familyId) ? ' active' : ''}`}
+                        onClick={() => handleFamilySelect(family.family_id)}
+                        role="option"
+                        aria-selected={String(family.family_id) === String(familyId)}
+                      >
+                        {family.family_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
@@ -342,7 +396,7 @@ export default function AppShell() {
                 <span>{currentFamily?.family_name || ''}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="mobile-header-actions">
               <button className="sidebar-action-btn" onClick={() => setSearchOpen(true)} aria-label={t(messages, 'search.title')}>
                 <Search size={18} />
               </button>
@@ -360,15 +414,35 @@ export default function AppShell() {
                   </span>
                 )}
               </button>
-              <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
-                <LogOut size={18} />
-              </button>
+              {activeView === 'dashboard' && dashboardLayoutAction ? (
+                <button
+                  className="sidebar-action-btn mobile-dashboard-layout-btn"
+                  onClick={dashboardLayoutAction.onClick}
+                  aria-label={dashboardLayoutAction.label}
+                  aria-pressed={dashboardLayoutAction.pressed}
+                  title={dashboardLayoutAction.label}
+                >
+                  <Settings2 size={18} />
+                </button>
+              ) : (
+                <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
+                  <LogOut size={18} />
+                </button>
+              )}
             </div>
           </div>
         )}
 
         <div className="view-enter">
-          {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : <ActiveComponent onOpenSearch={() => setSearchOpen(true)} />}
+          {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
+            <ActiveComponent
+              onOpenSearch={() => setSearchOpen(true)}
+              onOpenNotifications={() => { setNotifPanelOpen(true); setOverflowOpen(false); }}
+              unreadCount={unreadCount}
+              notificationButtonRef={bellBtnRef}
+              onDashboardLayoutActionChange={activeView === 'dashboard' ? handleDashboardLayoutActionChange : undefined}
+            />
+          )}
         </div>
       </main>
 

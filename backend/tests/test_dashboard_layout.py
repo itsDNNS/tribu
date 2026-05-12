@@ -70,6 +70,35 @@ def _seed_user(scopes: str = "*") -> tuple[str, int]:
 def test_dashboard_layout_persists_normalizes_and_resets_per_user():
     token, user_id = _seed_user()
 
+    nav_response = client.get("/nav/order", headers=_auth(token))
+    assert nav_response.status_code == 200, nav_response.json()
+    assert nav_response.json()["nav_order"] == [
+        "dashboard",
+        "calendar",
+        "weekly_plan",
+        "shopping",
+        "tasks",
+        "activity",
+        "templates",
+        "meal_plans",
+        "school_timetables",
+        "recipes",
+        "rewards",
+        "gifts",
+        "contacts",
+        "notifications",
+        "settings",
+        "admin",
+    ]
+
+    nav_update = client.put(
+        "/nav/order",
+        json={"nav_order": ["dashboard", "weekly_plan", "calendar"]},
+        headers=_auth(token),
+    )
+    assert nav_update.status_code == 200, nav_update.json()
+    assert nav_update.json()["nav_order"] == ["dashboard", "weekly_plan", "calendar"]
+
     default_response = client.get("/nav/dashboard-layout", headers=_auth(token))
     assert default_response.status_code == 200, default_response.json()
     assert default_response.json()["modules"] == [

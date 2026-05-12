@@ -30,7 +30,7 @@ test.describe('Dashboard', () => {
   });
 
   test('keeps duplicate summary counts out of the dashboard header', async ({ authedPage: page }) => {
-    await expect(page.getByRole('group', { name: 'Quick actions' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('group', { name: 'Family at a glance' })).toHaveCount(0);
     await expect(page.getByTestId('hero-chip-members')).toHaveCount(0);
     await expect(page.getByTestId('hero-chip-events')).toHaveCount(0);
@@ -39,12 +39,20 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
   });
 
-  test('moves search into the dashboard header and removes the duplicate date chip', async ({ authedPage: page }) => {
-    await expect(page.getByRole('group', { name: 'Quick actions' })).toBeVisible({ timeout: 10000 });
+  test('moves search into the dashboard header and removes the duplicate date chip', async ({ authedPage: page }, testInfo) => {
+    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.dashboard-header-actions .view-date')).toHaveCount(0);
     await expect(page.locator('.sidebar-search-btn')).toHaveCount(0);
 
     const dashboardSearch = page.locator('.dashboard-header-actions .dashboard-search-btn');
+    if (testInfo.project.name.includes('Mobile')) {
+      await expect(dashboardSearch).toBeHidden();
+      await page.locator('.mobile-header').getByRole('button', { name: /Search|Suchen/i }).click();
+      await expect(page.locator('.search-overlay')).toBeVisible();
+      await expect(page.getByPlaceholder(/Search|suchen/i)).toBeFocused();
+      return;
+    }
+
     await expect(dashboardSearch).toBeVisible();
     await dashboardSearch.click();
     await expect(page.locator('.search-overlay')).toBeVisible();
@@ -53,7 +61,7 @@ test.describe('Dashboard', () => {
 
   test('keeps dashboard header search usable on narrow desktop widths', async ({ authedPage: page }) => {
     await page.setViewportSize({ width: 1024, height: 720 });
-    await expect(page.getByRole('group', { name: 'Quick actions' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
 
     const header = page.locator('.today-command-header');
     const dashboardSearch = header.locator('.dashboard-search-btn');
@@ -69,87 +77,83 @@ test.describe('Dashboard', () => {
 
   test('keeps mobile dashboard header and cards tightly stacked', async ({ authedPage: page }) => {
     await page.setViewportSize({ width: 485, height: 873 });
-    await expect(page.getByRole('group', { name: 'Quick actions' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
 
     const dateLine = page.locator('.today-command-family');
     const dashboardSearch = page.locator('.dashboard-search-btn');
+    const notificationToggle = page.locator('.dashboard-notifications-action');
     const layoutToggle = page.locator('.dashboard-layout-toggle');
     const nextUp = page.locator('.next-up-card');
     const statusCard = page.locator('.today-status-card');
+    const quickCapture = page.getByRole('region', { name: 'Quick capture' });
+    const dailyLoop = page.getByRole('region', { name: 'Today loop' });
+    const setupChecklist = page.getByRole('region', { name: 'Set up your first week' });
 
     const boxes = await Promise.all([
       dateLine.boundingBox(),
-      dashboardSearch.boundingBox(),
-      layoutToggle.boundingBox(),
       nextUp.boundingBox(),
       statusCard.boundingBox(),
+      quickCapture.boundingBox(),
+      dailyLoop.boundingBox(),
+      setupChecklist.boundingBox(),
     ]);
     for (const box of boxes) expect(box).not.toBeNull();
 
-    const [dateBox, searchBox, layoutBox, nextUpBox, statusBox] = boxes;
-    const firstActionTop = Math.min(searchBox.y, layoutBox.y);
-    const lastActionBottom = Math.max(searchBox.y + searchBox.height, layoutBox.y + layoutBox.height);
-    const dateToActionsGap = firstActionTop - (dateBox.y + dateBox.height);
-    const actionsToNextUpGap = nextUpBox.y - lastActionBottom;
-    const nextUpToStatusGap = statusBox.y - (nextUpBox.y + nextUpBox.height);
-
-    expect(dateToActionsGap).toBeLessThanOrEqual(32);
-    expect(actionsToNextUpGap).toBeLessThanOrEqual(32);
-    expect(nextUpToStatusGap).toBeLessThanOrEqual(32);
+    const [dateBox, nextUpBox, statusBox, quickCaptureBox, dailyLoopBox, setupBox] = boxes;
+    expect(await dashboardSearch.isVisible()).toBe(false);
+    expect(await notificationToggle.isVisible()).toBe(false);
+    expect(await layoutToggle.isVisible()).toBe(false);
+    await expect(page.locator('.mobile-header-actions').getByRole('button')).toHaveCount(3);
+    await expect(page.locator('.mobile-dashboard-layout-btn')).toBeVisible();
+    expect(await statusCard.isVisible()).toBe(true);
+    expect(nextUpBox.y - (dateBox.y + dateBox.height)).toBeLessThanOrEqual(40);
+    expect(statusBox.y).toBeGreaterThan(nextUpBox.y + nextUpBox.height);
+    expect(quickCaptureBox.y).toBeGreaterThan(statusBox.y + statusBox.height);
+    expect(dailyLoopBox.y).toBeGreaterThan(quickCaptureBox.y + quickCaptureBox.height);
+    expect(setupBox.y).toBeGreaterThan(dailyLoopBox.y + dailyLoopBox.height);
   });
 
-  test('quick-action pills navigate to correct views', async ({ authedPage: page }) => {
-    const quickActions = page.getByRole('group', { name: 'Quick actions' });
-    await quickActions.waitFor({ timeout: 10000 });
+  test('quick capture shortcuts navigate to planning views', async ({ authedPage: page }) => {
+    const quickCapture = page.getByRole('region', { name: 'Quick capture' });
+    await quickCapture.waitFor({ timeout: 10000 });
 
     // Event → Calendar
-    await page.getByTestId('quick-action-event').click();
+    await quickCapture.getByRole('button', { name: 'Event' }).click();
     await expect(page.locator('.calendar-grid-wrapper')).toBeVisible({ timeout: 10000 });
 
     // Back to Dashboard
     await navigateTo(page, 'Home');
-    await page.getByRole('group', { name: 'Quick actions' }).waitFor({ timeout: 10000 });
+    await page.getByRole('region', { name: 'Quick capture' }).waitFor({ timeout: 10000 });
 
-    // Task → Tasks
-    await page.getByTestId('quick-action-task').click();
-    await expect(page.locator('.tasks-filter-tabs')).toBeVisible({ timeout: 10000 });
-
-    // Back to Dashboard
-    await navigateTo(page, 'Home');
-    await page.getByRole('group', { name: 'Quick actions' }).waitFor({ timeout: 10000 });
-
-    // Weekly plan → print-ready weekly view
-    await page.getByTestId('quick-action-weekly-plan').click();
-    await expect(page.getByRole('heading', { name: 'Weekly plan' })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: 'Print' })).toHaveClass(/no-print/);
-    await expect(page.getByRole('group', { name: 'Filters' })).toHaveClass(/no-print/);
-    await expect(page.getByRole('region', { name: 'Events' })).toBeVisible();
-
-    // Back to Dashboard
-    await page.getByRole('button', { name: 'Back to dashboard' }).click();
-    await page.getByRole('group', { name: 'Quick actions' }).waitFor({ timeout: 10000 });
-
-    // Invite → Admin
-    await page.getByTestId('quick-action-invite').click();
-    await expect(page.getByRole('heading', { name: 'Admin' })).toBeVisible({ timeout: 10000 });
-  });
-
-  test('daily check-in tiles navigate without separate pill buttons', async ({ authedPage: page }) => {
-    const dailyLoop = page.getByRole('region', { name: 'Today in motion' });
-    await expect(dailyLoop).toBeVisible({ timeout: 10000 });
-    await expect(dailyLoop.locator('.daily-loop-action')).toHaveCount(0);
-
-    await dailyLoop.getByRole('button', { name: 'Plan meals' }).click();
+    // Meal → Meal plan
+    await page.getByRole('region', { name: 'Quick capture' }).getByRole('button', { name: 'Meal' }).click();
     await expect(page.getByRole('heading', { name: 'Meal plan' })).toBeVisible({ timeout: 10000 });
 
+    // Back to Dashboard
     await navigateTo(page, 'Home');
-    await page.getByRole('region', { name: 'Today in motion' }).waitFor({ timeout: 10000 });
-    await page.getByRole('region', { name: 'Today in motion' }).getByRole('button', { name: 'Open shopping' }).click();
+    await page.getByRole('region', { name: 'Quick capture' }).waitFor({ timeout: 10000 });
+
+    await quickCapture.getByPlaceholder('Note an event, task, or shopping thought…').fill('Buy apples from market');
+    await expect(quickCapture.getByRole('button', { name: 'Task' })).toBeEnabled();
+    await expect(quickCapture.getByRole('button', { name: 'Shopping' })).toBeEnabled();
+    await expect(quickCapture.getByRole('button', { name: 'Note' })).toBeEnabled();
+  });
+
+  test('today status tiles navigate to their owning modules', async ({ authedPage: page }) => {
+    const todayStatus = page.getByRole('group', { name: 'Today status' });
+    await expect(todayStatus).toBeVisible({ timeout: 10000 });
+
+    await todayStatus.getByRole('button', { name: /Events/i }).click();
+    await expect(page.locator('.calendar-grid-wrapper')).toBeVisible({ timeout: 10000 });
+
+    await navigateTo(page, 'Home');
+    await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });
+    await page.getByRole('group', { name: 'Today status' }).getByRole('button', { name: /Shopping/i }).click();
     await expect(page.locator('.shopping-lists-panel')).toBeVisible({ timeout: 10000 });
 
     await navigateTo(page, 'Home');
-    await page.getByRole('region', { name: 'Today in motion' }).waitFor({ timeout: 10000 });
-    await page.getByRole('region', { name: 'Today in motion' }).getByRole('button', { name: 'Open routines' }).click();
+    await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });
+    await page.getByRole('group', { name: 'Today status' }).getByRole('button', { name: /Tasks/i }).click();
     await expect(page.locator('.tasks-filter-tabs')).toBeVisible({ timeout: 10000 });
   });
 
@@ -193,8 +197,9 @@ test.describe('Dashboard', () => {
     await expect(quickCapture).toBeVisible({ timeout: 10000 });
 
     await quickCapture.getByPlaceholder('Note an event, task, or shopping thought…').fill('Buy apples from market');
-    await quickCapture.getByRole('button', { name: 'Save to inbox' }).click();
+    await quickCapture.getByRole('button', { name: 'Note' }).click();
 
+    await quickCapture.locator('.quick-capture-inbox-title').click();
     await expect(quickCapture).toContainText('Buy apples from market', { timeout: 10000 });
     await quickCapture.locator('.quick-capture-item-actions').getByRole('button', { name: 'Shopping' }).click();
     await expect(quickCapture).not.toContainText('Buy apples from market', { timeout: 10000 });
@@ -203,7 +208,9 @@ test.describe('Dashboard', () => {
   test('customizes dashboard module order and keeps it after reload', async ({ authedPage: page }) => {
     const tasksModule = page.locator('[data-dashboard-module="tasks"]');
     const eventsModule = page.locator('[data-dashboard-module="events"]');
+    const dailyLoopModule = page.locator('[data-dashboard-module="daily_loop"]');
     await expect(tasksModule).toBeVisible({ timeout: 10000 });
+    await expect(dailyLoopModule).toHaveCSS('order', '1');
     await expect(eventsModule).toHaveCSS('order', '2');
     await expect(tasksModule).toHaveCSS('order', '3');
 
@@ -220,6 +227,7 @@ test.describe('Dashboard', () => {
 
     await page.getByRole('button', { name: 'Customize layout' }).click();
     await page.getByRole('button', { name: 'Reset layout' }).click();
+    await expect(page.locator('[data-dashboard-module="daily_loop"]')).toHaveCSS('order', '1');
     await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '2');
     await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '3');
   });
@@ -236,7 +244,7 @@ test.describe('Dashboard', () => {
       await page.reload();
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme, { timeout: 10000 });
       await page.locator('#main-content').waitFor({ timeout: 15000 });
-      await page.getByTestId('quick-action-weekly-plan').click();
+      await navigateTo(page, 'Weekly plan');
       await expect(page.getByRole('heading', { name: 'Weekly plan' })).toBeVisible({ timeout: 10000 });
 
       const checks = await page.evaluate(() => {

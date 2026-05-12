@@ -170,11 +170,11 @@ test.describe('Calendar', () => {
     const currentMonth = await monthLabel.textContent();
 
     // Next month
-    await page.locator('[aria-label="Next month"]').click();
+    await clickVisibleCenter(page, page.locator('[aria-label="Next month"]'));
     await expect(monthLabel).not.toHaveText(currentMonth, { timeout: 5000 });
 
     // Previous month
-    await page.locator('[aria-label="Previous month"]').click();
+    await clickVisibleCenter(page, page.locator('[aria-label="Previous month"]'));
     await expect(monthLabel).toHaveText(currentMonth, { timeout: 5000 });
   });
 });

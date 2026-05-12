@@ -11,6 +11,7 @@ const VIEW_KEYS = {
   Tasks: 'tasks',
   Activity: 'activity',
   Templates: 'templates',
+  'Weekly plan': 'weekly_plan',
   'Meal plan': 'meal_plans',
   Recipes: 'recipes',
   Rewards: 'rewards',

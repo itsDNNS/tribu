@@ -12,6 +12,30 @@ const TYPE_ICONS = {
   system: Bell,
 };
 
+function renderNotificationBody(notif, messages) {
+  if (!notif?.body) return null;
+
+  if (notif.type === 'event_reminder') {
+    const match = notif.body.match(/^Starts in (\d+) minutes$/);
+    if (match) {
+      return t(messages, 'notification_body_event_starts_in').replace('{count}', match[1]);
+    }
+  }
+
+  if (notif.type === 'task_due' && notif.body === 'Task is overdue') {
+    return t(messages, 'notification_body_task_overdue');
+  }
+
+  if (notif.type === 'birthday') {
+    const match = notif.body.match(/^Birthday tomorrow \((.+)\)$/);
+    if (match) {
+      return t(messages, 'notification_body_birthday_tomorrow').replace('{date}', match[1]);
+    }
+  }
+
+  return notif.body;
+}
+
 export default function NotificationCenter({ onClose } = {}) {
   const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
   const closeBtnRef = useRef(null);
@@ -147,6 +171,7 @@ export default function NotificationCenter({ onClose } = {}) {
             <div className="notif-group-header">{group.label}</div>
             {group.items.map(notif => {
               const Icon = TYPE_ICONS[notif.type] || Bell;
+              const body = renderNotificationBody(notif, messages);
               return (
                 <div
                   key={notif.id}
@@ -167,9 +192,9 @@ export default function NotificationCenter({ onClose } = {}) {
                         {serverTimeAgo(notif.created_at, lang)}
                       </span>
                     </div>
-                    {notif.body && (
+                    {body && (
                       <div className="notif-body">
-                        {notif.body}
+                        {body}
                       </div>
                     )}
                   </div>

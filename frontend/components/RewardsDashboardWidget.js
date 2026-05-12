@@ -11,9 +11,12 @@ export default function RewardsDashboardWidget() {
 
   if (rw.loading) {
     return (
-      <div className="bento-card bento-rewards glass glow-amber">
+      <div className="bento-card bento-rewards bento-card-illustrated glass glow-amber">
+        <span className="bento-card-visual bento-card-visual-rewards" aria-hidden="true">
+          <Gift size={30} />
+        </span>
         <div className="bento-card-header">
-          <Gift size={16} /> <span>{t(messages, 'module.rewards.name')}</span>
+          <h2 className="bento-card-title">{t(messages, 'module.rewards.name')}</h2>
         </div>
         <div className="skeleton skeleton-text" style={{ width: '60%', height: 14 }} />
         <div className="skeleton skeleton-text" style={{ width: '40%', height: 14, marginTop: 6 }} />
@@ -21,7 +24,27 @@ export default function RewardsDashboardWidget() {
     );
   }
 
-  if (!rw.currency) return null;
+  if (!rw.currency) {
+    return (
+      <div className="bento-card bento-rewards bento-card-illustrated">
+        <span className="bento-card-visual bento-card-visual-rewards" aria-hidden="true">
+          <Gift size={30} />
+        </span>
+        <div className="bento-card-header">
+          <h2 className="bento-card-title">{t(messages, 'module.rewards.name')}</h2>
+        </div>
+        <div className="rewards-balance rewards-balance-empty">
+          <div className="rewards-balance-value">0</div>
+          <div className="rewards-balance-label">{t(messages, 'module.rewards.no_currency')}</div>
+        </div>
+        <div className="bento-card-footer">
+          <button type="button" className="bento-card-action" onClick={() => setActiveView('rewards')}>
+            {t(messages, 'module.rewards.view_all')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Child: own balance + best affordable reward
   if (isChild) {
@@ -29,10 +52,12 @@ export default function RewardsDashboardWidget() {
     const nextReward = affordable[0] || rw.catalog.filter(r => r.is_active).sort((a, b) => a.cost - b.cost)[0];
 
     return (
-      <div className="bento-card bento-rewards glass glow-amber">
+      <div className="bento-card bento-rewards bento-card-illustrated glass glow-amber">
+        <span className="bento-card-visual bento-card-visual-rewards" aria-hidden="true">
+          <Gift size={30} />
+        </span>
         <div className="bento-card-header">
-          <Gift size={16} /> <span>{t(messages, 'module.rewards.name')}</span>
-          <button className="bento-more" onClick={() => setActiveView('rewards')}>{t(messages, 'module.rewards.view_all')}</button>
+          <h2 className="bento-card-title">{t(messages, 'module.rewards.name')}</h2>
         </div>
         {rw.myBalance && (
           <div className="rewards-balance">
@@ -47,6 +72,11 @@ export default function RewardsDashboardWidget() {
             <span className="rewards-next-cost">{nextReward.cost} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></span>
           </div>
         )}
+        <div className="bento-card-footer">
+          <button type="button" className="bento-card-action" onClick={() => setActiveView('rewards')}>
+            {t(messages, 'module.rewards.view_all')}
+          </button>
+        </div>
       </div>
     );
   }
@@ -58,10 +88,12 @@ export default function RewardsDashboardWidget() {
   });
 
   return (
-    <div className="bento-card bento-rewards glass glow-amber">
+    <div className="bento-card bento-rewards bento-card-illustrated glass glow-amber">
+      <span className="bento-card-visual bento-card-visual-rewards" aria-hidden="true">
+        <Gift size={30} />
+      </span>
       <div className="bento-card-header">
-        <Gift size={16} /> <span>{t(messages, 'module.rewards.name')}</span>
-        <button className="bento-more" onClick={() => setActiveView('rewards')}>{t(messages, 'module.rewards.view_all')}</button>
+        <h2 className="bento-card-title">{t(messages, 'module.rewards.name')}</h2>
       </div>
       {childBalances.length > 0 ? (
         <div className="rewards-child-list">
@@ -86,6 +118,11 @@ export default function RewardsDashboardWidget() {
           <ChevronRight size={13} />
         </button>
       )}
+      <div className="bento-card-footer">
+        <button type="button" className="bento-card-action" onClick={() => setActiveView('rewards')}>
+          {t(messages, 'module.rewards.view_all')}
+        </button>
+      </div>
     </div>
   );
 }

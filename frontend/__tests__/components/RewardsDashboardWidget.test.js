@@ -63,4 +63,14 @@ describe('RewardsDashboardWidget', () => {
 
     expect(setActiveView).toHaveBeenCalledWith('rewards');
   });
+
+  test('keeps the dashboard card visible before a reward currency is configured', () => {
+    mockRewards = baseRewards({ currency: null, balances: [] });
+
+    render(<RewardsDashboardWidget />);
+
+    expect(screen.getByRole('heading', { name: 'Belohnungen' })).toBeInTheDocument();
+    expect(screen.getByText('Noch keine Belohnungs-Währung eingerichtet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Alle anzeigen' })).toBeInTheDocument();
+  });
 });

@@ -11,8 +11,8 @@ from app.core.errors import error_detail, UNKNOWN_NAV_KEYS
 
 router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})
 
-DEFAULT_NAV_ORDER = ["dashboard", "calendar", "shopping", "tasks", "activity", "templates", "meal_plans", "school_timetables", "recipes", "contacts", "notifications", "settings", "admin"]
-KNOWN_KEYS = {"dashboard", "calendar", "shopping", "tasks", "activity", "templates", "rewards", "gifts", "meal_plans", "school_timetables", "recipes", "contacts", "notifications", "settings", "admin"}
+DEFAULT_NAV_ORDER = ["dashboard", "calendar", "weekly_plan", "shopping", "tasks", "activity", "templates", "meal_plans", "school_timetables", "recipes", "rewards", "gifts", "contacts", "notifications", "settings", "admin"]
+KNOWN_KEYS = {"dashboard", "calendar", "weekly_plan", "shopping", "tasks", "activity", "templates", "rewards", "gifts", "meal_plans", "school_timetables", "recipes", "contacts", "notifications", "settings", "admin"}
 DEFAULT_DASHBOARD_LAYOUT = ["quick_capture", "daily_loop", "events", "tasks", "birthdays", "rewards"]
 KNOWN_DASHBOARD_MODULES = set(DEFAULT_DASHBOARD_LAYOUT)
 
@@ -114,7 +114,20 @@ def _normalize_dashboard_modules(modules: list[str]) -> list[str]:
     for module in modules:
         if module in KNOWN_DASHBOARD_MODULES and module not in seen:
             seen.append(module)
-    return seen + [module for module in DEFAULT_DASHBOARD_LAYOUT if module not in seen]
+    normalized = list(seen)
+    for default_index, module in enumerate(DEFAULT_DASHBOARD_LAYOUT):
+        if module in normalized:
+            continue
+        if module == "daily_loop" and "quick_capture" in normalized:
+            normalized.insert(normalized.index("quick_capture") + 1, module)
+            continue
+        insert_at = len(normalized)
+        for next_module in DEFAULT_DASHBOARD_LAYOUT[default_index + 1:]:
+            if next_module in normalized:
+                insert_at = normalized.index(next_module)
+                break
+        normalized.insert(insert_at, module)
+    return normalized
 
 
 def _validate_dashboard_modules(modules: list[str]) -> list[str]:

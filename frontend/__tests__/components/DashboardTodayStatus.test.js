@@ -1,7 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardView from '../../components/DashboardView';
-import { apiListMealPlans } from '../../lib/api';
 
 let mockAppState = {};
 
@@ -9,14 +8,10 @@ jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockAppState,
 }));
 
-jest.mock('../../lib/i18n', () => ({
-  t: (messages, key) => messages?.[key] || key,
-}));
-
 jest.mock('../../lib/api', () => ({
   apiGetDashboardLayout: jest.fn(() => new Promise(() => {})),
   apiGetSetupChecklist: jest.fn().mockResolvedValue({ ok: true, data: null }),
-  apiListMealPlans: jest.fn(() => Promise.resolve({ ok: true, data: [] })),
+  apiListMealPlans: jest.fn(() => Promise.resolve({ ok: true, data: [{ id: 1, plan_date: '2030-01-01', slot: 'evening' }] })),
   apiResetDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'] } })),
   apiUpdateDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'] } })),
 }));
@@ -38,6 +33,9 @@ const messages = {
   'module.tasks.no_tasks': 'No tasks yet',
   'module.dashboard.empty_birthdays': 'No birthdays',
   'module.dashboard.days': 'days',
+  'module.dashboard.activity_title': 'Recent activity',
+  'module.dashboard.activity_empty': 'No household activity yet.',
+  'module.dashboard.activity_unknown_actor': 'Someone',
   'module.dashboard.today_command_center': 'Today command center',
   'module.dashboard.today_status_label': 'Today status',
   'module.dashboard.today_status_events': 'Events',
@@ -47,7 +45,6 @@ const messages = {
   'module.dashboard.next_up_title': 'Next up',
   'module.dashboard.next_up_empty': 'Nothing scheduled',
   'module.dashboard.next_up_empty_hint': 'The calendar is clear.',
-  'module.dashboard.quick_capture_title': 'Quick capture',
   'module.dashboard.daily_loop_title': 'Today loop',
   'module.dashboard.daily_loop_meals': 'Meals planned',
   'module.dashboard.daily_loop_shopping': 'Shopping open',
@@ -60,8 +57,9 @@ const messages = {
   upcoming_birthdays_4w: 'Birthdays',
 };
 
-function todayIso() {
+function isoDate(offsetDays = 0) {
   const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${month}-${day}`;
@@ -69,17 +67,15 @@ function todayIso() {
 
 function baseApp(overrides = {}) {
   return {
-    summary: { next_events: [], upcoming_birthdays: [] },
+    summary: { next_events: [], upcoming_birthdays: [{ person_name: 'Grandma', days_until: 5, occurs_on: 'May 17' }] },
     me: { display_name: 'Dennis' },
     members: [{ user_id: 1, display_name: 'Dennis' }],
-    tasks: [
-      { id: 1, title: 'Kitchen reset', status: 'open', recurrence: 'daily', due_date: `${todayIso()}T08:00:00` },
-      { id: 2, title: 'Archive paperwork', status: 'open' },
-    ],
-    events: [],
-    shoppingLists: [{ id: 1, item_count: 4, checked_count: 1 }],
-    quickCaptureInbox: [],
+    tasks: [{ id: 1, title: 'Take out bins', status: 'open' }],
+    events: [{ id: 1, title: 'School', starts_at: `${isoDate()}T08:00:00` }],
+    shoppingLists: [{ id: 1, item_count: 5, checked_count: 2 }],
+    activity: [],
     familyId: 42,
+    families: [],
     setActiveView: jest.fn(),
     messages,
     lang: 'en',
@@ -91,57 +87,53 @@ function baseApp(overrides = {}) {
   };
 }
 
-describe('DashboardView daily loop', () => {
+describe('DashboardView today status', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     mockAppState = baseApp();
-    apiListMealPlans.mockResolvedValue({ ok: true, data: [{ id: 1 }, { id: 2 }] });
   });
 
-  it('renders the Today loop directly after quick capture with visual action tiles', async () => {
-    const { container } = render(<DashboardView />);
+  it('summarizes today status while keeping the daily loop as its own section', () => {
+    render(<DashboardView />);
 
-    const modules = Array.from(container.querySelectorAll('.bento-grid > [data-dashboard-module]')).map((module) => module.getAttribute('data-dashboard-module'));
-    expect(modules.slice(0, 3)).toEqual(['quick_capture', 'daily_loop', 'events']);
-
-    const loop = screen.getByRole('region', { name: 'Today loop' });
-    expect(loop.querySelector('.daily-loop-subtitle')).toBeNull();
-    expect(loop.querySelectorAll('.daily-loop-action-art')).toHaveLength(3);
-    await waitFor(() => expect(apiListMealPlans).toHaveBeenCalledWith(42, todayIso(), todayIso()));
-    await waitFor(() => expect(within(loop).getByRole('button', { name: /Meals planned: Plan meals/i })).toHaveTextContent('2'));
-    expect(within(loop).getByRole('button', { name: /Shopping open: Open shopping/i })).toHaveTextContent('3');
-    expect(within(loop).getByRole('button', { name: /Routines due: Open routines/i })).toHaveTextContent('1');
+    const status = screen.getByRole('group', { name: 'Today status' });
+    expect(within(status).getByTestId('today-status-events')).toHaveTextContent('1');
+    expect(within(status).getByTestId('today-status-tasks')).toHaveTextContent('1');
+    expect(within(status).getByTestId('today-status-shopping')).toHaveTextContent('3');
+    expect(within(status).getByTestId('today-status-birthdays')).toHaveTextContent('1');
+    expect(screen.getByRole('region', { name: 'Today loop' })).toBeInTheDocument();
   });
 
-  it('routes daily loop tiles to their owning views', () => {
+  it('navigates from today status tiles to their owning modules', () => {
     const setActiveView = jest.fn();
-    mockAppState = baseApp({ setActiveView, familyId: null });
+    mockAppState = baseApp({ setActiveView });
 
     render(<DashboardView />);
-    const loop = screen.getByRole('region', { name: 'Today loop' });
 
-    fireEvent.click(within(loop).getByRole('button', { name: /Meals planned/i }));
-    fireEvent.click(within(loop).getByRole('button', { name: /Shopping open/i }));
-    fireEvent.click(within(loop).getByRole('button', { name: /Routines due/i }));
+    const status = screen.getByRole('group', { name: 'Today status' });
+    fireEvent.click(within(status).getByRole('button', { name: /Events/i }));
+    fireEvent.click(within(status).getByRole('button', { name: /Tasks/i }));
+    fireEvent.click(within(status).getByRole('button', { name: /Shopping/i }));
+    fireEvent.click(within(status).getByRole('button', { name: /Birthdays/i }));
 
-    expect(setActiveView).toHaveBeenCalledWith('meal_plans');
-    expect(setActiveView).toHaveBeenCalledWith('shopping');
+    expect(setActiveView).toHaveBeenCalledWith('calendar');
     expect(setActiveView).toHaveBeenCalledWith('tasks');
+    expect(setActiveView).toHaveBeenCalledWith('shopping');
+    expect(setActiveView).toHaveBeenCalledWith('contacts');
   });
 
-  it('shows a useful empty prompt when the daily loop has no active inputs', async () => {
-    apiListMealPlans.mockResolvedValue({ ok: true, data: [] });
+  it('keeps household activity out of the permanent dashboard layout', () => {
     mockAppState = baseApp({
-      tasks: [
-        { id: 1, title: 'Future routine', status: 'open', recurrence: 'weekly', due_date: '2999-01-01T08:00:00' },
-      ],
-      shoppingLists: [],
+      activity: [{
+        id: 1,
+        actor_display_name: 'Dennis',
+        summary: 'Dennis completed task "Pay school lunch"',
+        created_at: '2026-04-29T10:00:00Z',
+      }],
     });
 
     render(<DashboardView />);
 
-    const loop = screen.getByRole('region', { name: 'Today loop' });
-    await waitFor(() => expect(within(loop).getByRole('button', { name: /Meals planned: Plan meals/i })).toHaveTextContent('0'));
-    expect(loop).toHaveTextContent('Nothing pressing today.');
+    expect(screen.queryByRole('region', { name: 'Recent activity' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Dennis completed task "Pay school lunch"')).not.toBeInTheDocument();
   });
 });

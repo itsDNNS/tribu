@@ -6,6 +6,7 @@ __pycache__/
 # Node
 node_modules/
 .next/
+frontend/.next-e2e/
 
 # Env
 .env
@@ -25,11 +26,15 @@ tmp-marketing-research-collector.py
 
 # Playwright
 e2e/test-results/
+frontend/test-results/
 playwright-report/
+frontend/playwright-report/
 
 # OS
 .DS_Store
 
 # Graphify knowledge graph (local only)
 graphify-out/
+test-*.db
 backend/test-*.db
+backend/test-e2e-dav/

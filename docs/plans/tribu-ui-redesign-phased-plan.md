@@ -88,7 +88,7 @@ Run from `frontend/`:
 npm test -- --runTestsByPath \
   __tests__/components/AppShellMobileNav.test.js \
   __tests__/components/DashboardDesktopLayout.test.js \
-  __tests__/components/DashboardDailyLoop.test.js \
+  __tests__/components/DashboardTodayStatus.test.js \
   __tests__/components/DashboardHero.test.js \
   __tests__/components/QuickCaptureCard.test.js \
   __tests__/components/CalendarViewBirthdayIndicators.test.js \
@@ -268,7 +268,7 @@ Run from `frontend/`:
 ```bash
 npm test -- --runTestsByPath \
   __tests__/components/DashboardDesktopLayout.test.js \
-  __tests__/components/DashboardDailyLoop.test.js \
+  __tests__/components/DashboardTodayStatus.test.js \
   __tests__/components/DashboardHero.test.js \
   __tests__/components/QuickCaptureCard.test.js
 npm run build

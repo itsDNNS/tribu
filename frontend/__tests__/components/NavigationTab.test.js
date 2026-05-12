@@ -29,6 +29,7 @@ const messages = {
   'module.shopping.name': 'Einkauf',
   'module.tasks.name': 'Aufgaben',
   'module.templates.name': 'Vorlagen',
+  'module.weekly_plan.title': 'Wochenplan',
   'module.meal_plans.name': 'Essensplan',
   'module.school_timetables.name': 'Stundenpläne',
   'module.recipes.name': 'Rezepte',
@@ -55,6 +56,7 @@ const LABEL_BY_KEY = {
   shopping: 'Einkauf',
   tasks: 'Aufgaben',
   templates: 'Vorlagen',
+  weekly_plan: 'Wochenplan',
   meal_plans: 'Essensplan',
   school_timetables: 'Stundenpläne',
   recipes: 'Rezepte',
@@ -91,6 +93,7 @@ describe('NavigationTab', () => {
   test('hides adult-only items for children but still shows rewards', () => {
     mockAppState = baseState({ isChild: true });
     render(<NavigationTab />);
+    expect(screen.queryByText('Wochenplan')).not.toBeInTheDocument();
     expect(screen.queryByText('Geschenke')).not.toBeInTheDocument();
     expect(screen.getByText('Belohnungen')).toBeInTheDocument();
   });
