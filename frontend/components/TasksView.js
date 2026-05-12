@@ -14,9 +14,14 @@ export default function TasksView() {
   const tk = useTasks();
   const [showFormDetails, setShowFormDetails] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
+  const taskList = Array.isArray(tasks) ? tasks : [];
+  const openCount = taskList.filter((task) => task.status === 'open').length;
+  const doneCount = taskList.filter((task) => task.status === 'done').length;
+  const overdueCount = taskList.filter((task) => task.status === 'open' && task.due_date && new Date(task.due_date) < new Date()).length;
+  const highPriorityCount = taskList.filter((task) => task.status === 'open' && task.priority === 'high').length;
 
   return (
-    <div>
+    <div className="tasks-page">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
@@ -38,12 +43,32 @@ export default function TasksView() {
         onSubmit={tk.updateTask}
       />
 
-      <div className="view-header">
+      <div className="view-header family-view-header">
         <div>
+          <div className="view-kicker">{t(messages, 'module.tasks.open')}</div>
           <h1 className="view-title">{t(messages, 'module.tasks.name')}</h1>
           <div className="view-subtitle">
             {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
           </div>
+        </div>
+      </div>
+
+      <div className="tasks-focus-strip" role="group" aria-label={t(messages, 'module.tasks.refine')}>
+        <div className="tasks-focus-chip">
+          <strong>{openCount}</strong>
+          <span>{t(messages, 'module.tasks.open')}</span>
+        </div>
+        <div className="tasks-focus-chip tasks-focus-chip-danger">
+          <strong>{overdueCount}</strong>
+          <span>{t(messages, 'module.tasks.overdue')}</span>
+        </div>
+        <div className="tasks-focus-chip tasks-focus-chip-warm">
+          <strong>{highPriorityCount}</strong>
+          <span>{t(messages, 'module.tasks.priority.high')}</span>
+        </div>
+        <div className="tasks-focus-chip">
+          <strong>{doneCount}</strong>
+          <span>{t(messages, 'module.tasks.done')}</span>
         </div>
       </div>
 

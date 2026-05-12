@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw, Clock3, MapPin } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -55,6 +55,94 @@ function countDueRoutines(tasks, today = todayIsoDate()) {
     const dueDate = normalizeDateOnly(task.due_date);
     return Boolean(dueDate) && dueDate <= today;
   }).length;
+}
+
+
+function getEventOccurrenceDate(event) {
+  return normalizeDateOnly(event?.starts_at) || normalizeDateOnly(event?.occurrence_date);
+}
+
+function getEventOccurrenceKey(event) {
+  const date = getEventOccurrenceDate(event) || '';
+  const startsAt = event?.starts_at ? String(event.starts_at) : '';
+  return `${event?.id ?? event?.title ?? startsAt}:${date}:${startsAt}`;
+}
+
+function countTodayEvents(events, summary, today = todayIsoDate()) {
+  const sources = [
+    ...(Array.isArray(events) ? events : []),
+    ...(Array.isArray(summary?.next_events) ? summary.next_events : []),
+  ];
+  const seen = new Set();
+  return sources.reduce((count, event) => {
+    if (getEventOccurrenceDate(event) !== today) return count;
+    const key = getEventOccurrenceKey(event);
+    if (seen.has(key)) return count;
+    seen.add(key);
+    return count + 1;
+  }, 0);
+}
+
+function getOpenTaskCount(tasks) {
+  return (Array.isArray(tasks) ? tasks : []).filter((task) => task?.status === 'open').length;
+}
+
+function getUpcomingBirthdayCount(summary) {
+  return Array.isArray(summary?.upcoming_birthdays) ? summary.upcoming_birthdays.length : 0;
+}
+
+function formatEventTime(value, locale, timeFormat) {
+  const date = parseDate(value);
+  if (!date) return '';
+  return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
+}
+
+function TodayStatusItem({ label, value, testId }) {
+  return (
+    <div className="today-status-item">
+      <span className="today-status-value" data-testid={testId}>{value}</span>
+      <span className="today-status-label">{label}</span>
+    </div>
+  );
+}
+
+function NextUpCard({ event, locale, lang, timeFormat, messages, members, setActiveView, isChild }) {
+  const eventDate = event ? parseDate(event.starts_at) : null;
+  const assignedMember = event?.assigned_to
+    ? members.find((member) => String(member.user_id) === String(event.assigned_to))
+    : null;
+  const goToEvent = () => {
+    if (!event) return;
+    if (eventDate) sessionStorage.setItem('tribu_calendar_focus', eventDate.toISOString());
+    setActiveView('calendar');
+  };
+
+  return (
+    <section className={`next-up-card${event ? '' : ' next-up-empty'}`} role="region" aria-label={t(messages, 'module.dashboard.next_up_title')}>
+      <div className="next-up-eyebrow">{t(messages, 'module.dashboard.next_up_title')}</div>
+      {event ? (
+        <button type="button" className="next-up-button" onClick={goToEvent}>
+          <span className="next-up-time"><Clock3 size={16} aria-hidden="true" /> {formatEventTime(event.starts_at, locale, timeFormat)}</span>
+          <span className="next-up-title">{event.title}</span>
+          <span className="next-up-meta">
+            <span>{prettyDate(event.starts_at, lang, timeFormat)}</span>
+            {event.location && <span><MapPin size={14} aria-hidden="true" /> {event.location}</span>}
+            {assignedMember && <span>{assignedMember.display_name}</span>}
+          </span>
+        </button>
+      ) : (
+        <div className="next-up-clear">
+          <div className="next-up-title">{t(messages, 'module.dashboard.next_up_empty')}</div>
+          <p>{t(messages, 'module.dashboard.next_up_empty_hint')}</p>
+          {!isChild && (
+            <button type="button" className="next-up-empty-action" onClick={() => setActiveView('calendar')}>
+              {t(messages, 'module.dashboard.empty_events_action')}
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, messages, setActiveView }) {
@@ -177,7 +265,7 @@ function ActivationPanel({ steps, completedCount, totalCount, messages, onDismis
 }
 
 export default function DashboardView() {
-  const { summary, me, members, tasks, events, shoppingLists, quickCaptureInbox, familyId, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
+  const { summary, me, members, tasks, events, shoppingLists, quickCaptureInbox, familyId, families, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
   const todayIso = useMemo(() => todayIsoDate(), []);
   const [mealsTodayCount, setMealsTodayCount] = useState(0);
   const [setupChecklist, setSetupChecklist] = useState(null);
@@ -187,8 +275,13 @@ export default function DashboardView() {
   const openTasks = tasks.filter((task) => task.status === 'open');
   const shoppingOpenCount = useMemo(() => countOpenShoppingItems(shoppingLists), [shoppingLists]);
   const routineDueCount = useMemo(() => countDueRoutines(tasks, todayIso), [tasks, todayIso]);
+  const todayEventCount = useMemo(() => countTodayEvents(events, summary, todayIso), [events, summary, todayIso]);
+  const openTaskCount = useMemo(() => getOpenTaskCount(tasks), [tasks]);
+  const birthdaySoonCount = getUpcomingBirthdayCount(summary);
+  const nextUpEvent = Array.isArray(summary?.next_events) ? summary.next_events[0] : null;
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const todayStr = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const currentFamily = Array.isArray(families) ? families.find((family) => String(family.family_id) === String(familyId)) : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -396,19 +489,64 @@ export default function DashboardView() {
   const moduleOrder = (moduleKey) => orderedDashboardLayout.indexOf(moduleKey);
 
   return (
-    <div>
-      <div className="view-header">
-        <div>
-          <h1 className="view-title">{getGreeting(messages)}, {me?.display_name || 'User'}</h1>
+    <div className="dashboard-today-page">
+      <section className="today-command-center" role="region" aria-label={t(messages, 'module.dashboard.today_command_center')}>
+        <div className="today-command-header">
+          <div>
+            <div className="today-command-kicker">{t(messages, 'module.dashboard.today_kicker')}</div>
+            <h1 className="view-title">{getGreeting(messages)}, {me?.display_name || 'User'}</h1>
+            {currentFamily && <p className="today-command-family">{currentFamily.family_name}</p>}
+          </div>
+          <div className="dashboard-header-actions">
+            <div className="view-date">{todayStr}</div>
+            <button type="button" className="dashboard-layout-toggle" onClick={() => setLayoutEditing((current) => !current)}>
+              <Settings2 size={15} aria-hidden="true" />
+              <span>{t(messages, 'module.dashboard.customize_layout')}</span>
+            </button>
+          </div>
         </div>
-        <div className="dashboard-header-actions">
-          <div className="view-date">{todayStr}</div>
-          <button type="button" className="dashboard-layout-toggle" onClick={() => setLayoutEditing((current) => !current)}>
-            <Settings2 size={15} aria-hidden="true" />
-            <span>{t(messages, 'module.dashboard.customize_layout')}</span>
-          </button>
+
+        <div className="today-command-grid">
+          <NextUpCard
+            event={nextUpEvent}
+            locale={locale}
+            lang={lang}
+            timeFormat={timeFormat}
+            messages={messages}
+            members={members}
+            setActiveView={setActiveView}
+            isChild={isChild}
+          />
+          <div className="today-status-grid" role="group" aria-label={t(messages, 'module.dashboard.today_status_label')}>
+            <TodayStatusItem label={t(messages, 'module.dashboard.today_status_events')} value={todayEventCount} testId="today-status-events" />
+            <TodayStatusItem label={t(messages, 'module.dashboard.today_status_tasks')} value={openTaskCount} testId="today-status-tasks" />
+            <TodayStatusItem label={t(messages, 'module.dashboard.today_status_shopping')} value={shoppingOpenCount} testId="today-status-shopping" />
+            <TodayStatusItem label={t(messages, 'module.dashboard.today_status_birthdays')} value={birthdaySoonCount} testId="today-status-birthdays" />
+          </div>
         </div>
-      </div>
+
+        <div
+          className="dashboard-quick-actions"
+          role="group"
+          aria-label={t(messages, 'module.dashboard.quick_actions_label')}
+        >
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={action.key}
+                type="button"
+                className="quick-action-pill"
+                data-testid={`quick-action-${action.key}`}
+                onClick={action.onClick}
+              >
+                <Icon size={16} aria-hidden="true" />
+                <span>{action.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {layoutEditing && (
         <section className="dashboard-layout-panel" aria-label={t(messages, 'module.dashboard.customize_layout')}>
@@ -439,29 +577,6 @@ export default function DashboardView() {
           </ol>
         </section>
       )}
-
-      <div
-        className="dashboard-quick-actions"
-        role="group"
-        aria-label={t(messages, 'module.dashboard.quick_actions_label')}
-      >
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <button
-              key={action.key}
-              type="button"
-              className="quick-action-pill"
-              data-testid={`quick-action-${action.key}`}
-              onClick={action.onClick}
-            >
-              <Icon size={16} aria-hidden="true" />
-              <span>{action.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
       {showActivationPanel && (
         <ActivationPanel
           steps={checklistSteps}

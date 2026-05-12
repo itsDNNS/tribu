@@ -64,7 +64,10 @@ describe('DisplayPage', () => {
     await act(async () => { render(<DisplayPage />); });
     await flushAsync();
 
-    expect(screen.getByTestId('display-state-missing')).toBeInTheDocument();
+    const missing = screen.getByTestId('display-state-missing');
+    expect(missing).toBeInTheDocument();
+    expect(missing).toHaveClass('display-state--warm');
+    expect(screen.getByTestId('display-root')).toHaveClass('display-root--hearth');
     expect(api.apiDisplayMe).not.toHaveBeenCalled();
     expect(api.apiDisplayDashboard).not.toHaveBeenCalled();
   });

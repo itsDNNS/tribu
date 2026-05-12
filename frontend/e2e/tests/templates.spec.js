@@ -1,6 +1,7 @@
 const { test, expect } = require('../helpers/fixtures');
 const { getFamilyId, seedHouseholdTemplate } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
+const { selectShoppingList } = require('../helpers/shopping');
 
 test.describe('Household templates', () => {
   test.setTimeout(90000);
@@ -53,7 +54,7 @@ test.describe('Household templates', () => {
     await page.reload();
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
-    await page.getByText('E2E prep shopping').click();
+    await selectShoppingList(page, 'E2E prep shopping');
     await expect(page.locator('[role="checkbox"][aria-label="Granola bars"]')).toBeVisible({ timeout: 10000 });
   });
 });

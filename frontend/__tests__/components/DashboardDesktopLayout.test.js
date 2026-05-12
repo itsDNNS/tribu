@@ -213,4 +213,13 @@ describe('DashboardView desktop bento layout', () => {
     expect(css).toMatch(/@media \(max-width: 1100px\) \{[\s\S]*\.dashboard-module-shell\[data-dashboard-module="events"\],[\s\S]*\.dashboard-module-shell\[data-dashboard-module="rewards"\] \{ grid-column: span 6; \}/);
     expect(css).toMatch(/@media \(max-width: 768px\)[\s\S]*\.dashboard-module-shell\[data-dashboard-module="events"\],[\s\S]*\.dashboard-module-shell\[data-dashboard-module="quick_capture"\] \{ grid-column: span 1; \}/);
   });
+
+  it('stacks the Today command center before narrow tablet widths can overflow', () => {
+    const cssPath = path.join(__dirname, '../../styles/globals.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+
+    expect(css).toMatch(/@media \(max-width: 960px\) \{[\s\S]*\.today-command-grid \{ grid-template-columns: 1fr; \}/);
+    expect(css).toMatch(/@media \(max-width: 960px\) \{[\s\S]*\.today-command-header \{ flex-direction: column; align-items: stretch; \}/);
+  });
+
 });

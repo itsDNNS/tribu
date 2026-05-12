@@ -699,5 +699,21 @@
   "notifications_external_destinations_help": "Администраторите могат да добавят Gotify, ntfy, Telegram, Matrix или имейл дестинации за домашни напомняния и избрана активност при пазаруване.",
   "notifications_external_destinations_action": "Configure household notifications",
   "notification_destinations_event_shopping_list": "Промени в списъците за пазаруване",
-  "notification_destinations_event_shopping_item": "Промени в артикулите за пазаруване"
+  "notification_destinations_event_shopping_item": "Промени в артикулите за пазаруване",
+  "nav.group.today": "Днес",
+  "nav.group.plan": "План",
+  "nav.group.lists": "Списъци",
+  "nav.group.people": "Хора",
+  "nav.group.household": "Домакинство",
+  "nav.group.system": "Още / Система",
+  "module.dashboard.today_command_center": "Today command center",
+  "module.dashboard.today_kicker": "Today at home",
+  "module.dashboard.next_up_title": "Next up",
+  "module.dashboard.next_up_empty": "Nothing else scheduled",
+  "module.dashboard.next_up_empty_hint": "Use quick capture to park anything the family should remember.",
+  "module.dashboard.today_status_events": "Events today",
+  "module.dashboard.today_status_tasks": "Open tasks",
+  "module.dashboard.today_status_shopping": "Shopping open",
+  "module.dashboard.today_status_birthdays": "Birthdays soon",
+  "module.dashboard.today_status_label": "Today status"
 }

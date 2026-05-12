@@ -699,5 +699,21 @@
   "notifications_external_destinations_help": "Admins können Gotify-, ntfy-, Telegram-, Matrix- oder E-Mail-Ziele für Haushaltserinnerungen und ausgewählte Einkaufsaktivität hinzufügen.",
   "notifications_external_destinations_action": "Haushaltsbenachrichtigungen konfigurieren",
   "notification_destinations_event_shopping_list": "Änderungen an Einkaufslisten",
-  "notification_destinations_event_shopping_item": "Änderungen an Einkaufsartikeln"
+  "notification_destinations_event_shopping_item": "Änderungen an Einkaufsartikeln",
+  "nav.group.today": "Heute",
+  "nav.group.plan": "Planen",
+  "nav.group.lists": "Listen",
+  "nav.group.people": "Personen",
+  "nav.group.household": "Haushalt",
+  "nav.group.system": "Mehr / System",
+  "module.dashboard.today_command_center": "Heute-Zentrale",
+  "module.dashboard.today_kicker": "Heute zu Hause",
+  "module.dashboard.next_up_title": "Als Nächstes",
+  "module.dashboard.next_up_empty": "Heute ist nichts mehr geplant",
+  "module.dashboard.next_up_empty_hint": "Nutze die Schnellerfassung, um festzuhalten, woran die Familie denken soll.",
+  "module.dashboard.today_status_events": "Termine heute",
+  "module.dashboard.today_status_tasks": "Offene Aufgaben",
+  "module.dashboard.today_status_shopping": "Einkauf offen",
+  "module.dashboard.today_status_birthdays": "Geburtstage bald",
+  "module.dashboard.today_status_label": "Status für heute"
 }

@@ -99,6 +99,27 @@ function setup(overrides = {}, appOverrides = {}) {
   return render(<ShoppingView />);
 }
 
+describe('ShoppingView redesign shell', () => {
+  test('renders the active list command header and category overview', () => {
+    const { container } = setup({
+      items: [
+        { id: 1, name: 'Milk', spec: null, category: 'Dairy', checked: false },
+        { id: 2, name: 'Apples', spec: null, category: 'Produce', checked: false },
+      ],
+      uncheckedItems: [
+        { id: 1, name: 'Milk', spec: null, category: 'Dairy', checked: false },
+        { id: 2, name: 'Apples', spec: null, category: 'Produce', checked: false },
+      ],
+      checkedItems: [],
+    });
+
+    expect(container.querySelector('.shopping-active-header')).toBeInTheDocument();
+    expect(container.querySelector('.family-view-header')).toBeInTheDocument();
+    expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Dairy');
+    expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Produce');
+  });
+});
+
 describe('ShoppingView quick add', () => {
   test('keeps quick-add suggestions inactive until the user types a real query', () => {
     setup({

@@ -1,6 +1,7 @@
 const { test, expect } = require('../helpers/fixtures');
 const { getFamilyId, seedShoppingList, seedShoppingItem, seedShoppingTemplate } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
+const { shoppingListCard, selectShoppingList } = require('../helpers/shopping');
 
 test.describe('Shopping', () => {
   test.setTimeout(90000);
@@ -19,7 +20,7 @@ test.describe('Shopping', () => {
     await page.locator('input[placeholder="e.g. Grocery Store"]').fill('E2E Groceries');
     await page.locator('.shopping-new-list-form .btn-sm').first().click();
 
-    await expect(page.getByText('E2E Groceries')).toBeVisible({ timeout: 10000 });
+    await expect(shoppingListCard(page, 'E2E Groceries')).toBeVisible({ timeout: 10000 });
   });
 
   test('add an item to a list', async ({ authedPage: page, apiCtx }) => {
@@ -31,7 +32,7 @@ test.describe('Shopping', () => {
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
-    await page.getByText('Item Test List').click();
+    await selectShoppingList(page, 'Item Test List');
     await page.locator('input[placeholder="Add an item..."]').fill('Bread');
     await page.locator('.shopping-spec-input').fill('whole wheat');
     await page.locator('.shopping-category-input').fill('Bakery');
@@ -53,7 +54,7 @@ test.describe('Shopping', () => {
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
-    await page.getByText('Reuse Checked List').click();
+    await selectShoppingList(page, 'Reuse Checked List');
     await expect(page.locator('[role="checkbox"][aria-label="Milk"]')).toHaveAttribute('aria-checked', 'true', { timeout: 10000 });
 
     await page.locator('input[placeholder="Add an item..."]').fill('milch');
@@ -78,7 +79,7 @@ test.describe('Shopping', () => {
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
-    await page.getByText('Toggle List').click();
+    await selectShoppingList(page, 'Toggle List');
 
     const produceGroup = page.getByRole('button', { name: /Produce/ });
     await expect(produceGroup).toBeVisible({ timeout: 10000 });
@@ -106,7 +107,7 @@ test.describe('Shopping', () => {
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
-    await page.getByText('Template Target List').click();
+    await selectShoppingList(page, 'Template Target List');
     await expandTemplatesIfCollapsed(page);
     await page.getByRole('button', { name: 'New template' }).click();
     await page.locator('input[placeholder="e.g. Weekly groceries"]').fill('Weekly groceries');
@@ -149,7 +150,7 @@ test.describe('Shopping', () => {
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
-    await page.getByText('Seeded Template Target').click();
+    await selectShoppingList(page, 'Seeded Template Target');
     await expandTemplatesIfCollapsed(page);
     await page.getByRole('button', { name: 'Add to list: Seeded weekly groceries' }).click();
 
@@ -166,13 +167,13 @@ test.describe('Shopping', () => {
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
 
-    await page.getByText('Delete This List').click();
+    await selectShoppingList(page, 'Delete This List');
 
     // deleteList() now uses ConfirmDialog — click the confirm button
     await page.locator('[aria-label="Delete list: Delete This List"]').click();
     await page.locator('.cal-dialog .btn-sm').first().click();
 
-    await expect(page.getByText('Delete This List')).not.toBeVisible({ timeout: 10000 });
+    await expect(shoppingListCard(page, 'Delete This List')).not.toBeVisible({ timeout: 10000 });
   });
 
   test('mobile in-store layout prioritizes active items and keeps keyboard focus out of the checklist', async ({ authedPage: page, apiCtx }) => {
@@ -191,7 +192,7 @@ test.describe('Shopping', () => {
     await page.reload();
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
-    await page.getByText('Mobile Market List').click();
+    await selectShoppingList(page, 'Mobile Market List');
 
     const itemsPanel = page.locator('.shopping-items-panel');
     const templatesPanel = page.locator('.shopping-templates-panel');
@@ -255,7 +256,7 @@ test.describe('Shopping', () => {
     await page.reload();
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
-    await page.getByText('Opaque Menu Market List').click();
+    await selectShoppingList(page, 'Opaque Menu Market List');
 
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-theme', 'light');
@@ -299,7 +300,7 @@ test.describe('Shopping', () => {
     await page.reload();
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
-    await page.getByText('Breakpoint Market List').click();
+    await selectShoppingList(page, 'Breakpoint Market List');
 
     await expect(page.locator('.shopping-items-panel')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.shopping-templates-panel')).toBeVisible({ timeout: 10000 });

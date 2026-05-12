@@ -1,6 +1,7 @@
 const { test, expect, request } = require('@playwright/test');
 const { getFamilyId, seedShoppingList, seedMealPlan } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
+const { selectShoppingList } = require('../helpers/shopping');
 
 function formatIsoDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -76,8 +77,7 @@ test.describe('Meal plan', () => {
 
       await navigateTo(page, 'Shopping');
 
-      await expect(page.getByText('Weekly Groceries')).toBeVisible({ timeout: 90000 });
-      await page.locator('.shopping-list-card', { hasText: 'Weekly Groceries' }).click();
+      await selectShoppingList(page, 'Weekly Groceries');
       await expect(page.getByRole('checkbox', { name: 'Flour' })).toBeVisible({ timeout: 30000 });
       await expect(page.getByText('750 g')).toBeVisible({ timeout: 30000 });
       await expect(page.getByRole('checkbox', { name: 'Milk' })).toBeVisible({ timeout: 30000 });

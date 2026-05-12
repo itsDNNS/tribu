@@ -46,6 +46,24 @@ describe('AuthPage OIDC integration', () => {
     window.history.replaceState({}, '', '/');
   });
 
+
+  it('renders the warm welcome-mat shell without glass/glow landing classes', async () => {
+    const api = require('../../lib/api');
+    api.apiGetOidcPublicConfig.mockResolvedValue({
+      ok: true,
+      data: { enabled: false, ready: false, button_label: '', password_login_disabled: false },
+    });
+
+    const { container } = render(<AuthPage />);
+    await waitFor(() => expect(api.apiGetOidcPublicConfig).toHaveBeenCalled());
+
+    expect(container.querySelector('.landing-welcome-mat')).toBeInTheDocument();
+    expect(container.querySelector('.landing-paper-stack')).toBeInTheDocument();
+    expect(container.querySelector('.auth-card--warm')).toBeInTheDocument();
+    expect(container.querySelector('.landing-page .glass')).not.toBeInTheDocument();
+    expect(container.querySelector('.landing-page [class*="glow-"]')).not.toBeInTheDocument();
+  });
+
   it('does not render the SSO button when public-config says not ready', async () => {
     const api = require('../../lib/api');
     api.apiGetOidcPublicConfig.mockResolvedValue({

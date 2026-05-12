@@ -76,10 +76,10 @@ export default function AuthPage() {
   }
 
   const features = [
-    { icon: CalendarDays, title: t(messages, 'landing.feat_calendar'), desc: t(messages, 'landing.feat_calendar_desc'), glow: 'glow-purple' },
-    { icon: CheckSquare, title: t(messages, 'landing.feat_tasks'), desc: t(messages, 'landing.feat_tasks_desc'), glow: 'glow-blue' },
-    { icon: ShoppingCart, title: t(messages, 'landing.feat_shopping'), desc: t(messages, 'landing.feat_shopping_desc'), glow: 'glow-amber' },
-    { icon: Bell, title: t(messages, 'landing.feat_notifications'), desc: t(messages, 'landing.feat_notifications_desc'), glow: 'glow-emerald' },
+    { icon: CalendarDays, title: t(messages, 'landing.feat_calendar'), desc: t(messages, 'landing.feat_calendar_desc'), tone: 'calendar' },
+    { icon: CheckSquare, title: t(messages, 'landing.feat_tasks'), desc: t(messages, 'landing.feat_tasks_desc'), tone: 'tasks' },
+    { icon: ShoppingCart, title: t(messages, 'landing.feat_shopping'), desc: t(messages, 'landing.feat_shopping_desc'), tone: 'shopping' },
+    { icon: Bell, title: t(messages, 'landing.feat_notifications'), desc: t(messages, 'landing.feat_notifications_desc'), tone: 'notifications' },
   ];
 
   return (
@@ -98,9 +98,14 @@ export default function AuthPage() {
       </div>
 
       {/* Hero */}
-      <section className="landing-hero">
-        <div className="auth-logo">
-          <Users size={32} color="white" aria-hidden="true" />
+      <section className="landing-hero landing-welcome-mat">
+        <div className="auth-logo auth-logo--warm">
+          <Users size={32} aria-hidden="true" />
+        </div>
+        <div className="landing-paper-stack" aria-hidden="true">
+          <span className="landing-paper-card landing-paper-card--calendar" />
+          <span className="landing-paper-card landing-paper-card--tasks" />
+          <span className="landing-paper-card landing-paper-card--shopping" />
         </div>
         <h1>{t(messages, 'landing.hero_title')}</h1>
         <p className="landing-hero-subtitle">{t(messages, 'landing.hero_subtitle')}</p>
@@ -118,7 +123,7 @@ export default function AuthPage() {
       {/* Features */}
       <section className="landing-features">
         {features.map((f, i) => (
-          <div key={i} className={`landing-feature-card glass ${f.glow}`} style={{ animationDelay: `${i * 0.1}s` }}>
+          <div key={i} className={`landing-feature-card landing-feature-card--${f.tone}`} style={{ animationDelay: `${i * 0.1}s` }}>
             <div className="landing-feature-icon">
               <f.icon size={24} aria-hidden="true" />
             </div>
@@ -146,7 +151,7 @@ export default function AuthPage() {
 
       {/* Auth Section */}
       <section className="landing-auth" id="auth">
-        <div className="auth-card glass glow-purple">
+        <div className="auth-card auth-card--warm">
           {!(sso.ready && sso.password_login_disabled) && (
             <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
               <button
