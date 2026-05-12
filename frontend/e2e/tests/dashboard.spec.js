@@ -39,6 +39,34 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
   });
 
+  test('moves search into the dashboard header and removes the duplicate date chip', async ({ authedPage: page }) => {
+    await expect(page.getByRole('group', { name: 'Quick actions' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.dashboard-header-actions .view-date')).toHaveCount(0);
+    await expect(page.locator('.sidebar-search-btn')).toHaveCount(0);
+
+    const dashboardSearch = page.locator('.dashboard-header-actions .dashboard-search-btn');
+    await expect(dashboardSearch).toBeVisible();
+    await dashboardSearch.click();
+    await expect(page.locator('.search-overlay')).toBeVisible();
+    await expect(page.getByPlaceholder(/Search/i)).toBeFocused();
+  });
+
+  test('keeps dashboard header search usable on narrow desktop widths', async ({ authedPage: page }) => {
+    await page.setViewportSize({ width: 1024, height: 720 });
+    await expect(page.getByRole('group', { name: 'Quick actions' })).toBeVisible({ timeout: 10000 });
+
+    const header = page.locator('.today-command-header');
+    const dashboardSearch = header.locator('.dashboard-search-btn');
+    await expect(dashboardSearch).toBeVisible();
+
+    const headerBox = await header.boundingBox();
+    const searchBox = await dashboardSearch.boundingBox();
+    expect(headerBox).not.toBeNull();
+    expect(searchBox).not.toBeNull();
+    expect(searchBox.x + searchBox.width).toBeLessThanOrEqual(headerBox.x + headerBox.width + 1);
+    expect(searchBox.width).toBeGreaterThanOrEqual(280);
+  });
+
   test('quick-action pills navigate to correct views', async ({ authedPage: page }) => {
     const quickActions = page.getByRole('group', { name: 'Quick actions' });
     await quickActions.waitFor({ timeout: 10000 });

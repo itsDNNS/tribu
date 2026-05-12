@@ -13,7 +13,9 @@ jest.mock('../../contexts/AppContext', () => ({
 
 jest.mock('../../lib/announce', () => ({ announce: jest.fn() }));
 
-jest.mock('../../components/DashboardView', () => function MockDashboard() { return <div>Dashboard view</div>; });
+jest.mock('../../components/DashboardView', () => function MockDashboard({ onOpenSearch }) {
+  return <button type="button" onClick={onOpenSearch}>Dashboard search trigger</button>;
+});
 jest.mock('../../components/ActivityView', () => function MockActivity() { return <div>Activity view</div>; });
 jest.mock('../../components/calendar', () => function MockCalendar() { return <div>Calendar view</div>; });
 jest.mock('../../components/ContactsView', () => function MockContacts() { return <div>Contacts view</div>; });
@@ -31,7 +33,9 @@ jest.mock('../../components/NotificationCenter', () => function MockNotification
 jest.mock('../../components/ForcePasswordChange', () => function MockForcePasswordChange() { return <div>Force password change</div>; });
 jest.mock('../../components/OnboardingWizard', () => function MockOnboarding() { return <div>Onboarding</div>; });
 jest.mock('../../components/MemberAvatar', () => function MockMemberAvatar() { return <div data-testid="member-avatar" />; });
-jest.mock('../../components/SearchOverlay', () => function MockSearchOverlay() { return null; });
+jest.mock('../../components/SearchOverlay', () => function MockSearchOverlay({ open }) {
+  return open ? <div role="dialog" aria-label="Search">Search overlay</div> : null;
+});
 
 const messages = {
   dashboard: 'Dashboard',
@@ -153,6 +157,22 @@ describe('AppShell mobile bottom navigation', () => {
     const css = fs.readFileSync(path.join(process.cwd(), 'styles', 'globals.css'), 'utf8');
 
     expect(css).toMatch(/\.bottom-nav-item \{[^}]*min-height: 44px;[^}]*min-width: 44px;/);
+  });
+
+  it('moves desktop dashboard search out of the sidebar and wires the dashboard trigger to global search', () => {
+    mockAppState = baseState({ isMobile: false, activeView: 'dashboard' });
+    const { container } = render(<AppShell />);
+
+    expect(container.querySelector('.sidebar-search-btn')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Dashboard search trigger' }));
+    expect(screen.getByRole('dialog', { name: 'Search' })).toBeInTheDocument();
+  });
+
+  it('keeps desktop sidebar search available outside the dashboard', () => {
+    mockAppState = baseState({ isMobile: false, activeView: 'calendar' });
+    const { container } = render(<AppShell />);
+
+    expect(container.querySelector('.sidebar-search-btn')).toBeInTheDocument();
   });
 
   it('groups desktop navigation around household jobs and keeps system items separate', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw, MapPin } from 'lucide-react';
+import { CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Printer, Settings2, ArrowUp, ArrowDown, RotateCcw, MapPin, Search } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
@@ -275,7 +275,7 @@ function ActivationPanel({ steps, completedCount, totalCount, messages, onDismis
   );
 }
 
-export default function DashboardView() {
+export default function DashboardView({ onOpenSearch } = {}) {
   const { summary, me, members, tasks, events, shoppingLists, quickCaptureInbox, familyId, families, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
   const todayIso = useMemo(() => todayIsoDate(), []);
   const [mealsTodayCount, setMealsTodayCount] = useState(0);
@@ -513,7 +513,18 @@ export default function DashboardView() {
             <p className="today-command-family">{todayStr}</p>
           </div>
           <div className="dashboard-header-actions">
-            <div className="view-date">{todayStr}</div>
+            {typeof onOpenSearch === 'function' && (
+              <button
+                type="button"
+                className="dashboard-search-btn"
+                onClick={onOpenSearch}
+                aria-label={t(messages, 'search.placeholder')}
+              >
+                <Search size={16} aria-hidden="true" />
+                <span className="dashboard-search-placeholder">{t(messages, 'search.placeholder')}</span>
+                <kbd className="dashboard-search-kbd">⌘K</kbd>
+              </button>
+            )}
             <button type="button" className="dashboard-layout-toggle" onClick={() => setLayoutEditing((current) => !current)}>
               <Settings2 size={15} aria-hidden="true" />
               <span>{t(messages, 'module.dashboard.customize_layout')}</span>

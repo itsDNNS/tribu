@@ -241,11 +241,13 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-content">
-          <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)}>
-            <Search size={14} />
-            {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
-            {!collapsed && <kbd className="sidebar-search-kbd">⌘K</kbd>}
-          </button>
+          {activeView !== 'dashboard' && (
+            <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)}>
+              <Search size={14} />
+              {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
+              {!collapsed && <kbd className="sidebar-search-kbd">⌘K</kbd>}
+            </button>
+          )}
           {!collapsed && currentFamily && (
             <div className="family-switcher">
               <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{currentFamily.family_name}</span>
@@ -366,7 +368,7 @@ export default function AppShell() {
         )}
 
         <div className="view-enter">
-          {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : <ActiveComponent />}
+          {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : <ActiveComponent onOpenSearch={() => setSearchOpen(true)} />}
         </div>
       </main>
 

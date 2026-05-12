@@ -53,6 +53,7 @@ const messages = {
   'module.dashboard.today_status_shopping': 'Shopping open',
   'module.dashboard.today_status_birthdays': 'Birthdays soon',
   'module.dashboard.today_status_label': 'Today status',
+  'search.placeholder': 'Search tasks, shopping, events...',
   'module.dashboard.quick_my_tasks': 'My tasks',
   'module.dashboard.quick_rewards': 'Rewards',
   'module.dashboard.context_chips_label': 'Family at a glance',
@@ -230,6 +231,20 @@ describe('DashboardView hero', () => {
   it('does not render the icon-only header quick action buttons anymore', () => {
     const { container } = render(<DashboardView />);
     expect(container.querySelectorAll('.dashboard-header-actions .btn-icon')).toHaveLength(0);
+  });
+
+  it('moves global search into the dashboard header and removes the duplicated date chip', () => {
+    const onOpenSearch = jest.fn();
+    const { container } = render(<DashboardView onOpenSearch={onOpenSearch} />);
+
+    const headerActions = container.querySelector('.dashboard-header-actions');
+    expect(headerActions).toBeInTheDocument();
+    expect(headerActions.querySelector('.view-date')).not.toBeInTheDocument();
+
+    const searchButton = within(headerActions).getByRole('button', { name: /Search tasks, shopping, events/i });
+    expect(searchButton).toHaveClass('dashboard-search-btn');
+    fireEvent.click(searchButton);
+    expect(onOpenSearch).toHaveBeenCalledTimes(1);
   });
 
   it('renders child-safe quick action pills without duplicated header summary chips', () => {
