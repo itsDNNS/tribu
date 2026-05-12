@@ -35,7 +35,7 @@ export default function CalendarView() {
   };
 
   return (
-    <div>
+    <div className="calendar-page">
       {/* Delete confirmation dialog for recurring events */}
       {cal.deleteConfirm && (
         <DeleteRecurringDialog
@@ -47,8 +47,9 @@ export default function CalendarView() {
         />
       )}
 
-      <div className="view-header">
+      <div className="view-header family-view-header">
         <div>
+          <div className="view-kicker">{t(messages, 'module.calendar.month')}</div>
           <h1 className="view-title">{t(messages, 'calendar')}</h1>
           <div className="view-subtitle">
             {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
@@ -57,7 +58,7 @@ export default function CalendarView() {
       </div>
 
       {cal.calendarView === 'month' && (
-        <div className="calendar-controls">
+        <div className="calendar-controls calendar-controls-surface">
           <div className="calendar-nav">
             <button
               className="calendar-nav-btn"
@@ -86,7 +87,7 @@ export default function CalendarView() {
       )}
 
       {cal.calendarView === 'week' && (
-        <div className="calendar-controls">
+        <div className="calendar-controls calendar-controls-surface">
           <div className="calendar-nav">
             <button
               className="calendar-nav-btn"

@@ -4,7 +4,7 @@ import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
-import { isNavItemVisible, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
+import { isNavItemVisible, MOBILE_PRIMARY_NAV_KEYS, NAV_GROUPS, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
 import MemberAvatar from './MemberAvatar';
 import DashboardView from './DashboardView';
 import ActivityView from './ActivityView';
@@ -128,11 +128,38 @@ export default function AppShell() {
     return items;
   }, [itemRegistry, isAdmin]);
 
-  // Mobile bottom nav: pinned items (settings/admin) always in overflow
-  const hasOverflow = pinnedItems.length > 0 || orderedItems.length > MAX_BOTTOM_NAV;
+  const navIndex = useMemo(() => {
+    return new Map(navOrder.map((key, index) => [key, index]));
+  }, [navOrder]);
+
+  const navGroups = useMemo(() => {
+    return NAV_GROUPS
+      .map((group) => ({
+        ...group,
+        label: t(messages, group.labelKey, group.fallback),
+        items: group.itemKeys
+          .filter((key) => key in itemRegistry)
+          .sort((a, b) => (navIndex.get(a) ?? 999) - (navIndex.get(b) ?? 999))
+          .map((key) => itemRegistry[key]),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [itemRegistry, messages, navIndex]);
+  const dailyNavGroups = navGroups.filter((group) => group.key !== 'system');
+  const systemNavGroup = navGroups.find((group) => group.key === 'system');
+
+  const mobilePrimaryItems = MOBILE_PRIMARY_NAV_KEYS
+    .map((key) => itemRegistry[key])
+    .filter(Boolean);
+  const mobilePrimaryKeys = new Set(mobilePrimaryItems.map((item) => item.key));
+  const remainingMobileItems = orderedItems.filter((item) => !mobilePrimaryKeys.has(item.key));
+  const hasOverflow = pinnedItems.length > 0 || remainingMobileItems.length > 0 || mobilePrimaryItems.length > MAX_BOTTOM_NAV;
   const maxVisible = hasOverflow ? MAX_BOTTOM_NAV - 1 : MAX_BOTTOM_NAV;
-  const visibleItems = orderedItems.slice(0, maxVisible);
-  const overflowItems = [...orderedItems.slice(maxVisible), ...pinnedItems];
+  const visibleItems = mobilePrimaryItems.slice(0, maxVisible);
+  const overflowItems = [
+    ...mobilePrimaryItems.slice(maxVisible),
+    ...remainingMobileItems,
+    ...pinnedItems,
+  ];
   const activeInOverflow = overflowItems.some((item) => item.key === activeView);
 
   const navigate = useCallback((key) => {
@@ -180,7 +207,7 @@ export default function AppShell() {
   // No system divider needed - pinned items render below the spacer
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 2 }}>
+    <div className="app-shell">
       {demoMode && (
         <div className="demo-banner">
           {t(messages, 'demo_banner')}
@@ -214,10 +241,10 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-content">
-          <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--glass-border)', border: 'none', borderRadius: 8, color: 'var(--text-muted)', fontSize: '0.82rem', cursor: 'pointer', marginBottom: 12 }}>
+          <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)}>
             <Search size={14} />
             {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
-            {!collapsed && <kbd style={{ marginLeft: 'auto', fontSize: '0.65rem', opacity: 0.6, background: 'var(--void-surface)', padding: '2px 5px', borderRadius: 4 }}>⌘K</kbd>}
+            {!collapsed && <kbd className="sidebar-search-kbd">⌘K</kbd>}
           </button>
           {!collapsed && currentFamily && (
             <div className="family-switcher">
@@ -231,40 +258,47 @@ export default function AppShell() {
             </div>
           )}
 
-          <nav className="nav-section" aria-label={t(messages, 'aria.main_navigation')}>
-            {orderedItems.map((item) => (
-              <button
-                key={item.key}
-                className={`nav-item${activeView === item.key ? ' active' : ''}`}
-                onClick={() => navigate(item.key)}
-                data-tooltip={item.label}
-                aria-current={activeView === item.key ? 'page' : undefined}
-              >
-                <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
-                {!collapsed && <span className="nav-label">{item.label}</span>}
-                {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
-              </button>
+          <nav className="nav-groups" aria-label={t(messages, 'aria.main_navigation')}>
+            {dailyNavGroups.map((group) => (
+              <section className={`nav-section nav-section-${group.key}`} aria-label={group.label} key={group.key}>
+                {!collapsed && <div className="nav-section-label">{group.label}</div>}
+                {group.items.map((item) => (
+                  <button
+                    key={item.key}
+                    className={`nav-item${activeView === item.key ? ' active' : ''}`}
+                    onClick={() => navigate(item.key)}
+                    data-tooltip={item.label}
+                    aria-current={activeView === item.key ? 'page' : undefined}
+                  >
+                    <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
+                    {!collapsed && <span className="nav-label">{item.label}</span>}
+                    {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
+                  </button>
+                ))}
+              </section>
             ))}
+
+            <div className="sidebar-spacer" aria-hidden="true" />
+
+            {systemNavGroup && (
+              <section className={`nav-section nav-section-${systemNavGroup.key}`} aria-label={systemNavGroup.label}>
+                {!collapsed && <div className="nav-section-label">{systemNavGroup.label}</div>}
+                {systemNavGroup.items.map((item) => (
+                  <button
+                    key={item.key}
+                    className={`nav-item${activeView === item.key ? ' active' : ''}`}
+                    onClick={() => navigate(item.key)}
+                    data-tooltip={item.label}
+                    aria-current={activeView === item.key ? 'page' : undefined}
+                  >
+                    <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
+                    {!collapsed && <span className="nav-label">{item.label}</span>}
+                    {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
+                  </button>
+                ))}
+              </section>
+            )}
           </nav>
-
-          <div style={{ flex: 1 }} />
-
-          {pinnedItems.length > 0 && (
-            <nav className="nav-section" aria-label="System">
-              {pinnedItems.map((item) => (
-                <button
-                  key={item.key}
-                  className={`nav-item${activeView === item.key ? ' active' : ''}`}
-                  onClick={() => navigate(item.key)}
-                  data-tooltip={item.label}
-                  aria-current={activeView === item.key ? 'page' : undefined}
-                >
-                  <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
-                  {!collapsed && <span className="nav-label">{item.label}</span>}
-                </button>
-              ))}
-            </nav>
-          )}
 
           <div className="sidebar-divider" />
 
@@ -365,8 +399,8 @@ export default function AppShell() {
                 aria-current={activeView === item.key ? 'page' : undefined}
               >
                 <item.icon size={22} aria-hidden="true" />
-                {item.badge && <span className="bottom-nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>}
                 <span>{item.mobileLabel || item.label}</span>
+                {item.badge && <span className="bottom-nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>}
               </button>
             ))}
             {hasOverflow && (

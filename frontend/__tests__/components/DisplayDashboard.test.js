@@ -68,6 +68,16 @@ afterEach(() => {
 });
 
 describe('DisplayDashboard — identity + clock', () => {
+
+  test('marks the shared display with the warm hearth visual language', () => {
+    renderWithFixedNow(buildDashboard(), new Date('2026-04-27T08:30:00'));
+
+    const dashboard = screen.getByTestId('display-dashboard');
+    expect(dashboard).toHaveClass('display-dashboard--hearth');
+    expect(dashboard).toHaveAttribute('data-visual-language', 'warm-hearth');
+    expect(screen.getAllByTestId(/display-widget-/).length).toBeGreaterThan(0);
+  });
+
   test('renders the family hearth name and device tag', () => {
     renderWithFixedNow(buildDashboard(), new Date('2026-04-27T08:30:00'));
 

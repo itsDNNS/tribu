@@ -113,7 +113,7 @@ export default function DisplayPage() {
         <title>Tribu Display</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       </Head>
-      <main className="display-root" data-testid="display-root">
+      <main className="display-root display-root--hearth" data-testid="display-root">
         {state === 'loading' && (
           <div
             className="display-state-loading"
@@ -130,19 +130,19 @@ export default function DisplayPage() {
           </div>
         )}
         {state === 'missing' && (
-          <div className="display-state" data-testid="display-state-missing">
+          <div className="display-state display-state--warm" data-testid="display-state-missing">
             <h1>Tribu Display</h1>
             <p>Pair this device by opening the link an admin generated under Admin → Displays.</p>
           </div>
         )}
         {state === 'invalid' && (
-          <div className="display-state" data-testid="display-state-invalid">
+          <div className="display-state display-state--warm" data-testid="display-state-invalid">
             <h1>Tribu Display</h1>
             <p>This display is not paired or its token is no longer valid. Ask an admin to create a new pairing link.</p>
           </div>
         )}
         {state === 'revoked' && (
-          <div className="display-state" data-testid="display-state-revoked">
+          <div className="display-state display-state--warm" data-testid="display-state-revoked">
             <h1>Tribu Display</h1>
             <p>This display has been removed by an admin. Ask for a new pairing link to bring it back online.</p>
           </div>

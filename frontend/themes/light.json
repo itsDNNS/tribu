@@ -6,15 +6,22 @@
   "description": "Warm and inviting",
   "dataTheme": "light",
   "tokens": {
-    "bg": "#f0ecf8",
-    "surface": "#ffffff",
-    "text": "#1a1520",
-    "muted": "#9b93a8",
-    "border": "rgba(0,0,0,0.06)",
-    "primary": "#7c3aed",
+    "bg": "#f6f0e8",
+    "surface": "#fffaf3",
+    "surfaceRaised": "#fffdf8",
+    "surfaceSoft": "#f8efe4",
+    "text": "#231b16",
+    "muted": "#74685e",
+    "border": "rgba(97,74,54,0.12)",
+    "primary": "#7b568a",
     "primaryText": "#ffffff",
-    "sidebar": "rgba(240,237,245,0.92)",
-    "sidebarActive": "rgba(124,58,237,0.08)",
-    "textSecondary": "#6b6380"
+    "sidebar": "rgba(255,250,243,0.95)",
+    "sidebarActive": "rgba(123,86,138,0.12)",
+    "textSecondary": "#5c5148",
+    "sage": "#739c78",
+    "sky": "#68a4c9",
+    "amber": "#c78932",
+    "rose": "#bd7480",
+    "shadow": "0 12px 30px -22px rgba(97,74,54,0.34)"
   }
 }

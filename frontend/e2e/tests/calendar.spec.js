@@ -2,6 +2,23 @@ const { test, expect } = require('../helpers/fixtures');
 const { getFamilyId, seedCalendarEvent } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
+async function clickVisibleCenter(page, locator) {
+  await locator.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
+  await expect.poll(async () => locator.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return hit === element || element.contains(hit);
+  })).toBe(true);
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width <= 768) {
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    return;
+  }
+  await locator.click();
+}
+
 test.describe('Calendar', () => {
   test('navigate to calendar and see month view', async ({ authedPage: page }) => {
     await navigateTo(page, 'Calendar');
@@ -22,9 +39,11 @@ test.describe('Calendar', () => {
     await titleInput.fill('E2E Test Event');
     await form.locator('input[placeholder="Location or address"]').fill('Sports Park, Field 2');
     await form.locator('#calendar-create-icon').selectOption('soccer');
+    await page.evaluate(() => document.activeElement?.blur());
 
     // Submit
-    await form.locator('button[type="submit"]').click();
+    const submitButton = form.locator('button[type="submit"]');
+    await clickVisibleCenter(page, submitButton);
 
     // Event should appear with location and provider-neutral map links
     await expect(page.getByText('E2E Test Event')).toBeVisible({ timeout: 10000 });
@@ -138,7 +157,8 @@ test.describe('Calendar', () => {
     await expect(page.getByText('Delete Me')).toBeVisible({ timeout: 10000 });
 
     // Delete it
-    await page.locator('[aria-label="Delete event: Delete Me"]').click();
+    const deleteButton = page.locator('[aria-label="Delete event: Delete Me"]');
+    await clickVisibleCenter(page, deleteButton);
     await expect(page.getByText('Delete Me')).not.toBeVisible({ timeout: 10000 });
   });
 

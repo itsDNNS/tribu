@@ -699,5 +699,21 @@
   "notifications_external_destinations_help": "Beheerders kunnen Gotify-, ntfy-, Telegram-, Matrix- of e-mailbestemmingen toevoegen voor huishoudelijke herinneringen en geselecteerde boodschappenactiviteit.",
   "notifications_external_destinations_action": "Configure household notifications",
   "notification_destinations_event_shopping_list": "Wijzigingen in boodschappenlijsten",
-  "notification_destinations_event_shopping_item": "Wijzigingen in boodschappenitems"
+  "notification_destinations_event_shopping_item": "Wijzigingen in boodschappenitems",
+  "nav.group.today": "Vandaag",
+  "nav.group.plan": "Plannen",
+  "nav.group.lists": "Lijsten",
+  "nav.group.people": "Mensen",
+  "nav.group.household": "Huishouden",
+  "nav.group.system": "Meer / Systeem",
+  "module.dashboard.today_command_center": "Today command center",
+  "module.dashboard.today_kicker": "Today at home",
+  "module.dashboard.next_up_title": "Next up",
+  "module.dashboard.next_up_empty": "Nothing else scheduled",
+  "module.dashboard.next_up_empty_hint": "Use quick capture to park anything the family should remember.",
+  "module.dashboard.today_status_events": "Events today",
+  "module.dashboard.today_status_tasks": "Open tasks",
+  "module.dashboard.today_status_shopping": "Shopping open",
+  "module.dashboard.today_status_birthdays": "Birthdays soon",
+  "module.dashboard.today_status_label": "Today status"
 }

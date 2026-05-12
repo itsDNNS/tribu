@@ -699,5 +699,21 @@
   "notifications_external_destinations_help": "Administratori mogu dodati Gotify, ntfy, Telegram, Matrix ili e-mail odredišta za podsjetnike kućanstva i odabranu aktivnost kupnje.",
   "notifications_external_destinations_action": "Configure household notifications",
   "notification_destinations_event_shopping_list": "Promjene popisa za kupnju",
-  "notification_destinations_event_shopping_item": "Promjene stavki za kupnju"
+  "notification_destinations_event_shopping_item": "Promjene stavki za kupnju",
+  "nav.group.today": "Danas",
+  "nav.group.plan": "Plan",
+  "nav.group.lists": "Popisi",
+  "nav.group.people": "Osobe",
+  "nav.group.household": "Kućanstvo",
+  "nav.group.system": "Više / Sustav",
+  "module.dashboard.today_command_center": "Today command center",
+  "module.dashboard.today_kicker": "Today at home",
+  "module.dashboard.next_up_title": "Next up",
+  "module.dashboard.next_up_empty": "Nothing else scheduled",
+  "module.dashboard.next_up_empty_hint": "Use quick capture to park anything the family should remember.",
+  "module.dashboard.today_status_events": "Events today",
+  "module.dashboard.today_status_tasks": "Open tasks",
+  "module.dashboard.today_status_shopping": "Shopping open",
+  "module.dashboard.today_status_birthdays": "Birthdays soon",
+  "module.dashboard.today_status_label": "Today status"
 }

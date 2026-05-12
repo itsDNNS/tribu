@@ -699,5 +699,21 @@
   "notifications_external_destinations_help": "Administratörer kan lägga till Gotify-, ntfy-, Telegram-, Matrix- eller e-postmål för hushållets påminnelser och vald inköpsaktivitet.",
   "notifications_external_destinations_action": "Configure household notifications",
   "notification_destinations_event_shopping_list": "Ändringar i inköpslistor",
-  "notification_destinations_event_shopping_item": "Ändringar i inköpsvaror"
+  "notification_destinations_event_shopping_item": "Ändringar i inköpsvaror",
+  "nav.group.today": "Idag",
+  "nav.group.plan": "Planera",
+  "nav.group.lists": "Listor",
+  "nav.group.people": "Personer",
+  "nav.group.household": "Hushåll",
+  "nav.group.system": "Mer / System",
+  "module.dashboard.today_command_center": "Today command center",
+  "module.dashboard.today_kicker": "Today at home",
+  "module.dashboard.next_up_title": "Next up",
+  "module.dashboard.next_up_empty": "Nothing else scheduled",
+  "module.dashboard.next_up_empty_hint": "Use quick capture to park anything the family should remember.",
+  "module.dashboard.today_status_events": "Events today",
+  "module.dashboard.today_status_tasks": "Open tasks",
+  "module.dashboard.today_status_shopping": "Shopping open",
+  "module.dashboard.today_status_birthdays": "Birthdays soon",
+  "module.dashboard.today_status_label": "Today status"
 }

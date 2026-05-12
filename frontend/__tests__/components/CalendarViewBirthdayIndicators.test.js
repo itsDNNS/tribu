@@ -76,6 +76,16 @@ describe('CalendarView birthday month indicators', () => {
     mockUseApp.mockReturnValue(baseApp());
   });
 
+  it('wraps month view in the calm calendar page shell', () => {
+    mockUseCalendar.mockReturnValue(baseCalendar([emptyCell(), monthCell(1, [])]));
+
+    const { container } = render(<CalendarView />);
+
+    expect(container.querySelector('.calendar-page')).toBeInTheDocument();
+    expect(container.querySelector('.family-view-header')).toBeInTheDocument();
+    expect(container.querySelector('.calendar-controls-surface')).toBeInTheDocument();
+  });
+
   it('shows a cake indicator instead of a regular dot for a birthday-only day', () => {
     mockUseCalendar.mockReturnValue(baseCalendar([
       emptyCell(),

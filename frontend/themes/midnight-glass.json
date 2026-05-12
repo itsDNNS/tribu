@@ -6,15 +6,22 @@
   "description": "Glassmorphism, deep violet",
   "dataTheme": "midnight-glass",
   "tokens": {
-    "bg": "#06080f",
-    "surface": "#111628",
-    "text": "#e8edff",
-    "muted": "#565f82",
-    "border": "rgba(120,130,180,0.12)",
-    "primary": "#7c3aed",
+    "bg": "#0c101c",
+    "surface": "#161b2b",
+    "surfaceRaised": "#202638",
+    "surfaceSoft": "rgba(255,255,255,0.045)",
+    "text": "#f3f0ec",
+    "muted": "#9d95aa",
+    "border": "rgba(197,203,224,0.13)",
+    "primary": "#8b5e9f",
     "primaryText": "#ffffff",
-    "sidebar": "rgba(10,13,24,0.85)",
-    "sidebarActive": "rgba(124,58,237,0.12)",
-    "textSecondary": "#8b93b8"
+    "sidebar": "rgba(22,27,43,0.94)",
+    "sidebarActive": "rgba(139,94,159,0.13)",
+    "textSecondary": "#c9c1d1",
+    "sage": "#85a887",
+    "sky": "#6aa6d8",
+    "amber": "#d4a24f",
+    "rose": "#c9828f",
+    "shadow": "0 10px 28px -18px rgba(8,11,20,0.65)"
   }
 }

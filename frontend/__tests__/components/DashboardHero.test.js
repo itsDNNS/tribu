@@ -42,6 +42,16 @@ const messages = {
   'module.dashboard.quick_invite': 'Invite',
   'module.dashboard.quick_weekly_plan': 'Weekly plan',
   'module.dashboard.quick_actions_label': 'Quick actions',
+  'module.dashboard.today_command_center': 'Today command center',
+  'module.dashboard.today_kicker': 'Today at home',
+  'module.dashboard.next_up_title': 'Next up',
+  'module.dashboard.next_up_empty': 'Nothing else scheduled',
+  'module.dashboard.next_up_empty_hint': 'Use quick capture to park anything the family should remember.',
+  'module.dashboard.today_status_events': 'Events today',
+  'module.dashboard.today_status_tasks': 'Open tasks',
+  'module.dashboard.today_status_shopping': 'Shopping open',
+  'module.dashboard.today_status_birthdays': 'Birthdays soon',
+  'module.dashboard.today_status_label': 'Today status',
   'module.dashboard.quick_my_tasks': 'My tasks',
   'module.dashboard.quick_rewards': 'Rewards',
   'module.dashboard.context_chips_label': 'Family at a glance',
@@ -105,6 +115,75 @@ function todayAt(hour = 10, minute = 0) {
 describe('DashboardView hero', () => {
   beforeEach(() => {
     mockAppState = baseApp();
+  });
+
+  it('renders a Today command center with next-up context and household status counts', () => {
+    mockAppState = baseApp({
+      tasks: [
+        { id: 1, title: 'Pack bags', status: 'open' },
+        { id: 2, title: 'Buy milk', status: 'open' },
+        { id: 3, title: 'Done task', status: 'done' },
+      ],
+      shoppingLists: [
+        { id: 1, item_count: 4, checked_count: 1 },
+        { id: 2, items: [{ checked: false }, { checked: true }, { checked: false }] },
+      ],
+      events: [
+        { id: 1, title: 'School run', starts_at: todayAt(8, 15), location: 'Main gate' },
+        { id: 2, title: 'Tomorrow training', starts_at: `${todayAt(17, 30).slice(0, 10)}T17:30:00` },
+      ],
+      summary: {
+        next_events: [
+          { id: 1, title: 'School run', starts_at: todayAt(8, 15), location: 'Main gate' },
+        ],
+        upcoming_birthdays: [{ person_name: 'Grandma', days_until: 5, occurs_on: 'May 16' }],
+      },
+    });
+
+    render(<DashboardView />);
+
+    const commandCenter = screen.getByRole('region', { name: 'Today command center' });
+    expect(within(commandCenter).getByRole('heading', { name: /Dennis/i })).toBeVisible();
+    const nextUp = within(commandCenter).getByRole('region', { name: 'Next up' });
+    expect(nextUp).toHaveTextContent('School run');
+    expect(nextUp).toHaveTextContent('Main gate');
+    expect(nextUp).toHaveTextContent('08:15');
+
+    const statusGroup = within(commandCenter).getByRole('group', { name: 'Today status' });
+    expect(within(statusGroup).getByTestId('today-status-events')).toHaveTextContent('2');
+    expect(within(statusGroup).getByTestId('today-status-tasks')).toHaveTextContent('2');
+    expect(within(statusGroup).getByTestId('today-status-shopping')).toHaveTextContent('5');
+    expect(within(statusGroup).getByTestId('today-status-birthdays')).toHaveTextContent('1');
+  });
+
+
+  it('counts recurring today occurrences from the expanded dashboard summary', () => {
+    mockAppState = baseApp({
+      events: [
+        { id: 9, title: 'Weekly piano', starts_at: '2026-01-01T16:00:00', recurrence: 'weekly' },
+      ],
+      summary: {
+        next_events: [
+          { id: 9, title: 'Weekly piano', starts_at: todayAt(16, 0), recurrence: 'weekly', is_recurring: true },
+        ],
+        upcoming_birthdays: [],
+      },
+    });
+
+    render(<DashboardView />);
+
+    const commandCenter = screen.getByRole('region', { name: 'Today command center' });
+    const statusGroup = within(commandCenter).getByRole('group', { name: 'Today status' });
+    expect(within(statusGroup).getByTestId('today-status-events')).toHaveTextContent('1');
+  });
+
+  it('renders a useful next-up all-clear state when no event is queued', () => {
+    render(<DashboardView />);
+
+    const commandCenter = screen.getByRole('region', { name: 'Today command center' });
+    const nextUp = within(commandCenter).getByRole('region', { name: 'Next up' });
+    expect(nextUp).toHaveTextContent('Nothing else scheduled');
+    expect(nextUp).toHaveTextContent('Use quick capture to park anything the family should remember.');
   });
 
   it('keeps the greeting with the user display name', () => {

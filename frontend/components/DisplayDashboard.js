@@ -65,10 +65,11 @@ export default function DisplayDashboard({ me, dashboard }) {
 
   return (
     <div
-      className={`display-dashboard display-dashboard--${config.display_mode}`}
+      className={`display-dashboard display-dashboard--hearth display-dashboard--${config.display_mode}`}
       data-testid="display-dashboard"
       data-display-mode={config.display_mode}
       data-layout-preset={config.layout_preset}
+      data-visual-language="warm-hearth"
       role="region"
       aria-label="Tribu shared home display"
     >
@@ -648,6 +649,7 @@ function formatTimeOfDay(d) {
   return d.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 
@@ -753,6 +755,7 @@ function formatAgendaWhen(event) {
   return d.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 

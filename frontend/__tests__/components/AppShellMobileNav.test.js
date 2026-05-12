@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AppShell from '../../components/AppShell';
 import { DEFAULT_NAV_ORDER } from '../../contexts/UIContext';
@@ -42,6 +42,12 @@ const messages = {
   settings: 'Settings',
   admin: 'Admin',
   nav_more: 'More',
+  'nav.group.today': 'Today',
+  'nav.group.plan': 'Plan',
+  'nav.group.lists': 'Lists',
+  'nav.group.people': 'People',
+  'nav.group.household': 'Household',
+  'nav.group.system': 'More / System',
   member: 'Member',
   child: 'Child',
   'aria.open_menu': 'Open menu',
@@ -57,6 +63,7 @@ const messages = {
   'module.recipes.name': 'Recipes',
   'module.rewards.name': 'Rewards',
   'module.gifts.name': 'Gifts',
+  'module.school_timetables.name': 'School',
   'module.weekly_plan.name': 'Weekly',
   'search.title': 'Search',
   'search.placeholder': 'Search Tribu',
@@ -93,18 +100,26 @@ describe('AppShell mobile bottom navigation', () => {
 
     const bottomNav = screen.getByRole('navigation', { name: 'Bottom navigation' });
     expect(bottomNav).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /dashboard/i })).toHaveAttribute('aria-current', 'page');
-    const tasksItem = bottomNav.querySelector('.bottom-nav-item:nth-child(4)');
-    const shoppingItem = bottomNav.querySelector('.bottom-nav-item:nth-child(3)');
+
+    const visibleBottomItems = bottomNav.querySelectorAll('.bottom-nav-inner > .bottom-nav-item');
+    expect(visibleBottomItems).toHaveLength(5);
+    expect([...visibleBottomItems].map((item) => item.textContent)).toEqual([
+      'Home',
+      'Plan',
+      'Tasks1',
+      'Shopping2',
+      'More',
+    ]);
+
+    expect(within(bottomNav).getByRole('button', { name: /home/i })).toHaveAttribute('aria-current', 'page');
+    const tasksItem = visibleBottomItems[2];
+    const shoppingItem = visibleBottomItems[3];
     expect(tasksItem).toHaveTextContent('Tasks');
     expect(tasksItem).toHaveTextContent('1');
     expect(shoppingItem).toHaveTextContent('Shopping');
     expect(shoppingItem).toHaveTextContent('2');
 
-    const visibleBottomItems = bottomNav.querySelectorAll('.bottom-nav-inner > .bottom-nav-item');
-    expect(visibleBottomItems).toHaveLength(5);
-
-    fireEvent.click(screen.getByRole('button', { name: /more/i }));
+    fireEvent.click(within(bottomNav).getByRole('button', { name: /more/i }));
     expect(screen.getAllByRole('button', { name: /^settings$/i })
       .some((button) => button.classList.contains('bottom-nav-overflow-item'))).toBe(true);
     expect(screen.getAllByRole('button', { name: /^admin$/i })
@@ -132,5 +147,29 @@ describe('AppShell mobile bottom navigation', () => {
     const css = fs.readFileSync(path.join(process.cwd(), 'styles', 'globals.css'), 'utf8');
 
     expect(css).toMatch(/@media \(max-width: 768px\) \{[\s\S]*\.sidebar\.mobile-open \{ transform: translateX\(0\); background: var\(--void-surface\); \}/);
+  });
+
+  it('keeps bottom navigation touch targets at least 44px in both dimensions', () => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'styles', 'globals.css'), 'utf8');
+
+    expect(css).toMatch(/\.bottom-nav-item \{[^}]*min-height: 44px;[^}]*min-width: 44px;/);
+  });
+
+  it('groups desktop navigation around household jobs and keeps system items separate', () => {
+    mockAppState = baseState({ isMobile: false });
+    render(<AppShell />);
+
+    const mainNav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(mainNav).toBeInTheDocument();
+    expect(within(mainNav).getByRole('region', { name: 'Today' })).toHaveTextContent('Dashboard');
+    expect(within(mainNav).getByRole('region', { name: 'Plan' })).toHaveTextContent('Calendar');
+    expect(within(mainNav).getByRole('region', { name: 'Lists' })).toHaveTextContent('Tasks');
+    expect(within(mainNav).getByRole('region', { name: 'Lists' })).toHaveTextContent('Shopping');
+    expect(within(mainNav).getByRole('region', { name: 'People' })).toHaveTextContent('Contacts');
+    expect(within(mainNav).getByRole('region', { name: 'Household' })).toHaveTextContent('Rewards');
+
+    const systemNav = within(mainNav).getByRole('region', { name: 'More / System' });
+    expect(systemNav).toHaveTextContent('Settings');
+    expect(systemNav).toHaveTextContent('Admin');
   });
 });

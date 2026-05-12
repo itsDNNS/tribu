@@ -94,6 +94,15 @@ jest.mock('../../hooks/useTasks', () => ({
 describe('TasksView', () => {
   beforeEach(() => jest.clearAllMocks());
 
+  it('renders the warm task focus strip', () => {
+    const { container } = render(<TasksView />);
+
+    expect(container.querySelector('.tasks-focus-strip')).toBeInTheDocument();
+    expect(container.querySelector('.family-view-header')).toBeInTheDocument();
+    expect(container.querySelector('.tasks-focus-strip')).toHaveTextContent('Offen');
+    expect(container.querySelector('.tasks-focus-strip')).toHaveTextContent('Erledigt');
+  });
+
   it('renders task list', () => {
     render(<TasksView />);
     expect(screen.getByText('Buy milk')).toBeInTheDocument();

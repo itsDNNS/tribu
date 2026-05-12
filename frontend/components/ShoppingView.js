@@ -345,7 +345,7 @@ export default function ShoppingView() {
   }
 
   return (
-    <div>
+    <div className="shopping-page">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
@@ -356,8 +356,9 @@ export default function ShoppingView() {
           messages={messages}
         />
       )}
-      <div className="view-header">
+      <div className="view-header family-view-header">
         <div>
+          <div className="view-kicker">{sh.activeList?.name || t(messages, 'module.shopping.name')}</div>
           <h1 className="view-title">{t(messages, 'module.shopping.name')}</h1>
           <div className="view-subtitle">
             {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
@@ -498,6 +499,29 @@ export default function ShoppingView() {
         <div className="shopping-items-panel">
           {sh.activeList ? (
             <div className="shopping-items-wrapper">
+              <div className="shopping-active-header">
+                <div>
+                  <div className="view-kicker">{sh.activeList.name}</div>
+                  <h2>{sh.activeList.name}</h2>
+                </div>
+                <div className="shopping-active-count" aria-label={`${sh.checkedItems.length}/${sh.items.length}`}>
+                  <strong>{sh.uncheckedItems.length}</strong>
+                  <span>{t(messages, 'module.shopping.name')}</span>
+                </div>
+              </div>
+              {uncheckedGroups.length > 0 && (
+                <div className="shopping-category-overview" aria-label={t(messages, 'module.shopping.name')}>
+                  {uncheckedGroups.map((group) => (
+                    <div
+                      key={group.key || 'uncategorized-overview'}
+                      className={`shopping-category-overview-chip${collapsedCategories[group.key] ? ' muted' : ''}`}
+                    >
+                      <span>{group.label}</span>
+                      <strong>{group.items.length}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* Quick-Add Bar */}
               {!isChild && (
                 <form onSubmit={sh.addItem} className="quick-add-bar">

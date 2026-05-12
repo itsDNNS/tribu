@@ -17,11 +17,21 @@ import {
 } from 'lucide-react';
 
 export const PINNED_NAV_KEYS = new Set(['settings', 'admin']);
+export const MOBILE_PRIMARY_NAV_KEYS = ['dashboard', 'calendar', 'tasks', 'shopping'];
+
+export const NAV_GROUPS = [
+  { key: 'today', labelKey: 'nav.group.today', fallback: 'Today', itemKeys: ['dashboard'] },
+  { key: 'plan', labelKey: 'nav.group.plan', fallback: 'Plan', itemKeys: ['calendar', 'templates'] },
+  { key: 'lists', labelKey: 'nav.group.lists', fallback: 'Lists', itemKeys: ['tasks', 'shopping', 'meal_plans', 'recipes'] },
+  { key: 'people', labelKey: 'nav.group.people', fallback: 'People', itemKeys: ['contacts'] },
+  { key: 'household', labelKey: 'nav.group.household', fallback: 'Household', itemKeys: ['rewards', 'school_timetables', 'gifts'] },
+  { key: 'system', labelKey: 'nav.group.system', fallback: 'More / System', itemKeys: ['activity', 'notifications', 'settings', 'admin'] },
+];
 
 export const NAV_ITEM_META = {
   dashboard: { icon: LayoutDashboard, labelKey: 'dashboard', mobileLabel: 'Home' },
   activity: { icon: Activity, labelKey: 'activity' },
-  calendar: { icon: CalendarDays, labelKey: 'calendar' },
+  calendar: { icon: CalendarDays, labelKey: 'calendar', mobileLabel: 'Plan' },
   shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
   templates: { icon: ClipboardList, labelKey: 'module.templates.name', adultOnly: true, hideInDemo: true },

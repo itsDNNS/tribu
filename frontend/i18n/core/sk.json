@@ -699,5 +699,21 @@
   "notifications_external_destinations_help": "Administrátori môžu pridať ciele Gotify, ntfy, Telegram, Matrix alebo e-mail pre domáce pripomienky a vybranú nákupnú aktivitu.",
   "notifications_external_destinations_action": "Configure household notifications",
   "notification_destinations_event_shopping_list": "Zmeny nákupných zoznamov",
-  "notification_destinations_event_shopping_item": "Zmeny nákupných položiek"
+  "notification_destinations_event_shopping_item": "Zmeny nákupných položiek",
+  "nav.group.today": "Dnes",
+  "nav.group.plan": "Plán",
+  "nav.group.lists": "Zoznamy",
+  "nav.group.people": "Ľudia",
+  "nav.group.household": "Domácnosť",
+  "nav.group.system": "Viac / Systém",
+  "module.dashboard.today_command_center": "Today command center",
+  "module.dashboard.today_kicker": "Today at home",
+  "module.dashboard.next_up_title": "Next up",
+  "module.dashboard.next_up_empty": "Nothing else scheduled",
+  "module.dashboard.next_up_empty_hint": "Use quick capture to park anything the family should remember.",
+  "module.dashboard.today_status_events": "Events today",
+  "module.dashboard.today_status_tasks": "Open tasks",
+  "module.dashboard.today_status_shopping": "Shopping open",
+  "module.dashboard.today_status_birthdays": "Birthdays soon",
+  "module.dashboard.today_status_label": "Today status"
 }

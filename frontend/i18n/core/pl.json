@@ -699,5 +699,21 @@
   "notifications_external_destinations_help": "Administratorzy mogą dodać miejsca docelowe Gotify, ntfy, Telegram, Matrix lub e-mail dla przypomnień domowych i wybranej aktywności zakupowej.",
   "notifications_external_destinations_action": "Configure household notifications",
   "notification_destinations_event_shopping_list": "Zmiany list zakupów",
-  "notification_destinations_event_shopping_item": "Zmiany pozycji zakupów"
+  "notification_destinations_event_shopping_item": "Zmiany pozycji zakupów",
+  "nav.group.today": "Dzisiaj",
+  "nav.group.plan": "Plan",
+  "nav.group.lists": "Listy",
+  "nav.group.people": "Osoby",
+  "nav.group.household": "Dom",
+  "nav.group.system": "Więcej / System",
+  "module.dashboard.today_command_center": "Today command center",
+  "module.dashboard.today_kicker": "Today at home",
+  "module.dashboard.next_up_title": "Next up",
+  "module.dashboard.next_up_empty": "Nothing else scheduled",
+  "module.dashboard.next_up_empty_hint": "Use quick capture to park anything the family should remember.",
+  "module.dashboard.today_status_events": "Events today",
+  "module.dashboard.today_status_tasks": "Open tasks",
+  "module.dashboard.today_status_shopping": "Shopping open",
+  "module.dashboard.today_status_birthdays": "Birthdays soon",
+  "module.dashboard.today_status_label": "Today status"
 }

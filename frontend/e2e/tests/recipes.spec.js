@@ -1,6 +1,7 @@
 const { test, expect } = require('../helpers/fixtures');
 const { getFamilyId, seedShoppingList } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
+const { selectShoppingList } = require('../helpers/shopping');
 
 test.describe('Recipes', () => {
   async function expectRecipeDialogInViewport(page) {
@@ -67,7 +68,7 @@ test.describe('Recipes', () => {
     await page.locator('.recipe-form-actions-right').getByRole('button', { name: 'Cancel' }).click();
 
     await navigateTo(page, 'Shopping');
-    await page.getByText('Recipe Shopping List').click();
+    await selectShoppingList(page, 'Recipe Shopping List');
     await expect(page.getByRole('checkbox', { name: 'Flour' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('checkbox', { name: 'Milk' })).toBeVisible();
 

@@ -699,5 +699,21 @@
   "notifications_external_destinations_help": "Administratorii pot adăuga destinații Gotify, ntfy, Telegram, Matrix sau e-mail pentru mementouri ale gospodăriei și activitate de cumpărături selectată.",
   "notifications_external_destinations_action": "Configure household notifications",
   "notification_destinations_event_shopping_list": "Modificări ale listelor de cumpărături",
-  "notification_destinations_event_shopping_item": "Modificări ale articolelor de cumpărături"
+  "notification_destinations_event_shopping_item": "Modificări ale articolelor de cumpărături",
+  "nav.group.today": "Azi",
+  "nav.group.plan": "Plan",
+  "nav.group.lists": "Liste",
+  "nav.group.people": "Persoane",
+  "nav.group.household": "Gospodărie",
+  "nav.group.system": "Mai mult / Sistem",
+  "module.dashboard.today_command_center": "Today command center",
+  "module.dashboard.today_kicker": "Today at home",
+  "module.dashboard.next_up_title": "Next up",
+  "module.dashboard.next_up_empty": "Nothing else scheduled",
+  "module.dashboard.next_up_empty_hint": "Use quick capture to park anything the family should remember.",
+  "module.dashboard.today_status_events": "Events today",
+  "module.dashboard.today_status_tasks": "Open tasks",
+  "module.dashboard.today_status_shopping": "Shopping open",
+  "module.dashboard.today_status_birthdays": "Birthdays soon",
+  "module.dashboard.today_status_label": "Today status"
 }
