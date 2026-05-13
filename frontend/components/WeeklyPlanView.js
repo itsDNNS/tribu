@@ -147,12 +147,27 @@ function formatWeekLabel(range, locale) {
   return `${range.start.toLocaleDateString(locale, { day: '2-digit', month: 'short' })} – ${range.end.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })}`;
 }
 
-function Section({ title, icon: Icon, items, emptyLabel, renderItem }) {
+function Section({ title, icon: Icon, items, emptyLabel, renderItem, sectionKey }) {
   return (
-    <section className="weekly-plan-section" role="region" aria-label={title}>
-      <h2><Icon size={17} aria-hidden="true" /> {title}</h2>
+    <section className={`weekly-plan-section weekly-plan-section-${sectionKey}`} role="region" aria-label={title}>
+      <span className={`weekly-plan-section-visual weekly-plan-section-visual-${sectionKey}`} aria-hidden="true">
+        <Icon size={22} />
+      </span>
+      <div className="weekly-plan-section-header">
+        <h2>{title}</h2>
+        <span className="weekly-plan-section-count">{items.length}</span>
+      </div>
       {items.length ? <ul>{items.map(renderItem)}</ul> : <p className="weekly-plan-empty">{emptyLabel}</p>}
     </section>
+  );
+}
+
+function WeeklyPlanItem({ meta, title, accent = 'neutral' }) {
+  return (
+    <li className={`weekly-plan-item weekly-plan-item-${accent}`}>
+      <span>{meta}</span>
+      <strong>{title}</strong>
+    </li>
   );
 }
 
@@ -212,15 +227,28 @@ export default function WeeklyPlanView({ initialDate, initialMeals = null, initi
 
   return (
     <main className="weekly-plan-page print-surface">
-      <div className="weekly-plan-toolbar no-print">
-        <button type="button" className="btn-secondary" onClick={() => setActiveView('dashboard')}><ArrowLeft size={16} /> {t(messages, 'module.weekly_plan.back_dashboard')}</button>
-        <div className="weekly-plan-nav">
-          <button type="button" className="btn-secondary" onClick={() => setAnchor(addDays(anchor, -7))}><ChevronLeft size={16} /> {t(messages, 'module.weekly_plan.previous_week')}</button>
-          <button type="button" className="btn-secondary" onClick={() => setAnchor(new Date())}>{t(messages, 'module.weekly_plan.this_week')}</button>
-          <button type="button" className="btn-secondary" onClick={() => setAnchor(addDays(anchor, 7))}>{t(messages, 'module.weekly_plan.next_week')} <ChevronRight size={16} /></button>
+      <header className="family-view-header weekly-plan-header">
+        <span className="weekly-plan-header-icon" aria-hidden="true">
+          <CalendarDays size={24} />
+        </span>
+        <div className="weekly-plan-title-block">
+          <p className="view-kicker">Tribu</p>
+          <h1>{t(messages, 'module.weekly_plan.title')}</h1>
+          <p>{t(messages, 'module.weekly_plan.subtitle')}</p>
         </div>
-        <button type="button" className="btn-primary no-print" onClick={() => window.print()}><Printer size={16} /> {t(messages, 'module.weekly_plan.print')}</button>
+        <strong className="weekly-plan-week-pill">{formatWeekLabel(range, locale)}</strong>
+      </header>
+
+      <div className="weekly-plan-toolbar no-print">
+        <button type="button" className="btn-secondary weekly-plan-back-btn" onClick={() => setActiveView('dashboard')}><ArrowLeft size={16} /> {t(messages, 'module.weekly_plan.back_dashboard')}</button>
+        <div className="weekly-plan-nav">
+          <button type="button" className="btn-secondary weekly-plan-icon-btn" onClick={() => setAnchor(addDays(anchor, -7))} aria-label={t(messages, 'module.weekly_plan.previous_week')}><ChevronLeft size={16} /></button>
+          <button type="button" className="btn-secondary weekly-plan-today-btn" onClick={() => setAnchor(new Date())}>{t(messages, 'module.weekly_plan.this_week')}</button>
+          <button type="button" className="btn-secondary weekly-plan-icon-btn" onClick={() => setAnchor(addDays(anchor, 7))} aria-label={t(messages, 'module.weekly_plan.next_week')}><ChevronRight size={16} /></button>
+        </div>
+        <button type="button" className="btn-primary weekly-plan-print-btn no-print" onClick={() => window.print()}><Printer size={16} /> {t(messages, 'module.weekly_plan.print')}</button>
       </div>
+
       <fieldset className="weekly-plan-filters no-print" aria-label={t(messages, 'module.weekly_plan.filters')}>
         <label className="weekly-plan-member-filter">
           <span>{t(messages, 'module.weekly_plan.filter_member')}</span>
@@ -244,27 +272,41 @@ export default function WeeklyPlanView({ initialDate, initialMeals = null, initi
           ))}
         </div>
       </fieldset>
-      <header className="weekly-plan-header">
-        <p className="eyebrow">Tribu</p>
-        <h1>{t(messages, 'module.weekly_plan.title')}</h1>
-        <p>{t(messages, 'module.weekly_plan.subtitle')}</p>
-        <strong>{formatWeekLabel(range, locale)}</strong>
-      </header>
+
+      <div className="weekly-plan-summary no-print">
+        {SECTION_CONFIG.map((section) => {
+          const Icon = section.icon;
+          return (
+            <button
+              type="button"
+              key={section.key}
+              className={`weekly-plan-summary-card weekly-plan-summary-card-${section.key}${visibleSections.has(section.key) ? ' active' : ''}`}
+              onClick={() => toggleSection(section.key)}
+              aria-pressed={visibleSections.has(section.key)}
+            >
+              <span className="weekly-plan-summary-icon" aria-hidden="true"><Icon size={18} /></span>
+              <span className="weekly-plan-summary-label">{t(messages, section.labelKey)}</span>
+              <strong>{sections[section.key]?.length || 0}</strong>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="weekly-plan-grid">
-        {visibleSections.has('events') && <Section title={t(messages, 'module.weekly_plan.events')} icon={CalendarDays} items={sections.events} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(event) => (
-          <li key={`event-${event.id || event.title}`}><span>{formatDate(eventDate(event), locale)} {parseDate(eventDate(event))?.toLocaleTimeString(locale, timeOptions)}</span><strong>{event.title}</strong></li>
+        {visibleSections.has('events') && <Section sectionKey="events" title={t(messages, 'module.weekly_plan.events')} icon={CalendarDays} items={sections.events} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(event) => (
+          <WeeklyPlanItem key={`event-${event.id || event.title}`} accent="events" meta={`${formatDate(eventDate(event), locale)} ${parseDate(eventDate(event))?.toLocaleTimeString(locale, timeOptions) || ''}`} title={event.title} />
         )} />}
-        {visibleSections.has('tasks') && <Section title={t(messages, 'module.weekly_plan.tasks')} icon={ListChecks} items={sections.tasks} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(task) => (
-          <li key={`task-${task.id || task.title}`}><span>{formatDate(taskDate(task), locale) || t(messages, 'module.weekly_plan.no_due_date')}</span><strong>{task.title}</strong></li>
+        {visibleSections.has('tasks') && <Section sectionKey="tasks" title={t(messages, 'module.weekly_plan.tasks')} icon={ListChecks} items={sections.tasks} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(task) => (
+          <WeeklyPlanItem key={`task-${task.id || task.title}`} accent="tasks" meta={formatDate(taskDate(task), locale) || t(messages, 'module.weekly_plan.no_due_date')} title={task.title} />
         )} />}
-        {visibleSections.has('meals') && <Section title={t(messages, 'module.weekly_plan.meals')} icon={Utensils} items={sections.meals} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(meal) => (
-          <li key={`meal-${meal.id || meal.meal_name}`}><span>{formatDate(mealDate(meal), locale)} {meal.slot || meal.meal_type || ''}</span><strong>{meal.meal_name || meal.title || meal.name}</strong></li>
+        {visibleSections.has('meals') && <Section sectionKey="meals" title={t(messages, 'module.weekly_plan.meals')} icon={Utensils} items={sections.meals} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(meal) => (
+          <WeeklyPlanItem key={`meal-${meal.id || meal.meal_name}`} accent="meals" meta={`${formatDate(mealDate(meal), locale)} ${meal.slot || meal.meal_type || ''}`} title={meal.meal_name || meal.title || meal.name} />
         )} />}
-        {visibleSections.has('birthdays') && <Section title={t(messages, 'module.weekly_plan.birthdays')} icon={Cake} items={sections.birthdays} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(birthday) => (
-          <li key={`birthday-${birthday.id || birthday.person_name || birthday.name}`}><span>{formatDate(birthdayDate(birthday, range.start), locale)}</span><strong>{birthday.person_name || birthday.name}</strong></li>
+        {visibleSections.has('birthdays') && <Section sectionKey="birthdays" title={t(messages, 'module.weekly_plan.birthdays')} icon={Cake} items={sections.birthdays} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(birthday) => (
+          <WeeklyPlanItem key={`birthday-${birthday.id || birthday.person_name || birthday.name}`} accent="birthdays" meta={formatDate(birthdayDate(birthday, range.start), locale)} title={birthday.person_name || birthday.name} />
         )} />}
-        {visibleSections.has('shopping') && <Section title={t(messages, 'module.weekly_plan.shopping')} icon={ShoppingCart} items={sections.shopping} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(item) => (
-          <li key={`shopping-${item.id || item.title}`}><span>{item.detail}</span><strong>{item.title}</strong></li>
+        {visibleSections.has('shopping') && <Section sectionKey="shopping" title={t(messages, 'module.weekly_plan.shopping')} icon={ShoppingCart} items={sections.shopping} emptyLabel={t(messages, 'module.weekly_plan.empty_section')} renderItem={(item) => (
+          <WeeklyPlanItem key={`shopping-${item.id || item.title}`} accent="shopping" meta={item.detail} title={item.title} />
         )} />}
       </div>
     </main>

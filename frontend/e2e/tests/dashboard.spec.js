@@ -279,4 +279,50 @@ test.describe('Dashboard', () => {
       }
     }
   });
+
+  test('keeps weekly plan print output light, readable, and free of app chrome', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    await seedCalendarEvent(apiCtx, familyId, { title: 'Weekly print event' });
+    await seedTask(apiCtx, familyId, { title: 'Weekly print task' });
+
+    await page.evaluate(() => {
+      window.localStorage.setItem('tribu_theme', 'midnight-glass');
+    });
+    await page.reload();
+    await page.locator('#main-content').waitFor({ timeout: 15000 });
+    await navigateTo(page, 'Weekly plan');
+    await expect(page.getByRole('heading', { name: 'Weekly plan' })).toBeVisible({ timeout: 10000 });
+
+    await page.emulateMedia({ media: 'print' });
+    const printState = await page.evaluate(() => {
+      const styleOf = (selector) => {
+        const element = document.querySelector(selector);
+        return element ? window.getComputedStyle(element) : null;
+      };
+      const pageStyle = styleOf('.weekly-plan-page');
+      const headerStyle = styleOf('.weekly-plan-header');
+      const sectionStyle = styleOf('.weekly-plan-section');
+      const toolbarStyle = styleOf('.weekly-plan-toolbar');
+      const iconStyle = styleOf('.weekly-plan-header-icon');
+      const navStyle = styleOf('.bottom-nav');
+      return {
+        pageBackground: pageStyle?.backgroundColor,
+        headerBackground: headerStyle?.backgroundColor,
+        sectionBackground: sectionStyle?.backgroundColor,
+        headerColor: styleOf('.weekly-plan-header h1')?.color,
+        toolbarDisplay: toolbarStyle?.display,
+        iconDisplay: iconStyle?.display,
+        bottomNavDisplay: navStyle?.display || 'none',
+      };
+    });
+
+    expect(printState.pageBackground).toBe('rgb(255, 255, 255)');
+    expect(printState.headerBackground).toBe('rgb(255, 255, 255)');
+    expect(printState.sectionBackground).toBe('rgb(255, 255, 255)');
+    expect(printState.headerColor).toBe('rgb(26, 21, 32)');
+    expect(printState.toolbarDisplay).toBe('none');
+    expect(printState.iconDisplay).toBe('none');
+    expect(printState.bottomNavDisplay).toBe('none');
+    await page.emulateMedia({ media: 'screen' });
+  });
 });

@@ -157,6 +157,13 @@ describe('WeeklyPlanView', () => {
     expect(screen.getByText('Mia bag')).toBeVisible();
     expect(screen.queryByText('Leo bag')).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: /Tasks and routines\s+1/i }));
+    expect(screen.queryByRole('region', { name: 'Tasks and routines' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tasks and routines\s+1/i })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: /Tasks and routines\s+1/i }));
+    expect(screen.getByRole('region', { name: 'Tasks and routines' })).toBeVisible();
+    expect(screen.getByRole('button', { name: /Tasks and routines\s+1/i })).toHaveAttribute('aria-pressed', 'true');
+
     fireEvent.click(within(screen.getByLabelText('Sections')).getByLabelText('Tasks and routines'));
     expect(screen.queryByRole('region', { name: 'Tasks and routines' })).not.toBeInTheDocument();
   });
@@ -197,12 +204,13 @@ describe('weekly plan theme CSS contract', () => {
 
     const weeklyCss = css.slice(weeklyPlanStart, weeklyPlanEnd);
 
-    expect(weeklyCss).toContain('--weekly-plan-surface: #ffffff');
-    expect(weeklyCss).toContain('--weekly-plan-text-primary: #1a1520');
-    expect(weeklyCss).toContain('--weekly-plan-text-secondary: #5e5673');
+    expect(weeklyCss).toContain('--weekly-plan-surface: rgb(255, 253, 248)');
+    expect(weeklyCss).toContain('--weekly-plan-text-primary: var(--text-primary)');
+    expect(weeklyCss).toContain('--weekly-plan-text-secondary: var(--text-secondary)');
     expect(weeklyCss).toContain('background: var(--weekly-plan-surface)');
     expect(weeklyCss).toContain('color: var(--weekly-plan-text-primary)');
     expect(weeklyCss).toContain('color: var(--weekly-plan-text-secondary)');
+    expect(weeklyCss).toContain(':root .weekly-plan-page { --weekly-plan-surface: #ffffff;');
     expect(weeklyCss).not.toContain('.weekly-plan-section li strong { color: var(--text-primary);');
     expect(weeklyCss).not.toContain('.weekly-plan-section li span { color: var(--text-secondary);');
   });
