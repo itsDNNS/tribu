@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { navigateTo } = require('../helpers/navigation');
 
 test.use({ serviceWorkers: 'block' });
 
@@ -64,5 +65,26 @@ test.describe('Rewards dashboard widget', () => {
     await expect(rewardsCard).toContainText('Rewards');
     await expect(rewardsCard.getByRole('button', { name: 'View all' })).toBeVisible();
     await expect(rewardsCard).not.toContainText('view_all');
+  });
+
+  test('demo rewards view uses the refreshed panel layout', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.getByRole('button', { name: /try demo/i }).first().click();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 90000 });
+
+    await navigateTo(page, 'Rewards');
+
+    await expect(page.locator('.rewards-page')).toBeVisible({ timeout: 30000 });
+    await expect(page.getByRole('heading', { name: /Rewards|Belohnungen/ })).toBeVisible();
+    await expect(page.getByText(/Family balances|Familien-Guthaben/)).toBeVisible();
+    await expect(page.getByText(/Quick award|Schnell vergeben/)).toBeVisible();
+    await expect(page.locator('.rewards-panel').first()).toBeVisible();
+    await expect(page.locator('body')).not.toContainText('module.rewards');
+
+    const hasHorizontalOverflow = await page.evaluate(() => (
+      document.body.scrollWidth > window.innerWidth
+      || document.documentElement.scrollWidth > window.innerWidth
+    ));
+    expect(hasHorizontalOverflow).toBe(false);
   });
 });

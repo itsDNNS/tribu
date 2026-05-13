@@ -9,21 +9,61 @@ import MemberAvatar from './MemberAvatar';
 import * as api from '../lib/api';
 
 const CURRENCY_PRESETS = [
-  { name: 'Stars', icon: 'star', Icon: Star, color: '#f59e0b' },
-  { name: 'Gems', icon: 'gem', Icon: Gem, color: '#7c3aed' },
-  { name: 'Hearts', icon: 'heart', Icon: Heart, color: '#f43f5e' },
-  { name: 'Bolts', icon: 'zap', Icon: Zap, color: '#06b6d4' },
-  { name: 'Trophies', icon: 'trophy', Icon: Trophy, color: '#f59e0b' },
+  { name: 'Stars', icon: 'star', Icon: Star },
+  { name: 'Gems', icon: 'gem', Icon: Gem },
+  { name: 'Hearts', icon: 'heart', Icon: Heart },
+  { name: 'Bolts', icon: 'zap', Icon: Zap },
+  { name: 'Trophies', icon: 'trophy', Icon: Trophy },
 ];
 
+function RewardAmount({ currency, amount, sign = '' }) {
+  return (
+    <span className="rewards-amount">
+      {sign}{amount} <CurrencyIcon icon={currency.icon} label={currency.name} />
+    </span>
+  );
+}
+
+function RewardsPageHeader({ messages, currency }) {
+  return (
+    <div className="family-view-header rewards-page-header">
+      <span className="rewards-page-icon" aria-hidden="true">
+        <Gift size={24} />
+      </span>
+      <div className="rewards-page-title">
+        <h1>{t(messages, 'module.rewards.name')}</h1>
+        {currency && (
+          <span className="rewards-header-currency">
+            <CurrencyIcon icon={currency.icon} label={currency.name} /> {currency.name}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RewardsPanel({ title, children, className = '', action }) {
+  return (
+    <section className={`rewards-panel${className ? ` ${className}` : ''}`}>
+      <div className="rewards-panel-header">
+        <h2 className="rewards-section-title">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function RewardRowIcon({ children, tone = 'neutral' }) {
+  return <span className={`rewards-row-icon rewards-row-icon-${tone}`} aria-hidden="true">{children}</span>;
+}
+
 export default function RewardsView() {
-  const { messages, members, me, isChild, tasks, loadTasks } = useApp();
+  const { messages, members, me, isChild, tasks, loadTasks, lang, demoMode } = useApp();
   const rw = useRewards();
 
   const [tab, setTab] = useState('overview');
   const [creatingCurrency, setCreatingCurrency] = useState(false);
-
-  // Form state
   const [ruleName, setRuleName] = useState('');
   const [ruleAmount, setRuleAmount] = useState(1);
   const [rewardName, setRewardName] = useState('');
@@ -32,19 +72,32 @@ export default function RewardsView() {
   const [earnUserId, setEarnUserId] = useState('');
   const [earnAmount, setEarnAmount] = useState(1);
   const [earnNote, setEarnNote] = useState('');
-
-  // Inline task-reward confirmation
   const [confirmingTask, setConfirmingTask] = useState(null);
   const [confirmAmount, setConfirmAmount] = useState(1);
 
-  // Tasks with token rewards (open, assigned)
-  const rewardTasks = (tasks || []).filter(tk => tk.status === 'open' && tk.token_reward_amount > 0);
+  const rewardTasks = (tasks || []).filter((task) => task.status === 'open' && task.token_reward_amount > 0);
+  const activeCatalog = rw.catalog.filter((reward) => reward.is_active);
+
+  if (rw.loading) {
+    return (
+      <div className="rewards-page">
+        <RewardsPageHeader messages={messages} />
+        <section className="rewards-panel">
+          <div className="skeleton skeleton-text rewards-widget-skeleton-line" />
+          <div className="skeleton skeleton-text rewards-widget-skeleton-line short" />
+        </section>
+      </div>
+    );
+  }
 
   async function handleEarnForTask() {
     if (!confirmingTask || !rw.currency) return;
-    const { ok } = await api.apiUpdateTask(confirmingTask.id, { status: 'done' });
-    if (!ok) return;
-    await rw.earnTokens(confirmingTask.assigned_to_user_id || me?.user_id, confirmAmount, `Task: ${confirmingTask.title}`);
+    if (!demoMode) {
+      const { ok } = await api.apiUpdateTask(confirmingTask.id, { status: 'done' });
+      if (!ok) return;
+    }
+    const note = t(messages, 'module.rewards.from_task').replace('{title}', confirmingTask.title);
+    await rw.earnTokens(confirmingTask.assigned_to_user_id || me?.user_id, confirmAmount, note);
     setConfirmingTask(null);
     if (loadTasks) await loadTasks();
   }
@@ -53,277 +106,336 @@ export default function RewardsView() {
     e.preventDefault();
     if (!earnUserId) return;
     await rw.earnTokens(Number(earnUserId), earnAmount, earnNote);
-    setEarnUserId(''); setEarnAmount(1); setEarnNote('');
+    setEarnUserId('');
+    setEarnAmount(1);
+    setEarnNote('');
   }
 
-  // -- No currency setup --
   if (!rw.currency && !isChild) {
     return (
-      <div className="view-content">
-        <div className="view-header"><h1><Gift size={22} /> {t(messages, 'module.rewards.name')}</h1></div>
-        <div className="glass settings-section rewards-setup">
-          <h3 className="rewards-setup-title">{t(messages, 'module.rewards.currency_setup')}</h3>
-          <div className="rewards-setup-grid">
-            {CURRENCY_PRESETS.map(p => (
-              <button key={p.name} className="glass-sm rewards-setup-option" disabled={creatingCurrency} onClick={async () => {
-                if (creatingCurrency) return;
-                setCreatingCurrency(true);
-                await rw.createCurrency(p.name, p.icon);
-                setCreatingCurrency(false);
-              }}>
-                <p.Icon size={24} style={{ color: p.color, flexShrink: 0 }} />
-                <div className="rewards-setup-option-name">{p.name}</div>
-              </button>
-            ))}
+      <div className="rewards-page rewards-page-setup">
+        <RewardsPageHeader messages={messages} />
+        <section className="rewards-panel rewards-setup">
+          <div className="rewards-panel-header">
+            <h2 className="rewards-section-title">{t(messages, 'module.rewards.currency_setup')}</h2>
           </div>
-        </div>
+          <div className="rewards-setup-grid">
+            {CURRENCY_PRESETS.map((preset) => {
+              const PresetIcon = preset.Icon;
+              return (
+                <button
+                  key={preset.name}
+                  className="rewards-setup-option"
+                  type="button"
+                  disabled={creatingCurrency}
+                  onClick={async () => {
+                    if (creatingCurrency) return;
+                    setCreatingCurrency(true);
+                    await rw.createCurrency(preset.name, preset.icon);
+                    setCreatingCurrency(false);
+                  }}
+                >
+                  <RewardRowIcon tone={preset.icon}>
+                    <PresetIcon size={20} />
+                  </RewardRowIcon>
+                  <span className="rewards-setup-option-name">{preset.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       </div>
     );
   }
 
   if (!rw.currency && isChild) {
     return (
-      <div className="view-content">
-        <div className="view-header"><h1><Gift size={22} /> {t(messages, 'module.rewards.name')}</h1></div>
+      <div className="rewards-page">
+        <RewardsPageHeader messages={messages} />
         <div className="rewards-empty">{t(messages, 'module.rewards.no_currency')}</div>
       </div>
     );
   }
 
-  // -- Child view --
   if (isChild) {
-    const myTasks = rewardTasks.filter(tk => tk.assigned_to_user_id === me?.user_id);
+    const myTasks = rewardTasks.filter((task) => task.assigned_to_user_id === me?.user_id);
+    const target = activeCatalog
+      .filter((reward) => !rw.myBalance || rw.myBalance.balance < reward.cost)
+      .sort((a, b) => a.cost - b.cost)[0];
+    const progress = target && rw.myBalance ? Math.min(100, Math.round((rw.myBalance.balance / target.cost) * 100)) : 0;
+    const remaining = target && rw.myBalance ? Math.max(0, target.cost - rw.myBalance.balance) : 0;
+
     return (
-      <div className="view-content">
-        <div className="view-header"><h1><Gift size={22} /> {t(messages, 'module.rewards.name')}</h1></div>
+      <div className="rewards-page rewards-child-page">
+        <RewardsPageHeader messages={messages} currency={rw.currency} />
         {rw.myBalance && (
-          <div className="glass glow-purple rewards-hero">
-            <div className="rewards-hero-value"><CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {rw.myBalance.balance}</div>
+          <section className="rewards-hero rewards-panel">
+            <div className="rewards-hero-value">
+              <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {rw.myBalance.balance}
+            </div>
             <div className="rewards-hero-label">{rw.currency.name}</div>
             {rw.myBalance.pending > 0 && <div className="rewards-hero-pending">{t(messages, 'module.rewards.pending').replace('{count}', rw.myBalance.pending)}</div>}
-          </div>
+          </section>
         )}
-        {(() => {
-          const unaffordable = rw.catalog
-            .filter(r => r.is_active && (!rw.myBalance || rw.myBalance.balance < r.cost))
-            .sort((a, b) => a.cost - b.cost);
-          const target = unaffordable[0];
-          if (!target || !rw.myBalance) return null;
-          const pct = Math.min(100, Math.round((rw.myBalance.balance / target.cost) * 100));
-          const remaining = target.cost - rw.myBalance.balance;
-          return (
-            <div className="rewards-progress">
-              <div className="rewards-progress-label">
-                {t(messages, 'module.rewards.progress_toward').replace('{name}', target.name)}
-              </div>
-              <div className="rewards-progress-bar">
-                <div className="rewards-progress-fill" style={{ width: `${pct}%` }} />
-              </div>
-              <div className="rewards-progress-info">
-                <span>{rw.myBalance.balance} / {target.cost} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></span>
-                <span>{t(messages, 'module.rewards.progress_remaining').replace('{count}', remaining)}</span>
-              </div>
+
+        {target && rw.myBalance && (
+          <section className="rewards-progress rewards-panel">
+            <div className="rewards-progress-label">
+              {t(messages, 'module.rewards.progress_toward').replace('{name}', target.name)}
             </div>
-          );
-        })()}
-        {myTasks.length > 0 && (
-          <>
-            <h3 className="rewards-section-title">{t(messages, 'module.rewards.tasks_with_reward')}</h3>
-            {myTasks.map(tk => (
-              <div key={tk.id} className="glass-sm rewards-row rewards-row-task">
-                <CheckSquare size={14} style={{ color: 'var(--amethyst)' }} />
-                <span className="rewards-row-title">{tk.title}</span>
-                <span className="rewards-row-value">+{tk.token_reward_amount} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></span>
-              </div>
-            ))}
-          </>
+            <div className="rewards-progress-bar">
+              <span className="rewards-progress-fill" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="rewards-progress-info">
+              <span><RewardAmount currency={rw.currency} amount={`${rw.myBalance.balance} / ${target.cost}`} /></span>
+              <span>{t(messages, 'module.rewards.progress_remaining').replace('{count}', remaining)}</span>
+            </div>
+          </section>
         )}
-        <h3 className="rewards-section-title">{t(messages, 'module.rewards.catalog')}</h3>
-        {rw.catalog.filter(r => r.is_active).length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rewards')}</div>}
-        <div className="settings-grid">
-          {rw.catalog.filter(r => r.is_active).map(r => {
-            const canAfford = rw.myBalance && rw.myBalance.balance >= r.cost;
-            return (
-              <div key={r.id} className={`glass-sm settings-section rewards-catalog-item${canAfford ? '' : ' rewards-catalog-item-locked'}`}>
-                <Award size={18} style={{ color: 'var(--amethyst)', flexShrink: 0 }} />
-                <div className="rewards-row-title">
-                  <div className="rewards-balance-card-name">{r.name}</div>
-                  <div className="rewards-row-meta">{r.cost} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></div>
+
+        {myTasks.length > 0 && (
+          <RewardsPanel title={t(messages, 'module.rewards.tasks_with_reward')}>
+            <div className="rewards-list">
+              {myTasks.map((task) => (
+                <div key={task.id} className="rewards-row rewards-row-task">
+                  <RewardRowIcon tone="task"><CheckSquare size={16} /></RewardRowIcon>
+                  <span className="rewards-row-title">{task.title}</span>
+                  <RewardAmount currency={rw.currency} amount={task.token_reward_amount} sign="+" />
                 </div>
-                <button className="btn-sm" disabled={!canAfford} onClick={() => rw.redeem(r)}>{t(messages, 'module.rewards.redeem')}</button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
+              ))}
+            </div>
+          </RewardsPanel>
+        )}
 
-  // -- Adult view --
-  return (
-    <div className="view-content">
-      <div className="view-header">
-        <h1><Gift size={22} /> {t(messages, 'module.rewards.name')} <span className="rewards-header-currency"><CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {rw.currency.name}</span></h1>
-      </div>
-
-      {/* Tabs - history demoted to link */}
-      <div className="rewards-tabs">
-        {['overview', 'catalog'].map(k => (
-          <button key={k} className={`rewards-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>
-            {t(messages, `module.rewards.tab_${k}`)}
-            {k === 'overview' && rw.pendingCount > 0 && <span className="rewards-tab-badge">{rw.pendingCount}</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* Overview Tab */}
-      {tab === 'overview' && (
-        <>
-          {/* Balances */}
-          <h3 className="rewards-section-title">{t(messages, 'module.rewards.balances_title')}</h3>
-          <div className="rewards-balances">
-            {rw.balances.map((b, i) => {
-              const member = members.find(m => m.user_id === b.user_id);
+        <RewardsPanel title={t(messages, 'module.rewards.catalog')}>
+          {activeCatalog.length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rewards')}</div>}
+          <div className="rewards-catalog-grid">
+            {activeCatalog.map((reward) => {
+              const canAfford = rw.myBalance && rw.myBalance.balance >= reward.cost;
               return (
-                <div key={b.user_id} className="glass-sm rewards-balance-card">
-                  <MemberAvatar member={member || { display_name: b.display_name }} index={i} size={28} />
-                  <div>
-                    <div className="rewards-balance-card-name">{b.display_name}</div>
-                    <div className="rewards-balance-card-value"><CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {b.balance}</div>
+                <div key={reward.id} className={`rewards-catalog-card${canAfford ? '' : ' rewards-catalog-card-locked'}`}>
+                  <RewardRowIcon tone="spend"><Award size={18} /></RewardRowIcon>
+                  <div className="rewards-row-title">
+                    <div className="rewards-balance-card-name">{reward.name}</div>
+                    <div className="rewards-row-meta"><RewardAmount currency={rw.currency} amount={reward.cost} /></div>
                   </div>
+                  <button className="btn-sm" type="button" disabled={!canAfford} onClick={() => rw.redeem(reward)}>
+                    {t(messages, 'module.rewards.redeem')}
+                  </button>
                 </div>
               );
             })}
           </div>
+        </RewardsPanel>
+      </div>
+    );
+  }
 
-          {/* Tasks with token rewards */}
-          {rewardTasks.length > 0 && (
-            <>
-              <h3 className="rewards-section-title">{t(messages, 'module.rewards.tasks_with_reward')}</h3>
-              {rewardTasks.map(tk => {
-                const assignee = members.find(m => m.user_id === tk.assigned_to_user_id);
-                const isConfirming = confirmingTask?.id === tk.id;
+  return (
+    <div className="rewards-page">
+      <RewardsPageHeader messages={messages} currency={rw.currency} />
+
+      <div className="rewards-tabs" role="group" aria-label={t(messages, 'module.rewards.name')}>
+        {['overview', 'catalog'].map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`rewards-tab${tab === key ? ' active' : ''}`}
+            onClick={() => setTab(key)}
+            aria-pressed={tab === key}
+          >
+            {t(messages, `module.rewards.tab_${key}`)}
+            {key === 'overview' && rw.pendingCount > 0 && <span className="rewards-tab-badge">{rw.pendingCount}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'overview' && (
+        <div className="rewards-grid">
+          <RewardsPanel title={t(messages, 'module.rewards.balances_title')} className="rewards-panel-wide">
+            <div className="rewards-balances">
+              {rw.balances.map((balance, index) => {
+                const member = members.find((item) => item.user_id === balance.user_id);
                 return (
-                  <div key={tk.id}>
-                    <div className={`glass-sm rewards-row rewards-row-task${isConfirming ? ' rewards-row-top' : ''}`}>
-                      <button className="btn-ghost rewards-action" onClick={() => { setConfirmingTask(isConfirming ? null : tk); setConfirmAmount(tk.token_reward_amount); }}>
-                        <CheckSquare size={16} style={{ color: isConfirming ? 'var(--success)' : 'var(--amethyst)' }} />
-                      </button>
-                      <span className="rewards-row-title">{tk.title}</span>
-                      {assignee && <span className="rewards-row-meta">{assignee.display_name}</span>}
-                      <span className="rewards-row-value">+{tk.token_reward_amount} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></span>
+                  <div key={balance.user_id} className="rewards-balance-card">
+                    <MemberAvatar member={member || { display_name: balance.display_name }} index={index} size={30} />
+                    <div>
+                      <div className="rewards-balance-card-name">{balance.display_name}</div>
+                      <div className="rewards-balance-card-value"><RewardAmount currency={rw.currency} amount={balance.balance} /></div>
                     </div>
-                    {isConfirming && (
-                      <div className="glass-sm rewards-row rewards-row-bottom">
-                        <span className="rewards-row-meta">{assignee?.display_name || '?'}</span>
-                        <input type="number" className="form-input rewards-earn-amount" min={1} value={confirmAmount} onChange={e => setConfirmAmount(Number(e.target.value))} />
-                        <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} />
-                        <button className="btn-sm" onClick={handleEarnForTask}><Check size={14} /></button>
-                        <button className="btn-ghost rewards-action" onClick={() => setConfirmingTask(null)}><X size={14} /></button>
-                      </div>
+                    {balance.pending > 0 && (
+                      <span className="rewards-balance-pending">{t(messages, 'module.rewards.pending').replace('{count}', balance.pending)}</span>
                     )}
                   </div>
                 );
               })}
-            </>
+            </div>
+          </RewardsPanel>
+
+          <RewardsPanel title={t(messages, 'module.rewards.earn_quick')} className="rewards-quick-award">
+            <form onSubmit={handleEarn} className="rewards-earn-form">
+              <select className="form-input rewards-earn-select" value={earnUserId} onChange={(e) => setEarnUserId(e.target.value)} required>
+                <option value="">{t(messages, 'module.rewards.earn_member')}</option>
+                {members.map((member) => <option key={member.user_id} value={member.user_id}>{member.display_name}</option>)}
+              </select>
+              <input className="form-input rewards-earn-amount" type="number" min={1} value={earnAmount} onChange={(e) => setEarnAmount(Number(e.target.value))} aria-label={t(messages, 'module.rewards.earn_amount')} />
+              <input className="form-input rewards-earn-note" value={earnNote} onChange={(e) => setEarnNote(e.target.value)} placeholder={t(messages, 'module.rewards.earn_note')} />
+              <button className="btn-sm rewards-submit-btn" type="submit">
+                <Plus size={14} aria-hidden="true" /> {t(messages, 'module.rewards.earn_tokens')}
+              </button>
+            </form>
+          </RewardsPanel>
+
+          {rewardTasks.length > 0 && (
+            <RewardsPanel title={t(messages, 'module.rewards.tasks_with_reward')} className="rewards-panel-wide">
+              <div className="rewards-list">
+                {rewardTasks.map((task) => {
+                  const assignee = members.find((member) => member.user_id === task.assigned_to_user_id);
+                  const isConfirming = confirmingTask?.id === task.id;
+                  return (
+                    <div key={task.id} className="rewards-task-confirm">
+                      <div className={`rewards-row rewards-row-task${isConfirming ? ' rewards-row-top' : ''}`}>
+                        <button
+                          className="btn-ghost rewards-action rewards-action-task"
+                          type="button"
+                          onClick={() => {
+                            setConfirmingTask(isConfirming ? null : task);
+                            setConfirmAmount(task.token_reward_amount);
+                          }}
+                          aria-label={`${t(messages, 'module.rewards.earn_tokens')}: ${task.title}`}
+                        >
+                          <CheckSquare size={16} aria-hidden="true" />
+                        </button>
+                        <span className="rewards-row-title">{task.title}</span>
+                        {assignee && <span className="rewards-row-meta">{assignee.display_name}</span>}
+                        <RewardAmount currency={rw.currency} amount={task.token_reward_amount} sign="+" />
+                      </div>
+                      {isConfirming && (
+                        <div className="rewards-row rewards-row-bottom">
+                          <span className="rewards-row-meta">{assignee?.display_name || ''}</span>
+                          <input type="number" className="form-input rewards-earn-amount" min={1} value={confirmAmount} onChange={(e) => setConfirmAmount(Number(e.target.value))} aria-label={t(messages, 'module.rewards.earn_amount')} />
+                          <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} />
+                          <button className="btn-sm rewards-action rewards-action-confirm" type="button" onClick={handleEarnForTask} aria-label={t(messages, 'module.rewards.confirm')}><Check size={14} aria-hidden="true" /></button>
+                          <button className="btn-ghost rewards-action rewards-action-reject" type="button" onClick={() => setConfirmingTask(null)} aria-label={t(messages, 'module.rewards.reject')}><X size={14} aria-hidden="true" /></button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </RewardsPanel>
           )}
 
-          {/* Quick earn */}
-          <h3 className="rewards-section-title">{t(messages, 'module.rewards.earn_quick')}</h3>
-          <form onSubmit={handleEarn} className="glass-sm settings-section rewards-earn-form">
-            <select className="form-input rewards-earn-select" value={earnUserId} onChange={e => setEarnUserId(e.target.value)} required>
-              <option value="">{t(messages, 'module.rewards.earn_member')}</option>
-              {members.map(m => <option key={m.user_id} value={m.user_id}>{m.display_name}</option>)}
-            </select>
-            <input className="form-input rewards-earn-amount" type="number" min={1} value={earnAmount} onChange={e => setEarnAmount(Number(e.target.value))} />
-            <input className="form-input rewards-earn-note" value={earnNote} onChange={e => setEarnNote(e.target.value)} placeholder={t(messages, 'module.rewards.earn_note')} />
-            <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'module.rewards.earn_tokens')}</button>
-          </form>
-
-          {/* Pending confirmations */}
           {rw.pendingTxns.length > 0 && (
-            <>
-              <h3 className="rewards-section-title">{t(messages, 'module.rewards.txn_pending')} ({rw.pendingCount})</h3>
-              {rw.pendingTxns.map(tx => {
-                const memberName = members.find(m => m.user_id === tx.user_id)?.display_name || '?';
-                return (
-                  <div key={tx.id} className="glass-sm rewards-row rewards-row-pending">
-                    <Award size={14} style={{ color: 'var(--warning)' }} />
-                    <span className="rewards-row-title">{memberName}: {tx.kind === 'earn' ? '+' : '-'}{tx.amount} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {tx.note && `(${tx.note})`}</span>
-                    <button className="btn-ghost rewards-action rewards-action-confirm" onClick={() => rw.confirmTxn(tx.id)}><Check size={16} /></button>
-                    <button className="btn-ghost rewards-action rewards-action-reject" onClick={() => rw.rejectTxn(tx.id)}><X size={16} /></button>
-                  </div>
-                );
-              })}
-            </>
+            <RewardsPanel title={`${t(messages, 'module.rewards.txn_pending')} (${rw.pendingCount})`} className="rewards-panel-wide">
+              <div className="rewards-list">
+                {rw.pendingTxns.map((transaction) => {
+                  const memberName = members.find((member) => member.user_id === transaction.user_id)?.display_name || '';
+                  return (
+                    <div key={transaction.id} className="rewards-row rewards-row-pending">
+                      <RewardRowIcon tone="pending"><Award size={16} /></RewardRowIcon>
+                      <span className="rewards-row-title">
+                        {memberName}: <RewardAmount currency={rw.currency} amount={transaction.amount} sign={transaction.kind === 'earn' ? '+' : '-'} />
+                        {transaction.note && <span className="rewards-row-note"> {transaction.note}</span>}
+                      </span>
+                      <button className="btn-ghost rewards-action rewards-action-confirm" type="button" onClick={() => rw.confirmTxn(transaction.id)} aria-label={t(messages, 'module.rewards.confirm')}><Check size={16} aria-hidden="true" /></button>
+                      <button className="btn-ghost rewards-action rewards-action-reject" type="button" onClick={() => rw.rejectTxn(transaction.id)} aria-label={t(messages, 'module.rewards.reject')}><X size={16} aria-hidden="true" /></button>
+                    </div>
+                  );
+                })}
+              </div>
+            </RewardsPanel>
           )}
 
-          {/* History link */}
           <div className="rewards-history-link">
-            <button className="btn-ghost" onClick={() => setTab('history')}>
-              <Clock size={13} />
+            <button className="btn-ghost" type="button" onClick={() => setTab('history')}>
+              <Clock size={13} aria-hidden="true" />
               {t(messages, 'module.rewards.history_link')}
             </button>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Catalog Tab */}
       {tab === 'catalog' && (
-        <>
-          <h3 className="rewards-section-title">{t(messages, 'module.rewards.earning_rules')}</h3>
-          {rw.rules.length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rules')}</div>}
-          {rw.rules.map(r => (
-            <div key={r.id} className="glass-sm rewards-row rewards-row-earn">
-              <Star size={14} style={{ color: 'var(--amethyst)' }} />
-              <span className="rewards-row-title">{r.name}</span>
-              <span className="rewards-row-value">+{r.amount} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></span>
-              <button className="btn-ghost rewards-action rewards-action-delete" onClick={() => rw.deleteRule(r.id)}><X size={14} /></button>
+        <div className="rewards-grid rewards-catalog-management">
+          <RewardsPanel title={t(messages, 'module.rewards.earning_rules')}>
+            {rw.rules.length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rules')}</div>}
+            <div className="rewards-list">
+              {rw.rules.map((rule) => (
+                <div key={rule.id} className="rewards-row rewards-row-earn">
+                  <RewardRowIcon tone="earn"><Star size={16} /></RewardRowIcon>
+                  <span className="rewards-row-title">{rule.name}</span>
+                  <RewardAmount currency={rw.currency} amount={rule.amount} sign="+" />
+                  <button className="btn-ghost rewards-action rewards-action-delete" type="button" onClick={() => rw.deleteRule(rule.id)} aria-label={t(messages, 'aria.delete_item').replace('{name}', rule.name)}><X size={14} aria-hidden="true" /></button>
+                </div>
+              ))}
             </div>
-          ))}
-          <form onSubmit={async (e) => { e.preventDefault(); await rw.createRule(ruleName, ruleAmount); setRuleName(''); setRuleAmount(1); }} className="rewards-add-form">
-            <input className="form-input rewards-add-name" value={ruleName} onChange={e => setRuleName(e.target.value)} placeholder={t(messages, 'module.rewards.rule_name')} required />
-            <input className="form-input rewards-add-amount" type="number" min={1} value={ruleAmount} onChange={e => setRuleAmount(Number(e.target.value))} />
-            <button className="btn-sm" type="submit"><Plus size={14} /></button>
-          </form>
+            <form onSubmit={async (e) => { e.preventDefault(); await rw.createRule(ruleName, ruleAmount); setRuleName(''); setRuleAmount(1); }} className="rewards-add-form">
+              <input className="form-input rewards-add-name" value={ruleName} onChange={(e) => setRuleName(e.target.value)} placeholder={t(messages, 'module.rewards.rule_name')} required />
+              <input className="form-input rewards-add-amount" type="number" min={1} value={ruleAmount} onChange={(e) => setRuleAmount(Number(e.target.value))} aria-label={t(messages, 'module.rewards.rule_amount')} />
+              <button className="btn-sm rewards-add-btn" type="submit" aria-label={t(messages, 'module.rewards.add_rule')}><Plus size={14} aria-hidden="true" /></button>
+            </form>
+          </RewardsPanel>
 
-          <h3 className="rewards-section-title">{t(messages, 'module.rewards.catalog')}</h3>
-          {rw.catalog.length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rewards')}</div>}
-          {rw.catalog.map(r => (
-            <div key={r.id} className="glass-sm rewards-row rewards-row-spend">
-              <Award size={14} style={{ color: 'var(--amethyst)' }} />
-              <span className="rewards-row-title">{r.name}</span>
-              <span className="rewards-row-value">{r.cost} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></span>
-              <button className="btn-ghost rewards-action rewards-action-delete" onClick={() => rw.deleteReward(r.id)}><X size={14} /></button>
+          <RewardsPanel title={t(messages, 'module.rewards.catalog')}>
+            {rw.catalog.length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rewards')}</div>}
+            <div className="rewards-list">
+              {rw.catalog.map((reward) => (
+                <div key={reward.id} className="rewards-row rewards-row-spend">
+                  <RewardRowIcon tone="spend"><Award size={16} /></RewardRowIcon>
+                  <span className="rewards-row-title">{reward.name}</span>
+                  <RewardAmount currency={rw.currency} amount={reward.cost} />
+                  <button className="btn-ghost rewards-action rewards-action-delete" type="button" onClick={() => rw.deleteReward(reward.id)} aria-label={t(messages, 'aria.delete_item').replace('{name}', reward.name)}><X size={14} aria-hidden="true" /></button>
+                </div>
+              ))}
             </div>
-          ))}
-          <form onSubmit={async (e) => { e.preventDefault(); await rw.createReward(rewardName, rewardCost, rewardIcon || null); setRewardName(''); setRewardCost(5); setRewardIcon(''); }} className="rewards-add-form">
-            <input className="form-input rewards-add-name" value={rewardName} onChange={e => setRewardName(e.target.value)} placeholder={t(messages, 'module.rewards.reward_name')} required />
-            <input className="form-input rewards-add-amount" type="number" min={1} value={rewardCost} onChange={e => setRewardCost(Number(e.target.value))} />
-            <button className="btn-sm" type="submit"><Plus size={14} /></button>
-          </form>
-        </>
+            <form onSubmit={async (e) => { e.preventDefault(); await rw.createReward(rewardName, rewardCost, rewardIcon || null); setRewardName(''); setRewardCost(5); setRewardIcon(''); }} className="rewards-add-form rewards-add-reward-form">
+              <input className="form-input rewards-add-name" value={rewardName} onChange={(e) => setRewardName(e.target.value)} placeholder={t(messages, 'module.rewards.reward_name')} required />
+              <input className="form-input rewards-add-amount" type="number" min={1} value={rewardCost} onChange={(e) => setRewardCost(Number(e.target.value))} aria-label={t(messages, 'module.rewards.reward_cost')} />
+              <select className="form-input rewards-add-icon" value={rewardIcon} onChange={(e) => setRewardIcon(e.target.value)} aria-label={t(messages, 'module.rewards.reward_icon')}>
+                <option value="">{t(messages, 'module.rewards.reward_icon')}</option>
+                {CURRENCY_PRESETS.map((preset) => (
+                  <option key={preset.icon} value={preset.icon}>{preset.name}</option>
+                ))}
+              </select>
+              <button className="btn-sm rewards-add-btn" type="submit" aria-label={t(messages, 'module.rewards.add_reward')}><Plus size={14} aria-hidden="true" /></button>
+            </form>
+          </RewardsPanel>
+        </div>
       )}
 
-      {/* History Tab (hidden, accessible via link) */}
       {tab === 'history' && (
-        <>
-          <button className="btn-ghost rewards-history-back" onClick={() => setTab('overview')}>&larr; {t(messages, 'module.rewards.tab_overview')}</button>
-          {rw.transactions.map(tx => {
-            const memberName = members.find(m => m.user_id === tx.user_id)?.display_name || '?';
-            const date = parseServerInstant(tx.created_at).toLocaleDateString();
-            return (
-              <div key={tx.id} className="glass-sm rewards-row rewards-history-row">
-                {tx.kind === 'earn' ? <ArrowUpCircle size={14} style={{ color: 'var(--success)' }} /> : <ArrowDownCircle size={14} style={{ color: 'var(--danger)' }} />}
-                <span className="rewards-history-date">{date}</span>
-                <span className="rewards-history-member">{memberName}</span>
-                <span className="rewards-row-title">{tx.note || tx.kind}</span>
-                <span className="rewards-row-value">{tx.kind === 'earn' ? '+' : '-'}{tx.amount} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /></span>
-                <span className={`rewards-history-status rewards-history-status-${tx.status}`}>{tx.status}</span>
-              </div>
-            );
-          })}
-        </>
+        <RewardsPanel
+          title={t(messages, 'module.rewards.transactions')}
+          action={(
+            <button className="btn-ghost rewards-history-back" type="button" onClick={() => setTab('overview')}>
+              {t(messages, 'module.rewards.tab_overview')}
+            </button>
+          )}
+        >
+          <div className="rewards-list">
+            {rw.transactions.map((transaction) => {
+              const memberName = members.find((member) => member.user_id === transaction.user_id)?.display_name || '';
+              const date = parseServerInstant(transaction.created_at).toLocaleDateString(lang);
+              return (
+                <div key={transaction.id} className="rewards-row rewards-history-row">
+                  <RewardRowIcon tone={transaction.kind === 'earn' ? 'earn' : 'spend'}>
+                    {transaction.kind === 'earn' ? <ArrowUpCircle size={16} /> : <ArrowDownCircle size={16} />}
+                  </RewardRowIcon>
+                  <span className="rewards-history-date">{date}</span>
+                  <span className="rewards-history-member">{memberName}</span>
+                  <span className="rewards-row-title">
+                    {transaction.note || t(messages, transaction.kind === 'earn' ? 'module.rewards.txn_earn' : 'module.rewards.txn_redeem')}
+                  </span>
+                  <RewardAmount currency={rw.currency} amount={transaction.amount} sign={transaction.kind === 'earn' ? '+' : '-'} />
+                  <span className={`rewards-history-status rewards-history-status-${transaction.status}`}>
+                    {t(messages, `module.rewards.txn_${transaction.status}`)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </RewardsPanel>
       )}
     </div>
   );
