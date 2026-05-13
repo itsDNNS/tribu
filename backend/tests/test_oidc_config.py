@@ -89,12 +89,13 @@ class TestConfigRoundTrip:
         assert cfg.is_ready() is False
 
     def test_save_and_reload(self, db):
+        issuer = "https://auth.example.com/application/o/tribu/"
         oidc_core.save_config(
             db,
             enabled=True,
             preset="authentik",
             button_label="Sign in with Home IdP",
-            issuer="https://auth.example.com/application/o/tribu",
+            issuer=issuer,
             client_id="tribu-client",
             client_secret="topsecret",
             scopes="openid profile email",
@@ -107,8 +108,10 @@ class TestConfigRoundTrip:
         assert cfg.enabled is True
         assert cfg.preset == "authentik"
         assert cfg.button_label == "Sign in with Home IdP"
-        # Trailing slash stripped on save so URL concat stays predictable
-        assert cfg.issuer == "https://auth.example.com/application/o/tribu"
+        # The issuer is an OIDC identity string, not just a URL prefix.
+        # Authentik normally includes the trailing slash in both discovery
+        # and ID-token `iss`, so saving must preserve it exactly.
+        assert cfg.issuer == issuer
         assert cfg.client_id == "tribu-client"
         assert cfg.client_secret == "topsecret"
         assert cfg.allow_signup is True
@@ -311,10 +314,32 @@ class TestDiscovery:
         assert disc.token_endpoint.endswith("/token")
         assert disc.jwks_uri.endswith("/jwks")
 
-    def test_trailing_slash_normalised(self):
-        with patch.object(oidc_core, "_fetch_json", return_value=_valid_doc()):
-            disc = oidc_core.fetch_discovery("https://idp.example.com/", force=True)
-        assert disc.issuer == "https://idp.example.com"
+    def test_trailing_slash_preserved_for_authentik_issuer(self):
+        issuer = "https://idp.example.com/application/o/tribu/"
+        fetched_urls: list[str] = []
+
+        def fake_fetch(url, timeout=5.0):
+            fetched_urls.append(url)
+            return _valid_doc(issuer)
+
+        with patch.object(oidc_core, "_fetch_json", side_effect=fake_fetch):
+            disc = oidc_core.fetch_discovery(issuer, force=True)
+
+        assert disc.issuer == issuer
+        assert fetched_urls == [
+            "https://idp.example.com/application/o/tribu/.well-known/openid-configuration"
+        ]
+
+    def test_trailing_slash_mismatch_raises(self):
+        with patch.object(
+            oidc_core,
+            "_fetch_json",
+            return_value=_valid_doc("https://idp.example.com/application/o/tribu/"),
+        ):
+            with pytest.raises(oidc_core.DiscoveryError):
+                oidc_core.fetch_discovery(
+                    "https://idp.example.com/application/o/tribu", force=True
+                )
 
     def test_missing_required_field_raises(self):
         bad = _valid_doc()
