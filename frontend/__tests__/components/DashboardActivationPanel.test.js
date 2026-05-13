@@ -54,7 +54,6 @@ const messages = {
   'module.dashboard.daily_loop_open_meals': 'Plan meals',
   'module.dashboard.daily_loop_open_shopping': 'Open shopping',
   'module.dashboard.daily_loop_open_routines': 'Open routines',
-  'module.dashboard.daily_loop_empty': 'Nothing pressing today.',
   'module.dashboard.activation_title': 'Get your household started',
   'module.dashboard.activation_subtitle': 'A few quick steps so the whole family can use Tribu together.',
   'module.dashboard.activation_step_invite_title': 'Invite your family',

@@ -97,7 +97,6 @@
   "module.dashboard.daily_loop_open_meals": "Planera måltider",
   "module.dashboard.daily_loop_open_shopping": "Öppen shopping",
   "module.dashboard.daily_loop_open_routines": "Öppna rutiner",
-  "module.dashboard.daily_loop_empty": "Planera en måltid, lägg till matvaror eller ställ in en återkommande uppgift för att komma igång idag.",
   "module.dashboard.module_daily_loop": "Idag i rörelse",
   "module.dashboard.view_calendar": "Visa kalender",
   "module.dashboard.view_tasks": "Visa alla uppgifter",

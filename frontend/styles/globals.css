@@ -980,7 +980,6 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .daily-loop-action-value { color: var(--text-primary); font-family: var(--font-mono); font-size: 1.4rem; line-height: 1; font-weight: 850; }
 .daily-loop-action-label { color: var(--text-secondary); font-size: 0.84rem; font-weight: 700; line-height: 1.2; }
 .daily-loop-action-link { grid-column: 2; color: var(--text-muted); font-size: 0.74rem; font-weight: 700; }
-.daily-loop-empty { margin: 0; color: var(--text-muted); font-size: 0.82rem; }
 
 @media (max-width: 1280px) {
   .dashboard-module-shell[data-dashboard-module="events"],

@@ -153,8 +153,6 @@ function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, me
       onClick: () => setActiveView('tasks'),
     },
   ];
-  const hasAttention = items.some((item) => item.value > 0);
-
   return (
     <section className="bento-card bento-daily-loop" role="region" aria-label={t(messages, 'module.dashboard.daily_loop_title')}>
       <div className="bento-card-header daily-loop-header">
@@ -185,9 +183,6 @@ function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, me
           );
         })}
       </div>
-      {!hasAttention && (
-        <p className="daily-loop-empty">{t(messages, 'module.dashboard.daily_loop_empty')}</p>
-      )}
     </section>
   );
 }

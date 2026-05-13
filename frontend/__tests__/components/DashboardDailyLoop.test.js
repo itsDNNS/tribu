@@ -55,7 +55,6 @@ const messages = {
   'module.dashboard.daily_loop_open_meals': 'Plan meals',
   'module.dashboard.daily_loop_open_shopping': 'Open shopping',
   'module.dashboard.daily_loop_open_routines': 'Open routines',
-  'module.dashboard.daily_loop_empty': 'Nothing pressing today.',
   next_events: 'Next events',
   upcoming_birthdays_4w: 'Birthdays',
 };
@@ -129,7 +128,7 @@ describe('DashboardView daily loop', () => {
     expect(setActiveView).toHaveBeenCalledWith('tasks');
   });
 
-  it('shows a useful empty prompt when the daily loop has no active inputs', async () => {
+  it('keeps daily loop compact when there are no active inputs', async () => {
     apiListMealPlans.mockResolvedValue({ ok: true, data: [] });
     mockAppState = baseApp({
       tasks: [
@@ -142,6 +141,6 @@ describe('DashboardView daily loop', () => {
 
     const loop = screen.getByRole('region', { name: 'Today loop' });
     await waitFor(() => expect(within(loop).getByRole('button', { name: /Meals planned: Plan meals/i })).toHaveTextContent('0'));
-    expect(loop).toHaveTextContent('Nothing pressing today.');
+    expect(loop.querySelector('.daily-loop-empty')).toBeNull();
   });
 });

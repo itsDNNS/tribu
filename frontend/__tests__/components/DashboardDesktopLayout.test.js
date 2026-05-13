@@ -73,7 +73,6 @@ const messages = {
   'module.dashboard.daily_loop_open_meals': 'Plan meals',
   'module.dashboard.daily_loop_open_shopping': 'Open shopping',
   'module.dashboard.daily_loop_open_routines': 'Open routines',
-  'module.dashboard.daily_loop_empty': 'Nothing pressing today.',
   next_events: 'Next events',
   upcoming_birthdays_4w: 'Birthdays',
 };
