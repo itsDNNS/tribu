@@ -2,11 +2,19 @@
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage/
+htmlcov/
 
 # Node
 node_modules/
 .next/
 frontend/.next-e2e/
+.turbo/
+.vercel/
 
 # Env
 .env
@@ -31,6 +39,7 @@ e2e/test-results/
 frontend/test-results/
 playwright-report/
 frontend/playwright-report/
+*.trace
 
 # OS
 .DS_Store
@@ -38,5 +47,8 @@ frontend/playwright-report/
 # Graphify knowledge graph (local only)
 graphify-out/
 test-*.db
+*.sqlite
+*.sqlite3
+*.log
 backend/test-*.db
 backend/test-e2e-dav/
