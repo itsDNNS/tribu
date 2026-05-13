@@ -114,7 +114,7 @@ export default function TasksView() {
           {/* Quick Add */}
           {!isChild && (
             <>
-              <form onSubmit={tk.createTask} className="quick-add-bar">
+              <form onSubmit={tk.createTask} className={`quick-add-bar${showFormDetails ? ' quick-add-expanded' : ''}`}>
                 <input
                   className="quick-add-input"
                   placeholder={t(messages, 'module.tasks.title') || 'Neue Aufgabe hinzufügen...'}

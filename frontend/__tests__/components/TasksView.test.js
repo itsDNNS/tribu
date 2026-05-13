@@ -112,6 +112,15 @@ describe('TasksView', () => {
     expect(container.querySelector('.quick-add-bar .task-form-toggle')).toHaveTextContent('Mehr Optionen');
   });
 
+  it('keeps expanded task options attached to quick add', () => {
+    const { container } = render(<TasksView />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Mehr Optionen/i }));
+
+    expect(container.querySelector('.quick-add-bar')).toHaveClass('quick-add-expanded');
+    expect(container.querySelector('.quick-add-bar + .task-form-fields')).toBeInTheDocument();
+  });
+
   it('renders task list', () => {
     render(<TasksView />);
     expect(screen.getByText('Buy milk')).toBeInTheDocument();

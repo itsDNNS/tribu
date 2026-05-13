@@ -5213,6 +5213,15 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   border-bottom: 1px solid var(--border-subtle);
   background: color-mix(in srgb, var(--surface-soft) 58%, transparent);
 }
+.tasks-page .quick-add-bar.quick-add-expanded {
+  padding-bottom: 8px;
+  border-bottom: 0;
+}
+.tasks-page .quick-add-bar.quick-add-expanded + .task-form-fields {
+  padding: 0 16px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-soft) 58%, transparent);
+}
 .tasks-page .quick-add-input,
 .shopping-items-wrapper .quick-add-input {
   border-color: var(--border-subtle);
@@ -5560,6 +5569,12 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   .tasks-page .quick-add-bar {
     grid-template-columns: minmax(0, 1fr) 44px;
     padding: 8px 12px 12px;
+  }
+  .tasks-page .quick-add-bar.quick-add-expanded {
+    padding-bottom: 8px;
+  }
+  .tasks-page .quick-add-bar.quick-add-expanded + .task-form-fields {
+    padding: 0 12px 12px;
   }
   .tasks-page .quick-add-input {
     grid-column: 1 / -1;
