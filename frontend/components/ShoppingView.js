@@ -660,16 +660,19 @@ export default function ShoppingView() {
 
                 {allGroups.length > 0 && (
                   <aside className="shopping-category-overview" aria-label={t(messages, 'module.shopping.items')}>
-                    <div className="shopping-total-chip">
-                      <span>{sh.items.length}</span>
-                      <strong>{t(messages, 'module.shopping.items')}</strong>
+                    <div className="shopping-category-summary">
+                      <ShoppingCart size={13} aria-hidden="true" />
+                      <span><strong>{sh.items.length}</strong> {t(messages, 'module.shopping.items')}</span>
                     </div>
                     {allGroups.map((group) => (
                       <div
                         key={group.key || 'uncategorized-overview'}
                         className={`shopping-category-overview-chip${collapsedCategories[group.key] ? ' muted' : ''}`}
                       >
-                        <span>{group.label}</span>
+                        <span className="shopping-category-overview-label">
+                          <span className="shopping-category-overview-marker" aria-hidden="true" />
+                          {group.label}
+                        </span>
                         <strong>{group.items.length}</strong>
                       </div>
                     ))}

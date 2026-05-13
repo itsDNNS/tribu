@@ -20,6 +20,7 @@ const messages = {
   'module.shopping.item_name_placeholder': 'Add an item...',
   'module.shopping.item_spec_placeholder': 'e.g. 500g, organic',
   'module.shopping.item_category_placeholder': 'Category or aisle',
+  'module.shopping.items': 'Items',
   'module.shopping.no_items': 'No items yet',
   'module.shopping.add_first_item': 'Add first item',
   'module.shopping.checked_section': 'Checked',
@@ -117,6 +118,8 @@ describe('ShoppingView redesign shell', () => {
     expect(container.querySelector('.shopping-active-select')).toBeInTheDocument();
     expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Dairy');
     expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Produce');
+    expect(container.querySelector('.shopping-category-summary')).toHaveTextContent('2 Items');
+    expect(container.querySelector('.shopping-total-chip')).not.toBeInTheDocument();
   });
 });
 
