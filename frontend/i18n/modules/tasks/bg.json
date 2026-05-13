@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Първа сряда всеки месец",
   "module.tasks.recurrence.monthly_first_thursday": "Първи четвъртък всеки месец",
   "module.tasks.recurrence.monthly_first_friday": "Първи петък всеки месец",
-  "module.tasks.recurrence.monthly_first_saturday": "Първа събота всеки месец"
+  "module.tasks.recurrence.monthly_first_saturday": "Първа събота всеки месец",
+  "module.tasks.due_today": "Днес",
+  "module.tasks.mine": "Моите",
+  "module.tasks.filters": "Филтри",
+  "module.tasks.new_task": "Нова задача"
 }

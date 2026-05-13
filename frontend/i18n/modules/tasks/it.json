@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Primo mercoledì di ogni mese",
   "module.tasks.recurrence.monthly_first_thursday": "Primo giovedì di ogni mese",
   "module.tasks.recurrence.monthly_first_friday": "Primo venerdì di ogni mese",
-  "module.tasks.recurrence.monthly_first_saturday": "Primo sabato di ogni mese"
+  "module.tasks.recurrence.monthly_first_saturday": "Primo sabato di ogni mese",
+  "module.tasks.due_today": "Oggi",
+  "module.tasks.mine": "Mie",
+  "module.tasks.filters": "Filtri",
+  "module.tasks.new_task": "Nuova attività"
 }

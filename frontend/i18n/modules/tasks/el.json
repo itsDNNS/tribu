@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Πρώτη Τετάρτη κάθε μήνα",
   "module.tasks.recurrence.monthly_first_thursday": "Πρώτη Πέμπτη κάθε μήνα",
   "module.tasks.recurrence.monthly_first_friday": "Πρώτη Παρασκευή κάθε μήνα",
-  "module.tasks.recurrence.monthly_first_saturday": "Πρώτο Σάββατο κάθε μήνα"
+  "module.tasks.recurrence.monthly_first_saturday": "Πρώτο Σάββατο κάθε μήνα",
+  "module.tasks.due_today": "Σήμερα",
+  "module.tasks.mine": "Δικά μου",
+  "module.tasks.filters": "Φίλτρα",
+  "module.tasks.new_task": "Νέα εργασία"
 }

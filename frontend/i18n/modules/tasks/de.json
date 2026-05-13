@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Erster Mittwoch monatlich",
   "module.tasks.recurrence.monthly_first_thursday": "Erster Donnerstag monatlich",
   "module.tasks.recurrence.monthly_first_friday": "Erster Freitag monatlich",
-  "module.tasks.recurrence.monthly_first_saturday": "Erster Samstag monatlich"
+  "module.tasks.recurrence.monthly_first_saturday": "Erster Samstag monatlich",
+  "module.tasks.due_today": "Heute fällig",
+  "module.tasks.mine": "Meine",
+  "module.tasks.filters": "Filter",
+  "module.tasks.new_task": "Neue Aufgabe"
 }

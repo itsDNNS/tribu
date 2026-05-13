@@ -83,8 +83,10 @@ test.describe('Tasks', () => {
     await expect(page.getByText('Still Open')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Already Done')).toBeVisible({ timeout: 5000 });
 
+    await page.getByRole('button', { name: 'Filters' }).click();
+
     // "Open" tab
-    await page.locator('.tasks-filter-btn', { hasText: 'Open' }).click();
+    await page.locator('.tasks-state-btn', { hasText: 'Open' }).click();
     await expect(page.getByText('Still Open')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('High Priority Open')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Already Done')).not.toBeVisible({ timeout: 3000 });
@@ -95,7 +97,7 @@ test.describe('Tasks', () => {
     await page.getByLabel('Filter by priority', { exact: true }).selectOption('');
 
     // "Done" tab
-    await page.locator('.tasks-filter-btn', { hasText: 'Done' }).click();
+    await page.locator('.tasks-state-btn', { hasText: 'Done' }).click();
     await expect(page.getByText('Already Done')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Still Open')).not.toBeVisible({ timeout: 3000 });
   });

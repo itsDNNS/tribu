@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Prima zi de miercuri a fiecărei luni",
   "module.tasks.recurrence.monthly_first_thursday": "Prima zi de joi a fiecărei luni",
   "module.tasks.recurrence.monthly_first_friday": "Prima zi de vineri a fiecărei luni",
-  "module.tasks.recurrence.monthly_first_saturday": "Prima sâmbătă a fiecărei luni"
+  "module.tasks.recurrence.monthly_first_saturday": "Prima sâmbătă a fiecărei luni",
+  "module.tasks.due_today": "Astăzi",
+  "module.tasks.mine": "Ale mele",
+  "module.tasks.filters": "Filtre",
+  "module.tasks.new_task": "Sarcină nouă"
 }

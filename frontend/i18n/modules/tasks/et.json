@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Iga kuu esimene kolmapäev",
   "module.tasks.recurrence.monthly_first_thursday": "Iga kuu esimene neljapäev",
   "module.tasks.recurrence.monthly_first_friday": "Iga kuu esimene reede",
-  "module.tasks.recurrence.monthly_first_saturday": "Iga kuu esimene laupäev"
+  "module.tasks.recurrence.monthly_first_saturday": "Iga kuu esimene laupäev",
+  "module.tasks.due_today": "Täna",
+  "module.tasks.mine": "Minu",
+  "module.tasks.filters": "Filtrid",
+  "module.tasks.new_task": "Uus ülesanne"
 }

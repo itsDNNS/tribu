@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Pirmas mėnesio trečiadienis",
   "module.tasks.recurrence.monthly_first_thursday": "Pirmas mėnesio ketvirtadienis",
   "module.tasks.recurrence.monthly_first_friday": "Pirmas mėnesio penktadienis",
-  "module.tasks.recurrence.monthly_first_saturday": "Pirmas mėnesio šeštadienis"
+  "module.tasks.recurrence.monthly_first_saturday": "Pirmas mėnesio šeštadienis",
+  "module.tasks.due_today": "Šiandien",
+  "module.tasks.mine": "Mano",
+  "module.tasks.filters": "Filtrai",
+  "module.tasks.new_task": "Nauja užduotis"
 }

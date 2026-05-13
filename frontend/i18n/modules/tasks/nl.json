@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Eerste woensdag van elke maand",
   "module.tasks.recurrence.monthly_first_thursday": "Eerste donderdag van elke maand",
   "module.tasks.recurrence.monthly_first_friday": "Eerste vrijdag van elke maand",
-  "module.tasks.recurrence.monthly_first_saturday": "Eerste zaterdag van elke maand"
+  "module.tasks.recurrence.monthly_first_saturday": "Eerste zaterdag van elke maand",
+  "module.tasks.due_today": "Vandaag",
+  "module.tasks.mine": "Mijn",
+  "module.tasks.filters": "Filters",
+  "module.tasks.new_task": "Nieuwe taak"
 }

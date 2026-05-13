@@ -240,7 +240,7 @@ test.describe('Shopping', () => {
 
     await quickAdd.fill('Bananas');
     await expect(quickAdd).toBeFocused();
-    await page.getByRole('button', { name: 'Add item' }).click();
+    await page.locator('.shopping-items-wrapper .quick-add-btn').click();
     await expect(quickAdd).not.toBeFocused();
     await expect(page.locator('[role="checkbox"][aria-label="Bananas"]')).toBeVisible({ timeout: 10000 });
   });

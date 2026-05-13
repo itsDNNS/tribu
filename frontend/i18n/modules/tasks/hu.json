@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Minden hónap első szerdája",
   "module.tasks.recurrence.monthly_first_thursday": "Minden hónap első csütörtöke",
   "module.tasks.recurrence.monthly_first_friday": "Minden hónap első péntekje",
-  "module.tasks.recurrence.monthly_first_saturday": "Minden hónap első szombatja"
+  "module.tasks.recurrence.monthly_first_saturday": "Minden hónap első szombatja",
+  "module.tasks.due_today": "Ma",
+  "module.tasks.mine": "Saját",
+  "module.tasks.filters": "Szűrők",
+  "module.tasks.new_task": "Új feladat"
 }

@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "An chéad Chéadaoin gach mí",
   "module.tasks.recurrence.monthly_first_thursday": "An chéad Déardaoin gach mí",
   "module.tasks.recurrence.monthly_first_friday": "An chéad Aoine gach mí",
-  "module.tasks.recurrence.monthly_first_saturday": "An chéad Satharn gach mí"
+  "module.tasks.recurrence.monthly_first_saturday": "An chéad Satharn gach mí",
+  "module.tasks.due_today": "Inniu",
+  "module.tasks.mine": "Mo chuid",
+  "module.tasks.filters": "Scagairí",
+  "module.tasks.new_task": "Tasc nua"
 }

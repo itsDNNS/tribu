@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Første onsdag hver måned",
   "module.tasks.recurrence.monthly_first_thursday": "Første torsdag hver måned",
   "module.tasks.recurrence.monthly_first_friday": "Første fredag hver måned",
-  "module.tasks.recurrence.monthly_first_saturday": "Første lørdag hver måned"
+  "module.tasks.recurrence.monthly_first_saturday": "Første lørdag hver måned",
+  "module.tasks.due_today": "I dag",
+  "module.tasks.mine": "Mine",
+  "module.tasks.filters": "Filtre",
+  "module.tasks.new_task": "Ny opgave"
 }

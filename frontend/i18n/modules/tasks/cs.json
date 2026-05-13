@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "První středa každý měsíc",
   "module.tasks.recurrence.monthly_first_thursday": "První čtvrtek každý měsíc",
   "module.tasks.recurrence.monthly_first_friday": "První pátek každý měsíc",
-  "module.tasks.recurrence.monthly_first_saturday": "První sobota každý měsíc"
+  "module.tasks.recurrence.monthly_first_saturday": "První sobota každý měsíc",
+  "module.tasks.due_today": "Dnes",
+  "module.tasks.mine": "Moje",
+  "module.tasks.filters": "Filtry",
+  "module.tasks.new_task": "Nový úkol"
 }

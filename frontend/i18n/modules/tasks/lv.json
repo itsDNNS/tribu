@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Katra mēneša pirmā trešdiena",
   "module.tasks.recurrence.monthly_first_thursday": "Katra mēneša pirmā ceturtdiena",
   "module.tasks.recurrence.monthly_first_friday": "Katra mēneša pirmā piektdiena",
-  "module.tasks.recurrence.monthly_first_saturday": "Katra mēneša pirmā sestdiena"
+  "module.tasks.recurrence.monthly_first_saturday": "Katra mēneša pirmā sestdiena",
+  "module.tasks.due_today": "Šodien",
+  "module.tasks.mine": "Mani",
+  "module.tasks.filters": "Filtri",
+  "module.tasks.new_task": "Jauns uzdevums"
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Clock, Check, X, ChevronDown, Pencil } from 'lucide-react';
+import { Plus, Clock, Check, X, ChevronDown, Pencil, SlidersHorizontal } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
 import { prettyDate } from '../lib/helpers';
@@ -10,15 +10,40 @@ import ConfirmDialog from './ConfirmDialog';
 import TaskEditDialog from './TaskEditDialog';
 
 export default function TasksView() {
-  const { familyId, families, members, messages, lang, isChild, timeFormat, tasks } = useApp();
+  const { members, messages, lang, isChild, timeFormat, tasks, me } = useApp();
   const tk = useTasks();
   const [showFormDetails, setShowFormDetails] = useState(false);
+  const [showRefine, setShowRefine] = useState(false);
+  const [quickFilter, setQuickFilter] = useState('all');
   const [confirmAction, setConfirmAction] = useState(null);
   const taskList = Array.isArray(tasks) ? tasks : [];
-  const openCount = taskList.filter((task) => task.status === 'open').length;
-  const doneCount = taskList.filter((task) => task.status === 'done').length;
-  const overdueCount = taskList.filter((task) => task.status === 'open' && task.due_date && new Date(task.due_date) < new Date()).length;
-  const highPriorityCount = taskList.filter((task) => task.status === 'open' && task.priority === 'high').length;
+  const today = new Date();
+  const isSameDay = (value, date) => {
+    if (!value) return false;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return false;
+    return parsed.getFullYear() === date.getFullYear()
+      && parsed.getMonth() === date.getMonth()
+      && parsed.getDate() === date.getDate();
+  };
+  const allCount = taskList.length;
+  const dueTodayCount = taskList.filter((task) => task.status === 'open' && isSameDay(task.due_date, today)).length;
+  const overdueCount = taskList.filter((task) => task.status === 'open' && task.due_date && new Date(task.due_date) < today && !isSameDay(task.due_date, today)).length;
+  const mineCount = me?.user_id
+    ? taskList.filter((task) => task.status === 'open' && String(task.assigned_to_user_id || '') === String(me.user_id)).length
+    : 0;
+  const taskQuickFilters = [
+    { key: 'due_today', label: t(messages, 'module.tasks.due_today'), count: dueTodayCount },
+    { key: 'overdue', label: t(messages, 'module.tasks.overdue'), count: overdueCount },
+    { key: 'mine', label: t(messages, 'module.tasks.mine'), count: mineCount },
+    { key: 'all', label: t(messages, 'module.tasks.all'), count: allCount },
+  ];
+  const visibleTasks = tk.filteredTasks.filter((task) => {
+    if (quickFilter === 'due_today') return task.status === 'open' && isSameDay(task.due_date, today);
+    if (quickFilter === 'overdue') return task.status === 'open' && task.due_date && new Date(task.due_date) < today && !isSameDay(task.due_date, today);
+    if (quickFilter === 'mine') return me?.user_id && task.status === 'open' && String(task.assigned_to_user_id || '') === String(me.user_id);
+    return true;
+  });
 
   return (
     <div className="tasks-page">
@@ -43,37 +68,49 @@ export default function TasksView() {
         onSubmit={tk.updateTask}
       />
 
-      <div className="view-header family-view-header">
-        <div>
-          <div className="view-kicker">{t(messages, 'module.tasks.open')}</div>
-          <h1 className="view-title">{t(messages, 'module.tasks.name')}</h1>
-          <div className="view-subtitle">
-            {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
-          </div>
-        </div>
-      </div>
-
-      <div className="tasks-focus-strip" role="group" aria-label={t(messages, 'module.tasks.refine')}>
-        <div className="tasks-focus-chip">
-          <strong>{openCount}</strong>
-          <span>{t(messages, 'module.tasks.open')}</span>
-        </div>
-        <div className="tasks-focus-chip tasks-focus-chip-danger">
-          <strong>{overdueCount}</strong>
-          <span>{t(messages, 'module.tasks.overdue')}</span>
-        </div>
-        <div className="tasks-focus-chip tasks-focus-chip-warm">
-          <strong>{highPriorityCount}</strong>
-          <span>{t(messages, 'module.tasks.priority.high')}</span>
-        </div>
-        <div className="tasks-focus-chip">
-          <strong>{doneCount}</strong>
-          <span>{t(messages, 'module.tasks.done')}</span>
-        </div>
-      </div>
-
       <div className="tasks-layout">
         <div className="tasks-wrapper">
+          <div className="tasks-card-header">
+            <h1>{t(messages, 'module.tasks.name')}</h1>
+            <div className="tasks-card-actions">
+              {!isChild && (
+                <button className="tasks-new-btn" type="button" onClick={() => document.querySelector('.quick-add-input')?.focus()}>
+                  {t(messages, 'module.tasks.new_task')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="tasks-toolbar">
+            <div className="tasks-filter-tabs" role="group" aria-label={t(messages, 'module.tasks.refine')}>
+              {taskQuickFilters.map((filter) => (
+                <button
+                  key={filter.key}
+                  className={`tasks-filter-btn${quickFilter === filter.key ? ' active' : ''}`}
+                  onClick={() => {
+                    setQuickFilter(filter.key);
+                    if (filter.key === 'all') tk.setTaskFilter('all');
+                    if (filter.key === 'due_today' || filter.key === 'overdue' || filter.key === 'mine') tk.setTaskFilter('open');
+                  }}
+                  aria-pressed={quickFilter === filter.key}
+                >
+                  <span>{filter.label}</span>
+                  <strong>{filter.count}</strong>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className={`tasks-refine-toggle${showRefine ? ' active' : ''}`}
+              onClick={() => setShowRefine((prev) => !prev)}
+              aria-expanded={showRefine}
+              aria-controls="tasks-refine-controls"
+            >
+              <SlidersHorizontal size={14} aria-hidden="true" />
+              {t(messages, 'module.tasks.filters')}
+            </button>
+          </div>
+
           {/* Quick Add */}
           {!isChild && (
             <>
@@ -129,15 +166,13 @@ export default function TasksView() {
             </>
           )}
 
-          {/* Filter Tabs */}
-          <div className="tasks-toolbar">
-            <div className="tasks-filter-tabs">
-              <button className={`tasks-filter-btn${tk.taskFilter === 'all' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('all')} aria-pressed={tk.taskFilter === 'all'}>{t(messages, 'module.tasks.all')}</button>
-              <button className={`tasks-filter-btn${tk.taskFilter === 'open' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('open')} aria-pressed={tk.taskFilter === 'open'}>{t(messages, 'module.tasks.open')}</button>
-              <button className={`tasks-filter-btn${tk.taskFilter === 'done' ? ' active' : ''}`} onClick={() => tk.setTaskFilter('done')} aria-pressed={tk.taskFilter === 'done'}>{t(messages, 'module.tasks.done')}</button>
-            </div>
-            <div className="tasks-count">{tk.filteredTasks.length} {t(messages, 'module.tasks.name')}</div>
-            <div className="tasks-refine-controls" role="group" aria-label={t(messages, 'module.tasks.refine')}>
+          {showRefine && (
+            <div id="tasks-refine-controls" className="tasks-refine-controls" role="group" aria-label={t(messages, 'module.tasks.refine')}>
+              <div className="tasks-state-tabs">
+                <button className={`tasks-state-btn${tk.taskFilter === 'all' ? ' active' : ''}`} onClick={() => { tk.setTaskFilter('all'); setQuickFilter('all'); }} aria-pressed={tk.taskFilter === 'all'}>{t(messages, 'module.tasks.all')}</button>
+                <button className={`tasks-state-btn${tk.taskFilter === 'open' ? ' active' : ''}`} onClick={() => { tk.setTaskFilter('open'); setQuickFilter('all'); }} aria-pressed={tk.taskFilter === 'open'}>{t(messages, 'module.tasks.open')}</button>
+                <button className={`tasks-state-btn${tk.taskFilter === 'done' ? ' active' : ''}`} onClick={() => { tk.setTaskFilter('done'); setQuickFilter('all'); }} aria-pressed={tk.taskFilter === 'done'}>{t(messages, 'module.tasks.done')}</button>
+              </div>
               <select
                 className="form-input tasks-refine-input"
                 value={tk.assigneeFilter}
@@ -171,11 +206,11 @@ export default function TasksView() {
                 <option value="assignee">{t(messages, 'module.tasks.sort.assignee')}</option>
               </select>
             </div>
-          </div>
+          )}
 
           {/* Task List */}
           <div className="tasks-list">
-            {tk.filteredTasks.length === 0 && (
+            {visibleTasks.length === 0 && (
               <div className="tasks-empty">
                 <span>{t(messages, 'module.tasks.no_tasks')}</span>
                 {!isChild && tasks.length === 0 && (
@@ -185,8 +220,9 @@ export default function TasksView() {
                 )}
               </div>
             )}
-            {tk.filteredTasks.map((task) => {
-              const isOverdue = task.due_date && task.status === 'open' && new Date(task.due_date) < new Date();
+            {visibleTasks.map((task) => {
+              const isOverdue = task.due_date && task.status === 'open' && new Date(task.due_date) < today && !isSameDay(task.due_date, today);
+              const isDueToday = task.status === 'open' && isSameDay(task.due_date, today);
               const isDone = task.status === 'done';
               const assignee = members.find((m) => m.user_id === task.assigned_to_user_id);
               const assigneeIndex = assignee ? members.indexOf(assignee) : 0;
@@ -210,10 +246,13 @@ export default function TasksView() {
                     </div>
                     {task.description && <div className="task-description">{task.description}</div>}
                     <div className="task-meta">
-                      <span className={`task-badge badge-${task.priority}`}>
-                        {t(messages, `module.tasks.priority.${task.priority}`)}
-                      </span>
+                      {isDueToday && <span className="task-due-label task-due-today">{t(messages, 'module.tasks.due_today')}</span>}
                       {isOverdue && <span className="task-badge badge-overdue">{t(messages, 'module.tasks.overdue')}</span>}
+                      {task.priority && (
+                        <span className={`task-priority-label task-priority-${task.priority}`}>
+                          {t(messages, `module.tasks.priority.${task.priority}`)}
+                        </span>
+                      )}
                       {task.recurrence && <span className="task-badge badge-recurring">{t(messages, `module.tasks.recurrence.${task.recurrence}`)}</span>}
                       {task.due_date && (
                         <span className={`task-due${isOverdue ? ' overdue' : ''}`}>

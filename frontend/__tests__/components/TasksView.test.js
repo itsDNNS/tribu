@@ -46,6 +46,10 @@ jest.mock('../../contexts/AppContext', () => ({
       'module.tasks.sort.created': 'Neueste zuerst',
       'module.tasks.sort.priority': 'Priorität',
       'module.tasks.sort.assignee': 'Person',
+      'module.tasks.due_today': 'Heute fällig',
+      'module.tasks.mine': 'Meine',
+      'module.tasks.filters': 'Filter',
+      'module.tasks.new_task': 'Neue Aufgabe',
     },
     ui: {
       card: { background: '#fff', borderColor: '#eee', color: '#111', borderRadius: 14, padding: 16, border: '1px solid #eee' },
@@ -55,6 +59,7 @@ jest.mock('../../contexts/AppContext', () => ({
       secondaryBtn: { border: '1px solid #d1d5db', borderRadius: 10, padding: '9px 12px', background: '#fff', cursor: 'pointer' },
     },
     isMobile: false,
+    me: { user_id: 10, display_name: 'Max' },
     switchFamily: jest.fn(),
   }),
 }));
@@ -94,13 +99,14 @@ jest.mock('../../hooks/useTasks', () => ({
 describe('TasksView', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('renders the warm task focus strip', () => {
+  it('renders the compact task command card with priority filters', () => {
     const { container } = render(<TasksView />);
 
-    expect(container.querySelector('.tasks-focus-strip')).toBeInTheDocument();
-    expect(container.querySelector('.family-view-header')).toBeInTheDocument();
-    expect(container.querySelector('.tasks-focus-strip')).toHaveTextContent('Offen');
-    expect(container.querySelector('.tasks-focus-strip')).toHaveTextContent('Erledigt');
+    expect(container.querySelector('.tasks-card-header')).toBeInTheDocument();
+    expect(container.querySelector('.tasks-wrapper')).toBeInTheDocument();
+    expect(container.querySelector('.tasks-filter-tabs')).toHaveTextContent('Heute fällig');
+    expect(container.querySelector('.tasks-filter-tabs')).toHaveTextContent('Meine');
+    expect(container.querySelector('.tasks-new-btn')).toHaveTextContent('Neue Aufgabe');
   });
 
   it('renders task list', () => {

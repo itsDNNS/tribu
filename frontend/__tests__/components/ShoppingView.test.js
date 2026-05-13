@@ -114,7 +114,7 @@ describe('ShoppingView redesign shell', () => {
     });
 
     expect(container.querySelector('.shopping-active-header')).toBeInTheDocument();
-    expect(container.querySelector('.family-view-header')).toBeInTheDocument();
+    expect(container.querySelector('.shopping-active-select')).toBeInTheDocument();
     expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Dairy');
     expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Produce');
   });
@@ -168,8 +168,9 @@ describe('ShoppingView quick add', () => {
 
     expect(input).not.toHaveAttribute('list');
     expect(input).toHaveAttribute('aria-expanded', 'true');
-    const options = screen.getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['Milk']);
+    const options = screen.getByRole('listbox', { name: 'Add an item...' }).querySelectorAll('[role="option"]');
+    const optionLabels = Array.from(options).map((option) => option.textContent);
+    expect(optionLabels).toEqual(['Milk']);
   });
 
   test('supports keyboard selection in the app-controlled quick-add suggestions', () => {
@@ -236,7 +237,7 @@ describe('ShoppingView quick add', () => {
     });
 
     expect(screen.getByPlaceholderText('Category or aisle')).toBeInTheDocument();
-    const vegetablesToggle = screen.getByRole('button', { name: /Vegetables/i });
+    const vegetablesToggle = document.querySelector('#shopping-category-vegetables-items').previousElementSibling;
     expect(vegetablesToggle).toHaveAttribute('aria-expanded', 'true');
     fireEvent.click(vegetablesToggle);
     expect(vegetablesToggle).toHaveAttribute('aria-expanded', 'false');

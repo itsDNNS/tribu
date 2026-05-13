@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Kuukauden ensimmäinen keskiviikko",
   "module.tasks.recurrence.monthly_first_thursday": "Kuukauden ensimmäinen torstai",
   "module.tasks.recurrence.monthly_first_friday": "Kuukauden ensimmäinen perjantai",
-  "module.tasks.recurrence.monthly_first_saturday": "Kuukauden ensimmäinen lauantai"
+  "module.tasks.recurrence.monthly_first_saturday": "Kuukauden ensimmäinen lauantai",
+  "module.tasks.due_today": "Tänään",
+  "module.tasks.mine": "Omat",
+  "module.tasks.filters": "Suodattimet",
+  "module.tasks.new_task": "Uusi tehtävä"
 }

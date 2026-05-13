@@ -47,5 +47,9 @@
   "module.tasks.recurrence.monthly_first_wednesday": "Prva srijeda svakog mjeseca",
   "module.tasks.recurrence.monthly_first_thursday": "Prvi četvrtak svakog mjeseca",
   "module.tasks.recurrence.monthly_first_friday": "Prvi petak svakog mjeseca",
-  "module.tasks.recurrence.monthly_first_saturday": "Prva subota svakog mjeseca"
+  "module.tasks.recurrence.monthly_first_saturday": "Prva subota svakog mjeseca",
+  "module.tasks.due_today": "Danas",
+  "module.tasks.mine": "Moje",
+  "module.tasks.filters": "Filtri",
+  "module.tasks.new_task": "Novi zadatak"
 }
