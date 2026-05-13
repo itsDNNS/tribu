@@ -85,7 +85,13 @@ test.describe('Tasks', () => {
 
     await page.getByRole('button', { name: 'Filters' }).click();
     const controlsBox = await page.locator('.tasks-refine-controls').boundingBox();
+    const wrapperBox = await page.locator('.tasks-wrapper').boundingBox();
+    const viewportWidth = page.viewportSize()?.width ?? 0;
     expect(controlsBox).not.toBeNull();
+    expect(wrapperBox).not.toBeNull();
+    expect(controlsBox.x).toBeGreaterThanOrEqual(wrapperBox.x - 1);
+    expect(controlsBox.x + controlsBox.width).toBeLessThanOrEqual(wrapperBox.x + wrapperBox.width + 1);
+    expect(controlsBox.x + controlsBox.width).toBeLessThanOrEqual(viewportWidth + 1);
     for (const input of await page.locator('.tasks-refine-input').all()) {
       const inputBox = await input.boundingBox();
       expect(inputBox).not.toBeNull();
