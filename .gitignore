@@ -18,6 +18,8 @@ frontend/.next-e2e/
 
 # Internal docs (not for the repo)
 .internal/
+docs/design/
+docs/plans/
 tmp-marketing-research/
 tmp-marketing-research-collector.py
 
