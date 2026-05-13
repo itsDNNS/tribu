@@ -248,7 +248,7 @@ export default function MealPlansView() {
   }
 
   return (
-    <div>
+    <div className="meal-plans-page">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}

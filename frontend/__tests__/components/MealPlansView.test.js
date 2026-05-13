@@ -114,6 +114,7 @@ describe('MealPlansView', () => {
   test('renders the add button, fetches the week, and the grid has 7 day headers + 3 slots', async () => {
     mockAppState = baseState();
     const { container } = render(<MealPlansView />);
+    expect(container.querySelector('.meal-plans-page')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mahlzeit planen' })).toBeInTheDocument();
     await waitFor(() => expect(apiListMealPlans).toHaveBeenCalledTimes(1));
     expect(screen.getByText('Morgens')).toBeInTheDocument();

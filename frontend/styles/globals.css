@@ -2623,6 +2623,211 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .meal-recipe-picker-label { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .meal-recipe-picker-select { width: 100%; min-width: 0; }
 
+/* Meal plan redesign alignment: warm paper surfaces and calmer planning grid. */
+.meal-plans-page {
+  width: min(100%, 1080px);
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+}
+.meal-plans-page .view-header {
+  min-height: 66px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-paper);
+  box-shadow: var(--shadow-soft);
+}
+.meal-plans-page .view-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+.meal-plans-page .view-subtitle {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+.meal-plans-page .meal-header-actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+.meal-plans-page .meal-week-nav {
+  gap: 6px;
+}
+.meal-plans-page .meal-week-nav-btn,
+.meal-plans-page .meal-week-nav-label,
+.meal-plans-page .meal-week-shopping .btn,
+.meal-plans-page .btn-primary {
+  min-height: 38px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.meal-plans-page .meal-week-nav-btn,
+.meal-plans-page .meal-week-nav-label,
+.meal-plans-page .meal-week-shopping .btn {
+  border-color: var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-soft) 64%, var(--surface-paper));
+  color: var(--text-primary);
+}
+.meal-plans-page .meal-week-nav-label {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 760;
+}
+.meal-plans-page .meal-week-shopping {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.meal-plans-page .meal-week-shopping-list {
+  min-width: 150px;
+  min-height: 38px;
+  padding: 7px 34px 7px 12px;
+  border-color: var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-paper);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+.meal-plans-page .meal-loading {
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-soft) 62%, var(--surface-paper));
+}
+.meal-plans-page .meal-grid {
+  grid-template-columns: minmax(86px, 98px) repeat(7, minmax(84px, 1fr));
+  gap: 8px;
+  margin-top: 0;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-paper);
+  box-shadow: var(--shadow-soft);
+}
+.meal-plans-page .meal-grid-day-header,
+.meal-plans-page .meal-grid-slot-label {
+  min-height: 48px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface-soft) 68%, var(--surface-paper));
+}
+.meal-plans-page .meal-grid-day-header {
+  align-items: center;
+  padding: 8px 6px;
+  text-align: center;
+  letter-spacing: 0;
+}
+.meal-plans-page .meal-grid-day-today {
+  color: var(--amethyst);
+  border-color: color-mix(in srgb, var(--amethyst) 28%, var(--border-subtle));
+  background: color-mix(in srgb, var(--amethyst) 8%, var(--surface-paper));
+}
+.meal-plans-page .meal-grid-day-name {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.meal-plans-page .meal-grid-day-date {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 820;
+}
+.meal-plans-page .meal-grid-slot-label {
+  justify-content: center;
+  padding: 8px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+.meal-plans-page .meal-grid-cell {
+  min-height: 68px;
+  border-color: var(--border-subtle);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface-soft) 54%, var(--surface-paper));
+  box-shadow: none;
+}
+.meal-plans-page .meal-grid-cell:hover {
+  border-color: color-mix(in srgb, var(--amethyst) 22%, var(--border-subtle));
+  background: var(--surface-paper);
+  transform: none;
+}
+.meal-plans-page .meal-grid-cell-empty {
+  border-style: solid;
+  color: var(--text-muted);
+}
+.meal-plans-page .meal-grid-cell-empty svg {
+  width: 18px;
+  height: 18px;
+}
+.meal-plans-page .meal-grid-cell-filled {
+  background: var(--surface-paper);
+}
+.meal-plans-page .meal-grid-cell-filled::before {
+  left: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: var(--radius-pill);
+}
+.meal-plans-page .meal-cell-edit-btn {
+  padding: 10px 12px 10px 18px;
+}
+.meal-plans-page .meal-cell-title {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 820;
+}
+.meal-plans-page .meal-cell-meta {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.meal-plans-page .meal-cell-grip-btn {
+  opacity: 1;
+  color: var(--text-muted);
+}
+.meal-plans-page .meal-grid-cell-drop-over {
+  border-color: var(--amethyst);
+  background: color-mix(in srgb, var(--amethyst) 10%, var(--surface-paper));
+}
+.meal-plans-page .meal-cell-overlay {
+  border-color: var(--border-subtle);
+  background: var(--surface-paper);
+  box-shadow: var(--shadow-soft);
+}
+
+@media (max-width: 780px) {
+  .meal-plans-page {
+    width: 100%;
+  }
+  .meal-plans-page .view-header {
+    align-items: stretch;
+    padding: 12px;
+  }
+  .meal-plans-page .meal-header-actions,
+  .meal-plans-page .meal-week-shopping {
+    justify-content: flex-start;
+  }
+  .meal-plans-page .meal-grid {
+    grid-template-columns: minmax(72px, 86px) repeat(7, minmax(68px, 1fr));
+    padding: 10px;
+  }
+  .meal-plans-page .meal-grid-day-header,
+  .meal-plans-page .meal-grid-slot-label {
+    min-height: 42px;
+  }
+}
+
 /* ─── Recipes module ─── */
 .recipe-header-actions { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
 .recipe-search { min-height: 38px; min-width: min(280px, 100%); display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; background: rgba(120, 130, 180, 0.06); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); color: var(--text-muted); }
