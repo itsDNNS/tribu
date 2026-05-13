@@ -84,6 +84,14 @@ test.describe('Tasks', () => {
     await expect(page.getByText('Already Done')).toBeVisible({ timeout: 5000 });
 
     await page.getByRole('button', { name: 'Filters' }).click();
+    const controlsBox = await page.locator('.tasks-refine-controls').boundingBox();
+    expect(controlsBox).not.toBeNull();
+    for (const input of await page.locator('.tasks-refine-input').all()) {
+      const inputBox = await input.boundingBox();
+      expect(inputBox).not.toBeNull();
+      expect(inputBox.x).toBeGreaterThanOrEqual(controlsBox.x - 1);
+      expect(inputBox.x + inputBox.width).toBeLessThanOrEqual(controlsBox.x + controlsBox.width + 1);
+    }
 
     // "Open" tab
     await page.locator('.tasks-state-btn', { hasText: 'Open' }).click();

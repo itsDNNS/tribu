@@ -5229,11 +5229,22 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   padding: 0 16px 10px;
 }
 .tasks-page .tasks-refine-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
   margin: 0 16px 10px;
   padding: 10px;
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   background: var(--surface-soft);
+}
+.tasks-page .tasks-refine-controls .tasks-state-tabs {
+  grid-column: 1 / -1;
+}
+.tasks-page .tasks-refine-input {
+  width: 100%;
+  min-width: 0;
 }
 .tasks-state-tabs {
   display: flex;
@@ -5545,6 +5556,7 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
     min-height: 44px;
   }
   .tasks-page .tasks-refine-controls {
+    grid-template-columns: 1fr;
     margin: 0 12px 10px;
   }
   .tasks-page .tasks-list {
