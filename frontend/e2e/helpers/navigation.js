@@ -72,6 +72,11 @@ async function navigateTo(page, viewName) {
       await drawerItem.click();
       return;
     }
+    const backdrop = page.locator('.sidebar-backdrop.active');
+    if (await backdrop.isVisible({ timeout: 500 }).catch(() => false)) {
+      await backdrop.click({ force: true });
+      await backdrop.waitFor({ state: 'hidden', timeout: 1000 }).catch(() => {});
+    }
   }
 
   // Then try bottom-nav overflow when present.

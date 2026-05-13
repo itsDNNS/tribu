@@ -258,16 +258,17 @@ test.describe('Dashboard', () => {
           '.weekly-plan-section li strong',
           '.weekly-plan-section li span',
         ];
-        return selectors.map((selector) => {
+        return selectors.flatMap((selector) => {
           const element = document.querySelector(selector);
+          if (!element) return [];
           const surface = element?.closest('.weekly-plan-header, .weekly-plan-section li, .weekly-plan-section, .weekly-plan-filters') || element;
           const elementStyle = window.getComputedStyle(element);
           const surfaceStyle = window.getComputedStyle(surface);
-          return {
+          return [{
             selector,
             color: elementStyle.color,
             backgroundColor: surfaceStyle.backgroundColor,
-          };
+          }];
         });
       });
 

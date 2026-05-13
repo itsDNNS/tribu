@@ -64,11 +64,16 @@ export default function SettingsView() {
   // Mobile: list view when no tab selected
   if (isMobile && activeTab === null) {
     return (
-      <div>
-        <div className="view-header">
-          <div>
-            <h1 className="view-title">{t(messages, 'settings')}</h1>
-            <div className="view-subtitle">{t(messages, 'settings_subtitle')}</div>
+      <div className="settings-page">
+        <div className="view-header settings-page-header">
+          <div className="settings-title-block">
+            <span className="settings-page-icon" aria-hidden="true">
+              <User size={22} />
+            </span>
+            <div>
+              <h1 className="view-title">{t(messages, 'settings')}</h1>
+              <div className="view-subtitle">{t(messages, 'settings_subtitle')}</div>
+            </div>
           </div>
         </div>
         <div className="settings-mobile-list">
@@ -98,7 +103,7 @@ export default function SettingsView() {
   // Mobile: detail view with back button
   if (isMobile) {
     return (
-      <div>
+      <div className="settings-page settings-page-detail">
         <button className="settings-mobile-back" onClick={() => setActiveTab(null)}>
           <ArrowLeft size={16} /> {t(messages, 'settings_back')}
         </button>
@@ -109,11 +114,16 @@ export default function SettingsView() {
 
   // Desktop: sidebar + content
   return (
-    <div>
-      <div className="view-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'settings')}</h1>
-          <div className="view-subtitle">{t(messages, 'settings_subtitle')}</div>
+    <div className="settings-page">
+      <div className="view-header settings-page-header">
+        <div className="settings-title-block">
+          <span className="settings-page-icon" aria-hidden="true">
+            <User size={22} />
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'settings')}</h1>
+            <div className="view-subtitle">{t(messages, 'settings_subtitle')}</div>
+          </div>
         </div>
       </div>
       <div className="settings-layout">

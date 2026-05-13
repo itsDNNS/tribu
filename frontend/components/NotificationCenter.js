@@ -116,7 +116,7 @@ export default function NotificationCenter({ onClose } = {}) {
   })();
 
   return (
-    <div>
+    <div className={onClose ? 'notifications-panel-content' : 'notifications-page'}>
       {onClose ? (
         <div className="notif-panel-header">
           <h2 className="notif-panel-title">{t(messages, 'notifications')}</h2>
@@ -130,13 +130,18 @@ export default function NotificationCenter({ onClose } = {}) {
           </button>
         </div>
       ) : (
-        <div className="view-header">
-          <div>
-            <h1 className="view-title">{t(messages, 'notifications')}</h1>
-            <div className="view-subtitle">
-              {unreadCount > 0
-                ? `${unreadCount} ${t(messages, 'notifications_unread')}`
-                : t(messages, 'notifications_all_read')}
+        <div className="view-header notifications-header">
+          <div className="notifications-title-block">
+            <span className="notifications-page-icon" aria-hidden="true">
+              <Bell size={22} />
+            </span>
+            <div>
+              <h1 className="view-title">{t(messages, 'notifications')}</h1>
+              <div className="view-subtitle">
+                {unreadCount > 0
+                  ? `${unreadCount} ${t(messages, 'notifications_unread')}`
+                  : t(messages, 'notifications_all_read')}
+              </div>
             </div>
           </div>
           {unreadCount > 0 && (
@@ -177,6 +182,7 @@ export default function NotificationCenter({ onClose } = {}) {
                   key={notif.id}
                   className={`notif-item${notif.read ? ' notif-item-read' : ' notif-item-unread'}`}
                   onClick={() => handleClick(notif)}
+                  role="button"
                   tabIndex={0}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); handleClick(notif); } }}
                 >
@@ -199,6 +205,7 @@ export default function NotificationCenter({ onClose } = {}) {
                     )}
                   </div>
                   <button
+                    type="button"
                     className="btn-ghost notif-delete"
                     onClick={(e) => { e.stopPropagation(); handleDelete(notif.id); }}
                     aria-label={t(messages, 'aria.delete_notification')}

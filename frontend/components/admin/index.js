@@ -143,7 +143,7 @@ export default function AdminView() {
   }
 
   return (
-    <div className="view-enter">
+    <div className="view-enter admin-page">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
@@ -154,9 +154,15 @@ export default function AdminView() {
           messages={messages}
         />
       )}
-      <div className="view-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'admin_title')}</h1>
+      <div className="view-header admin-page-header">
+        <div className="admin-title-block">
+          <span className="admin-page-icon" aria-hidden="true">
+            <Shield size={22} />
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'admin_title')}</h1>
+            <div className="view-subtitle">{t(messages, 'admin_sections')}</div>
+          </div>
         </div>
       </div>
 
@@ -259,7 +265,7 @@ export default function AdminView() {
                             onChange={(e) => setNewRole(e.target.value)}
                           >
                             <option value="member">{t(messages, 'member')}</option>
-                            <option value="admin">Admin</option>
+                            <option value="admin">{t(messages, 'admin')}</option>
                           </select>
                         </div>
                         <label className="set-checkbox-label">
@@ -355,9 +361,9 @@ function MemberGroups({ members, me, messages, onSetAdult, onSetRole, onResetPas
               value={m.date_of_birth || ''}
               onChange={(e) => onSetBirthdate(m.user_id, e.target.value || null)}
               aria-label={t(messages, 'birthdate')} />
-            <label className="btn-ghost" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <label className="btn-ghost adm-avatar-label">
               <ImageIcon size={13} /> {t(messages, 'set_avatar')}
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => onSetAvatar(m.user_id, e)} />
+              <input type="file" accept="image/*" className="adm-avatar-input" onChange={(e) => onSetAvatar(m.user_id, e)} />
             </label>
             <button className="btn-ghost" onClick={() => onResetPassword(m.user_id)}><KeyRound size={13} /> {t(messages, 'reset_password')}</button>
             <button className="btn-ghost btn-outline-danger" onClick={() => onRemoveMember(m.user_id)}><X size={13} /> {t(messages, 'remove_member')}</button>
