@@ -1,6 +1,7 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import MealPlansView from '../../components/MealPlansView';
+import { buildDemoMealPlans } from '../../lib/demo-data';
 
 jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({ success: jest.fn(), error: jest.fn() }),
@@ -30,7 +31,6 @@ jest.mock('../../lib/api', () => ({
 
 const messages = {
   'module.meal_plans.name': 'Essensplan',
-  'module.meal_plans.demo_blocked': 'Im Demo nicht verfügbar',
   'module.meal_plans.slot_taken': 'Slot belegt',
   'toast.error': 'Fehler',
   'module.meal_plans.add': 'Mahlzeit planen',
@@ -86,13 +86,24 @@ const messages = {
 };
 
 function baseState(overrides) {
-  return {
+  const state = {
     familyId: '1',
     families: [{ family_id: 1, family_name: 'Test' }],
     messages,
+    lang: 'de',
     demoMode: false,
+    mealPlans: [],
+    setMealPlans: (updater) => {
+      const current = mockAppState.mealPlans || [];
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      mockAppState = { ...mockAppState, mealPlans: next };
+    },
     ...overrides,
   };
+  if (state.demoMode && state.mealPlans.length === 0) {
+    state.mealPlans = buildDemoMealPlans(state.lang);
+  }
+  return state;
 }
 
 describe('MealPlansView', () => {
@@ -134,12 +145,26 @@ describe('MealPlansView', () => {
     expect(screen.getByPlaceholderText('z.B. Spaghetti')).toBeInTheDocument();
   });
 
-  test('demo mode renders the blocked placeholder instead of fetching', async () => {
+  test('demo mode renders local demo meals instead of fetching', async () => {
     mockAppState = baseState({ demoMode: true });
     render(<MealPlansView />);
-    expect(screen.getByText('Im Demo nicht verfügbar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mahlzeit planen' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Porridge mit Beeren')).toBeInTheDocument());
     expect(apiListMealPlans).not.toHaveBeenCalled();
     expect(apiListRecipes).not.toHaveBeenCalled();
+  });
+
+  test('demo mode can create a local meal without calling the API', async () => {
+    mockAppState = baseState({ demoMode: true });
+    render(<MealPlansView />);
+    await waitFor(() => expect(screen.getByText('Porridge mit Beeren')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mahlzeit planen' }));
+    fireEvent.change(screen.getByPlaceholderText('z.B. Spaghetti'), { target: { value: 'Demo Suppe' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => expect(screen.getByText('Demo Suppe')).toBeInTheDocument());
+    expect(apiCreateMealPlan).not.toHaveBeenCalled();
   });
 
   test('copies a recipe into the meal dialog before creating the plan', async () => {

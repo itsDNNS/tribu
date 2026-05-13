@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Към списъка за пазаруване",
   "module.meal_plans.drag_aria": "Плъзнете \"{name}\" в друг слот",
   "module.meal_plans.pushed_one": "1 съставка е избутана в списъка за пазаруване",
-  "module.meal_plans.pushed_many": "{count} съставки, избутани в списъка за пазаруване",
-  "module.meal_plans.demo_blocked": "Не се предлага в демо режим"
+  "module.meal_plans.pushed_many": "{count} съставки, избутани в списъка за пазаруване"
 }

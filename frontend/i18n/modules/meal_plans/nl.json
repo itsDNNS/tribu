@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Naar boodschappenlijstje",
   "module.meal_plans.drag_aria": "Sleep \"{name}\" naar een ander slot",
   "module.meal_plans.pushed_one": "1 ingrediënt naar het boodschappenlijstje geduwd",
-  "module.meal_plans.pushed_many": "{count}-ingrediënten naar het boodschappenlijstje gepusht",
-  "module.meal_plans.demo_blocked": "Niet beschikbaar in demomodus"
+  "module.meal_plans.pushed_many": "{count}-ingrediënten naar het boodschappenlijstje gepusht"
 }

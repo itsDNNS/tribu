@@ -23,7 +23,7 @@ function AppOrchestrator({ children }) {
 
   const { loggedIn, demoMode, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
   const { familyId, setFamilyId, families, setFamilies, setMyFamilyRole, setMyFamilyIsAdult, loadMembers, setMembers } = family;
-  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setActivity, setQuickCaptureInbox, setContacts, setBirthdays, setSummary } = data;
+  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setMealPlans, setActivity, setQuickCaptureInbox, setContacts, setBirthdays, setSummary } = data;
   const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, restoreView, setIsMobile, setNavOrder, setTimeFormat, lang } = ui;
 
   // Wrap data loaders to inject familyId default and skip in demo mode
@@ -129,14 +129,16 @@ function AppOrchestrator({ children }) {
     setEvents(demo.events);
     setTasks(demo.tasks);
     setShoppingLists(demo.shoppingLists);
+    setMealPlans(demo.mealPlans || []);
     setActivity(demo.activity || []);
     setQuickCaptureInbox(demo.quickCaptureInbox || []);
     setContacts(demo.contacts);
     setBirthdays(demo.birthdays);
     setSummary(demo.summary);
+    setNeedsSetup(false);
     setLoggedIn(true);
     setLoading(false);
-  }, [lang, setDemoMode, setMe, setFamilies, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult, setMembers, setEvents, setTasks, setShoppingLists, setActivity, setQuickCaptureInbox, setContacts, setBirthdays, setSummary, setLoggedIn, setLoading]);
+  }, [lang, setDemoMode, setMe, setFamilies, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult, setMembers, setEvents, setTasks, setShoppingLists, setMealPlans, setActivity, setQuickCaptureInbox, setContacts, setBirthdays, setSummary, setNeedsSetup, setLoggedIn, setLoading]);
 
   const logout = useCallback(async () => {
     await auth.logout();

@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Ostoslistalle",
   "module.meal_plans.drag_aria": "Vedä \"{name}\" toiseen paikkaan",
   "module.meal_plans.pushed_one": "1 ainesosa työnnetty ostoslistalle",
-  "module.meal_plans.pushed_many": "{count} ainekset työnnetty ostoslistalle",
-  "module.meal_plans.demo_blocked": "Ei saatavilla esittelytilassa"
+  "module.meal_plans.pushed_many": "{count} ainekset työnnetty ostoslistalle"
 }

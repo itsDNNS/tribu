@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Til handleliste",
   "module.meal_plans.drag_aria": "Dra \"{name}\" til et annet spor",
   "module.meal_plans.pushed_one": "1 ingrediens presset til handlelisten",
-  "module.meal_plans.pushed_many": "{count} ingredienser presset til handlelisten",
-  "module.meal_plans.demo_blocked": "Ikke tilgjengelig i demomodus"
+  "module.meal_plans.pushed_many": "{count} ingredienser presset til handlelisten"
 }

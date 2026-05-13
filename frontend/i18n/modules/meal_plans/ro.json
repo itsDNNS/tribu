@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "La lista de cumpărături",
   "module.meal_plans.drag_aria": "Trageți „{name}” într-un alt slot",
   "module.meal_plans.pushed_one": "1 ingredient împins în lista de cumpărături",
-  "module.meal_plans.pushed_many": "Ingredientele {count} împinse în lista de cumpărături",
-  "module.meal_plans.demo_blocked": "Nu este disponibil în modul demonstrativ"
+  "module.meal_plans.pushed_many": "Ingredientele {count} împinse în lista de cumpărături"
 }

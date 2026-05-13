@@ -11,6 +11,7 @@ export function DataProvider({ children }) {
   const [birthdays, setBirthdays] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [shoppingLists, setShoppingLists] = useState([]);
+  const [mealPlans, setMealPlans] = useState([]);
   const [activity, setActivity] = useState([]);
   const [quickCaptureInbox, setQuickCaptureInbox] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -75,6 +76,7 @@ export function DataProvider({ children }) {
     setBirthdays([]);
     setTasks([]);
     setShoppingLists([]);
+    setMealPlans([]);
     setActivity([]);
     setQuickCaptureInbox([]);
     setNotifications([]);
@@ -88,6 +90,7 @@ export function DataProvider({ children }) {
     birthdays, setBirthdays,
     tasks, setTasks,
     shoppingLists, setShoppingLists,
+    mealPlans, setMealPlans,
     activity, setActivity,
     quickCaptureInbox, setQuickCaptureInbox,
     notifications, setNotifications,

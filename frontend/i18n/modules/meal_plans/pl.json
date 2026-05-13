@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Do listy zakupów",
   "module.meal_plans.drag_aria": "Przeciągnij „{name}” do innego miejsca",
   "module.meal_plans.pushed_one": "1 składnik przeniesiony na listę zakupów",
-  "module.meal_plans.pushed_many": "{count} składników przeniesiono na listę zakupów",
-  "module.meal_plans.demo_blocked": "Niedostępne w trybie demo"
+  "module.meal_plans.pushed_many": "{count} składników przeniesiono na listę zakupów"
 }

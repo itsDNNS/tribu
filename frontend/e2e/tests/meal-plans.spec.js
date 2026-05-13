@@ -28,6 +28,29 @@ async function registerWorkerUser(baseURL, browserName) {
 }
 
 test.describe('Meal plan', () => {
+  test('is available with demo meals in demo mode', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.getByRole('button', { name: /try demo/i }).first().click();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 90000 });
+
+    await navigateTo(page, 'Meal plan');
+
+    await expect(page.locator('.meal-plans-page')).toBeVisible({ timeout: 30000 });
+    await expect(page.getByRole('heading', { name: 'Meal plan' })).toBeVisible();
+    await expect(page.getByText(/Porridge with berries|Porridge mit Beeren/)).toBeVisible();
+    await expect(page.getByText('Not available in demo mode')).toHaveCount(0);
+
+    await page.getByRole('button', { name: /Plan a meal|Mahlzeit planen/ }).click();
+    await page.getByPlaceholder(/Spaghetti/).fill('Demo soup');
+    await page.getByRole('button', { name: /Save|Speichern/ }).click();
+    await expect(page.getByText('Demo soup')).toBeVisible();
+
+    await navigateTo(page, 'Tasks');
+    await expect(page.getByRole('heading', { name: /Tasks|Aufgaben/ })).toBeVisible();
+    await navigateTo(page, 'Meal plan');
+    await expect(page.getByText('Demo soup')).toBeVisible();
+  });
+
   test('pushes the current week ingredients to a shopping list', async ({ page, baseURL, browserName }) => {
     const workerUser = await registerWorkerUser(baseURL, browserName);
     await page.context().addCookies(workerUser.cookies);

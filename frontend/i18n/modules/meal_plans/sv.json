@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Till inköpslistan",
   "module.meal_plans.drag_aria": "Dra \"{name}\" till en annan plats",
   "module.meal_plans.pushed_one": "1 ingrediens tryckt till inköpslistan",
-  "module.meal_plans.pushed_many": "{count} ingredienser skjuts till inköpslistan",
-  "module.meal_plans.demo_blocked": "Ej tillgängligt i demoläge"
+  "module.meal_plans.pushed_many": "{count} ingredienser skjuts till inköpslistan"
 }

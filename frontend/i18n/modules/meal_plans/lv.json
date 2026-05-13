@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Uz iepirkumu sarakstu",
   "module.meal_plans.drag_aria": "Velciet \"{name}\" uz citu slotu",
   "module.meal_plans.pushed_one": "1 sastāvdaļa ir ievietota iepirkumu sarakstā",
-  "module.meal_plans.pushed_many": "{count} sastāvdaļas ir iekļautas iepirkumu sarakstā",
-  "module.meal_plans.demo_blocked": "Nav pieejams demonstrācijas režīmā"
+  "module.meal_plans.pushed_many": "{count} sastāvdaļas ir iekļautas iepirkumu sarakstā"
 }

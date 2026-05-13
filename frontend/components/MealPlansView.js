@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, UtensilsCrossed, Plus, Edit2, CalendarDays, GripVertical, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Edit2, CalendarDays, GripVertical, ShoppingCart } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -151,20 +151,6 @@ export default function MealPlansView() {
     }
   }, [shoppingLists, selectedWeekListId]);
 
-  if (demoMode) {
-    return (
-      <div className="view">
-        <div className="view-header">
-          <h1 className="view-title">{t(messages, 'module.meal_plans.name')}</h1>
-        </div>
-        <div className="empty-state">
-          <UtensilsCrossed size={32} aria-hidden="true" />
-          <p>{t(messages, 'module.meal_plans.demo_blocked')}</p>
-        </div>
-      </div>
-    );
-  }
-
   const currentFamilyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
   const days = weekDays(hook.weekStart);
   const today = new Date();
@@ -271,7 +257,7 @@ export default function MealPlansView() {
         isEditing={editingId != null}
         ingredientHints={hook.ingredientHints}
         shoppingLists={shoppingLists}
-        onPushToShopping={editingId != null ? handlePushToShopping : null}
+        onPushToShopping={editingId != null && !demoMode ? handlePushToShopping : null}
         recipes={recipes}
       />
 
@@ -309,7 +295,7 @@ export default function MealPlansView() {
             </button>
           </div>
 
-          {shoppingLists.length > 0 && (
+          {!demoMode && shoppingLists.length > 0 && (
             <div className="meal-week-shopping" role="group" aria-label={t(messages, 'module.meal_plans.push_week_to_shopping')}>
               <select
                 className="form-input meal-week-shopping-list"

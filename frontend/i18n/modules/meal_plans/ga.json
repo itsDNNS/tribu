@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Go dtí an liosta siopadóireachta",
   "module.meal_plans.drag_aria": "Tarraing \"{name}\" chuig sliotán eile",
   "module.meal_plans.pushed_one": "1 chomhábhar brú chuig an liosta siopadóireachta",
-  "module.meal_plans.pushed_many": "Comhábhair {count} bhrú ar an liosta siopadóireachta",
-  "module.meal_plans.demo_blocked": "Níl sé ar fáil i mód taispeána"
+  "module.meal_plans.pushed_many": "Comhábhair {count} bhrú ar an liosta siopadóireachta"
 }

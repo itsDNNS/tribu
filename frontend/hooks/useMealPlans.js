@@ -34,8 +34,18 @@ export function weekDays(weekStart) {
   return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 }
 
+function mealInRange(meal, start, end) {
+  return meal.plan_date >= formatIsoDate(start) && meal.plan_date <= formatIsoDate(end);
+}
+
+function ingredientNamesFromMeals(items) {
+  return Array.from(new Set(
+    items.flatMap((meal) => (meal.ingredients || []).map((ingredient) => ingredient.name).filter(Boolean)),
+  )).sort((a, b) => a.localeCompare(b));
+}
+
 export function useMealPlans() {
-  const { familyId, messages, demoMode } = useApp();
+  const { familyId, messages, demoMode, mealPlans: demoMeals = [], setMealPlans } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [weekStart, setWeekStart] = useState(() => isoWeekStart(new Date()));
@@ -46,7 +56,11 @@ export function useMealPlans() {
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
 
   const load = useCallback(async (fid = familyId) => {
-    if (!fid || demoMode) {
+    if (demoMode) {
+      setMeals(demoMeals.filter((meal) => mealInRange(meal, weekStart, weekEnd)));
+      return;
+    }
+    if (!fid) {
       setMeals([]);
       return;
     }
@@ -56,20 +70,24 @@ export function useMealPlans() {
     const { ok, data } = await api.apiListMealPlans(fid, start, end);
     if (ok && Array.isArray(data)) setMeals(data);
     setLoading(false);
-  }, [familyId, demoMode, weekStart, weekEnd]);
+  }, [familyId, demoMode, demoMeals, weekStart, weekEnd]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const loadIngredientHints = useCallback(async (fid = familyId) => {
-    if (!fid || demoMode) {
+    if (demoMode) {
+      setIngredientHints(ingredientNamesFromMeals(demoMeals));
+      return;
+    }
+    if (!fid) {
       setIngredientHints([]);
       return;
     }
     const { ok, data } = await api.apiListMealPlanIngredients(fid);
     if (ok && data?.items) setIngredientHints(data.items);
-  }, [familyId, demoMode]);
+  }, [familyId, demoMode, demoMeals]);
 
   useEffect(() => {
     loadIngredientHints();
@@ -115,12 +133,27 @@ export function useMealPlans() {
   }
 
   async function createMeal(form) {
+    const payload = buildPayload(form);
     if (demoMode) {
-      toastError(t(messages, 'module.meal_plans.name'));
-      return { ok: false };
+      if (demoMeals.some((meal) => meal.plan_date === payload.plan_date && meal.slot === payload.slot)) {
+        toastError(t(messages, 'module.meal_plans.slot_taken'));
+        return { ok: false, status: 409 };
+      }
+      const now = new Date().toISOString();
+      const data = {
+        id: Math.max(0, ...demoMeals.map((meal) => meal.id || 0)) + 1,
+        family_id: Number(familyId) || 1,
+        ...payload,
+        created_by_user_id: 1,
+        created_at: now,
+        updated_at: now,
+      };
+      setMealPlans((prev) => [...prev, data]);
+      toastSuccess(t(messages, 'module.meal_plans.created'));
+      announce(t(messages, 'module.meal_plans.created'));
+      return { ok: true, data };
     }
-    const payload = { family_id: Number(familyId), ...buildPayload(form) };
-    const { ok, data, status } = await api.apiCreateMealPlan(payload);
+    const { ok, data, status } = await api.apiCreateMealPlan({ family_id: Number(familyId), ...payload });
     if (!ok) {
       if (status === 409) toastError(t(messages, 'module.meal_plans.slot_taken'));
       else toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
@@ -134,6 +167,19 @@ export function useMealPlans() {
 
   async function updateMeal(planId, form) {
     const payload = buildPayload(form);
+    if (demoMode) {
+      if (demoMeals.some((meal) => meal.id !== planId && meal.plan_date === payload.plan_date && meal.slot === payload.slot)) {
+        toastError(t(messages, 'module.meal_plans.slot_taken'));
+        return { ok: false, status: 409 };
+      }
+      const current = demoMeals.find((meal) => meal.id === planId);
+      if (!current) return { ok: false, status: 404 };
+      const updated = { ...current, ...payload, updated_at: new Date().toISOString() };
+      setMealPlans((prev) => prev.map((meal) => (meal.id === planId ? updated : meal)));
+      toastSuccess(t(messages, 'module.meal_plans.updated'));
+      announce(t(messages, 'module.meal_plans.updated'));
+      return { ok: true, data: updated };
+    }
     const { ok, data, status } = await api.apiUpdateMealPlan(planId, payload);
     if (!ok) {
       if (status === 409) toastError(t(messages, 'module.meal_plans.slot_taken'));
@@ -147,6 +193,12 @@ export function useMealPlans() {
   }
 
   async function deleteMeal(planId) {
+    if (demoMode) {
+      setMealPlans((prev) => prev.filter((meal) => meal.id !== planId));
+      toastSuccess(t(messages, 'module.meal_plans.deleted'));
+      announce(t(messages, 'module.meal_plans.deleted'));
+      return true;
+    }
     const { ok, data } = await api.apiDeleteMealPlan(planId);
     if (!ok) {
       toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
@@ -161,6 +213,16 @@ export function useMealPlans() {
   async function moveMeal(planId, plan_date, slot) {
     const current = meals.find((m) => m.id === planId);
     if (current && current.plan_date === plan_date && current.slot === slot) return true;
+    if (demoMode) {
+      if (demoMeals.some((meal) => meal.id !== planId && meal.plan_date === plan_date && meal.slot === slot)) {
+        toastError(t(messages, 'module.meal_plans.slot_taken'));
+        return false;
+      }
+      setMealPlans((prev) => prev.map((meal) => (
+        meal.id === planId ? { ...meal, plan_date, slot, updated_at: new Date().toISOString() } : meal
+      )));
+      return true;
+    }
     // Optimistic local update so the drop lands without waiting for the round-trip.
     setMeals((prev) => prev.map((m) => (m.id === planId ? { ...m, plan_date, slot } : m)));
     const { ok, status, data } = await api.apiUpdateMealPlan(planId, { plan_date, slot });
@@ -176,6 +238,7 @@ export function useMealPlans() {
   }
 
   async function pushToShopping(planId, shoppingListId, ingredientNames = null) {
+    if (demoMode) return { ok: false };
     const { ok, data } = await api.apiAddMealIngredientsToShopping(planId, shoppingListId, ingredientNames);
     if (!ok) {
       toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
@@ -192,6 +255,7 @@ export function useMealPlans() {
   }
 
   async function pushWeekToShopping(shoppingListId) {
+    if (demoMode) return { ok: false };
     const { ok, data } = await api.apiAddWeekMealIngredientsToShopping(
       Number(familyId),
       formatIsoDate(weekStart),

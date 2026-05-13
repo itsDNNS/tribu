@@ -40,6 +40,15 @@ function dateAt(dayOffset, hour = 9, minute = 0) {
   return d.toISOString();
 }
 
+function isoDateAt(dayOffset) {
+  const d = today();
+  d.setDate(d.getDate() + dayOffset);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function birthdayIn(days, lang = 'en') {
   const d = today();
   d.setDate(d.getDate() + days);
@@ -108,6 +117,12 @@ const strings = {
       { title: 'Prepare for parent meeting', desc: 'Note questions about after-school clubs' },
       { title: 'Do laundry', desc: null },
     ],
+    meals: [
+      { offset: 0, slot: 'morning', meal_name: 'Porridge with berries', ingredients: [{ name: 'Oats', amount: 200, unit: 'g' }, { name: 'Berries', amount: 1, unit: 'box' }] },
+      { offset: 1, slot: 'evening', meal_name: 'Sheet-pan vegetables', ingredients: [{ name: 'Potatoes', amount: 1, unit: 'kg' }, { name: 'Carrots', amount: 500, unit: 'g' }] },
+      { offset: 2, slot: 'noon', meal_name: 'Pasta with tomato sauce', ingredients: [{ name: 'Pasta', amount: 500, unit: 'g' }, { name: 'Tomatoes', amount: 4, unit: 'pcs' }] },
+      { offset: 4, slot: 'evening', meal_name: 'Family pizza', ingredients: [{ name: 'Flour', amount: 500, unit: 'g' }, { name: 'Mozzarella', amount: 2, unit: 'pcs' }] },
+    ],
   },
   de: {
     familyName: 'Familie Müller',
@@ -166,8 +181,30 @@ const strings = {
       { title: 'Elternabend vorbereiten', desc: 'Fragen zur AG-Wahl notieren' },
       { title: 'Wäsche waschen', desc: null },
     ],
+    meals: [
+      { offset: 0, slot: 'morning', meal_name: 'Porridge mit Beeren', ingredients: [{ name: 'Haferflocken', amount: 200, unit: 'g' }, { name: 'Beeren', amount: 1, unit: 'Schale' }] },
+      { offset: 1, slot: 'evening', meal_name: 'Ofengemüse', ingredients: [{ name: 'Kartoffeln', amount: 1, unit: 'kg' }, { name: 'Karotten', amount: 500, unit: 'g' }] },
+      { offset: 2, slot: 'noon', meal_name: 'Pasta mit Tomatensauce', ingredients: [{ name: 'Pasta', amount: 500, unit: 'g' }, { name: 'Tomaten', amount: 4, unit: 'Stk' }] },
+      { offset: 4, slot: 'evening', meal_name: 'Familienpizza', ingredients: [{ name: 'Mehl', amount: 500, unit: 'g' }, { name: 'Mozzarella', amount: 2, unit: 'Stk' }] },
+    ],
   },
 };
+
+export function buildDemoMealPlans(lang = 'en') {
+  const s = strings[lang] || strings.en;
+  return (s.meals || strings.en.meals).map((meal) => ({
+    id: nextId(),
+    family_id: 1,
+    plan_date: isoDateAt(meal.offset),
+    slot: meal.slot,
+    meal_name: meal.meal_name,
+    ingredients: meal.ingredients,
+    notes: null,
+    created_by_user_id: 1,
+    created_at: dateAt(-2),
+    updated_at: dateAt(-1),
+  }));
+}
 
 export function buildDemoData(lang = 'en') {
   _nextId = 100;
@@ -178,6 +215,8 @@ export function buildDemoData(lang = 'en') {
     email: 'demo@tribu.local',
     display_name: 'Dennis',
     profile_image: '',
+    has_completed_onboarding: true,
+    must_change_password: false,
   };
 
   const families = [
@@ -355,5 +394,7 @@ export function buildDemoData(lang = 'en') {
     },
   ];
 
-  return { me, families, members, events, tasks, contacts, birthdays, shoppingLists, activity, quickCaptureInbox, summary };
+  const mealPlans = buildDemoMealPlans(lang);
+
+  return { me, families, members, events, tasks, contacts, birthdays, shoppingLists, mealPlans, activity, quickCaptureInbox, summary };
 }

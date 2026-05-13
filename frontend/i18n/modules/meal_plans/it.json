@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Alla lista della spesa",
   "module.meal_plans.drag_aria": "Trascina \"{name}\" in un altro slot",
   "module.meal_plans.pushed_one": "1 ingrediente inserito nella lista della spesa",
-  "module.meal_plans.pushed_many": "{count} ingredienti inseriti nella lista della spesa",
-  "module.meal_plans.demo_blocked": "Non disponibile in modalità demo"
+  "module.meal_plans.pushed_many": "{count} ingredienti inseriti nella lista della spesa"
 }

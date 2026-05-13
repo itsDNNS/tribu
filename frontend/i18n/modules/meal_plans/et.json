@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Ostunimekirja juurde",
   "module.meal_plans.drag_aria": "Lohistage \"{name}\" teise pessa",
   "module.meal_plans.pushed_one": "1 koostisosa lükati ostunimekirja",
-  "module.meal_plans.pushed_many": "{count} koostisosad lükati ostunimekirja",
-  "module.meal_plans.demo_blocked": "Pole saadaval demorežiimis"
+  "module.meal_plans.pushed_many": "{count} koostisosad lükati ostunimekirja"
 }

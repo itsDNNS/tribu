@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "A bevásárló listához",
   "module.meal_plans.drag_aria": "Húzza a „{name}” elemet egy másik nyílásba",
   "module.meal_plans.pushed_one": "1 hozzávaló felkerült a bevásárlólistára",
-  "module.meal_plans.pushed_many": "A {count} összetevők felkerültek a bevásárlólistára",
-  "module.meal_plans.demo_blocked": "Demo módban nem elérhető"
+  "module.meal_plans.pushed_many": "A {count} összetevők felkerültek a bevásárlólistára"
 }

@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Στη λίστα αγορών",
   "module.meal_plans.drag_aria": "Σύρετε το \"{name}\" σε άλλη υποδοχή",
   "module.meal_plans.pushed_one": "1 συστατικό μπήκε στη λίστα αγορών",
-  "module.meal_plans.pushed_many": "Τα συστατικά {count} μπήκαν στη λίστα αγορών",
-  "module.meal_plans.demo_blocked": "Δεν είναι διαθέσιμο σε λειτουργία επίδειξης"
+  "module.meal_plans.pushed_many": "Τα συστατικά {count} μπήκαν στη λίστα αγορών"
 }

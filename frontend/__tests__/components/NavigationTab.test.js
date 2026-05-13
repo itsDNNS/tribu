@@ -98,10 +98,10 @@ describe('NavigationTab', () => {
     expect(screen.getByText('Belohnungen')).toBeInTheDocument();
   });
 
-  test('hides demo-blocked items in demo mode but still shows rewards', () => {
+  test('hides demo-blocked items in demo mode but still shows meal plans and rewards', () => {
     mockAppState = baseState({ demoMode: true });
     render(<NavigationTab />);
-    expect(screen.queryByText('Essensplan')).not.toBeInTheDocument();
+    expect(screen.getByText('Essensplan')).toBeInTheDocument();
     expect(screen.queryByText('Rezepte')).not.toBeInTheDocument();
     expect(screen.queryByText('Geschenke')).not.toBeInTheDocument();
     expect(screen.getByText('Belohnungen')).toBeInTheDocument();

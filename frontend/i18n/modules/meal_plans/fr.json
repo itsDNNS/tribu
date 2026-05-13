@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Vers la liste de courses",
   "module.meal_plans.drag_aria": "Glisser \"{name}\" vers un autre créneau",
   "module.meal_plans.pushed_one": "1 ingrédient ajouté à la liste de courses",
-  "module.meal_plans.pushed_many": "{count} ingrédients ajoutés à la liste de courses",
-  "module.meal_plans.demo_blocked": "Non disponible en mode démo"
+  "module.meal_plans.pushed_many": "{count} ingrédients ajoutés à la liste de courses"
 }

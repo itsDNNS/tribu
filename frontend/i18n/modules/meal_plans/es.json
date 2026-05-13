@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "A la lista de compras",
   "module.meal_plans.drag_aria": "Arrastrar \"{name}\" a otro horario",
   "module.meal_plans.pushed_one": "1 ingrediente enviado a la lista de compras",
-  "module.meal_plans.pushed_many": "{count} ingredientes enviados a la lista de compras",
-  "module.meal_plans.demo_blocked": "No disponible en modo demo"
+  "module.meal_plans.pushed_many": "{count} ingredientes enviados a la lista de compras"
 }

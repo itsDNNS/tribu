@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Na popis za kupovinu",
   "module.meal_plans.drag_aria": "Povucite \"{name}\" u drugi utor",
   "module.meal_plans.pushed_one": "1 sastojak gurnut na popis za kupnju",
-  "module.meal_plans.pushed_many": "{count} sastojci gurnuti na popis za kupovinu",
-  "module.meal_plans.demo_blocked": "Nije dostupno u demo modu"
+  "module.meal_plans.pushed_many": "{count} sastojci gurnuti na popis za kupovinu"
 }

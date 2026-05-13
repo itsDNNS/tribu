@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Do nákupního seznamu",
   "module.meal_plans.drag_aria": "Přetáhněte \"{name}\" do jiného slotu",
   "module.meal_plans.pushed_one": "1 ingredience zatlačena do nákupního seznamu",
-  "module.meal_plans.pushed_many": "Ingredience {count} posunuty na nákupní seznam",
-  "module.meal_plans.demo_blocked": "Není k dispozici v demo režimu"
+  "module.meal_plans.pushed_many": "Ingredience {count} posunuty na nákupní seznam"
 }

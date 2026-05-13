@@ -37,7 +37,7 @@ export const NAV_ITEM_META = {
   shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
   templates: { icon: ClipboardList, labelKey: 'module.templates.name', adultOnly: true, hideInDemo: true },
-  meal_plans: { icon: UtensilsCrossed, labelKey: 'module.meal_plans.name', hideInDemo: true },
+  meal_plans: { icon: UtensilsCrossed, labelKey: 'module.meal_plans.name' },
   school_timetables: { icon: GraduationCap, labelKey: 'module.school_timetables.name', hideInDemo: true, adultOnly: true },
   recipes: { icon: BookOpen, labelKey: 'module.recipes.name', hideInDemo: true },
   rewards: { icon: Gift, labelKey: 'module.rewards.name' },

@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Na nakupovalni seznam",
   "module.meal_plans.drag_aria": "Povlecite \"{name}\" v drugo režo",
   "module.meal_plans.pushed_one": "1 sestavina potisnjena na nakupovalni seznam",
-  "module.meal_plans.pushed_many": "{count} sestavine potisnjene na nakupovalni seznam",
-  "module.meal_plans.demo_blocked": "Ni na voljo v demo načinu"
+  "module.meal_plans.pushed_many": "{count} sestavine potisnjene na nakupovalni seznam"
 }

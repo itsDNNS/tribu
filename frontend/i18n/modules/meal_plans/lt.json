@@ -53,6 +53,5 @@
   "module.meal_plans.push_to_shopping": "Į pirkinių sąrašą",
   "module.meal_plans.drag_aria": "Vilkite „{name}“ į kitą lizdą",
   "module.meal_plans.pushed_one": "1 ingredientas įtrauktas į pirkinių sąrašą",
-  "module.meal_plans.pushed_many": "{count} sudedamosios dalys įtrauktos į pirkinių sąrašą",
-  "module.meal_plans.demo_blocked": "Nepasiekiamas demonstraciniu režimu"
+  "module.meal_plans.pushed_many": "{count} sudedamosios dalys įtrauktos į pirkinių sąrašą"
 }
