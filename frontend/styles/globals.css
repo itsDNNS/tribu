@@ -5393,14 +5393,68 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   order: 2;
   flex-direction: row;
   overflow-x: auto;
-  padding-bottom: 2px;
+  gap: 8px;
+  padding: 0 0 4px;
   scrollbar-width: none;
 }
 .shopping-page .shopping-lists-panel::-webkit-scrollbar { display: none; }
 .shopping-page .shopping-templates-panel { order: 3; }
 .shopping-page .shopping-list-card {
-  min-width: 150px;
+  min-width: 148px;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-color: var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-soft) 62%, var(--surface-paper));
   box-shadow: none;
+}
+.shopping-page .shopping-list-card.active {
+  border-color: color-mix(in srgb, var(--amethyst) 24%, var(--border-subtle));
+  background: var(--surface-paper);
+  box-shadow: none;
+}
+.shopping-page .shopping-list-name {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+.shopping-page .shopping-list-meta {
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+.shopping-page .shopping-list-delete {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 6px;
+  opacity: 1;
+}
+.shopping-page .shopping-list-progress {
+  height: 2px;
+  background: transparent;
+}
+.shopping-page .shopping-list-progress-fill {
+  background: var(--amethyst);
+}
+.shopping-page .shopping-add-list-btn {
+  min-height: 58px;
+  padding: 10px 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-soft) 62%, var(--surface-paper));
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+.shopping-page .shopping-add-list-btn:hover {
+  border-color: color-mix(in srgb, var(--amethyst) 22%, var(--border-subtle));
+  background: var(--surface-paper);
+  color: var(--amethyst);
 }
 .shopping-items-wrapper {
   border-color: var(--border-subtle);
@@ -5567,6 +5621,18 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .shopping-page .shopping-templates-panel {
   border-color: var(--border-subtle);
   border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-soft) 58%, var(--surface-paper));
+  box-shadow: none;
+  padding: 14px 16px;
+}
+.shopping-page .shopping-templates-header h2 {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 850;
+}
+.shopping-page .shopping-templates-panel .shopping-add-list-btn {
+  min-height: 40px;
+  border-radius: var(--radius-pill);
   background: var(--surface-paper);
 }
 
