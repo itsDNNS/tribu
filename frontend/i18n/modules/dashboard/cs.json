@@ -15,6 +15,7 @@
   "module.dashboard.all": "Vše →",
   "module.dashboard.days": "dní",
   "module.dashboard.empty_events": "Žádné nadcházející události",
+  "module.dashboard.empty_events_action": "Otevřete kalendář",
   "module.dashboard.empty_tasks": "Vše hotovo!",
   "module.dashboard.empty_tasks_action": "Vytvořit úkol",
   "module.dashboard.empty_birthdays": "Žádné narozeniny v příštích 4 týdnech",

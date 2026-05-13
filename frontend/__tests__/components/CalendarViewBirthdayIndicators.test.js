@@ -76,14 +76,29 @@ describe('CalendarView birthday month indicators', () => {
     mockUseApp.mockReturnValue(baseApp());
   });
 
-  it('wraps month view in the calm calendar page shell', () => {
+  it('wraps month view in the warm calendar board shell', () => {
     mockUseCalendar.mockReturnValue(baseCalendar([emptyCell(), monthCell(1, [])]));
 
     const { container } = render(<CalendarView />);
 
     expect(container.querySelector('.calendar-page')).toBeInTheDocument();
-    expect(container.querySelector('.family-view-header')).toBeInTheDocument();
+    expect(container.querySelector('.calendar-board')).toBeInTheDocument();
+    expect(container.querySelector('.calendar-board-title')).toHaveTextContent('Calendar');
     expect(container.querySelector('.calendar-controls-surface')).toBeInTheDocument();
+    expect(container.querySelector('.calendar-day.empty')).toBeDisabled();
+  });
+
+  it('preserves a custom quick-add time when choosing another day', () => {
+    const cal = baseCalendar([emptyCell(), monthCell(4, [])]);
+    cal.startsAt = '2026-05-01T15:30';
+    mockUseCalendar.mockReturnValue(cal);
+
+    render(<CalendarView />);
+
+    screen.getByRole('button', { name: /^May 4$/i }).click();
+
+    expect(cal.setSelectedDate).toHaveBeenCalledWith(new Date(2026, 4, 4));
+    expect(cal.setStartsAt).toHaveBeenCalledWith('2026-05-04T15:30');
   });
 
   it('shows a cake indicator instead of a regular dot for a birthday-only day', () => {

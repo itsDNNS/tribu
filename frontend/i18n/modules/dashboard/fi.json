@@ -15,6 +15,7 @@
   "module.dashboard.all": "Kaikki →",
   "module.dashboard.days": "päivää",
   "module.dashboard.empty_events": "Ei tulevia tapahtumia",
+  "module.dashboard.empty_events_action": "Avaa kalenteri",
   "module.dashboard.empty_tasks": "Kaikki tehty!",
   "module.dashboard.empty_tasks_action": "Luo tehtävä",
   "module.dashboard.empty_birthdays": "Ei syntymäpäiviä seuraavan 4 viikon aikana",

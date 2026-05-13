@@ -15,6 +15,7 @@
   "module.dashboard.all": "Alla →",
   "module.dashboard.days": "dagar",
   "module.dashboard.empty_events": "Inga kommande evenemang",
+  "module.dashboard.empty_events_action": "Öppna kalendern",
   "module.dashboard.empty_tasks": "Allt klart!",
   "module.dashboard.empty_tasks_action": "Skapa uppgift",
   "module.dashboard.empty_birthdays": "Inga födelsedagar under de kommande 4 veckorna",

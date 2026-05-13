@@ -15,6 +15,7 @@
   "module.dashboard.all": "Tutti→",
   "module.dashboard.days": "giorni",
   "module.dashboard.empty_events": "Nessun evento in programma",
+  "module.dashboard.empty_events_action": "Apri il calendario",
   "module.dashboard.empty_tasks": "Tutto fatto!",
   "module.dashboard.empty_tasks_action": "Crea attività",
   "module.dashboard.empty_birthdays": "Nessun compleanno nelle prossime 4 settimane",

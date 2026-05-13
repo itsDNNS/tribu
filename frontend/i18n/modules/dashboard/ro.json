@@ -15,6 +15,7 @@
   "module.dashboard.all": "Toate →",
   "module.dashboard.days": "zile",
   "module.dashboard.empty_events": "Nu există evenimente viitoare",
+  "module.dashboard.empty_events_action": "Deschide calendarul",
   "module.dashboard.empty_tasks": "Toate gata!",
   "module.dashboard.empty_tasks_action": "Creați sarcină",
   "module.dashboard.empty_birthdays": "Nicio zi de naștere în următoarele 4 săptămâni",

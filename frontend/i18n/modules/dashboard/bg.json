@@ -15,6 +15,7 @@
   "module.dashboard.all": "Всички →",
   "module.dashboard.days": "дни",
   "module.dashboard.empty_events": "Няма предстоящи събития",
+  "module.dashboard.empty_events_action": "Отворете календара",
   "module.dashboard.empty_tasks": "Готово!",
   "module.dashboard.empty_tasks_action": "Създаване на задача",
   "module.dashboard.empty_birthdays": "Няма рождени дни през следващите 4 седмици",

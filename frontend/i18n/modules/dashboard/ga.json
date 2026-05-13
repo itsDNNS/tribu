@@ -15,6 +15,7 @@
   "module.dashboard.all": "Gach →",
   "module.dashboard.days": "laethanta",
   "module.dashboard.empty_events": "Níl aon imeachtaí le teacht",
+  "module.dashboard.empty_events_action": "Oscail féilire",
   "module.dashboard.empty_tasks": "Gach déanta!",
   "module.dashboard.empty_tasks_action": "Cruthaigh tasc",
   "module.dashboard.empty_birthdays": "Gan breithlaethanta sna 4 seachtaine amach romhainn",

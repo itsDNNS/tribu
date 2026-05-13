@@ -103,9 +103,15 @@ test.describe('Calendar', () => {
 
     const iconBox = await iconDay.locator('.calendar-day-num').boundingBox();
     const plainBox = await plainDay.locator('.calendar-day-num').boundingBox();
+    const iconCellBox = await iconDay.boundingBox();
+    const plainCellBox = await plainDay.boundingBox();
     expect(iconBox).not.toBeNull();
     expect(plainBox).not.toBeNull();
+    expect(iconCellBox).not.toBeNull();
+    expect(plainCellBox).not.toBeNull();
     expect(Math.abs(iconBox.y - plainBox.y)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs((iconBox.x + iconBox.width / 2) - (iconCellBox.x + iconCellBox.width / 2))).toBeLessThanOrEqual(1);
+    expect(Math.abs((plainBox.x + plainBox.width / 2) - (plainCellBox.x + plainCellBox.width / 2))).toBeLessThanOrEqual(1);
   });
 
   test('desktop event form gives date-time fields enough room for time entry', async ({ authedPage: page }) => {

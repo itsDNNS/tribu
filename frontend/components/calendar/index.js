@@ -12,8 +12,24 @@ export default function CalendarView() {
   const cal = useCalendar();
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const weekdays = t(messages, 'module.calendar.weekdays').split(',');
+  const familyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
 
   const today = new Date();
+  const monthLastDay = new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() + 1, 0).getDate();
+  const previousMonthLastDay = new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth(), 0).getDate();
+  const firstRealCellIndex = cal.monthCells.findIndex((cell) => !cell.empty);
+  const adjacentDayNumber = (idx) => {
+    if (firstRealCellIndex === -1) return '';
+    if (idx < firstRealCellIndex) return previousMonthLastDay - firstRealCellIndex + idx + 1;
+    return idx - firstRealCellIndex - monthLastDay + 1;
+  };
+  const dayStartInput = (date, currentValue = '') => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const currentTime = String(currentValue || '').match(/T(\d{2}:\d{2})/)?.[1] || '09:00';
+    return `${y}-${m}-${d}T${currentTime}`;
+  };
   const formatCountLabel = (count, singular, plural) => `${count} ${count === 1 ? singular : plural}`;
   const buildDayContentLabel = (birthdayCount, regularEvents) => {
     const eventCount = regularEvents.length;
@@ -47,76 +63,74 @@ export default function CalendarView() {
         />
       )}
 
-      <div className="view-header family-view-header">
-        <div>
-          <div className="view-kicker">{t(messages, 'module.calendar.month')}</div>
-          <h1 className="view-title">{t(messages, 'calendar')}</h1>
-          <div className="view-subtitle">
-            {families.find((f) => String(f.family_id) === String(familyId))?.family_name || ''}
+      <section className="calendar-board" aria-label={t(messages, 'calendar')}>
+        <div className="calendar-board-header">
+          <div>
+            <h1 className="calendar-board-title">{t(messages, 'calendar')}</h1>
+            {familyName && <div className="calendar-board-family">{familyName}</div>}
           </div>
         </div>
-      </div>
 
-      {cal.calendarView === 'month' && (
-        <div className="calendar-controls calendar-controls-surface">
-          <div className="calendar-nav">
-            <button
-              className="calendar-nav-btn"
-              onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() - 1, 1)); cal.setSelectedDate(null); }}
-              aria-label={t(messages, 'aria.previous_month')}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="calendar-month-label" aria-live="polite">
-              {cal.calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
+        {cal.calendarView === 'month' && (
+          <div className="calendar-controls calendar-controls-surface">
+            <div className="calendar-nav">
+              <div className="calendar-month-label" aria-live="polite">
+                {cal.calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
+              </div>
+              <button
+                className="calendar-nav-btn"
+                onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() - 1, 1)); cal.setSelectedDate(null); }}
+                aria-label={t(messages, 'aria.previous_month')}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                className="calendar-nav-btn"
+                onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() + 1, 1)); cal.setSelectedDate(null); }}
+                aria-label={t(messages, 'aria.next_month')}
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
-            <button
-              className="calendar-nav-btn"
-              onClick={() => { cal.setCalendarMonth(new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth() + 1, 1)); cal.setSelectedDate(null); }}
-              aria-label={t(messages, 'aria.next_month')}
-            >
-              <ChevronRight size={18} />
-            </button>
+            <button className="today-btn" onClick={() => { cal.setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); cal.setSelectedDate(today); cal.setStartsAt(dayStartInput(today, cal.startsAt)); }}>{t(messages, 'module.calendar.today')}</button>
+            <div className="calendar-view-toggle">
+              <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>{t(messages, 'module.calendar.month')}</button>
+              <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>{t(messages, 'module.calendar.week')}</button>
+            </div>
           </div>
-          <button className="today-btn" onClick={() => { cal.setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); cal.setSelectedDate(today); }}>{t(messages, 'module.calendar.today')}</button>
-          <div className="calendar-view-toggle">
-            <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>{t(messages, 'module.calendar.month')}</button>
-            <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>{t(messages, 'module.calendar.week')}</button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {cal.calendarView === 'week' && (
-        <div className="calendar-controls calendar-controls-surface">
-          <div className="calendar-nav">
-            <button
-              className="calendar-nav-btn"
-              onClick={cal.prevWeek}
-              aria-label={t(messages, 'aria.previous_week')}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="calendar-month-label" aria-live="polite">
-              {t(messages, 'module.calendar.cw')} {cal.weekInfo.weekNumber}: {cal.weekInfo.weekStart.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })} – {new Date(cal.weekInfo.weekEnd.getTime() - 1).toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })}
+        {cal.calendarView === 'week' && (
+          <div className="calendar-controls calendar-controls-surface">
+            <div className="calendar-nav">
+              <div className="calendar-month-label" aria-live="polite">
+                {t(messages, 'module.calendar.cw')} {cal.weekInfo.weekNumber}: {cal.weekInfo.weekStart.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })} – {new Date(cal.weekInfo.weekEnd.getTime() - 1).toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })}
+              </div>
+              <button
+                className="calendar-nav-btn"
+                onClick={cal.prevWeek}
+                aria-label={t(messages, 'aria.previous_week')}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                className="calendar-nav-btn"
+                onClick={cal.nextWeek}
+                aria-label={t(messages, 'aria.next_week')}
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
-            <button
-              className="calendar-nav-btn"
-              onClick={cal.nextWeek}
-              aria-label={t(messages, 'aria.next_week')}
-            >
-              <ChevronRight size={18} />
-            </button>
+            <button className="today-btn" onClick={cal.goToCurrentWeek}>{t(messages, 'module.calendar.today')}</button>
+            <div className="calendar-view-toggle">
+              <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>{t(messages, 'module.calendar.month')}</button>
+              <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>{t(messages, 'module.calendar.week')}</button>
+            </div>
           </div>
-          <button className="today-btn" onClick={cal.goToCurrentWeek}>{t(messages, 'module.calendar.today')}</button>
-          <div className="calendar-view-toggle">
-            <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>{t(messages, 'module.calendar.month')}</button>
-            <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>{t(messages, 'module.calendar.week')}</button>
-          </div>
-        </div>
-      )}
+        )}
 
       {cal.calendarView === 'month' ? (
-        <div className={isMobile ? '' : 'calendar-layout'}>
+        <div className="calendar-month-flow">
           <div className="calendar-grid-wrapper">
             <div className="calendar-weekdays">
               {weekdays.map((d) => (
@@ -141,7 +155,6 @@ export default function CalendarView() {
                 const birthdayEvents = (c.events || []).filter((ev) => ev._isBirthday);
                 const regularEvents = (c.events || []).filter((ev) => !ev._isBirthday);
                 const birthdayCount = birthdayEvents.length;
-                const regularEventCount = regularEvents.length;
                 const dayContentLabel = buildDayContentLabel(birthdayCount, regularEvents);
                 const dayLabel = dayDate
                   ? dayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' }) + (dayContentLabel ? `, ${dayContentLabel}` : '')
@@ -153,20 +166,19 @@ export default function CalendarView() {
                     type="button"
                     className={cls.join(' ')}
                     tabIndex={c.empty ? -1 : 0}
-                    aria-label={dayLabel}
+                    aria-label={c.empty ? undefined : dayLabel}
+                    aria-hidden={c.empty ? 'true' : undefined}
+                    disabled={c.empty}
                     onClick={() => {
                       if (c.empty) return;
                       const picked = new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth(), c.day);
                       cal.setSelectedDate(picked);
-                      if (!cal.startsAt) {
-                        const y = picked.getFullYear();
-                        const m = String(picked.getMonth() + 1).padStart(2, '0');
-                        const d = String(picked.getDate()).padStart(2, '0');
-                        cal.setStartsAt(`${y}-${m}-${d}T09:00`);
-                      }
+                      cal.setStartsAt(dayStartInput(picked, cal.startsAt));
                     }}
                   >
-                    {!c.empty && (
+                    {c.empty ? (
+                      <span className="calendar-day-num calendar-day-num-muted" aria-hidden="true">{adjacentDayNumber(idx)}</span>
+                    ) : (
                       <>
                         <span className="calendar-day-num">{c.day}</span>
                         <div className="calendar-day-dots" aria-hidden="true">
@@ -199,7 +211,7 @@ export default function CalendarView() {
           </div>
 
           {/* Day Detail Panel */}
-          {!isMobile && (
+          {!isMobile && cal.selectedDate && (
             <DayDetailPanel cal={cal} locale={locale} messages={messages} lang={lang} timeFormat={timeFormat} events={events} members={members} isChild={isChild} demoMode={demoMode} setActiveView={setActiveView} />
           )}
         </div>
@@ -238,6 +250,7 @@ export default function CalendarView() {
           })}
         </div>
       )}
+      </section>
 
       {/* Selected date details on mobile */}
       {isMobile && cal.calendarView === 'month' && cal.selectedDate && (

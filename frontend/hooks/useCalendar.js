@@ -6,6 +6,12 @@ import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 
+function formatLocalDateTimeInput(date, hour = date.getHours(), minute = date.getMinutes()) {
+  const local = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
+  const offset = local.getTimezoneOffset();
+  return new Date(local.getTime() - offset * 60000).toISOString().slice(0, 16);
+}
+
 export function useCalendar() {
   const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members, birthdays } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -22,15 +28,16 @@ export function useCalendar() {
     return isNaN(d.getTime()) ? null : d;
   })();
 
-  const [calendarMonth, setCalendarMonth] = useState(() => _initialFocus ?? new Date());
-  const [selectedDate, setSelectedDate] = useState(() => _initialFocus);
+  const defaultFocusDate = _initialFocus ?? new Date();
+  const [calendarMonth, setCalendarMonth] = useState(() => defaultFocusDate);
+  const [selectedDate, setSelectedDate] = useState(() => defaultFocusDate);
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
 
   // Event form
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [startsAt, setStartsAt] = useState('');
+  const [startsAt, setStartsAt] = useState(() => formatLocalDateTimeInput(defaultFocusDate, 9, 0));
   const [endsAt, setEndsAt] = useState('');
   const [allDay, setAllDay] = useState(false);
   const [recurrence, setRecurrence] = useState('');

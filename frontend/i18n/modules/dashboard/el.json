@@ -15,6 +15,7 @@
   "module.dashboard.all": "Όλα →",
   "module.dashboard.days": "ημέρες",
   "module.dashboard.empty_events": "Δεν υπάρχουν επερχόμενες εκδηλώσεις",
+  "module.dashboard.empty_events_action": "Άνοιγμα ημερολογίου",
   "module.dashboard.empty_tasks": "Όλα έγιναν!",
   "module.dashboard.empty_tasks_action": "Δημιουργία εργασίας",
   "module.dashboard.empty_birthdays": "Δεν υπάρχουν γενέθλια τις επόμενες 4 εβδομάδες",

@@ -15,6 +15,7 @@
   "module.dashboard.all": "Visi →",
   "module.dashboard.days": "dienų",
   "module.dashboard.empty_events": "Jokių būsimų įvykių",
+  "module.dashboard.empty_events_action": "Atidaryti kalendorių",
   "module.dashboard.empty_tasks": "Viskas padaryta!",
   "module.dashboard.empty_tasks_action": "Sukurti užduotį",
   "module.dashboard.empty_birthdays": "Per kitas 4 savaites gimtadienių nebus",

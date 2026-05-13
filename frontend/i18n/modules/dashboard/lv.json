@@ -15,6 +15,7 @@
   "module.dashboard.all": "Visi →",
   "module.dashboard.days": "dienas",
   "module.dashboard.empty_events": "Nav gaidāmu notikumu",
+  "module.dashboard.empty_events_action": "Atvērt kalendāru",
   "module.dashboard.empty_tasks": "Viss darīts!",
   "module.dashboard.empty_tasks_action": "Izveidot uzdevumu",
   "module.dashboard.empty_birthdays": "Nākamo 4 nedēļu laikā nav dzimšanas dienu",

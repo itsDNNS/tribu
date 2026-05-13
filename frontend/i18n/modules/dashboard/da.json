@@ -15,6 +15,7 @@
   "module.dashboard.all": "Alle →",
   "module.dashboard.days": "dage",
   "module.dashboard.empty_events": "Ingen kommende begivenheder",
+  "module.dashboard.empty_events_action": "Åbn kalender",
   "module.dashboard.empty_tasks": "Alt færdigt!",
   "module.dashboard.empty_tasks_action": "Opret opgave",
   "module.dashboard.empty_birthdays": "Ingen fødselsdage i de næste 4 uger",

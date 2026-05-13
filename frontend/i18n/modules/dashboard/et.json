@@ -15,6 +15,7 @@
   "module.dashboard.all": "Kõik →",
   "module.dashboard.days": "päevadel",
   "module.dashboard.empty_events": "Tulevasi sündmusi pole",
+  "module.dashboard.empty_events_action": "Ava kalender",
   "module.dashboard.empty_tasks": "Kõik tehtud!",
   "module.dashboard.empty_tasks_action": "Loo ülesanne",
   "module.dashboard.empty_birthdays": "Järgmise 4 nädala jooksul sünnipäevi pole",

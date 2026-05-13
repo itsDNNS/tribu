@@ -15,6 +15,7 @@
   "module.dashboard.all": "Alles →",
   "module.dashboard.days": "dagen",
   "module.dashboard.empty_events": "Geen aankomende evenementen",
+  "module.dashboard.empty_events_action": "Kalender openen",
   "module.dashboard.empty_tasks": "Alles klaar!",
   "module.dashboard.empty_tasks_action": "Taak maken",
   "module.dashboard.empty_birthdays": "Geen verjaardagen de komende 4 weken",

@@ -15,6 +15,7 @@
   "module.dashboard.all": "Sve →",
   "module.dashboard.days": "dana",
   "module.dashboard.empty_events": "Nema nadolazećih događaja",
+  "module.dashboard.empty_events_action": "Otvori kalendar",
   "module.dashboard.empty_tasks": "Gotovo!",
   "module.dashboard.empty_tasks_action": "Izradi zadatak",
   "module.dashboard.empty_birthdays": "Nema rođendana u sljedeća 4 tjedna",

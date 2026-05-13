@@ -15,6 +15,7 @@
   "module.dashboard.all": "Vse →",
   "module.dashboard.days": "dni",
   "module.dashboard.empty_events": "Ni prihajajočih dogodkov",
+  "module.dashboard.empty_events_action": "Odpri koledar",
   "module.dashboard.empty_tasks": "Vse opravljeno!",
   "module.dashboard.empty_tasks_action": "Ustvari nalogo",
   "module.dashboard.empty_birthdays": "V naslednjih 4 tednih ne bo rojstnih dni",

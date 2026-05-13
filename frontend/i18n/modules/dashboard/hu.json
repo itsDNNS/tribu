@@ -15,6 +15,7 @@
   "module.dashboard.all": "Mind →",
   "module.dashboard.days": "napokon",
   "module.dashboard.empty_events": "Nincsenek közelgő események",
+  "module.dashboard.empty_events_action": "Nyissa meg a naptárat",
   "module.dashboard.empty_tasks": "Minden kész!",
   "module.dashboard.empty_tasks_action": "Feladat létrehozása",
   "module.dashboard.empty_birthdays": "Nem lesz születésnap a következő 4 hétben",
