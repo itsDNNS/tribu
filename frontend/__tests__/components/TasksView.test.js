@@ -50,6 +50,8 @@ jest.mock('../../contexts/AppContext', () => ({
       'module.tasks.mine': 'Meine',
       'module.tasks.filters': 'Filter',
       'module.tasks.new_task': 'Neue Aufgabe',
+      'module.tasks.more_options': 'Mehr Optionen',
+      'module.tasks.less_options': 'Weniger Optionen',
     },
     ui: {
       card: { background: '#fff', borderColor: '#eee', color: '#111', borderRadius: 14, padding: 16, border: '1px solid #eee' },
@@ -107,6 +109,7 @@ describe('TasksView', () => {
     expect(container.querySelector('.tasks-filter-tabs')).toHaveTextContent('Heute fällig');
     expect(container.querySelector('.tasks-filter-tabs')).toHaveTextContent('Meine');
     expect(container.querySelector('.tasks-new-btn')).toHaveTextContent('Neue Aufgabe');
+    expect(container.querySelector('.quick-add-bar .task-form-toggle')).toHaveTextContent('Mehr Optionen');
   });
 
   it('renders task list', () => {

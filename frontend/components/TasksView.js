@@ -122,15 +122,14 @@ export default function TasksView() {
                   onChange={(e) => tk.setTaskTitle(e.target.value)}
                   required
                 />
+                <button type="button" className="task-form-toggle" onClick={() => setShowFormDetails(prev => !prev)} aria-expanded={showFormDetails} aria-controls={showFormDetails ? 'task-form-details' : undefined}>
+                  <ChevronDown size={14} className={showFormDetails ? 'task-form-toggle-open' : ''} />
+                  {t(messages, showFormDetails ? 'module.tasks.less_options' : 'module.tasks.more_options')}
+                </button>
                 <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_task')}>
                   <Plus size={22} />
                 </button>
               </form>
-
-              <button type="button" className="task-form-toggle" onClick={() => setShowFormDetails(prev => !prev)} aria-expanded={showFormDetails} aria-controls={showFormDetails ? 'task-form-details' : undefined}>
-                <ChevronDown size={14} className={showFormDetails ? 'task-form-toggle-open' : ''} />
-                {t(messages, showFormDetails ? 'module.tasks.less_options' : 'module.tasks.more_options')}
-              </button>
 
               {showFormDetails && (
                 <div id="task-form-details" className="task-form-fields">
