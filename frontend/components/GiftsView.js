@@ -105,9 +105,11 @@ function GiftCard({ gift, members, messages, onEdit, onDelete, onStatusChange })
 
   return (
     <div className={`gift-card gift-status-${gift.status}`}>
+      <span className="gift-card-visual" aria-hidden="true">
+        <StatusIcon size={22} />
+      </span>
       <div className="gift-card-header">
         <div className="gift-card-title-row">
-          <StatusIcon size={16} className="gift-status-icon" aria-hidden="true" />
           <h3 className="gift-card-title">{gift.title}</h3>
         </div>
         <div className="gift-card-actions">
@@ -208,12 +210,20 @@ export default function GiftsView() {
   if (isChild || demoMode) {
     const label = isChild ? 'module.gifts.adult_only' : 'module.gifts.demo_blocked';
     return (
-      <div className="view">
-        <div className="view-header">
-          <h1 className="view-title">{t(messages, 'module.gifts.name')}</h1>
+      <div className="gift-page">
+        <div className="family-view-header gift-page-header">
+          <span className="gift-page-icon" aria-hidden="true">
+            <GiftIcon size={24} />
+          </span>
+          <div className="gift-page-title">
+            <p className="view-kicker">Tribu</p>
+            <h1>{t(messages, 'module.gifts.name')}</h1>
+          </div>
         </div>
-        <div className="empty-state">
-          <Sparkles size={32} aria-hidden="true" />
+        <div className="gift-empty-rich gift-empty-panel">
+          <span className="gift-empty-icon-wrap">
+            <Sparkles size={32} aria-hidden="true" />
+          </span>
           <p>{t(messages, label)}</p>
         </div>
       </div>
@@ -267,7 +277,7 @@ export default function GiftsView() {
   }
 
   return (
-    <div>
+    <div className="gift-page">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
@@ -292,74 +302,88 @@ export default function GiftsView() {
         onPickBirthday={prefillFromBirthday}
       />
 
-      <div className="view-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'module.gifts.name')}</h1>
-          <div className="view-subtitle">{currentFamilyName}</div>
+      <div className="family-view-header gift-page-header">
+        <span className="gift-page-icon" aria-hidden="true">
+          <GiftIcon size={24} />
+        </span>
+        <div className="gift-page-title">
+          <p className="view-kicker">Tribu</p>
+          <h1>{t(messages, 'module.gifts.name')}</h1>
+          {currentFamilyName && <p>{currentFamilyName}</p>}
         </div>
         <div className="gift-view-header-actions">
-          <button type="button" className="btn btn-primary" onClick={openAddDialog}>
+          <button type="button" className="btn btn-primary gift-add-btn" onClick={openAddDialog}>
             <Plus size={16} aria-hidden="true" />
             {t(messages, 'module.gifts.add')}
           </button>
         </div>
       </div>
 
-      <div className="gift-filters">
-        <select
-          className="form-input"
-          value={g.statusFilter}
-          onChange={(e) => g.setStatusFilter(e.target.value)}
-          aria-label={t(messages, 'module.gifts.filter_status')}
-        >
-          <option value="">{t(messages, 'module.gifts.filter_all_statuses')}</option>
+      <section className="gift-toolbar" aria-label={t(messages, 'module.gifts.filter_status')}>
+        <div className="gift-status-tabs" role="group" aria-label={t(messages, 'module.gifts.filter_status')}>
+          <button
+            type="button"
+            className={`gift-status-tab${g.statusFilter === '' ? ' active' : ''}`}
+            onClick={() => g.setStatusFilter('')}
+          >
+            {t(messages, 'module.gifts.filter_all_statuses')}
+          </button>
           {GIFT_STATUSES.map((s) => (
-            <option key={s} value={s}>{statusLabel(messages, s)}</option>
+            <button
+              key={s}
+              type="button"
+              className={`gift-status-tab gift-status-tab-${s}${g.statusFilter === s ? ' active' : ''}`}
+              onClick={() => g.setStatusFilter(s)}
+            >
+              {statusLabel(messages, s)}
+            </button>
           ))}
-        </select>
-        <select
-          className="form-input"
-          value={g.recipientFilter}
-          onChange={(e) => g.setRecipientFilter(e.target.value)}
-          aria-label={t(messages, 'module.gifts.filter_recipient')}
-        >
-          <option value="">{t(messages, 'module.gifts.filter_all_recipients')}</option>
-          {members.map((m) => (
-            <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-          ))}
-        </select>
-        <select
-          className="form-input"
-          value={g.sortOrder}
-          onChange={(e) => g.setSortOrder(e.target.value)}
-          aria-label={t(messages, 'module.gifts.sort_aria')}
-        >
-          {GIFT_SORT_OPTIONS.map((s) => (
-            <option key={s} value={s}>{t(messages, `module.gifts.sort.${s}`)}</option>
-          ))}
-        </select>
-        <label className="gift-filter-toggle">
-          <input
-            type="checkbox"
-            checked={g.includeGifted}
-            onChange={(e) => g.setIncludeGifted(e.target.checked)}
-          />
-          {t(messages, 'module.gifts.filter_include_gifted')}
-        </label>
-        <label className="gift-filter-toggle">
-          <input
-            type="checkbox"
-            checked={groupByRecipientEnabled}
-            onChange={(e) => setGroupByRecipientEnabled(e.target.checked)}
-          />
-          <Users size={14} aria-hidden="true" />
-          {t(messages, 'module.gifts.group_by_recipient')}
-        </label>
-      </div>
+        </div>
+        <div className="gift-filters">
+          <select
+            className="form-input"
+            value={g.recipientFilter}
+            onChange={(e) => g.setRecipientFilter(e.target.value)}
+            aria-label={t(messages, 'module.gifts.filter_recipient')}
+          >
+            <option value="">{t(messages, 'module.gifts.filter_all_recipients')}</option>
+            {members.map((m) => (
+              <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+            ))}
+          </select>
+          <select
+            className="form-input"
+            value={g.sortOrder}
+            onChange={(e) => g.setSortOrder(e.target.value)}
+            aria-label={t(messages, 'module.gifts.sort_aria')}
+          >
+            {GIFT_SORT_OPTIONS.map((s) => (
+              <option key={s} value={s}>{t(messages, `module.gifts.sort.${s}`)}</option>
+            ))}
+          </select>
+          <label className="gift-filter-toggle">
+            <input
+              type="checkbox"
+              checked={g.includeGifted}
+              onChange={(e) => g.setIncludeGifted(e.target.checked)}
+            />
+            {t(messages, 'module.gifts.filter_include_gifted')}
+          </label>
+          <label className="gift-filter-toggle">
+            <input
+              type="checkbox"
+              checked={groupByRecipientEnabled}
+              onChange={(e) => setGroupByRecipientEnabled(e.target.checked)}
+            />
+            <Users size={14} aria-hidden="true" />
+            {t(messages, 'module.gifts.group_by_recipient')}
+          </label>
+        </div>
+      </section>
 
       {g.loading && <p className="gift-loading">{t(messages, 'module.gifts.loading')}</p>}
       {!g.loading && g.gifts.length === 0 && (hasFilters ? (
-        <div className="gift-empty-filtered">
+        <div className="gift-empty-filtered gift-empty-panel">
           <Sparkles size={24} aria-hidden="true" />
           <p>{t(messages, 'module.gifts.empty_filtered')}</p>
           <button type="button" className="gift-empty-filtered-btn" onClick={clearFilters}>
@@ -367,7 +391,7 @@ export default function GiftsView() {
           </button>
         </div>
       ) : (
-        <div className="gift-empty-rich">
+        <div className="gift-empty-rich gift-empty-panel">
           <span className="gift-empty-icon-wrap">
             <GiftIcon size={36} aria-hidden="true" />
           </span>
