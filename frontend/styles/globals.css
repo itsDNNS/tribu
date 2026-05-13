@@ -557,15 +557,9 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 /* Admin > Single Sign-On section — enforce a consistent vertical
    rhythm so the dense stack of fields does not crowd together. */
 .sso-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg, 20px);
+  display: grid;
+  gap: 12px;
 }
-.sso-section .admin-section-header {
-  display: flex; align-items: center; gap: 8px;
-  margin: 0;
-}
-.sso-section .admin-section-header h2 { margin: 0; font-size: 1.05rem; }
 .sso-section .adm-form-desc { margin: 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.55; max-width: 72ch; }
 .sso-section .sso-grid {
   display: grid;
@@ -592,9 +586,9 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md, 12px);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-soft) 54%, var(--surface-paper));
 }
 .sso-section .sso-checkbox-field .set-checkbox-label { margin: 0; }
 .sso-section .sso-secret-actions {
@@ -605,11 +599,14 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 }
 .sso-section .sso-callback-box {
   padding: 12px 14px;
-  border: 1px dashed var(--glass-border);
-  border-radius: var(--radius-md, 12px);
-  background: rgba(124, 58, 237, 0.05);
+  border: 1px dashed var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--amethyst) 7%, var(--surface-paper));
 }
 .sso-section .set-btn-row { margin: 0; }
+.sso-action-row { gap: 8px; }
+.sso-test-banner { margin-top: 0; }
+.sso-test-banner-error { background: var(--danger-bg, #fee); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 28%, var(--border-subtle)); }
 @media (max-width: 900px) {
   .sso-section .sso-grid { grid-template-columns: 1fr; }
   .sso-section .sso-field-span-2 { grid-column: auto; }
@@ -1000,8 +997,17 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .admin-time-toggle { display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md); }
 .admin-time-label { font-weight: 500; font-size: 0.88rem; }
 
+/* Admin: subsection surfaces */
+.admin-subpage { display: grid; gap: 12px; min-width: 0; }
+.admin-subpage-header { margin: 0; min-height: 58px; padding: 0; }
+.admin-subpage-title-block { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.admin-subpage-icon { width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; background: color-mix(in srgb, var(--amethyst) 10%, var(--surface-paper)); color: color-mix(in srgb, var(--amethyst) 76%, var(--text-primary)); border: 1px solid var(--border-subtle); }
+.admin-subpage .invite-intro { margin: 0; color: var(--text-secondary); font-size: 0.86rem; line-height: 1.5; max-width: 76ch; }
+.admin-subpage .settings-section,
+.admin-subpage.settings-section { background: var(--surface-paper); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-soft); }
+
 /* Admin: success banner (password created, invite link) */
-.adm-success-banner { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: var(--space-md); margin-bottom: var(--space-md); }
+.adm-success-banner { background: color-mix(in srgb, var(--success) 11%, var(--surface-paper)); border: 1px solid color-mix(in srgb, var(--success) 26%, var(--border-subtle)); border-radius: 13px; padding: 12px; margin-bottom: 0; }
 .adm-banner-header { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-sm); }
 .adm-banner-title { font-weight: 600; font-size: 0.88rem; }
 .adm-banner-warning { color: var(--warning); font-size: 0.82rem; margin-bottom: var(--space-sm); }
@@ -1014,7 +1020,7 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 
 /* Admin: add-member / invite create form */
 .adm-add-wrapper { margin-top: var(--space-md); }
-.adm-form-grid { padding: var(--space-md); display: grid; gap: var(--space-md); }
+.adm-form-grid { padding: 14px; display: grid; gap: 12px; }
 .adm-form-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; }
 
 /* Admin: member card */
@@ -1024,42 +1030,43 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .adm-birthdate-input { width: auto; min-width: 140px; padding: 4px 8px; font-size: 0.78rem; }
 
 /* Admin: invite section */
-.adm-section-header { margin-top: 2rem; }
-.adm-section-gap { margin-bottom: 1rem; }
-.adm-col-layout { display: flex; flex-direction: column; gap: 0.5rem; }
-.adm-col-layout-lg { display: flex; flex-direction: column; gap: 0.75rem; }
-.adm-field-title { font-weight: 500; }
+.adm-section-header { margin-top: 0; }
+.adm-section-gap { margin-bottom: 0; }
+.adm-col-layout { display: flex; flex-direction: column; gap: 8px; }
+.adm-col-layout-lg { display: flex; flex-direction: column; gap: 10px; }
+.adm-field-title { color: var(--text-primary); font-weight: 800; }
 .adm-field-hint { color: var(--text-muted); font-size: 0.8rem; }
 .adm-field-hint-sm { color: var(--text-muted); font-size: 0.78rem; }
 .adm-self-start { align-self: flex-start; }
-.adm-empty { opacity: 0.6; }
+.adm-empty { margin: 0; padding: 12px; border: 1px dashed var(--border-subtle); border-radius: 12px; background: color-mix(in srgb, var(--surface-soft) 50%, var(--surface-paper)); color: var(--text-muted); font-size: 0.86rem; }
 .adm-input-narrow { width: 5rem; }
 .adm-select-block { display: block; margin-top: 0.25rem; }
 .adm-input-block { display: block; width: 5rem; margin-top: 0.25rem; }
 
 /* Admin: list items (invites, backups) */
-.adm-list-item { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-top: 1px solid var(--glass-border, rgba(255,255,255,0.08)); }
+.adm-list-item { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 12px; background: color-mix(in srgb, var(--surface-soft) 50%, var(--surface-paper)); }
+.adm-list-item + .adm-list-item { margin-top: 8px; }
 .adm-list-item-header { display: flex; gap: 0.5rem; align-items: center; }
-.adm-list-item-icon { opacity: 0.5; }
-.adm-list-item-role { font-size: 0.85rem; font-weight: 500; }
+.adm-list-item-icon { opacity: 0.78; color: var(--amethyst); }
+.adm-list-item-role { color: var(--text-primary); font-size: 0.88rem; font-weight: 820; }
 .adm-list-item-status { font-size: 0.78rem; font-weight: 600; }
-.adm-list-item-meta { font-size: 0.78rem; opacity: 0.6; margin-top: 2px; }
+.adm-list-item-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 3px; }
 .adm-revoke-btn { color: var(--danger); }
 
 /* Admin: backup section */
-.adm-backup-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
-.adm-backup-filename { font-weight: 500; font-size: 0.9rem; }
-.adm-backup-meta { font-size: 0.8rem; opacity: 0.6; }
-.adm-backup-last { font-size: 0.85rem; opacity: 0.8; }
-.adm-backup-volume { font-size: 0.8rem; opacity: 0.6; }
-.adm-retention-hint { font-size: 0.8rem; opacity: 0.7; }
+.adm-backup-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 10px; }
+.adm-backup-filename { color: var(--text-primary); font-weight: 820; font-size: 0.9rem; overflow-wrap: anywhere; }
+.adm-backup-meta { color: var(--text-muted); font-size: 0.8rem; }
+.adm-backup-last { color: var(--text-secondary); font-size: 0.85rem; }
+.adm-backup-volume { color: var(--text-muted); font-size: 0.8rem; }
+.adm-retention-hint { color: var(--text-muted); font-size: 0.8rem; }
 .adm-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .backup-confidence-panel { display: grid; gap: var(--space-md); }
 .backup-confidence-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); }
 .backup-confidence-warning { margin: 0.35rem 0 0; color: var(--warning, #d97706); font-size: 0.9rem; }
 .backup-docs-link { white-space: nowrap; }
 .backup-confidence-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
-.backup-confidence-card { border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); background: rgba(120, 130, 180, 0.05); display: grid; gap: 0.35rem; min-width: 0; }
+.backup-confidence-card { border: 1px solid var(--border-subtle); border-radius: 12px; padding: 12px; background: color-mix(in srgb, var(--surface-soft) 56%, var(--surface-paper)); display: grid; gap: 0.35rem; min-width: 0; }
 .backup-confidence-card span { color: var(--text-secondary); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .backup-confidence-card strong { color: var(--text-primary); font-size: 0.95rem; overflow-wrap: anywhere; }
 .backup-confidence-card small { color: var(--text-muted); overflow-wrap: anywhere; }
@@ -1992,12 +1999,14 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: 10px 0;
-  border-bottom: 1px solid var(--glass-border);
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-soft) 50%, var(--surface-paper));
   flex-wrap: wrap;
   font-size: 0.85rem;
 }
-.audit-entry:last-of-type { border-bottom: none; }
+.audit-entry + .audit-entry { margin-top: 8px; }
 .audit-time {
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -2006,11 +2015,11 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 }
 .audit-action-badge {
   font-size: 0.75rem;
-  font-weight: 600;
-  padding: 2px 10px;
+  font-weight: 800;
+  padding: 4px 10px;
   border-radius: var(--radius-pill);
-  background: rgba(124, 58, 237, 0.1);
-  color: var(--amethyst);
+  background: color-mix(in srgb, var(--amethyst) 10%, var(--surface-paper));
+  color: color-mix(in srgb, var(--amethyst) 80%, var(--text-primary));
   font-family: var(--font-mono);
 }
 .audit-target {
@@ -2021,9 +2030,10 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.03);
-  padding: 2px 8px;
-  border-radius: 6px;
+  background: var(--surface-paper);
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
 }
 .audit-admin {
   font-size: 0.75rem;
@@ -2032,11 +2042,11 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 }
 
 [data-theme="light"] .audit-action-badge {
-  background: rgba(124, 58, 237, 0.08);
-  color: #6d28d9;
+  background: color-mix(in srgb, var(--amethyst) 10%, var(--surface-paper));
+  color: color-mix(in srgb, var(--amethyst) 80%, var(--text-primary));
 }
 [data-theme="light"] .audit-details {
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--surface-paper);
 }
 
 
@@ -3256,14 +3266,14 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 
 /* Meal plan redesign alignment: warm paper surfaces and calmer planning grid. */
 .meal-plans-page {
-  width: min(100%, 1080px);
+  width: min(100%, 1120px);
   box-sizing: border-box;
   margin: 0 auto;
   padding-inline: clamp(8px, 1.6vw, 14px);
   display: grid;
   gap: 12px;
 }
-.meal-plans-page .view-header {
+.meal-plans-page .meal-plan-header {
   min-height: 66px;
   align-items: center;
   gap: 12px;
@@ -3274,6 +3284,8 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   background: var(--surface-paper);
   box-shadow: var(--shadow-soft);
 }
+.meal-plan-title-block { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.meal-plan-page-icon { width: 44px; height: 44px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; background: color-mix(in srgb, var(--accent-amber) 12%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-amber) 80%, var(--text-primary)); border: 1px solid var(--border-subtle); }
 .meal-plans-page .view-title {
   margin: 0;
   color: var(--text-primary);
@@ -3314,6 +3326,36 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   font-size: 0.8rem;
   font-weight: 760;
 }
+.meal-plan-week-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.meal-plan-summary-card {
+  min-height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-paper);
+  box-shadow: var(--shadow-soft);
+}
+.meal-plan-summary-card::before {
+  content: '';
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--meal-accent, var(--amethyst)) 14%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--meal-accent, var(--amethyst)) 20%, var(--border-subtle));
+}
+.meal-plan-summary-morning { --meal-accent: var(--warning); }
+.meal-plan-summary-noon { --meal-accent: var(--sapphire); }
+.meal-plan-summary-evening { --meal-accent: var(--amethyst); }
+.meal-plan-summary-label { flex: 1; min-width: 0; color: var(--text-secondary); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+.meal-plan-summary-value { color: var(--text-primary); font-family: var(--font-mono); font-size: 1.35rem; line-height: 1; font-weight: 880; }
 .meal-plans-page .meal-week-shopping {
   display: inline-flex;
   align-items: center;
@@ -3337,7 +3379,7 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   background: color-mix(in srgb, var(--surface-soft) 62%, var(--surface-paper));
 }
 .meal-plans-page .meal-grid {
-  grid-template-columns: minmax(86px, 98px) repeat(7, minmax(84px, 1fr));
+  grid-template-columns: minmax(78px, 92px) repeat(7, minmax(86px, 1fr));
   gap: 8px;
   margin-top: 0;
   padding: 12px;
@@ -3348,7 +3390,7 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 }
 .meal-plans-page .meal-grid-day-header,
 .meal-plans-page .meal-grid-slot-label {
-  min-height: 48px;
+  min-height: 50px;
   border: 1px solid var(--border-subtle);
   border-radius: 11px;
   background: color-mix(in srgb, var(--surface-soft) 68%, var(--surface-paper));
@@ -3378,12 +3420,14 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .meal-plans-page .meal-grid-slot-label {
   justify-content: center;
   padding: 8px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: 0.78rem;
   font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 .meal-plans-page .meal-grid-cell {
-  min-height: 68px;
+  min-height: 74px;
   border-color: var(--border-subtle);
   border-radius: 11px;
   background: color-mix(in srgb, var(--surface-soft) 54%, var(--surface-paper));
@@ -3403,7 +3447,7 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   height: 18px;
 }
 .meal-plans-page .meal-grid-cell-filled {
-  background: var(--surface-paper);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--meal-accent, var(--amethyst)) 8%, var(--surface-paper)), var(--surface-paper));
 }
 .meal-plans-page .meal-grid-cell-filled::before {
   left: 8px;
@@ -3443,9 +3487,16 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   .meal-plans-page {
     width: 100%;
   }
-  .meal-plans-page .view-header {
+  .meal-plans-page .meal-plan-header {
     align-items: stretch;
     padding: 12px;
+  }
+  .meal-plan-week-summary {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .meal-plan-summary-card {
+    min-height: 52px;
   }
   .meal-plans-page .meal-header-actions,
   .meal-plans-page .meal-week-shopping {

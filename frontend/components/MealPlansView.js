@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Edit2, CalendarDays, GripVertical, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Edit2, CalendarDays, GripVertical, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -154,6 +154,13 @@ export default function MealPlansView() {
   const currentFamilyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
   const days = weekDays(hook.weekStart);
   const today = new Date();
+  const visibleMeals = days.flatMap((day) => (
+    MEAL_SLOTS.map((slot) => hook.getCell(formatIsoDate(day), slot)).filter(Boolean)
+  ));
+  const mealCountBySlot = MEAL_SLOTS.reduce((acc, slot) => {
+    acc[slot] = visibleMeals.filter((meal) => meal.slot === slot).length;
+    return acc;
+  }, {});
 
   function openAdd(date, slot) {
     setEditingId(null);
@@ -261,10 +268,15 @@ export default function MealPlansView() {
         recipes={recipes}
       />
 
-      <div className="view-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'module.meal_plans.name')}</h1>
-          <div className="view-subtitle">{currentFamilyName}</div>
+      <div className="view-header meal-plan-header">
+        <div className="meal-plan-title-block">
+          <span className="meal-plan-page-icon" aria-hidden="true">
+            <UtensilsCrossed size={22} />
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'module.meal_plans.name')}</h1>
+            <div className="view-subtitle">{currentFamilyName || weekRangeLabel(hook.weekStart, hook.weekEnd)}</div>
+          </div>
         </div>
         <div className="meal-header-actions">
           <div className="meal-week-nav" role="group" aria-label={t(messages, 'module.meal_plans.week')}>
@@ -328,6 +340,15 @@ export default function MealPlansView() {
             {t(messages, 'module.meal_plans.add')}
           </button>
         </div>
+      </div>
+
+      <div className="meal-plan-week-summary" aria-label={t(messages, 'module.meal_plans.week')}>
+        {MEAL_SLOTS.map((slot) => (
+          <div key={slot} className={`meal-plan-summary-card meal-plan-summary-${slot}`}>
+            <span className="meal-plan-summary-label">{slotLabel(messages, slot)}</span>
+            <strong className="meal-plan-summary-value">{mealCountBySlot[slot] || 0}</strong>
+          </div>
+        ))}
       </div>
 
       {hook.loading && <p className="meal-loading">{t(messages, 'module.meal_plans.loading')}</p>}

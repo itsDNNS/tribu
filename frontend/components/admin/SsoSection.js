@@ -103,10 +103,16 @@ export default function SsoSection() {
   const redirectUri = cfg.effective_callback_url || '';
 
   return (
-    <form className="settings-section sso-section" onSubmit={handleSave} data-testid="sso-admin-section">
-      <div className="admin-section-header">
-        <KeyRound size={16} />
-        <h2>{t(messages, 'sso.title')}</h2>
+    <form className="settings-section sso-section admin-subpage admin-subpage-sso" onSubmit={handleSave} data-testid="sso-admin-section">
+      <div className="view-header adm-section-header admin-subpage-header">
+        <div className="admin-subpage-title-block">
+          <span className="admin-subpage-icon" aria-hidden="true">
+            <KeyRound size={20} />
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'sso.title')}</h1>
+          </div>
+        </div>
       </div>
       <p className="adm-form-desc">{t(messages, 'sso.desc')}</p>
 
@@ -248,7 +254,7 @@ export default function SsoSection() {
         </div>
       )}
 
-      <div className="set-btn-row" style={{ gap: 8 }}>
+      <div className="set-btn-row sso-action-row">
         <button type="submit" className="btn-primary" disabled={saving}>
           <Check size={14} /> {t(messages, 'sso.save')}
         </button>
@@ -263,12 +269,12 @@ export default function SsoSection() {
       </div>
 
       {testState.result && testState.result.ok && (
-        <div className="adm-success-banner" role="status" style={{ marginTop: 12 }}>
+        <div className="adm-success-banner sso-test-banner" role="status">
           <ShieldCheck size={14} /> {t(messages, 'sso.test_ok')}
         </div>
       )}
       {testState.result && !testState.result.ok && (
-        <div className="adm-success-banner" role="alert" style={{ marginTop: 12, background: 'var(--danger-bg, #fee)', color: 'var(--danger)' }}>
+        <div className="adm-success-banner sso-test-banner sso-test-banner-error" role="alert">
           <ShieldAlert size={14} /> {t(messages, 'sso.test_fail').replace('{error}', testState.result.error || 'unknown')}
         </div>
       )}

@@ -126,11 +126,13 @@ describe('MealPlansView', () => {
     mockAppState = baseState();
     const { container } = render(<MealPlansView />);
     expect(container.querySelector('.meal-plans-page')).toBeInTheDocument();
+    expect(container.querySelector('.meal-plan-page-icon')).toBeInTheDocument();
+    expect(container.querySelector('.meal-plan-week-summary')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mahlzeit planen' })).toBeInTheDocument();
     await waitFor(() => expect(apiListMealPlans).toHaveBeenCalledTimes(1));
-    expect(screen.getByText('Morgens')).toBeInTheDocument();
-    expect(screen.getByText('Mittags')).toBeInTheDocument();
-    expect(screen.getByText('Abends')).toBeInTheDocument();
+    expect(screen.getAllByText('Morgens').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Mittags').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Abends').length).toBeGreaterThan(0);
     // 21 empty cells (7 days × 3 slots)
     const cells = container.querySelectorAll('.meal-grid-cell');
     expect(cells.length).toBe(21);

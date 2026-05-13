@@ -147,7 +147,7 @@ export default function DisplaysSection() {
   }
 
   return (
-    <>
+    <div className="admin-subpage admin-subpage-displays">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
@@ -159,9 +159,14 @@ export default function DisplaysSection() {
         />
       )}
 
-      <div className="view-header adm-section-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'display_title')}</h1>
+      <div className="view-header adm-section-header admin-subpage-header">
+        <div className="admin-subpage-title-block">
+          <span className="admin-subpage-icon" aria-hidden="true">
+            <Monitor size={20} />
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'display_title')}</h1>
+          </div>
         </div>
       </div>
       <p className="invite-intro">{t(messages, 'display_intro')}</p>
@@ -346,7 +351,7 @@ export default function DisplaysSection() {
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }
 

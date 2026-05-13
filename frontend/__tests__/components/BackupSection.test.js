@@ -126,8 +126,9 @@ describe('BackupSection confidence panel', () => {
   });
 
   test('explains backend, included domains, missing export warning, and restore path', async () => {
-    render(<BackupSection />);
+    const { container } = render(<BackupSection />);
 
+    expect(container.querySelector('.admin-subpage-backups')).toBeInTheDocument();
     expect(await screen.findByText('Backup confidence')).toBeInTheDocument();
     expect(await screen.findByText('Database backend')).toBeInTheDocument();
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument();

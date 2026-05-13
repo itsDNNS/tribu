@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Archive } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { downloadBlob, errorText, parseServerInstant } from '../../lib/helpers';
@@ -143,7 +144,7 @@ export default function BackupSection() {
   ];
 
   return (
-    <>
+    <div className="admin-subpage admin-subpage-backups">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
@@ -154,9 +155,14 @@ export default function BackupSection() {
           messages={messages}
         />
       )}
-      <div className="view-header adm-section-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'backup_title')}</h1>
+      <div className="view-header adm-section-header admin-subpage-header">
+        <div className="admin-subpage-title-block">
+          <span className="admin-subpage-icon" aria-hidden="true">
+            <Archive size={20} />
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'backup_title')}</h1>
+          </div>
         </div>
       </div>
 
@@ -286,6 +292,6 @@ export default function BackupSection() {
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

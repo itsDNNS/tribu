@@ -108,7 +108,7 @@ export default function InviteSection() {
   }
 
   return (
-    <>
+    <div className="admin-subpage admin-subpage-invites">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
@@ -119,9 +119,14 @@ export default function InviteSection() {
           messages={messages}
         />
       )}
-      <div className="view-header adm-section-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'invite_title')}</h1>
+      <div className="view-header adm-section-header admin-subpage-header">
+        <div className="admin-subpage-title-block">
+          <span className="admin-subpage-icon" aria-hidden="true">
+            <Link size={20} />
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'invite_title')}</h1>
+          </div>
         </div>
       </div>
       <p className="invite-intro">{t(messages, 'invite_intro')}</p>
@@ -222,7 +227,7 @@ export default function InviteSection() {
                   <label>{t(messages, 'invite_role')}</label>
                   <select className="form-input" value={rolePreset} onChange={(e) => setRolePreset(e.target.value)}>
                     <option value="member">{t(messages, 'member')}</option>
-                    <option value="admin">Admin</option>
+                    <option value="admin">{t(messages, 'admin')}</option>
                   </select>
                   <small className="invite-helper-text">{t(messages, 'invite_role_helper')}</small>
                 </div>
@@ -256,6 +261,6 @@ export default function InviteSection() {
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

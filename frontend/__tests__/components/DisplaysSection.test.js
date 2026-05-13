@@ -105,8 +105,10 @@ function flushAsync() {
 
 describe('DisplaysSection', () => {
   test('renders the not-a-person hint and an empty state', async () => {
-    await act(async () => { render(<DisplaysSection />); });
+    let rendered;
+    await act(async () => { rendered = render(<DisplaysSection />); });
 
+    expect(rendered.container.querySelector('.admin-subpage-displays')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Displays' })).toBeInTheDocument();
     expect(screen.getByTestId('display-not-a-person-hint')).toHaveTextContent(/not a person/i);
     expect(screen.getByText('No displays.')).toBeInTheDocument();

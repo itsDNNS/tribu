@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Activity } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
@@ -49,10 +50,15 @@ export default function AuditLogSection() {
   }
 
   return (
-    <>
-      <div className="view-header adm-section-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'audit_log_title')}</h1>
+    <div className="admin-subpage admin-subpage-audit">
+      <div className="view-header adm-section-header admin-subpage-header">
+        <div className="admin-subpage-title-block">
+          <span className="admin-subpage-icon" aria-hidden="true">
+            <Activity size={20} />
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'audit_log_title')}</h1>
+          </div>
         </div>
       </div>
 
@@ -87,6 +93,6 @@ export default function AuditLogSection() {
           </button>
         )}
       </div>
-    </>
+    </div>
   );
 }
