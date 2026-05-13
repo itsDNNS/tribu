@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, UserPlus, X, Trash2, Cake } from 'lucide-react';
+import { Plus, UserPlus, X, Trash2, Cake, ContactRound } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useContacts } from '../hooks/useContacts';
 import { useBirthdays, birthdayAge, buildBirthdayList } from '../hooks/useBirthdays';
@@ -133,21 +133,25 @@ export default function ContactsView() {
   }
 
   return (
-    <div>
-      <div className="view-header">
-        <div>
-          <h1 className="view-title">{t(messages, 'contacts')}</h1>
-          <div className="view-subtitle">
-            {activeTab === 'contacts'
-              ? `${contactsHook.contacts.length} ${t(messages, 'contacts')}`
-              : `${allBirthdays.length} ${t(messages, 'module.birthdays.name')}`}
+    <div className="contacts-page">
+      <div className="view-header contacts-header">
+        <div className="contacts-title-block">
+          <span className="contacts-page-icon" aria-hidden="true">
+            {activeTab === 'contacts' ? <ContactRound size={22} /> : <Cake size={22} />}
+          </span>
+          <div>
+            <h1 className="view-title">{t(messages, 'contacts')}</h1>
+            <div className="view-subtitle">
+              {activeTab === 'contacts'
+                ? `${contactsHook.contacts.length} ${t(messages, 'contacts')}`
+                : `${allBirthdays.length} ${t(messages, 'module.birthdays.name')}`}
+            </div>
           </div>
         </div>
         {canEdit && (
           <button
-            className="btn-primary"
+            className="btn-primary contacts-add-btn"
             onClick={activeTab === 'contacts' ? contactsHook.openCreate : birthdaysHook.openCreate}
-            style={{ fontSize: '0.85rem' }}
           >
             <Plus size={16} /> {t(messages, activeTab === 'contacts' ? 'module.contacts.add' : 'module.birthdays.add')}
           </button>

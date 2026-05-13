@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CheckSquare, Pencil, Plus, ShoppingCart, Sparkles, Trash2 } from 'lucide-react';
+import { CalendarDays, CheckSquare, ClipboardList, Pencil, Plus, ShoppingCart, Sparkles, Trash2 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import {
@@ -163,7 +163,10 @@ export default function TemplatesView() {
 
   function renderTemplateCard(template) {
     return (
-      <article key={template.id} className="template-card glass-sm">
+      <article key={template.id} className="template-card">
+        <div className={`template-card-visual ${template.is_builtin ? 'template-card-visual-builtin' : 'template-card-visual-custom'}`} aria-hidden="true">
+          {template.is_builtin ? <Sparkles size={24} /> : <ClipboardList size={24} />}
+        </div>
         <div className="template-card-header">
           <div>
             <div className="template-card-title-row">
@@ -175,7 +178,7 @@ export default function TemplatesView() {
             {template.description && <p>{template.description}</p>}
           </div>
         </div>
-        <div className="template-stats" aria-label={`${template.task_count} tasks, ${template.shopping_count} shopping items`}>
+        <div className="template-stats" aria-label={`${template.task_count} ${t(messages, 'module.templates.tasks')}, ${template.shopping_count} ${t(messages, 'module.templates.shopping')}`}>
           <span><CheckSquare size={15} aria-hidden="true" /> {template.task_count}</span>
           <span><ShoppingCart size={15} aria-hidden="true" /> {template.shopping_count}</span>
         </div>
@@ -214,8 +217,8 @@ export default function TemplatesView() {
 
   if (isChild) {
     return (
-      <div className="view-stack">
-        <div className="view-header"><h1>{t(messages, 'module.templates.name')}</h1></div>
+      <div className="view-stack templates-view">
+        <div className="view-header templates-header"><h1>{t(messages, 'module.templates.name')}</h1></div>
         <div className="empty-state glass">{t(messages, 'module.templates.adult_only')}</div>
       </div>
     );
@@ -224,9 +227,14 @@ export default function TemplatesView() {
   return (
     <div className="view-stack templates-view">
       <div className="view-header templates-header">
-        <div>
-          <h1>{t(messages, 'module.templates.name')}</h1>
-          <p>{t(messages, 'module.templates.subtitle')}</p>
+        <div className="templates-title-block">
+          <span className="templates-page-icon" aria-hidden="true">
+            <ClipboardList size={22} />
+          </span>
+          <div>
+            <h1>{t(messages, 'module.templates.name')}</h1>
+            <p>{t(messages, 'module.templates.subtitle')}</p>
+          </div>
         </div>
         <button className="btn-primary" onClick={startCreate}>
           <Plus size={17} aria-hidden="true" /> {t(messages, 'module.templates.new')}
@@ -239,7 +247,7 @@ export default function TemplatesView() {
         </div>
       )}
 
-      <section className="templates-apply-panel glass-sm" aria-label={t(messages, 'module.templates.apply_settings')}>
+      <section className="templates-apply-panel" aria-label={t(messages, 'module.templates.apply_settings')}>
         <label>
           {t(messages, 'module.templates.target_date')}
           <span className="input-with-icon"><CalendarDays size={16} aria-hidden="true" /><input className="form-input" type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} /></span>
@@ -251,7 +259,7 @@ export default function TemplatesView() {
       </section>
 
       {formOpen && (
-        <form className="template-editor glass" onSubmit={saveTemplate}>
+        <form className="template-editor" onSubmit={saveTemplate}>
           <div className="template-editor-grid">
             <label>{t(messages, 'module.templates.name_label')}<input className="form-input" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} /></label>
             <label>{t(messages, 'module.templates.description_label')}<input className="form-input" value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} /></label>
@@ -287,7 +295,7 @@ export default function TemplatesView() {
           </section>
           <section className="templates-section">
             <div className="section-title"><h2>{t(messages, 'module.templates.custom')}</h2></div>
-            {customTemplates.length > 0 ? <div className="templates-grid">{customTemplates.map(renderTemplateCard)}</div> : <div className="empty-state glass-sm">{t(messages, 'module.templates.empty')}</div>}
+            {customTemplates.length > 0 ? <div className="templates-grid">{customTemplates.map(renderTemplateCard)}</div> : <div className="empty-state template-empty">{t(messages, 'module.templates.empty')}</div>}
           </section>
         </>
       )}

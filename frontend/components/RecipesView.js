@@ -42,9 +42,11 @@ function RecipeCard({ recipe, messages, onEdit, onToggleFavorite }) {
 
   return (
     <article className="recipe-card">
+      <div className="recipe-card-visual" aria-hidden="true">
+        <BookOpen size={24} />
+      </div>
       <div className="recipe-card-header">
         <div className="recipe-card-title-row">
-          <BookOpen size={17} className="recipe-card-icon" aria-hidden="true" />
           <h3 className="recipe-card-title">{recipe.title}</h3>
         </div>
         <div className="recipe-card-actions">
@@ -564,7 +566,7 @@ export default function RecipesView() {
   }
 
   return (
-    <div>
+    <div className="recipes-page">
       {confirmAction && (
         <ConfirmDialog
           title={confirmAction.title}
@@ -590,10 +592,15 @@ export default function RecipesView() {
         onPushToShopping={editingId != null ? handlePushToShopping : null}
       />
 
-      <div className="view-header">
-        <div>
+      <div className="view-header recipes-header">
+        <div className="recipes-title-block">
+          <span className="recipes-page-icon" aria-hidden="true">
+            <BookOpen size={22} />
+          </span>
+          <div>
           <h1 className="view-title">{t(messages, 'module.recipes.name')}</h1>
           <div className="view-subtitle">{currentFamilyName}</div>
+          </div>
         </div>
         <div className="recipe-header-actions">
           <label className="recipe-search">

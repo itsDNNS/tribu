@@ -289,10 +289,13 @@ export default function SchoolTimetablesView() {
   if (demoMode) {
     return (
       <div className="view school-timetables-view">
-        <div className="view-header">
-          <div>
-            <h1 className="view-title"><GraduationCap size={24} /> {t(messages, 'module.school_timetables.name')}</h1>
-            <p className="view-subtitle">{t(messages, 'module.school_timetables.subtitle')}</p>
+        <div className="view-header school-header">
+          <div className="school-title-block">
+            <span className="school-page-icon" aria-hidden="true"><GraduationCap size={22} /></span>
+            <div>
+              <h1 className="view-title">{t(messages, 'module.school_timetables.name')}</h1>
+              <p className="view-subtitle">{t(messages, 'module.school_timetables.subtitle')}</p>
+            </div>
           </div>
         </div>
         <div className="school-empty-rich">
@@ -307,10 +310,13 @@ export default function SchoolTimetablesView() {
 
   return (
     <div className="view school-timetables-view">
-      <div className="view-header">
-        <div>
-          <h1 className="view-title"><GraduationCap size={24} /> {t(messages, 'module.school_timetables.name')}</h1>
-          <p className="view-subtitle">{t(messages, 'module.school_timetables.subtitle')}</p>
+      <div className="view-header school-header">
+        <div className="school-title-block">
+          <span className="school-page-icon" aria-hidden="true"><GraduationCap size={22} /></span>
+          <div>
+            <h1 className="view-title">{t(messages, 'module.school_timetables.name')}</h1>
+            <p className="view-subtitle">{t(messages, 'module.school_timetables.subtitle')}</p>
+          </div>
         </div>
         {!showEmptyState && (
           <button type="button" className="btn-primary school-add-btn" onClick={startNew}>
@@ -372,7 +378,7 @@ export default function SchoolTimetablesView() {
             <section className="school-editor-section school-meta-section">
               <div className="school-meta-grid">
                 <label className="school-field">
-                  <span>Name</span>
+                  <span>{t(messages, 'name')}</span>
                   <input
                     className="form-input"
                     value={form.name}

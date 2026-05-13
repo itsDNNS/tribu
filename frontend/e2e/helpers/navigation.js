@@ -17,6 +17,7 @@ const VIEW_KEYS = {
   Rewards: 'rewards',
   Gifts: 'gifts',
   Contacts: 'contacts',
+  'School timetables': 'school_timetables',
   Notifications: 'notifications',
   Settings: 'settings',
   Admin: 'admin',
