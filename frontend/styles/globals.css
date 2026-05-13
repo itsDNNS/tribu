@@ -5293,8 +5293,12 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 }
 .tasks-page .tasks-layout {
   display: block;
+  min-width: 0;
+  max-width: 100%;
 }
 .tasks-page .tasks-wrapper {
+  min-width: 0;
+  max-width: 100%;
   border-color: var(--border-subtle);
   border-radius: 14px;
   background: var(--surface-paper);
