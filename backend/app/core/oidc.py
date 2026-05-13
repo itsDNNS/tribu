@@ -223,7 +223,7 @@ def save_config(
     set_setting(db, KEY_ENABLED, "true" if enabled else "false")
     set_setting(db, KEY_PRESET, preset)
     set_setting(db, KEY_BUTTON_LABEL, button_label)
-    set_setting(db, KEY_ISSUER, issuer.rstrip("/"))
+    set_setting(db, KEY_ISSUER, issuer.strip())
     set_setting(db, KEY_CLIENT_ID, client_id)
     if client_secret is not None:
         set_setting(db, KEY_CLIENT_SECRET, client_secret)
@@ -428,7 +428,11 @@ def _fetch_json(url: str, timeout: float = 5.0) -> dict:
 
 
 def _discovery_url(issuer: str) -> str:
-    base = issuer.rstrip("/")
+    # Only normalize for URL concatenation. The configured issuer
+    # itself is an OIDC identity string and must stay exact for
+    # discovery issuer checks, ID-token `iss` validation, and identity
+    # linking. Authentik commonly includes a trailing slash there.
+    base = issuer.strip().rstrip("/")
     return f"{base}/.well-known/openid-configuration"
 
 
@@ -440,7 +444,7 @@ def fetch_discovery(issuer: str, *, force: bool = False) -> Discovery:
     fields the login flow actually reads; the full JSON is kept as
     ``.raw`` for tests and for admin diagnostics.
     """
-    issuer = issuer.rstrip("/")
+    issuer = issuer.strip()
     now = time.monotonic()
     if not force:
         cached = _discovery_cache.get(issuer)
@@ -466,12 +470,11 @@ def fetch_discovery(issuer: str, *, force: bool = False) -> Discovery:
             f"Discovery document missing required fields: {', '.join(missing)}"
         )
 
-    # Some IdPs issue discovery at a slightly different URL than the
-    # issuer claim (trailing slash mismatch). We require the claim
-    # itself to match the configured issuer after stripping trailing
-    # slashes to protect against mix-up / phishing via a rogue
-    # discovery endpoint.
-    claimed = str(data["issuer"]).rstrip("/")
+    # The issuer is an exact OIDC identity string. A trailing slash
+    # mismatch is significant because the same value is later passed
+    # to ID-token `iss` validation. Do not normalize it away here, or
+    # the admin discovery test can pass while the real callback fails.
+    claimed = str(data["issuer"])
     if claimed != issuer:
         raise DiscoveryError(
             f"Issuer mismatch: configured {issuer!r}, document says {claimed!r}"
@@ -498,7 +501,7 @@ def invalidate_discovery_cache(issuer: Optional[str] = None) -> None:
     if issuer is None:
         _discovery_cache.clear()
     else:
-        _discovery_cache.pop(issuer.rstrip("/"), None)
+        _discovery_cache.pop(issuer.strip(), None)
 
 
 # ---------------------------------------------------------------------------

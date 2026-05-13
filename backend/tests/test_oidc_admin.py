@@ -233,7 +233,7 @@ def test_put_config_partial_update():
         json={
             "enabled": True,
             "preset": "authentik",
-            "issuer": "https://auth.example.com/application/o/tribu",
+            "issuer": "https://auth.example.com/application/o/tribu/",
             "client_id": "tribu",
             "client_secret": "s3cr3t",
             "scopes": "openid profile email",
@@ -260,7 +260,7 @@ def test_put_config_partial_update():
     body = resp.json()
     assert body["button_label"] == "Sign in with home IdP"
     assert body["client_secret_set"] is True
-    assert body["issuer"] == "https://auth.example.com/application/o/tribu"
+    assert body["issuer"] == "https://auth.example.com/application/o/tribu/"
 
 
 def test_put_clears_secret_on_empty_string():
