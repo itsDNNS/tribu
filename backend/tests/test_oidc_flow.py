@@ -11,6 +11,8 @@ few state / nonce / redirect failure modes.
 """
 from __future__ import annotations
 
+from urllib.parse import parse_qs, urlsplit
+
 import jwt
 import pytest
 from fastapi.testclient import TestClient
@@ -186,6 +188,29 @@ def test_login_rejects_open_redirect(monkeypatch):
     client.cookies.clear()
 
 
+def test_login_accepts_native_mobile_redirect(monkeypatch):
+    _seed_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+
+    resp = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback")
+    assert resp.status_code == 303
+    cookie = client.cookies.get(FLOW_COOKIE)
+    payload = jwt.decode(cookie, JWT_SECRET, algorithms=["HS256"])
+    assert payload["mobile_redirect_uri"] == "tribu://auth/oidc/callback"
+    assert payload["redirect_to"] == "/"
+    client.cookies.clear()
+
+
+def test_login_rejects_untrusted_mobile_redirect(monkeypatch):
+    _seed_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+
+    resp = client.get("/auth/oidc/login?mobile_redirect_uri=https%3A%2F%2Fevil.example%2Fcallback")
+    assert resp.status_code == 400
+    assert "OIDC_INVALID_CALLBACK" in str(resp.json())
+    client.cookies.clear()
+
+
 def test_login_falls_back_when_discovery_fails(monkeypatch):
     _seed_config()
 
@@ -242,6 +267,18 @@ def test_callback_provider_error_is_reported(monkeypatch):
     client.cookies.clear()
 
 
+def test_mobile_callback_provider_error_returns_to_app(monkeypatch):
+    _seed_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+
+    start = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback")
+    assert start.status_code == 303
+    resp = client.get("/auth/oidc/callback?error=access_denied&error_description=user+cancelled")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "tribu://auth/oidc/callback?error=provider_error"
+    client.cookies.clear()
+
+
 # ---------------------------------------------------------------------------
 # Happy-path helpers
 # ---------------------------------------------------------------------------
@@ -256,6 +293,13 @@ def _perform_login_and_extract_state(monkeypatch) -> str:
         if k == "state":
             return v
     raise AssertionError("no state in authorize URL")
+
+
+def _perform_mobile_login_and_extract_state(monkeypatch) -> str:
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    resp = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback")
+    location = resp.headers["location"]
+    return parse_qs(urlsplit(location).query)["state"][0]
 
 
 def _mock_token_exchange(monkeypatch, *, subject: str, email: str | None, email_verified: bool, name: str | None = None):
@@ -379,6 +423,53 @@ def test_callback_stamps_last_success_timestamp(monkeypatch):
         if parsed.tzinfo is not None:
             parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
         assert abs((oidc_core.utcnow() - parsed).total_seconds()) < 300
+    finally:
+        db.close()
+    client.cookies.clear()
+
+
+def test_mobile_callback_exchanges_short_code_for_bearer_tokens(monkeypatch):
+    _seed_config(proven=False)
+    db = TestSession()
+    try:
+        db.add(User(
+            email="mobile-sso@example.com",
+            password_hash=hash_password("Secure1Pass"),
+            display_name="Mobile SSO",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    state = _perform_mobile_login_and_extract_state(monkeypatch)
+    _mock_token_exchange(
+        monkeypatch,
+        subject="mobile-sub",
+        email="mobile-sso@example.com",
+        email_verified=True,
+        name="Mobile SSO",
+    )
+
+    resp = client.get(f"/auth/oidc/callback?code=authcode&state={state}")
+    assert resp.status_code == 303
+    location = resp.headers["location"]
+    assert location.startswith("tribu://auth/oidc/callback?code=")
+    code = parse_qs(urlsplit(location).query)["code"][0]
+
+    exchange = client.post("/auth/oidc/mobile-exchange", json={"code": code})
+    assert exchange.status_code == 200, exchange.text
+    data = exchange.json()
+    assert data["token_type"] == "bearer"
+    assert data["access_token"]
+    assert data["refresh_token"]
+    assert data["expires_in_hours"] > 0
+    assert data["refresh_expires_in_seconds"] > 0
+    assert data["must_change_password"] is False
+
+    db = TestSession()
+    try:
+        stored = oidc_core.get_setting(db, oidc_core.KEY_LAST_SUCCESS_AT, "")
+        assert stored
     finally:
         db.close()
     client.cookies.clear()

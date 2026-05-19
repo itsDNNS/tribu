@@ -24,7 +24,7 @@ import logging
 import secrets
 from datetime import timedelta
 from typing import Optional
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -32,9 +32,9 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core import oidc as oidc_core
+from app.core.auth_sessions import issue_refresh_session, issue_session_cookies
 from app.core.clock import utcnow
-from app.core.config import COOKIE_SECURE
-from app.core.auth_sessions import issue_session_cookies
+from app.core.config import COOKIE_SECURE, REFRESH_COOKIE_MAX_AGE
 from app.core.errors import (
     OIDC_ID_TOKEN_INVALID,
     OIDC_INVALID_CALLBACK,
@@ -45,7 +45,8 @@ from app.core.errors import (
 from app.core.utils import audit_log as _audit, resolve_base_url
 from app.database import get_db
 from app.models import FamilyInvitation, Membership, OIDCIdentity, User
-from app.security import JWT_SECRET
+from app.schemas import MobileLoginResponse, OIDCMobileExchangeRequest
+from app.security import JWT_EXPIRE_HOURS, JWT_SECRET, create_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,9 @@ FLOW_COOKIE = "tribu_oidc_flow"
 FLOW_TTL_SECONDS = 600  # 10 minutes from authorize to callback
 FLOW_JWT_ALG = "HS256"
 FLOW_JWT_PURPOSE = "oidc_flow"
+MOBILE_CODE_TTL_SECONDS = 120
+MOBILE_CODE_PURPOSE = "oidc_mobile_result"
+MOBILE_REDIRECT_URI = "tribu://auth/oidc/callback"
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +136,53 @@ def _clear_flow_cookie(response) -> None:
     response.delete_cookie(FLOW_COOKIE, path="/auth/oidc")
 
 
+def _validate_mobile_redirect_uri(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    parsed = urlsplit(value)
+    if (
+        parsed.scheme != "tribu"
+        or parsed.netloc != "auth"
+        or parsed.path != "/oidc/callback"
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise HTTPException(status_code=400, detail=error_detail(OIDC_INVALID_CALLBACK))
+    return MOBILE_REDIRECT_URI
+
+
+def _mobile_redirect(target: str, params: dict[str, str]) -> str:
+    parsed = urlsplit(target)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query.update(params)
+    return urlunsplit((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        urlencode(query),
+        parsed.fragment,
+    ))
+
+
+def _sign_mobile_code(user: User) -> str:
+    payload = {
+        "purpose": MOBILE_CODE_PURPOSE,
+        "user_id": user.id,
+        "email": user.email,
+        "exp": utcnow() + timedelta(seconds=MOBILE_CODE_TTL_SECONDS),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=FLOW_JWT_ALG)
+
+
+def _unsign_mobile_code(raw: str) -> dict:
+    decoded = jwt.decode(raw, JWT_SECRET, algorithms=[FLOW_JWT_ALG])
+    if decoded.get("purpose") != MOBILE_CODE_PURPOSE:
+        raise jwt.InvalidTokenError("Mobile OIDC code has wrong purpose")
+    return decoded
+
+
 # ---------------------------------------------------------------------------
 # /auth/oidc/login
 # ---------------------------------------------------------------------------
@@ -164,11 +215,13 @@ def start_login(
     request: Request,
     invite: Optional[str] = Query(None, description="Invitation token to bind to the new account."),
     redirect_to: Optional[str] = Query(None, description="Absolute path to land on after login (same-origin)."),
+    mobile_redirect_uri: Optional[str] = Query(None, description="Native app callback URI for bearer-token SSO."),
     db: Session = Depends(get_db),
 ):
     cfg = oidc_core.load_config(db)
     if not cfg.is_ready():
         raise HTTPException(status_code=400, detail=error_detail(OIDC_NOT_CONFIGURED))
+    mobile_callback = _validate_mobile_redirect_uri(mobile_redirect_uri)
 
     try:
         disc = oidc_core.fetch_discovery(cfg.issuer)
@@ -201,6 +254,7 @@ def start_login(
         "verifier": code_verifier,
         "invite": invite or "",
         "redirect_to": _safe_redirect(redirect_to),
+        "mobile_redirect_uri": mobile_callback,
         "issuer": cfg.issuer,
         # Pin the redirect_uri we actually sent to the IdP so the
         # callback token-exchange submits exactly the same value.
@@ -225,6 +279,18 @@ def start_login(
 def _error_redirect(code: str) -> str:
     """Build the ``/?sso_error=<code>`` URL the frontend handles."""
     return f"/?sso_error={code}"
+
+
+def _flow_error_response(flow: dict, code: str) -> RedirectResponse:
+    mobile_redirect_uri = flow.get("mobile_redirect_uri") or ""
+    url = (
+        _mobile_redirect(mobile_redirect_uri, {"error": code})
+        if mobile_redirect_uri
+        else _error_redirect(code)
+    )
+    resp = RedirectResponse(url=url, status_code=303)
+    _clear_flow_cookie(resp)
+    return resp
 
 
 def _invitation_by_token(db: Session, token: Optional[str]) -> Optional[FamilyInvitation]:
@@ -447,34 +513,24 @@ def callback(
 
     if error:
         logger.info("OIDC provider returned error %r: %s", error, error_description)
-        resp = RedirectResponse(url=_error_redirect("provider_error"), status_code=303)
-        _clear_flow_cookie(resp)
-        return resp
+        return _flow_error_response(flow, "provider_error")
 
     if not code or not state:
-        resp = RedirectResponse(url=_error_redirect("invalid_state"), status_code=303)
-        _clear_flow_cookie(resp)
-        return resp
+        return _flow_error_response(flow, "invalid_state")
 
     if not secrets.compare_digest(state, flow.get("state", "")):
-        resp = RedirectResponse(url=_error_redirect("state_mismatch"), status_code=303)
-        _clear_flow_cookie(resp)
-        return resp
+        return _flow_error_response(flow, "state_mismatch")
 
     cfg = oidc_core.load_config(db)
     if not cfg.is_ready() or cfg.issuer != flow.get("issuer"):
         # Issuer changed between authorize and callback — cfg drift.
-        resp = RedirectResponse(url=_error_redirect("config_changed"), status_code=303)
-        _clear_flow_cookie(resp)
-        return resp
+        return _flow_error_response(flow, "config_changed")
 
     try:
         disc = oidc_core.fetch_discovery(cfg.issuer)
     except oidc_core.DiscoveryError as exc:
         logger.warning("OIDC discovery failed at callback: %s", exc)
-        resp = RedirectResponse(url=_error_redirect("discovery_failed"), status_code=303)
-        _clear_flow_cookie(resp)
-        return resp
+        return _flow_error_response(flow, "discovery_failed")
 
     # Prefer the URI we actually sent to the IdP at authorize time;
     # fall back to recomputing for older flow cookies that predate
@@ -494,9 +550,7 @@ def callback(
         )
     except oidc_core.TokenExchangeError as exc:
         logger.warning("OIDC token exchange failed: %s", exc)
-        resp = RedirectResponse(url=_error_redirect("token_exchange_failed"), status_code=303)
-        _clear_flow_cookie(resp)
-        return resp
+        return _flow_error_response(flow, "token_exchange_failed")
 
     try:
         claims = oidc_core.verify_id_token(
@@ -508,9 +562,7 @@ def callback(
         )
     except oidc_core.IDTokenError as exc:
         logger.warning("OIDC ID token verification failed: %s", exc)
-        resp = RedirectResponse(url=_error_redirect("id_token_invalid"), status_code=303)
-        _clear_flow_cookie(resp)
-        return resp
+        return _flow_error_response(flow, "id_token_invalid")
 
     try:
         user = _link_or_create_user(
@@ -523,14 +575,23 @@ def callback(
         db.rollback()
         detail = exc.detail if isinstance(exc.detail, dict) else {"code": "UNKNOWN"}
         code_tag = str(detail.get("code", "signup_blocked")).lower()
-        resp = RedirectResponse(url=_error_redirect(code_tag), status_code=303)
-        _clear_flow_cookie(resp)
-        return resp
+        return _flow_error_response(flow, code_tag)
 
     # Stamp proof-of-life so password_login_disabled can trust that
     # SSO actually works end-to-end. Commit once for the whole
     # transaction (identity link + membership + timestamp).
     oidc_core.record_successful_sso_login(db)
+
+    mobile_redirect_uri = flow.get("mobile_redirect_uri") or ""
+    if mobile_redirect_uri:
+        code = _sign_mobile_code(user)
+        response = RedirectResponse(
+            url=_mobile_redirect(mobile_redirect_uri, {"code": code}),
+            status_code=303,
+        )
+        db.commit()
+        _clear_flow_cookie(response)
+        return response
 
     redirect_to = _safe_redirect(flow.get("redirect_to"))
     response = RedirectResponse(url=redirect_to, status_code=303)
@@ -538,3 +599,39 @@ def callback(
     db.commit()
     _clear_flow_cookie(response)
     return response
+
+
+@router.post(
+    "/auth/oidc/mobile-exchange",
+    summary="Exchange native OIDC callback code",
+    description=(
+        "Exchange the short-lived code delivered to the native app "
+        "callback URI for the same bearer + refresh token shape as "
+        "mobile password login."
+    ),
+    response_model=MobileLoginResponse,
+    response_description="Mobile SSO exchange successful",
+)
+def mobile_exchange(payload: OIDCMobileExchangeRequest, db: Session = Depends(get_db)):
+    try:
+        decoded = _unsign_mobile_code(payload.code)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail=error_detail(OIDC_INVALID_CALLBACK)) from None
+
+    user_id = decoded.get("user_id")
+    if not isinstance(user_id, int):
+        raise HTTPException(status_code=401, detail=error_detail(OIDC_INVALID_CALLBACK))
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail=error_detail(OIDC_INVALID_CALLBACK))
+
+    refresh_token = issue_refresh_session(db, user)
+    db.commit()
+    return MobileLoginResponse(
+        access_token=create_access_token(user_id=user.id, email=user.email),
+        refresh_token=refresh_token,
+        expires_in_hours=JWT_EXPIRE_HOURS,
+        refresh_expires_in_seconds=REFRESH_COOKIE_MAX_AGE,
+        must_change_password=user.must_change_password,
+    )
