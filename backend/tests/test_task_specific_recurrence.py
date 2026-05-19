@@ -117,3 +117,45 @@ def test_first_weekday_monthly_creates_next_occurrence_on_completion(recurrence,
         assert next_task.due_date == expected_due
     finally:
         db.close()
+
+
+def test_list_tasks_reward_only_returns_open_reward_tasks():
+    token, family_id, user_id = _seed_admin()
+    db = TestSession()
+    try:
+        db.add_all([
+            Task(
+                family_id=family_id,
+                title="Rewarded open task",
+                priority="normal",
+                assigned_to_user_id=user_id,
+                created_by_user_id=user_id,
+                token_reward_amount=3,
+            ),
+            Task(
+                family_id=family_id,
+                title="Plain open task",
+                priority="normal",
+                assigned_to_user_id=user_id,
+                created_by_user_id=user_id,
+            ),
+            Task(
+                family_id=family_id,
+                title="Done rewarded task",
+                priority="normal",
+                status="done",
+                assigned_to_user_id=user_id,
+                created_by_user_id=user_id,
+                token_reward_amount=5,
+            ),
+        ])
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.get(f"/tasks?family_id={family_id}&reward_only=true", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    data = resp.json()
+    assert data["total"] == 1
+    assert [item["title"] for item in data["items"]] == ["Rewarded open task"]
