@@ -80,6 +80,14 @@ class LoginRequest(BaseModel):
     })
 
 
+class MobileLoginResponse(BaseModel):
+    """Bearer token response for native mobile clients."""
+    access_token: str = Field(..., description="JWT bearer token for Authorization header use")
+    token_type: str = Field("bearer", description="Token type")
+    expires_in_hours: int = Field(..., description="Configured access token lifetime in hours")
+    must_change_password: bool = Field(False, description="True if user must change their temporary password")
+
+
 class MeResponse(BaseModel):
     """Current authenticated user profile."""
     user_id: int = Field(..., description="User ID")

@@ -66,11 +66,11 @@ from app.core.scheduler import configure_backup_schedule, start_notification_job
 from app.core import ws_broadcast
 from app.schemas import (
     AUTH_RESPONSES, CONFLICT_RESPONSE, ErrorResponse,
-    ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, ProfileImageUpdate, RegisterRequest,
+    ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, MobileLoginResponse, ProfileImageUpdate, RegisterRequest,
 )
 from app.core import cache
 from app.core.utils import get_setting, utcnow
-from app.security import hash_password, verify_password
+from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 from app.core.config import REFRESH_COOKIE_NAME, VERSION
 
 logger = logging.getLogger(__name__)
@@ -396,6 +396,35 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     issue_session_cookies(response, db, user)
     db.commit()
     return response
+
+
+@app.post(
+    "/auth/mobile-login",
+    tags=["auth"],
+    summary="Mobile login",
+    description=(
+        "Authenticate a native mobile client with email and password. "
+        "Returns a bearer token for Authorization header use instead of browser cookies. "
+        "Rate limited to 20 requests per minute. No authentication required."
+    ),
+    response_model=MobileLoginResponse,
+    responses={401: {"model": ErrorResponse, "description": "Invalid credentials"}},
+    response_description="Mobile login successful",
+)
+@limiter.limit("20/minute")
+def mobile_login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
+    if oidc_core.password_login_disabled(db):
+        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+
+    user = db.query(User).filter(User.email == payload.email.lower()).first()
+    if not user or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
+
+    return MobileLoginResponse(
+        access_token=create_access_token(user_id=user.id, email=user.email),
+        expires_in_hours=JWT_EXPIRE_HOURS,
+        must_change_password=user.must_change_password,
+    )
 
 
 @app.post(
