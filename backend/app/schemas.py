@@ -7,7 +7,7 @@ import re
 
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from app.core.calendar_icons import normalize_calendar_event_icon
 from app.core.notification_destinations import clean_events as clean_notification_destination_events
@@ -1147,8 +1147,24 @@ class NotificationPreferenceUpdate(BaseModel):
 class PushSubscriptionCreate(BaseModel):
     """Register a push subscription."""
     endpoint: str = Field(..., description="Push service endpoint URL")
-    p256dh: str = Field(..., description="Client public key for encryption")
-    auth: str = Field(..., description="Client auth secret")
+    p256dh: Optional[str] = Field(None, description="Client public key for browser Web Push encryption")
+    auth: Optional[str] = Field(None, description="Client browser Web Push auth secret")
+    platform: str = Field("web", description="Push platform: web or expo")
+    device_name: Optional[str] = Field(None, max_length=120, description="Optional native device label")
+
+    @field_validator("platform")
+    @classmethod
+    def normalize_platform(cls, value: str) -> str:
+        platform = (value or "web").strip().lower()
+        if platform not in {"web", "expo"}:
+            raise ValueError("platform must be web or expo")
+        return platform
+
+    @model_validator(mode="after")
+    def require_web_push_keys(self):
+        if self.platform == "web" and (not self.p256dh or not self.auth):
+            raise ValueError("p256dh and auth are required for web push subscriptions")
+        return self
 
 
 class PushUnsubscribe(BaseModel):
@@ -1169,7 +1185,10 @@ class PushStatusResponse(BaseModel):
     server_configured: bool = Field(..., description="Whether required VAPID settings are present")
     vapid_public_key_available: bool = Field(..., description="Whether a public key can be served to the browser")
     pywebpush_available: bool = Field(..., description="Whether the backend can import the Web Push sender")
+    native_sender_available: bool = Field(True, description="Whether native Expo push dispatch is available")
     subscription_count: int = Field(..., ge=0, description="Stored subscriptions for this user")
+    web_subscription_count: int = Field(0, ge=0, description="Stored browser Web Push subscriptions for this user")
+    native_subscription_count: int = Field(0, ge=0, description="Stored native Expo push subscriptions for this user")
     push_enabled: bool = Field(..., description="Whether push is enabled in notification preferences")
     ready: bool = Field(..., description="Whether server, dependency, preference, and subscription are ready")
     blocked_reason: Optional[str] = Field(None, description="High-level readiness blocker")
