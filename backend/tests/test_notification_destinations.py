@@ -728,6 +728,7 @@ def test_shopping_item_destination_failure_is_isolated_and_filters_destinations(
     assert calls[0]["event_type"] == "shopping.item.changed"
     assert calls[0]["source_type"] == "shopping_item"
     assert calls[0]["title"] == "Shopping item added"
+    assert calls[0]["link"] == f"/shopping?list={list_id}&item={resp.json()['id']}"
 
     db = TestSession()
     try:
@@ -781,6 +782,11 @@ def test_shopping_item_destination_update_actions_include_unchecked(monkeypatch)
 
     assert [call["trigger_key"].split(":")[2] for call in calls] == ["created", "checked", "unchecked"]
     assert calls[-1]["body"] == 'User admin unchecked "Apples" on "Market".'
+    assert [call["link"] for call in calls] == [
+        f"/shopping?list={list_id}&item={item_id}",
+        f"/shopping?list={list_id}&item={item_id}",
+        f"/shopping?list={list_id}&item={item_id}",
+    ]
 
 
 def test_shopping_template_apply_sends_item_destination_after_items_are_saved(monkeypatch):
@@ -992,6 +998,8 @@ def test_quick_capture_shopping_routes_send_destinations(monkeypatch):
         "quick_capture_added",
         "quick_capture_added",
     ]
+    assert calls[1]["link"] == f"/shopping?list={direct.json()['created_item']['list_id']}&item={direct.json()['created_item']['id']}"
+    assert calls[2]["link"] == f"/shopping?list={converted.json()['converted_item']['list_id']}&item={converted.json()['converted_item']['id']}"
 
 
 def test_clear_checked_shopping_items_sends_item_destination(monkeypatch):
