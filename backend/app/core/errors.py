@@ -91,6 +91,7 @@ NOTIFICATION_NOT_FOUND = "NOTIFICATION_NOT_FOUND"
 
 # ── Navigation ────────────────────────────────────────────────
 UNKNOWN_NAV_KEYS = "UNKNOWN_NAV_KEYS"
+INVALID_UI_PREFERENCE = "INVALID_UI_PREFERENCE"
 
 # ── Gifts ────────────────────────────────────────────────────
 GIFT_NOT_FOUND = "GIFT_NOT_FOUND"
@@ -199,6 +200,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     CSV_MISSING_COLUMN: "CSV requires at least the column full_name",
     NOTIFICATION_NOT_FOUND: "Notification not found",
     UNKNOWN_NAV_KEYS: "Unknown nav keys: {keys}",
+    INVALID_UI_PREFERENCE: "Invalid UI preference: {key}",
     REWARD_CURRENCY_NOT_FOUND: "Reward currency not found",
     REWARD_CURRENCY_ALREADY_EXISTS: "This family already has a reward currency",
     EARNING_RULE_NOT_FOUND: "Earning rule not found",

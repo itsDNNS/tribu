@@ -58,6 +58,14 @@ class TestNavRouterScopes:
         from app.modules.nav_router import update_nav_order
         assert _get_scope_string(update_nav_order) == "profile:write"
 
+    def test_get_ui_preferences_scope(self):
+        from app.modules.nav_router import get_ui_preferences
+        assert _get_scope_string(get_ui_preferences) == "profile:read"
+
+    def test_update_ui_preferences_scope(self):
+        from app.modules.nav_router import update_ui_preferences
+        assert _get_scope_string(update_ui_preferences) == "profile:write"
+
 
 class TestNotificationsRouterScopes:
     def test_list_notifications_has_scope(self):
