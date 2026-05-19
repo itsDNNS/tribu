@@ -192,11 +192,12 @@ def test_login_accepts_native_mobile_redirect(monkeypatch):
     _seed_config()
     monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
 
-    resp = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback")
+    resp = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback&mobile_state=native-123")
     assert resp.status_code == 303
     cookie = client.cookies.get(FLOW_COOKIE)
     payload = jwt.decode(cookie, JWT_SECRET, algorithms=["HS256"])
     assert payload["mobile_redirect_uri"] == "tribu://auth/oidc/callback"
+    assert payload["mobile_state"] == "native-123"
     assert payload["redirect_to"] == "/"
     client.cookies.clear()
 
@@ -271,11 +272,11 @@ def test_mobile_callback_provider_error_returns_to_app(monkeypatch):
     _seed_config()
     monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
 
-    start = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback")
+    start = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback&mobile_state=native-err")
     assert start.status_code == 303
     resp = client.get("/auth/oidc/callback?error=access_denied&error_description=user+cancelled")
     assert resp.status_code == 303
-    assert resp.headers["location"] == "tribu://auth/oidc/callback?error=provider_error"
+    assert resp.headers["location"] == "tribu://auth/oidc/callback?error=provider_error&state=native-err"
     client.cookies.clear()
 
 
@@ -295,9 +296,12 @@ def _perform_login_and_extract_state(monkeypatch) -> str:
     raise AssertionError("no state in authorize URL")
 
 
-def _perform_mobile_login_and_extract_state(monkeypatch) -> str:
+def _perform_mobile_login_and_extract_state(monkeypatch, mobile_state: str = "") -> str:
     monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
-    resp = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback")
+    url = "/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback"
+    if mobile_state:
+        url += f"&mobile_state={mobile_state}"
+    resp = client.get(url)
     location = resp.headers["location"]
     return parse_qs(urlsplit(location).query)["state"][0]
 
@@ -472,6 +476,44 @@ def test_mobile_callback_exchanges_short_code_for_bearer_tokens(monkeypatch):
         assert stored
     finally:
         db.close()
+    client.cookies.clear()
+
+
+def test_mobile_callback_binds_short_code_to_native_state(monkeypatch):
+    _seed_config(proven=False)
+    db = TestSession()
+    try:
+        db.add(User(
+            email="mobile-state@example.com",
+            password_hash=hash_password("Secure1Pass"),
+            display_name="Mobile State",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    native_state = "native-state-456"
+    state = _perform_mobile_login_and_extract_state(monkeypatch, native_state)
+    _mock_token_exchange(
+        monkeypatch,
+        subject="mobile-state-sub",
+        email="mobile-state@example.com",
+        email_verified=True,
+        name="Mobile State",
+    )
+
+    resp = client.get(f"/auth/oidc/callback?code=authcode&state={state}")
+    assert resp.status_code == 303
+    params = parse_qs(urlsplit(resp.headers["location"]).query)
+    assert params["state"][0] == native_state
+    code = params["code"][0]
+
+    mismatch = client.post("/auth/oidc/mobile-exchange", json={"code": code, "state": "wrong-state"})
+    assert mismatch.status_code == 401
+
+    exchange = client.post("/auth/oidc/mobile-exchange", json={"code": code, "state": native_state})
+    assert exchange.status_code == 200, exchange.text
+    assert exchange.json()["access_token"]
     client.cookies.clear()
 
 
