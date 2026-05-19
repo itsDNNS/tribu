@@ -157,15 +157,19 @@ def _push_blocked_reason(
     pywebpush_available: bool,
     push_enabled: bool,
     subscription_count: int,
+    web_subscription_count: int = 0,
+    native_subscription_count: int = 0,
 ) -> str | None:
-    if not server_configured:
-        return "server_not_configured"
-    if not pywebpush_available:
-        return "sender_unavailable"
     if not push_enabled:
         return "preference_disabled"
     if subscription_count == 0:
         return "no_subscription"
+    if native_subscription_count > 0:
+        return None
+    if web_subscription_count > 0 and not server_configured:
+        return "server_not_configured"
+    if web_subscription_count > 0 and not pywebpush_available:
+        return "sender_unavailable"
     return None
 
 
@@ -183,6 +187,8 @@ def push_status(
 ):
     pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
     subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).count()
+    native_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform == "expo").count()
+    web_subscription_count = max(subscription_count - native_subscription_count, 0)
     last_log = (
         db.query(NotificationSentLog)
         .filter(NotificationSentLog.user_id == user.id)
@@ -197,12 +203,17 @@ def push_status(
         pywebpush_available=sender_available,
         push_enabled=push_enabled,
         subscription_count=subscription_count,
+        web_subscription_count=web_subscription_count,
+        native_subscription_count=native_subscription_count,
     )
     return {
         "server_configured": server_configured,
         "vapid_public_key_available": bool(get_vapid_public_key()),
         "pywebpush_available": sender_available,
+        "native_sender_available": True,
         "subscription_count": subscription_count,
+        "web_subscription_count": web_subscription_count,
+        "native_subscription_count": native_subscription_count,
         "push_enabled": push_enabled,
         "ready": blocked_reason is None,
         "blocked_reason": blocked_reason,
@@ -233,11 +244,15 @@ def push_test(
 ):
     pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
     subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).count()
+    native_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform == "expo").count()
+    web_subscription_count = max(subscription_count - native_subscription_count, 0)
     blocked_reason = _push_blocked_reason(
         server_configured=is_vapid_configured(),
         pywebpush_available=is_pywebpush_available(),
         push_enabled=bool(pref and pref.push_enabled),
         subscription_count=subscription_count,
+        web_subscription_count=web_subscription_count,
+        native_subscription_count=native_subscription_count,
     )
     if blocked_reason:
         return {
@@ -288,14 +303,18 @@ def push_subscribe(
     existing = db.query(PushSubscription).filter(PushSubscription.endpoint == payload.endpoint).first()
     if existing:
         existing.user_id = user.id
-        existing.p256dh = payload.p256dh
-        existing.auth = payload.auth
+        existing.p256dh = payload.p256dh or ""
+        existing.auth = payload.auth or ""
+        existing.platform = payload.platform
+        existing.device_name = payload.device_name
     else:
         sub = PushSubscription(
             user_id=user.id,
             endpoint=payload.endpoint,
-            p256dh=payload.p256dh,
-            auth=payload.auth,
+            p256dh=payload.p256dh or "",
+            auth=payload.auth or "",
+            platform=payload.platform,
+            device_name=payload.device_name,
         )
         db.add(sub)
 

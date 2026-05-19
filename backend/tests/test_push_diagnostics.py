@@ -125,8 +125,41 @@ def test_push_subscribe_persists_subscription_and_enables_preference():
         sub = db.query(PushSubscription).filter(PushSubscription.user_id == user_id).one()
         assert pref.push_enabled is True
         assert sub.endpoint == "https://push.example/device-1"
+        assert sub.platform == "web"
     finally:
         db.close()
+
+
+def test_native_push_subscribe_persists_expo_subscription_and_enables_preference():
+    token, user_id = _seed_user("native-subscribe")
+
+    resp = client.post(
+        "/notifications/push/subscribe",
+        headers=_auth(token),
+        json={"endpoint": "ExponentPushToken[native-device-1]", "platform": "expo", "device_name": "iPhone"},
+    )
+
+    assert resp.status_code == 200, resp.json()
+    db = TestSession()
+    try:
+        pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user_id).one()
+        sub = db.query(PushSubscription).filter(PushSubscription.user_id == user_id).one()
+        assert pref.push_enabled is True
+        assert sub.endpoint == "ExponentPushToken[native-device-1]"
+        assert sub.platform == "expo"
+        assert sub.device_name == "iPhone"
+        assert sub.p256dh == ""
+        assert sub.auth == ""
+    finally:
+        db.close()
+
+    status = client.get("/notifications/push/status", headers=_auth(token))
+    assert status.status_code == 200, status.json()
+    body = status.json()
+    assert body["ready"] is True
+    assert body["blocked_reason"] is None
+    assert body["native_subscription_count"] == 1
+    assert body["web_subscription_count"] == 0
 
 
 def test_push_status_treats_blank_vapid_values_as_not_configured(monkeypatch):
@@ -227,6 +260,46 @@ def test_push_test_endpoint_uses_stored_subscriptions_and_redacts_failures(monke
     }
     assert "push.example" not in str(body)
     assert "private-endpoint" not in str(body)
+
+
+def test_push_test_endpoint_sends_to_native_expo_subscription_without_vapid(monkeypatch):
+    token, user_id = _seed_user("native-test-send")
+    db = TestSession()
+    db.add(NotificationPreference(user_id=user_id, push_enabled=True))
+    db.add(
+        PushSubscription(
+            user_id=user_id,
+            endpoint="ExponentPushToken[native-private]",
+            p256dh="",
+            auth="",
+            platform="expo",
+        )
+    )
+    db.commit()
+    db.close()
+
+    from app.core import push as push_module
+
+    calls = []
+
+    def fake_expo_send(token, title, body, url=None):
+        calls.append((token, title, body, url))
+        return True, None, False
+
+    monkeypatch.setattr(push_module, "_send_expo_push", fake_expo_send)
+
+    resp = client.post("/notifications/push/test", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    assert calls == [("ExponentPushToken[native-private]", "Tribu test notification", "Push notifications are ready for this device.", "settings")]
+    assert resp.json() == {
+        "status": "sent",
+        "attempted": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "removed": 0,
+        "skipped_reason": None,
+    }
 
 
 def test_vapid_claim_subject_accepts_plain_email_or_mailto(monkeypatch):

@@ -582,6 +582,8 @@ class PushSubscription(Base):
     endpoint = Column(Text, nullable=False, unique=True)
     p256dh = Column(Text, nullable=False)
     auth = Column(Text, nullable=False)
+    platform = Column(String(20), nullable=False, default="web", server_default="web")
+    device_name = Column(String(120), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
