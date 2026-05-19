@@ -90,6 +90,11 @@ class MobileLoginResponse(BaseModel):
     must_change_password: bool = Field(False, description="True if user must change their temporary password")
 
 
+class OIDCMobileExchangeRequest(BaseModel):
+    """Exchange a short-lived native OIDC callback code for bearer tokens."""
+    code: str = Field(..., min_length=20, description="Short-lived code returned to the native app callback URL")
+
+
 class MobileRefreshRequest(BaseModel):
     """Refresh a native mobile bearer session."""
     refresh_token: str = Field(..., min_length=20, description="Opaque refresh token returned by mobile login")
