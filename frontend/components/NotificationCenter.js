@@ -36,6 +36,17 @@ function renderNotificationBody(notif, messages) {
   return notif.body;
 }
 
+function notificationLinkView(link) {
+  const raw = String(link || '').trim();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw, window.location.origin);
+    return parsed.pathname.replace(/^\/+/, '').split('/')[0] || 'dashboard';
+  } catch {
+    return raw.replace(/^\/+/, '').split('?')[0].split('/')[0] || 'dashboard';
+  }
+}
+
 export default function NotificationCenter({ onClose } = {}) {
   const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
   const closeBtnRef = useRef(null);
@@ -79,7 +90,7 @@ export default function NotificationCenter({ onClose } = {}) {
     handleMarkRead(notif);
     if (notif.link) {
       if (onClose) onClose();
-      setActiveView(notif.link);
+      setActiveView(notificationLinkView(notif.link));
     }
   }
 

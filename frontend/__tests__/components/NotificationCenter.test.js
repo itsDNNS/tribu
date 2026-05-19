@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import NotificationCenter from '../../components/NotificationCenter';
 import { buildMessages } from '../../lib/i18n';
+import * as api from '../../lib/api';
 
 let mockAppState = {};
 
@@ -35,6 +36,9 @@ function baseState(overrides = {}) {
 describe('NotificationCenter external destination callout', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    api.apiMarkNotificationRead.mockResolvedValue({ ok: true });
+    api.apiMarkAllNotificationsRead.mockResolvedValue({ ok: true });
+    api.apiDeleteNotification.mockResolvedValue({ ok: true });
     mockAppState = baseState();
   });
 
@@ -97,5 +101,29 @@ describe('NotificationCenter external destination callout', () => {
     expect(screen.getByText('Geburtstag morgen (May 13)')).toBeVisible();
     expect(screen.queryByText('Starts in 15 minutes')).not.toBeInTheDocument();
     expect(screen.queryByText('Task is overdue')).not.toBeInTheDocument();
+  });
+
+  it('normalizes concrete notification links to the owning PWA view', () => {
+    const setActiveView = jest.fn();
+    mockAppState = baseState({
+      setActiveView,
+      notifications: [
+        {
+          id: 1,
+          type: 'event_reminder',
+          title: 'Musikschule',
+          body: 'Starts in 15 minutes',
+          link: '/calendar?event=42',
+          read: false,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(<NotificationCenter />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Musikschule/i }));
+
+    expect(setActiveView).toHaveBeenCalledWith('calendar');
   });
 });

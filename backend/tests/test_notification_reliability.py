@@ -592,6 +592,7 @@ def test_disabled_push_category_keeps_in_app_reminder_and_skips_push(monkeypatch
         db.add(ev)
         db.commit()
         user_id = user.id
+        ev_id = ev.id
     finally:
         db.close()
 
@@ -614,6 +615,7 @@ def test_disabled_push_category_keeps_in_app_reminder_and_skips_push(monkeypatch
         logs = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).all()
         assert len(notifs) == 1
         assert notifs[0].type == "event_reminder"
+        assert notifs[0].link == f"/calendar?event={ev_id}"
         assert len(logs) == 1
         assert logs[0].status == "delivered"
         assert logs[0].last_error == "push_skipped:category_disabled:calendar_reminders"
@@ -784,6 +786,7 @@ def test_recurring_event_occurrence_creates_one_reminder(monkeypatch):
         notifs = db.query(Notification).filter(Notification.user_id == user_id).all()
         logs = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).all()
         assert len(notifs) == 1
+        assert notifs[0].link == f"/calendar?event={ev_id}"
         assert len(logs) == 1
         assert logs[0].trigger_key == _event_trigger_key(ev_id, expected_occurrence)
         assert logs[0].status == "delivered"
@@ -941,6 +944,7 @@ def test_task_due_creates_one_log_then_does_not_duplicate(monkeypatch):
         logs = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).all()
         notifs = db.query(Notification).filter(Notification.user_id == user_id).all()
         assert len(notifs) == 1
+        assert notifs[0].link == f"/tasks?id={task_id}"
         assert len(logs) == 1
         assert logs[0].trigger_key.startswith(f"task:{task_id}:")
         assert logs[0].status == "delivered"
