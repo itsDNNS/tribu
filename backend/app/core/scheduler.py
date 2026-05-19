@@ -406,7 +406,7 @@ def _check_notifications():
                         fid=ev.family_id,
                         title=ev.title,
                         body=body,
-                        link="calendar",
+                        link=f"/calendar?event={ev.id}",
                         source_type="event",
                         source_id=ev.id,
                         trigger_key=trigger_key,
@@ -416,7 +416,7 @@ def _check_notifications():
                         uid, ev.family_id, "event_reminder",
                         ev.title,
                         body,
-                        "calendar", "event", ev.id,
+                        f"/calendar?event={ev.id}", "event", ev.id,
                         trigger_key,
                     )
 
@@ -440,7 +440,7 @@ def _check_notifications():
                     fid=task.family_id,
                     title=task.title,
                     body="Task is overdue",
-                    link="tasks",
+                    link=f"/tasks?id={task.id}",
                     source_type="task",
                     source_id=task.id,
                     trigger_key=trigger_key,
@@ -450,7 +450,7 @@ def _check_notifications():
                     uid, task.family_id, "task_due",
                     task.title,
                     "Task is overdue",
-                    "tasks", "task", task.id,
+                    f"/tasks?id={task.id}", "task", task.id,
                     trigger_key,
                 )
 
