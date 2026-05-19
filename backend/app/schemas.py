@@ -93,6 +93,7 @@ class MobileLoginResponse(BaseModel):
 class OIDCMobileExchangeRequest(BaseModel):
     """Exchange a short-lived native OIDC callback code for bearer tokens."""
     code: str = Field(..., min_length=20, description="Short-lived code returned to the native app callback URL")
+    state: Optional[str] = Field(None, max_length=128, description="Native app state echoed from the callback URL")
 
 
 class MobileRefreshRequest(BaseModel):

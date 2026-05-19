@@ -60,6 +60,7 @@ FLOW_JWT_PURPOSE = "oidc_flow"
 MOBILE_CODE_TTL_SECONDS = 120
 MOBILE_CODE_PURPOSE = "oidc_mobile_result"
 MOBILE_REDIRECT_URI = "tribu://auth/oidc/callback"
+MOBILE_STATE_MAX_LENGTH = 128
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +154,14 @@ def _validate_mobile_redirect_uri(value: Optional[str]) -> str:
     return MOBILE_REDIRECT_URI
 
 
+def _validate_mobile_state(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    if len(value) > MOBILE_STATE_MAX_LENGTH or not all(ch.isalnum() or ch in "-._~" for ch in value):
+        raise HTTPException(status_code=400, detail=error_detail(OIDC_INVALID_CALLBACK))
+    return value
+
+
 def _mobile_redirect(target: str, params: dict[str, str]) -> str:
     parsed = urlsplit(target)
     query = dict(parse_qsl(parsed.query, keep_blank_values=True))
@@ -166,11 +175,12 @@ def _mobile_redirect(target: str, params: dict[str, str]) -> str:
     ))
 
 
-def _sign_mobile_code(user: User) -> str:
+def _sign_mobile_code(user: User, mobile_state: str = "") -> str:
     payload = {
         "purpose": MOBILE_CODE_PURPOSE,
         "user_id": user.id,
         "email": user.email,
+        "mobile_state": mobile_state,
         "exp": utcnow() + timedelta(seconds=MOBILE_CODE_TTL_SECONDS),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=FLOW_JWT_ALG)
@@ -216,12 +226,14 @@ def start_login(
     invite: Optional[str] = Query(None, description="Invitation token to bind to the new account."),
     redirect_to: Optional[str] = Query(None, description="Absolute path to land on after login (same-origin)."),
     mobile_redirect_uri: Optional[str] = Query(None, description="Native app callback URI for bearer-token SSO."),
+    mobile_state: Optional[str] = Query(None, description="Native app state echoed to the callback URI and token exchange."),
     db: Session = Depends(get_db),
 ):
     cfg = oidc_core.load_config(db)
     if not cfg.is_ready():
         raise HTTPException(status_code=400, detail=error_detail(OIDC_NOT_CONFIGURED))
     mobile_callback = _validate_mobile_redirect_uri(mobile_redirect_uri)
+    native_state = _validate_mobile_state(mobile_state) if mobile_callback else ""
 
     try:
         disc = oidc_core.fetch_discovery(cfg.issuer)
@@ -255,6 +267,7 @@ def start_login(
         "invite": invite or "",
         "redirect_to": _safe_redirect(redirect_to),
         "mobile_redirect_uri": mobile_callback,
+        "mobile_state": native_state,
         "issuer": cfg.issuer,
         # Pin the redirect_uri we actually sent to the IdP so the
         # callback token-exchange submits exactly the same value.
@@ -283,8 +296,9 @@ def _error_redirect(code: str) -> str:
 
 def _flow_error_response(flow: dict, code: str) -> RedirectResponse:
     mobile_redirect_uri = flow.get("mobile_redirect_uri") or ""
+    mobile_state = flow.get("mobile_state") or ""
     url = (
-        _mobile_redirect(mobile_redirect_uri, {"error": code})
+        _mobile_redirect(mobile_redirect_uri, {k: v for k, v in {"error": code, "state": mobile_state}.items() if v})
         if mobile_redirect_uri
         else _error_redirect(code)
     )
@@ -584,9 +598,10 @@ def callback(
 
     mobile_redirect_uri = flow.get("mobile_redirect_uri") or ""
     if mobile_redirect_uri:
-        code = _sign_mobile_code(user)
+        mobile_state = flow.get("mobile_state") or ""
+        code = _sign_mobile_code(user, mobile_state)
         response = RedirectResponse(
-            url=_mobile_redirect(mobile_redirect_uri, {"code": code}),
+            url=_mobile_redirect(mobile_redirect_uri, {k: v for k, v in {"code": code, "state": mobile_state}.items() if v}),
             status_code=303,
         )
         db.commit()
@@ -620,6 +635,9 @@ def mobile_exchange(payload: OIDCMobileExchangeRequest, db: Session = Depends(ge
 
     user_id = decoded.get("user_id")
     if not isinstance(user_id, int):
+        raise HTTPException(status_code=401, detail=error_detail(OIDC_INVALID_CALLBACK))
+    mobile_state = decoded.get("mobile_state") or ""
+    if mobile_state and not secrets.compare_digest(str(payload.state or ""), str(mobile_state)):
         raise HTTPException(status_code=401, detail=error_detail(OIDC_INVALID_CALLBACK))
 
     user = db.query(User).filter(User.id == user_id).first()
