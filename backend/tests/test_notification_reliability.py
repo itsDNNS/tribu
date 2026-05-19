@@ -19,6 +19,7 @@ from app.database import Base
 from app.models import (
     CalendarEvent,
     Family,
+    FamilyBirthday,
     Membership,
     Notification,
     NotificationPreference,
@@ -912,6 +913,34 @@ def test_birthday_uses_target_date_in_trigger_key():
     d2 = datetime(2027, 4, 26).date()
     assert _birthday_trigger_key(bd_id, d1) != _birthday_trigger_key(bd_id, d2)
     assert "birthday:3:2026-04-26" == _birthday_trigger_key(bd_id, d1)
+
+
+def test_birthday_reminder_links_to_birthday_detail(monkeypatch):
+    db = TestSession()
+    try:
+        user, fam = _seed_user(db, "birthday-link@example.com")
+        _set_pref(db, user.id, push_enabled=False)
+        now = datetime(2026, 4, 25, 12, 0, 0)
+        birthday = FamilyBirthday(family_id=fam.id, person_name="Oma", month=4, day=26)
+        db.add(birthday)
+        db.commit()
+        user_id, birthday_id = user.id, birthday.id
+    finally:
+        db.close()
+
+    _freeze_now(monkeypatch, now)
+    from app.core.scheduler import _check_notifications
+
+    _check_notifications()
+
+    db = TestSession()
+    try:
+        notifs = db.query(Notification).filter(Notification.user_id == user_id).all()
+        assert len(notifs) == 1
+        assert notifs[0].type == "birthday"
+        assert notifs[0].link == f"/birthdays?id={birthday_id}"
+    finally:
+        db.close()
 
 
 def test_task_due_creates_one_log_then_does_not_duplicate(monkeypatch):

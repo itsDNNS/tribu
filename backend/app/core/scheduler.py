@@ -476,7 +476,7 @@ def _check_notifications():
                     fid=bd.family_id,
                     title=bd.person_name,
                     body=body,
-                    link="dashboard",
+                    link=f"/birthdays?id={bd.id}",
                     source_type="birthday",
                     source_id=bd.id,
                     trigger_key=trigger_key,
@@ -486,7 +486,7 @@ def _check_notifications():
                     uid, bd.family_id, "birthday",
                     bd.person_name,
                     body,
-                    "dashboard", "birthday", bd.id,
+                    f"/birthdays?id={bd.id}", "birthday", bd.id,
                     trigger_key,
                 )
 

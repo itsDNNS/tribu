@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect } from 'react';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
 import { resolveInitialView } from '../lib/navigationState';
+import { notificationLinkView } from '../lib/notificationLinks';
 import { AuthProvider, useAuth } from './AuthContext';
 import { FamilyProvider, useFamily } from './FamilyContext';
 import { DataProvider, useData } from './DataContext';
@@ -256,7 +257,7 @@ function AppOrchestrator({ children }) {
     if (!('serviceWorker' in navigator)) return;
     const handler = (event) => {
       if (event.data?.type === 'NAVIGATE' && event.data.url) {
-        setActiveViewUI(event.data.url);
+        setActiveViewUI(notificationLinkView(event.data.url));
       }
     };
     navigator.serviceWorker.addEventListener('message', handler);
