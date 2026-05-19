@@ -70,6 +70,7 @@ def _compute_next_due(current_due: Optional[datetime], recurrence: str) -> datet
 def list_tasks(
     family_id: int,
     status: Optional[str] = Query(None),
+    reward_only: bool = Query(False, description="Return only open tasks with a token reward configured"),
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     user: User = Depends(current_user),
@@ -84,6 +85,8 @@ def list_tasks(
         if status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=error_detail(INVALID_STATUS, status=status))
         base = base.filter(Task.status == status)
+    if reward_only:
+        base = base.filter(Task.status == "open", Task.token_reward_amount.isnot(None), Task.token_reward_amount > 0)
     total = base.count()
     items = base.order_by(Task.created_at.desc()).offset(offset).limit(limit).all()
     return PaginatedTasks(items=items, total=total, offset=offset, limit=limit)
