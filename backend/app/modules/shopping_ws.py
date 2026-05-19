@@ -1,9 +1,9 @@
 """WebSocket endpoint for real-time shopping list sync.
 
-Clients connect to ``/ws/shopping/{list_id}`` with a valid JWT cookie.
-The server authenticates via the ``tribu_token`` cookie and verifies
-family membership.  Mutations made through the REST API are broadcast
-to all connected clients for the same list.  Clients may send
+Clients connect to ``/ws/shopping/{list_id}`` with a valid JWT cookie or
+native mobile ``Authorization: Bearer`` header. The server verifies family
+membership. Mutations made through the REST API are broadcast to all
+connected clients for the same list. Clients may send
 ``{"type": "ping"}`` to keep the connection alive; the server replies
 with ``{"type": "pong"}``.
 """
@@ -25,11 +25,16 @@ router = APIRouter()
 
 
 def _auth_and_check(ws: WebSocket, list_id: int) -> tuple[int, int] | None:
-    """Extract user from JWT cookie, verify family membership.
+    """Extract user from JWT cookie or bearer header, verify family membership.
 
     Returns (user_id, family_id) or None on failure.
     """
     token = ws.cookies.get("tribu_token")
+    if not token:
+        authorization = ws.headers.get("authorization", "")
+        scheme, _, value = authorization.partition(" ")
+        if scheme.lower() == "bearer" and value:
+            token = value.strip()
     if not token:
         return None
 
