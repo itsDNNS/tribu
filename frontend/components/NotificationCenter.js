@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
+import { notificationLinkView } from '../lib/notificationLinks';
 
 const TYPE_ICONS = {
   event_reminder: CalendarDays,
@@ -34,17 +35,6 @@ function renderNotificationBody(notif, messages) {
   }
 
   return notif.body;
-}
-
-function notificationLinkView(link) {
-  const raw = String(link || '').trim();
-  if (!raw) return '';
-  try {
-    const parsed = new URL(raw, window.location.origin);
-    return parsed.pathname.replace(/^\/+/, '').split('/')[0] || 'dashboard';
-  } catch {
-    return raw.replace(/^\/+/, '').split('?')[0].split('/')[0] || 'dashboard';
-  }
 }
 
 export default function NotificationCenter({ onClose } = {}) {

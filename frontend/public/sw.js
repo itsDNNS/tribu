@@ -126,10 +126,25 @@ self.addEventListener('push', (event) => {
   );
 });
 
+function notificationViewFromUrl(rawUrl) {
+  const raw = String(rawUrl || '').trim();
+  if (!raw || raw === '/') return 'dashboard';
+  let target = '';
+  try {
+    target = new URL(raw, self.location.origin).pathname.replace(/^\/+/, '').split('/')[0];
+  } catch {
+    target = raw.replace(/^\/+/, '').split('?')[0].split('/')[0];
+  }
+  if (target === 'birthdays') return 'contacts';
+  if (target === 'today') return 'dashboard';
+  return target || 'dashboard';
+}
+
 // Notification click handler — focus existing tab or open new one
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';
+  const targetView = notificationViewFromUrl(targetUrl);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
@@ -139,7 +154,7 @@ self.addEventListener('notificationclick', (event) => {
           return client.focus();
         }
       }
-      return self.clients.openWindow(targetUrl);
+      return self.clients.openWindow(`/?view=${encodeURIComponent(targetView)}`);
     })
   );
 });

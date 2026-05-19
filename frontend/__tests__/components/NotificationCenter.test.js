@@ -126,4 +126,28 @@ describe('NotificationCenter external destination callout', () => {
 
     expect(setActiveView).toHaveBeenCalledWith('calendar');
   });
+
+  it('routes birthday notification links to contacts in the PWA', () => {
+    const setActiveView = jest.fn();
+    mockAppState = baseState({
+      setActiveView,
+      notifications: [
+        {
+          id: 1,
+          type: 'birthday',
+          title: 'Oma',
+          body: 'Birthday tomorrow (May 13)',
+          link: '/birthdays?id=7',
+          read: false,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(<NotificationCenter />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Oma/i }));
+
+    expect(setActiveView).toHaveBeenCalledWith('contacts');
+  });
 });
