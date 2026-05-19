@@ -79,7 +79,7 @@ def global_search(
     )
     if items:
         results["shopping"] = [
-            {"id": i.id, "name": i.name, "list_id": i.list_id, "checked": i.checked}
+            {"id": i.id, "name": i.name, "list_id": i.list_id, "list_name": i.shopping_list.name, "checked": i.checked}
             for i in items
         ]
 
