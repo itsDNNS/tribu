@@ -83,9 +83,16 @@ class LoginRequest(BaseModel):
 class MobileLoginResponse(BaseModel):
     """Bearer token response for native mobile clients."""
     access_token: str = Field(..., description="JWT bearer token for Authorization header use")
+    refresh_token: str = Field(..., description="Opaque refresh token for native mobile session rotation")
     token_type: str = Field("bearer", description="Token type")
     expires_in_hours: int = Field(..., description="Configured access token lifetime in hours")
+    refresh_expires_in_seconds: int = Field(..., description="Configured refresh token lifetime in seconds")
     must_change_password: bool = Field(False, description="True if user must change their temporary password")
+
+
+class MobileRefreshRequest(BaseModel):
+    """Refresh a native mobile bearer session."""
+    refresh_token: str = Field(..., min_length=20, description="Opaque refresh token returned by mobile login")
 
 
 class MeResponse(BaseModel):

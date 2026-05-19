@@ -21,7 +21,7 @@ from slowapi.util import get_remote_address
 
 
 from app.core.deps import current_user
-from app.core.auth_sessions import clear_session_cookies, issue_session_cookies, revoke_refresh_session, rotate_refresh_session
+from app.core.auth_sessions import clear_session_cookies, issue_refresh_session, issue_session_cookies, revoke_refresh_session, rotate_refresh_session, rotate_refresh_token
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.core.errors import (
     error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT,
@@ -66,12 +66,12 @@ from app.core.scheduler import configure_backup_schedule, start_notification_job
 from app.core import ws_broadcast
 from app.schemas import (
     AUTH_RESPONSES, CONFLICT_RESPONSE, ErrorResponse,
-    ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, MobileLoginResponse, ProfileImageUpdate, RegisterRequest,
+    ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, MobileLoginResponse, MobileRefreshRequest, ProfileImageUpdate, RegisterRequest,
 )
 from app.core import cache
 from app.core.utils import get_setting, utcnow
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
-from app.core.config import REFRESH_COOKIE_NAME, VERSION
+from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -420,11 +420,53 @@ def mobile_login(request: Request, payload: LoginRequest, db: Session = Depends(
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
 
+    refresh_token = issue_refresh_session(db, user)
+    db.commit()
     return MobileLoginResponse(
         access_token=create_access_token(user_id=user.id, email=user.email),
+        refresh_token=refresh_token,
         expires_in_hours=JWT_EXPIRE_HOURS,
+        refresh_expires_in_seconds=REFRESH_COOKIE_MAX_AGE,
         must_change_password=user.must_change_password,
     )
+
+
+@app.post(
+    "/auth/mobile-refresh",
+    tags=["auth"],
+    summary="Refresh mobile session",
+    description=(
+        "Rotate a native mobile refresh token and return a new bearer token. "
+        "Native clients store the opaque refresh token in platform-secure storage and send access tokens via Authorization headers."
+    ),
+    response_model=MobileLoginResponse,
+    responses={401: {"model": ErrorResponse, "description": "Refresh session expired or invalid"}},
+    response_description="Mobile session refreshed",
+)
+def mobile_refresh(payload: MobileRefreshRequest, db: Session = Depends(get_db)):
+    result, user, next_refresh_token = rotate_refresh_token(db, payload.refresh_token)
+    if result != "ok" or not user or not next_refresh_token:
+        raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
+    db.commit()
+    return MobileLoginResponse(
+        access_token=create_access_token(user_id=user.id, email=user.email),
+        refresh_token=next_refresh_token,
+        expires_in_hours=JWT_EXPIRE_HOURS,
+        refresh_expires_in_seconds=REFRESH_COOKIE_MAX_AGE,
+        must_change_password=user.must_change_password,
+    )
+
+
+@app.post(
+    "/auth/mobile-logout",
+    tags=["auth"],
+    summary="Logout mobile session",
+    description="Revoke a native mobile refresh token without relying on browser cookies.",
+    response_description="Mobile logout successful",
+)
+def mobile_logout(payload: MobileRefreshRequest, db: Session = Depends(get_db)):
+    revoke_refresh_session(db, payload.refresh_token)
+    return {"status": "ok"}
 
 
 @app.post(
