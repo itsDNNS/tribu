@@ -113,7 +113,7 @@ def global_search(
     )
     if birthdays:
         results["birthdays"] = [
-            {"id": b.id, "person_name": b.person_name, "month": b.month, "day": b.day}
+            {"id": b.id, "person_name": b.person_name, "month": b.month, "day": b.day, "year": b.year, "contact_id": b.contact_id}
             for b in birthdays
         ]
 
