@@ -140,6 +140,52 @@ def test_dashboard_layout_persists_normalizes_and_resets_per_user():
     assert reset_response.json()["modules"][0:2] == ["quick_capture", "daily_loop"]
 
 
+def test_ui_preferences_persist_validate_and_share_available_values():
+    token, user_id = _seed_user()
+
+    default_response = client.get("/nav/ui-preferences", headers=_auth(token))
+    assert default_response.status_code == 200, default_response.json()
+    assert default_response.json()["theme"] == "light"
+    assert default_response.json()["language"] == "en"
+    assert "dark" in default_response.json()["available_themes"]
+    assert "de" in default_response.json()["available_languages"]
+
+    update_response = client.put(
+        "/nav/ui-preferences",
+        json={"theme": "midnight-glass", "language": "de"},
+        headers=_auth(token),
+    )
+    assert update_response.status_code == 200, update_response.json()
+    assert update_response.json()["theme"] == "midnight-glass"
+    assert update_response.json()["language"] == "de"
+
+    db = TestSession()
+    row = db.query(UserNavOrder).filter(UserNavOrder.user_id == user_id).first()
+    assert row is not None
+    assert row.ui_theme == "midnight-glass"
+    assert row.ui_language == "de"
+    db.close()
+
+    saved_response = client.get("/nav/ui-preferences", headers=_auth(token))
+    assert saved_response.status_code == 200, saved_response.json()
+    assert saved_response.json()["theme"] == "midnight-glass"
+    assert saved_response.json()["language"] == "de"
+
+    invalid_theme = client.put(
+        "/nav/ui-preferences",
+        json={"theme": "unknown"},
+        headers=_auth(token),
+    )
+    assert invalid_theme.status_code == 422
+
+    invalid_language = client.put(
+        "/nav/ui-preferences",
+        json={"language": "xx"},
+        headers=_auth(token),
+    )
+    assert invalid_language.status_code == 422
+
+
 def test_dashboard_layout_rejects_unknown_modules_and_enforces_scopes():
     read_token, _ = _seed_user(scopes="profile:read")
     write_token, _ = _seed_user(scopes="profile:write")
@@ -161,3 +207,13 @@ def test_dashboard_layout_rejects_unknown_modules_and_enforces_scopes():
     )
     assert invalid.status_code == 422
     assert "activity" in str(invalid.json())
+
+    forbidden_preferences_read = client.get("/nav/ui-preferences", headers=_auth(write_token))
+    assert forbidden_preferences_read.status_code == 403
+
+    forbidden_preferences_write = client.put(
+        "/nav/ui-preferences",
+        json={"theme": "dark"},
+        headers=_auth(read_token),
+    )
+    assert forbidden_preferences_write.status_code == 403

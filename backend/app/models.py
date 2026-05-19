@@ -622,6 +622,8 @@ class UserNavOrder(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     nav_order = Column(JSON, nullable=False, default=["dashboard", "calendar", "shopping", "tasks", "templates", "contacts", "notifications", "settings"])
     dashboard_layout = Column(JSON, nullable=True)
+    ui_theme = Column(String, nullable=True)
+    ui_language = Column(String, nullable=True)
 
 
 class AuditLog(Base):

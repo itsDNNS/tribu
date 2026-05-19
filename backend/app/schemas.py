@@ -1229,6 +1229,20 @@ class DashboardLayoutUpdate(BaseModel):
     modules: list[str] = Field(min_length=1, max_length=12, description="Ordered dashboard module keys")
 
 
+class UiPreferencesResponse(BaseModel):
+    """User's UI preferences for Tribu clients."""
+    theme: str = Field(..., description="Selected app theme key")
+    language: str = Field(..., description="Selected UI language key")
+    available_themes: list[str] = Field(default_factory=list, description="Theme keys supported by the server")
+    available_languages: list[str] = Field(default_factory=list, description="Language keys supported by the server")
+
+
+class UiPreferencesUpdate(BaseModel):
+    """Update UI preferences for Tribu clients."""
+    theme: Optional[str] = Field(None, min_length=1, max_length=40, description="Selected app theme key")
+    language: Optional[str] = Field(None, min_length=2, max_length=12, description="Selected UI language key")
+
+
 # ---------------------------------------------------------------------------
 # Invitations
 # ---------------------------------------------------------------------------
