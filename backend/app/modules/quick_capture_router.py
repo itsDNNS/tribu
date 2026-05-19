@@ -142,7 +142,7 @@ def _dispatch_quick_capture_shopping_events(
         event_type="shopping.item.changed",
         title="Shopping item added",
         body=f'{user.display_name or "Someone"} added "{item.name}" to "{shopping_list.name}" from quick capture.',
-        link=f"/shopping?list={shopping_list.id}",
+        link=f"/shopping?list={shopping_list.id}&item={item.id}",
         source_type="shopping_item",
         source_id=item.id,
         action="quick_capture_added",
