@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import ast
+import sqlite3
 from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 
+BACKEND_DIR = Path(__file__).resolve().parents[1]
 VERSIONS_DIR = Path(__file__).resolve().parents[1] / "alembic" / "versions"
 MAX_ALEMBIC_VERSION_LENGTH = 32
 
@@ -36,3 +41,18 @@ def test_alembic_revision_ids_fit_version_table_column() -> None:
         )
         assert revision not in revisions, f"Duplicate Alembic revision {revision!r} in {path} and {revisions[revision]}"
         revisions[revision] = path
+
+
+def test_alembic_upgrades_fresh_sqlite_database(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "native-smoke.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+
+    command.upgrade(config, "head")
+
+    head = ScriptDirectory.from_config(config).get_current_head()
+    with sqlite3.connect(db_path) as conn:
+        version = conn.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+    assert version == head
