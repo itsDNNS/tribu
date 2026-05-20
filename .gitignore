@@ -47,6 +47,7 @@ frontend/playwright-report/
 # Graphify knowledge graph (local only)
 graphify-out/
 test-*.db
+*-smoke.db
 *.sqlite
 *.sqlite3
 *.log
