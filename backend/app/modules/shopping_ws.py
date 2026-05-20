@@ -10,12 +10,12 @@ with ``{"type": "pong"}``.
 
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 import jwt
 from sqlalchemy.orm import Session
 
 from app.core.ws_manager import manager
-from app.database import SessionLocal
+from app.database import get_db
 from app.models import Membership, ShoppingList
 from app.security import decode_token
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _auth_and_check(ws: WebSocket, list_id: int) -> tuple[int, int] | None:
+def _auth_and_check(ws: WebSocket, list_id: int, db: Session) -> tuple[int, int] | None:
     """Extract user from JWT cookie or bearer header, verify family membership.
 
     Returns (user_id, family_id) or None on failure.
@@ -44,25 +44,21 @@ def _auth_and_check(ws: WebSocket, list_id: int) -> tuple[int, int] | None:
     except (jwt.PyJWTError, KeyError, TypeError, ValueError):
         return None
 
-    db: Session = SessionLocal()
-    try:
-        sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
-        if not sl:
-            return None
-        membership = db.query(Membership).filter(
-            Membership.user_id == user_id,
-            Membership.family_id == sl.family_id,
-        ).first()
-        if not membership:
-            return None
-        return user_id, sl.family_id
-    finally:
-        db.close()
+    sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
+    if not sl:
+        return None
+    membership = db.query(Membership).filter(
+        Membership.user_id == user_id,
+        Membership.family_id == sl.family_id,
+    ).first()
+    if not membership:
+        return None
+    return user_id, sl.family_id
 
 
 @router.websocket("/ws/shopping/{list_id}")
-async def shopping_ws(ws: WebSocket, list_id: int):
-    result = _auth_and_check(ws, list_id)
+async def shopping_ws(ws: WebSocket, list_id: int, db: Session = Depends(get_db)):
+    result = _auth_and_check(ws, list_id, db)
     if result is None:
         await ws.accept()
         await ws.close(code=4001, reason="Unauthorized")

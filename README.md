@@ -295,6 +295,7 @@ Use the [GitHub Wiki](https://github.com/itsDNNS/tribu/wiki) as the primary docu
 | Install and operate | [Self-Hosting](https://github.com/itsDNNS/tribu/wiki/Self-Hosting) |
 | Shared display | [Shared Home Display](https://github.com/itsDNNS/tribu/wiki/Shared-Home-Display) |
 | Home Assistant | [Home Assistant](https://github.com/itsDNNS/tribu/wiki/Home-Assistant) |
+| Native release readiness | [Native release smoke-test matrix](docs/native-release-smoke-test-matrix.md) |
 | Contribute | [Contributing](CONTRIBUTING.md) |
 | Security reports | [Security Policy](SECURITY.md) |
 | Releases | [Releases](https://github.com/itsDNNS/tribu/releases) |

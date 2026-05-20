@@ -1,12 +1,11 @@
 /**
- * Production wrapper test for /display (issue #172, Codex blocker 3).
+ * Production wrapper test for /display (issue #172).
  *
- * The bug Codex flagged was that even though DisplayPage itself
- * avoided AppContext, Next's custom _app.js still mounted
- * AppProvider for every route — so `/display` was hitting
- * `/auth/me`, `/families/me`, members loaders, etc., on every
- * pageload. This file mounts the real `pages/_app.js` and asserts
- * that for `pathname === '/display'`:
+ * DisplayPage itself avoided AppContext, but Next's custom _app.js
+ * still mounted AppProvider for every route, so `/display` was hitting
+ * `/auth/me`, `/families/me`, members loaders, etc., on every pageload.
+ * This file mounts the real `pages/_app.js` and asserts that for
+ * `pathname === '/display'`:
  *   - no normal bootstrap fetch is made (no /auth/me, /families/me,
  *     /tokens, /notifications, /families/{id}/members);
  *   - AppContext is not mounted (the standalone branch only renders
