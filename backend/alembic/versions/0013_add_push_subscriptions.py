@@ -17,20 +17,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def _table_exists(table_name: str) -> bool:
     bind = op.get_bind()
-    result = bind.execute(
-        sa.text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = :t)"),
-        {"t": table_name},
-    )
-    return result.scalar()
+    insp = sa.inspect(bind)
+    return table_name in insp.get_table_names()
 
 
 def _column_exists(table_name: str, column_name: str) -> bool:
     bind = op.get_bind()
-    result = bind.execute(
-        sa.text("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = :t AND column_name = :c)"),
-        {"t": table_name, "c": column_name},
-    )
-    return result.scalar()
+    insp = sa.inspect(bind)
+    if table_name not in insp.get_table_names():
+        return False
+    return any(column["name"] == column_name for column in insp.get_columns(table_name))
 
 
 def upgrade() -> None:

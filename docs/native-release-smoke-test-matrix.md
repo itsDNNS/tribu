@@ -13,6 +13,7 @@ This matrix tracks the backend/PWA side of the first production-ready iOS and An
 | Mobile daily API | Covered by automated tests | Covered by automated tests | Passing baseline | `/mobile/daily` enforces family membership and required PAT scopes. |
 | Shopping WebSocket sync | Covered by automated tests | Covered by automated tests | Passing baseline | `/ws/shopping/{list_id}` accepts native `Authorization: Bearer` headers and verifies family membership. |
 | Native push registration | Covered by automated tests | Covered by automated tests | Passing baseline | Expo-style native subscriptions persist and can receive test notifications. |
+| Isolated native smoke backend | Covered by Alembic SQLite smoke | Covered by Alembic SQLite smoke | Passing baseline | Fresh local smoke databases can be created with `alembic upgrade head` instead of bypassing migrations with `Base.metadata.create_all`. |
 | PWA install identity | Covered by automated tests | Covered by automated tests | Passing baseline | Manifest identity and daily shortcuts are tested for the existing web/PWA app. |
 | Simulator/device app launch | Tracked in app repo | Tracked in app repo | App-owned | Launch evidence is recorded in `tribu-app/docs/RELEASE_SMOKE_MATRIX.md`. |
 | Store release configuration | Tracked in app repo | Tracked in app repo | App-owned | Bundle IDs, signing, native build config, icons, permissions, and store metadata are owned by `itsDNNS/tribu-app`. |
@@ -35,6 +36,13 @@ npm test -- --runInBand __tests__/public-manifest.test.js __tests__/public-sw.te
 ```
 
 Expected result: `4 passed` test suites, `12 passed` tests.
+
+```sh
+cd backend
+DATABASE_URL='sqlite:///./test-alembic-smoke.db' JWT_SECRET='release-smoke-test-secret-32-bytes-minimum' ../.venv/bin/pytest tests/test_alembic_revisions.py -q
+```
+
+Expected result: `2 passed`.
 
 ## Manual smoke matrix
 

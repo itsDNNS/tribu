@@ -23,6 +23,16 @@ EMOJI_TO_NAME = {
 }
 
 
+def _set_icon_default(default: str) -> None:
+    with op.batch_alter_table("reward_currencies") as batch:
+        batch.alter_column(
+            "icon",
+            existing_type=sa.String(10),
+            existing_nullable=False,
+            server_default=default,
+        )
+
+
 def upgrade() -> None:
     conn = op.get_bind()
     for emoji, name in EMOJI_TO_NAME.items():
@@ -30,9 +40,7 @@ def upgrade() -> None:
             sa.text("UPDATE reward_currencies SET icon = :name WHERE icon = :emoji"),
             {"name": name, "emoji": emoji},
         )
-    conn.execute(
-        sa.text("ALTER TABLE reward_currencies ALTER COLUMN icon SET DEFAULT 'star'"),
-    )
+    _set_icon_default("star")
 
 
 def downgrade() -> None:
@@ -42,7 +50,4 @@ def downgrade() -> None:
             sa.text("UPDATE reward_currencies SET icon = :emoji WHERE icon = :name"),
             {"name": name, "emoji": emoji},
         )
-    conn.execute(
-        sa.text("ALTER TABLE reward_currencies ALTER COLUMN icon SET DEFAULT :default"),
-            {"default": "\u2b50"},
-    )
+    _set_icon_default("\u2b50")
