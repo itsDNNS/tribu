@@ -17,8 +17,8 @@ This matrix tracks the backend/PWA side of the first production-ready iOS and An
 | PWA install identity | Covered by automated tests | Covered by automated tests | Passing baseline | Manifest identity and daily shortcuts are tested for the existing web/PWA app. |
 | Simulator/device app launch | Tracked in app repo | Tracked in app repo | App-owned | Launch evidence is recorded in `tribu-app/docs/RELEASE_SMOKE_MATRIX.md`. |
 | Store release configuration | Tracked in app repo | Tracked in app repo | App-owned | Bundle IDs, signing, native build config, icons, permissions, and store metadata are owned by `itsDNNS/tribu-app`. |
-| File import and share flows | API/file payload covered | API/file payload covered | Partial | Backend endpoints for Calendar ICS and Contacts CSV/VCF are covered by app release smoke; platform picker/share-sheet confirmation remains app-owned. |
-| SSO callback handling | Backend exchange covered by tests | Backend exchange covered by tests | Partial | Native deep-link handling remains app-owned; `/auth/oidc/mobile-exchange` belongs to this backend. |
+| File import and share flows | API/file payload covered; app share sheets tracked in app repo | API/file payload covered; app share sheets tracked in app repo | Split pass | Backend endpoints for Calendar ICS and Contacts CSV/VCF are covered by app release smoke; platform picker/share-sheet confirmation is app-owned and recorded in `tribu-app/docs/RELEASE_SMOKE_MATRIX.md`. |
+| SSO callback handling | Backend exchange covered by tests; real IdP redirect pending in app repo | Backend exchange covered by tests; real IdP redirect pending in app repo | Backend pass / app pending | `/auth/oidc/mobile-exchange` and callback state binding are backend-covered. The remaining real-provider redirect validation is app/device-owned. |
 
 ## Automated baseline
 
@@ -44,31 +44,25 @@ DATABASE_URL='sqlite:///./test-alembic-smoke.db' JWT_SECRET='release-smoke-test-
 
 Expected result: `2 passed`.
 
-## Manual smoke matrix
+## App smoke ownership snapshot
 
-Use this section with the native app repository. Each check must be run against a non-demo backend with realistic family data.
+The detailed device/simulator smoke matrix is authoritative in `itsDNNS/tribu-app` under `docs/RELEASE_SMOKE_MATRIX.md`. As of 2026-05-20, backend-owned portions are no longer the blocker for these app checks:
 
-| Flow | iOS simulator/device | Android emulator/device | Evidence required |
-|---|---|---|---|
-| Fresh install opens production endpoint selector or configured backend | Pending | Pending | Screenshot of first launch and selected backend. |
-| Password login creates bearer and refresh session | Pending | Pending | Login succeeds, `/auth/me` loads, app restart keeps session. |
-| Refresh token rotation survives app restart | Pending | Pending | Expired access token refreshes once; old refresh token is rejected. |
-| Logout revokes refresh token | Pending | Pending | Reopen app after logout shows signed-out state. |
-| SSO login and callback | Pending | Pending | Provider redirect returns to app and loads authenticated user. |
-| Invite link opens app and completes onboarding | Pending | Pending | App receives invite/deep link and lands in joined family. |
-| Daily dashboard loads real family data | Pending | Pending | Calendar, tasks, shopping summaries, quick capture count, notifications count match backend. |
-| Shopping list real-time sync | Pending | Pending | Two clients see add/toggle/delete updates through WebSocket without refresh. |
-| Push permission and native subscription | Pending | Pending | Device token stored with platform, push preference enabled. |
-| Test push delivery | Pending | Pending | Notification appears when app is backgrounded and opens the expected app view. |
-| File import | Pending | Pending | ICS/CSV/VCF or supported document flow imports without exposing parser internals on failure. |
-| Share into Tribu | Pending | Pending | Shared text/link/file reaches the intended quick-capture or import flow. |
-| Offline and retry behavior | Pending | Pending | App shows a recoverable offline state and resyncs without duplicate writes. |
-| Release build launch | Pending | Pending | iOS archive/TestFlight or Android release/AAB build launches without dev server. |
-| Store privacy and permissions review | Pending | Pending | Permission prompts, privacy text, and store metadata match actual behavior. |
+| Flow | Backend status | App status pointer |
+|---|---|---|
+| Fresh install/backend selection | No backend change required | iOS Release simulator and Android release APK evidence recorded in app repo. |
+| Password login, refresh, logout | Covered by automated tests and app smokes | iOS and Android UI logout evidence recorded in app repo, including `/auth/mobile-logout` 200s. |
+| SSO login and callback | `/auth/oidc/mobile-exchange` and native state binding covered | Real IdP redirect remains app/device-owned pending work. |
+| Invite link acceptance | Public preview and register-with-invite APIs covered by app release smoke | Visual join completion remains app-owned pending work. |
+| Daily dashboard | `/mobile/daily` covered by tests and app smokes | iOS and Android release simulator/emulator dashboard evidence recorded in app repo. |
+| Shopping WebSocket sync | Native bearer WebSocket auth covered by tests and app API smoke | Flaky-network device validation remains app-owned pending work. |
+| Native push diagnostics | Native subscription and test-send backend paths covered by tests | Physical device token registration/delivery remains app-owned pending work. |
+| File import/export and share | Calendar ICS and Contacts CSV/VCF payload APIs covered by app release smoke | Platform share-sheet evidence is tracked in app repo. |
+| Store/privacy/signing | Backend has no signing/store ownership | App identifiers, permissions, metadata, and signing blockers are tracked in app repo. |
 
 ## Release blockers
 
-1. Keep backend mobile auth, OIDC mobile exchange, push diagnostics, file import/export, and Shopping WebSocket APIs green while app release testing continues.
-2. Verify native deep links for SSO, invite links, notification taps, and share/file entry points from `itsDNNS/tribu-app` against this backend.
-3. Run the manual smoke matrix on local iOS and Android simulators/emulators from the app repository, then repeat on at least one real iOS and Android device before store submission.
-4. Keep backend docs aligned with the split-repository ownership so app release blockers are not hidden in this repository.
+1. Keep backend mobile auth, OIDC mobile exchange, push diagnostics, file import/export, and Shopping WebSocket APIs green while final app release testing continues.
+2. Support the app-owned remaining checks: real IdP SSO redirect, physical-device push delivery, invite visual join completion, flaky-network behavior, and final share/file entry points.
+3. Do not move app-owned release artifacts, signing credentials, native build configuration, or store metadata into this repository.
+4. Keep this split-repository ownership aligned so native app release blockers are visible in `itsDNNS/tribu-app`, not duplicated as stale pending rows here.
