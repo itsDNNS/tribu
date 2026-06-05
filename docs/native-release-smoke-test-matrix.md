@@ -1,6 +1,6 @@
 # Native release smoke-test matrix
 
-Last updated: 2026-05-20
+Last updated: 2026-06-05
 
 This matrix tracks the backend/PWA side of the first production-ready iOS and Android release. Native app source, native build configuration, and device-specific smoke evidence live in the separate `itsDNNS/tribu-app` repository.
 
@@ -12,7 +12,7 @@ This matrix tracks the backend/PWA side of the first production-ready iOS and An
 | Backend mobile auth | Covered by automated tests | Covered by automated tests | Passing baseline | `/auth/mobile-login`, `/auth/mobile-refresh`, and `/auth/mobile-logout` return bearer/refresh tokens without browser cookies. |
 | Mobile daily API | Covered by automated tests | Covered by automated tests | Passing baseline | `/mobile/daily` enforces family membership and required PAT scopes. |
 | Shopping WebSocket sync | Covered by automated tests | Covered by automated tests | Passing baseline | `/ws/shopping/{list_id}` accepts native `Authorization: Bearer` headers and verifies family membership. |
-| Native push registration | Covered by automated tests | Covered by automated tests | Passing baseline | Expo-style native subscriptions persist and can receive test notifications. |
+| Native push registration | Covered by automated tests | Covered by automated tests | Passing baseline | Flutter-compatible FCM subscriptions persist and can receive backend test notifications when FCM credentials are configured; Expo-style subscriptions remain covered for legacy compatibility. |
 | Isolated native smoke backend | Covered by Alembic SQLite smoke | Covered by Alembic SQLite smoke | Passing baseline | Fresh local smoke databases can be created with `alembic upgrade head` instead of bypassing migrations with `Base.metadata.create_all`. |
 | PWA install identity | Covered by automated tests | Covered by automated tests | Passing baseline | Manifest identity and daily shortcuts are tested for the existing web/PWA app. |
 | Simulator/device app launch | Tracked in app repo | Tracked in app repo | App-owned | Launch evidence is recorded in `tribu-app/docs/RELEASE_SMOKE_MATRIX.md`. |
@@ -28,7 +28,7 @@ Run these from the repository root unless noted.
 DATABASE_URL='sqlite:///./test-baseline.db' JWT_SECRET='test-secret-key-for-mobile-baseline' .venv/bin/pytest backend/tests/test_mobile_auth.py backend/tests/test_mobile_daily.py backend/tests/test_shopping_ws_auth.py backend/tests/test_push_diagnostics.py
 ```
 
-Expected result: `14 passed`.
+Expected result: `16 passed`.
 
 ```sh
 cd frontend
@@ -46,7 +46,7 @@ Expected result: `2 passed`.
 
 ## App smoke ownership snapshot
 
-The detailed device/simulator smoke matrix is authoritative in `itsDNNS/tribu-app` under `docs/RELEASE_SMOKE_MATRIX.md`. As of 2026-05-20, backend-owned portions are no longer the blocker for these app checks:
+The detailed device/simulator smoke matrix is authoritative in `itsDNNS/tribu-app` under `docs/RELEASE_SMOKE_MATRIX.md`. As of 2026-06-05, backend-owned portions are no longer the blocker for these app checks:
 
 | Flow | Backend status | App status pointer |
 |---|---|---|
@@ -56,7 +56,7 @@ The detailed device/simulator smoke matrix is authoritative in `itsDNNS/tribu-ap
 | Invite link acceptance | Public preview and register-with-invite APIs covered by app release smoke | Visual join completion remains app-owned pending work. |
 | Daily dashboard | `/mobile/daily` covered by tests and app smokes | iOS and Android release simulator/emulator dashboard evidence recorded in app repo. |
 | Shopping WebSocket sync | Native bearer WebSocket auth covered by tests and app API smoke | Flaky-network device validation remains app-owned pending work. |
-| Native push diagnostics | Native subscription and test-send backend paths covered by tests | Physical device token registration/delivery remains app-owned pending work. |
+| Native push diagnostics | FCM subscription and test-send backend paths covered by tests; backend delivery requires `FCM_SERVICE_ACCOUNT_JSON` or `FIREBASE_SERVICE_ACCOUNT_JSON` plus project id, or `GOOGLE_APPLICATION_CREDENTIALS`. | Physical device token registration/delivery remains app-owned pending work. |
 | File import/export and share | Calendar ICS and Contacts CSV/VCF payload APIs covered by app release smoke | Platform share-sheet evidence is tracked in app repo. |
 | Store/privacy/signing | Backend has no signing/store ownership | App identifiers, permissions, metadata, and signing blockers are tracked in app repo. |
 

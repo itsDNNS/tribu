@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core import cache
 from app.core.deps import current_user
 from app.core.scopes import require_scope
-from app.core.push import get_vapid_public_key, is_pywebpush_available, is_vapid_configured, send_push_for_user
+from app.core.push import get_vapid_public_key, is_fcm_configured, is_pywebpush_available, is_vapid_configured, send_push_for_user
 from app.core.notification_preferences import normalize_push_categories
 from app.database import get_db, SessionLocal
 from app.models import Notification, NotificationPreference, NotificationSentLog, PushSubscription, User
@@ -155,6 +155,7 @@ def _push_blocked_reason(
     *,
     server_configured: bool,
     pywebpush_available: bool,
+    native_sender_available: bool,
     push_enabled: bool,
     subscription_count: int,
     web_subscription_count: int = 0,
@@ -165,7 +166,7 @@ def _push_blocked_reason(
     if subscription_count == 0:
         return "no_subscription"
     if native_subscription_count > 0:
-        return None
+        return None if native_sender_available else "native_sender_unavailable"
     if web_subscription_count > 0 and not server_configured:
         return "server_not_configured"
     if web_subscription_count > 0 and not pywebpush_available:
@@ -187,7 +188,9 @@ def push_status(
 ):
     pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
     subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).count()
-    native_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform == "expo").count()
+    native_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform.in_(("expo", "fcm"))).count()
+    fcm_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform == "fcm").count()
+    expo_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform == "expo").count()
     web_subscription_count = max(subscription_count - native_subscription_count, 0)
     last_log = (
         db.query(NotificationSentLog)
@@ -197,10 +200,13 @@ def push_status(
     )
     server_configured = is_vapid_configured()
     sender_available = is_pywebpush_available()
+    fcm_configured = is_fcm_configured()
+    native_sender_available = expo_subscription_count > 0 or (fcm_subscription_count > 0 and fcm_configured)
     push_enabled = bool(pref and pref.push_enabled)
     blocked_reason = _push_blocked_reason(
         server_configured=server_configured,
         pywebpush_available=sender_available,
+        native_sender_available=native_sender_available,
         push_enabled=push_enabled,
         subscription_count=subscription_count,
         web_subscription_count=web_subscription_count,
@@ -210,7 +216,8 @@ def push_status(
         "server_configured": server_configured,
         "vapid_public_key_available": bool(get_vapid_public_key()),
         "pywebpush_available": sender_available,
-        "native_sender_available": True,
+        "fcm_configured": fcm_configured,
+        "native_sender_available": native_sender_available,
         "subscription_count": subscription_count,
         "web_subscription_count": web_subscription_count,
         "native_subscription_count": native_subscription_count,
@@ -244,11 +251,15 @@ def push_test(
 ):
     pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user.id).first()
     subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).count()
-    native_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform == "expo").count()
+    native_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform.in_(("expo", "fcm"))).count()
+    fcm_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform == "fcm").count()
+    expo_subscription_count = db.query(PushSubscription).filter(PushSubscription.user_id == user.id, PushSubscription.platform == "expo").count()
     web_subscription_count = max(subscription_count - native_subscription_count, 0)
+    fcm_configured = is_fcm_configured()
     blocked_reason = _push_blocked_reason(
         server_configured=is_vapid_configured(),
         pywebpush_available=is_pywebpush_available(),
+        native_sender_available=expo_subscription_count > 0 or (fcm_subscription_count > 0 and fcm_configured),
         push_enabled=bool(pref and pref.push_enabled),
         subscription_count=subscription_count,
         web_subscription_count=web_subscription_count,
