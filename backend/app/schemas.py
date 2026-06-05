@@ -1162,15 +1162,15 @@ class PushSubscriptionCreate(BaseModel):
     endpoint: str = Field(..., description="Push service endpoint URL")
     p256dh: Optional[str] = Field(None, description="Client public key for browser Web Push encryption")
     auth: Optional[str] = Field(None, description="Client browser Web Push auth secret")
-    platform: str = Field("web", description="Push platform: web or expo")
+    platform: str = Field("web", description="Push platform: web, expo, or fcm")
     device_name: Optional[str] = Field(None, max_length=120, description="Optional native device label")
 
     @field_validator("platform")
     @classmethod
     def normalize_platform(cls, value: str) -> str:
         platform = (value or "web").strip().lower()
-        if platform not in {"web", "expo"}:
-            raise ValueError("platform must be web or expo")
+        if platform not in {"web", "expo", "fcm"}:
+            raise ValueError("platform must be web, expo, or fcm")
         return platform
 
     @model_validator(mode="after")
@@ -1198,10 +1198,11 @@ class PushStatusResponse(BaseModel):
     server_configured: bool = Field(..., description="Whether required VAPID settings are present")
     vapid_public_key_available: bool = Field(..., description="Whether a public key can be served to the browser")
     pywebpush_available: bool = Field(..., description="Whether the backend can import the Web Push sender")
-    native_sender_available: bool = Field(True, description="Whether native Expo push dispatch is available")
+    fcm_configured: bool = Field(False, description="Whether Firebase Cloud Messaging service-account settings are present")
+    native_sender_available: bool = Field(True, description="Whether at least one configured native push sender can dispatch")
     subscription_count: int = Field(..., ge=0, description="Stored subscriptions for this user")
     web_subscription_count: int = Field(0, ge=0, description="Stored browser Web Push subscriptions for this user")
-    native_subscription_count: int = Field(0, ge=0, description="Stored native Expo push subscriptions for this user")
+    native_subscription_count: int = Field(0, ge=0, description="Stored native push subscriptions for this user")
     push_enabled: bool = Field(..., description="Whether push is enabled in notification preferences")
     ready: bool = Field(..., description="Whether server, dependency, preference, and subscription are ready")
     blocked_reason: Optional[str] = Field(None, description="High-level readiness blocker")

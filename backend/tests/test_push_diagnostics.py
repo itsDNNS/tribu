@@ -39,6 +39,11 @@ def setup_db(monkeypatch):
     monkeypatch.delenv("VAPID_PUBLIC_KEY", raising=False)
     monkeypatch.delenv("VAPID_PRIVATE_KEY", raising=False)
     monkeypatch.delenv("VAPID_CLAIMS_EMAIL", raising=False)
+    monkeypatch.delenv("FCM_PROJECT_ID", raising=False)
+    monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
+    monkeypatch.delenv("FCM_SERVICE_ACCOUNT_JSON", raising=False)
+    monkeypatch.delenv("FIREBASE_SERVICE_ACCOUNT_JSON", raising=False)
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
 
     def _override():
         db = TestSession()
@@ -158,6 +163,40 @@ def test_native_push_subscribe_persists_expo_subscription_and_enables_preference
     body = status.json()
     assert body["ready"] is True
     assert body["blocked_reason"] is None
+    assert body["native_subscription_count"] == 1
+    assert body["web_subscription_count"] == 0
+
+
+def test_native_push_subscribe_persists_fcm_subscription_and_requires_sender_config():
+    token, user_id = _seed_user("fcm-subscribe")
+
+    resp = client.post(
+        "/notifications/push/subscribe",
+        headers=_auth(token),
+        json={"endpoint": "fcm-device-token-1", "platform": "fcm", "device_name": "Pixel"},
+    )
+
+    assert resp.status_code == 200, resp.json()
+    db = TestSession()
+    try:
+        pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == user_id).one()
+        sub = db.query(PushSubscription).filter(PushSubscription.user_id == user_id).one()
+        assert pref.push_enabled is True
+        assert sub.endpoint == "fcm-device-token-1"
+        assert sub.platform == "fcm"
+        assert sub.device_name == "Pixel"
+        assert sub.p256dh == ""
+        assert sub.auth == ""
+    finally:
+        db.close()
+
+    status = client.get("/notifications/push/status", headers=_auth(token))
+    assert status.status_code == 200, status.json()
+    body = status.json()
+    assert body["ready"] is False
+    assert body["blocked_reason"] == "native_sender_unavailable"
+    assert body["fcm_configured"] is False
+    assert body["native_sender_available"] is False
     assert body["native_subscription_count"] == 1
     assert body["web_subscription_count"] == 0
 
@@ -292,6 +331,52 @@ def test_push_test_endpoint_sends_to_native_expo_subscription_without_vapid(monk
 
     assert resp.status_code == 200, resp.json()
     assert calls == [("ExponentPushToken[native-private]", "Tribu test notification", "Push notifications are ready for this device.", "settings")]
+    assert resp.json() == {
+        "status": "sent",
+        "attempted": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "removed": 0,
+        "skipped_reason": None,
+    }
+
+
+def test_push_test_endpoint_sends_to_native_fcm_subscription_when_configured(monkeypatch):
+    token, user_id = _seed_user("fcm-test-send")
+    db = TestSession()
+    db.add(NotificationPreference(user_id=user_id, push_enabled=True))
+    db.add(
+        PushSubscription(
+            user_id=user_id,
+            endpoint="fcm-private-token",
+            p256dh="",
+            auth="",
+            platform="fcm",
+        )
+    )
+    db.commit()
+    db.close()
+
+    monkeypatch.setenv("FCM_PROJECT_ID", "tribu-test")
+    monkeypatch.setenv(
+        "FCM_SERVICE_ACCOUNT_JSON",
+        '{"client_email":"firebase@example.com","private_key":"-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----\\n","project_id":"tribu-test"}',
+    )
+
+    from app.core import push as push_module
+
+    calls = []
+
+    def fake_fcm_send(token, title, body, url=None):
+        calls.append((token, title, body, url))
+        return True, None, False
+
+    monkeypatch.setattr(push_module, "_send_fcm_push", fake_fcm_send)
+
+    resp = client.post("/notifications/push/test", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    assert calls == [("fcm-private-token", "Tribu test notification", "Push notifications are ready for this device.", "settings")]
     assert resp.json() == {
         "status": "sent",
         "attempted": 1,
