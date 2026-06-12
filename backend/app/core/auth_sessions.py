@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import Literal
+from datetime import datetime, timedelta
+from typing import Literal, cast
 
 from fastapi import Response
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ from app.core.config import (
     REFRESH_COOKIE_MAX_AGE,
     REFRESH_COOKIE_NAME,
 )
-from app.core.utils import utcnow
+from app.core.clock import to_utc_naive, utcnow
 from app.models import User, UserSession
 from app.security import (
     create_access_token,
@@ -78,7 +78,7 @@ def rotate_refresh_token(db: Session, refresh_token: str) -> tuple[RefreshRotati
     if session.revoked_at is not None:
         return "invalid", None, None
     now = utcnow()
-    if session.expires_at <= now:
+    if to_utc_naive(cast(datetime, session.expires_at)) <= now:
         session.revoked_at = now
         db.commit()
         return "invalid", None, None

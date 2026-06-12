@@ -1,14 +1,18 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
 import jwt
+from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
+from app.core.auth_sessions import issue_refresh_session, rotate_refresh_token
+from app.core.deps import _resolve_user
 from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, User, UserSession
-from app.security import JWT_ALG, JWT_SECRET, hash_password
+from app.models import Family, Membership, PersonalAccessToken, User, UserSession
+from app.security import JWT_ALG, JWT_SECRET, generate_pat, hash_password
 
 engine = create_engine(
     "sqlite:///./test-session-persistence.db",
@@ -77,6 +81,70 @@ def _expired_access_token(user_id: int) -> str:
         JWT_SECRET,
         algorithm=JWT_ALG,
     )
+
+
+def test_rotate_refresh_token_accepts_aware_postgres_expiry_timestamp():
+    user_id = _seed_user()
+    db = TestSession()
+    try:
+        user = db.query(User).filter(User.id == user_id).one()
+        refresh_token = issue_refresh_session(db, user)
+        session = db.query(UserSession).filter(UserSession.user_id == user_id).one()
+        setattr(session, "expires_at", datetime.now(timezone.utc) + timedelta(days=1))
+
+        result, refreshed_user, next_token = rotate_refresh_token(db, refresh_token)
+
+        assert result == "ok"
+        assert refreshed_user is not None
+        assert getattr(refreshed_user, "id") == user_id
+        assert next_token is not None
+    finally:
+        db.close()
+
+
+def test_expired_refresh_token_with_aware_postgres_timestamp_is_invalid():
+    user_id = _seed_user()
+    db = TestSession()
+    try:
+        user = db.query(User).filter(User.id == user_id).one()
+        refresh_token = issue_refresh_session(db, user)
+        session = db.query(UserSession).filter(UserSession.user_id == user_id).one()
+        setattr(session, "expires_at", datetime.now(timezone.utc) - timedelta(minutes=1))
+
+        result, refreshed_user, next_token = rotate_refresh_token(db, refresh_token)
+
+        assert result == "invalid"
+        assert refreshed_user is None
+        assert next_token is None
+        assert getattr(session, "revoked_at") is not None
+    finally:
+        db.close()
+
+
+def test_expired_pat_with_aware_timestamp_returns_unauthorized():
+    user_id = _seed_user()
+    token, token_hash, token_lookup = generate_pat()
+    db = TestSession()
+    try:
+        db.add(
+            PersonalAccessToken(
+                user_id=user_id,
+                name="expired-aware-pat",
+                token_hash=token_hash,
+                token_lookup=token_lookup,
+                scopes="profile:read",
+                expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            )
+        )
+        db.flush()
+        request = Request({"type": "http", "headers": []})
+
+        with pytest.raises(HTTPException) as exc_info:
+            _resolve_user(request, token, db)
+
+        assert exc_info.value.status_code == 401
+    finally:
+        db.close()
 
 
 def test_login_issues_refresh_cookie_and_refreshes_expired_access_cookie():

@@ -168,6 +168,23 @@ describe('Auth API', () => {
     expect(global.fetch.mock.calls[1][1].credentials).toBe('include');
   });
 
+  it('retries once after a stale refresh failure in case another context refreshed cookies', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) })
+      .mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'invalid' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ email: 'session@example.com' }) });
+
+    const result = await apiGetMe();
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toEqual({ email: 'session@example.com' });
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual([
+      '/api/auth/me',
+      '/api/auth/refresh',
+      '/api/auth/me',
+    ]);
+  });
+
   it('apiUpdateProfileImage sends PATCH', async () => {
     await apiUpdateProfileImage('data:image/png;base64,...');
     const [url, opts] = lastCall();

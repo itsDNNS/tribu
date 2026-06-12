@@ -12,12 +12,13 @@ storage plugin in the next phases.
 """
 from __future__ import annotations
 
-from typing import Optional
+from datetime import datetime
+from typing import Optional, cast
 
 from radicale.auth import BaseAuth
 from radicale.log import logger
 
-from app.core.clock import utcnow
+from app.core.clock import to_utc_naive, utcnow
 from app.core.scopes import has_scope, parse_scopes
 from app.database import SessionLocal
 from app.models import PersonalAccessToken, User
@@ -71,7 +72,8 @@ class Auth(BaseAuth):
             )
             if pat is None:
                 return ""
-            if pat.expires_at is not None and pat.expires_at < utcnow():
+            expires_at = cast(datetime | None, pat.expires_at)
+            if expires_at is not None and to_utc_naive(expires_at) < utcnow():
                 _record_dav_failure(pat, "token_expired")
                 db.commit()
                 return ""
