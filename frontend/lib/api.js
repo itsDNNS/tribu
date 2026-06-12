@@ -22,8 +22,7 @@ async function request(path, options = {}, allowRefresh = true) {
   try { data = await res.json(); } catch { data = null; }
 
   if (res.status === 401 && allowRefresh && !logoutInFlight && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
-    const refreshed = await refreshSession();
-    if (refreshed.ok && !logoutInFlight) return request(path, options, false);
+    await refreshSession();
     if (!logoutInFlight) return request(path, options, false);
   }
 

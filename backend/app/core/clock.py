@@ -9,6 +9,16 @@ def utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def utcnow_aware() -> datetime:
+    """Return the current UTC instant as a timezone-aware datetime.
+
+    Use this for SQLAlchemy columns declared with ``timezone=True``. Tribu still
+    uses naive UTC for most legacy audit fields, so this helper keeps the two
+    storage contracts explicit instead of changing ``utcnow()`` globally.
+    """
+    return datetime.now(UTC)
+
+
 def to_utc_naive(value: datetime) -> datetime:
     """Normalize a datetime to Tribu's naive UTC storage convention.
 
@@ -22,6 +32,17 @@ def to_utc_naive(value: datetime) -> datetime:
     return value.astimezone(UTC).replace(tzinfo=None)
 
 
+def to_utc_aware(value: datetime) -> datetime:
+    """Normalize a datetime to timezone-aware UTC.
+
+    Naive values are interpreted as Tribu's legacy naive UTC convention. Aware
+    values are converted to UTC without losing the instant.
+    """
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
 @lru_cache(maxsize=8)
 def app_timezone(name: str | None = None) -> ZoneInfo:
     timezone_name = (name or os.getenv("TZ") or "UTC").strip() or "UTC"
@@ -31,12 +52,6 @@ def app_timezone(name: str | None = None) -> ZoneInfo:
         return ZoneInfo("UTC")
 
 
-def _as_utc_aware(value: datetime) -> datetime:
-    if value.tzinfo is None or value.utcoffset() is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
-
-
 def local_wall_now(now_utc: datetime | None = None) -> datetime:
     """Return the current Tribu wall-clock time as a naive datetime.
 
@@ -44,7 +59,7 @@ def local_wall_now(now_utc: datetime | None = None) -> datetime:
     scheduler comparisons must use the same clock. Audit/log timestamps should
     continue to use utcnow().
     """
-    instant = _as_utc_aware(now_utc or utcnow())
+    instant = to_utc_aware(now_utc or utcnow())
     return instant.astimezone(app_timezone()).replace(tzinfo=None)
 
 

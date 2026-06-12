@@ -102,6 +102,21 @@ def test_rotate_refresh_token_accepts_aware_postgres_expiry_timestamp():
         db.close()
 
 
+def test_issue_refresh_session_uses_aware_utc_values_for_timezone_columns():
+    user_id = _seed_user()
+    db = TestSession()
+    try:
+        user = db.query(User).filter(User.id == user_id).one()
+        issue_refresh_session(db, user)
+        session = next(obj for obj in db.new if isinstance(obj, UserSession))
+
+        for value in (session.created_at, session.last_used_at, session.expires_at):
+            assert value.tzinfo is not None
+            assert value.utcoffset() == timedelta(0)
+    finally:
+        db.close()
+
+
 def test_expired_refresh_token_with_aware_postgres_timestamp_is_invalid():
     user_id = _seed_user()
     db = TestSession()
