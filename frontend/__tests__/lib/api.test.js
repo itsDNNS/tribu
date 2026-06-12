@@ -185,6 +185,23 @@ describe('Auth API', () => {
     ]);
   });
 
+  it('does not start another refresh when the single retry remains unauthorized', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'expired' }) })
+      .mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'invalid' }) })
+      .mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'still expired' }) });
+
+    const result = await apiGetMe();
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(401);
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual([
+      '/api/auth/me',
+      '/api/auth/refresh',
+      '/api/auth/me',
+    ]);
+  });
+
   it('apiUpdateProfileImage sends PATCH', async () => {
     await apiUpdateProfileImage('data:image/png;base64,...');
     const [url, opts] = lastCall();

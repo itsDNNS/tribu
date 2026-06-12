@@ -13,7 +13,7 @@ from app.core.config import (
     REFRESH_COOKIE_MAX_AGE,
     REFRESH_COOKIE_NAME,
 )
-from app.core.clock import to_utc_naive, utcnow
+from app.core.clock import to_utc_naive, utcnow, utcnow_aware
 from app.models import User, UserSession
 from app.security import (
     create_access_token,
@@ -52,7 +52,7 @@ RefreshRotationResult = Literal["ok", "stale", "invalid"]
 def issue_refresh_session(db: Session, user: User) -> str:
     """Create a revocable refresh session and return the one-time plain token."""
     refresh_token, stored_hash, lookup = generate_refresh_token()
-    now = utcnow()
+    now = utcnow_aware()
     db.add(
         UserSession(
             user_id=user.id,
@@ -67,7 +67,13 @@ def issue_refresh_session(db: Session, user: User) -> str:
 
 
 def rotate_refresh_token(db: Session, refresh_token: str) -> tuple[RefreshRotationResult, User | None, str | None]:
-    """Rotate an opaque refresh token without writing browser cookies."""
+    """Rotate an opaque refresh token without writing browser cookies.
+
+    Successful rotations are left uncommitted so browser and native callers can
+    publish the matching access/refresh response atomically with the DB change.
+    Invalid expired/orphaned sessions are committed here because callers may
+    immediately return or raise a 401 response.
+    """
     session = (
         db.query(UserSession)
         .filter(UserSession.token_lookup == refresh_token_lookup_key(refresh_token))
@@ -77,16 +83,17 @@ def rotate_refresh_token(db: Session, refresh_token: str) -> tuple[RefreshRotati
         return "stale", None, None
     if session.revoked_at is not None:
         return "invalid", None, None
-    now = utcnow()
+    write_now = utcnow_aware()
+    now = to_utc_naive(write_now)
     if to_utc_naive(cast(datetime, session.expires_at)) <= now:
-        session.revoked_at = now
+        session.revoked_at = write_now  # type: ignore[reportAttributeAccessIssue]
         db.commit()
         return "invalid", None, None
     if not verify_refresh_token(refresh_token, session.token_hash):
         return "invalid", None, None
     user = db.query(User).filter(User.id == session.user_id).first()
     if not user:
-        session.revoked_at = now
+        session.revoked_at = write_now  # type: ignore[reportAttributeAccessIssue]
         db.commit()
         return "invalid", None, None
 
@@ -102,8 +109,8 @@ def rotate_refresh_token(db: Session, refresh_token: str) -> tuple[RefreshRotati
             {
                 UserSession.token_lookup: next_lookup,
                 UserSession.token_hash: next_hash,
-                UserSession.last_used_at: now,
-                UserSession.expires_at: now + timedelta(seconds=REFRESH_COOKIE_MAX_AGE),
+                UserSession.last_used_at: write_now,
+                UserSession.expires_at: write_now + timedelta(seconds=REFRESH_COOKIE_MAX_AGE),
             },
             synchronize_session=False,
         )
@@ -140,5 +147,5 @@ def revoke_refresh_session(db: Session, refresh_token: str | None) -> None:
         .first()
     )
     if session and session.revoked_at is None:
-        session.revoked_at = utcnow()
+        session.revoked_at = utcnow_aware()  # type: ignore[reportAttributeAccessIssue]
         db.commit()

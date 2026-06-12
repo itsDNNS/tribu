@@ -1,5 +1,5 @@
 
-from app.core.clock import utcnow
+from app.core.clock import utcnow, utcnow_aware
 
 from sqlalchemy import Column, Date, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
 from sqlalchemy.orm import relationship
@@ -36,8 +36,8 @@ class UserSession(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token_lookup = Column(String(64), unique=True, nullable=False, index=True)
     token_hash = Column(String(256), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
-    last_used_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow_aware)
+    last_used_at = Column(DateTime(timezone=True), nullable=False, default=utcnow_aware)
     expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
     revoked_at = Column(DateTime(timezone=True), nullable=True, index=True)
 

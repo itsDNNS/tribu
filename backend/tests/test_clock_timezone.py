@@ -2,7 +2,16 @@ from datetime import UTC, datetime, timezone, timedelta
 
 import pytest
 
-from app.core.clock import app_timezone, local_today, local_wall_now, local_wall_to_utc_naive, to_local_wall_naive
+from app.core.clock import (
+    app_timezone,
+    local_today,
+    local_wall_now,
+    local_wall_to_utc_naive,
+    to_local_wall_naive,
+    to_utc_aware,
+    to_utc_naive,
+    utcnow_aware,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -67,6 +76,31 @@ def test_to_local_wall_naive_converts_utc_values_to_family_wall_time():
     aware_utc = datetime(2026, 5, 9, 7, 15, 0, tzinfo=UTC)
 
     assert to_local_wall_naive(aware_utc).isoformat() == "2026-05-09T09:15:00"
+
+
+def test_utcnow_aware_returns_timezone_aware_utc_instant():
+    now = utcnow_aware()
+
+    assert now.tzinfo is UTC
+    assert now.utcoffset() == timedelta(0)
+
+
+def test_to_utc_naive_preserves_instant_for_aware_offsets():
+    aware = datetime(2026, 5, 9, 9, 15, 0, tzinfo=timezone(timedelta(hours=2)))
+
+    converted = to_utc_naive(aware)
+
+    assert converted.tzinfo is None
+    assert converted.isoformat() == "2026-05-09T07:15:00"
+
+
+def test_to_utc_aware_interprets_naive_values_as_utc():
+    naive = datetime(2026, 5, 9, 7, 15, 0)
+
+    converted = to_utc_aware(naive)
+
+    assert converted.tzinfo is UTC
+    assert converted.isoformat() == "2026-05-09T07:15:00+00:00"
 
 
 def test_local_wall_to_utc_naive_interprets_stored_wall_times_with_dst():
