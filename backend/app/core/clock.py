@@ -9,6 +9,19 @@ def utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def to_utc_naive(value: datetime) -> datetime:
+    """Normalize a datetime to Tribu's naive UTC storage convention.
+
+    Most audit/session fields are stored as naive UTC values, but production
+    PostgreSQL drivers can return ``timezone=True`` columns as aware UTC
+    datetimes. Normalizing before comparisons keeps SQLite and Postgres
+    behavior aligned without changing local wall-clock calendar semantics.
+    """
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
 @lru_cache(maxsize=8)
 def app_timezone(name: str | None = None) -> ZoneInfo:
     timezone_name = (name or os.getenv("TZ") or "UTC").strip() or "UTC"

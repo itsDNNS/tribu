@@ -24,6 +24,7 @@ async function request(path, options = {}, allowRefresh = true) {
   if (res.status === 401 && allowRefresh && !logoutInFlight && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
     const refreshed = await refreshSession();
     if (refreshed.ok && !logoutInFlight) return request(path, options, false);
+    if (!logoutInFlight) return request(path, options, false);
   }
 
   return { ok: res.ok, status: res.status, data };

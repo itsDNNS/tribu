@@ -1,8 +1,8 @@
 from datetime import UTC, date, datetime
 import jwt
 
-from app.core.utils import utcnow
-from typing import Optional
+from app.core.clock import to_utc_naive, utcnow
+from typing import Optional, cast
 
 from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -81,7 +81,8 @@ def _resolve_user(request: Request, token_str: str, db: Session) -> User:
         pat = _find_pat(db, token_str)
         if not pat:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
-        if pat.expires_at and pat.expires_at < utcnow():
+        expires_at = cast(datetime | None, pat.expires_at)
+        if expires_at is not None and to_utc_naive(expires_at) < utcnow():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(TOKEN_EXPIRED))
         if not verify_pat(token_str, pat.token_hash):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
