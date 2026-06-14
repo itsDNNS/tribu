@@ -1,0 +1,41 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      DATABASE_URL: sqlite:///./test-backend-ci.db
+      JWT_SECRET: backend-ci-test-secret-key-32-bytes
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt pytest
+
+      - name: Run backend release-contract tests
+        run: |
+          PYTHONPATH=backend python -m pytest \
+            backend/tests/test_cors_headers.py \
+            backend/tests/test_mobile_auth.py \
+            backend/tests/test_oidc_flow.py \
+            -q
