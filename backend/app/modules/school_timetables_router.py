@@ -135,6 +135,10 @@ def _serialize(db: Session, timetable: SchoolTimetable) -> SchoolTimetableRespon
     memberships = db.query(Membership).filter(Membership.family_id == timetable.family_id).all()
     membership_by_user_id = {m.user_id: m for m in memberships}
     period_by_id = {p.id: p for p in timetable.periods}
+    lessons_with_periods = [
+        (lesson, period_by_id.get(lesson.period_id))
+        for lesson in timetable.lessons
+    ]
     assigned_members = [
         _member_response(assignment.member, membership_by_user_id)
         for assignment in timetable.assignments
@@ -166,13 +170,20 @@ def _serialize(db: Session, timetable: SchoolTimetable) -> SchoolTimetableRespon
                 id=lesson.id,
                 period_id=lesson.period_id,
                 weekday=lesson.weekday,
-                period_position=period_by_id[lesson.period_id].position,
+                period_position=period.position,
                 subject=lesson.subject,
                 room=lesson.room,
                 teacher=lesson.teacher,
                 color=lesson.color,
             )
-            for lesson in sorted(timetable.lessons, key=lambda l: (l.weekday, period_by_id[l.period_id].position))
+            for lesson, period in sorted(
+                lessons_with_periods,
+                key=lambda item: (
+                    item[0].weekday,
+                    item[1].position if item[1] is not None else 10_000,
+                ),
+            )
+            if period is not None
         ],
         created_by_user_id=timetable.created_by_user_id,
         created_at=timetable.created_at,
