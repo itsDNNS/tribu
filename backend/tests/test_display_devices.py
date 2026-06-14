@@ -14,7 +14,7 @@ import json as json_module
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
@@ -811,6 +811,36 @@ class TestSchoolTimetables:
         assert listed.status_code == 200, listed.text
         assert listed.json()[0]["lessons"][0]["subject"] == "Math"
 
+    def test_list_skips_legacy_lessons_without_period_rows(self):
+        admin_token, _, family_id = _seed_member_with_pat(
+            "schoolLegacyLesson", role="admin", is_adult=True, scopes="school_timetables:read,school_timetables:write"
+        )
+        child_id = _seed_child(family_id, "Legacy")
+
+        created = client.post(
+            "/school-timetables",
+            json=_school_payload(family_id, [child_id]),
+            headers=_auth(admin_token),
+        )
+        assert created.status_code == 200, created.text
+        lesson_id = created.json()["lessons"][0]["id"]
+
+        db = TestSession()
+        try:
+            db.execute(text("PRAGMA foreign_keys=OFF"))
+            db.execute(
+                text("UPDATE school_timetable_lessons SET period_id = :period_id WHERE id = :lesson_id"),
+                {"period_id": 999_999, "lesson_id": lesson_id},
+            )
+            db.commit()
+            db.execute(text("PRAGMA foreign_keys=ON"))
+        finally:
+            db.close()
+
+        listed = client.get(f"/school-timetables?family_id={family_id}", headers=_auth(admin_token))
+        assert listed.status_code == 200, listed.text
+        assert all(lesson["period_id"] != 999_999 for lesson in listed.json()[0]["lessons"])
+
     def test_rejects_adult_members_as_child_assignments(self):
         admin_token, admin_user_id, family_id = _seed_member_with_pat(
             "schoolAdultAssignment", role="admin", is_adult=True, scopes="school_timetables:write"
@@ -835,13 +865,9 @@ class TestSchoolTimetables:
 
     def test_display_dashboard_includes_today_school_timetable_without_ids(self, monkeypatch):
         import app.modules.display_router as display_router
+        from datetime import date
 
-        class FixedDate(display_router.date):
-            @classmethod
-            def today(cls):
-                return cls(2026, 4, 27)
-
-        monkeypatch.setattr(display_router, "date", FixedDate)
+        monkeypatch.setattr(display_router, "local_today", lambda: date(2026, 4, 27))
 
         admin_token, _, family_id = _seed_member_with_pat("schoolDisplay", role="admin", is_adult=True)
         child_a = _seed_child(family_id, "TwinA", color="#7c3aed")
