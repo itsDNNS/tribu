@@ -11,11 +11,11 @@ python-dateutil==2.9.0.post0
 icalendar==7.0.1
 alembic==1.18.4
 apscheduler==3.11.2
-python-multipart==0.0.27
+python-multipart==0.0.31
 redis==5.2.1
 pywebpush==2.0.1
 httpx==0.28.1
 radicale==3.7.1
 a2wsgi==1.10.7
 apprise==1.10.0
-cryptography==46.0.7
+cryptography==48.0.1
