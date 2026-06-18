@@ -76,7 +76,13 @@ def test_public_registration_can_be_explicitly_enabled_after_setup(monkeypatch):
     assert second.status_code == 200
 
 
-def test_invite_registration_still_works_after_initial_setup():
+def test_invite_registration_still_works_after_initial_setup(monkeypatch):
+    invalidated_patterns = []
+    monkeypatch.setattr(
+        "app.modules.invitations_router.cache.invalidate_pattern",
+        invalidated_patterns.append,
+    )
+
     db = TestSession()
     try:
         admin = User(
@@ -115,3 +121,4 @@ def test_invite_registration_still_works_after_initial_setup():
         },
     )
     assert resp.status_code == 200
+    assert "tribu:families:*" in invalidated_patterns

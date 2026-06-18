@@ -13,6 +13,7 @@ patch_asyncio_iscoroutinefunction()
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.core import cache
 from app.core import oidc as oidc_core
 from app.core.deps import current_user, ensure_family_admin
 from app.core.scopes import require_scope
@@ -267,6 +268,10 @@ def register_with_invite(
     response = JSONResponse(content={"status": "ok"})
     issue_session_cookies(response, db, user)
     db.commit()
+    # The joiner now belongs to a new family; drop the cached families list so
+    # /families/me doesn't keep serving the stale pre-join set for up to 300s
+    # (which made clients fall back to the wrong family).
+    cache.invalidate_pattern("tribu:families:*")
     return response
 
 
