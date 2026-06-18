@@ -1,15 +1,20 @@
 """Version resolution helpers for backend health/build reporting."""
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
+import sys
+from collections.abc import Mapping
 from datetime import UTC, date, datetime
 from pathlib import Path
 
 _BRANCH_PLACEHOLDERS = {"main", "master", "dev", "latest", "head"}
 _SEMVER_PREFIX = re.compile(r"^v?\d+\.\d+\.\d+")
 _DATE_VERSION_PREFIX = re.compile(r"^v?(\d{4}-\d{2}-\d{2})(?:[.-]|$)")
+_BUILD_INFO_PATH = Path(__file__).with_name("build_info.json")
+_BUILD_INFO_KEYS = ("APP_VERSION", "APP_BUILD_NUMBER", "APP_GIT_SHA", "APP_BUILD_DATE")
 
 
 def _clean(value: str | None) -> str:
@@ -88,21 +93,66 @@ def git_describe_version(repo_root: Path | None = None) -> str | None:
     return described.lstrip("v") or None
 
 
-def resolve_app_version(env: dict[str, str] | None = None) -> str:
-    source = env or os.environ
+def _metadata_version(source: Mapping[str, str], *, described: str | None = None) -> str | None:
     configured = _clean(source.get("APP_VERSION"))
     if configured and not is_placeholder_version(configured):
         return configured.lstrip("v")
 
-    described = git_describe_version()
     build_number = source.get("APP_BUILD_NUMBER") or source.get("GITHUB_RUN_NUMBER")
     git_sha = source.get("APP_GIT_SHA") or source.get("GITHUB_SHA")
-    derived = build_metadata_version(
+    return build_metadata_version(
         build_number,
         git_sha,
         base_version=described,
         build_date=source.get("APP_BUILD_DATE") or source.get("SOURCE_DATE_EPOCH"),
     )
+
+
+def load_build_info(path: Path | None = None) -> dict[str, str]:
+    """Load immutable build metadata generated into Docker images."""
+
+    target = path or _BUILD_INFO_PATH
+    try:
+        raw = json.loads(target.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {key: _clean(raw.get(key)) for key in _BUILD_INFO_KEYS if _clean(raw.get(key))}
+
+
+def write_build_info_file(path: Path | None = None, env: dict[str, str] | None = None) -> None:
+    """Persist build metadata so runtime env overrides cannot make health stale."""
+
+    source = env or os.environ
+    target = path or _BUILD_INFO_PATH
+    target.write_text(
+        json.dumps({key: _clean(source.get(key)) for key in _BUILD_INFO_KEYS}, sort_keys=True) + "\n",
+    )
+
+
+def resolve_app_version(
+    env: dict[str, str] | None = None,
+    *,
+    build_info: dict[str, str] | None = None,
+) -> str:
+    source = env or os.environ
+    override = _clean(source.get("APP_VERSION_OVERRIDE"))
+    if override and not is_placeholder_version(override):
+        return override.lstrip("v")
+
+    image_metadata = load_build_info() if build_info is None else build_info
+    if image_metadata:
+        built = _metadata_version(image_metadata)
+        if built:
+            return built
+
+    configured = _clean(source.get("APP_VERSION"))
+    if configured and not is_placeholder_version(configured):
+        return configured.lstrip("v")
+
+    described = git_describe_version()
+    derived = _metadata_version(source, described=described)
     if derived:
         return derived
 
@@ -116,3 +166,10 @@ def resolve_app_version(env: dict[str, str] | None = None) -> str:
         return described
 
     return configured.lstrip("v") if configured else "dev"
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["--write-build-info"]:
+        write_build_info_file()
+    else:
+        print(resolve_app_version())

@@ -5,7 +5,9 @@ from app.core.versioning import (
     build_metadata_version,
     is_placeholder_version,
     is_release_like_version,
+    load_build_info,
     resolve_app_version,
+    write_build_info_file,
 )
 
 
@@ -31,9 +33,72 @@ def test_build_metadata_version_uses_date_and_run_number():
 
 
 def test_resolve_app_version_preserves_explicit_release_versions():
-    assert resolve_app_version({"APP_VERSION": "v2026-04-24"}) == "2026-04-24"
-    assert resolve_app_version({"APP_VERSION": "v2026-04-24.412"}) == "2026-04-24.412"
-    assert resolve_app_version({"APP_VERSION": "1.6.0-3-gabc1234+build.412"}) == "1.6.0-3-gabc1234+build.412"
+    assert resolve_app_version({"APP_VERSION": "v2026-04-24"}, build_info={}) == "2026-04-24"
+    assert resolve_app_version({"APP_VERSION": "v2026-04-24.412"}, build_info={}) == "2026-04-24.412"
+    assert resolve_app_version({"APP_VERSION": "1.6.0-3-gabc1234+build.412"}, build_info={}) == "1.6.0-3-gabc1234+build.412"
+
+
+def test_resolve_app_version_prefers_image_build_info_over_stale_runtime_env():
+    version = resolve_app_version(
+        {
+            "APP_VERSION": "2026-05-13.287",
+            "APP_BUILD_NUMBER": "287",
+            "APP_GIT_SHA": "b0944c70aacb9600be8ae3266096c89691225461",
+            "APP_BUILD_DATE": "2026-06-05",
+        },
+        build_info={
+            "APP_VERSION": "2026-05-13.294",
+            "APP_BUILD_NUMBER": "294",
+            "APP_GIT_SHA": "08edd2634291fe882bc59556f2d56c8bef54176b",
+            "APP_BUILD_DATE": "2026-06-18",
+        },
+    )
+
+    assert version == "2026-05-13.294"
+
+
+def test_resolve_app_version_uses_image_build_metadata_for_branch_placeholders(monkeypatch):
+    monkeypatch.setattr("app.core.versioning.git_describe_version", lambda repo_root=None: None)
+    version = resolve_app_version(
+        {"APP_VERSION": "2026-05-13.287", "APP_BUILD_NUMBER": "287"},
+        build_info={
+            "APP_VERSION": "main",
+            "APP_BUILD_NUMBER": "294",
+            "APP_GIT_SHA": "08edd2634291fe882bc59556f2d56c8bef54176b",
+            "APP_BUILD_DATE": "2026-06-18",
+        },
+    )
+
+    assert version == "2026-06-18.294"
+
+
+def test_app_version_override_remains_explicit_escape_hatch():
+    version = resolve_app_version(
+        {"APP_VERSION_OVERRIDE": "2026-06-19.manual", "APP_VERSION": "2026-05-13.287"},
+        build_info={"APP_VERSION": "2026-05-13.294"},
+    )
+
+    assert version == "2026-06-19.manual"
+
+
+def test_build_info_file_round_trip(tmp_path):
+    path = tmp_path / "build_info.json"
+    write_build_info_file(
+        path,
+        {
+            "APP_VERSION": "main",
+            "APP_BUILD_NUMBER": "294",
+            "APP_GIT_SHA": "08edd2634291fe882bc59556f2d56c8bef54176b",
+            "APP_BUILD_DATE": "2026-06-18",
+        },
+    )
+
+    assert load_build_info(path) == {
+        "APP_VERSION": "main",
+        "APP_BUILD_NUMBER": "294",
+        "APP_GIT_SHA": "08edd2634291fe882bc59556f2d56c8bef54176b",
+        "APP_BUILD_DATE": "2026-06-18",
+    }
 
 
 def test_resolve_app_version_replaces_branch_placeholder_with_build_metadata(monkeypatch):
