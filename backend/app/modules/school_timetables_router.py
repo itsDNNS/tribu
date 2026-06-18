@@ -6,7 +6,7 @@ timetable so twins/multiples can share one class plan without duplicate
 lesson rows.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
@@ -49,9 +49,9 @@ def _load_for_caller(db: Session, user: User, timetable_id: int) -> SchoolTimeta
     timetable = (
         db.query(SchoolTimetable)
         .options(
-            joinedload(SchoolTimetable.periods),
-            joinedload(SchoolTimetable.lessons).joinedload(SchoolTimetableLesson.period),
-            joinedload(SchoolTimetable.assignments).joinedload(SchoolTimetableAssignment.member),
+            selectinload(SchoolTimetable.periods),
+            selectinload(SchoolTimetable.lessons).selectinload(SchoolTimetableLesson.period),
+            selectinload(SchoolTimetable.assignments).selectinload(SchoolTimetableAssignment.member),
         )
         .filter(SchoolTimetable.id == timetable_id)
         .first()
@@ -249,9 +249,9 @@ def list_school_timetables(
     rows = (
         db.query(SchoolTimetable)
         .options(
-            joinedload(SchoolTimetable.periods),
-            joinedload(SchoolTimetable.lessons),
-            joinedload(SchoolTimetable.assignments).joinedload(SchoolTimetableAssignment.member),
+            selectinload(SchoolTimetable.periods),
+            selectinload(SchoolTimetable.lessons),
+            selectinload(SchoolTimetable.assignments).selectinload(SchoolTimetableAssignment.member),
         )
         .filter(SchoolTimetable.family_id == family_id)
         .order_by(SchoolTimetable.name.asc())
