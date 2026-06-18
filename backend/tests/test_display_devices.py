@@ -811,6 +811,50 @@ class TestSchoolTimetables:
         assert listed.status_code == 200, listed.text
         assert listed.json()[0]["lessons"][0]["subject"] == "Math"
 
+    def test_list_avoids_cartesian_join_for_assigned_member_avatars(self):
+        admin_token, _, family_id = _seed_member_with_pat(
+            "schoolAvatarAdmin", role="admin", is_adult=True, scopes="school_timetables:read,school_timetables:write"
+        )
+        child_a = _seed_child(family_id, "AvatarA", color="#7c3aed")
+        child_b = _seed_child(family_id, "AvatarB", color="#f43f5e")
+        avatar = "data:image/png;base64,iVBORw0KGgo="
+        db = TestSession()
+        try:
+            db.query(User).filter(User.id == child_a).update({User.profile_image: avatar})
+            db.commit()
+        finally:
+            db.close()
+
+        created = client.post(
+            "/school-timetables",
+            json=_school_payload(family_id, [child_a, child_b], include_saturday=True),
+            headers=_auth(admin_token),
+        )
+        assert created.status_code == 200, created.text
+
+        statements: list[str] = []
+
+        def capture_statement(_conn, _cursor, statement, _parameters, _context, _executemany):
+            statements.append(" ".join(statement.lower().split()))
+
+        event.listen(engine, "before_cursor_execute", capture_statement)
+        try:
+            listed = client.get(f"/school-timetables?family_id={family_id}", headers=_auth(admin_token))
+        finally:
+            event.remove(engine, "before_cursor_execute", capture_statement)
+
+        assert listed.status_code == 200, listed.text
+        body = listed.json()[0]
+        profile_images = {member["display_name"]: member["profile_image"] for member in body["assigned_members"]}
+        assert profile_images["Child AvatarA"] == avatar
+        assert body["lessons"][0]["subject"] == "Math"
+        assert not any(
+            "join school_timetable_periods" in statement
+            and "join school_timetable_lessons" in statement
+            and "join users" in statement
+            for statement in statements
+        ), statements
+
     def test_list_skips_legacy_lessons_without_period_rows(self):
         admin_token, _, family_id = _seed_member_with_pat(
             "schoolLegacyLesson", role="admin", is_adult=True, scopes="school_timetables:read,school_timetables:write"
