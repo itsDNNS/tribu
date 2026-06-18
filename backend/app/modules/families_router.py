@@ -28,6 +28,9 @@ def my_families(user: User = Depends(current_user), db: Session = Depends(get_db
             db.query(Membership)
             .options(joinedload(Membership.family))
             .filter(Membership.user_id == user.id)
+            # Stable order so clients always pick the same "first" family
+            # instead of flipping between families on every request.
+            .order_by(Membership.family_id)
             .all()
         )
         return [
