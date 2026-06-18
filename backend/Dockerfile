@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir --no-compile -r requirements.txt \
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY app ./app
+RUN python -m app.core.versioning --write-build-info
 
 RUN mkdir -p /backups \
     && groupadd -r tribu && useradd -r -g tribu tribu \
