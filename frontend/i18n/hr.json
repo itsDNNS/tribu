@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Dodajte tjedan na popis za kupovinu",
   "module.meal_plans.push_week_to_shopping_aria": "Stavite sve sastojke iz ovog tjedna na popis za kupovinu",
   "module.meal_plans.push_to_shopping": "Na popis za kupovinu",
-  "module.meal_plans.drag_aria": "Povucite \"{name}\" u drugi utor",
+  "module.meal_plans.drag_aria": "Premjesti „{name}“ u drugi termin",
   "module.meal_plans.pushed_one": "1 sastojak gurnut na popis za kupnju",
   "module.meal_plans.pushed_many": "{count} sastojci gurnuti na popis za kupovinu",
   "module.recipes.name": "Recepti",

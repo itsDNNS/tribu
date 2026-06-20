@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Adăugați săptămâna la lista de cumpărături",
   "module.meal_plans.push_week_to_shopping_aria": "Împingeți toate ingredientele din această săptămână într-o listă de cumpărături",
   "module.meal_plans.push_to_shopping": "La lista de cumpărături",
-  "module.meal_plans.drag_aria": "Trageți „{name}” într-un alt slot",
+  "module.meal_plans.drag_aria": "Mută „{name}” în alt interval",
   "module.meal_plans.pushed_one": "1 ingredient împins în lista de cumpărături",
   "module.meal_plans.pushed_many": "Ingredientele {count} împinse în lista de cumpărături",
   "module.recipes.name": "Rețete",

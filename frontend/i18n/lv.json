@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Pievienojiet nedēļu iepirkumu sarakstam",
   "module.meal_plans.push_week_to_shopping_aria": "Ievietojiet visas šīs nedēļas sastāvdaļas iepirkumu sarakstā",
   "module.meal_plans.push_to_shopping": "Uz iepirkumu sarakstu",
-  "module.meal_plans.drag_aria": "Velciet \"{name}\" uz citu slotu",
+  "module.meal_plans.drag_aria": "Pārvietot “{name}” uz citu vietu",
   "module.meal_plans.pushed_one": "1 sastāvdaļa ir ievietota iepirkumu sarakstā",
   "module.meal_plans.pushed_many": "{count} sastāvdaļas ir iekļautas iepirkumu sarakstā",
   "module.recipes.name": "Receptes",

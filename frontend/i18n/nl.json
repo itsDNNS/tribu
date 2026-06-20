@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Week toevoegen aan boodschappenlijstje",
   "module.meal_plans.push_week_to_shopping_aria": "Zet alle ingrediënten van deze week op een boodschappenlijstje",
   "module.meal_plans.push_to_shopping": "Naar boodschappenlijstje",
-  "module.meal_plans.drag_aria": "Sleep \"{name}\" naar een ander slot",
+  "module.meal_plans.drag_aria": "Verplaats \"{name}\" naar een ander moment",
   "module.meal_plans.pushed_one": "1 ingrediënt naar het boodschappenlijstje geduwd",
   "module.meal_plans.pushed_many": "{count}-ingrediënten naar het boodschappenlijstje gepusht",
   "module.recipes.name": "Recepten",

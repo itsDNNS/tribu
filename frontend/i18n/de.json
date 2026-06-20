@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Woche zur Einkaufsliste hinzufügen",
   "module.meal_plans.push_week_to_shopping_aria": "Alle Zutaten dieser Woche in Einkaufsliste schieben",
   "module.meal_plans.push_to_shopping": "In Einkaufsliste",
-  "module.meal_plans.drag_aria": "\"{name}\" auf einen anderen Slot ziehen",
+  "module.meal_plans.drag_aria": "„{name}“ in einen anderen Platz verschieben",
   "module.meal_plans.pushed_one": "1 Zutat auf die Einkaufsliste geschoben",
   "module.meal_plans.pushed_many": "{count} Zutaten auf die Einkaufsliste geschoben",
   "module.recipes.name": "Rezepte",

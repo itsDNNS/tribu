@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Προσθήκη εβδομάδας στη λίστα αγορών",
   "module.meal_plans.push_week_to_shopping_aria": "Σπρώξτε όλα τα συστατικά από αυτήν την εβδομάδα σε μια λίστα αγορών",
   "module.meal_plans.push_to_shopping": "Στη λίστα αγορών",
-  "module.meal_plans.drag_aria": "Σύρετε το \"{name}\" σε άλλη υποδοχή",
+  "module.meal_plans.drag_aria": "Μετακίνηση του «{name}» σε άλλη θέση",
   "module.meal_plans.pushed_one": "1 συστατικό μπήκε στη λίστα αγορών",
   "module.meal_plans.pushed_many": "Τα συστατικά {count} μπήκαν στη λίστα αγορών",
   "module.recipes.name": "Συνταγές",

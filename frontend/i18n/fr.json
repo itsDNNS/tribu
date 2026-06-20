@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Ajouter la semaine à la liste de courses",
   "module.meal_plans.push_week_to_shopping_aria": "Envoyer tous les ingrédients de cette semaine vers une liste de courses",
   "module.meal_plans.push_to_shopping": "Vers la liste de courses",
-  "module.meal_plans.drag_aria": "Glisser \"{name}\" vers un autre créneau",
+  "module.meal_plans.drag_aria": "Déplacer « {name} » vers un autre créneau",
   "module.meal_plans.pushed_one": "1 ingrédient ajouté à la liste de courses",
   "module.meal_plans.pushed_many": "{count} ingrédients ajoutés à la liste de courses",
   "module.recipes.name": "Recettes",
