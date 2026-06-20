@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import urllib.error
 
 import pytest
 from fastapi.testclient import TestClient
@@ -81,6 +83,26 @@ def _seed_admin(scopes: str = "admin:read,admin:write,shopping:write") -> tuple[
         db.close()
 
 
+def _seed_webhook_endpoint(family_id: int, *, url: str = "https://receiver.example/hook?token=private") -> int:
+    db = TestSession()
+    try:
+        endpoint = WebhookEndpoint(
+            family_id=family_id,
+            name="Receiver",
+            url=url,
+            events=["webhook.test"],
+            active=True,
+            secret_header_name="X-Tribu-Secret",
+            secret_header_value="secret-value",
+        )
+        db.add(endpoint)
+        db.commit()
+        return int(endpoint.id)
+    finally:
+        db.close()
+
+
+
 def test_create_webhook_redacts_url_and_secret():
     token, family_id, _ = _seed_admin()
 
@@ -150,35 +172,59 @@ def test_rejects_reserved_secret_header_name():
     assert "secret-value" not in str(resp.json())
 
 
+def test_webhook_stdlib_post_sets_method_headers_payload_and_timeout(monkeypatch):
+    from app.core import webhooks as webhooks_core
+
+    calls = []
+
+    class FakeResponse:
+        status = 201
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class FakeOpener:
+        def open(self, request, *, timeout):
+            calls.append({"request": request, "timeout": timeout})
+            return FakeResponse()
+
+    monkeypatch.setattr(webhooks_core, "_WEBHOOK_OPENER", FakeOpener())
+
+    status = webhooks_core._post_webhook_json(
+        "https://receiver.example/hook",
+        payload={"event_type": "webhook.test", "data": {"message": "hello"}},
+        headers={"Content-Type": "application/json", "User-Agent": "Tribu-Webhooks/1.0", "X-Tribu-Secret": "secret"},
+    )
+
+    assert status == 201
+    request = calls[0]["request"]
+    assert request.get_method() == "POST"
+    assert calls[0]["timeout"] == webhooks_core.WEBHOOK_TIMEOUT_SECONDS
+    assert dict(request.header_items())["Content-type"] == "application/json"
+    assert dict(request.header_items())["User-agent"] == "Tribu-Webhooks/1.0"
+    assert dict(request.header_items())["X-tribu-secret"] == "secret"
+    assert json.loads(request.data.decode("utf-8"))["event_type"] == "webhook.test"
+
+
 def test_test_webhook_sends_redacted_delivery(monkeypatch):
     token, family_id, _ = _seed_admin()
-    db = TestSession()
-    endpoint = WebhookEndpoint(
-        family_id=family_id,
-        name="Receiver",
-        url="https://receiver.example/hook?token=private",
-        events=["webhook.test"],
-        active=True,
-        secret_header_name="X-Tribu-Secret",
-        secret_header_value="secret-value",
-    )
-    db.add(endpoint)
-    db.commit()
-    endpoint_id = endpoint.id
-    db.close()
+    endpoint_id = _seed_webhook_endpoint(family_id)
 
     calls = []
 
     class FakeResponse:
         status_code = 204
 
-    def fake_post(url, *, json, headers, timeout, follow_redirects=False):
-        calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
-        return FakeResponse()
+    def fake_post(url, *, payload, headers):
+        calls.append({"url": url, "payload": payload, "headers": headers})
+        return FakeResponse.status_code
 
     from app.core import webhooks as webhooks_core
 
-    monkeypatch.setattr(webhooks_core.httpx, "post", fake_post)
+    monkeypatch.setattr(webhooks_core, "_post_webhook_json", fake_post)
 
     resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
 
@@ -188,8 +234,71 @@ def test_test_webhook_sends_redacted_delivery(monkeypatch):
     assert body["delivery"]["status_code"] == 204
     assert calls[0]["url"] == "https://receiver.example/hook?token=private"
     assert calls[0]["headers"]["X-Tribu-Secret"] == "secret-value"
-    assert calls[0]["json"]["event_type"] == "webhook.test"
+    assert calls[0]["payload"]["event_type"] == "webhook.test"
     assert "receiver.example" not in str(body)
+    assert "secret-value" not in str(body)
+
+
+def test_webhook_status_code_failure_is_recorded_safely(monkeypatch):
+    token, family_id, _ = _seed_admin()
+    endpoint_id = _seed_webhook_endpoint(family_id)
+
+    from app.core import webhooks as webhooks_core
+
+    monkeypatch.setattr(webhooks_core, "_post_webhook_json", lambda *_args, **_kwargs: 503)
+
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["status"] == "failed"
+    assert body["delivery"]["status_code"] == 503
+    assert body["delivery"]["error"] == "HTTP 503"
+    assert "secret-value" not in str(body)
+    assert "token=private" not in str(body)
+
+
+def test_webhook_connection_error_records_safe_operator_error(monkeypatch):
+    token, family_id, _ = _seed_admin()
+    endpoint_id = _seed_webhook_endpoint(family_id)
+
+    def raise_connection_error(*_args, **_kwargs):
+        raise urllib.error.URLError(ConnectionRefusedError("connection refused for token=private"))
+
+    from app.core import webhooks as webhooks_core
+
+    monkeypatch.setattr(webhooks_core, "_post_webhook_json", raise_connection_error)
+
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["status"] == "failed"
+    assert body["delivery"]["status_code"] is None
+    assert body["delivery"]["error"] == "ConnectionRefusedError"
+    assert "token=private" not in str(body)
+    assert "secret-value" not in str(body)
+
+
+def test_webhook_timeout_error_records_safe_operator_error(monkeypatch):
+    token, family_id, _ = _seed_admin()
+    endpoint_id = _seed_webhook_endpoint(family_id)
+
+    def raise_timeout(*_args, **_kwargs):
+        raise TimeoutError("timeout for token=private")
+
+    from app.core import webhooks as webhooks_core
+
+    monkeypatch.setattr(webhooks_core, "_post_webhook_json", raise_timeout)
+
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["status"] == "failed"
+    assert body["delivery"]["status_code"] is None
+    assert body["delivery"]["error"] == "TimeoutError"
+    assert "token=private" not in str(body)
     assert "secret-value" not in str(body)
 
 
@@ -214,13 +323,13 @@ def test_subscribed_shopping_event_creates_delivery(monkeypatch):
     class FakeResponse:
         status_code = 200
 
-    def fake_post(url, *, json, headers, timeout, follow_redirects=False):
-        sent_payloads.append(json)
-        return FakeResponse()
+    def fake_post(url, *, payload, headers):
+        sent_payloads.append(payload)
+        return FakeResponse.status_code
 
     from app.core import webhooks as webhooks_core
 
-    monkeypatch.setattr(webhooks_core.httpx, "post", fake_post)
+    monkeypatch.setattr(webhooks_core, "_post_webhook_json", fake_post)
 
     resp = client.post(
         f"/shopping/lists/{list_id}/items",
@@ -261,13 +370,13 @@ def test_task_event_creates_delivery(monkeypatch):
     class FakeResponse:
         status_code = 202
 
-    def fake_post(url, *, json, headers, timeout, follow_redirects=False):
-        sent_payloads.append(json)
-        return FakeResponse()
+    def fake_post(url, *, payload, headers):
+        sent_payloads.append(payload)
+        return FakeResponse.status_code
 
     from app.core import webhooks as webhooks_core
 
-    monkeypatch.setattr(webhooks_core.httpx, "post", fake_post)
+    monkeypatch.setattr(webhooks_core, "_post_webhook_json", fake_post)
 
     resp = client.post(
         "/tasks",
@@ -321,7 +430,7 @@ def test_inactive_or_unsubscribed_webhooks_are_skipped(monkeypatch):
     def fake_post(*args, **kwargs):
         raise AssertionError("No webhook should be sent")
 
-    monkeypatch.setattr(webhooks_core.httpx, "post", fake_post)
+    monkeypatch.setattr(webhooks_core, "_post_webhook_json", fake_post)
 
     resp = client.post(
         f"/shopping/lists/{list_id}/items",
