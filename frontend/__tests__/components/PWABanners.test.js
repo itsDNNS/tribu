@@ -1,12 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { PWABanners } from '../../components/PWABanners';
-
-let pwaState = {};
-
-jest.mock('../../hooks/usePWA', () => ({
-  usePWA: () => pwaState,
-}));
 
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => ({
@@ -22,44 +16,95 @@ jest.mock('../../contexts/AppContext', () => ({
   }),
 }));
 
-function renderWithPwa(overrides) {
-  pwaState = {
-    isOffline: false,
-    showBackOnline: false,
-    updateAvailable: false,
-    installPrompt: null,
-    isInstalled: false,
-    triggerInstall: jest.fn(),
-    dismissInstall: jest.fn(),
-    applyUpdate: jest.fn(),
-    ...overrides,
-  };
-  render(<PWABanners />);
-  return pwaState;
+function setOnline(value) {
+  Object.defineProperty(window.navigator, 'onLine', {
+    configurable: true,
+    get: () => value,
+  });
 }
 
+function mockServiceWorker({ waitingWorker = null } = {}) {
+  const serviceWorker = new EventTarget();
+  serviceWorker.controller = waitingWorker ? {} : null;
+  serviceWorker.register = jest.fn().mockResolvedValue({
+    waiting: waitingWorker,
+    installing: null,
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  });
+  Object.defineProperty(window.navigator, 'serviceWorker', {
+    configurable: true,
+    value: serviceWorker,
+  });
+  return serviceWorker;
+}
+
+function mockNoServiceWorker() {
+  Object.defineProperty(window.navigator, 'serviceWorker', {
+    configurable: true,
+    value: undefined,
+  });
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  window.localStorage.clear();
+  window.matchMedia = jest.fn().mockReturnValue({ matches: false });
+  setOnline(true);
+  mockNoServiceWorker();
+});
+
 describe('PWABanners', () => {
-  it('announces offline and back-online state without install/update actions', () => {
-    renderWithPwa({ isOffline: true });
-    expect(screen.getByRole('alert')).toHaveTextContent('You are offline');
+  it('announces offline and back-online state without install/update actions', async () => {
+    render(<PWABanners />);
+
+    fireEvent(window, new Event('offline'));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('You are offline'));
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
 
-    renderWithPwa({ showBackOnline: true });
-    expect(screen.getByRole('status')).toHaveTextContent('Back online');
+    fireEvent(window, new Event('online'));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Back online'));
   });
 
   it('lets users apply a waiting service-worker update', async () => {
-    const state = renderWithPwa({ updateAvailable: true });
-    fireEvent.click(screen.getByRole('button', { name: 'Update now' }));
-    expect(state.applyUpdate).toHaveBeenCalledTimes(1);
+    const waitingWorker = { postMessage: jest.fn() };
+    mockServiceWorker({ waitingWorker });
+
+    render(<PWABanners />);
+
+    const updateButton = await screen.findByRole('button', { name: 'Update now' });
+    fireEvent.click(updateButton);
+
+    expect(waitingWorker.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
   });
 
   it('shows the captured install prompt only when the app is not installed', async () => {
-    const state = renderWithPwa({ installPrompt: { prompt: jest.fn() } });
-    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
-    expect(state.triggerInstall).toHaveBeenCalledTimes(1);
+    const prompt = jest.fn();
+    const beforeInstallPrompt = new Event('beforeinstallprompt', { cancelable: true });
+    beforeInstallPrompt.prompt = prompt;
+    beforeInstallPrompt.userChoice = Promise.resolve({ outcome: 'accepted' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss install prompt' }));
-    expect(state.dismissInstall).toHaveBeenCalledTimes(1);
+    render(<PWABanners />);
+    fireEvent(window, beforeInstallPrompt);
+
+    const installButton = await screen.findByRole('button', { name: 'Install' });
+    fireEvent.click(installButton);
+
+    await waitFor(() => expect(prompt).toHaveBeenCalledTimes(1));
+  });
+
+  it('dismisses captured install prompts through the banner control', async () => {
+    const beforeInstallPrompt = new Event('beforeinstallprompt', { cancelable: true });
+    beforeInstallPrompt.prompt = jest.fn();
+    beforeInstallPrompt.userChoice = Promise.resolve({ outcome: 'dismissed' });
+
+    render(<PWABanners />);
+    fireEvent(window, beforeInstallPrompt);
+
+    const dismissButton = await screen.findByRole('button', { name: 'Dismiss install prompt' });
+    fireEvent.click(dismissButton);
+
+    expect(window.localStorage.getItem('tribu_install_dismissed')).toBe('1');
+    await waitFor(() => expect(screen.queryByText('Install Tribu on this device')).not.toBeInTheDocument());
   });
 });
