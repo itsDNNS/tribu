@@ -22,10 +22,14 @@ def test_stable_release_tag_detection_covers_date_patch_tags():
     assert not STABLE_RELEASE_TAG_RE.fullmatch('v1.2.3-rc1')
 
 
-def test_backend_image_persists_build_info_inside_image():
+def test_backend_image_receives_app_version_build_arg_only():
     dockerfile = Path('backend/Dockerfile').read_text()
+    workflow = Path('.github/workflows/docker.yml').read_text()
 
-    assert 'RUN python -m app.core.versioning --write-build-info' in dockerfile
+    assert 'ARG APP_VERSION=dev' in dockerfile
+    assert 'ENV APP_VERSION=${APP_VERSION}' in dockerfile
+    assert 'RUN python -m app.core.versioning --write-build-info' not in dockerfile
+    assert 'APP_VERSION=${{ steps.app_version.outputs.value }}' in workflow
 
 
 def test_frontend_image_receives_same_build_version_as_backend():

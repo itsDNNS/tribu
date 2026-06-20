@@ -1,7 +1,6 @@
 # Python
 __pycache__/
 *.pyc
-backend/app/core/build_info.json
 .venv/
 .pytest_cache/
 .ruff_cache/
