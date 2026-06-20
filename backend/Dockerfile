@@ -1,13 +1,7 @@
 FROM python:3.13-slim
 
 ARG APP_VERSION=dev
-ARG APP_BUILD_NUMBER=""
-ARG APP_GIT_SHA=""
-ARG APP_BUILD_DATE=""
 ENV APP_VERSION=${APP_VERSION}
-ENV APP_BUILD_NUMBER=${APP_BUILD_NUMBER}
-ENV APP_GIT_SHA=${APP_GIT_SHA}
-ENV APP_BUILD_DATE=${APP_BUILD_DATE}
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_NO_COMPILE=1
 
@@ -23,7 +17,6 @@ RUN pip install --no-cache-dir --no-compile -r requirements.txt \
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY app ./app
-RUN python -m app.core.versioning --write-build-info
 
 RUN mkdir -p /backups \
     && groupadd -r tribu && useradd -r -g tribu tribu \
