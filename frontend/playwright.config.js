@@ -1,5 +1,9 @@
 const { defineConfig, devices } = require('@playwright/test');
 
+const baseURL = process.env.BASE_URL || 'http://localhost:3000';
+const webServerCommand = process.env.E2E_WEB_SERVER_COMMAND;
+const webServerURL = process.env.E2E_WEB_SERVER_URL || baseURL;
+
 module.exports = defineConfig({
   testDir: './e2e/tests',
   fullyParallel: false,
@@ -9,8 +13,21 @@ module.exports = defineConfig({
 
   globalSetup: './e2e/global-setup.js',
 
+  ...(webServerCommand
+    ? {
+        webServer: {
+          command: webServerCommand,
+          url: webServerURL,
+          timeout: 300 * 1000,
+          reuseExistingServer: !process.env.CI,
+          stdout: 'pipe',
+          stderr: 'pipe',
+        },
+      }
+    : {}),
+
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL,
     locale: 'en-US',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
