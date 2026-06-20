@@ -10,7 +10,6 @@ jest.mock('../../contexts/AppContext', () => ({
     familyId: '1',
     families: [{ family_id: 1, family_name: 'TestFamily' }],
     members: [{ user_id: 10, display_name: 'Max' }],
-    tokens: { surface: '#fff', border: '#eee', muted: '#999', primary: '#4f46e5', text: '#111', sidebar: '#fff', sidebarActive: '#eee', primaryText: '#fff' },
     messages: {
       'module.tasks.name': 'Aufgaben',
       'module.tasks.all': 'Alle',
@@ -52,13 +51,6 @@ jest.mock('../../contexts/AppContext', () => ({
       'module.tasks.new_task': 'Neue Aufgabe',
       'module.tasks.more_options': 'Mehr Optionen',
       'module.tasks.less_options': 'Weniger Optionen',
-    },
-    ui: {
-      card: { background: '#fff', borderColor: '#eee', color: '#111', borderRadius: 14, padding: 16, border: '1px solid #eee' },
-      smallCard: { borderColor: '#eee', borderRadius: 10, padding: 10, border: '1px solid #eee', display: 'grid', gap: 4 },
-      input: { border: '1px solid #d1d5db', borderRadius: 10, padding: '10px 12px', fontSize: 16 },
-      primaryBtn: { border: 'none', borderRadius: 10, padding: '10px 14px', background: '#4f46e5', color: '#fff', cursor: 'pointer' },
-      secondaryBtn: { border: '1px solid #d1d5db', borderRadius: 10, padding: '9px 12px', background: '#fff', cursor: 'pointer' },
     },
     isMobile: false,
     me: { user_id: 10, display_name: 'Max' },

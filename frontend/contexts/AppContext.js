@@ -4,8 +4,7 @@ import { buildDemoData } from '../lib/demo-data';
 import { buildMessages, listLanguages } from '../lib/i18n';
 import { resolveInitialView } from '../lib/navigationState';
 import { notificationLinkView } from '../lib/notificationLinks';
-import { buildUi } from '../lib/styles';
-import { getTheme, listThemes } from '../lib/themes';
+import { listThemes } from '../lib/themes';
 
 export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
 
@@ -54,11 +53,8 @@ export function AppProvider({ children }) {
   const [timeFormat, setTimeFormat] = useState('24h');
 
   const messages = useMemo(() => buildMessages(lang), [lang]);
-  const themeConfig = useMemo(() => getTheme(theme), [theme]);
-  const tokens = themeConfig.tokens;
   const availableThemes = useMemo(() => listThemes(), []);
   const availableLanguages = useMemo(() => listLanguages(), []);
-  const ui = useMemo(() => buildUi(tokens), [tokens]);
 
   const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
   const isChild = !isAdmin && !myFamilyIsAdult;
@@ -497,10 +493,8 @@ export function AppProvider({ children }) {
     theme, setTheme,
     lang, setLang,
     messages,
-    tokens,
     availableThemes,
     availableLanguages,
-    ui,
     activeView, setActiveView, restoreView,
     isMobile, setIsMobile,
     navOrder, setNavOrder,

@@ -6,7 +6,7 @@ import * as api from '../../lib/api';
 jest.mock('../../lib/api');
 
 function Probe() {
-  const { loading, loggedIn, familyId, isMobile, isAdmin, isChild, switchFamily } = useApp();
+  const { loading, loggedIn, familyId, isMobile, isAdmin, isChild, theme, setTheme, switchFamily } = useApp();
   return (
     <div>
       <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
@@ -14,6 +14,8 @@ function Probe() {
       <span data-testid="family-id">{familyId}</span>
       <span data-testid="is-mobile">{isMobile ? 'mobile' : 'desktop'}</span>
       <span data-testid="family-role">{isAdmin ? 'admin' : isChild ? 'child' : 'member'}</span>
+      <span data-testid="theme">{theme}</span>
+      <button type="button" onClick={() => setTheme('dark')}>Switch dark theme</button>
       <button type="button" onClick={() => switchFamily('8')}>Switch family</button>
     </div>
   );
@@ -70,6 +72,23 @@ describe('AppProvider bootstrap', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('is-mobile')).toHaveTextContent('mobile'));
+  });
+
+  test('applies dark theme through data-theme without exposing a generated ui object', async () => {
+    render(
+      <AppProvider>
+        <Probe />
+      </AppProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('theme')).toHaveTextContent('light'));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch dark theme' }));
+
+    await waitFor(() => expect(screen.getByTestId('theme')).toHaveTextContent('dark'));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(window.localStorage.getItem('tribu_theme')).toBe('dark');
   });
 
   test('does not keep the app shell blocked by slow secondary data loaders', async () => {

@@ -85,13 +85,16 @@ test.describe('Settings', () => {
   test('switch theme and verify data-theme attribute', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    // On mobile, click Account tab first
-    const accountItem = page.locator('.settings-mobile-item', { hasText: 'Account' });
-    if (await accountItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+    // On mobile, Settings first renders a list of sections. Wait for either
+    // the section list or the desktop account panel before checking themes.
+    const accountItem = page.locator('.settings-mobile-item').filter({ hasText: /^Account$/ });
+    const profileName = page.locator('.profile-name');
+    await expect(accountItem.or(profileName).first()).toBeVisible({ timeout: 10000 });
+    if (await accountItem.isVisible().catch(() => false)) {
       await accountItem.click();
     }
 
-    await page.locator('.profile-name').waitFor({ timeout: 10000 });
+    await expect(profileName).toBeVisible({ timeout: 10000 });
 
     const html = page.locator('html');
     const initialTheme = await html.getAttribute('data-theme');
