@@ -1,10 +1,10 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import RewardsDashboardWidget from '../../components/RewardsDashboardWidget';
+import { buildMockAppState, renderWithMockApp } from '../test-utils';
 
-let mockAppState = {};
 jest.mock('../../contexts/AppContext', () => ({
-  useApp: () => mockAppState,
+  useApp: () => require('../test-utils').getMockAppState(),
 }));
 
 let mockRewards = {};
@@ -20,13 +20,12 @@ const messages = {
 };
 
 function baseApp(overrides = {}) {
-  return {
+  return buildMockAppState({
     messages,
     isChild: false,
     members: [{ user_id: 2, display_name: 'Mia', is_adult: false }],
-    setActiveView: jest.fn(),
     ...overrides,
-  };
+  });
 }
 
 function baseRewards(overrides = {}) {
@@ -41,14 +40,17 @@ function baseRewards(overrides = {}) {
   };
 }
 
+function renderWidget(overrides = {}) {
+  return renderWithMockApp(<RewardsDashboardWidget />, baseApp(overrides));
+}
+
 describe('RewardsDashboardWidget', () => {
   beforeEach(() => {
-    mockAppState = baseApp();
     mockRewards = baseRewards();
   });
 
   test('renders translated view-all action instead of the raw key', () => {
-    render(<RewardsDashboardWidget />);
+    renderWidget();
 
     expect(screen.getByRole('button', { name: 'Alle anzeigen' })).toBeInTheDocument();
     expect(screen.queryByText('view_all')).not.toBeInTheDocument();
@@ -56,9 +58,8 @@ describe('RewardsDashboardWidget', () => {
 
   test('view-all action opens the rewards view', () => {
     const setActiveView = jest.fn();
-    mockAppState = baseApp({ setActiveView });
+    renderWidget({ setActiveView });
 
-    render(<RewardsDashboardWidget />);
     fireEvent.click(screen.getByRole('button', { name: 'Alle anzeigen' }));
 
     expect(setActiveView).toHaveBeenCalledWith('rewards');
@@ -67,7 +68,7 @@ describe('RewardsDashboardWidget', () => {
   test('keeps the dashboard card visible before a reward currency is configured', () => {
     mockRewards = baseRewards({ currency: null, balances: [] });
 
-    render(<RewardsDashboardWidget />);
+    renderWidget();
 
     expect(screen.getByRole('heading', { name: 'Belohnungen' })).toBeInTheDocument();
     expect(screen.getByText('Noch keine Belohnungs-Währung eingerichtet.')).toBeInTheDocument();

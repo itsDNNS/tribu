@@ -1,26 +1,26 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import NotificationsTab from '../../components/settings/NotificationsTab';
-import { buildMessages } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import usePushSubscription from '../../hooks/usePushSubscription';
+import { buildTestMessages, createMockToast, resetMockAppState } from '../test-utils';
 
-let mockAppState = {};
-const toastSuccess = jest.fn();
+let mockToast;
 
 jest.mock('../../lib/api');
 jest.mock('../../hooks/usePushSubscription');
 jest.mock('../../contexts/AppContext', () => ({
-  useApp: () => mockAppState,
+  useApp: () => require('../test-utils').getMockAppState(),
 }));
 jest.mock('../../contexts/ToastContext', () => ({
-  useToast: () => ({ success: toastSuccess }),
+  useToast: () => mockToast,
 }));
 
 describe('NotificationsTab push diagnostics', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAppState = { messages: buildMessages('en'), loggedIn: true, demoMode: false };
+    mockToast = createMockToast();
+    resetMockAppState({ messages: buildTestMessages(), loggedIn: true, demoMode: false });
     api.apiGetNotificationPreferences.mockResolvedValue({
       ok: true,
       data: {
