@@ -1,14 +1,13 @@
-import { createContext, useCallback, useContext, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
+import { buildMessages, listLanguages } from '../lib/i18n';
 import { resolveInitialView } from '../lib/navigationState';
 import { notificationLinkView } from '../lib/notificationLinks';
-import { AuthProvider, useAuth } from './AuthContext';
-import { FamilyProvider, useFamily } from './FamilyContext';
-import { DataProvider, useData } from './DataContext';
-import { UIProvider, useUI, DEFAULT_NAV_ORDER } from './UIContext';
+import { buildUi } from '../lib/styles';
+import { getTheme, listThemes } from '../lib/themes';
 
-export { DEFAULT_NAV_ORDER };
+export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
 
 const AppContext = createContext(null);
 
@@ -16,16 +15,140 @@ export function useApp() {
   return useContext(AppContext);
 }
 
-function AppOrchestrator({ children }) {
-  const auth = useAuth();
-  const family = useFamily();
-  const data = useData();
-  const ui = useUI();
+export function AppProvider({ children }) {
+  // Auth state
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [me, setMe] = useState(null);
+  const [profileImage, setProfileImage] = useState('');
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
-  const { loggedIn, demoMode, setMe, setLoggedIn, setDemoMode, setProfileImage, setNeedsSetup } = auth;
-  const { familyId, setFamilyId, families, setFamilies, setMyFamilyRole, setMyFamilyIsAdult, loadMembers, setMembers } = family;
-  const { loadDashboard, loadEvents, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, loadNotifications, resetData, lastEventIdRef, setNotifications, setUnreadCount, setEvents, setTasks, setShoppingLists, setMealPlans, setActivity, setQuickCaptureInbox, setContacts, setBirthdays, setSummary } = data;
-  const { setLoading, setTheme, setLang, setActiveView: setActiveViewUI, restoreView, setIsMobile, setNavOrder, setTimeFormat, lang } = ui;
+  // Family state
+  const [familyId, setFamilyId] = useState('1');
+  const [families, setFamilies] = useState([]);
+  const [myFamilyRole, setMyFamilyRole] = useState('member');
+  const [myFamilyIsAdult, setMyFamilyIsAdult] = useState(true);
+  const [members, setMembers] = useState([]);
+
+  // Data state
+  const [summary, setSummary] = useState({ next_events: [], upcoming_birthdays: [] });
+  const [events, setEvents] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [birthdays, setBirthdays] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [shoppingLists, setShoppingLists] = useState([]);
+  const [mealPlans, setMealPlans] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [quickCaptureInbox, setQuickCaptureInbox] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const lastEventIdRef = useRef(0);
+
+  // UI state
+  const [theme, setTheme] = useState('light');
+  const [lang, setLang] = useState('en');
+  const [activeView, setActiveViewRaw] = useState('dashboard');
+  const [isMobile, setIsMobile] = useState(false);
+  const [navOrder, setNavOrder] = useState(DEFAULT_NAV_ORDER);
+  const [loading, setLoading] = useState(true);
+  const [timeFormat, setTimeFormat] = useState('24h');
+
+  const messages = useMemo(() => buildMessages(lang), [lang]);
+  const themeConfig = useMemo(() => getTheme(theme), [theme]);
+  const tokens = themeConfig.tokens;
+  const availableThemes = useMemo(() => listThemes(), []);
+  const availableLanguages = useMemo(() => listLanguages(), []);
+  const ui = useMemo(() => buildUi(tokens), [tokens]);
+
+  const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
+  const isChild = !isAdmin && !myFamilyIsAdult;
+
+  const setActiveView = useCallback((view) => {
+    sessionStorage.setItem('tribu_view', view);
+    setActiveViewRaw(view);
+    if (typeof window !== 'undefined') {
+      history.pushState(null, '', `#${view}`);
+    }
+  }, []);
+
+  // Restore view without creating a history entry (for init/popstate)
+  const restoreView = useCallback((view) => {
+    sessionStorage.setItem('tribu_view', view);
+    setActiveViewRaw(view);
+    if (typeof window !== 'undefined') {
+      history.replaceState(null, '', `#${view}`);
+    }
+  }, []);
+
+  const loadDashboard = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetDashboard(fid);
+    if (ok) setSummary(data);
+  }, []);
+
+  const loadEvents = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetEvents(fid);
+    if (ok) setEvents(data);
+  }, []);
+
+  const loadMembers = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetMembers(fid);
+    if (ok) setMembers(data);
+  }, []);
+
+  const loadContacts = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetContacts(fid);
+    if (ok) setContacts(data);
+  }, []);
+
+  const loadBirthdays = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetBirthdays(fid);
+    if (ok) setBirthdays(data);
+  }, []);
+
+  const loadTasks = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetTasks(fid);
+    if (ok) setTasks(data);
+  }, []);
+
+  const loadShoppingLists = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetShoppingLists(fid);
+    if (ok) setShoppingLists(data);
+  }, []);
+
+  const loadActivity = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetActivity(fid, 10, 0);
+    if (ok) setActivity(Array.isArray(data?.items) ? data.items : []);
+  }, []);
+
+  const loadQuickCaptureInbox = useCallback(async (fid) => {
+    const { ok, data } = await api.apiGetQuickCaptureInbox(fid, 10, 0);
+    if (ok) setQuickCaptureInbox(Array.isArray(data?.items) ? data.items : []);
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    const { ok, data } = await api.apiGetNotifications(50, 0);
+    if (ok) {
+      setNotifications(data);
+      setUnreadCount(data.filter((n) => !n.read).length);
+      if (data.length) {
+        lastEventIdRef.current = Math.max(lastEventIdRef.current, data[0].id);
+      }
+    }
+  }, []);
+
+  const resetData = useCallback(() => {
+    setEvents([]);
+    setSummary({ next_events: [], upcoming_birthdays: [] });
+    setContacts([]);
+    setBirthdays([]);
+    setTasks([]);
+    setShoppingLists([]);
+    setMealPlans([]);
+    setActivity([]);
+    setQuickCaptureInbox([]);
+    setNotifications([]);
+    setUnreadCount(0);
+  }, []);
 
   // Wrap data loaders to inject familyId default and skip in demo mode
   const loadDashboardWrapped = useCallback(async (fid = familyId) => {
@@ -86,7 +209,7 @@ function AppOrchestrator({ children }) {
       const missing = DEFAULT_NAV_ORDER.filter((k) => !order.includes(k));
       setNavOrder(missing.length ? [...order, ...missing] : order);
     }
-  }, [demoMode, setNavOrder]);
+  }, [demoMode]);
 
   const switchFamily = useCallback(async (fid) => {
     setLoading(true);
@@ -98,7 +221,7 @@ function AppOrchestrator({ children }) {
     }
     await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadActivity(fid), loadQuickCaptureInbox(fid)]);
     setLoading(false);
-  }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, setLoading, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult]);
+  }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox]);
 
   const loadFamilyDataInBackground = useCallback((fid) => {
     void Promise.allSettled([
@@ -116,7 +239,7 @@ function AppOrchestrator({ children }) {
         if (ok && tfData?.time_format) setTimeFormat(tfData.time_format);
       }),
     ]);
-  }, [loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, loadNavOrderWrapped, setTimeFormat]);
+  }, [loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox, loadNavOrderWrapped]);
 
   const enterDemo = useCallback(() => {
     const demo = buildDemoData(lang);
@@ -139,10 +262,13 @@ function AppOrchestrator({ children }) {
     setNeedsSetup(false);
     setLoggedIn(true);
     setLoading(false);
-  }, [lang, setDemoMode, setMe, setFamilies, setFamilyId, setMyFamilyRole, setMyFamilyIsAdult, setMembers, setEvents, setTasks, setShoppingLists, setMealPlans, setActivity, setQuickCaptureInbox, setContacts, setBirthdays, setSummary, setNeedsSetup, setLoggedIn, setLoading]);
+  }, [lang]);
 
   const logout = useCallback(async () => {
-    await auth.logout();
+    if (!demoMode) await api.apiLogout();
+    setDemoMode(false);
+    setLoggedIn(false);
+    setMe(null);
     resetData();
     setFamilies([]);
     setFamilyId('1');
@@ -150,7 +276,7 @@ function AppOrchestrator({ children }) {
     setMyFamilyRole('member');
     setMyFamilyIsAdult(true);
     setNavOrder(DEFAULT_NAV_ORDER);
-  }, [auth.logout, resetData, setFamilies, setFamilyId, setMembers, setMyFamilyRole, setMyFamilyIsAdult, setNavOrder]);
+  }, [demoMode, resetData]);
 
   // Init: localStorage, resize, auto-login
   useEffect(() => {
@@ -208,15 +334,15 @@ function AppOrchestrator({ children }) {
 
   // Persist theme
   useEffect(() => {
-    window.localStorage.setItem('tribu_theme', ui.theme);
-    document.documentElement.setAttribute('data-theme', ui.theme);
-  }, [ui.theme]);
+    window.localStorage.setItem('tribu_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Persist lang
   useEffect(() => {
-    window.localStorage.setItem('tribu_lang', ui.lang);
-    document.documentElement.lang = ui.lang;
-  }, [ui.lang]);
+    window.localStorage.setItem('tribu_lang', lang);
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   // Bootstrap after login
   useEffect(() => {
@@ -257,12 +383,12 @@ function AppOrchestrator({ children }) {
     if (!('serviceWorker' in navigator)) return;
     const handler = (event) => {
       if (event.data?.type === 'NAVIGATE' && event.data.url) {
-        setActiveViewUI(notificationLinkView(event.data.url));
+        setActiveView(notificationLinkView(event.data.url));
       }
     };
     navigator.serviceWorker.addEventListener('message', handler);
     return () => navigator.serviceWorker.removeEventListener('message', handler);
-  }, [setActiveViewUI]);
+  }, [setActiveView]);
 
   // SSE real-time notifications with polling fallback
   useEffect(() => {
@@ -326,22 +452,39 @@ function AppOrchestrator({ children }) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [loggedIn, demoMode, loadNotificationsWrapped, lastEventIdRef, setNotifications, setUnreadCount]);
+  }, [loggedIn, demoMode, loadNotificationsWrapped]);
 
   const value = {
     // Auth
-    ...auth,
+    loggedIn, setLoggedIn,
+    me, setMe,
+    profileImage, setProfileImage,
+    needsSetup, setNeedsSetup,
+    demoMode, setDemoMode,
     logout,
     // Family
-    ...family,
+    familyId, setFamilyId,
+    families, setFamilies,
+    myFamilyRole, setMyFamilyRole,
+    myFamilyIsAdult, setMyFamilyIsAdult,
+    members, setMembers,
+    loadMembers: loadMembersWrapped,
+    isAdmin, isChild,
     // Data
-    ...data,
-    // UI
-    ...ui,
-    // Orchestrated loaders (with familyId default + demo guard)
+    summary, setSummary,
+    events, setEvents,
+    contacts, setContacts,
+    birthdays, setBirthdays,
+    tasks, setTasks,
+    shoppingLists, setShoppingLists,
+    mealPlans, setMealPlans,
+    activity, setActivity,
+    quickCaptureInbox, setQuickCaptureInbox,
+    notifications, setNotifications,
+    unreadCount, setUnreadCount,
+    lastEventIdRef,
     loadDashboard: loadDashboardWrapped,
     loadEvents: loadEventsWrapped,
-    loadMembers: loadMembersWrapped,
     loadContacts: loadContactsWrapped,
     loadBirthdays: loadBirthdaysWrapped,
     loadTasks: loadTasksWrapped,
@@ -349,6 +492,20 @@ function AppOrchestrator({ children }) {
     loadActivity: loadActivityWrapped,
     loadQuickCaptureInbox: loadQuickCaptureInboxWrapped,
     loadNotifications: loadNotificationsWrapped,
+    resetData,
+    // UI
+    theme, setTheme,
+    lang, setLang,
+    messages,
+    tokens,
+    availableThemes,
+    availableLanguages,
+    ui,
+    activeView, setActiveView, restoreView,
+    isMobile, setIsMobile,
+    navOrder, setNavOrder,
+    loading, setLoading,
+    timeFormat, setTimeFormat,
     loadNavOrder: loadNavOrderWrapped,
     // Cross-domain
     switchFamily,
@@ -356,18 +513,4 @@ function AppOrchestrator({ children }) {
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
-
-export function AppProvider({ children }) {
-  return (
-    <UIProvider>
-      <AuthProvider>
-        <FamilyProvider>
-          <DataProvider>
-            <AppOrchestrator>{children}</AppOrchestrator>
-          </DataProvider>
-        </FamilyProvider>
-      </AuthProvider>
-    </UIProvider>
-  );
 }

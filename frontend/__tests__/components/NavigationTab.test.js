@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import NavigationTab from '../../components/settings/NavigationTab';
-import { DEFAULT_NAV_ORDER } from '../../contexts/UIContext';
+import { DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 
 let mockAppState = {};
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockAppState,
-  DEFAULT_NAV_ORDER: jest.requireActual('../../contexts/UIContext').DEFAULT_NAV_ORDER,
+  DEFAULT_NAV_ORDER: jest.requireActual('../../contexts/AppContext').DEFAULT_NAV_ORDER,
 }));
 
 jest.mock('../../lib/api', () => ({
