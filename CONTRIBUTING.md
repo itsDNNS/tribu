@@ -124,6 +124,17 @@ npm run dev
 
 The frontend expects the app at `http://localhost:3000` and the backend at `http://localhost:8000`.
 
+### Translations
+
+Tribu ships one checked-in locale bundle per supported UI language under `frontend/i18n/<language>.json`. Edit those bundle files directly when changing user-facing copy.
+
+When adding or changing translation keys:
+
+- Add the key to `frontend/i18n/en.json` first.
+- Keep the same key present in every other `frontend/i18n/*.json` file.
+- Preserve placeholders and technical literals exactly, for example `{count}`, `{date}`, `openid`, and permission scope names.
+- Run the i18n unit tests before opening a PR.
+
 ## Testing before you open a PR
 
 Run the narrowest relevant checks for your change, then broaden if needed.

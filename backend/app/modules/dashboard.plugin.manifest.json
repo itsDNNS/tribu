@@ -7,8 +7,8 @@
   "entrypoints": {
     "backend_router": "backend/app/modules/dashboard_router.py",
     "i18n": [
-      "frontend/i18n/modules/dashboard/de.json",
-      "frontend/i18n/modules/dashboard/en.json"
+      "frontend/i18n/de.json",
+      "frontend/i18n/en.json"
     ]
   },
   "menu": { "label_key": "module.dashboard.name", "icon": "LayoutDashboard", "order": 10 }
