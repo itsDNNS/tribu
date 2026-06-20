@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const LOCALE_DIR = path.join(process.cwd(), 'i18n', 'core');
+const LOCALE_DIR = path.join(process.cwd(), 'i18n');
 const REQUIRED_KEYS = {
   notification_body_event_starts_in: ['{count}'],
   notification_body_task_overdue: [],
@@ -9,7 +9,7 @@ const REQUIRED_KEYS = {
 };
 
 describe('notification body i18n', () => {
-  it('keeps localized scheduler notification body keys and placeholders in every core locale', () => {
+  it('keeps localized scheduler notification body keys and placeholders in every locale bundle', () => {
     const localeFiles = fs.readdirSync(LOCALE_DIR).filter((file) => file.endsWith('.json'));
     expect(localeFiles.length).toBeGreaterThan(0);
 

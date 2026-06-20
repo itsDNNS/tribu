@@ -7,8 +7,8 @@
   "entrypoints": {
     "backend_router": "backend/app/modules/calendar_router.py",
     "i18n": [
-      "frontend/i18n/modules/calendar/de.json",
-      "frontend/i18n/modules/calendar/en.json"
+      "frontend/i18n/de.json",
+      "frontend/i18n/en.json"
     ]
   },
   "menu": { "label_key": "module.calendar.name", "icon": "CalendarDays", "order": 20 }
