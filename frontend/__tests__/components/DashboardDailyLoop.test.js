@@ -1,31 +1,20 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardView from '../../components/DashboardView';
 import { apiListMealPlans } from '../../lib/api';
-
-let mockAppState = {};
+import { buildMockAppState, buildTestMessages, renderWithMockApp } from '../test-utils';
 
 jest.mock('../../contexts/AppContext', () => ({
-  useApp: () => mockAppState,
+  useApp: () => require('../test-utils').getMockAppState(),
 }));
 
-jest.mock('../../lib/i18n', () => ({
-  t: (messages, key) => messages?.[key] || key,
-}));
-
-jest.mock('../../lib/api', () => ({
-  apiGetDashboardLayout: jest.fn(() => new Promise(() => {})),
-  apiGetSetupChecklist: jest.fn().mockResolvedValue({ ok: true, data: null }),
-  apiListMealPlans: jest.fn(() => Promise.resolve({ ok: true, data: [] })),
-  apiResetDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'] } })),
-  apiUpdateDashboardLayout: jest.fn(() => Promise.resolve({ ok: true, data: { modules: ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'] } })),
-}));
+jest.mock('../../lib/api', () => require('../test-utils').createMockApi());
 
 jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
   return <div data-testid="rewards-widget" />;
 });
 
-const messages = {
+const messages = buildTestMessages({
   'module.dashboard.greeting_morning': 'Good morning',
   'module.dashboard.greeting_afternoon': 'Good afternoon',
   'module.dashboard.greeting_evening': 'Good evening',
@@ -34,7 +23,6 @@ const messages = {
   'module.dashboard.all': 'All',
   'module.dashboard.empty_events': 'No upcoming events',
   'module.dashboard.empty_tasks': 'All done!',
-  'module.dashboard.empty_tasks_action': 'Create task',
   'module.tasks.no_tasks': 'No tasks yet',
   'module.dashboard.empty_birthdays': 'No birthdays',
   'module.dashboard.days': 'days',
@@ -57,7 +45,7 @@ const messages = {
   'module.dashboard.daily_loop_open_routines': 'Open routines',
   next_events: 'Next events',
   upcoming_birthdays_4w: 'Birthdays',
-};
+});
 
 function todayIso() {
   const d = new Date();
@@ -67,7 +55,7 @@ function todayIso() {
 }
 
 function baseApp(overrides = {}) {
-  return {
+  return buildMockAppState({
     summary: { next_events: [], upcoming_birthdays: [] },
     me: { display_name: 'Dennis' },
     members: [{ user_id: 1, display_name: 'Dennis' }],
@@ -77,28 +65,23 @@ function baseApp(overrides = {}) {
     ],
     events: [],
     shoppingLists: [{ id: 1, item_count: 4, checked_count: 1 }],
-    quickCaptureInbox: [],
-    familyId: 42,
-    setActiveView: jest.fn(),
     messages,
-    lang: 'en',
-    timeFormat: '24h',
-    isChild: false,
-    isAdmin: false,
-    demoMode: false,
     ...overrides,
-  };
+  });
+}
+
+function renderDashboard(overrides = {}) {
+  return renderWithMockApp(<DashboardView />, baseApp(overrides));
 }
 
 describe('DashboardView daily loop', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAppState = baseApp();
     apiListMealPlans.mockResolvedValue({ ok: true, data: [{ id: 1 }, { id: 2 }] });
   });
 
   it('renders the Today loop directly after quick capture with visual action tiles', async () => {
-    const { container } = render(<DashboardView />);
+    const { container } = renderDashboard();
 
     const modules = Array.from(container.querySelectorAll('.bento-grid > [data-dashboard-module]')).map((module) => module.getAttribute('data-dashboard-module'));
     expect(modules.slice(0, 3)).toEqual(['quick_capture', 'daily_loop', 'events']);
@@ -114,9 +97,8 @@ describe('DashboardView daily loop', () => {
 
   it('routes daily loop tiles to their owning views', () => {
     const setActiveView = jest.fn();
-    mockAppState = baseApp({ setActiveView, familyId: null });
+    renderDashboard({ setActiveView, familyId: null });
 
-    render(<DashboardView />);
     const loop = screen.getByRole('region', { name: 'Today loop' });
 
     fireEvent.click(within(loop).getByRole('button', { name: /Meals planned/i }));
@@ -130,14 +112,12 @@ describe('DashboardView daily loop', () => {
 
   it('keeps daily loop compact when there are no active inputs', async () => {
     apiListMealPlans.mockResolvedValue({ ok: true, data: [] });
-    mockAppState = baseApp({
+    renderDashboard({
       tasks: [
         { id: 1, title: 'Future routine', status: 'open', recurrence: 'weekly', due_date: '2999-01-01T08:00:00' },
       ],
       shoppingLists: [],
     });
-
-    render(<DashboardView />);
 
     const loop = screen.getByRole('region', { name: 'Today loop' });
     await waitFor(() => expect(within(loop).getByRole('button', { name: /Meals planned: Plan meals/i })).toHaveTextContent('0'));

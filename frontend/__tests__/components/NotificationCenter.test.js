@@ -1,52 +1,38 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import NotificationCenter from '../../components/NotificationCenter';
-import { buildMessages } from '../../lib/i18n';
 import * as api from '../../lib/api';
+import { buildTestMessages, renderWithMockApp } from '../test-utils';
 
-let mockAppState = {};
-
-jest.mock('../../lib/api', () => ({
-  apiMarkNotificationRead: jest.fn(),
-  apiMarkAllNotificationsRead: jest.fn(),
-  apiDeleteNotification: jest.fn(),
-}));
+jest.mock('../../lib/api', () => require('../test-utils').createMockApi());
 
 jest.mock('../../contexts/AppContext', () => ({
-  useApp: () => mockAppState,
+  useApp: () => require('../test-utils').getMockAppState(),
 }));
 
-function baseState(overrides = {}) {
-  return {
-    messages: buildMessages('en'),
+function renderCenter(overrides = {}) {
+  return renderWithMockApp(<NotificationCenter />, {
+    messages: buildTestMessages(),
     lang: 'en',
-    notifications: [],
-    setNotifications: jest.fn(),
-    unreadCount: 0,
-    setUnreadCount: jest.fn(),
-    loadNotifications: jest.fn(),
-    setActiveView: jest.fn(),
     isAdmin: true,
     isChild: false,
     demoMode: false,
     ...overrides,
-  };
+  });
 }
 
 describe('NotificationCenter external destination callout', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    jest.clearAllMocks();
     api.apiMarkNotificationRead.mockResolvedValue({ ok: true });
     api.apiMarkAllNotificationsRead.mockResolvedValue({ ok: true });
     api.apiDeleteNotification.mockResolvedValue({ ok: true });
-    mockAppState = baseState();
   });
 
   it('links admins from the notifications page to household notification destinations', () => {
     const setActiveView = jest.fn();
-    mockAppState = baseState({ setActiveView });
-
-    render(<NotificationCenter />);
+    renderCenter({ setActiveView });
 
     fireEvent.click(screen.getByRole('button', { name: 'Configure household notifications' }));
 
@@ -55,16 +41,14 @@ describe('NotificationCenter external destination callout', () => {
   });
 
   it('does not show the destination callout to non-admins', () => {
-    mockAppState = baseState({ isAdmin: false });
-
-    render(<NotificationCenter />);
+    renderCenter({ isAdmin: false });
 
     expect(screen.queryByRole('button', { name: 'Configure household notifications' })).not.toBeInTheDocument();
   });
 
   it('localizes scheduler notification body fallbacks', () => {
-    mockAppState = baseState({
-      messages: buildMessages('de'),
+    renderCenter({
+      messages: buildTestMessages({}, 'de'),
       lang: 'de',
       notifications: [
         {
@@ -94,8 +78,6 @@ describe('NotificationCenter external destination callout', () => {
       ],
     });
 
-    render(<NotificationCenter />);
-
     expect(screen.getByText('Beginnt in 15 Minuten')).toBeVisible();
     expect(screen.getByText('Aufgabe ist überfällig')).toBeVisible();
     expect(screen.getByText('Geburtstag morgen (May 13)')).toBeVisible();
@@ -105,7 +87,7 @@ describe('NotificationCenter external destination callout', () => {
 
   it('normalizes concrete notification links to the owning PWA view', () => {
     const setActiveView = jest.fn();
-    mockAppState = baseState({
+    renderCenter({
       setActiveView,
       notifications: [
         {
@@ -120,8 +102,6 @@ describe('NotificationCenter external destination callout', () => {
       ],
     });
 
-    render(<NotificationCenter />);
-
     fireEvent.click(screen.getByRole('button', { name: /Musikschule/i }));
 
     expect(setActiveView).toHaveBeenCalledWith('calendar');
@@ -129,7 +109,7 @@ describe('NotificationCenter external destination callout', () => {
 
   it('routes birthday notification links to contacts in the PWA', () => {
     const setActiveView = jest.fn();
-    mockAppState = baseState({
+    renderCenter({
       setActiveView,
       notifications: [
         {
@@ -143,8 +123,6 @@ describe('NotificationCenter external destination callout', () => {
         },
       ],
     });
-
-    render(<NotificationCenter />);
 
     fireEvent.click(screen.getByRole('button', { name: /Oma/i }));
 
