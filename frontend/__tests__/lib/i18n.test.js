@@ -2,6 +2,11 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+import {
+  languageMeta,
+  localeBundles as generatedLocaleBundles,
+  supportedLanguageKeys,
+} from '../../lib/generated/i18nBundles';
 import { buildMessages, listLanguages, mergeMessages, t } from '../../lib/i18n';
 
 const expectedLanguages = [
@@ -58,7 +63,7 @@ const localeFiles = fs
   .filter((file) => file.endsWith('.json'))
   .sort();
 
-const localeBundles = Object.fromEntries(
+const fileLocaleBundles = Object.fromEntries(
   localeFiles.map((file) => [path.basename(file, '.json'), readLocale(path.basename(file, '.json'))])
 );
 
@@ -86,7 +91,24 @@ describe('i18n bundled locale files', () => {
   });
 
   it('ships one bundle for every supported language', () => {
-    expect(Object.keys(localeBundles).sort()).toEqual(expectedLanguages);
+    expect(Object.keys(fileLocaleBundles).sort()).toEqual(expectedLanguages);
+  });
+
+  it('keeps the generated bundle index in sync with locale files and language metadata', () => {
+    expect(() => {
+      execFileSync('npm', ['run', 'i18n:check', '--silent'], {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    }).not.toThrow();
+
+    expect(supportedLanguageKeys).toEqual(listLanguages().map((lang) => lang.key));
+    expect(Object.keys(generatedLocaleBundles).sort()).toEqual(expectedLanguages);
+    expect(Object.keys(languageMeta).sort()).toEqual(expectedLanguages);
+    for (const lang of expectedLanguages) {
+      expect(generatedLocaleBundles[lang]).toEqual(fileLocaleBundles[lang]);
+    }
   });
 
   it('reduces the hand-maintained catalog to per-language bundles', () => {
@@ -96,10 +118,10 @@ describe('i18n bundled locale files', () => {
   });
 
   it('keeps keys and placeholders aligned with English', () => {
-    const english = localeBundles.en;
+    const english = fileLocaleBundles.en;
     const englishKeys = Object.keys(english).sort();
     for (const lang of expectedLanguages) {
-      const locale = localeBundles[lang];
+      const locale = fileLocaleBundles[lang];
       expect(Object.keys(locale).sort()).toEqual(englishKeys);
       for (const key of englishKeys) {
         expect(String(locale[key]).trim()).not.toBe('');
