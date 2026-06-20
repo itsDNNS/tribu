@@ -3,13 +3,19 @@ import hmac
 import os
 import logging
 from contextlib import asynccontextmanager
+from inspect import iscoroutinefunction
 
-from app.core.compat import patch_asyncio_iscoroutinefunction
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
+
+def patch_asyncio_iscoroutinefunction() -> None:
+    """Provide SlowAPI a non-deprecated coroutine checker on Python 3.14+."""
+    if getattr(asyncio, "iscoroutinefunction", None) is not iscoroutinefunction:
+        asyncio.iscoroutinefunction = iscoroutinefunction
+
 
 patch_asyncio_iscoroutinefunction()
 
