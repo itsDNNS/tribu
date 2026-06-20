@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
   Edit2,
@@ -13,10 +13,13 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
-import { useRecipes } from '../hooks/useRecipes';
+import { announce } from '../lib/announce';
+import * as api from '../lib/api';
+import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
-import { createEmptyRecipeIngredient, formatIngredientAmount, scaleRecipeIngredients } from '../lib/recipes';
+import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient, formatIngredientAmount, recipeToForm, scaleRecipeIngredients } from '../lib/recipes';
 import ConfirmDialog from './ConfirmDialog';
 
 
@@ -477,13 +480,128 @@ function RecipeDialog({
 }
 
 export default function RecipesView() {
-  const { familyId, families, messages, demoMode, shoppingLists } = useApp();
-  const recipes = useRecipes();
+  const { familyId, families, messages, demoMode, shoppingLists, loadShoppingLists } = useApp();
+  const { success: toastSuccess, error: toastError } = useToast();
+  const [recipeItems, setRecipeItems] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(recipes.emptyForm());
+  const [form, setForm] = useState(() => createEmptyRecipeForm());
   const [query, setQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState(null);
+
+  const loadRecipes = useCallback(async (fid = familyId) => {
+    if (!fid || demoMode) {
+      setRecipeItems([]);
+      return;
+    }
+    setLoading(true);
+    const { ok, data } = await api.apiListRecipes(fid);
+    if (ok && Array.isArray(data)) setRecipeItems(data);
+    setLoading(false);
+  }, [familyId, demoMode]);
+
+  useEffect(() => {
+    loadRecipes();
+  }, [loadRecipes]);
+
+  const ingredientHints = useMemo(() => {
+    const seen = new Set();
+    const names = [];
+    for (const recipe of recipeItems) {
+      for (const ingredient of recipe.ingredients || []) {
+        const name = (ingredient.name || '').trim();
+        const key = name.toLowerCase();
+        if (!name || seen.has(key)) continue;
+        seen.add(key);
+        names.push(name);
+      }
+    }
+    return names.sort((a, b) => a.localeCompare(b));
+  }, [recipeItems]);
+
+  async function createRecipe(formToCreate) {
+    if (demoMode) {
+      toastError(t(messages, 'module.recipes.demo_blocked'));
+      return { ok: false };
+    }
+    const payload = { family_id: Number(familyId), ...buildRecipePayload(formToCreate) };
+    const { ok, data } = await api.apiCreateRecipe(payload);
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return { ok: false };
+    }
+    toastSuccess(t(messages, 'module.recipes.created'));
+    announce(t(messages, 'module.recipes.created'));
+    await loadRecipes();
+    return { ok: true, data };
+  }
+
+  async function updateRecipe(recipeId, formToUpdate) {
+    const payload = buildRecipePayload(formToUpdate);
+    const { ok, data } = await api.apiUpdateRecipe(recipeId, payload);
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return { ok: false };
+    }
+    toastSuccess(t(messages, 'module.recipes.updated'));
+    announce(t(messages, 'module.recipes.updated'));
+    await loadRecipes();
+    return { ok: true, data };
+  }
+
+  async function updateRecipeFields(recipeId, fields) {
+    const { ok, data } = await api.apiUpdateRecipe(recipeId, fields);
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return { ok: false };
+    }
+    await loadRecipes();
+    return { ok: true, data };
+  }
+
+  async function deleteRecipe(recipeId) {
+    const { ok, data } = await api.apiDeleteRecipe(recipeId);
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return false;
+    }
+    toastSuccess(t(messages, 'module.recipes.deleted'));
+    announce(t(messages, 'module.recipes.deleted'));
+    await loadRecipes();
+    return true;
+  }
+
+  async function pushToShopping(recipeId, shoppingListId, ingredientNames = null) {
+    const { ok, data } = await api.apiAddRecipeIngredientsToShopping(recipeId, shoppingListId, ingredientNames);
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return { ok: false };
+    }
+    const added = data?.added_count ?? 0;
+    const template = added === 1
+      ? t(messages, 'module.recipes.pushed_one')
+      : t(messages, 'module.recipes.pushed_many');
+    const msg = template.replace('{count}', String(added));
+    toastSuccess(msg);
+    announce(msg);
+    await loadShoppingLists?.();
+    return { ok: true, added };
+  }
+
+  const recipes = {
+    recipes: recipeItems,
+    loading,
+    ingredientHints,
+    reload: loadRecipes,
+    createRecipe,
+    updateRecipe,
+    updateRecipeFields,
+    deleteRecipe,
+    pushToShopping,
+    emptyForm: createEmptyRecipeForm,
+    populateFormFromRecipe: recipeToForm,
+  };
 
   const currentFamilyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
 
