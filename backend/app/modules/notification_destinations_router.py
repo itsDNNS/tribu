@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_admin
 from app.core.notification_destinations import (
+    APPRISE_PROVIDER,
     destination_response,
     protect_target_url,
     provider_status,
@@ -50,7 +51,7 @@ def _audit_details(destination: NotificationDestination, action: str) -> dict:
     return {
         "destination_id": destination.id,
         "action": action,
-        "provider": destination.provider,
+        "provider": APPRISE_PROVIDER,
         "url_redacted": redact_target_url(destination.target_url_secret),
         "events": destination.events or [],
         "active": destination.active,
@@ -98,7 +99,11 @@ def get_provider_status(
     "",
     response_model=NotificationDestinationResponse,
     summary="Create notification destination",
-    description="Create an Apprise-backed household notification destination. Admin only. Scope: `admin:write`.",
+    description=(
+        "Create an Apprise-backed household notification destination. "
+        "Legacy provider payload values are ignored; Apprise is always used. "
+        "Admin only. Scope: `admin:write`."
+    ),
 )
 def create_destination(
     payload: NotificationDestinationCreate,
@@ -110,7 +115,7 @@ def create_destination(
     destination = NotificationDestination(
         family_id=payload.family_id,
         name=payload.name.strip(),
-        provider="apprise",
+        provider=APPRISE_PROVIDER,
         target_url_secret=protect_target_url(payload.target_url_secret),
         events=payload.events,
         active=payload.active,

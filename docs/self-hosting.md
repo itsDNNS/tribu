@@ -47,7 +47,7 @@ See [Self-Hosting: Push Notifications](https://github.com/itsDNNS/tribu/wiki/Sel
 
 ## Household Notification Destinations (Optional)
 
-Admins can add Apprise-backed destinations for human-readable household reminders and opt-in shopping activity, such as Gotify, ntfy, Telegram, Matrix, or email. Use placeholder examples in public docs and screenshots, for example `ntfy://ntfy.sh/family-topic` or `gotify://host.example/token`, not real tokens.
+Admins can add Apprise-backed destinations for human-readable household reminders and opt-in shopping activity, such as Gotify, ntfy, Telegram, Matrix, or email. Use placeholder examples in public docs and screenshots, for example `ntfy://ntfy.sh/family-topic` or `gotify://host.example/token`, not real tokens. The destination API always uses Apprise for new destinations; `provider: "apprise"` is still returned for compatibility, and any legacy `provider` value sent on create is ignored.
 
 Destination URLs are stored encrypted with a key derived from `NOTIFICATION_DESTINATION_SECRET_KEY` when set, otherwise `JWT_SECRET`. Keep that secret stable across upgrades and restores. Existing legacy plaintext rows are still readable so old installs can upgrade in place, but newly saved or updated destinations are encrypted.
 

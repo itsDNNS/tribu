@@ -25,6 +25,8 @@ from app.models import Membership, NotificationDestination, NotificationDestinat
 
 logger = logging.getLogger(__name__)
 
+APPRISE_PROVIDER = "apprise"
+
 ALLOWED_APPRISE_SCHEMES = {
     "gotify",
     "gotifys",
@@ -232,7 +234,7 @@ def destination_response(destination: NotificationDestination) -> dict[str, Any]
         "id": destination.id,
         "family_id": destination.family_id,
         "name": destination.name,
-        "provider": destination.provider,
+        "provider": APPRISE_PROVIDER,
         "url_redacted": redact_target_url(destination.target_url_secret),
         "events": destination.events or [],
         "active": destination.active,
@@ -249,7 +251,7 @@ def destination_response(destination: NotificationDestination) -> dict[str, Any]
 
 def provider_status() -> dict[str, Any]:
     return {
-        "provider": "apprise",
+        "provider": APPRISE_PROVIDER,
         "available": is_provider_available(),
         "allowed_schemes": sorted(ALLOWED_APPRISE_SCHEMES),
         "events": sorted(DESTINATION_EVENT_TYPES),
