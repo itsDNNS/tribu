@@ -133,7 +133,8 @@ When adding or changing translation keys:
 - Add the key to `frontend/i18n/en.json` first.
 - Keep the same key present in every other `frontend/i18n/*.json` file.
 - Preserve placeholders and technical literals exactly, for example `{count}`, `{date}`, `openid`, and permission scope names.
-- Run the i18n unit tests before opening a PR.
+- If you add or remove a supported language, update `frontend/lib/i18nLanguages.json` and run `npm run i18n:generate` from `frontend` to refresh the generated bundle index.
+- Run `npm run i18n:check` and the i18n unit tests before opening a PR.
 
 ## Testing before you open a PR
 
