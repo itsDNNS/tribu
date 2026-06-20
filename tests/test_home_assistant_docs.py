@@ -5,20 +5,21 @@ DOC = ROOT / "docs" / "home-assistant.md"
 PACKAGE = ROOT / "integrations" / "home-assistant" / "tribu_package.yaml"
 DASHBOARD = ROOT / "integrations" / "home-assistant" / "dashboard-card.yaml"
 
+REQUIRED_ENTITIES = [
+    "sensor.tribu_next_event",
+    "sensor.tribu_open_tasks",
+    "sensor.tribu_open_shopping_items",
+    "sensor.tribu_upcoming_birthdays",
+]
 
-def test_home_assistant_package_documents_required_entities_and_actions():
-    doc = DOC.read_text()
+
+def test_home_assistant_package_and_dashboard_define_required_entities_and_actions():
     package = PACKAGE.read_text()
+    dashboard = DASHBOARD.read_text()
 
-    required_entities = [
-        "sensor.tribu_next_event",
-        "sensor.tribu_open_tasks",
-        "sensor.tribu_open_shopping_items",
-        "sensor.tribu_upcoming_birthdays",
-    ]
-    for entity in required_entities:
-        assert entity in doc
+    for entity in REQUIRED_ENTITIES:
         assert entity in package
+        assert entity in dashboard
 
     assert "rest_command:" in package
     assert "tribu_add_quick_capture" in package
@@ -27,35 +28,31 @@ def test_home_assistant_package_documents_required_entities_and_actions():
     assert "event_type" in package
 
 
-def test_home_assistant_docs_use_secret_placeholders_not_real_tokens():
+def test_home_assistant_docs_are_wiki_pointer_with_required_sections():
+    doc = DOC.read_text()
+
+    assert "https://github.com/itsDNNS/tribu/wiki/Home-Assistant" in doc
+    assert "compatibility pointer for existing links" in doc
+    for section in (
+        "## Tribu scopes used by the package",
+        "## Dashboard example",
+        "## Privacy boundaries",
+        "## Troubleshooting",
+    ):
+        assert section in doc
+
+
+def test_home_assistant_examples_use_secret_placeholders_not_real_tokens():
     combined = "\n".join(
         path.read_text()
         for path in (DOC, PACKAGE, DASHBOARD)
     )
 
     assert "tribu_pat_" not in combined
-    redacted_header = "Authorization: Bearer " + "*" * 3 + " tribu_token"
-    assert redacted_header in combined
-    assert "!secret tribu_token" in combined
-    assert "!secret tribu_url" in combined
+    assert "Authorization: !secret tribu_authorization_header" in combined
+    assert "!secret tribu_dashboard_summary_url" in combined
+    assert "!secret tribu_open_tasks_url" in combined
+    assert "!secret tribu_shopping_lists_url" in combined
+    assert "!secret tribu_quick_capture_url" in combined
     assert "!secret tribu_family_id" in combined
-    assert "Do not paste token values" in combined
-
-
-def test_home_assistant_docs_cover_privacy_troubleshooting_and_dashboard_example():
-    doc = DOC.read_text()
-    dashboard = DASHBOARD.read_text()
-
-    for section in (
-        "## Privacy boundaries",
-        "## Troubleshooting",
-        "## Tribu scopes used by the package",
-        "## Dashboard example",
-    ):
-        assert section in doc
-
-    assert "type: entities" in dashboard
-    assert "sensor.tribu_next_event" in dashboard
-    assert "sensor.tribu_open_tasks" in dashboard
-    assert "sensor.tribu_open_shopping_items" in dashboard
-    assert "sensor.tribu_upcoming_birthdays" in dashboard
+    assert "Keep token values out of this file" in combined

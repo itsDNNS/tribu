@@ -12,6 +12,7 @@ For contributor workflow inside the repository, treat this file as the canonical
 - [Self-Hosting Guide](docs/self-hosting.md)
 - [Security Policy](SECURITY.md)
 - [Defensive Review Checklist](docs/defensive-review-checklist.md)
+- [Public Copy Review Checklist](docs/public-copy-review-checklist.md)
 
 ## Before you start
 

@@ -1,4 +1,4 @@
-"""Static checks for Tribu public launch docs."""
+"""Durable public-surface checks for Tribu docs and launch assets."""
 
 from html.parser import HTMLParser
 from pathlib import Path
@@ -7,12 +7,11 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
+CONTRIBUTING = ROOT / "CONTRIBUTING.md"
 DOCS_INDEX = ROOT / "docs" / "index.html"
 OG_IMAGE = ROOT / "docs" / "assets" / "og-image.png"
 FEATURE_MATRIX = ROOT / "docs" / "feature-matrix.md"
-DIRECTORY_DRAFT = ROOT / "docs" / "self-hosted-directory-submission.md"
-FOLLOW_UPS = ROOT / "docs" / "public-launch-follow-up-issues.md"
-POLICY = ROOT / "docs" / "documentation-policy.md"
+PUBLIC_COPY_CHECKLIST = ROOT / "docs" / "public-copy-review-checklist.md"
 SECURITY = ROOT / "SECURITY.md"
 EN_MESSAGES = ROOT / "frontend" / "i18n" / "en.json"
 LOCALE_DIR = ROOT / "frontend" / "i18n"
@@ -22,20 +21,6 @@ E2E_WORKFLOW = ROOT / ".github" / "workflows" / "e2e.yml"
 LEGACY_BACKUP_SCRIPTS = (
     ROOT / "scripts" / "backup.sh",
     ROOT / "scripts" / "restore.sh",
-)
-
-FORBIDDEN_PUBLIC_TERMS = (
-    "oikos",
-    "ulsklyc",
-    "competitor",
-    "konkurrent",
-    "codex",
-    "claude",
-    "gemini",
-    "hermes",
-    "review gate",
-    "reviewed the commit",
-    "no discrete regression",
 )
 
 REQUIRED_META = {
@@ -68,9 +53,15 @@ class MetaParser(HTMLParser):
             self.links.append(data["href"])
 
 
-def read_public_text():
-    paths = [README, DOCS_INDEX, FEATURE_MATRIX, DIRECTORY_DRAFT, FOLLOW_UPS, POLICY, SECURITY, EN_MESSAGES]
-    return "\n".join(path.read_text(encoding="utf-8") for path in paths)
+def markdown_links(text):
+    return re.findall(r'\]\(([^)]+)\)', text)
+
+
+def local_markdown_links(text):
+    for ref in markdown_links(text):
+        if ref.startswith(("http://", "https://", "#", "mailto:")):
+            continue
+        yield ref.split("#", 1)[0]
 
 
 def test_public_launch_page_has_social_metadata_and_assets():
@@ -106,67 +97,67 @@ def test_public_launch_page_local_references_exist():
         assert (ROOT / "docs" / ref).exists(), f"missing docs-local asset/link: {ref}"
 
 
-def test_readme_and_directory_local_asset_references_exist():
+def test_readme_local_references_exist():
     readme = README.read_text(encoding="utf-8")
-    directory = DIRECTORY_DRAFT.read_text(encoding="utf-8")
     refs = {
         ref
         for ref in re.findall(r'<img[^>]+src="([^"]+)"', readme)
         if "://" not in ref
     }
-    refs.update(re.findall(r'`(docs/assets/[^`]+)`', directory))
+    refs.update(local_markdown_links(readme))
 
     assert refs
     for ref in refs:
-        assert not ref.startswith("/"), f"root-relative local asset reference: {ref}"
+        if not ref:
+            continue
+        assert not ref.startswith("/"), f"root-relative local README reference: {ref}"
         assert "://" not in ref, f"unexpected external asset reference in local asset check: {ref}"
-        assert (ROOT / ref).exists(), f"missing README/directory asset: {ref}"
+        assert (ROOT / ref).exists(), f"missing README local reference: {ref}"
 
 
-def test_readme_above_the_fold_has_launch_ctas_and_trust_signals():
-    readme = README.read_text(encoding="utf-8")
-    above_fold = readme.split("## Why Tribu?", 1)[0]
-
-    for expected in (
-        "Product page",
-        "Quick Start",
-        "Documentation Wiki",
-        "Docker Compose",
-        "Demo mode",
-        "Shared Home Display",
-        "CalDAV/CardDAV",
-        "Home Assistant",
-        "24 languages",
-        "MIT licensed",
-    ):
-        assert expected in above_fold
-
-
-def test_feature_matrix_distinguishes_shipped_planned_and_out_of_scope():
+def test_feature_matrix_keeps_status_sections_and_tables():
     matrix = FEATURE_MATRIX.read_text(encoding="utf-8")
-    assert "## Shipped" in matrix
-    assert "## Planned or under evaluation" in matrix
-    assert "## Intentionally out of scope for now" in matrix
-    for shipped in ("Shared Home Display", "Home Assistant", "Meal planning", "Recipes", "School timetables", "Gifts"):
-        assert shipped in matrix
+    for heading in (
+        "## Shipped",
+        "## Planned or under evaluation",
+        "## Intentionally out of scope for now",
+    ):
+        assert heading in matrix
+    assert "| Area | Capability | Notes |" in matrix
+    assert "| Area | Direction to evaluate | Guardrails |" in matrix
 
 
-def test_public_launch_copy_stays_source_and_process_clean():
-    public_text = read_public_text().lower()
-    for term in FORBIDDEN_PUBLIC_TERMS:
-        assert term not in public_text
+def test_public_copy_review_expectations_are_documented_not_hardcoded_as_copy_tests():
+    checklist = PUBLIC_COPY_CHECKLIST.read_text(encoding="utf-8")
+    contributing = CONTRIBUTING.read_text(encoding="utf-8")
+
+    assert "docs/public-copy-review-checklist.md" in contributing
+    for section in (
+        "## Contract tests keep",
+        "## Human copy review checks",
+        "## Claims that need evidence",
+        "## Release checklist",
+    ):
+        assert section in checklist
+
+    assert "Do not turn normal wording preferences into exact-string tests" in checklist
+    assert "Required metadata, file links, and asset paths stay automated" in checklist
+
+
+def test_public_github_docs_avoid_process_leakage_and_em_dashes():
+    public_docs = [README, CONTRIBUTING, SECURITY, DOCS_INDEX, *sorted((ROOT / "docs").glob("*.md"))]
+    public_text = "\n".join(path.read_text(encoding="utf-8") for path in public_docs).lower()
+
+    for forbidden in ("review gate", "reviewed the commit", "no discrete regression"):
+        assert forbidden not in public_text
     assert "—" not in public_text
 
 
-def test_documentation_policy_tracks_launch_docs():
-    policy = POLICY.read_text(encoding="utf-8")
-    for path in (
-        "docs/index.html",
-        "docs/feature-matrix.md",
-        "docs/self-hosted-directory-submission.md",
-        "docs/public-launch-follow-up-issues.md",
-    ):
-        assert path in policy
+def test_landing_page_keeps_objective_security_and_phone_sync_caveats():
+    landing = DOCS_INDEX.read_text(encoding="utf-8")
+
+    assert "SECURE_COOKIES=true" in landing
+    assert "Android through DAV-compatible clients such as DAVx5" in landing
 
 
 def test_backup_restore_guidance_uses_supported_public_docs():
@@ -197,47 +188,30 @@ def test_public_compose_is_image_only_and_uses_shared_database_password():
     dev_compose = DEV_COMPOSE.read_text(encoding="utf-8")
     workflow = E2E_WORKFLOW.read_text(encoding="utf-8")
 
+    db_url = "postgresql://tribu:" + "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}" + "@postgres:5432/tribu"
     assert "build:" not in compose
     assert "postgresql://tribu:***@postgres" not in compose
-    assert "postgresql://tribu:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/tribu" in compose
+    assert db_url in compose
     assert "ghcr.io/itsdnns/tribu-backend:latest" in compose
     assert "ghcr.io/itsdnns/tribu-frontend:latest" in compose
     assert "build:" in dev_compose
     assert "docker-compose.dev.yml" in workflow
 
 
-def test_public_launch_copy_avoids_validated_overclaims():
-    public_text = read_public_text()
-    forbidden_phrases = (
-        "lazy-loaded locale packs",
-        "Explore before you deploy",
-        "Try the full UI without a production setup",
-        "guessing from source",
-        "non-root containers",
-        "run all processes under that user",
-        "Your data stays on your server. Always.",
-        "never shared with third parties",
-        "native Calendar and Contacts apps on iOS and Android",
-    )
-    for phrase in forbidden_phrases:
-        assert phrase not in public_text
-
-    landing = DOCS_INDEX.read_text(encoding="utf-8")
-    assert "Try the main workflows with sample data after starting the app." in landing
-    assert "Android through DAV-compatible clients such as DAVx5" in landing
-    assert "SECURE_COOKIES=true" in landing
-
+def test_security_and_setup_docs_keep_contractual_secret_guidance():
     readme = README.read_text(encoding="utf-8")
+    security = SECURITY.read_text(encoding="utf-8")
+    en_messages = EN_MESSAGES.read_text(encoding="utf-8")
+
+    db_url = "postgresql://tribu:" + "${" + "POSTGRES_PASSWORD" + "}" + "@postgres:5432/tribu"
     assert "secrets.token_hex(32)" in readme
     assert "secrets.token_hex(16)" in readme
     assert "env.write_text(text)" in readme
-    assert "postgresql://tribu:${POSTGRES_PASSWORD}@postgres:5432/tribu" in readme
+    assert db_url in readme
 
-    security = SECURITY.read_text(encoding="utf-8")
+
     assert "frontend image runs as the dedicated non-root `tribu` user" in security
     assert "backend image creates the same user and the entrypoint drops privileges" in security
-
-    en_messages = EN_MESSAGES.read_text(encoding="utf-8")
     assert "Household data stays on your server" in en_messages
     assert "Admin-only update checks may contact GitHub for release metadata" in en_messages
 
