@@ -58,6 +58,7 @@ test.describe('Admin', () => {
     await expect(page.getByText(/No export has been created yet\./)).toBeVisible();
     await expect(page.getByText(/OIDC client secrets/i)).toBeVisible();
     await expect(page.getByText('Configured backup volume', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open backup docs' })).toHaveAttribute('href', 'https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore');
     await expect(page.getByText(/JWT_SECRET|DATABASE_URL|tribu_pat_|\/backups|docker-compose\.yml/)).toHaveCount(0);
   });
 });

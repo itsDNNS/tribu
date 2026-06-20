@@ -139,7 +139,7 @@ describe('BackupSection confidence panel', () => {
     expect(screen.getByText('Not included')).toBeInTheDocument();
     expect(screen.getByText('JWT secret')).toBeInTheDocument();
     expect(screen.getByText('Restore during the setup wizard on a fresh installation.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open backup docs' })).toHaveAttribute('href', 'https://github.com/itsDNNS/tribu/blob/main/docs/self-hosting.md#backup--restore');
+    expect(screen.getByRole('link', { name: 'Open backup docs' })).toHaveAttribute('href', 'https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore');
     expect(screen.queryByText(new RegExp('/' + 'backups'))).not.toBeInTheDocument();
     expect(screen.queryByText(/docker-compose\.yml/i)).not.toBeInTheDocument();
   });

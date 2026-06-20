@@ -52,7 +52,7 @@ Follow these steps before exposing Tribu to the internet:
 2. **Enable secure cookies**: Set `SECURE_COOKIES=true` in your `.env` file. This adds the `Secure` flag to auth cookies so they are only sent over HTTPS.
 3. **Generate strong secrets**: Use `openssl rand -hex 32` for `JWT_SECRET` and `openssl rand -hex 16` for `POSTGRES_PASSWORD`. Never reuse secrets across instances.
 4. **Restrict CORS** (optional): The default regex allows all `192.168.x.x` addresses. If your instance is public, consider narrowing this to your specific domain by modifying the `allow_origin_regex` in `backend/app/main.py`.
-5. **Backups**: Schedule regular PostgreSQL backups and test restore procedures. The [Self-Hosting Guide](docs/self-hosting.md#backup-and-restore) documents the built-in backup flow.
+5. **Backups**: Schedule regular PostgreSQL backups and test restore procedures. The [Backup & Restore guide](https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore) documents the supported operations flow.
 6. **Keep images updated**: Rebuild Docker images periodically to pick up security patches in base images and dependencies.
 
 ## Known Limitations
