@@ -1,5 +1,5 @@
 import { resolveInitialView } from '../../lib/navigationState';
-import { DEFAULT_NAV_ORDER } from '../../contexts/UIContext';
+import { DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 
 describe('resolveInitialView', () => {
   it('prioritizes bookmarkable hash routes over PWA shortcut query strings and stored view', () => {

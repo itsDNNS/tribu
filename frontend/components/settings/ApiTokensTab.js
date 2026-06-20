@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useFamily } from '../../contexts/FamilyContext';
 import { copyTextToClipboard, parseServerInstant } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
@@ -10,9 +9,8 @@ import * as api from '../../lib/api';
 const SCOPE_MODULE_KEYS_BASE = ['calendar', 'tasks', 'contacts', 'birthdays', 'families', 'profile', 'household_templates'];
 
 export default function ApiTokensTab() {
-  const { messages, lang, loggedIn, demoMode } = useApp();
+  const { messages, lang, loggedIn, demoMode, isAdmin } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
-  const { isAdmin } = useFamily();
   const scopeModuleKeys = isAdmin ? [...SCOPE_MODULE_KEYS_BASE, 'admin'] : SCOPE_MODULE_KEYS_BASE;
 
   const [tokens, setTokens] = useState([]);

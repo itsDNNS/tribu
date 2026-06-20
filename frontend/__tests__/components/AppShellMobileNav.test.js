@@ -3,12 +3,13 @@ import path from 'path';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AppShell from '../../components/AppShell';
-import { DEFAULT_NAV_ORDER } from '../../contexts/UIContext';
+import { DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 
 let mockAppState = {};
 
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockAppState,
+  DEFAULT_NAV_ORDER: ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'],
 }));
 
 jest.mock('../../lib/announce', () => ({ announce: jest.fn() }));
@@ -181,6 +182,26 @@ describe('AppShell mobile bottom navigation', () => {
     expect(css).toMatch(/\.sidebar-content \{[^}]*flex: 1 1 auto;[^}]*min-height: 0;[^}]*overflow-y: auto;/);
     expect(css).toMatch(/\.sidebar-footer \{[^}]*flex: 0 0 auto;[^}]*padding: 0 var\(--space-md\) var\(--space-md\);/);
     expect(css).toMatch(/\.sidebar\.collapsed \.sidebar-footer \{[^}]*padding: 0 var\(--space-sm\) var\(--space-sm\);/);
+  });
+
+  it('switches families from the sidebar family selector', () => {
+    const switchFamily = jest.fn();
+    mockAppState = baseState({
+      isMobile: false,
+      familyId: '1',
+      families: [
+        { family_id: 1, family_name: 'Family' },
+        { family_id: 2, family_name: 'Second Family' },
+      ],
+      switchFamily,
+    });
+
+    render(<AppShell />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Family' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Second Family' }));
+
+    expect(switchFamily).toHaveBeenCalledWith('2');
   });
 
   it('groups desktop navigation around household jobs and keeps system items separate', () => {
