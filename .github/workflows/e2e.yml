@@ -23,42 +23,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Start services
-        working-directory: docker
-        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
-
-      - name: Wait for backend health
-        run: |
-          echo "Waiting for backend..."
-          for i in $(seq 1 60); do
-            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-              echo "Backend healthy"
-              break
-            fi
-            if [ $i -eq 60 ]; then
-              echo "Backend failed to start"
-              docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml logs backend
-              exit 1
-            fi
-            sleep 2
-          done
-
-      - name: Wait for frontend
-        run: |
-          echo "Waiting for frontend..."
-          for i in $(seq 1 60); do
-            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
-              echo "Frontend healthy"
-              break
-            fi
-            if [ $i -eq 60 ]; then
-              echo "Frontend failed to start"
-              docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml logs frontend
-              exit 1
-            fi
-            sleep 2
-          done
-
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -78,6 +42,9 @@ jobs:
         run: npx playwright test
         env:
           BASE_URL: http://localhost:3000
+          E2E_WEB_SERVER_URL: http://localhost:3000
+          E2E_BACKEND_HEALTH_URL: http://localhost:8000/health
+          E2E_WEB_SERVER_COMMAND: docker compose -f ../docker/docker-compose.yml -f ../docker/docker-compose.dev.yml up --build
 
       - name: Upload test report
         uses: actions/upload-artifact@v7
@@ -92,10 +59,5 @@ jobs:
         if: failure()
         with:
           name: playwright-traces
-          path: frontend/e2e/test-results/
+          path: frontend/test-results/
           retention-days: 7
-
-      - name: Teardown
-        if: always()
-        working-directory: docker
-        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
