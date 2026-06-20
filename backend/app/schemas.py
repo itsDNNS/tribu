@@ -2170,18 +2170,20 @@ class WebhookTestResponse(BaseModel):
 class NotificationDestinationCreate(BaseModel):
     family_id: int = Field(..., description="Family ID")
     name: str = Field(..., min_length=1, max_length=120, description="Destination display name")
-    provider: str = Field("apprise", description="Destination provider")
     target_url_secret: str = Field(..., min_length=3, max_length=2000, description="Apprise destination URL")
     events: list[str] = Field(default_factory=list, description="Subscribed reminder event types")
     active: bool = Field(True, description="Whether deliveries are enabled")
     respect_quiet_hours: bool = Field(True, description="Whether household quiet hours suppress this destination")
 
-    @field_validator("provider")
-    @classmethod
-    def validate_provider(cls, value: str) -> str:
-        if value != "apprise":
-            raise ValueError("Unsupported notification destination provider")
-        return value
+    model_config = ConfigDict(
+        extra="ignore",
+        json_schema_extra={
+            "description": (
+                "Create an Apprise-backed notification destination. The legacy "
+                "provider input is ignored when present; Apprise is always used."
+            )
+        },
+    )
 
     @field_validator("target_url_secret")
     @classmethod

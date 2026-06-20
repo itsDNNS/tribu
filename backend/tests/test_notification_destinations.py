@@ -36,6 +36,7 @@ from app.models import (
     User,
 )
 from app.security import PAT_PREFIX, hash_password
+from app.schemas import NotificationDestinationCreate
 
 engine = create_engine(
     "sqlite://",
@@ -178,6 +179,25 @@ def _seed_shopping_list(family_id: int, user_id: int, name: str = "Coverage list
         db.close()
 
 
+def test_create_schema_omits_provider_configuration_but_ignores_legacy_input():
+    schema = NotificationDestinationCreate.model_json_schema()
+    assert "provider" not in schema["properties"]
+    assert "legacy provider input is ignored" in schema["description"]
+
+    payload = NotificationDestinationCreate.model_validate(
+        {
+            "family_id": 1,
+            "name": "Compatibility destination",
+            "provider": "unsupported-provider",
+            "target_url_secret": "mailto://compatibility@example.com",
+            "events": ["calendar.reminder"],
+        }
+    )
+
+    assert not hasattr(payload, "provider")
+    assert payload.target_url_secret == "mailto://compatibility@example.com"
+
+
 def test_admin_crud_redacts_secret_and_audits_safe_metadata():
     token, family_id, _ = _seed_member()
     raw_url = "ntfy://ntfy.sh/placeholder-topic?token=placeholder-token"
@@ -188,6 +208,7 @@ def test_admin_crud_redacts_secret_and_audits_safe_metadata():
         json={
             "family_id": family_id,
             "name": "Kitchen ntfy",
+            "provider": "unsupported-provider",
             "target_url_secret": raw_url,
             "events": ["calendar.reminder", "task.reminder"],
             "active": True,
@@ -207,12 +228,16 @@ def test_admin_crud_redacts_secret_and_audits_safe_metadata():
 
     db = TestSession()
     try:
-        stored = db.get(NotificationDestination, body["id"]).target_url_secret
+        stored_destination = db.get(NotificationDestination, body["id"])
+        assert stored_destination is not None
+        stored = getattr(stored_destination, "target_url_secret")
+        stored_provider = getattr(stored_destination, "provider")
     finally:
         db.close()
 
     from app.core.notification_destinations import reveal_target_url
 
+    assert stored_provider == "apprise"
     assert stored.startswith("enc:v1:")
     assert raw_url not in stored
     assert "placeholder-token" not in stored
@@ -234,6 +259,21 @@ def test_admin_crud_redacts_secret_and_audits_safe_metadata():
 
     deleted = client.delete(f"/notification-destinations/{body['id']}", headers=_auth(token))
     assert deleted.status_code == 200
+
+
+def test_response_normalizes_legacy_stored_provider_to_apprise():
+    token, family_id, user_id = _seed_member()
+    db = TestSession()
+    try:
+        db.add(_destination(family_id, user_id, provider="legacy-provider", target_url_secret="mailto://legacy@example.com"))
+        db.commit()
+    finally:
+        db.close()
+
+    listed = client.get(f"/notification-destinations?family_id={family_id}", headers=_auth(token))
+
+    assert listed.status_code == 200, listed.json()
+    assert listed.json()[0]["provider"] == "apprise"
 
 
 def test_admin_authorization_cross_family_and_pat_scope_split():
