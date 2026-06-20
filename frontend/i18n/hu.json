@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Hét hozzáadása a bevásárlólistához",
   "module.meal_plans.push_week_to_shopping_aria": "Töltsd fel az e hét összes hozzávalóját a bevásárlólistára",
   "module.meal_plans.push_to_shopping": "A bevásárló listához",
-  "module.meal_plans.drag_aria": "Húzza a „{name}” elemet egy másik nyílásba",
+  "module.meal_plans.drag_aria": "Helyezd át a(z) „{name}” ételt egy másik helyre",
   "module.meal_plans.pushed_one": "1 hozzávaló felkerült a bevásárlólistára",
   "module.meal_plans.pushed_many": "A {count} összetevők felkerültek a bevásárlólistára",
   "module.recipes.name": "Receptek",

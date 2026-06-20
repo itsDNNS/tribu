@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Tilføj uge til indkøbslisten",
   "module.meal_plans.push_week_to_shopping_aria": "Skub alle ingredienser fra denne uge til en indkøbsliste",
   "module.meal_plans.push_to_shopping": "Til indkøbsliste",
-  "module.meal_plans.drag_aria": "Træk \"{name}\" til en anden plads",
+  "module.meal_plans.drag_aria": "Flyt \"{name}\" til et andet felt",
   "module.meal_plans.pushed_one": "1 ingrediens skubbet til indkøbslisten",
   "module.meal_plans.pushed_many": "{count} ingredienser skubbet til indkøbslisten",
   "module.recipes.name": "Opskrifter",

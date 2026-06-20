@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Pridajte týždeň do nákupného zoznamu",
   "module.meal_plans.push_week_to_shopping_aria": "Zatlačte všetky ingrediencie z tohto týždňa do nákupného zoznamu",
   "module.meal_plans.push_to_shopping": "Do nákupného zoznamu",
-  "module.meal_plans.drag_aria": "Presuňte „{name}“ do iného slotu",
+  "module.meal_plans.drag_aria": "Presunúť „{name}“ do iného miesta",
   "module.meal_plans.pushed_one": "1 ingrediencia zatlačená do nákupného zoznamu",
   "module.meal_plans.pushed_many": "{count} ingrediencie zaradené do nákupného zoznamu",
   "module.recipes.name": "Recepty",

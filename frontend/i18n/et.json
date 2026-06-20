@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Lisage nädal ostunimekirja",
   "module.meal_plans.push_week_to_shopping_aria": "Lükake kõik selle nädala koostisosad ostunimekirja",
   "module.meal_plans.push_to_shopping": "Ostunimekirja juurde",
-  "module.meal_plans.drag_aria": "Lohistage \"{name}\" teise pessa",
+  "module.meal_plans.drag_aria": "Teisalda „{name}“ teise ajapessa",
   "module.meal_plans.pushed_one": "1 koostisosa lükati ostunimekirja",
   "module.meal_plans.pushed_many": "{count} koostisosad lükati ostunimekirja",
   "module.recipes.name": "Retseptid",

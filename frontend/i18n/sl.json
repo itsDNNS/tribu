@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Dodajte teden na nakupovalni seznam",
   "module.meal_plans.push_week_to_shopping_aria": "Potisnite vse sestavine iz tega tedna na nakupovalni seznam",
   "module.meal_plans.push_to_shopping": "Na nakupovalni seznam",
-  "module.meal_plans.drag_aria": "Povlecite \"{name}\" v drugo režo",
+  "module.meal_plans.drag_aria": "Premakni »{name}« na drugo mesto",
   "module.meal_plans.pushed_one": "1 sestavina potisnjena na nakupovalni seznam",
   "module.meal_plans.pushed_many": "{count} sestavine potisnjene na nakupovalni seznam",
   "module.recipes.name": "Recepti",

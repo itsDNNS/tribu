@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Añadir la semana a la lista de compras",
   "module.meal_plans.push_week_to_shopping_aria": "Enviar todos los ingredientes de esta semana a una lista de compras",
   "module.meal_plans.push_to_shopping": "A la lista de compras",
-  "module.meal_plans.drag_aria": "Arrastrar \"{name}\" a otro horario",
+  "module.meal_plans.drag_aria": "Mover «{name}» a otro espacio",
   "module.meal_plans.pushed_one": "1 ingrediente enviado a la lista de compras",
   "module.meal_plans.pushed_many": "{count} ingredientes enviados a la lista de compras",
   "module.recipes.name": "Recetas",

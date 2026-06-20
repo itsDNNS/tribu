@@ -3221,7 +3221,7 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   .meal-ingredient-row { grid-template-columns: 1fr 80px 60px auto; }
 }
 
-/* Meal DnD */
+/* Meal move controls */
 .meal-grid-cell-filled { padding: 0; }
 .meal-cell-edit-btn {
   background: transparent; border: none; color: inherit; font-family: inherit;
@@ -3241,17 +3241,35 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   display: inline-flex; align-items: center; justify-content: center;
   cursor: grab;
   opacity: 0; transition: opacity 0.15s;
-  touch-action: none;
+  touch-action: manipulation;
   min-height: auto;
 }
 .meal-grid-cell-filled:hover .meal-cell-grip-btn,
+.meal-cell-grip-btn[aria-expanded="true"],
 .meal-cell-grip-btn:focus-visible { opacity: 1; }
 .meal-cell-grip-btn:hover { color: var(--text-primary); background: rgba(120, 130, 180, 0.12); }
 .meal-cell-grip-btn:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
 .meal-cell-grip-btn:active { cursor: grabbing; }
 .meal-grid-cell-dragging { opacity: 0.3; }
 .meal-grid-cell-drop-over { border-color: var(--amethyst); background: rgba(124, 58, 237, 0.08); }
-.meal-cell-overlay { box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.4); transform: rotate(-1deg); background: var(--void-elevated); cursor: grabbing; max-width: 220px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border); }
+.meal-cell-move-panel {
+  position: absolute;
+  z-index: 4;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  padding: 6px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: var(--void-elevated);
+  box-shadow: var(--shadow-soft);
+}
+.meal-cell-move-select {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 0.78rem;
+}
 
 /* Meal shopping push section */
 .meal-push { display: flex; flex-direction: column; gap: 6px; padding: var(--space-sm); border: 1px dashed var(--glass-border); border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.04); }
@@ -3477,10 +3495,9 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   border-color: var(--amethyst);
   background: color-mix(in srgb, var(--amethyst) 10%, var(--surface-paper));
 }
-.meal-plans-page .meal-cell-overlay {
+.meal-plans-page .meal-cell-move-panel {
   border-color: var(--border-subtle);
   background: var(--surface-paper);
-  box-shadow: var(--shadow-soft);
 }
 
 @media (max-width: 780px) {

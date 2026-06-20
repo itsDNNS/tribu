@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Legg til uke på handlelisten",
   "module.meal_plans.push_week_to_shopping_aria": "Overfør alle ingrediensene fra denne uken til en handleliste",
   "module.meal_plans.push_to_shopping": "Til handleliste",
-  "module.meal_plans.drag_aria": "Dra \"{name}\" til et annet spor",
+  "module.meal_plans.drag_aria": "Flytt «{name}» til et annet tidspunkt",
   "module.meal_plans.pushed_one": "1 ingrediens presset til handlelisten",
   "module.meal_plans.pushed_many": "{count} ingredienser presset til handlelisten",
   "module.recipes.name": "Oppskrifter",

@@ -1062,7 +1062,7 @@
   "module.meal_plans.push_week_to_shopping": "Добавете седмица към списъка за пазаруване",
   "module.meal_plans.push_week_to_shopping_aria": "Поставете всички съставки от тази седмица в списък за пазаруване",
   "module.meal_plans.push_to_shopping": "Към списъка за пазаруване",
-  "module.meal_plans.drag_aria": "Плъзнете \"{name}\" в друг слот",
+  "module.meal_plans.drag_aria": "Преместете „{name}“ в друг слот",
   "module.meal_plans.pushed_one": "1 съставка е избутана в списъка за пазаруване",
   "module.meal_plans.pushed_many": "{count} съставки, избутани в списъка за пазаруване",
   "module.recipes.name": "Рецепти",

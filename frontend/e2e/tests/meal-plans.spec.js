@@ -51,6 +51,34 @@ test.describe('Meal plan', () => {
     await expect(page.getByText('Demo soup')).toBeVisible();
   });
 
+  test('moves a demo meal with the native slot picker', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.getByRole('button', { name: /try demo/i }).first().click();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 90000 });
+
+    await navigateTo(page, 'Meal plan');
+
+    const mealCell = page.locator('.meal-grid-cell-filled').first();
+    await expect(mealCell).toBeVisible({ timeout: 30000 });
+    const mealName = (await mealCell.locator('.meal-cell-title').innerText()).trim();
+
+    await mealCell.locator('.meal-cell-grip-btn').click();
+    const moveSelect = mealCell.locator('.meal-cell-move-select');
+    await expect(moveSelect).toBeVisible();
+
+    const targetValue = await moveSelect.evaluate((select) => (
+      Array.from(select.options).find((option) => option.value !== select.value)?.value
+    ));
+    expect(targetValue).toBeTruthy();
+    const targetSlot = targetValue.split(':')[1];
+    await moveSelect.selectOption(targetValue);
+
+    const movedMealCell = page
+      .locator(`.meal-grid-cell-filled.meal-grid-slot-${targetSlot}`)
+      .filter({ hasText: mealName });
+    await expect(movedMealCell).toBeVisible({ timeout: 30000 });
+  });
+
   test('pushes the current week ingredients to a shopping list', async ({ page, baseURL, browserName }) => {
     const workerUser = await registerWorkerUser(baseURL, browserName);
     await page.context().addCookies(workerUser.cookies);
