@@ -293,6 +293,7 @@ Use the [GitHub Wiki](https://github.com/itsDNNS/tribu/wiki) as the primary docu
 | Product overview | [Product page](https://itsdnns.github.io/tribu/) and this README |
 | Full docs | [Documentation Wiki](https://github.com/itsDNNS/tribu/wiki) |
 | Install and operate | [Self-Hosting](https://github.com/itsDNNS/tribu/wiki/Self-Hosting) |
+| Back up and restore | [Backup & Restore](https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore) |
 | Shared display | [Shared Home Display](https://github.com/itsDNNS/tribu/wiki/Shared-Home-Display) |
 | Home Assistant | [Home Assistant](https://github.com/itsDNNS/tribu/wiki/Home-Assistant) |
 | Native release readiness | [Native release smoke-test matrix](docs/native-release-smoke-test-matrix.md) |

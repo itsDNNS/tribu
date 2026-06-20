@@ -19,6 +19,10 @@ LOCALE_DIR = ROOT / "frontend" / "i18n"
 COMPOSE = ROOT / "docker" / "docker-compose.yml"
 DEV_COMPOSE = ROOT / "docker" / "docker-compose.dev.yml"
 E2E_WORKFLOW = ROOT / ".github" / "workflows" / "e2e.yml"
+LEGACY_BACKUP_SCRIPTS = (
+    ROOT / "scripts" / "backup.sh",
+    ROOT / "scripts" / "restore.sh",
+)
 
 FORBIDDEN_PUBLIC_TERMS = (
     "oikos",
@@ -163,6 +167,29 @@ def test_documentation_policy_tracks_launch_docs():
         "docs/public-launch-follow-up-issues.md",
     ):
         assert path in policy
+
+
+def test_backup_restore_guidance_uses_supported_public_docs():
+    readme = README.read_text(encoding="utf-8")
+    security = SECURITY.read_text(encoding="utf-8")
+    admin_backup = (ROOT / "frontend" / "components" / "admin" / "BackupSection.js").read_text(encoding="utf-8")
+
+    for script in LEGACY_BACKUP_SCRIPTS:
+        assert not script.exists(), f"legacy backup helper remains tracked: {script.relative_to(ROOT)}"
+
+    supported_url = "https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore"
+    assert supported_url in readme
+    assert supported_url in security
+    assert supported_url in admin_backup
+
+    checked_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (README, SECURITY, ROOT / "docs" / "self-hosting.md", ROOT / "frontend" / "components" / "admin" / "BackupSection.js")
+    )
+    assert "scripts/backup.sh" not in checked_text
+    assert "scripts/restore.sh" not in checked_text
+    assert "./scripts/backup.sh" not in checked_text
+    assert "./scripts/restore.sh" not in checked_text
 
 
 def test_public_compose_is_image_only_and_uses_shared_database_password():
