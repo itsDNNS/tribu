@@ -122,3 +122,31 @@ def test_invite_registration_still_works_after_initial_setup(monkeypatch):
     )
     assert resp.status_code == 200
     assert "tribu:families:*" in invalidated_patterns
+
+
+def test_invite_registration_rate_limit_still_applies_after_startup_patch():
+    from app.main import limiter as app_limiter
+    from app.modules.invitations_router import limiter as invitations_limiter
+
+    def reset_limiters():
+        app_limiter.reset()
+        invitations_limiter.reset()
+
+    reset_limiters()
+    try:
+        payload = {
+            "token": "missing-invite-token",
+            "email": "rate-limited@example.com",
+            "password": "Secure1Pass",
+            "display_name": "Invited",
+        }
+
+        for _ in range(10):
+            resp = client.post("/auth/register-with-invite", json=payload)
+            assert resp.status_code == 400
+            assert "INVITATION_INVALID" in str(resp.json())
+
+        limited = client.post("/auth/register-with-invite", json=payload)
+        assert limited.status_code == 429
+    finally:
+        reset_limiters()
