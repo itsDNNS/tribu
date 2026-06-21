@@ -28,7 +28,7 @@ from app.core.errors import (
 )
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
-from app.core.ws_broadcast import broadcast_item_added
+from app.core.ws_broadcast import broadcast_shopping_event
 from app.database import get_db
 from app.models import MealPlan, Membership, ShoppingItem, ShoppingList, User
 from app.schemas import (
@@ -470,9 +470,11 @@ def add_week_ingredients_to_shopping(
     db.commit()
     for item in created:
         db.refresh(item)
-        broadcast_item_added(
+        broadcast_shopping_event(
+            "list",
             shopping_list.id,
-            ShoppingItemResponse.model_validate(item).model_dump(mode="json"),
+            "item_added",
+            {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
         )
     if created:
         dispatch_shopping_destination_event(
@@ -552,9 +554,11 @@ def add_ingredients_to_shopping(
     db.commit()
     for item in created:
         db.refresh(item)
-        broadcast_item_added(
+        broadcast_shopping_event(
+            "list",
             shopping_list.id,
-            ShoppingItemResponse.model_validate(item).model_dump(mode="json"),
+            "item_added",
+            {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
         )
     if created:
         dispatch_shopping_destination_event(
