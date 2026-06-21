@@ -34,19 +34,11 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/screenshot-hero-mobile.png" alt="Tribu mobile dashboard" width="100%" />
+  <img src="docs/assets/screenshot-shared-display.png" alt="Tribu Shared Home Display on a kitchen tablet" width="100%" />
 </p>
 
 <p align="center">
-  <em>A quick daily view for the things your household needs today.</em>
-</p>
-
-<p align="center">
-  <img src="docs/assets/screenshot-light.png" alt="Tribu desktop dashboard" width="100%" />
-</p>
-
-<p align="center">
-  <em>A desktop command center for planning the week, sharing responsibility, and keeping everyone on the same page.</em>
+  <em>A read-only shared display for the day, agenda, and household context.</em>
 </p>
 
 ## Why Tribu?
@@ -72,60 +64,14 @@ Tribu runs with Docker Compose, published GHCR images, PostgreSQL, Valkey, and c
 
 ## Product tour
 
-<details open>
-<summary><strong>Open the screenshot tour</strong></summary>
+The README keeps one current visual proof asset: the Shared Home Display above. The broader workflow details live in the Wiki so setup and feature guides stay focused and current.
 
-<br>
-
-**1. Shared Home Display**
-
-<img src="docs/assets/screenshot-shared-display.png" alt="Shared Home Display on a kitchen tablet" width="100%" />
-
-A read-only household display for a kitchen tablet or hallway screen. Pair a display device, give it a revocable display token, and show the day without leaving a personal account signed in.
-
-**2. Desktop planning view**
-
-<img src="docs/assets/screenshot-light.png" alt="Dashboard in the Morning Mist theme" width="100%" />
-
-**3. Meals, recipes, and shopping**
-
-<img src="docs/assets/screenshot-meal-plans.png" alt="Meal planning with recipes and ingredients" width="100%" />
-
-Plan meals next to the rest of the week, keep recurring recipes nearby, and move ingredients toward the shopping list without opening another planning app.
-
-**4. School timetables**
-
-<img src="docs/assets/screenshot-school-timetables.png" alt="School timetable planning in Tribu" width="100%" />
-
-Keep each child's school week next to the rest of the family calendar, with lesson times, breaks, and assigned children in one place.
-
-**5. Phone sync**
-
-<img src="docs/assets/screenshot-phone-sync.png" alt="CalDAV and CardDAV phone sync settings" width="100%" />
-
-Sync calendars and contacts through CalDAV and CardDAV. iOS works with the built-in Calendar and Contacts apps. Android works through a DAV-compatible client such as DAVx5.
-
-**6. Home Assistant and webhooks**
-
-<img src="docs/assets/screenshot-home-assistant-webhooks.png" alt="Automation webhook settings for Home Assistant" width="100%" />
-
-Send selected Tribu events to automation tools such as Home Assistant through scoped webhooks with redacted endpoint details and secret headers.
-
-**7. Birthdays and gift ideas**
-
-<img src="docs/assets/screenshot-gifts.png" alt="Gift ideas and birthdays in Tribu" width="100%" />
-
-Keep birthdays and gift ideas close to the rest of household planning instead of maintaining another spreadsheet.
-
-**8. Recipes for the week**
-
-<img src="docs/assets/screenshot-recipes.png" alt="Recipes in Tribu" width="100%" />
-
-Keep family recipes organized, searchable, and ready for meal planning.
-
-See the [Wiki](https://github.com/itsDNNS/tribu/wiki) for setup guides and the broader product documentation.
-
-</details>
+| Workflow | Where to read more |
+|---|---|
+| Shared Home Display | [Pair a read-only kitchen tablet or wall screen](https://github.com/itsDNNS/tribu/wiki/Shared-Home-Display) |
+| Calendar, tasks, shopping, meals, recipes, school, gifts, rewards, contacts, and notifications | [Documentation Wiki](https://github.com/itsDNNS/tribu/wiki) |
+| Phone sync | [CalDAV and CardDAV setup](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#phone-sync-caldav--carddav) |
+| Home Assistant and webhooks | [Home Assistant guide](https://github.com/itsDNNS/tribu/wiki/Home-Assistant) |
 
 ## What Tribu covers today
 
