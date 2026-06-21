@@ -1,51 +1,61 @@
+import re
 from pathlib import Path
-
-import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / '.github/workflows'
 
 
-def test_e2e_workflow_declares_read_only_permissions():
-    workflow_text = (WORKFLOWS / 'e2e.yml').read_text()
-    workflow = yaml.safe_load(workflow_text)
+def read_e2e_workflow():
+    return (WORKFLOWS / 'e2e.yml').read_text()
 
-    assert workflow['permissions'] == {'contents': 'read'}
+
+def named_step_block(workflow_text, step_name):
+    match = re.search(
+        rf'(?m)^      - name: {re.escape(step_name)}\n(?P<body>(?:        .*\n)*)',
+        workflow_text,
+    )
+    assert match is not None, f'Missing workflow step: {step_name}'
+    return match.group('body')
+
+
+def test_e2e_workflow_declares_read_only_permissions():
+    workflow_text = read_e2e_workflow()
+    permissions = re.search(r'(?m)^permissions:\n(?P<body>(?:  [^\n]+\n)+)', workflow_text)
+
+    assert permissions is not None
+    assert permissions.group('body') == '  contents: read\n'
     assert workflow_text.index('\npermissions:\n') < workflow_text.index('\njobs:\n')
 
 
 def test_e2e_workflow_delegates_server_lifecycle_to_playwright():
-    workflow_text = (WORKFLOWS / 'e2e.yml').read_text()
-    workflow = yaml.safe_load(workflow_text)
-    steps = workflow['jobs']['e2e']['steps']
-    step_names = [step.get('name', '') for step in steps]
-    run_step = next(step for step in steps if step.get('name') == 'Run E2E tests')
+    workflow_text = read_e2e_workflow()
+    run_step = named_step_block(workflow_text, 'Run E2E tests')
 
-    assert 'Start services' not in step_names
-    assert 'Wait for backend health' not in step_names
-    assert 'Wait for frontend' not in step_names
-    assert 'Teardown' not in step_names
+    assert '      - name: Start services\n' not in workflow_text
+    assert '      - name: Wait for backend health\n' not in workflow_text
+    assert '      - name: Wait for frontend\n' not in workflow_text
+    assert '      - name: Teardown\n' not in workflow_text
     assert 'for i in $(seq' not in workflow_text
     assert 'curl -sf http://localhost' not in workflow_text
-    assert run_step['run'] == 'npx playwright test'
-    assert run_step['env']['BASE_URL'] == 'http://localhost:3000'
-    assert run_step['env']['E2E_WEB_SERVER_URL'] == 'http://localhost:3000'
-    assert run_step['env']['E2E_BACKEND_HEALTH_URL'] == 'http://localhost:8000/health'
-    assert 'docker-compose.dev.yml' in run_step['env']['E2E_WEB_SERVER_COMMAND']
-    assert 'up --build' in run_step['env']['E2E_WEB_SERVER_COMMAND']
+    assert '        run: npx playwright test\n' in run_step
+    assert '          BASE_URL: http://localhost:3000\n' in run_step
+    assert '          E2E_WEB_SERVER_URL: http://localhost:3000\n' in run_step
+    assert '          E2E_BACKEND_HEALTH_URL: http://localhost:8000/health\n' in run_step
+    assert '          E2E_WEB_SERVER_COMMAND:' in run_step
+    assert 'docker-compose.dev.yml' in run_step
+    assert 'up --build' in run_step
 
 
 def test_e2e_workflow_keeps_failure_artifacts():
-    workflow = yaml.safe_load((WORKFLOWS / 'e2e.yml').read_text())
-    steps = workflow['jobs']['e2e']['steps']
-    report_step = next(step for step in steps if step.get('name') == 'Upload test report')
-    trace_step = next(step for step in steps if step.get('name') == 'Upload traces on failure')
+    workflow_text = read_e2e_workflow()
+    report_step = named_step_block(workflow_text, 'Upload test report')
+    trace_step = named_step_block(workflow_text, 'Upload traces on failure')
 
-    assert report_step['if'] == 'always()'
-    assert report_step['with']['path'] == 'frontend/playwright-report/'
-    assert trace_step['if'] == 'failure()'
-    assert trace_step['with']['path'] == 'frontend/test-results/'
+    assert '        if: always()\n' in report_step
+    assert '          path: frontend/playwright-report/\n' in report_step
+    assert '        if: failure()\n' in trace_step
+    assert '          path: frontend/test-results/\n' in trace_step
 
 
 def test_playwright_config_owns_optional_web_server_lifecycle():
