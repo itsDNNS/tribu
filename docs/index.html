@@ -82,7 +82,6 @@
     .mockup { position: relative; }
     .mockup-card { background: var(--surface-strong); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); transform: rotate(1deg); }
     .mockup-card img { border-radius: calc(var(--radius) - 10px); border: 1px solid #eee4d7; }
-    .phone { position: absolute; width: 31%; left: -7%; bottom: -12%; border-radius: 24px; border: 8px solid #22272f; box-shadow: 0 22px 48px rgba(31, 41, 51, 0.28); overflow: hidden; background: #22272f; }
     .section { padding: 76px 0; }
     .section-header { max-width: 760px; margin-bottom: 34px; }
     .section-header p { color: var(--muted); font-size: 1.1rem; margin: 14px 0 0; }
@@ -106,7 +105,6 @@
       .hero { padding-top: 54px; }
       .hero-grid, .grid-2, .workflow { grid-template-columns: 1fr; }
       .grid-3 { grid-template-columns: 1fr; }
-      .phone { position: relative; left: auto; bottom: auto; width: 52%; margin: -40px auto 0; }
       .nav-inner { align-items: flex-start; flex-direction: column; padding: 14px 0; }
       .feature-list { grid-template-columns: 1fr; }
     }
@@ -145,12 +143,9 @@
             <span class="tag">MIT licensed</span>
           </div>
         </div>
-        <div class="mockup" aria-label="Tribu screenshots">
+        <div class="mockup" aria-label="Tribu Shared Home Display screenshot">
           <div class="mockup-card">
-            <img src="assets/screenshot-light.png" alt="Tribu desktop dashboard with household cards">
-          </div>
-          <div class="phone">
-            <img src="assets/screenshot-mobile.png" alt="Tribu mobile dashboard">
+            <img src="assets/screenshot-shared-display.png" alt="Tribu Shared Home Display on a kitchen tablet">
           </div>
         </div>
       </div>
@@ -191,13 +186,19 @@
             <li>Search across the household when you need something fast.</li>
           </ul>
         </div>
-        <img src="assets/screenshot-calendar.png" alt="Tribu calendar view">
+        <article class="card">
+          <h3>Full workflow docs stay in the Wiki.</h3>
+          <p>Calendar, tasks, shopping, meals, recipes, school timetables, gifts, rewards, contacts, notifications, and display setup are documented as maintained guides instead of a static screenshot gallery.</p>
+        </article>
       </div>
     </section>
 
     <section class="section">
       <div class="wrap grid-2">
-        <img src="assets/screenshot-shopping.png" alt="Tribu shopping list view">
+        <article class="card">
+          <h3>One current proof image in the repository.</h3>
+          <p>The public page keeps the strongest current screenshot and links to the Wiki for detailed workflows, so visitors get a quick proof point without a long gallery.</p>
+        </article>
         <div>
           <h2>From dinner plan to grocery run.</h2>
           <p class="lead">Meal plans, recipes, shopping lists, and task ownership sit in the same home base, so planning dinner does not become another scattered workflow.</p>

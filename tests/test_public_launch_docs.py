@@ -73,8 +73,7 @@ def test_public_launch_page_has_social_metadata_and_assets():
     assert "https://itsdnns.github.io/tribu/assets/og-image.png" in html
     assert OG_IMAGE.exists()
     assert OG_IMAGE.stat().st_size > 20_000
-    assert "assets/screenshot-light.png" in parser.images
-    assert "assets/screenshot-mobile.png" in parser.images
+    assert parser.images.count("assets/screenshot-shared-display.png") == 1
 
 
 def test_public_launch_page_local_references_exist():
