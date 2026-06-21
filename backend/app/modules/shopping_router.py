@@ -8,14 +8,7 @@ from app.core.activity import record_activity
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import ShoppingItem, ShoppingList, ShoppingTemplate, ShoppingTemplateItem, User
-from app.core.ws_broadcast import (
-    broadcast_item_added,
-    broadcast_item_deleted,
-    broadcast_item_updated,
-    broadcast_items_cleared,
-    broadcast_list_created,
-    broadcast_list_deleted,
-)
+from app.core.ws_broadcast import broadcast_shopping_event
 from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.webhooks import dispatch_webhook_event
 from app.schemas import (
@@ -257,7 +250,12 @@ def apply_template(
     db.commit()
     for item in created_items:
         db.refresh(item)
-        broadcast_item_added(sl.id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
+        broadcast_shopping_event(
+            "list",
+            sl.id,
+            "item_added",
+            {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
+        )
     if created_items:
         dispatch_shopping_destination_event(
             family_id=sl.family_id,
@@ -335,7 +333,12 @@ def create_list(
     db.commit()
     db.refresh(sl)
     resp = _list_response(sl)
-    broadcast_list_created(sl.family_id, resp.model_dump(mode="json"))
+    broadcast_shopping_event(
+        "family",
+        sl.family_id,
+        "list_created",
+        {"list": resp.model_dump(mode="json")},
+    )
     dispatch_webhook_event(
         db,
         family_id=sl.family_id,
@@ -376,7 +379,7 @@ def delete_list(
     list_name = sl.name
     db.delete(sl)
     db.commit()
-    broadcast_list_deleted(family_id, list_id)
+    broadcast_shopping_event("family", family_id, "list_deleted", {"list_id": list_id})
     dispatch_shopping_destination_event(
         family_id=family_id,
         event_type="shopping.list.changed",
@@ -462,7 +465,7 @@ def add_item(
         db.commit()
         db.refresh(checked_match)
         resp = ShoppingItemResponse.model_validate(checked_match).model_dump(mode="json")
-        broadcast_item_updated(list_id, resp)
+        broadcast_shopping_event("list", list_id, "item_updated", {"item": resp})
         dispatch_webhook_event(
             db,
             family_id=sl.family_id,
@@ -504,7 +507,12 @@ def add_item(
     )
     db.commit()
     db.refresh(item)
-    broadcast_item_added(list_id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
+    broadcast_shopping_event(
+        "list",
+        list_id,
+        "item_added",
+        {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
+    )
     dispatch_webhook_event(
         db,
         family_id=sl.family_id,
@@ -574,7 +582,12 @@ def update_item(
 
     db.commit()
     db.refresh(item)
-    broadcast_item_updated(item.list_id, ShoppingItemResponse.model_validate(item).model_dump(mode="json"))
+    broadcast_shopping_event(
+        "list",
+        item.list_id,
+        "item_updated",
+        {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
+    )
     dispatch_webhook_event(
         db,
         family_id=sl.family_id,
@@ -622,7 +635,7 @@ def delete_item(
     item_name = item.name
     db.delete(item)
     db.commit()
-    broadcast_item_deleted(list_id, item_id)
+    broadcast_shopping_event("list", list_id, "item_deleted", {"item_id": item_id})
     dispatch_shopping_destination_event(
         family_id=sl.family_id,
         event_type="shopping.item.changed",
@@ -658,7 +671,12 @@ def clear_checked(
         ShoppingItem.checked,
     ).delete(synchronize_session="fetch")
     db.commit()
-    broadcast_items_cleared(list_id, deleted)
+    broadcast_shopping_event(
+        "list",
+        list_id,
+        "items_cleared",
+        {"list_id": list_id, "deleted_count": deleted},
+    )
     if deleted:
         dispatch_shopping_destination_event(
             family_id=sl.family_id,
