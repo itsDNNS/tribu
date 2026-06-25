@@ -11,6 +11,7 @@ For contributor workflow inside the repository, treat this file as the canonical
 - [Roadmap](https://github.com/itsDNNS/tribu/wiki/Roadmap)
 - [Self-Hosting Guide](docs/self-hosting.md)
 - [Security Policy](SECURITY.md)
+- [Design System](DESIGN.md)
 - [Defensive Review Checklist](docs/defensive-review-checklist.md)
 - [Public Copy Review Checklist](docs/public-copy-review-checklist.md)
 
@@ -59,6 +60,7 @@ tribu/
 ├── docker/               # Compose stack and env template
 ├── docs/                 # Repo-local documentation and assets
 ├── scripts/              # Backup and restore helpers
+├── DESIGN.md             # Visual identity and UI system source of truth
 ├── README.md             # Public product-facing entry page
 ├── CONTRIBUTING.md       # Repo-local contributor guide
 └── SECURITY.md           # Security disclosure policy
@@ -187,6 +189,7 @@ If your change touches authentication, DAV, invitations, admin flows, or data in
 
 ### Docs and positioning
 
+- visual identity and UI system guidance: `DESIGN.md`
 - public first impression and product story: `README.md`
 - contributor workflow: `CONTRIBUTING.md`
 - self-hosting and operations: `docs/self-hosting.md`
