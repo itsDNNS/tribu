@@ -16,7 +16,7 @@ from app.core.notification_destinations import EligibleReminderUser, dispatch_fa
 from app.core.recurrence import expand_event
 from app.database import SessionLocal
 from app.models import (
-    CalendarEvent, FamilyBirthday, Membership, Notification,
+    CalendarEvent, CalendarSubscription, FamilyBirthday, Membership, Notification,
     NotificationPreference, NotificationSentLog, Task,
 )
 
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 BACKUP_JOB_ID = "scheduled_backup"
 NOTIFICATION_JOB_ID = "check_notifications"
+CALENDAR_SUBSCRIPTION_REFRESH_JOB_ID = "refresh_calendar_subscriptions"
 DST_TRANSITION_BUFFER = timedelta(hours=3)
 
 _scheduler: BackgroundScheduler | None = None
@@ -519,6 +520,59 @@ def start_notification_job():
         replace_existing=True,
     )
     logger.info("Notification check job started (every 5 min).")
+
+
+def _refresh_active_calendar_subscriptions():
+    from app.modules.calendar_router import _refresh_calendar_subscription
+
+    db = SessionLocal()
+    try:
+        subscriptions = (
+            db.query(CalendarSubscription)
+            .filter(CalendarSubscription.status == "active")
+            .order_by(CalendarSubscription.last_synced_at.asc().nullsfirst(), CalendarSubscription.id.asc())
+            .limit(25)
+            .all()
+        )
+        for subscription in subscriptions:
+            fallback_membership = (
+                db.query(Membership)
+                .filter(Membership.family_id == subscription.family_id)
+                .order_by(Membership.user_id.asc())
+                .first()
+            )
+            user_id = subscription.created_by_user_id or (fallback_membership.user_id if fallback_membership else None)
+            if user_id is None:
+                logger.warning("Skipping calendar subscription %s without a usable owner", subscription.id)
+                continue
+            _refresh_calendar_subscription(
+                db,
+                subscription=subscription,
+                user_id=user_id,
+            )
+        if subscriptions:
+            logger.info("Refreshed %s calendar subscription(s).", len(subscriptions))
+    except Exception:
+        db.rollback()
+        logger.exception("Calendar subscription refresh failed")
+    finally:
+        db.close()
+
+
+def start_calendar_subscription_refresh_job():
+    scheduler = get_scheduler()
+    existing = scheduler.get_job(CALENDAR_SUBSCRIPTION_REFRESH_JOB_ID)
+    if existing:
+        scheduler.remove_job(CALENDAR_SUBSCRIPTION_REFRESH_JOB_ID)
+    scheduler.add_job(
+        _refresh_active_calendar_subscriptions,
+        trigger=IntervalTrigger(hours=6),
+        id=CALENDAR_SUBSCRIPTION_REFRESH_JOB_ID,
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    logger.info("Calendar subscription refresh job started (every 6 hours).")
 
 
 def start_scheduler():

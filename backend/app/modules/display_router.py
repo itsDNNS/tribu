@@ -42,6 +42,7 @@ from app.models import (
     SchoolTimetable,
     SchoolTimetableAssignment,
     SchoolTimetableLesson,
+    Task,
     User,
 )
 from app.schemas import (
@@ -51,6 +52,7 @@ from app.schemas import (
     DisplayDashboardEvent,
     DisplayDashboardMember,
     DisplayDashboardResponse,
+    DisplayDashboardTask,
     DisplaySchoolTimetableGroup,
     DisplaySchoolTimetableLesson,
     SchoolTimetableMemberResponse,
@@ -310,8 +312,8 @@ def display_me(
     summary="Get the shared-home display dashboard",
     description=(
         "Return a curated, read-only dashboard for the family this display "
-        "is bound to: members (no emails), upcoming events (14 days), and "
-        "upcoming birthdays (28 days). The display token determines the "
+        "is bound to: members (no emails), upcoming events (14 days), "
+        "open tasks, and upcoming birthdays (28 days). The display token determines the "
         "family — there is no ``family_id`` query parameter."
     ),
     response_description="Display dashboard payload",
@@ -406,6 +408,25 @@ def display_dashboard(
             ))
     upcoming_birthdays.sort(key=lambda x: x.days_until)
 
+    task_rows = (
+        db.query(Task)
+        .filter(Task.family_id == device.family_id, Task.status == "open")
+        .order_by(Task.due_date.asc().nullslast(), Task.created_at.asc(), Task.id.asc())
+        .limit(8)
+        .all()
+    )
+    open_tasks = [
+        DisplayDashboardTask(
+            title=task.title,
+            priority=task.priority,
+            due_date=task.due_date,
+            participant_colors=[member_colors_by_user_id[task.assigned_to_user_id]]
+            if task.assigned_to_user_id in member_colors_by_user_id
+            else [],
+        )
+        for task in task_rows
+    ]
+
     membership_by_user_id = {m.user_id: m for m in memberships}
     today_weekday = today.isoweekday()
     today_school_timetables: list[DisplaySchoolTimetableGroup] = []
@@ -469,6 +490,7 @@ def display_dashboard(
         members=members,
         next_events=next_events,
         upcoming_birthdays=upcoming_birthdays,
+        open_tasks=open_tasks,
         today_school_timetables=today_school_timetables,
         config=_device_config(device),
     )

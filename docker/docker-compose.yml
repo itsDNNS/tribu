@@ -5,6 +5,11 @@ services:
     image: postgres:16-alpine
     container_name: tribu-postgres
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tribu -d tribu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     environment:
       POSTGRES_DB: tribu
       POSTGRES_USER: tribu
@@ -16,6 +21,11 @@ services:
     image: valkey/valkey:8-alpine
     container_name: tribu-valkey
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     image: ghcr.io/itsdnns/tribu-backend:latest
@@ -33,14 +43,29 @@ services:
       JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-24}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
       TZ: ${TZ:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      CORS_ALLOW_LAN_ORIGINS: ${CORS_ALLOW_LAN_ORIGINS:-false}
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
+      SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS: ${SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS:-false}
       ALLOW_OPEN_REGISTRATION: ${ALLOW_OPEN_REGISTRATION:-false}
       SETUP_RESTORE_TOKEN: ${SETUP_RESTORE_TOKEN:-}
       SETUP_RESTORE_MAX_BYTES: ${SETUP_RESTORE_MAX_BYTES:-104857600}
     depends_on:
-      - postgres
-      - valkey
-    ports:
-      - "8000:8000"
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     volumes:
       # For external storage (e.g. NAS), replace with a bind mount:
       # - /mnt/nas/backups/tribu:/backups
@@ -53,7 +78,8 @@ services:
     environment:
       BACKEND_URL: http://backend:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3000:3000"
 

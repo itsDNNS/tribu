@@ -192,6 +192,7 @@ def test_webhook_stdlib_post_sets_method_headers_payload_and_timeout(monkeypatch
             return FakeResponse()
 
     monkeypatch.setattr(webhooks_core, "_WEBHOOK_OPENER", FakeOpener())
+    monkeypatch.setattr(webhooks_core, "validate_http_url_route", lambda url, allow_private_networks=False: url)
 
     status = webhooks_core._post_webhook_json(
         "https://receiver.example/hook",
@@ -444,3 +445,32 @@ def test_inactive_or_unsubscribed_webhooks_are_skipped(monkeypatch):
         assert db.query(WebhookDelivery).count() == 0
     finally:
         db.close()
+
+
+def test_webhook_delivery_blocks_private_network_targets(monkeypatch):
+    token, family_id, _ = _seed_admin()
+    endpoint_id = _seed_webhook_endpoint(family_id, url="https://receiver.example/hook")
+
+    from app.core import webhooks as webhooks_core
+    from app.core.calendar_subscriptions import IcsSubscriptionError
+
+    def reject_private(url, *, allow_private_networks=False):
+        raise IcsSubscriptionError("Subscription URL host is not allowed")
+
+    called = {"opened": False}
+
+    class FakeOpener:
+        def open(self, request, *, timeout):
+            called["opened"] = True
+            raise AssertionError("network opener should not be called")
+
+    monkeypatch.setattr(webhooks_core, "validate_http_url_route", reject_private)
+    monkeypatch.setattr(webhooks_core, "_WEBHOOK_OPENER", FakeOpener())
+
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["status"] == "failed"
+    assert body["delivery"]["error"] == "NetworkTargetNotAllowed"
+    assert called["opened"] is False

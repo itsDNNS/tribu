@@ -27,7 +27,7 @@ def test_docker_workflow_uses_component_matrix_without_repeated_shared_steps():
     assert workflow.count('docker/login-action@v4') == 1
     assert workflow.count('docker/metadata-action@v6') == 1
     assert workflow.count('docker/build-push-action@v7') == 1
-    assert len(workflow.splitlines()) < 140
+    assert len(workflow.splitlines()) < 190
 
 
 def test_stable_release_tag_builds_publish_latest_images():
@@ -77,3 +77,13 @@ def test_docker_workflow_keeps_required_package_write_permissions():
     assert 'permissions:' in workflow
     assert 'contents: read' in workflow
     assert 'packages: write' in workflow
+
+
+def test_docker_publish_waits_for_backend_and_frontend_tests():
+    workflow = read_workflow()
+
+    assert 'backend-tests:' in workflow
+    assert 'uses: ./.github/workflows/backend-tests.yml' in workflow
+    assert 'frontend-tests:' in workflow
+    assert 'npm test -- --runInBand' in workflow
+    assert 'needs: [backend-tests, frontend-tests]' in workflow

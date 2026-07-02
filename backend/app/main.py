@@ -1,5 +1,6 @@
 import asyncio
 import hmac
+import ipaddress
 import os
 import logging
 from contextlib import asynccontextmanager
@@ -23,7 +24,6 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.extension import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
 
 
 from app.core.deps import current_user
@@ -69,7 +69,7 @@ from app.modules.display_router import admin_router as display_admin_router, dis
 from app.modules.mobile_router import router as mobile_router
 from app.modules.webhooks_router import router as webhooks_router
 from app.modules.notification_destinations_router import router as notification_destinations_router
-from app.core.scheduler import configure_backup_schedule, start_notification_job, start_scheduler, shutdown_scheduler
+from app.core.scheduler import configure_backup_schedule, start_calendar_subscription_refresh_job, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import ws_broadcast
 from app.schemas import (
     AUTH_RESPONSES, CONFLICT_RESPONSE, ErrorResponse,
@@ -225,6 +225,7 @@ async def lifespan(app: FastAPI):
         retention = int(get_setting(db, "backup_retention", "7"))
         start_scheduler()
         start_notification_job()
+        start_calendar_subscription_refresh_job()
         if schedule != "off":
             configure_backup_schedule(schedule, BACKUP_DB_URL, BACKUP_DIR, retention)
     finally:
@@ -239,7 +240,74 @@ async def lifespan(app: FastAPI):
 # App
 # ---------------------------------------------------------------------------
 
-limiter = Limiter(key_func=get_remote_address)
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _split_env_list(name: str) -> list[str]:
+    raw = os.getenv(name, "")
+    return [part.strip() for part in raw.replace(";", ",").split(",") if part.strip()]
+
+
+def _cors_allowed_origins() -> list[str]:
+    origins = {
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    }
+    origins.update(_split_env_list("CORS_ALLOWED_ORIGINS"))
+    return sorted(origins)
+
+
+def _cors_allowed_origin_regex() -> str:
+    # LAN browser origins are intentionally opt-in for self-hosted deployments
+    # that call the backend directly. The default Compose stack exposes only
+    # the frontend and reaches the backend over the internal Docker network.
+    if _env_bool("CORS_ALLOW_LAN_ORIGINS"):
+        return r"https?://(localhost|127\.0\.0\.1|192\.168\.[0-9]+\.[0-9]+)(:[0-9]+)?"
+    return r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?"
+
+
+def _trusted_proxy_networks() -> list[ipaddress._BaseNetwork]:
+    raw_networks = _split_env_list("TRUSTED_PROXY_CIDRS")
+    networks = ["127.0.0.0/8", "::1/128", *raw_networks]
+    parsed = []
+    for value in networks:
+        try:
+            parsed.append(ipaddress.ip_network(value, strict=False))
+        except ValueError:
+            logger.warning("Ignoring invalid TRUSTED_PROXY_CIDRS entry")
+    return parsed
+
+
+def _client_ip_is_trusted_proxy(client_host: str | None) -> bool:
+    if not client_host:
+        return False
+    try:
+        client_ip = ipaddress.ip_address(client_host)
+    except ValueError:
+        return False
+    return any(client_ip in network for network in _trusted_proxy_networks())
+
+
+def rate_limit_key(request: Request) -> str:
+    client_host = request.client.host if request.client else ""
+    if _client_ip_is_trusted_proxy(client_host):
+        forwarded_for = request.headers.get("x-forwarded-for", "")
+        first_hop = forwarded_for.split(",", 1)[0].strip()
+        if first_hop:
+            try:
+                ipaddress.ip_address(first_hop)
+                return first_hop
+            except ValueError:
+                pass
+    return client_host or "unknown"
+
+
+limiter = Limiter(key_func=rate_limit_key)
 
 app = FastAPI(
     title="Tribu API",
@@ -282,7 +350,8 @@ app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.[0-9]+\.[0-9]+)(:[0-9]+)?",
+    allow_origins=_cors_allowed_origins(),
+    allow_origin_regex=_cors_allowed_origin_regex(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Setup-Restore-Token"],

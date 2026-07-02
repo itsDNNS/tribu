@@ -175,13 +175,19 @@ volumes:
   tribu_backups:
 ```
 
-Set the required secrets before deploying. Set `TZ` as well when you want family calendar times and reminders to use a local household timezone instead of UTC:
+Set the required secrets before deploying. The public Compose stack exposes only the frontend by default; the backend stays reachable to the frontend on the internal Docker network.
+
+Set `TZ` when you want family calendar times, task due dates, reminder windows, and quiet hours to use a local household timezone instead of UTC. Audit and technical session timestamps remain UTC.
 
 | Variable | Description |
 |---|---|
 | `JWT_SECRET` | Random 64-character hex string for JWT signing. Keep it stable in the persisted `.env` so routine updates do not end active sessions. |
 | `POSTGRES_PASSWORD` | Random 32-character hex string for the database. |
 | `TZ` | Optional IANA timezone for family calendar/task times and reminder windows, for example `Europe/Berlin`. If unset or invalid, Tribu falls back to UTC. Audit timestamps remain UTC. |
+| `CORS_ALLOWED_ORIGINS` | Optional comma-separated exact browser origins for deployments that call the backend directly. The default allows localhost development origins only. |
+| `CORS_ALLOW_LAN_ORIGINS` | Optional `true` to allow `192.168.x.x` browser origins when you deliberately expose the backend on a LAN. |
+| `TRUSTED_PROXY_CIDRS` | Optional comma-separated proxy CIDRs whose `X-Forwarded-For` header may be used for login/register rate-limit keys. Leave unset unless a trusted reverse proxy sits in front of the backend. |
+| `SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS` | Optional `true` to let ICS calendar subscriptions fetch private/LAN feed URLs such as a self-hosted calendar server. Leave `false` unless you trust the feed targets. |
 
 Generate the values and write them into `.env`:
 
