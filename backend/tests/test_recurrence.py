@@ -163,7 +163,7 @@ class TestExpandMonthly:
         assert months == [1, 2, 3, 4, 5, 6]
 
     def test_monthly_end_of_month_edge_case(self):
-        """Event on Jan 31 clamps through Feb 28, then stays at 28th due to iterative relativedelta."""
+        """Event on Jan 31 clamps in February, then returns to month-end dates."""
         ev = make_event(
             recurrence="monthly",
             starts_at=datetime(2026, 1, 31, 10, 0),
@@ -173,10 +173,10 @@ class TestExpandMonthly:
         dates = [o["starts_at"] for o in result]
         assert dates[0] == datetime(2026, 1, 31, 10, 0)
         assert dates[1] == datetime(2026, 2, 28, 10, 0)
-        # After clamping to Feb 28, +1 month = Mar 28 (iterative behavior)
-        assert dates[2] == datetime(2026, 3, 28, 10, 0)
-        assert dates[3] == datetime(2026, 4, 28, 10, 0)
-        assert dates[4] == datetime(2026, 5, 28, 10, 0)
+        # The original 31st is the anchor day; short months clamp without drifting forever.
+        assert dates[2] == datetime(2026, 3, 31, 10, 0)
+        assert dates[3] == datetime(2026, 4, 30, 10, 0)
+        assert dates[4] == datetime(2026, 5, 31, 10, 0)
 
 
 # --- expand_event: yearly ---

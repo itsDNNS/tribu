@@ -13,7 +13,7 @@ VALID_RECURRENCES = {"daily", "weekly", "biweekly", "monthly", "yearly"}
 MAX_OCCURRENCES = 500
 
 
-def _next_occurrence(dt: datetime, recurrence: str) -> datetime:
+def _next_occurrence(dt: datetime, recurrence: str, *, anchor_day: int | None = None) -> datetime:
     if recurrence == "daily":
         return dt + timedelta(days=1)
     if recurrence == "weekly":
@@ -21,7 +21,7 @@ def _next_occurrence(dt: datetime, recurrence: str) -> datetime:
     if recurrence == "biweekly":
         return dt + timedelta(weeks=2)
     if recurrence == "monthly":
-        return dt + relativedelta(months=1)
+        return dt + relativedelta(months=1, day=anchor_day or dt.day)
     if recurrence == "yearly":
         return dt + relativedelta(years=1)
     return dt
@@ -156,7 +156,7 @@ def expand_event(
             occ["occurrence_date"] = occurrence_date
             occurrences.append(occ)
 
-        current = _next_occurrence(current, recurrence)
+        current = _next_occurrence(current, recurrence, anchor_day=event.starts_at.day)
         count += 1
 
     return occurrences

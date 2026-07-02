@@ -3,7 +3,7 @@ import {
   apiGetMyFamilies, apiGetMembers, apiSetAdult, apiSetRole,
   apiGetDashboard, apiGetEvents, apiCreateEvent, apiAddBirthday,
   apiGetContacts, apiImportContactsCsv,
-  apiExportCalendarIcs, apiImportCalendarIcs, apiExportContactsCsv,
+  apiExportCalendarIcs, apiImportCalendarIcs, apiExportContactsCsv, apiDownloadBackup,
   apiGetActivity,
   apiCreateQuickCapture, apiGetQuickCaptureInbox, apiConvertQuickCapture, apiDismissQuickCapture,
   apiGetSetupChecklist, apiDismissSetupChecklist, apiResetSetupChecklist, apiCompleteSetupChecklistStep,
@@ -199,6 +199,41 @@ describe('Auth API', () => {
       '/api/auth/me',
       '/api/auth/refresh',
       '/api/auth/me',
+    ]);
+  });
+
+
+  it('download helpers refresh once before retrying raw responses', async () => {
+    const finalResponse = { ok: true, status: 200, blob: () => Promise.resolve(new Blob(['ok'])) };
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) })
+      .mockResolvedValueOnce(finalResponse);
+
+    const result = await apiExportCalendarIcs('9');
+
+    expect(result).toBe(finalResponse);
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual([
+      '/api/calendar/events/export.ics?family_id=9',
+      '/api/auth/refresh',
+      '/api/calendar/events/export.ics?family_id=9',
+    ]);
+  });
+
+  it('backup downloads use the shared raw session retry path', async () => {
+    const finalResponse = { ok: true, status: 200, blob: () => Promise.resolve(new Blob(['backup'])) };
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ status: 'ok' }) })
+      .mockResolvedValueOnce(finalResponse);
+
+    const result = await apiDownloadBackup('latest.dump');
+
+    expect(result).toBe(finalResponse);
+    expect(global.fetch.mock.calls.map(([url]) => url)).toEqual([
+      '/api/admin/backup/latest.dump/download',
+      '/api/auth/refresh',
+      '/api/admin/backup/latest.dump/download',
     ]);
   });
 

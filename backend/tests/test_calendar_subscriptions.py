@@ -178,6 +178,44 @@ class TestUrlSafety:
             fetch_ics_text("https://feed.example.com/holidays.ics")
         assert calls["connected"] is False
 
+
+    def test_fetch_allows_private_hosts_with_explicit_opt_in(self, monkeypatch):
+        calls = {"connected": False}
+
+        def _private_addrinfo(host, port, type=0):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.168.1.20", port or 80))]
+
+        class _Socket:
+            def __init__(self, *args, **kwargs):
+                pass
+            def settimeout(self, timeout):
+                pass
+            def connect(self, sockaddr):
+                calls["connected"] = True
+                raise OSError("stop before network I/O")
+            def close(self):
+                pass
+
+        monkeypatch.setattr(socket, "getaddrinfo", _private_addrinfo)
+        monkeypatch.setattr(socket, "socket", _Socket)
+
+        with pytest.raises(IcsSubscriptionError, match="unreachable"):
+            fetch_ics_text("http://calendar.lan/family.ics", allow_private_networks=True)
+        assert calls["connected"] is True
+
+    def test_fetch_private_host_env_opt_in(self, monkeypatch):
+        from app.core import calendar_subscriptions as sub_mod
+
+        def _private_addrinfo(host, port, type=0):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.5", port or 80))]
+
+        monkeypatch.setenv("SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS", "true")
+        monkeypatch.setattr(socket, "getaddrinfo", _private_addrinfo)
+        monkeypatch.setattr(socket, "socket", lambda *a, **kw: (_ for _ in ()).throw(OSError("stop")))
+
+        with pytest.raises(IcsSubscriptionError, match="unreachable"):
+            sub_mod.fetch_ics_text("http://calendar.lan/family.ics")
+
     def test_fetch_rejects_all_resolved_addresses_when_none_are_public(self, monkeypatch):
         def _addrinfo(host, port, type=0):
             return [

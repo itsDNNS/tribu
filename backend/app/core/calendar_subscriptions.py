@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import http.client
 import ipaddress
+import os
 import socket
 import ssl
 import urllib.parse
@@ -78,8 +79,16 @@ def _is_disallowed_ip(raw_ip: str) -> bool:
     )
 
 
-def _public_addrinfo(parsed: urllib.parse.ParseResult) -> tuple[int, int, int, tuple]:
-    """Resolve once and return a public route target for the outbound request."""
+def subscriptions_allow_private_networks() -> bool:
+    return os.getenv("SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _route_addrinfo(
+    parsed: urllib.parse.ParseResult,
+    *,
+    allow_private_networks: bool = False,
+) -> tuple[int, int, int, tuple]:
+    """Resolve once and return an allowed route target for the outbound request."""
     hostname = parsed.hostname
     if not hostname:
         raise IcsSubscriptionError("Subscription URL is missing a host")
@@ -91,17 +100,24 @@ def _public_addrinfo(parsed: urllib.parse.ParseResult) -> tuple[int, int, int, t
     if not addresses:
         raise IcsSubscriptionError("Subscription URL host could not be resolved")
 
-    public_addresses = []
+    allowed_addresses = []
     for family, socktype, proto, _canonname, sockaddr in addresses:
         if family not in (socket.AF_INET, socket.AF_INET6):
             continue
-        if _is_disallowed_ip(sockaddr[0]):
+        if not allow_private_networks and _is_disallowed_ip(sockaddr[0]):
             continue
-        public_addresses.append((family, socktype, proto, sockaddr))
+        allowed_addresses.append((family, socktype, proto, sockaddr))
 
-    if not public_addresses:
+    if not allowed_addresses:
         raise IcsSubscriptionError("Subscription URL host is not allowed")
-    return public_addresses[0]
+    return allowed_addresses[0]
+
+
+def validate_http_url_route(url: str, *, allow_private_networks: bool = False) -> str:
+    """Validate scheme, host, resolution, and private-network policy for egress."""
+    target = validate_subscription_url(url)
+    _route_addrinfo(_parse_subscription_url(target), allow_private_networks=allow_private_networks)
+    return target
 
 
 def hostname_from_url(url: str) -> str:
@@ -126,6 +142,7 @@ def fetch_ics_text(
     *,
     max_bytes: int = _MAX_ICS_BYTES,
     timeout: float = _FETCH_TIMEOUT,
+    allow_private_networks: bool | None = None,
 ) -> str:
     """Fetch ``url`` and return its body as text.
 
@@ -135,7 +152,12 @@ def fetch_ics_text(
     """
     target = validate_subscription_url(url)
     parsed = _parse_subscription_url(target)
-    family, socktype, proto, sockaddr = _public_addrinfo(parsed)
+    if allow_private_networks is None:
+        allow_private_networks = subscriptions_allow_private_networks()
+    family, socktype, proto, sockaddr = _route_addrinfo(
+        parsed,
+        allow_private_networks=allow_private_networks,
+    )
     host = parsed.hostname or ""
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
     path = urllib.parse.urlunparse(("", "", parsed.path or "/", parsed.params, parsed.query, ""))

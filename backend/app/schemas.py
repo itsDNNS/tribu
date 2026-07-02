@@ -1983,6 +1983,14 @@ class DisplayDashboardBirthday(BaseModel):
     days_until: int = Field(..., description="Days until the birthday")
 
 
+class DisplayDashboardTask(BaseModel):
+    """Open task projection safe for a shared-home display."""
+    title: str = Field(..., description="Task title")
+    priority: str = Field(..., description="Task priority")
+    due_date: Optional[datetime] = Field(None, description="Task due date, if set")
+    participant_colors: list[str] = Field(default_factory=list, description="Display-safe assignee colors")
+
+
 class DisplayDashboardResponse(BaseModel):
     """Aggregated dashboard payload for a shared-home display.
 
@@ -1997,6 +2005,7 @@ class DisplayDashboardResponse(BaseModel):
     members: list[DisplayDashboardMember] = Field(..., description="Family members (display name, color, and avatar only)")
     next_events: list[DisplayDashboardEvent] = Field(..., description="Upcoming events within 14 days (display-safe fields only)")
     upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
+    open_tasks: list[DisplayDashboardTask] = Field(default_factory=list, description="Open tasks with display-safe fields only")
     today_school_timetables: list[DisplaySchoolTimetableGroup] = Field(default_factory=list, description="Display-safe school timetable groups for today")
     config: DisplayDeviceConfig = Field(..., description="Resolved display render config")
 

@@ -29,6 +29,17 @@ async function request(path, options = {}, allowRefresh = true) {
   return { ok: res.ok, status: res.status, data };
 }
 
+async function rawRequest(path, options = {}, allowRefresh = true) {
+  const res = await fetch(`${API}${path}`, { credentials: 'include', ...options });
+
+  if (res.status === 401 && allowRefresh && !logoutInFlight && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
+    await refreshSession();
+    if (!logoutInFlight) return rawRequest(path, options, false);
+  }
+
+  return res;
+}
+
 function post(path, body) {
   return request(path, {
     method: 'POST',
@@ -261,11 +272,11 @@ export function apiImportContactsCsv(family_id, csv_text) {
 }
 
 export async function apiExportContactsCsv(familyId) {
-  return fetch(`${API}/contacts/export.csv?family_id=${familyId}`, { credentials: 'include' });
+  return rawRequest(`/contacts/export.csv?family_id=${familyId}`);
 }
 
 export async function apiExportCalendarIcs(familyId) {
-  return fetch(`${API}/calendar/events/export.ics?family_id=${familyId}`, { credentials: 'include' });
+  return rawRequest(`/calendar/events/export.ics?family_id=${familyId}`);
 }
 
 export function apiImportCalendarIcs(family_id, ics_text) {
@@ -439,7 +450,7 @@ export function apiGetBackups() {
 }
 
 export async function apiDownloadBackup(filename) {
-  return fetch(`${API}/admin/backup/${encodeURIComponent(filename)}/download`, { credentials: 'include' });
+  return rawRequest(`/admin/backup/${encodeURIComponent(filename)}/download`);
 }
 
 export function apiDeleteBackup(filename) {

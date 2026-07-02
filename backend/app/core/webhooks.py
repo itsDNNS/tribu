@@ -11,6 +11,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from sqlalchemy.orm import Session
 
+from app.core.calendar_subscriptions import IcsSubscriptionError, validate_http_url_route
 from app.core.utils import utcnow
 from app.models import WebhookDelivery, WebhookEndpoint
 
@@ -80,8 +81,9 @@ def _webhook_network_error_name(exc: BaseException) -> str:
 
 
 def _post_webhook_json(url: str, *, payload: dict[str, Any], headers: dict[str, str]) -> int:
+    safe_url = validate_http_url_route(url, allow_private_networks=False)
     request = urllib.request.Request(
-        url,
+        safe_url,
         data=json.dumps(payload).encode("utf-8"),
         headers=headers,
         method="POST",
@@ -125,6 +127,9 @@ def deliver_to_endpoint(
         delivery.status_code = exc.code
         delivery.status = "failed"
         delivery.error = f"HTTP {exc.code}"
+    except IcsSubscriptionError:
+        delivery.status = "failed"
+        delivery.error = "NetworkTargetNotAllowed"
     except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
         delivery.status = "failed"
         delivery.error = _webhook_network_error_name(exc)
