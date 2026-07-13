@@ -5,17 +5,8 @@ import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import { createEmptyMealForm } from '../lib/meal-plans';
+import { startOfWeek, weekStartsOn } from '../lib/dates';
 import * as api from '../lib/api';
-
-/** Return the Monday of the ISO week for a given date, in local time. */
-function isoWeekStart(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  // getDay: 0 = Sunday. We want Monday as week start.
-  const dayOfWeek = (d.getDay() + 6) % 7; // 0 = Mon ... 6 = Sun
-  d.setDate(d.getDate() - dayOfWeek);
-  return d;
-}
 
 export function formatIsoDate(d) {
   const y = d.getFullYear();
@@ -45,10 +36,10 @@ function ingredientNamesFromMeals(items) {
 }
 
 export function useMealPlans() {
-  const { familyId, messages, demoMode, mealPlans: demoMeals = [], setMealPlans } = useApp();
+  const { familyId, messages, lang, demoMode, mealPlans: demoMeals = [], setMealPlans } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
-  const [weekStart, setWeekStart] = useState(() => isoWeekStart(new Date()));
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), weekStartsOn(lang)));
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ingredientHints, setIngredientHints] = useState([]);
@@ -95,7 +86,14 @@ export function useMealPlans() {
 
   const goPrevWeek = useCallback(() => setWeekStart((w) => addDays(w, -7)), []);
   const goNextWeek = useCallback(() => setWeekStart((w) => addDays(w, 7)), []);
-  const goToday = useCallback(() => setWeekStart(isoWeekStart(new Date())), []);
+  const goToday = useCallback(() => setWeekStart(startOfWeek(new Date(), weekStartsOn(lang))), [lang]);
+
+  useEffect(() => {
+    setWeekStart((current) => {
+      const next = startOfWeek(addDays(current, 3), weekStartsOn(lang));
+      return formatIsoDate(next) === formatIsoDate(current) ? current : next;
+    });
+  }, [lang]);
 
   const byCell = useMemo(() => {
     const map = new Map();
