@@ -19,6 +19,7 @@ from app.schemas import (
     ShoppingItemUpdate,
     ShoppingListCreate,
     ShoppingListResponse,
+    ShoppingListUpdate,
     ShoppingTemplateApplyRequest,
     ShoppingTemplateApplyResponse,
     ShoppingTemplateCreate,
@@ -358,6 +359,71 @@ def create_list(
     return resp
 
 
+
+
+@router.patch(
+    "/lists/{list_id}",
+    response_model=ShoppingListResponse,
+    summary="Update a shopping list",
+    description="Rename a shopping list. Broadcasts via WebSocket. Adult only. Scope: `shopping:write`.",
+    response_description="The updated shopping list",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def update_list(
+    list_id: int,
+    payload: ShoppingListUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
+    if not sl:
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
+    ensure_adult(db, user.id, sl.family_id)
+    new_name = payload.name.strip()
+    if not new_name:
+        raise HTTPException(status_code=422, detail="Shopping list name cannot be blank")
+    old_name = sl.name
+    sl.name = new_name
+    record_activity(
+        db,
+        family_id=sl.family_id,
+        actor_user_id=user.id,
+        actor_display_name=user.display_name,
+        action="renamed",
+        object_type="shopping_list",
+        object_id=sl.id,
+        object_label=sl.name,
+        verb="renamed",
+        object_kind="shopping list",
+    )
+    db.commit()
+    db.refresh(sl)
+    resp = _list_response(sl)
+    broadcast_shopping_event(
+        "family",
+        sl.family_id,
+        "list_updated",
+        {"list": resp.model_dump(mode="json")},
+    )
+    dispatch_webhook_event(
+        db,
+        family_id=sl.family_id,
+        event_type="shopping.list.updated",
+        data={"list_id": sl.id, "name": sl.name, "old_name": old_name},
+    )
+    dispatch_shopping_destination_event(
+        family_id=sl.family_id,
+        event_type="shopping.list.changed",
+        title="Shopping list renamed",
+        body=f'{user.display_name or "Someone"} renamed shopping list "{old_name}" to "{sl.name}".',
+        link=f"/shopping?list={sl.id}",
+        source_type="shopping_list",
+        source_id=sl.id,
+        action="renamed",
+    )
+    return resp
+
 @router.delete(
     "/lists/{list_id}",
     summary="Delete a shopping list",
@@ -552,17 +618,28 @@ def update_item(
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_ITEM_NOT_FOUND))
     sl = db.query(ShoppingList).filter(ShoppingList.id == item.list_id).first()
     membership = ensure_family_membership(db, user.id, sl.family_id)
+    fields = payload.model_dump(exclude_unset=True)
     if not membership.is_adult:
-        fields = payload.model_dump(exclude_unset=True)
         if set(fields.keys()) - {"checked"}:
             raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
 
+    old_list_id = item.list_id
+    old_list_name = sl.name
+    target_list = sl
+    moved = False
+
     if payload.name is not None:
         item.name = _normalize_item_name(payload.name)
-    if payload.spec is not None:
+    if "spec" in fields:
         item.spec = _clean_optional_text(payload.spec)
-    if payload.category is not None:
+    if "category" in fields:
         item.category = _clean_optional_text(payload.category)
+    if payload.list_id is not None and payload.list_id != item.list_id:
+        target_list = db.query(ShoppingList).filter(ShoppingList.id == payload.list_id).first()
+        if not target_list or target_list.family_id != sl.family_id:
+            raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
+        item.list_id = target_list.id
+        moved = True
     if payload.checked is not None:
         was_checked = item.checked
         item.checked = payload.checked
@@ -580,31 +657,59 @@ def update_item(
                 verb="checked off",
             )
 
+    if moved:
+        record_activity(
+            db,
+            family_id=sl.family_id,
+            actor_user_id=user.id,
+            actor_display_name=user.display_name,
+            action="moved",
+            object_type="shopping_item",
+            object_id=item.id,
+            object_label=item.name,
+            verb="moved",
+            object_kind="shopping item",
+        )
+
     db.commit()
     db.refresh(item)
-    broadcast_shopping_event(
-        "list",
-        item.list_id,
-        "item_updated",
-        {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
-    )
+    item_payload = ShoppingItemResponse.model_validate(item).model_dump(mode="json")
+    if moved:
+        broadcast_shopping_event("list", old_list_id, "item_deleted", {"item_id": item.id})
+        broadcast_shopping_event("list", item.list_id, "item_added", {"item": item_payload})
+    else:
+        broadcast_shopping_event(
+            "list",
+            item.list_id,
+            "item_updated",
+            {"item": item_payload},
+        )
+    webhook_data = {"list_id": item.list_id, "item_id": item.id, "name": item.name, "checked": item.checked}
+    if moved:
+        webhook_data["from_list_id"] = old_list_id
     dispatch_webhook_event(
         db,
         family_id=sl.family_id,
         event_type="shopping.item.updated",
-        data={"list_id": item.list_id, "item_id": item.id, "name": item.name, "checked": item.checked},
+        data=webhook_data,
     )
-    if payload.checked is True:
+    if moved:
+        item_action = "moved"
+        destination_body = f'{user.display_name or "Someone"} moved "{item.name}" from "{old_list_name}" to "{target_list.name}".'
+    elif payload.checked is True:
         item_action = "checked"
+        destination_body = f'{user.display_name or "Someone"} checked "{item.name}" on "{sl.name}".'
     elif payload.checked is False:
         item_action = "unchecked"
+        destination_body = f'{user.display_name or "Someone"} unchecked "{item.name}" on "{sl.name}".'
     else:
         item_action = "updated"
+        destination_body = f'{user.display_name or "Someone"} updated "{item.name}" on "{sl.name}".'
     dispatch_shopping_destination_event(
         family_id=sl.family_id,
         event_type="shopping.item.changed",
         title="Shopping item updated",
-        body=f'{user.display_name or "Someone"} {item_action} "{item.name}" on "{sl.name}".',
+        body=destination_body,
         link=f"/shopping?list={item.list_id}&item={item.id}",
         source_type="shopping_item",
         source_id=item.id,

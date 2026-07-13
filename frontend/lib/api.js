@@ -341,6 +341,10 @@ export function apiCreateShoppingList(payload) {
   return post('/shopping/lists', payload);
 }
 
+export function apiUpdateShoppingList(listId, payload) {
+  return patch(`/shopping/lists/${listId}`, payload);
+}
+
 export function apiDeleteShoppingList(listId) {
   return del(`/shopping/lists/${listId}`);
 }

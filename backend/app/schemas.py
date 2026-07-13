@@ -632,6 +632,11 @@ class ShoppingListCreate(BaseModel):
     })
 
 
+class ShoppingListUpdate(BaseModel):
+    """Rename a shopping list."""
+    name: str = Field(min_length=1, max_length=100, description="List name")
+
+
 class ShoppingListResponse(BaseModel):
     """Shopping list with item counts."""
     model_config = ConfigDict(from_attributes=True)
@@ -662,6 +667,7 @@ class ShoppingItemUpdate(BaseModel):
     spec: Optional[str] = Field(None, max_length=200, description="Item specification")
     category: Optional[str] = Field(None, max_length=100, description="Optional category or aisle label")
     checked: Optional[bool] = Field(None, description="Check/uncheck the item")
+    list_id: Optional[int] = Field(None, description="Move the item to another shopping list in the same family")
 
 
 class ShoppingItemResponse(BaseModel):
@@ -2019,6 +2025,7 @@ WEBHOOK_EVENT_TYPES = {
     "task.created",
     "task.updated",
     "shopping.list.created",
+    "shopping.list.updated",
     "shopping.item.created",
     "shopping.item.updated",
     "quick_capture.created",

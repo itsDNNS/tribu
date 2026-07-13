@@ -43,6 +43,44 @@ test.describe('Shopping', () => {
     await expect(page.getByText('whole wheat')).toBeVisible();
   });
 
+  test('rename a list, edit item details, and move the item between lists', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const source = await seedShoppingList(apiCtx, familyId, 'StoreA');
+    await seedShoppingList(apiCtx, familyId, 'StoreB');
+    await seedShoppingItem(apiCtx, source.id, 'Bread', '1 loaf', 'Bakery');
+
+    await navigateTo(page, 'Shopping');
+    await page.reload();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+    await navigateTo(page, 'Shopping');
+
+    await selectShoppingList(page, 'StoreA');
+    const renameForm = page.locator('.shopping-list-rename-form');
+    if ((await renameForm.count()) === 0) {
+      await shoppingListCard(page, 'StoreA').locator('button[aria-label="Rename list: StoreA"]').click({ force: true });
+    }
+    await expect(renameForm).toBeVisible({ timeout: 10000 });
+    await page.getByLabel('List name').fill('Store A market');
+    await renameForm.getByRole('button', { name: 'Save' }).click();
+    await expect(shoppingListCard(page, 'Store A market')).toBeVisible({ timeout: 10000 });
+
+    await page.locator('[role="checkbox"][aria-label="Bread"]').hover();
+    await page.getByRole('button', { name: 'Edit item: Bread' }).click();
+    const editForm = page.locator('.shopping-item-edit-form');
+    await editForm.getByLabel('Item').fill('baguette');
+    await editForm.getByLabel('Details').fill('2 loaves');
+    await editForm.getByLabel('Category').fill('Bakery aisle');
+    await editForm.getByLabel('Move to list').selectOption({ label: 'StoreB' });
+    await editForm.getByRole('button', { name: 'Save' }).click();
+
+    await expect(page.locator('[role="checkbox"][aria-label="Baguette"]')).not.toBeVisible({ timeout: 10000 });
+    await selectShoppingList(page, 'StoreB');
+    const movedItem = page.locator('[role="checkbox"][aria-label="Baguette"]');
+    await expect(movedItem).toBeVisible({ timeout: 10000 });
+    await expect(movedItem).toContainText('2 loaves');
+    await expect(movedItem).toContainText('Bakery aisle');
+  });
+
   test('reactivates checked items and normalizes quick-add names', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
     const list = await seedShoppingList(apiCtx, familyId, 'Reuse Checked List');
