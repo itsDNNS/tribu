@@ -9,6 +9,7 @@ const WEBHOOK_EVENTS = [
   ['task.created', 'Aufgabe erstellt'],
   ['task.updated', 'Aufgabe aktualisiert'],
   ['shopping.list.created', 'Einkaufsliste erstellt'],
+  ['shopping.list.updated', 'Einkaufsliste aktualisiert'],
   ['shopping.item.created', 'Einkaufsartikel erstellt'],
   ['shopping.item.updated', 'Einkaufsartikel aktualisiert'],
   ['quick_capture.created', 'Quick Capture erstellt'],

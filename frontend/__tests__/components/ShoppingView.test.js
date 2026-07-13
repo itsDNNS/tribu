@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ShoppingView from '../../components/ShoppingView';
 
@@ -16,9 +16,13 @@ jest.mock('../../hooks/useShopping', () => ({
 const messages = {
   'module.shopping.name': 'Shopping',
   'module.shopping.new_list': 'New list',
+  'module.shopping.list_name': 'List name',
   'module.shopping.list_name_placeholder': 'e.g. Grocery Store',
+  'module.shopping.item_name': 'Item',
   'module.shopping.item_name_placeholder': 'Add an item...',
+  'module.shopping.item_spec': 'Details',
   'module.shopping.item_spec_placeholder': 'e.g. 500g, organic',
+  'module.shopping.item_category': 'Category',
   'module.shopping.item_category_placeholder': 'Category or aisle',
   'module.shopping.items': 'Items',
   'module.shopping.no_items': 'No items yet',
@@ -43,6 +47,14 @@ const messages = {
   'module.shopping.apply_template': 'Add to list',
   'module.shopping.edit_template': 'Edit template',
   'module.shopping.delete_template': 'Delete template',
+  'module.shopping.rename_list': 'Rename list',
+  'module.shopping.edit_item': 'Edit item',
+  'module.shopping.move_to_list': 'Move to list',
+  'module.shopping.keep_current_list': 'Keep in current list',
+  'module.shopping.save': 'Save',
+  'module.shopping.cancel': 'Cancel',
+  'aria.rename_list': 'Rename list: {name}',
+  'aria.edit_item': 'Edit item: {name}',
   'aria.delete_item': 'Delete item: {name}',
   'aria.delete_list': 'Delete list: {name}',
   'aria.delete_template': 'Delete template: {name}',
@@ -79,9 +91,12 @@ function setup(overrides = {}, appOverrides = {}) {
     setShowCreateList: jest.fn(),
     itemInputRef: { current: null },
     createList: jest.fn(),
+    renameList: jest.fn(),
     deleteList: jest.fn(),
     addItem: jest.fn((event) => event.preventDefault()),
     toggleItem: jest.fn(),
+    editItem: jest.fn(),
+    moveItem: jest.fn(),
     deleteItem: jest.fn(),
     clearChecked: jest.fn(),
     wsConnected: true,
@@ -120,6 +135,74 @@ describe('ShoppingView redesign shell', () => {
     expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Produce');
     expect(container.querySelector('.shopping-category-summary')).toHaveTextContent('2 Items');
     expect(container.querySelector('.shopping-total-chip')).not.toBeInTheDocument();
+  });
+});
+
+
+
+describe('ShoppingView list and item editing', () => {
+  test('renames the active list from an inline form', async () => {
+    setup();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename list: Groceries' }));
+    const form = document.querySelector('.shopping-list-rename-form');
+    expect(form).toBeInTheDocument();
+    fireEvent.change(within(form).getByLabelText('List name'), { target: { value: 'Store B' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mockShoppingState.renameList).toHaveBeenCalledWith(10, 'Store B'));
+  });
+
+  test('hides rename and item edit affordances from child members', () => {
+    setup({
+      uncheckedItems: [{ id: 1, name: 'Bread', spec: null, category: null, checked: false }],
+      items: [{ id: 1, name: 'Bread', spec: null, category: null, checked: false }],
+    }, { isChild: true });
+
+    expect(screen.queryByRole('button', { name: 'Rename list: Groceries' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit item: Bread' })).not.toBeInTheDocument();
+  });
+
+  test('edits item details and moves the item to another list', async () => {
+    setup({
+      shoppingLists: [
+        { id: 10, name: 'Groceries', item_count: 1, checked_count: 0 },
+        { id: 11, name: 'Store B', item_count: 0, checked_count: 0 },
+      ],
+      uncheckedItems: [{ id: 1, list_id: 10, name: 'Bread', spec: '1 loaf', category: 'Bakery', checked: false }],
+      items: [{ id: 1, list_id: 10, name: 'Bread', spec: '1 loaf', category: 'Bakery', checked: false }],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit item: Bread' }));
+    const form = document.querySelector('.shopping-item-edit-form');
+    expect(form).toBeInTheDocument();
+    fireEvent.change(within(form).getByLabelText('Item'), { target: { value: 'baguette' } });
+    fireEvent.change(within(form).getByLabelText('Details'), { target: { value: '2 loaves' } });
+    fireEvent.change(within(form).getByLabelText('Category'), { target: { value: 'Bakery aisle' } });
+    fireEvent.change(within(form).getByLabelText('Move to list'), { target: { value: '11' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mockShoppingState.editItem).toHaveBeenCalledWith(1, {
+      name: 'baguette',
+      spec: '2 loaves',
+      category: 'Bakery aisle',
+      list_id: 11,
+    }));
+    expect(mockShoppingState.moveItem).not.toHaveBeenCalled();
+  });
+
+  test('escape closes the item edit form without saving', () => {
+    setup({
+      uncheckedItems: [{ id: 1, list_id: 10, name: 'Bread', spec: null, category: null, checked: false }],
+      items: [{ id: 1, list_id: 10, name: 'Bread', spec: null, category: null, checked: false }],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit item: Bread' }));
+    fireEvent.keyDown(within(document.querySelector('.shopping-item-edit-form')).getByLabelText('Item'), { key: 'Escape' });
+
+    expect(document.querySelector('.shopping-item-edit-form')).not.toBeInTheDocument();
+    expect(mockShoppingState.editItem).not.toHaveBeenCalled();
+    expect(mockShoppingState.moveItem).not.toHaveBeenCalled();
   });
 });
 

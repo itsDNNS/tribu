@@ -67,7 +67,107 @@ function blurActiveTextInput() {
   }
 }
 
-function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) {
+function ShoppingListRenameForm({ messages, name, onChange, onSubmit, onCancel }) {
+  return (
+    <form
+      className="shopping-list-rename-form"
+      onSubmit={onSubmit}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <input
+        className="form-input shopping-list-rename-input"
+        value={name}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        autoFocus
+        aria-label={t(messages, 'module.shopping.list_name')}
+      />
+      <button className="btn-sm shopping-inline-icon-btn" type="submit" aria-label={t(messages, 'module.shopping.save')}>
+        <Check size={14} aria-hidden="true" />
+      </button>
+      <button className="btn-ghost shopping-inline-icon-btn" type="button" onClick={onCancel} aria-label={t(messages, 'module.shopping.cancel')}>
+        <X size={14} aria-hidden="true" />
+      </button>
+    </form>
+  );
+}
+
+function ShoppingItemEditForm({ item, shoppingLists, activeListId, messages, onSave, onCancel }) {
+  const [name, setName] = useState(item.name || '');
+  const [spec, setSpec] = useState(item.spec || '');
+  const [category, setCategory] = useState(item.category || '');
+  const [targetListId, setTargetListId] = useState(String(item.list_id || activeListId || ''));
+  const otherLists = shoppingLists.filter((list) => String(list.id) !== String(activeListId));
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    await onSave(item.id, {
+      name,
+      spec,
+      category,
+      ...(targetListId && String(targetListId) !== String(activeListId) ? { list_id: Number(targetListId) } : {}),
+    });
+    onCancel();
+  }
+
+  return (
+    <form className="shopping-item-edit-form" onSubmit={handleSubmit}>
+      <input
+        className="quick-add-input"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        aria-label={t(messages, 'module.shopping.item_name')}
+        autoFocus
+        required
+      />
+      <input
+        className="quick-add-input shopping-spec-input"
+        value={spec}
+        onChange={(e) => setSpec(e.target.value)}
+        aria-label={t(messages, 'module.shopping.item_spec')}
+        placeholder={t(messages, 'module.shopping.item_spec_placeholder')}
+      />
+      <input
+        className="quick-add-input shopping-category-input"
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        aria-label={t(messages, 'module.shopping.item_category')}
+        placeholder={t(messages, 'module.shopping.item_category_placeholder')}
+      />
+      {otherLists.length > 0 && (
+        <select
+          className="form-input shopping-item-move-select"
+          value={targetListId}
+          onChange={(e) => setTargetListId(e.target.value)}
+          aria-label={t(messages, 'module.shopping.move_to_list')}
+        >
+          <option value={activeListId}>{t(messages, 'module.shopping.keep_current_list')}</option>
+          {otherLists.map((list) => (
+            <option key={list.id} value={list.id}>{list.name}</option>
+          ))}
+        </select>
+      )}
+      <div className="shopping-item-edit-actions">
+        <button className="btn-sm" type="submit">{t(messages, 'module.shopping.save')}</button>
+        <button className="btn-ghost" type="button" onClick={onCancel}>{t(messages, 'module.shopping.cancel')}</button>
+      </div>
+    </form>
+  );
+}
+
+function ShoppingItem({ item, checked, members, messages, onToggle, onEdit, onDelete }) {
   const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
   const memberIdx = addedBy ? members.indexOf(addedBy) : 0;
 
@@ -79,34 +179,49 @@ function ShoppingItem({ item, checked, members, messages, onToggle, onDelete }) 
   }
 
   return (
-    <div
-      className={`shopping-item${checked ? ' checked' : ''}`}
-      role="checkbox"
-      aria-checked={checked}
-      aria-label={item.name}
-      tabIndex={0}
-      onPointerDown={blurActiveTextInput}
-      onClick={() => onToggle(item.id, item.checked)}
-      onKeyDown={handleKeyDown}
-    >
-      <div className={`shopping-check${checked ? ' done' : ''}`} aria-hidden="true">
-        {checked && <Check size={14} color="white" />}
+    <div className="shopping-item-row">
+      <div
+        className={`shopping-item${checked ? ' checked' : ''}`}
+        role="checkbox"
+        aria-checked={checked}
+        aria-label={item.name}
+        tabIndex={0}
+        onPointerDown={blurActiveTextInput}
+        onClick={() => onToggle(item.id, item.checked)}
+        onKeyDown={handleKeyDown}
+      >
+        <div className={`shopping-check${checked ? ' done' : ''}`} aria-hidden="true">
+          {checked && <Check size={14} color="white" />}
+        </div>
+        <div className="shopping-item-info">
+          <span className="shopping-item-name">{item.name}</span>
+          {item.spec && <span className="shopping-spec">{item.spec}</span>}
+          {item.category && <span className="shopping-category-pill">{item.category}</span>}
+        </div>
+        {addedBy && <MemberAvatar member={addedBy} index={memberIdx} size={22} />}
       </div>
-      <div className="shopping-item-info">
-        <span className="shopping-item-name">{item.name}</span>
-        {item.spec && <span className="shopping-spec">{item.spec}</span>}
-        {item.category && <span className="shopping-category-pill">{item.category}</span>}
+      <div className="shopping-item-actions">
+        {onEdit && (
+          <button
+            className="shopping-item-action"
+            type="button"
+            onClick={() => onEdit(item)}
+            aria-label={t(messages, 'aria.edit_item').replace('{name}', item.name)}
+          >
+            <Pencil size={14} />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            className="shopping-item-action shopping-item-delete"
+            type="button"
+            onClick={() => onDelete(item.id)}
+            aria-label={t(messages, 'aria.delete_item').replace('{name}', item.name)}
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
-      {addedBy && <MemberAvatar member={addedBy} index={memberIdx} size={22} />}
-      {onDelete && (
-        <button
-          className="shopping-item-delete"
-          onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-          aria-label={t(messages, 'aria.delete_item').replace('{name}', item.name)}
-        >
-          <X size={14} />
-        </button>
-      )}
     </div>
   );
 }
@@ -253,6 +368,9 @@ export default function ShoppingView() {
   const { members, messages, isMobile, isChild } = useApp();
   const sh = useShopping();
   const [confirmAction, setConfirmAction] = useState(null);
+  const [editingListId, setEditingListId] = useState(null);
+  const [editingListName, setEditingListName] = useState('');
+  const [editingItemId, setEditingItemId] = useState(null);
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [templatesExpanded, setTemplatesExpanded] = useState(false);
@@ -324,6 +442,24 @@ export default function ShoppingView() {
     setCollapsedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
   }
 
+  function beginRenameList(list) {
+    setEditingListId(list.id);
+    setEditingListName(list.name);
+  }
+
+  async function submitRenameList(e, listId) {
+    e.preventDefault();
+    if (!editingListName.trim()) return;
+    await sh.renameList(listId, editingListName);
+    setEditingListId(null);
+    setEditingListName('');
+  }
+
+  function cancelRenameList() {
+    setEditingListId(null);
+    setEditingListName('');
+  }
+
   function openTemplateForm(template = null) {
     setEditingTemplate(template);
     setTemplatesExpanded(true);
@@ -359,45 +495,71 @@ export default function ShoppingView() {
       <div className={`shopping-layout${isChild ? ' shopping-layout-readonly' : ''}`}>
         {/* Lists Panel */}
         <div className={`shopping-lists-panel ${isMobile ? 'mobile' : ''}`}>
-          {sh.shoppingLists.map((list) => (
-            <div
-              key={list.id}
-              className={`shopping-list-card${list.id === sh.activeListId ? ' active' : ''}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => sh.setActiveListId(list.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  sh.setActiveListId(list.id);
-                }
-              }}
-            >
-              <div className="shopping-list-name">{list.name}</div>
-              <div className="shopping-list-meta">
-                {list.checked_count}/{list.item_count}
+          {sh.shoppingLists.map((list) => {
+            const isRenaming = editingListId === list.id;
+            return (
+              <div
+                key={list.id}
+                className={`shopping-list-card${list.id === sh.activeListId ? ' active' : ''}${isRenaming ? ' editing' : ''}`}
+                role={isRenaming ? undefined : 'button'}
+                tabIndex={isRenaming ? undefined : 0}
+                onClick={isRenaming ? undefined : () => sh.setActiveListId(list.id)}
+                onKeyDown={isRenaming ? undefined : (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    sh.setActiveListId(list.id);
+                  }
+                }}
+              >
+                {isRenaming ? (
+                  <ShoppingListRenameForm
+                    messages={messages}
+                    name={editingListName}
+                    onChange={setEditingListName}
+                    onSubmit={(e) => submitRenameList(e, list.id)}
+                    onCancel={cancelRenameList}
+                  />
+                ) : (
+                  <>
+                    <div className="shopping-list-name">{list.name}</div>
+                    <div className="shopping-list-meta">
+                      {list.checked_count}/{list.item_count}
+                    </div>
+                    {list.id === sh.activeListId && !isChild && (
+                      <div className="shopping-list-actions">
+                        <button
+                          className="shopping-list-action"
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); beginRenameList(list); }}
+                          aria-label={t(messages, 'aria.rename_list').replace('{name}', list.name)}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          className="shopping-list-action shopping-list-delete"
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setConfirmAction({
+                            title: t(messages, 'module.shopping.delete_list'),
+                            message: t(messages, 'module.shopping.delete_list_confirm'),
+                            danger: true,
+                            action: () => { sh.deleteList(list.id); setConfirmAction(null); },
+                          }); }}
+                          aria-label={t(messages, 'aria.delete_list').replace('{name}', list.name)}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                    {list.item_count > 0 && (
+                      <div className="shopping-list-progress" aria-hidden="true">
+                        <div className="shopping-list-progress-fill" style={{ width: `${Math.round((list.checked_count / list.item_count) * 100)}%` }} />
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-              {list.id === sh.activeListId && !isChild && (
-                <button
-                  className="shopping-list-delete"
-                  onClick={(e) => { e.stopPropagation(); setConfirmAction({
-                    title: t(messages, 'module.shopping.delete_list'),
-                    message: t(messages, 'module.shopping.delete_list_confirm'),
-                    danger: true,
-                    action: () => { sh.deleteList(list.id); setConfirmAction(null); },
-                  }); }}
-                  aria-label={t(messages, 'aria.delete_list').replace('{name}', list.name)}
-                >
-                  <X size={14} />
-                </button>
-              )}
-              {list.item_count > 0 && (
-                <div className="shopping-list-progress" aria-hidden="true">
-                  <div className="shopping-list-progress-fill" style={{ width: `${Math.round((list.checked_count / list.item_count) * 100)}%` }} />
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {!isChild && (
             sh.showCreateList ? (
@@ -611,15 +773,28 @@ export default function ShoppingView() {
                       onToggle={toggleCategory}
                     >
                       {group.items.map((item) => (
-                        <ShoppingItem
-                          key={item.id}
-                          item={item}
-                          checked={false}
-                          members={members}
-                          messages={messages}
-                          onToggle={sh.toggleItem}
-                          onDelete={isChild ? null : sh.deleteItem}
-                        />
+                        editingItemId === item.id ? (
+                          <ShoppingItemEditForm
+                            key={`edit-${item.id}`}
+                            item={item}
+                            shoppingLists={sh.shoppingLists}
+                            activeListId={sh.activeListId}
+                            messages={messages}
+                            onSave={sh.editItem}
+                            onCancel={() => setEditingItemId(null)}
+                          />
+                        ) : (
+                          <ShoppingItem
+                            key={item.id}
+                            item={item}
+                            checked={false}
+                            members={members}
+                            messages={messages}
+                            onToggle={sh.toggleItem}
+                            onEdit={isChild ? null : (currentItem) => setEditingItemId(currentItem.id)}
+                            onDelete={isChild ? null : sh.deleteItem}
+                          />
+                        )
                       ))}
                     </ShoppingCategoryGroup>
                   ))}
@@ -631,15 +806,28 @@ export default function ShoppingView() {
                         {t(messages, 'module.shopping.checked_section')} ({sh.checkedItems.length})
                       </div>
                       {sh.checkedItems.map((item) => (
-                        <ShoppingItem
-                          key={item.id}
-                          item={item}
-                          checked={true}
-                          members={members}
-                          messages={messages}
-                          onToggle={sh.toggleItem}
-                          onDelete={isChild ? null : sh.deleteItem}
-                        />
+                        editingItemId === item.id ? (
+                          <ShoppingItemEditForm
+                            key={`edit-${item.id}`}
+                            item={item}
+                            shoppingLists={sh.shoppingLists}
+                            activeListId={sh.activeListId}
+                            messages={messages}
+                            onSave={sh.editItem}
+                            onCancel={() => setEditingItemId(null)}
+                          />
+                        ) : (
+                          <ShoppingItem
+                            key={item.id}
+                            item={item}
+                            checked={true}
+                            members={members}
+                            messages={messages}
+                            onToggle={sh.toggleItem}
+                            onEdit={isChild ? null : (currentItem) => setEditingItemId(currentItem.id)}
+                            onDelete={isChild ? null : sh.deleteItem}
+                          />
+                        )
                       ))}
                       {!isChild && (
                         <div className="shopping-clear-wrapper">

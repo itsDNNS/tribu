@@ -64,7 +64,11 @@ export function useShopping() {
         });
         setShoppingLists((prev) =>
           prev.map((l) => l.id === msg.item.list_id
-            ? { ...l, item_count: (l.item_count || 0) + 1 }
+            ? {
+                ...l,
+                item_count: (l.item_count || 0) + 1,
+                checked_count: (l.checked_count || 0) + (msg.item.checked ? 1 : 0),
+              }
             : l
           ),
         );
@@ -100,6 +104,10 @@ export function useShopping() {
           if (prev.some((l) => l.id === msg.list.id)) return prev;
           return [...prev, msg.list];
         });
+        break;
+
+      case 'list_updated':
+        setShoppingLists((prev) => prev.map((l) => l.id === msg.list.id ? msg.list : l));
         break;
 
       case 'list_deleted':
@@ -191,6 +199,22 @@ export function useShopping() {
     }
     setNewListName('');
     setShowCreateList(false);
+  }
+
+  async function renameList(id, name) {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    const previousLists = shoppingLists;
+    setShoppingLists((prev) => prev.map((l) => l.id === id ? { ...l, name: trimmedName } : l));
+    if (demoMode) return;
+    const { ok, data } = await api.apiUpdateShoppingList(id, { name: trimmedName });
+    if (!ok) {
+      toastError(t(messages, 'toast.error'));
+      setShoppingLists(previousLists);
+      await loadShoppingLists();
+      return;
+    }
+    setShoppingLists((prev) => prev.map((l) => l.id === id ? { ...l, ...data } : l));
   }
 
   async function deleteList(id) {
@@ -290,6 +314,100 @@ export function useShopping() {
         await loadShoppingLists();
       }
     }
+  }
+
+  async function editItem(id, payload) {
+    const itemName = formatShoppingItemName(payload.name || '');
+    if (!itemName) return;
+    const targetId = Number(payload.list_id);
+    const isMove = Boolean(targetId && targetId !== Number(activeListId));
+    const item = items.find((i) => i.id === id);
+    const cleanedPayload = {
+      name: itemName,
+      spec: cleanOptionalText(payload.spec),
+      category: cleanOptionalText(payload.category),
+      ...(isMove ? { list_id: targetId } : {}),
+    };
+    const previousItems = items;
+    const previousLists = shoppingLists;
+    if (isMove) {
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      setShoppingLists((prev) => prev.map((l) => {
+        if (l.id === activeListId) {
+          return {
+            ...l,
+            item_count: Math.max((l.item_count || 0) - 1, 0),
+            checked_count: item?.checked ? Math.max((l.checked_count || 0) - 1, 0) : l.checked_count,
+            items: (l.items || []).filter((i) => i.id !== id),
+          };
+        }
+        if (l.id === targetId) {
+          return {
+            ...l,
+            item_count: (l.item_count || 0) + 1,
+            checked_count: item?.checked ? (l.checked_count || 0) + 1 : l.checked_count,
+            items: [...(l.items || []), { ...item, ...cleanedPayload, list_id: targetId }],
+          };
+        }
+        return l;
+      }));
+    } else {
+      setItems((prev) => prev.map((i) => i.id === id ? { ...i, ...cleanedPayload } : i));
+      setShoppingLists((prev) => prev.map((l) => l.id === activeListId
+        ? { ...l, items: (l.items || []).map((i) => i.id === id ? { ...i, ...cleanedPayload } : i) }
+        : l));
+    }
+    if (demoMode) return;
+    const { ok } = await api.apiUpdateShoppingItem(id, cleanedPayload);
+    if (!ok) {
+      toastError(t(messages, 'toast.error'));
+      setItems(previousItems);
+      setShoppingLists(previousLists);
+      await reloadItems();
+      return;
+    }
+    if (isMove || !wsConnected) {
+      await reloadItems();
+      await loadShoppingLists();
+    }
+  }
+
+  async function moveItem(id, targetListId) {
+    const targetId = Number(targetListId);
+    if (!targetId || targetId === Number(activeListId)) return;
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    const previousItems = items;
+    const previousLists = shoppingLists;
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    setShoppingLists((prev) => prev.map((l) => {
+      if (l.id === activeListId) {
+        return {
+          ...l,
+          item_count: Math.max((l.item_count || 0) - 1, 0),
+          checked_count: item.checked ? Math.max((l.checked_count || 0) - 1, 0) : l.checked_count,
+          items: (l.items || []).filter((i) => i.id !== id),
+        };
+      }
+      if (l.id === targetId) {
+        return {
+          ...l,
+          item_count: (l.item_count || 0) + 1,
+          checked_count: item.checked ? (l.checked_count || 0) + 1 : l.checked_count,
+          items: [...(l.items || []), { ...item, list_id: targetId }],
+        };
+      }
+      return l;
+    }));
+    if (demoMode) return;
+    const { ok } = await api.apiUpdateShoppingItem(id, { list_id: targetId });
+    if (!ok) {
+      toastError(t(messages, 'toast.error'));
+      setItems(previousItems);
+      setShoppingLists(previousLists);
+      return;
+    }
+    await loadShoppingLists();
   }
 
   async function deleteItem(id) {
@@ -445,8 +563,8 @@ export function useShopping() {
     showCreateList, setShowCreateList,
     templates,
     itemInputRef,
-    createList, deleteList,
-    addItem, toggleItem, deleteItem, clearChecked,
+    createList, renameList, deleteList,
+    addItem, toggleItem, editItem, moveItem, deleteItem, clearChecked,
     createTemplate, updateTemplate, deleteTemplate, applyTemplate, loadTemplates,
     wsConnected,
   };
