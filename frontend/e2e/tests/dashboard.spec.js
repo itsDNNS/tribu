@@ -22,6 +22,14 @@ function contrastRatio(foreground, background) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function localIsoDaysFromToday(daysFromToday, hour = 9, minute = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromToday);
+  date.setHours(hour, minute, 0, 0);
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(hour)}:${pad(minute)}:00`;
+}
+
 test.describe('Dashboard', () => {
   test('shows greeting with username', async ({ authedPage: page, testUser }) => {
     const greeting = page.locator('.view-title');
@@ -59,6 +67,34 @@ test.describe('Dashboard', () => {
     await dashboardSearch.click();
     await expect(page.locator('.search-overlay')).toBeVisible();
     await expect(page.getByPlaceholder(/Search/i)).toBeFocused();
+  });
+
+  test('promotes a future next-up date inside the time chip without overflowing', async ({ authedPage: page, apiCtx }) => {
+    const startsAt = localIsoDaysFromToday(2, 9, 0);
+    const expectedDate = new Date(startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const familyId = await getFamilyId(apiCtx);
+    await seedCalendarEvent(apiCtx, familyId, {
+      title: 'Future next-up chip event',
+      starts_at: startsAt,
+      location: 'Kitchen calendar',
+    });
+
+    await page.reload();
+    await expect(page.getByRole('region', { name: 'Next up' })).toBeVisible({ timeout: 10000 });
+
+    const nextUp = page.getByRole('region', { name: 'Next up' });
+    await expect(nextUp).toContainText('Future next-up chip event');
+    const chip = nextUp.locator('.next-up-time-chip');
+    await expect(chip).toHaveClass(/is-stacked/);
+    await expect(chip.locator('.next-up-chip-date')).toContainText(expectedDate);
+    await expect(chip.locator('.next-up-chip-time')).toContainText(/^0?9:00(\s?[AP]M)?$/i);
+
+    const chipBox = await chip.boundingBox();
+    const cardBox = await nextUp.boundingBox();
+    expect(chipBox).not.toBeNull();
+    expect(cardBox).not.toBeNull();
+    expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
+    expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(cardBox.y + cardBox.height + 1);
   });
 
   test('keeps dashboard header search usable on narrow desktop widths', async ({ authedPage: page }) => {

@@ -112,7 +112,13 @@ function getUpcomingBirthdayCount(summary) {
 function formatEventTime(value, locale, timeFormat) {
   const date = parseDate(value);
   if (!date) return '';
-  return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
+  return formatClockTime(date, locale, timeFormat);
+}
+
+function formatChipDate(value, locale) {
+  const date = parseDate(value);
+  if (!date) return '';
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 function formatClockTime(value, locale, timeFormat) {
@@ -198,6 +204,9 @@ function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, me
 
 function NextUpCard({ event, locale, lang, timeFormat, messages, members, setActiveView, isChild }) {
   const eventDate = event ? parseDate(event.starts_at) : null;
+  const eventTime = event ? formatEventTime(event.starts_at, locale, timeFormat) : '';
+  const isEventToday = event ? getEventOccurrenceDate(event) === todayIsoDate() : false;
+  const chipDate = event && !isEventToday ? formatChipDate(event.starts_at, locale) : '';
   const assignedMember = event?.assigned_to
     ? members.find((member) => String(member.user_id) === String(event.assigned_to))
     : null;
@@ -212,8 +221,9 @@ function NextUpCard({ event, locale, lang, timeFormat, messages, members, setAct
       <div className="next-up-eyebrow">{t(messages, 'module.dashboard.next_up_title')}</div>
       {event ? (
         <button type="button" className="next-up-content" onClick={goToEvent}>
-          <span className="next-up-time-chip">
-            <span>{formatEventTime(event.starts_at, locale, timeFormat)}</span>
+          <span className={`next-up-time-chip${chipDate ? ' is-stacked' : ''}`}>
+            {chipDate && <span className="next-up-chip-date">{chipDate}</span>}
+            <span className="next-up-chip-time">{eventTime}</span>
           </span>
           <span className="next-up-details">
             <span className="next-up-title">{event.title}</span>
