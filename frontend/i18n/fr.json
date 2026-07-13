@@ -711,6 +711,7 @@
   "nav.group.household": "Maison",
   "nav.group.system": "Plus / Système",
   "module.dashboard.today_command_center": "Today command center",
+  "module.dashboard.current_time": "Heure actuelle",
   "module.dashboard.next_up_title": "Next up",
   "module.dashboard.next_up_empty": "Nothing else scheduled",
   "module.dashboard.next_up_empty_hint": "Use quick capture to park anything the family should remember.",

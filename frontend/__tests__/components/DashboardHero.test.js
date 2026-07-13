@@ -38,6 +38,7 @@ const messages = {
   'module.dashboard.days': 'days',
   'module.dashboard.quick_event': 'Event',
   'module.dashboard.today_command_center': 'Today command center',
+  'module.dashboard.current_time': 'Current time',
   'module.dashboard.next_up_title': 'Next up',
   'module.dashboard.next_up_empty': 'Nothing else scheduled',
   'module.dashboard.next_up_empty_hint': 'Use quick capture to park anything the family should remember.',
@@ -202,6 +203,43 @@ describe('DashboardView hero', () => {
     const { container } = render(<DashboardView />);
     expect(container.querySelectorAll('.dashboard-header-actions .btn-icon')).toHaveLength(0);
     expect(screen.queryByRole('group', { name: 'Quick actions' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a live clock in the dashboard date line', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 6, 13, 8, 15, 0));
+
+    try {
+      mockAppState = baseApp({ demoMode: true });
+      const { container } = render(<DashboardView />);
+      const dateLine = container.querySelector('.today-command-family');
+      const clock = screen.getByTestId('dashboard-clock');
+
+      expect(dateLine).toContainElement(clock);
+      expect(clock).toHaveAccessibleName('Current time: 08:15');
+      expect(clock).toHaveTextContent('08:15');
+      expect(container.querySelector('.dashboard-header-actions [data-testid="dashboard-clock"]')).not.toBeInTheDocument();
+
+      jest.setSystemTime(new Date(2026, 6, 13, 8, 16, 0));
+      fireEvent(document, new Event('visibilitychange'));
+      expect(clock).toHaveTextContent('08:16');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('formats the dashboard clock with the household 12-hour preference', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 6, 13, 8, 15, 0));
+
+    try {
+      mockAppState = baseApp({ demoMode: true, timeFormat: '12h' });
+      render(<DashboardView />);
+
+      expect(screen.getByTestId('dashboard-clock').textContent).toMatch(/^8:15\s?AM$/i);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('moves global search into the dashboard header and removes the duplicated date chip', () => {
