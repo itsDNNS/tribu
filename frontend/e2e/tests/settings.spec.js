@@ -1,6 +1,23 @@
 const { test, expect } = require('../helpers/fixtures');
 const { navigateTo } = require('../helpers/navigation');
 
+async function openAccountSettings(page) {
+  await navigateTo(page, 'Settings');
+
+  const birthdateInput = page.getByLabel('Date of birth');
+  if (await birthdateInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    return birthdateInput;
+  }
+
+  const accountItem = page.locator('.settings-mobile-item', { hasText: 'Account' });
+  if (await accountItem.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false)) {
+    await accountItem.click();
+  }
+
+  await expect(birthdateInput).toBeVisible({ timeout: 10000 });
+  return birthdateInput;
+}
+
 test.describe('Settings', () => {
   test('open settings and see account tab', async ({ authedPage: page, testUser }) => {
     await navigateTo(page, 'Settings');
@@ -14,6 +31,34 @@ test.describe('Settings', () => {
     await expect(page.locator('.profile-name')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.profile-name')).toContainText(testUser.displayName);
     await expect(page.locator('.profile-email')).toContainText(testUser.email);
+  });
+
+  test('lets Account users type and clear a birthdate without using the calendar picker', async ({ authedPage: page }) => {
+    const birthdateInput = await openAccountSettings(page);
+
+    await birthdateInput.fill('1990-05-12');
+    const saveBirthdate = page.waitForResponse((response) => (
+      response.request().method() === 'PATCH'
+      && response.url().includes('/birthdate')
+      && response.ok()
+    ));
+    await birthdateInput.blur();
+    await saveBirthdate;
+    await expect(birthdateInput).toHaveValue('1990-05-12');
+
+    await page.reload();
+    const reloadedBirthdateInput = await openAccountSettings(page);
+    await expect(reloadedBirthdateInput).toHaveValue('1990-05-12', { timeout: 10000 });
+
+    await reloadedBirthdateInput.fill('');
+    const clearBirthdate = page.waitForResponse((response) => (
+      response.request().method() === 'PATCH'
+      && response.url().includes('/birthdate')
+      && response.ok()
+    ));
+    await reloadedBirthdateInput.blur();
+    await clearBirthdate;
+    await expect(reloadedBirthdateInput).toHaveValue('');
   });
 
   test('keeps Account settings focused on preference selectors without duplicate pack inventory', async ({ authedPage: page }) => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { User, Palette, Globe, Check, AlertTriangle, LogOut, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -18,6 +18,19 @@ const THEME_PREVIEWS = {
   'midnight-glass': { bg: '#06080f', surface: '#111628', accent: '#7c3aed' },
 };
 
+const MIN_BIRTHDATE = '1900-01-01';
+
+function formatBirthdateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function isBirthdateInRange(value, maxBirthdate) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && value >= MIN_BIRTHDATE && value <= maxBirthdate;
+}
+
 export default function AccountTab() {
   const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers, logout } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -29,6 +42,44 @@ export default function AccountTab() {
   const initials = (me?.display_name || 'U').charAt(0).toUpperCase();
   const currentMember = members.find((m) => m.user_id === me?.user_id);
   const myColor = currentMember?.color || null;
+  const savedBirthdate = currentMember?.date_of_birth || '';
+  const [birthdateDraft, setBirthdateDraft] = useState(savedBirthdate);
+  const savedBirthdateRef = useRef(savedBirthdate);
+  const pendingBirthdateRef = useRef(null);
+  const maxBirthdate = formatBirthdateInputValue(new Date());
+
+  useEffect(() => {
+    savedBirthdateRef.current = savedBirthdate;
+    setBirthdateDraft(savedBirthdate);
+  }, [savedBirthdate]);
+
+  async function commitBirthdate(input) {
+    const value = (input?.value || '').trim();
+    const currentSavedBirthdate = savedBirthdateRef.current;
+
+    if (input?.validity?.badInput) {
+      setBirthdateDraft(currentSavedBirthdate);
+      return;
+    }
+
+    if (value && !isBirthdateInRange(value, maxBirthdate)) {
+      setBirthdateDraft(currentSavedBirthdate);
+      return;
+    }
+
+    if (value === currentSavedBirthdate || pendingBirthdateRef.current === value) return;
+
+    pendingBirthdateRef.current = value;
+    const { ok, data } = await api.apiSetMemberBirthdate(familyId, me?.user_id, value || null);
+    pendingBirthdateRef.current = null;
+    if (!ok) {
+      setBirthdateDraft(currentSavedBirthdate);
+      return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+    }
+    savedBirthdateRef.current = value;
+    setBirthdateDraft(value);
+    await loadMembers();
+  }
 
   function onProfileImage(e) {
     const file = e.target.files?.[0];
@@ -69,19 +120,24 @@ export default function AccountTab() {
           <input type="file" accept="image/*" onChange={onProfileImage} className="set-file-input" />
         </div>
         <div className="set-field-group">
-          <label className="set-label">
+          <label className="set-label" htmlFor="account-birthdate">
             {t(messages, 'birthdate')}
           </label>
           <input
+            id="account-birthdate"
             type="date"
             className="form-input set-input-narrow"
-            value={currentMember?.date_of_birth || ''}
-            onChange={async (e) => {
-              const val = e.target.value || null;
-              if (val && !/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
-              const { ok, data } = await api.apiSetMemberBirthdate(familyId, me?.user_id, val);
-              if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-              await loadMembers();
+            value={birthdateDraft}
+            min={MIN_BIRTHDATE}
+            max={maxBirthdate}
+            aria-label={t(messages, 'birthdate')}
+            onChange={(e) => setBirthdateDraft(e.target.value)}
+            onBlur={(e) => { void commitBirthdate(e.currentTarget); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void commitBirthdate(e.currentTarget);
+              }
             }}
           />
         </div>
