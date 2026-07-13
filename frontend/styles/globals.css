@@ -797,6 +797,8 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .today-command-wave { display: inline-block; margin-left: 2px; font-size: 0.8em; transform: translateY(-1px); }
 .today-command-family-inline { color: var(--text-muted); font-weight: 700; }
 .today-command-family { margin: 7px 0 0; color: var(--text-secondary); font-size: 0.9rem; }
+.today-command-clock { color: var(--text-primary); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.01em; }
+.today-command-time-separator { color: var(--text-muted); }
 .today-command-grid { display: grid; grid-template-columns: minmax(320px, 0.95fr) minmax(380px, 1.35fr); gap: var(--space-md); align-items: stretch; }
 .next-up-card { position: relative; overflow: hidden; border: 1px solid rgba(139, 94, 159, 0.24); border-radius: 18px; background: linear-gradient(135deg, rgba(139, 94, 159, 0.15), rgba(32, 38, 56, 0.9)); color: #fff; padding: 14px; min-height: 126px; box-shadow: var(--shadow-soft); }
 .next-up-card::after { content: ''; position: absolute; right: -28px; bottom: -36px; width: 138px; height: 138px; border-radius: 999px; background: radial-gradient(circle, rgba(139, 94, 159, 0.14), rgba(139, 94, 159, 0)); pointer-events: none; }

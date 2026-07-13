@@ -711,6 +711,7 @@
   "nav.group.household": "Haushalt",
   "nav.group.system": "Mehr / System",
   "module.dashboard.today_command_center": "Heute-Zentrale",
+  "module.dashboard.current_time": "Aktuelle Uhrzeit",
   "module.dashboard.next_up_title": "Als Nächstes",
   "module.dashboard.next_up_empty": "Heute ist nichts mehr geplant",
   "module.dashboard.next_up_empty_hint": "Nutze die Schnellerfassung, um festzuhalten, woran die Familie denken soll.",

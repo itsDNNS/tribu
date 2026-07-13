@@ -43,6 +43,8 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.dashboard-header-actions .view-date')).toHaveCount(0);
     await expect(page.locator('.sidebar-search-btn')).toHaveCount(0);
+    await expect(page.getByTestId('dashboard-clock')).toBeVisible();
+    await expect(page.getByTestId('dashboard-clock')).toContainText(/^\d{1,2}:\d{2}(\s?[AP]M)?$/i);
 
     const dashboardSearch = page.locator('.dashboard-header-actions .dashboard-search-btn');
     if (testInfo.project.name.includes('Mobile')) {

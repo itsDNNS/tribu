@@ -5,6 +5,7 @@ import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
 import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetDashboardLayout, apiGetSetupChecklist, apiListMealPlans, apiResetDashboardLayout, apiUpdateDashboardLayout } from '../lib/api';
+import { useCurrentMinute } from '../hooks/useCurrentMinute';
 import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
@@ -112,6 +113,14 @@ function formatEventTime(value, locale, timeFormat) {
   const date = parseDate(value);
   if (!date) return '';
   return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
+}
+
+function formatClockTime(value, locale, timeFormat) {
+  return value.toLocaleTimeString(locale, {
+    hour: timeFormat === '12h' ? 'numeric' : '2-digit',
+    minute: '2-digit',
+    hour12: timeFormat === '12h',
+  });
 }
 
 function TodayStatusItem({ label, value, testId, icon: Icon, tone, onClick }) {
@@ -310,7 +319,9 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
   const birthdaySoonCount = getUpcomingBirthdayCount(summary);
   const nextUpEvent = Array.isArray(summary?.next_events) ? summary.next_events[0] : null;
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
-  const todayStr = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const currentMinute = useCurrentMinute();
+  const todayStr = currentMinute.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const currentTimeStr = formatClockTime(currentMinute, locale, timeFormat);
   const currentFamily = Array.isArray(families) ? families.find((family) => String(family.family_id) === String(familyId)) : null;
 
   useEffect(() => {
@@ -519,7 +530,19 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
             <h1 className="view-title today-command-title">
               {getGreeting(messages)}, <span>{heroName}</span>{heroFamilyName && <span className="today-command-family-inline"> · {heroFamilyName}</span>} <span className="today-command-wave" aria-hidden="true">👋</span>
             </h1>
-            <p className="today-command-family">{todayStr}</p>
+            <p className="today-command-family">
+              <span>{todayStr}</span>
+              <span className="today-command-time-separator" aria-hidden="true"> · </span>
+              <time
+                className="today-command-clock"
+                data-testid="dashboard-clock"
+                dateTime={currentMinute.toISOString()}
+                aria-label={`${t(messages, 'module.dashboard.current_time')}: ${currentTimeStr}`}
+                suppressHydrationWarning
+              >
+                {currentTimeStr}
+              </time>
+            </p>
           </div>
           <div className="dashboard-header-actions">
             {typeof onOpenSearch === 'function' && (
