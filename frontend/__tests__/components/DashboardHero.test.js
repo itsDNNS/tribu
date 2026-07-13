@@ -103,6 +103,14 @@ function todayAt(hour = 10, minute = 0) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(hour)}:${pad(minute)}:00`;
 }
 
+function daysFromTodayAt(daysFromToday, hour = 10, minute = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromToday);
+  d.setHours(hour, minute, 0, 0);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(hour)}:${pad(minute)}:00`;
+}
+
 describe('DashboardView hero', () => {
   beforeEach(() => {
     mockAppState = baseApp();
@@ -191,6 +199,44 @@ describe('DashboardView hero', () => {
     expect(nextUp).toHaveTextContent('Nothing else scheduled');
     expect(nextUp).toHaveTextContent('Use quick capture to park anything the family should remember.');
     expect(within(nextUp).getByRole('button', { name: 'Open calendar' })).toBeVisible();
+  });
+
+  it('promotes the date inside the next-up chip when the next event is not today', () => {
+    const startsAt = daysFromTodayAt(2, 14, 5);
+    const expectedDate = new Date(startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    mockAppState = baseApp({
+      summary: {
+        next_events: [{ id: 7, title: 'Dentist', starts_at: startsAt, location: 'Downtown' }],
+        upcoming_birthdays: [],
+      },
+    });
+
+    render(<DashboardView />);
+
+    const nextUp = screen.getByRole('region', { name: 'Next up' });
+    const chip = nextUp.querySelector('.next-up-time-chip');
+    expect(chip).toHaveClass('is-stacked');
+    expect(chip.querySelector('.next-up-chip-date')).toHaveTextContent(expectedDate);
+    expect(chip.querySelector('.next-up-chip-time')).toHaveTextContent('14:05');
+    expect(nextUp).toHaveTextContent('Dentist');
+    expect(nextUp).toHaveTextContent('Downtown');
+  });
+
+  it('formats 12-hour next-up times without a leading zero', () => {
+    mockAppState = baseApp({
+      timeFormat: '12h',
+      summary: {
+        next_events: [{ id: 8, title: 'Sample visit', starts_at: todayAt(9, 0), location: 'Gerald' }],
+        upcoming_birthdays: [],
+      },
+    });
+
+    render(<DashboardView />);
+
+    const chip = screen.getByRole('region', { name: 'Next up' }).querySelector('.next-up-time-chip');
+    expect(chip).not.toHaveClass('is-stacked');
+    expect(chip.textContent).toMatch(/^9:00\s?AM$/i);
+    expect(chip.textContent).not.toMatch(/^09:00/);
   });
 
   it('keeps the greeting with the user display name', () => {
