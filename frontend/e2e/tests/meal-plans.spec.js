@@ -37,6 +37,10 @@ test.describe('Meal plan', () => {
 
     await expect(page.locator('.meal-plans-page')).toBeVisible({ timeout: 30000 });
     await expect(page.getByRole('heading', { name: 'Meal plan' })).toBeVisible();
+    const firstDayHeader = page.locator('.meal-grid-day-header').first();
+    await expect(firstDayHeader.locator('.meal-grid-day-name')).toHaveText('Sunday');
+    await expect(firstDayHeader.locator('.meal-grid-day-date')).toHaveText(/\d{1,2}\/\d{1,2}/);
+    await expect(page.locator('.meal-week-nav-label')).toHaveText(/\d{1,2}\/\d{1,2}\/\d{4}/);
     await expect(page.getByText(/Porridge with berries|Porridge mit Beeren/)).toBeVisible();
     await expect(page.getByText('Not available in demo mode')).toHaveCount(0);
 

@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import MealPlansView from '../../components/MealPlansView';
 import { buildDemoMealPlans } from '../../lib/demo-data';
+import { buildMessages } from '../../lib/i18n';
 
 jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({ success: jest.fn(), error: jest.fn() }),
@@ -136,6 +137,64 @@ describe('MealPlansView', () => {
     // 21 empty cells (7 days × 3 slots)
     const cells = container.querySelectorAll('.meal-grid-cell');
     expect(cells.length).toBe(21);
+  });
+
+  test('uses Sunday-start US date formatting for English meal-plan weeks', async () => {
+    mockAppState = baseState({
+      lang: 'en',
+      messages: buildMessages('en'),
+      families: [],
+    });
+    const realDate = global.Date;
+    global.Date = class extends realDate {
+      constructor(...args) {
+        if (args.length === 0) {
+          super('2026-01-01T12:00:00');
+        } else {
+          super(...args);
+        }
+      }
+      static now() { return new realDate('2026-01-01T12:00:00').getTime(); }
+    };
+
+    try {
+      const { container } = render(<MealPlansView />);
+      await waitFor(() => expect(apiListMealPlans).toHaveBeenCalledWith('1', '2025-12-28', '2026-01-03'));
+
+      const firstHeader = container.querySelector('.meal-grid-day-header');
+      expect(firstHeader.querySelector('.meal-grid-day-name')).toHaveTextContent('Sunday');
+      expect(firstHeader.querySelector('.meal-grid-day-date')).toHaveTextContent('12/28');
+      expect(container.querySelector('.meal-week-nav-label')).toHaveTextContent(/12\/28\/2025\s*–\s*1\/3\/2026/);
+    } finally {
+      global.Date = realDate;
+    }
+  });
+
+  test('keeps Monday-start German date formatting and shows both years at New Year', async () => {
+    mockAppState = baseState({ families: [] });
+    const realDate = global.Date;
+    global.Date = class extends realDate {
+      constructor(...args) {
+        if (args.length === 0) {
+          super('2026-01-01T12:00:00');
+        } else {
+          super(...args);
+        }
+      }
+      static now() { return new realDate('2026-01-01T12:00:00').getTime(); }
+    };
+
+    try {
+      const { container } = render(<MealPlansView />);
+      await waitFor(() => expect(apiListMealPlans).toHaveBeenCalledWith('1', '2025-12-29', '2026-01-04'));
+
+      const firstHeader = container.querySelector('.meal-grid-day-header');
+      expect(firstHeader.querySelector('.meal-grid-day-name')).toHaveTextContent('Mo');
+      expect(firstHeader.querySelector('.meal-grid-day-date')).toHaveTextContent('29.12.');
+      expect(container.querySelector('.meal-week-nav-label')).toHaveTextContent(/29\.12\.2025\s*–\s*0?4\.0?1\.2026/);
+    } finally {
+      global.Date = realDate;
+    }
   });
 
   test('opens dialog on add button click and shows the meal name field', async () => {

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Plus, Edit2, CalendarDays, GripVertical, Sho
 import { useApp } from '../contexts/AppContext';
 import { useMealPlans, formatIsoDate, weekDays } from '../hooks/useMealPlans';
 import { MEAL_SLOTS } from '../lib/meal-plans';
+import { formatDayMonth, formatWeekRange, localeForLang } from '../lib/dates';
 import { apiListRecipes } from '../lib/api';
 import { t } from '../lib/i18n';
 import ConfirmDialog from './ConfirmDialog';
@@ -22,8 +23,8 @@ function slotLabel(messages, slot) {
   return t(messages, `module.meal_plans.slot.${slot}`);
 }
 
-function formatDayNumber(date) {
-  return `${date.getDate()}.${date.getMonth() + 1}.`;
+function weekdayKeyForDate(date) {
+  return WEEKDAY_KEYS[(date.getDay() + 6) % 7];
 }
 
 function ingredientsSummary(messages, ingredients) {
@@ -31,11 +32,6 @@ function ingredientsSummary(messages, ingredients) {
   if (count === 0) return '';
   if (count === 1) return t(messages, 'module.meal_plans.ingredients_summary_one');
   return t(messages, 'module.meal_plans.ingredients_summary').replace('{count}', String(count));
-}
-
-function weekRangeLabel(weekStart, weekEnd) {
-  const fmt = (d) => `${d.getDate()}.${d.getMonth() + 1}.`;
-  return `${fmt(weekStart)} - ${fmt(weekEnd)}${weekStart.getFullYear() === weekEnd.getFullYear() ? ` ${weekEnd.getFullYear()}` : ''}`;
 }
 
 function isSameDay(a, b) {
@@ -119,7 +115,7 @@ function FilledMealCell({
   );
 }
 
-function EmptyMealCell({ date, slot, messages, onClick, isDropOver, onDragOver, onDrop }) {
+function EmptyMealCell({ date, slot, messages, locale, onClick, isDropOver, onDragOver, onDrop }) {
   return (
     <button
       type="button"
@@ -129,7 +125,7 @@ function EmptyMealCell({ date, slot, messages, onClick, isDropOver, onDragOver, 
       onDrop={onDrop}
       aria-label={t(messages, 'module.meal_plans.add_for_slot_aria')
         .replace('{slot}', slotLabel(messages, slot))
-        .replace('{date}', formatDayNumber(date))}
+        .replace('{date}', formatDayMonth(date, locale))}
     >
       <Plus size={14} aria-hidden="true" />
     </button>
@@ -137,7 +133,7 @@ function EmptyMealCell({ date, slot, messages, onClick, isDropOver, onDragOver, 
 }
 
 export default function MealPlansView() {
-  const { familyId, families, messages, demoMode, shoppingLists = [] } = useApp();
+  const { familyId, families, messages, lang, demoMode, shoppingLists = [] } = useApp();
   const hook = useMealPlans();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -171,11 +167,12 @@ export default function MealPlansView() {
   }, [shoppingLists, selectedWeekListId]);
 
   const currentFamilyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
+  const locale = localeForLang(lang);
   const days = weekDays(hook.weekStart);
   const today = new Date();
-  const moveTargets = days.flatMap((day, dayIndex) => {
+  const moveTargets = days.flatMap((day) => {
     const iso = formatIsoDate(day);
-    const dayLabel = `${t(messages, WEEKDAY_KEYS[dayIndex])} ${formatDayNumber(day)}`;
+    const dayLabel = `${t(messages, weekdayKeyForDate(day))} ${formatDayMonth(day, locale)}`;
     return MEAL_SLOTS.map((slot) => ({
       value: `${iso}:${slot}`,
       label: `${dayLabel} · ${slotLabel(messages, slot)}`,
@@ -318,7 +315,7 @@ export default function MealPlansView() {
           </span>
           <div>
             <h1 className="view-title">{t(messages, 'module.meal_plans.name')}</h1>
-            <div className="view-subtitle">{currentFamilyName || weekRangeLabel(hook.weekStart, hook.weekEnd)}</div>
+            <div className="view-subtitle">{currentFamilyName || formatWeekRange(hook.weekStart, hook.weekEnd, locale)}</div>
           </div>
         </div>
         <div className="meal-header-actions">
@@ -338,7 +335,7 @@ export default function MealPlansView() {
               aria-label={t(messages, 'module.meal_plans.today')}
             >
               <CalendarDays size={14} aria-hidden="true" />
-              {weekRangeLabel(hook.weekStart, hook.weekEnd)}
+              {formatWeekRange(hook.weekStart, hook.weekEnd, locale)}
             </button>
             <button
               type="button"
@@ -403,8 +400,8 @@ export default function MealPlansView() {
             key={d.toISOString()}
             className={`meal-grid-day-header${isSameDay(d, today) ? ' meal-grid-day-today' : ''}`}
           >
-            <span className="meal-grid-day-name">{t(messages, WEEKDAY_KEYS[idx])}</span>
-            <span className="meal-grid-day-date">{formatDayNumber(d)}</span>
+            <span className="meal-grid-day-name">{t(messages, weekdayKeyForDate(d))}</span>
+            <span className="meal-grid-day-date">{formatDayMonth(d, locale)}</span>
           </div>
         ))}
 
@@ -446,6 +443,7 @@ export default function MealPlansView() {
                   date={d}
                   slot={slot}
                   messages={messages}
+                  locale={locale}
                   onClick={openAdd}
                   isDropOver={isDropOver}
                   {...dragTargetProps}
