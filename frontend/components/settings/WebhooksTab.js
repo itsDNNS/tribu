@@ -2,18 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { PlugZap, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
+import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
 const WEBHOOK_EVENTS = [
-  ['calendar.event.created', 'Termin erstellt'],
-  ['task.created', 'Aufgabe erstellt'],
-  ['task.updated', 'Aufgabe aktualisiert'],
-  ['shopping.list.created', 'Einkaufsliste erstellt'],
-  ['shopping.list.updated', 'Einkaufsliste aktualisiert'],
-  ['shopping.item.created', 'Einkaufsartikel erstellt'],
-  ['shopping.item.updated', 'Einkaufsartikel aktualisiert'],
-  ['quick_capture.created', 'Quick Capture erstellt'],
-  ['birthday.created', 'Geburtstag erstellt'],
+  ['calendar.event.created', 'webhooks_event_calendar_event_created'],
+  ['task.created', 'webhooks_event_task_created'],
+  ['task.updated', 'webhooks_event_task_updated'],
+  ['shopping.list.created', 'webhooks_event_shopping_list_created'],
+  ['shopping.list.updated', 'webhooks_event_shopping_list_updated'],
+  ['shopping.item.created', 'webhooks_event_shopping_item_created'],
+  ['shopping.item.updated', 'webhooks_event_shopping_item_updated'],
+  ['quick_capture.created', 'webhooks_event_quick_capture_created'],
+  ['birthday.created', 'webhooks_event_birthday_created'],
 ];
 
 const emptyForm = {
@@ -26,7 +27,8 @@ const emptyForm = {
 };
 
 export default function WebhooksTab() {
-  const { familyId } = useApp();
+  const { familyId, messages } = useApp();
+  const msg = useCallback((key, fallback) => t(messages, key, fallback), [messages]);
   const { success: toastSuccess, error: toastError } = useToast();
   const [webhooks, setWebhooks] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -67,11 +69,11 @@ export default function WebhooksTab() {
       };
       const res = await api.apiCreateWebhook(payload);
       if (res.ok) {
-        toastSuccess('Webhook gespeichert');
+        toastSuccess(msg('toast.webhook_saved', 'Webhook saved'));
         setForm(emptyForm);
         await loadWebhooks();
       } else {
-        toastError('Webhook konnte nicht gespeichert werden');
+        toastError(msg('toast.webhook_save_failed', 'Webhook could not be saved'));
       }
     } finally {
       setBusy(false);
@@ -86,7 +88,7 @@ export default function WebhooksTab() {
   async function handleDelete(endpoint) {
     const res = await api.apiDeleteWebhook(endpoint.id);
     if (res.ok) {
-      toastSuccess('Webhook gelöscht');
+      toastSuccess(msg('toast.webhook_deleted', 'Webhook deleted'));
       await loadWebhooks();
     }
   }
@@ -94,25 +96,24 @@ export default function WebhooksTab() {
   async function handleTest(endpoint) {
     const res = await api.apiTestWebhook(endpoint.id);
     if (res.ok) {
-      toastSuccess(res.data.status === 'delivered' ? 'Test-Webhook gesendet' : 'Test-Webhook fehlgeschlagen');
+      toastSuccess(res.data.status === 'delivered'
+        ? msg('toast.webhook_test_sent', 'Test webhook sent')
+        : msg('toast.webhook_test_failed', 'Test webhook failed'));
       await loadWebhooks();
     } else {
-      toastError('Test-Webhook konnte nicht gesendet werden');
+      toastError(msg('toast.webhook_test_send_failed', 'Test webhook could not be sent'));
     }
   }
 
   return (
     <div className="settings-grid">
       <div className="settings-section">
-        <div className="settings-section-title"><PlugZap size={16} /> Automation Webhooks</div>
-        <p className="settings-help">
-          Sende Tribu-Ereignisse an Home Assistant, Node-RED, ntfy, Gotify oder andere Automatisierungsplattformen.
-          URLs und Secret-Werte werden in der Oberfläche nicht vollständig angezeigt.
-        </p>
+        <div className="settings-section-title"><PlugZap size={16} /> {msg('automation_webhooks', 'Automation Webhooks')}</div>
+        <p className="settings-help">{msg('webhooks_help', 'Send Tribu events to Home Assistant, Node-RED, ntfy, Gotify or other automation platforms. URLs and secret values are not shown in full in the interface.')}</p>
 
         <form className="settings-form" onSubmit={handleCreate}>
           <div className="form-field">
-            <label className="set-label" htmlFor="webhook-name">Name</label>
+            <label className="set-label" htmlFor="webhook-name">{msg('name', 'Name')}</label>
             <input
               id="webhook-name"
               className="form-input"
@@ -123,7 +124,7 @@ export default function WebhooksTab() {
             />
           </div>
           <div className="form-field">
-            <label className="set-label" htmlFor="webhook-url">Webhook URL</label>
+            <label className="set-label" htmlFor="webhook-url">{msg('webhooks_url_label', 'Webhook URL')}</label>
             <input
               id="webhook-url"
               className="form-input"
@@ -135,7 +136,7 @@ export default function WebhooksTab() {
             />
           </div>
           <div className="form-field">
-            <label className="set-label" htmlFor="webhook-secret-header">Optionaler Secret Header</label>
+            <label className="set-label" htmlFor="webhook-secret-header">{msg('webhooks_secret_header_label', 'Optional secret header')}</label>
             <div className="set-time-row">
               <input
                 id="webhook-secret-header"
@@ -149,20 +150,20 @@ export default function WebhooksTab() {
                 type="password"
                 value={form.secret_header_value}
                 onChange={(event) => setForm((current) => ({ ...current, secret_header_value: event.target.value }))}
-                placeholder="Secret Wert"
+                placeholder={msg('webhooks_secret_value_placeholder', 'Secret value')}
               />
             </div>
           </div>
           <fieldset className="settings-checklist">
-            <legend className="set-label">Ereignisse</legend>
-            {WEBHOOK_EVENTS.map(([eventName, label]) => (
+            <legend className="set-label">{msg('webhooks_events_legend', 'Events')}</legend>
+            {WEBHOOK_EVENTS.map(([eventName, labelKey]) => (
               <label key={eventName} className="set-checkbox-label">
                 <input
                   type="checkbox"
                   checked={form.events.includes(eventName)}
                   onChange={() => toggleEvent(eventName)}
                 />
-                <span>{label}</span>
+                <span>{msg(labelKey, eventName)}</span>
               </label>
             ))}
           </fieldset>
@@ -172,16 +173,16 @@ export default function WebhooksTab() {
               checked={form.active}
               onChange={(event) => setForm((current) => ({ ...current, active: event.target.checked }))}
             />
-            Aktiv
+            {msg('webhooks_active', 'Active')}
           </label>
-          <button className="btn-sm" disabled={busy || form.events.length === 0} type="submit">Webhook hinzufügen</button>
+          <button className="btn-sm" disabled={busy || form.events.length === 0} type="submit">{msg('webhooks_add', 'Add webhook')}</button>
         </form>
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-title">Konfigurierte Webhooks</div>
+        <div className="settings-section-title">{msg('webhooks_configured', 'Configured webhooks')}</div>
         {webhooks.length === 0 ? (
-          <p className="settings-help">Noch keine Webhooks konfiguriert.</p>
+          <p className="settings-help">{msg('webhooks_none', 'No webhooks configured yet.')}</p>
         ) : (
           <div className="settings-list">
             {webhooks.map((endpoint) => (
@@ -190,14 +191,21 @@ export default function WebhooksTab() {
                   <strong>{endpoint.name}</strong>
                   <div className="muted-text">{endpoint.url_redacted}</div>
                   <div className="muted-text">{endpoint.events.join(', ')}</div>
-                  {endpoint.has_secret && <div className="muted-text">Secret Header: {endpoint.secret_header_name || 'gesetzt'}</div>}
+                  {endpoint.has_secret && (
+                    <div className="muted-text">
+                      {msg('webhooks_secret_header_display', 'Secret header: {name}').replace(
+                        '{name}',
+                        endpoint.secret_header_name || msg('webhooks_secret_header_set', 'set')
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="settings-row-actions">
                   <button className="btn-ghost" onClick={() => handleToggle(endpoint)}>
-                    {endpoint.active ? 'Deaktivieren' : 'Aktivieren'}
+                    {endpoint.active ? msg('webhooks_disable', 'Disable') : msg('webhooks_enable', 'Enable')}
                   </button>
-                  <button className="btn-sm" onClick={() => handleTest(endpoint)}>Test senden</button>
-                  <button className="btn-ghost" aria-label={`${endpoint.name} löschen`} onClick={() => handleDelete(endpoint)}>
+                  <button className="btn-sm" onClick={() => handleTest(endpoint)}>{msg('webhooks_send_test', 'Send test')}</button>
+                  <button className="btn-ghost" aria-label={msg('webhooks_delete_aria', 'Delete {name}').replace('{name}', endpoint.name)} onClick={() => handleDelete(endpoint)}>
                     <Trash2 size={16} />
                   </button>
                 </div>

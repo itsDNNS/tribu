@@ -1,6 +1,7 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import WebhooksTab from '../../components/settings/WebhooksTab';
+import { buildMessages } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
 let mockAppState = {};
@@ -18,7 +19,7 @@ jest.mock('../../contexts/ToastContext', () => ({
 describe('WebhooksTab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAppState = { familyId: 1 };
+    mockAppState = { familyId: 1, messages: buildMessages('en') };
     api.apiListWebhooks.mockResolvedValue({ ok: true, data: [] });
     api.apiCreateWebhook.mockResolvedValue({ ok: true, data: { id: 1 } });
     api.apiUpdateWebhook.mockResolvedValue({ ok: true, data: { id: 1 } });
@@ -45,7 +46,7 @@ describe('WebhooksTab', () => {
     expect(await screen.findByText('Home Assistant')).toBeInTheDocument();
     expect(screen.getByText('https://ha.example/hooks/[redacted]')).toBeInTheDocument();
     expect(screen.queryByText(/token=secret/i)).not.toBeInTheDocument();
-    expect(screen.getByText('Secret Header: X-Tribu-Secret')).toBeInTheDocument();
+    expect(screen.getByText('Secret header: X-Tribu-Secret')).toBeInTheDocument();
   });
 
   it('creates a webhook for the active family', async () => {
@@ -53,9 +54,9 @@ describe('WebhooksTab', () => {
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Node-RED' } });
     fireEvent.change(screen.getByLabelText('Webhook URL'), { target: { value: 'https://node-red.example/webhook/abc?token=private' } });
-    fireEvent.change(screen.getByLabelText('Optionaler Secret Header'), { target: { value: 'X-Tribu-Secret' } });
-    fireEvent.change(screen.getByPlaceholderText('Secret Wert'), { target: { value: 'super-secret' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Webhook hinzufügen' }));
+    fireEvent.change(screen.getByLabelText('Optional secret header'), { target: { value: 'X-Tribu-Secret' } });
+    fireEvent.change(screen.getByPlaceholderText('Secret value'), { target: { value: 'super-secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add webhook' }));
 
     await waitFor(() => expect(api.apiCreateWebhook).toHaveBeenCalledTimes(1));
     expect(api.apiCreateWebhook).toHaveBeenCalledWith(expect.objectContaining({
@@ -65,7 +66,19 @@ describe('WebhooksTab', () => {
       secret_header_name: 'X-Tribu-Secret',
       secret_header_value: 'super-secret',
     }));
-    expect(toastSuccess).toHaveBeenCalledWith('Webhook gespeichert');
+    expect(toastSuccess).toHaveBeenCalledWith('Webhook saved');
+  });
+
+  it('renders webhook copy from the selected language bundle', async () => {
+    mockAppState = { familyId: 1, messages: buildMessages('de') };
+
+    render(<WebhooksTab />);
+
+    expect(await screen.findByText(/Sende Tribu-Ereignisse an Home Assistant/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Optionaler Secret-Header')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Secret-Wert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Webhook hinzufügen' })).toBeInTheDocument();
+    expect(screen.queryByText('Optional secret header')).not.toBeInTheDocument();
   });
 
   it('sends a test webhook without showing secret values', async () => {
@@ -83,11 +96,11 @@ describe('WebhooksTab', () => {
 
     render(<WebhooksTab />);
 
-    const testButton = await screen.findByRole('button', { name: 'Test senden' });
+    const testButton = await screen.findByRole('button', { name: 'Send test' });
     fireEvent.click(testButton);
 
     await waitFor(() => expect(api.apiTestWebhook).toHaveBeenCalledWith(7));
-    expect(toastSuccess).toHaveBeenCalledWith('Test-Webhook gesendet');
+    expect(toastSuccess).toHaveBeenCalledWith('Test webhook sent');
     expect(screen.queryByText(/super-secret/i)).not.toBeInTheDocument();
   });
 });

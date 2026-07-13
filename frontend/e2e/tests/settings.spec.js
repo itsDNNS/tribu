@@ -141,12 +141,12 @@ test.describe('Settings', () => {
 
     await page.getByLabel('Name').fill('Home Assistant');
     await page.getByLabel('Webhook URL').fill('https://ha.example/api/webhook/placeholder-token');
-    await page.getByLabel('Optionaler Secret Header').fill('X-Tribu-Secret');
-    await page.getByPlaceholder('Secret Wert').fill('placeholder-secret');
-    await page.getByRole('button', { name: 'Webhook hinzufügen' }).click();
+    await page.getByLabel('Optional secret header').fill('X-Tribu-Secret');
+    await page.getByPlaceholder('Secret value').fill('placeholder-secret');
+    await page.getByRole('button', { name: 'Add webhook' }).click();
 
     await expect(page.getByText('https://ha.example/[redacted]')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Secret Header: X-Tribu-Secret')).toBeVisible();
+    await expect(page.getByText('Secret header: X-Tribu-Secret')).toBeVisible();
     await expect(page.getByText(/placeholder-token/)).toHaveCount(0);
     await expect(page.getByText(/placeholder-secret/)).toHaveCount(0);
   });
