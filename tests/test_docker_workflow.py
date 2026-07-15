@@ -71,12 +71,26 @@ def test_frontend_image_receives_same_build_version_as_backend():
     assert "echo 'NEXT_PUBLIC_APP_BUILD_DATE=${{ steps.app_version.outputs.date }}'" in workflow
 
 
-def test_docker_workflow_keeps_required_package_write_permissions():
+def test_docker_workflow_defaults_to_read_only_contents_permissions():
     workflow = read_workflow()
+    workflow_header, jobs_marker, _ = workflow.partition('\njobs:\n')
 
-    assert 'permissions:' in workflow
-    assert 'contents: read' in workflow
-    assert 'packages: write' in workflow
+    assert jobs_marker == '\njobs:\n'
+    assert workflow_header.endswith('\npermissions:\n  contents: read\n')
+
+
+def test_docker_workflow_build_job_keeps_package_write_permission():
+    lines = read_workflow().splitlines()
+    build_start = lines.index('  build:')
+    build_lines = []
+
+    for line in lines[build_start + 1:]:
+        if line.startswith('  ') and not line.startswith('    ') and line.strip():
+            break
+        build_lines.append(line)
+
+    build_job = '\n'.join(build_lines)
+    assert '    permissions:\n      contents: read\n      packages: write' in build_job
 
 
 def test_docker_publish_waits_for_backend_and_frontend_tests():
