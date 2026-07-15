@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Cake, Download, MapPin, Pencil, Repeat, Rss, Trash2 } from 'lucide-react';
+import { Cake, Copy, Download, MapPin, Pencil, Repeat, Rss, Trash2 } from 'lucide-react';
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
@@ -106,7 +106,7 @@ export function AssignChips({ members, assignedTo, setAssignedTo, messages }) {
   );
 }
 
-export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onEdit, members }) {
+export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onEdit, onDuplicate, members }) {
   const sourceType = ev.source_type || 'local';
   const isImported = sourceType === 'import' || sourceType === 'subscription';
   const editable = !!onEdit && !ev._isBirthday && !isImported;
@@ -163,6 +163,12 @@ export function EventCard({ ev, index, messages, lang, timeFormat, onDelete, onE
         <button type="button" className="event-card-action" onClick={(e) => { e.stopPropagation(); onEdit(ev); }}
           aria-label={t(messages, 'aria.edit_event').replace('{title}', ev.title)}>
           <Pencil size={14} />
+        </button>
+      )}
+      {onDuplicate && !ev._isBirthday && (
+        <button type="button" className="event-card-action" onClick={(e) => { e.stopPropagation(); onDuplicate(ev); }}
+          aria-label={t(messages, 'aria.duplicate_event').replace('{title}', ev.title)}>
+          <Copy size={14} />
         </button>
       )}
       {onDelete && !ev._isBirthday && (

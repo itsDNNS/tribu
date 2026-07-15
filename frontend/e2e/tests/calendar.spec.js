@@ -19,6 +19,30 @@ async function clickVisibleCenter(page, locator) {
   await locator.click();
 }
 
+async function cleanupCalendarEvents(request, eventIds, primaryError) {
+  const cleanupErrors = [];
+
+  for (const eventId of new Set(eventIds.filter(Boolean))) {
+    try {
+      const response = await request.delete(`/api/calendar/events/${eventId}`);
+      if (!response.ok() && response.status() !== 404) {
+        cleanupErrors.push(`DELETE event ${eventId} failed (${response.status()}): ${await response.text()}`);
+      }
+    } catch (error) {
+      cleanupErrors.push(`DELETE event ${eventId} failed: ${error.message}`);
+    }
+  }
+
+  if (cleanupErrors.length === 0) return;
+
+  const cleanupMessage = `Calendar cleanup failed:\n${cleanupErrors.join('\n')}`;
+  if (primaryError) {
+    primaryError.message += `\n${cleanupMessage}`;
+    return;
+  }
+  throw new Error(cleanupMessage);
+}
+
 test.describe('Calendar', () => {
   test('navigate to calendar and see month view', async ({ authedPage: page }) => {
     await navigateTo(page, 'Calendar');
@@ -58,6 +82,149 @@ test.describe('Calendar', () => {
       'href',
       'https://www.openstreetmap.org/search?query=Sports%20Park%2C%20Field%202',
     );
+  });
+
+  test('duplicates only after confirmation and creates an independent local event', async ({ authedPage: page, apiCtx }) => {
+    let sourceEvent;
+    let duplicateEvent;
+    let primaryError;
+
+    try {
+      const familyId = await getFamilyId(apiCtx);
+      const now = new Date();
+      const sourceDate = new Date(now.getFullYear(), now.getMonth(), 15, 14, 0, 0);
+      const sourceEnd = new Date(now.getFullYear(), now.getMonth(), 15, 15, 30, 0);
+      sourceEvent = await seedCalendarEvent(apiCtx, familyId, {
+        title: 'Original Plan',
+        description: 'Bring the folder',
+        location: 'Community room',
+        starts_at: sourceDate.toISOString(),
+        ends_at: sourceEnd.toISOString(),
+      });
+
+      const createPosts = [];
+      page.on('request', (request) => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/calendar/events') {
+          createPosts.push(request.url());
+        }
+      });
+
+      await navigateTo(page, 'Calendar');
+      await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: /^[A-Za-z]+ 15(?:,|$)/ }).click();
+      await clickVisibleCenter(page, page.locator('[aria-label="Duplicate event: Original Plan"]'));
+
+      const form = page.locator('.day-detail-panel .quick-add-form');
+      await expect(form.locator('input[placeholder="New event..."]')).toHaveValue('Original Plan');
+      await expect(page.locator('.day-detail-panel .cal-edit-recurring-hint')).toBeVisible();
+      expect(createPosts).toHaveLength(0);
+
+      await form.locator('input[placeholder="New event..."]').fill('Original Plan B');
+      await page.getByRole('button', { name: /^[A-Za-z]+ 22(?:,|$)/ }).click();
+      const retargetedForm = page.locator('.day-detail-panel .quick-add-form');
+      await expect(retargetedForm.locator('input[type="datetime-local"]').first()).toHaveValue(/-22T/);
+      await expect(retargetedForm.locator('input[type="datetime-local"]').nth(1)).toHaveValue(/-22T/);
+      const duplicateResponsePromise = page.waitForResponse((response) => (
+        response.request().method() === 'POST'
+        && new URL(response.url()).pathname === '/api/calendar/events'
+      ));
+      await clickVisibleCenter(page, retargetedForm.locator('button[type="submit"]'));
+      duplicateEvent = await (await duplicateResponsePromise).json();
+
+      await expect.poll(() => createPosts.length).toBe(1);
+      await expect(page.getByText('Original Plan B')).toBeVisible({ timeout: 10000 });
+
+      await page.getByRole('button', { name: /^[A-Za-z]+ 15(?:,|$)/ }).click();
+      await expect(page.getByText('Original Plan', { exact: true })).toBeVisible();
+      await clickVisibleCenter(page, page.locator('[aria-label="Delete event: Original Plan"]'));
+      await expect(page.getByText('Original Plan', { exact: true })).not.toBeVisible({ timeout: 10000 });
+
+      await page.reload();
+      await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: /^[A-Za-z]+ 22(?:,|$)/ }).click();
+      await expect(page.getByText('Original Plan B')).toBeVisible({ timeout: 10000 });
+      expect(createPosts).toHaveLength(1);
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      await cleanupCalendarEvents(apiCtx, [duplicateEvent?.id, sourceEvent?.id], primaryError);
+    }
+  });
+
+  test('canceling a duplicate creates nothing', async ({ authedPage: page, apiCtx }) => {
+    let sourceEvent;
+    let primaryError;
+
+    try {
+      const familyId = await getFamilyId(apiCtx);
+      const now = new Date();
+      const sourceDate = new Date(now.getFullYear(), now.getMonth(), 16, 14, 0, 0);
+      sourceEvent = await seedCalendarEvent(apiCtx, familyId, {
+        title: 'Cancel Original',
+        starts_at: sourceDate.toISOString(),
+      });
+
+      const createPosts = [];
+      page.on('request', (request) => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/calendar/events') {
+          createPosts.push(request.url());
+        }
+      });
+
+      await navigateTo(page, 'Calendar');
+      await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: /^[A-Za-z]+ 16(?:,|$)/ }).click();
+      await clickVisibleCenter(page, page.locator('[aria-label="Duplicate event: Cancel Original"]'));
+      await clickVisibleCenter(page, page.getByRole('button', { name: 'Cancel', exact: true }));
+
+      await expect(page.getByText('Quick add')).toBeVisible();
+      await expect(page.locator('.day-detail-panel input[placeholder="New event..."]')).toHaveValue('');
+      expect(createPosts).toHaveLength(0);
+
+      await page.reload();
+      await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: /^[A-Za-z]+ 16(?:,|$)/ }).click();
+      await expect(page.locator('.day-event-card').filter({ hasText: 'Cancel Original' })).toHaveCount(1);
+      expect(createPosts).toHaveLength(0);
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      await cleanupCalendarEvents(apiCtx, [sourceEvent?.id], primaryError);
+    }
+  });
+
+  test('routes week-view duplication to the visible month draft', async ({ authedPage: page, apiCtx }) => {
+    let sourceEvent;
+    let primaryError;
+
+    try {
+      const familyId = await getFamilyId(apiCtx);
+      const now = new Date();
+      const sourceDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 14, 0, 0);
+      sourceEvent = await seedCalendarEvent(apiCtx, familyId, {
+        title: 'Week Copy Source',
+        starts_at: sourceDate.toISOString(),
+      });
+
+      await navigateTo(page, 'Calendar');
+      await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: 'Week', exact: true }).click();
+      await expect(page.locator('.week-view')).toBeVisible();
+      await clickVisibleCenter(page, page.locator('[aria-label="Duplicate event: Week Copy Source"]'));
+
+      await expect(page.locator('.calendar-grid-wrapper')).toBeVisible();
+      const form = page.locator('.day-detail-panel .quick-add-form');
+      await expect(form).toBeVisible();
+      await expect(form.locator('input[placeholder="New event..."]')).toHaveValue('Week Copy Source');
+      await expect(page.getByText('Duplicate event', { exact: true })).toBeVisible();
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      await cleanupCalendarEvents(apiCtx, [sourceEvent?.id], primaryError);
+    }
   });
 
   test('month date numbers stay aligned with and without event icons', async ({ authedPage: page, apiCtx }) => {

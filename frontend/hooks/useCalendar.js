@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { errorText, toIsoOrNull, parseDate } from '../lib/helpers';
@@ -50,6 +50,14 @@ export function useCalendar() {
   const [color, setColor] = useState('');
   const [category, setCategory] = useState('');
   const [icon, setIcon] = useState('');
+
+  // Duplicate drafts reuse the create form but retain a source snapshot so
+  // the UI remains stable across event refetches.
+  const [duplicateSource, setDuplicateSource] = useState(null);
+  const duplicateSourceRef = useRef(null);
+  const [creating, setCreating] = useState(false);
+  const creatingRef = useRef(false);
+  const previousFamilyIdRef = useRef(familyId);
 
   // Edit state
   const [editingEvent, setEditingEvent] = useState(null);
@@ -227,40 +235,110 @@ export function useCalendar() {
     setWeekAnchor(new Date());
   }, []);
 
+  function resetCreateFields(nextStartsAt = '') {
+    setTitle(''); setDescription(''); setLocation(''); setStartsAt(nextStartsAt); setEndsAt(''); setAllDay(false);
+    setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]); setColor(''); setCategory(''); setIcon('');
+  }
+
+  function startDuplicate(ev) {
+    if (ev._isBirthday) return;
+
+    const snapshot = { title: ev.title || '' };
+    duplicateSourceRef.current = snapshot;
+    setDuplicateSource(snapshot);
+    setEditingEvent(null);
+    setTitle(ev.title || '');
+    setDescription(ev.description || '');
+    setLocation(ev.location || '');
+    setStartsAt(ev.starts_at ? String(ev.starts_at).slice(0, 16) : '');
+    setEndsAt(ev.ends_at ? String(ev.ends_at).slice(0, 16) : '');
+    setAllDay(ev.all_day || false);
+    setRecurrence('');
+    setRecurrenceEnd('');
+    const assigned = ev.assigned_to;
+    if (assigned === 'all') setAssignedTo(['all']);
+    else if (Array.isArray(assigned)) setAssignedTo(assigned.map(Number));
+    else setAssignedTo([]);
+    setColor(ev.color || '');
+    setCategory(ev.category || '');
+    setIcon(ev.icon || '');
+
+    const sourceDate = parseDate(ev.starts_at);
+    if (!isNaN(sourceDate.getTime())) {
+      const sourceDay = new Date(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate());
+      setSelectedDate(sourceDay);
+      setCalendarMonth((prev) => (
+        prev.getFullYear() === sourceDay.getFullYear() && prev.getMonth() === sourceDay.getMonth()
+          ? prev
+          : new Date(sourceDay.getFullYear(), sourceDay.getMonth(), 1)
+      ));
+    }
+    setCalendarViewRaw('month');
+    announce(t(messages, 'module.calendar.duplicating_hint').replace('{title}', ev.title || ''));
+  }
+
+  function cancelDuplicate() {
+    duplicateSourceRef.current = null;
+    setDuplicateSource(null);
+    resetCreateFields(formatLocalDateTimeInput(selectedDate ?? new Date(), 9, 0));
+  }
+
+  useEffect(() => {
+    if (previousFamilyIdRef.current === familyId) return;
+    previousFamilyIdRef.current = familyId;
+    if (duplicateSourceRef.current) cancelDuplicate();
+  }, [familyId]);
+
   async function createEvent(e) {
     e.preventDefault();
-    const assignedPayload = assignedTo.includes('all') ? 'all' : assignedTo.length > 0 ? assignedTo.map(Number) : null;
-    const payload = {
-      family_id: Number(familyId), title, description: description || null,
-      location: location || null,
-      starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
-      recurrence: recurrence || null,
-      recurrence_end: toIsoOrNull(recurrenceEnd),
-      assigned_to: assignedPayload,
-      color: color || null,
-      category: category || null,
-      icon: icon || null,
-    };
-    if (demoMode) {
-      const newEvent = { id: Date.now(), ...payload, is_recurring: !!recurrence, occurrence_date: null };
-      setEvents((prev) => [...prev, newEvent]);
-      setSummary((prev) => ({
-        ...prev,
-        next_events: [...(prev.next_events || []), newEvent]
-          .filter((ev) => parseDate(ev.starts_at) >= new Date())
-          .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
-          .slice(0, 5),
-      }));
-    } else {
-      const { ok, data } = await api.apiCreateEvent(payload);
-      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      await Promise.all([loadEventsForRange(), loadDashboard()]);
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setCreating(true);
+    const snapshotAtSubmit = duplicateSourceRef.current;
+
+    try {
+      const assignedPayload = assignedTo.includes('all') ? 'all' : assignedTo.length > 0 ? assignedTo.map(Number) : null;
+      const payload = {
+        family_id: Number(familyId), title, description: description || null,
+        location: location || null,
+        starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
+        recurrence: recurrence || null,
+        recurrence_end: toIsoOrNull(recurrenceEnd),
+        assigned_to: assignedPayload,
+        color: color || null,
+        category: category || null,
+        icon: icon || null,
+      };
+      if (demoMode) {
+        const newEvent = { id: Date.now(), ...payload, is_recurring: !!recurrence, occurrence_date: null };
+        setEvents((prev) => [...prev, newEvent]);
+        setSummary((prev) => ({
+          ...prev,
+          next_events: [...(prev.next_events || []), newEvent]
+            .filter((ev) => parseDate(ev.starts_at) >= new Date())
+            .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+            .slice(0, 5),
+        }));
+      } else {
+        const { ok, data } = await api.apiCreateEvent(payload);
+        if (!ok) {
+          toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+          return;
+        }
+        await Promise.all([loadEventsForRange(), loadDashboard()]);
+      }
+      if (duplicateSourceRef.current === snapshotAtSubmit) {
+        duplicateSourceRef.current = null;
+        setDuplicateSource((current) => (current === snapshotAtSubmit ? null : current));
+        resetCreateFields();
+      }
+      const msg = t(messages, 'toast.event_created');
+      toastSuccess(msg);
+      announce(msg);
+    } finally {
+      creatingRef.current = false;
+      setCreating(false);
     }
-    setTitle(''); setDescription(''); setLocation(''); setStartsAt(''); setEndsAt(''); setAllDay(false);
-    setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]); setColor(''); setCategory(''); setIcon('');
-    const msg = t(messages, 'toast.event_created');
-    toastSuccess(msg);
-    announce(msg);
   }
 
   function startEdit(ev) {
@@ -300,8 +378,8 @@ export function useCalendar() {
       : editAssignedTo.length > 0
         ? editAssignedTo.map(Number)
         : null;
-    // all_day and category are not exposed in the edit UI (neither is the
-    // create form). Omitting them from the PATCH keeps the backend's
+    // all_day and category are not exposed in the edit UI. Omitting them
+    // from the PATCH keeps the backend's
     // no-change semantics instead of writing stale state back.
     const payload = {
       title: editTitle,
@@ -408,6 +486,8 @@ export function useCalendar() {
     color, setColor,
     category, setCategory,
     icon, setIcon,
+    duplicateSource, startDuplicate, cancelDuplicate,
+    creating,
     deleteConfirm, setDeleteConfirm,
     birthdayName, setBirthdayName,
     birthdayMonth, setBirthdayMonth,
