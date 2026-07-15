@@ -7,6 +7,37 @@ import { getMemberColor } from '../../lib/member-colors';
 import { getCalendarEventIcon } from '../../lib/calendar-icons';
 import DayDetailPanel from './DayDetailPanel';
 
+function dateInputForDay(date, currentValue = '') {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const currentTime = String(currentValue || '').match(/T(\d{2}:\d{2})/)?.[1] || '09:00';
+  return `${y}-${m}-${d}T${currentTime}`;
+}
+
+export function retargetCreateDraft(date, startsAt, endsAt) {
+  const startMatch = String(startsAt || '').match(/^(\d{4})-(\d{2})-(\d{2})T/);
+  if (!startMatch) {
+    return { startsAt: dateInputForDay(date, startsAt), endsAt };
+  }
+
+  const sourceDayUtc = Date.UTC(Number(startMatch[1]), Number(startMatch[2]) - 1, Number(startMatch[3]));
+  const targetDayUtc = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDelta = Math.round((targetDayUtc - sourceDayUtc) / (24 * 60 * 60 * 1000));
+  const shift = (value) => {
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})(T.*)$/);
+    if (!match) return value;
+    const shifted = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    shifted.setDate(shifted.getDate() + dayDelta);
+    const y = shifted.getFullYear();
+    const m = String(shifted.getMonth() + 1).padStart(2, '0');
+    const d = String(shifted.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}${match[4]}`;
+  };
+
+  return { startsAt: shift(startsAt), endsAt: shift(endsAt) };
+}
+
 export default function CalendarView() {
   const { familyId, families, messages, isMobile, lang, demoMode, events, setActiveView, isChild, members, timeFormat } = useApp();
   const cal = useCalendar();
@@ -23,12 +54,10 @@ export default function CalendarView() {
     if (idx < firstRealCellIndex) return previousMonthLastDay - firstRealCellIndex + idx + 1;
     return idx - firstRealCellIndex - monthLastDay + 1;
   };
-  const dayStartInput = (date, currentValue = '') => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    const currentTime = String(currentValue || '').match(/T(\d{2}:\d{2})/)?.[1] || '09:00';
-    return `${y}-${m}-${d}T${currentTime}`;
+  const retargetDraft = (date) => {
+    const retargeted = retargetCreateDraft(date, cal.startsAt, cal.endsAt);
+    cal.setStartsAt(retargeted.startsAt);
+    cal.setEndsAt(retargeted.endsAt);
   };
   const formatCountLabel = (count, singular, plural) => `${count} ${count === 1 ? singular : plural}`;
   const buildDayContentLabel = (birthdayCount, regularEvents) => {
@@ -92,7 +121,7 @@ export default function CalendarView() {
                 <ChevronRight size={18} />
               </button>
             </div>
-            <button className="today-btn" onClick={() => { cal.setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); cal.setSelectedDate(today); cal.setStartsAt(dayStartInput(today, cal.startsAt)); }}>{t(messages, 'module.calendar.today')}</button>
+            <button className="today-btn" onClick={() => { cal.setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); cal.setSelectedDate(today); retargetDraft(today); }}>{t(messages, 'module.calendar.today')}</button>
             <div className="calendar-view-toggle">
               <button className={`calendar-view-btn${cal.calendarView === 'month' ? ' active' : ''}`} onClick={() => cal.setCalendarView('month')}>{t(messages, 'module.calendar.month')}</button>
               <button className={`calendar-view-btn${cal.calendarView === 'week' ? ' active' : ''}`} onClick={() => cal.setCalendarView('week')}>{t(messages, 'module.calendar.week')}</button>
@@ -173,7 +202,7 @@ export default function CalendarView() {
                       if (c.empty) return;
                       const picked = new Date(cal.calendarMonth.getFullYear(), cal.calendarMonth.getMonth(), c.day);
                       cal.setSelectedDate(picked);
-                      cal.setStartsAt(dayStartInput(picked, cal.startsAt));
+                      retargetDraft(picked);
                     }}
                   >
                     {c.empty ? (
@@ -227,10 +256,7 @@ export default function CalendarView() {
                   className={`week-day-header${isSelected ? ' week-day-selected' : ''}`}
                   onClick={() => {
                     cal.setSelectedDate(dayInfo.date);
-                    const local = new Date(dayInfo.date.getFullYear(), dayInfo.date.getMonth(), dayInfo.date.getDate(), 9, 0);
-                    const offset = local.getTimezoneOffset();
-                    const localIso = new Date(local.getTime() - offset * 60000).toISOString().slice(0, 16);
-                    cal.setStartsAt(localIso);
+                    retargetDraft(dayInfo.date);
                   }}
                 >
                   {dayInfo.date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -241,7 +267,7 @@ export default function CalendarView() {
                     <div className="week-day-empty">{t(messages, 'module.calendar.no_events_day')}</div>
                   ) : (
                     dayInfo.dayEvents.map((ev, j) => (
-                      <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={j} messages={messages} lang={lang} timeFormat={timeFormat} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} members={members} />
+                      <EventCard key={ev.occurrence_date ? `${ev.id}-${ev.occurrence_date}` : ev.id} ev={ev} index={j} messages={messages} lang={lang} timeFormat={timeFormat} onDelete={isChild ? null : cal.deleteEvent} onEdit={isChild ? null : cal.startEdit} onDuplicate={isChild ? null : cal.startDuplicate} members={members} />
                     ))
                   )}
                 </div>

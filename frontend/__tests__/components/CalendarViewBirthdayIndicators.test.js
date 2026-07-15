@@ -58,6 +58,8 @@ function baseCalendar(cells) {
     setSelectedDate: jest.fn(),
     startsAt: '',
     setStartsAt: jest.fn(),
+    endsAt: '',
+    setEndsAt: jest.fn(),
     weekInfo: { weekNumber: 18, weekStart: new Date(2026, 4, 1), weekEnd: new Date(2026, 4, 8), days: [] },
     setCalendarView: jest.fn(),
     prevWeek: jest.fn(),
@@ -99,6 +101,64 @@ describe('CalendarView birthday month indicators', () => {
 
     expect(cal.setSelectedDate).toHaveBeenCalledWith(new Date(2026, 4, 4));
     expect(cal.setStartsAt).toHaveBeenCalledWith('2026-05-04T15:30');
+  });
+
+  it('retargets both draft dates by the same delta when choosing another day', () => {
+    const cal = baseCalendar([emptyCell(), monthCell(4, [])]);
+    cal.startsAt = '2026-05-01T15:30';
+    cal.endsAt = '2026-05-02T17:00';
+    mockUseCalendar.mockReturnValue(cal);
+
+    render(<CalendarView />);
+
+    screen.getByRole('button', { name: /^May 4$/i }).click();
+
+    expect(cal.setStartsAt).toHaveBeenCalledWith('2026-05-04T15:30');
+    expect(cal.setEndsAt).toHaveBeenCalledWith('2026-05-05T17:00');
+  });
+
+  it('retargets both draft dates when returning to today', () => {
+    const cal = baseCalendar([emptyCell(), monthCell(4, [])]);
+    cal.startsAt = '2026-05-01T15:30';
+    cal.endsAt = '2026-05-02T17:00';
+    mockUseCalendar.mockReturnValue(cal);
+    const today = new Date();
+    const nextDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const datePart = (date) => [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    render(<CalendarView />);
+
+    screen.getByRole('button', { name: 'Today' }).click();
+
+    expect(cal.setStartsAt).toHaveBeenCalledWith(`${datePart(today)}T15:30`);
+    expect(cal.setEndsAt).toHaveBeenCalledWith(`${datePart(nextDay)}T17:00`);
+  });
+
+  it('retargets an active draft start and end together when choosing a week-day header', () => {
+    const targetDay = new Date(2026, 4, 4);
+    const cal = baseCalendar([]);
+    cal.calendarView = 'week';
+    cal.startsAt = '2026-05-01T23:30';
+    cal.endsAt = '2026-05-02T01:00';
+    cal.weekInfo = {
+      weekNumber: 19,
+      weekStart: targetDay,
+      weekEnd: new Date(2026, 4, 11),
+      days: [{ date: targetDay, dayEvents: [] }],
+    };
+    mockUseCalendar.mockReturnValue(cal);
+
+    render(<CalendarView />);
+
+    screen.getByRole('button', { name: /Mon, May 4/i }).click();
+
+    expect(cal.setSelectedDate).toHaveBeenCalledWith(targetDay);
+    expect(cal.setStartsAt).toHaveBeenCalledWith('2026-05-04T23:30');
+    expect(cal.setEndsAt).toHaveBeenCalledWith('2026-05-05T01:00');
   });
 
   it('shows a cake indicator instead of a regular dot for a birthday-only day', () => {

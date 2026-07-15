@@ -7,7 +7,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Area | Capability | Notes |
 |---|---|---|
 | Dashboard | Daily household overview | Events, open tasks, birthdays, activity, quick actions, and family context. |
-| Calendar | Shared calendar | Month and week views, recurring events, ICS import and export, external ICS feed import with manual refresh, day detail panels, and phone sync through CalDAV. |
+| Calendar | Shared calendar | Month and week views, recurring events, event duplication, ICS import and export, external ICS feed import with manual refresh, day detail panels, and phone sync through CalDAV. |
 | Tasks | Responsibilities and routines | Assignees, priorities, due dates, recurrence, templates, and overdue tracking. |
 | Shopping | Shared lists | Multiple lists, categories, progress, quick add, and real-time updates. |
 | Contacts | Family address book | Contact cards, CSV import and export, birthday extraction, and CardDAV sync. |

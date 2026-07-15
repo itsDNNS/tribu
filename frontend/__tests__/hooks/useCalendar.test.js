@@ -13,7 +13,9 @@ jest.mock('../../lib/api', () => ({
 }));
 
 jest.mock('../../lib/i18n', () => ({
-  t: (_messages, key) => key,
+  t: (_messages, key) => key === 'module.calendar.duplicating_hint'
+    ? 'Duplicating "{title}". Adjust the details and save it as a new event.'
+    : key,
 }));
 
 jest.mock('../../lib/announce', () => ({
@@ -250,5 +252,273 @@ describe('useCalendar edit flow', () => {
 
     expect(result.current.editingEvent).toEqual(expect.objectContaining({ id: 2 }));
     expect(result.current.editTitle).toBe('B');
+  });
+});
+
+describe('useCalendar duplicate flow', () => {
+  const { renderHook, act } = require('@testing-library/react');
+
+  function setupAppContext(overrides = {}) {
+    const { useApp } = require('../../contexts/AppContext');
+    const ctx = {
+      familyId: '1',
+      events: [],
+      setEvents: jest.fn(),
+      setSummary: jest.fn(),
+      summary: { next_events: [] },
+      messages: {},
+      lang: 'en',
+      timeFormat: '24h',
+      members: [{ user_id: 7, display_name: 'Max' }],
+      birthdays: [],
+      loadDashboard: jest.fn(() => Promise.resolve()),
+      demoMode: true,
+      ...overrides,
+    };
+    useApp.mockReturnValue(ctx);
+    return ctx;
+  }
+
+  function sourceEvent(overrides = {}) {
+    return {
+      id: 42,
+      family_id: 1,
+      title: 'Family dinner',
+      description: 'Bring dessert',
+      location: 'Club house',
+      starts_at: '2026-08-14T18:00:00',
+      ends_at: '2026-08-14T20:30:00',
+      all_day: true,
+      recurrence: 'weekly',
+      recurrence_end: '2026-12-31',
+      assigned_to: ['7'],
+      color: '#7c3aed',
+      category: 'family',
+      icon: 'meal',
+      source_type: 'subscription',
+      source_name: 'School calendar',
+      ical_uid: 'remote-uid',
+      occurrence_date: '2026-08-14',
+      is_recurring: true,
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('opens a cloned, prefilled one-off draft without creating anything', () => {
+    setupAppContext();
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const api = require('../../lib/api');
+    const { announce } = require('../../lib/announce');
+    const { result } = renderHook(() => useCalendar());
+    const source = sourceEvent();
+
+    act(() => result.current.startEdit(sourceEvent({ id: 7 })));
+    act(() => result.current.startDuplicate(source));
+
+    expect(api.apiCreateEvent).not.toHaveBeenCalled();
+    expect(announce).toHaveBeenCalledWith('Duplicating "Family dinner". Adjust the details and save it as a new event.');
+    expect(result.current.duplicateSource).not.toBe(source);
+    expect(result.current.duplicateSource).toEqual({ title: 'Family dinner' });
+    expect(result.current.editingEvent).toBeNull();
+    expect(result.current.title).toBe('Family dinner');
+    expect(result.current.description).toBe('Bring dessert');
+    expect(result.current.location).toBe('Club house');
+    expect(result.current.startsAt).toBe('2026-08-14T18:00');
+    expect(result.current.endsAt).toBe('2026-08-14T20:30');
+    expect(result.current.allDay).toBe(true);
+    expect(result.current.assignedTo).toEqual([7]);
+    expect(result.current.color).toBe('#7c3aed');
+    expect(result.current.category).toBe('family');
+    expect(result.current.icon).toBe('meal');
+    expect(result.current.recurrence).toBe('');
+    expect(result.current.recurrenceEnd).toBe('');
+  });
+
+  it('preserves an all-members assignment and ignores birthday pseudo-events', () => {
+    setupAppContext();
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => result.current.startDuplicate(sourceEvent({ assigned_to: 'all' })));
+    expect(result.current.assignedTo).toEqual(['all']);
+
+    act(() => result.current.cancelDuplicate());
+    act(() => result.current.startDuplicate(sourceEvent({ _isBirthday: true })));
+    expect(result.current.duplicateSource).toBeNull();
+  });
+
+  it('routes a week occurrence to its month and selects its source date at midnight', () => {
+    setupAppContext();
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => result.current.setCalendarView('week'));
+    act(() => result.current.startDuplicate(sourceEvent({ starts_at: '2027-02-03T10:15:00' })));
+
+    expect(result.current.calendarView).toBe('month');
+    expect(result.current.selectedDate).toEqual(new Date(2027, 1, 3));
+    expect(result.current.calendarMonth.getFullYear()).toBe(2027);
+    expect(result.current.calendarMonth.getMonth()).toBe(1);
+  });
+
+  it('keeps the draft when month navigation hides the selected day', () => {
+    setupAppContext();
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => result.current.startDuplicate(sourceEvent()));
+    act(() => result.current.setSelectedDate(null));
+
+    expect(result.current.selectedDate).toBeNull();
+    expect(result.current.duplicateSource).toEqual({ title: 'Family dinner' });
+    expect(result.current.title).toBe('Family dinner');
+  });
+
+  it('submits only curated create fields once and clears the completed draft', async () => {
+    setupAppContext({ demoMode: false });
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const api = require('../../lib/api');
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => result.current.startDuplicate(sourceEvent()));
+    await act(async () => {
+      await result.current.createEvent({ preventDefault: jest.fn() });
+    });
+
+    expect(api.apiCreateEvent).toHaveBeenCalledTimes(1);
+    const payload = api.apiCreateEvent.mock.calls[0][0];
+    expect(payload).toEqual(expect.objectContaining({
+      family_id: 1,
+      title: 'Family dinner',
+      description: 'Bring dessert',
+      location: 'Club house',
+      all_day: true,
+      assigned_to: [7],
+      color: '#7c3aed',
+      category: 'family',
+      icon: 'meal',
+      recurrence: null,
+      recurrence_end: null,
+    }));
+    for (const key of ['id', 'source_type', 'source_name', 'ical_uid', 'occurrence_date', 'is_recurring']) {
+      expect(payload).not.toHaveProperty(key);
+    }
+    expect(result.current.duplicateSource).toBeNull();
+    expect(result.current.title).toBe('');
+  });
+
+  it('retains the draft and its fields when create fails', async () => {
+    setupAppContext({ demoMode: false });
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const api = require('../../lib/api');
+    api.apiCreateEvent.mockResolvedValueOnce({ ok: false, data: { detail: 'failed' } });
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => result.current.startDuplicate(sourceEvent()));
+    await act(async () => {
+      await result.current.createEvent({ preventDefault: jest.fn() });
+    });
+
+    expect(result.current.duplicateSource).not.toBeNull();
+    expect(result.current.title).toBe('Family dinner');
+    expect(result.current.creating).toBe(false);
+  });
+
+  it('prevents duplicate create calls while the first request is pending', async () => {
+    setupAppContext({ demoMode: false });
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const api = require('../../lib/api');
+    let resolveCreate;
+    api.apiCreateEvent.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveCreate = () => resolve({ ok: true, data: {} });
+    }));
+    const { result } = renderHook(() => useCalendar());
+    act(() => result.current.startDuplicate(sourceEvent()));
+
+    let first;
+    let second;
+    act(() => {
+      first = result.current.createEvent({ preventDefault: jest.fn() });
+      second = result.current.createEvent({ preventDefault: jest.fn() });
+    });
+
+    expect(api.apiCreateEvent).toHaveBeenCalledTimes(1);
+    expect(result.current.creating).toBe(true);
+    await act(async () => {
+      resolveCreate();
+      await Promise.all([first, second]);
+    });
+    expect(result.current.creating).toBe(false);
+  });
+
+  it('does not clear a newer draft made from the same source object', async () => {
+    setupAppContext({ demoMode: false });
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const api = require('../../lib/api');
+    let resolveCreate;
+    api.apiCreateEvent.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveCreate = () => resolve({ ok: true, data: {} });
+    }));
+    const { result } = renderHook(() => useCalendar());
+    const source = sourceEvent();
+
+    act(() => result.current.startDuplicate(source));
+    const firstSnapshot = result.current.duplicateSource;
+    let save;
+    act(() => { save = result.current.createEvent({ preventDefault: jest.fn() }); });
+    act(() => result.current.startDuplicate(source));
+    const newerSnapshot = result.current.duplicateSource;
+
+    expect(newerSnapshot).not.toBe(firstSnapshot);
+    await act(async () => {
+      resolveCreate();
+      await save;
+    });
+    expect(result.current.duplicateSource).toBe(newerSnapshot);
+    expect(result.current.title).toBe('Family dinner');
+  });
+
+  it('cancels to pristine fields and demo save never calls the API', async () => {
+    const ctx = setupAppContext();
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const api = require('../../lib/api');
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => result.current.startDuplicate(sourceEvent()));
+    act(() => result.current.cancelDuplicate());
+    expect(result.current.duplicateSource).toBeNull();
+    expect(result.current.title).toBe('');
+    expect(result.current.description).toBe('');
+    expect(result.current.location).toBe('');
+    expect(result.current.startsAt).toBe('2026-08-14T09:00');
+    expect(result.current.endsAt).toBe('');
+    expect(result.current.allDay).toBe(false);
+    expect(result.current.assignedTo).toEqual([]);
+
+    act(() => result.current.startDuplicate(sourceEvent()));
+    await act(async () => {
+      await result.current.createEvent({ preventDefault: jest.fn() });
+    });
+    expect(api.apiCreateEvent).not.toHaveBeenCalled();
+    expect(ctx.setEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears an active duplicate draft when the family changes', () => {
+    const firstContext = setupAppContext();
+    const { useApp } = require('../../contexts/AppContext');
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const { result, rerender } = renderHook(() => useCalendar());
+
+    act(() => result.current.startDuplicate(sourceEvent()));
+    expect(result.current.duplicateSource).not.toBeNull();
+
+    useApp.mockReturnValue({ ...firstContext, familyId: '2' });
+    rerender();
+
+    expect(result.current.duplicateSource).toBeNull();
+    expect(result.current.title).toBe('');
+    expect(result.current.assignedTo).toEqual([]);
   });
 });

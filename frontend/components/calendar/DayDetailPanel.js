@@ -1,10 +1,19 @@
+import { useEffect, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import { t } from '../../lib/i18n';
 import { RECURRENCE_OPTIONS, AssignChips, EventCard } from './CalendarHelpers';
 import { COLOR_PALETTE } from '../../lib/member-colors';
 import { CALENDAR_EVENT_ICON_OPTIONS } from '../../lib/calendar-icons';
 
-export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat, events, members, isChild, demoMode, setActiveView, isMobile }) {
+export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat, events, members, isChild, demoMode, setActiveView, isMobile = false }) {
+  const createTitleRef = useRef(null);
+
+  useEffect(() => {
+    if (!cal.duplicateSource || isMobile) return;
+    createTitleRef.current?.focus();
+    createTitleRef.current?.select();
+  }, [cal.duplicateSource, isMobile]);
+
   if (!cal.selectedDate) return null;
 
   return (
@@ -38,6 +47,7 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
             ev={ev} index={i} messages={messages} lang={lang} timeFormat={timeFormat}
             onDelete={isChild ? null : cal.deleteEvent}
             onEdit={isChild ? null : cal.startEdit}
+            onDuplicate={isChild ? null : cal.startDuplicate}
             members={members}
           />
         ))}
@@ -58,7 +68,7 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
             <input className="form-input cal-form-datetime" type="datetime-local" value={cal.editStartsAt} onChange={e => cal.setEditStartsAt(e.target.value)} required />
             <input className="form-input cal-form-datetime" type="datetime-local" value={cal.editEndsAt} onChange={e => cal.setEditEndsAt(e.target.value)} />
           </div>
-          <select className="form-input cal-form-datetime" value={cal.editRecurrence} onChange={e => cal.setEditRecurrence(e.target.value)}>
+          <select className="form-input cal-form-datetime" value={cal.editRecurrence} onChange={e => cal.setEditRecurrence(e.target.value)} aria-label={t(messages, 'module.calendar.recurring')}>
             {RECURRENCE_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
             ))}
@@ -106,21 +116,37 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
       {/* Create form */}
       {!isChild && !cal.editingEvent && (
         <>
-          <div className="cal-form-section-title">{t(messages, 'module.calendar.quick_add')}</div>
+          <div className="cal-form-section-title">
+            {t(messages, cal.duplicateSource ? 'module.calendar.duplicate_event' : 'module.calendar.quick_add')}
+          </div>
+          {cal.duplicateSource && (
+            <div className="cal-edit-recurring-hint">
+              {t(messages, 'module.calendar.duplicating_hint').replace('{title}', cal.duplicateSource.title || '')}
+            </div>
+          )}
           <form onSubmit={cal.createEvent} className="quick-add-form">
-            <input className="form-input cal-form-input-lg" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={e => cal.setTitle(e.target.value)} required />
+            <input ref={createTitleRef} className="form-input cal-form-input-lg" placeholder={t(messages, 'module.calendar.new_event')} value={cal.title} onChange={e => cal.setTitle(e.target.value)} required />
             <input className="form-input" placeholder={t(messages, 'module.calendar.location')} value={cal.location} onChange={e => cal.setLocation(e.target.value)} />
+            {cal.duplicateSource && (
+              <input className="form-input" value={cal.description} onChange={e => cal.setDescription(e.target.value)} placeholder={t(messages, 'module.calendar.description')} />
+            )}
             <div className="cal-form-row">
               <input className="form-input cal-form-datetime" type="datetime-local" value={cal.startsAt} onChange={e => cal.setStartsAt(e.target.value)} required />
               <input className="form-input cal-form-datetime" type="datetime-local" value={cal.endsAt} onChange={e => cal.setEndsAt(e.target.value)} />
             </div>
-            <select className="form-input cal-form-datetime" value={cal.recurrence} onChange={e => cal.setRecurrence(e.target.value)}>
+            <select className="form-input cal-form-datetime" value={cal.recurrence} onChange={e => cal.setRecurrence(e.target.value)} aria-label={t(messages, 'module.calendar.recurring')}>
               {RECURRENCE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{t(messages, opt.key)}</option>
               ))}
             </select>
             {cal.recurrence && (
               <input className="form-input cal-form-datetime" type="date" value={cal.recurrenceEnd} onChange={e => cal.setRecurrenceEnd(e.target.value)} placeholder={t(messages, 'module.calendar.repeat_until')} />
+            )}
+            {cal.duplicateSource && (
+              <label className="set-checkbox-label">
+                <input type="checkbox" checked={cal.allDay} onChange={e => cal.setAllDay(e.target.checked)} />
+                {t(messages, 'all_day')}
+              </label>
             )}
             {members.length > 0 && (
               <div>
@@ -151,7 +177,12 @@ export default function DayDetailPanel({ cal, locale, messages, lang, timeFormat
                 ))}
               </select>
             </div>
-            <button className="btn-sm" type="submit"><Plus size={14} /> {t(messages, 'create_event')}</button>
+            <div className="cal-form-actions">
+              <button className="btn-sm" type="submit" disabled={cal.creating}><Plus size={14} /> {t(messages, 'create_event')}</button>
+              {cal.duplicateSource && (
+                <button className="btn-ghost" type="button" onClick={cal.cancelDuplicate}>{t(messages, 'cancel')}</button>
+              )}
+            </div>
           </form>
         </>
       )}
