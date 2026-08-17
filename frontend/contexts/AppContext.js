@@ -46,6 +46,7 @@ export function AppProvider({ children }) {
   // UI state
   const [theme, setTheme] = useState('light');
   const [lang, setLang] = useState('en');
+  const [weekStart, setWeekStart] = useState('monday');
   const [activeView, setActiveViewRaw] = useState('dashboard');
   const [isMobile, setIsMobile] = useState(false);
   const [navOrder, setNavOrder] = useState(DEFAULT_NAV_ORDER);
@@ -277,6 +278,8 @@ export function AppProvider({ children }) {
   // Init: localStorage, resize, auto-login
   useEffect(() => {
     setTheme(window.localStorage.getItem('tribu_theme') || 'light');
+    const storedWeekStart = window.localStorage.getItem('tribu_week_start');
+    setWeekStart(storedWeekStart === 'sunday' || storedWeekStart === 'monday' ? storedWeekStart : 'monday');
     const stored = window.localStorage.getItem('tribu_lang');
     if (stored) {
       setLang(stored);
@@ -339,6 +342,11 @@ export function AppProvider({ children }) {
     window.localStorage.setItem('tribu_lang', lang);
     document.documentElement.lang = lang;
   }, [lang]);
+
+  // Persist calendar week start
+  useEffect(() => {
+    window.localStorage.setItem('tribu_week_start', weekStart);
+  }, [weekStart]);
 
   // Bootstrap after login
   useEffect(() => {
@@ -492,6 +500,7 @@ export function AppProvider({ children }) {
     // UI
     theme, setTheme,
     lang, setLang,
+    weekStart, setWeekStart,
     messages,
     availableThemes,
     availableLanguages,

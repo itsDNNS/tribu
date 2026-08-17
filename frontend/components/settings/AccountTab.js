@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { User, Palette, Globe, Check, AlertTriangle, LogOut, Trash2 } from 'lucide-react';
+import { User, Palette, Globe, CalendarDays, Check, AlertTriangle, LogOut, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
@@ -32,7 +32,7 @@ function isBirthdateInRange(value, maxBirthdate) {
 }
 
 export default function AccountTab() {
-  const { theme, setTheme, lang, setLang, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers, logout } = useApp();
+  const { theme, setTheme, lang, setLang, weekStart, setWeekStart, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers, logout } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const [colorSaving, setColorSaving] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -233,6 +233,30 @@ export default function AccountTab() {
               {l.nativeName}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Calendar week start */}
+      <div className="settings-section">
+        <div className="settings-section-title"><CalendarDays size={16} /> {t(messages, 'week_start_title')}</div>
+        <p className="set-section-desc">{t(messages, 'week_start_desc')}</p>
+        <div className="week-start-toggle" role="group" aria-label={t(messages, 'week_start_title')}>
+          <button
+            type="button"
+            aria-pressed={weekStart === 'monday'}
+            className={`lang-btn${weekStart === 'monday' ? ' active' : ''}`}
+            onClick={() => setWeekStart('monday')}
+          >
+            {t(messages, 'week_start_monday')}
+          </button>
+          <button
+            type="button"
+            aria-pressed={weekStart === 'sunday'}
+            className={`lang-btn${weekStart === 'sunday' ? ' active' : ''}`}
+            onClick={() => setWeekStart('sunday')}
+          >
+            {t(messages, 'week_start_sunday')}
+          </button>
         </div>
       </div>
       {/* Security */}

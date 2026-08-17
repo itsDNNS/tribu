@@ -6,7 +6,7 @@ import * as api from '../../lib/api';
 jest.mock('../../lib/api');
 
 function Probe() {
-  const { loading, loggedIn, familyId, isMobile, isAdmin, isChild, theme, setTheme, switchFamily } = useApp();
+  const { loading, loggedIn, familyId, isMobile, isAdmin, isChild, theme, setTheme, weekStart, setWeekStart, switchFamily } = useApp();
   return (
     <div>
       <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
@@ -15,7 +15,9 @@ function Probe() {
       <span data-testid="is-mobile">{isMobile ? 'mobile' : 'desktop'}</span>
       <span data-testid="family-role">{isAdmin ? 'admin' : isChild ? 'child' : 'member'}</span>
       <span data-testid="theme">{theme}</span>
+      <span data-testid="week-start">{weekStart}</span>
       <button type="button" onClick={() => setTheme('dark')}>Switch dark theme</button>
+      <button type="button" onClick={() => setWeekStart('sunday')}>Start weeks on Sunday</button>
       <button type="button" onClick={() => switchFamily('8')}>Switch family</button>
     </div>
   );
@@ -89,6 +91,31 @@ describe('AppProvider bootstrap', () => {
     await waitFor(() => expect(screen.getByTestId('theme')).toHaveTextContent('dark'));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
     expect(window.localStorage.getItem('tribu_theme')).toBe('dark');
+  });
+
+  test('restores a valid Sunday week-start preference', async () => {
+    window.localStorage.setItem('tribu_week_start', 'sunday');
+
+    render(<AppProvider><Probe /></AppProvider>);
+
+    await waitFor(() => expect(screen.getByTestId('week-start')).toHaveTextContent('sunday'));
+  });
+
+  test('falls back to Monday for an invalid stored week-start preference', async () => {
+    window.localStorage.setItem('tribu_week_start', 'locale');
+
+    render(<AppProvider><Probe /></AppProvider>);
+
+    await waitFor(() => expect(screen.getByTestId('week-start')).toHaveTextContent('monday'));
+    expect(window.localStorage.getItem('tribu_week_start')).toBe('monday');
+  });
+
+  test('persists week-start changes', async () => {
+    render(<AppProvider><Probe /></AppProvider>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start weeks on Sunday' }));
+
+    await waitFor(() => expect(window.localStorage.getItem('tribu_week_start')).toBe('sunday'));
   });
 
   test('does not keep the app shell blocked by slow secondary data loaders', async () => {

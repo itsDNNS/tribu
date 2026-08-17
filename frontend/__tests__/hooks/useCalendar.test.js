@@ -78,6 +78,7 @@ describe('useCalendar edit flow', () => {
       summary: { next_events: [] },
       messages: {},
       lang: 'en',
+      weekStart: 'monday',
       timeFormat: '24h',
       members: [{ user_id: 7, display_name: 'Max' }],
       loadEventsForRange: jest.fn(() => Promise.resolve()),
@@ -268,6 +269,7 @@ describe('useCalendar duplicate flow', () => {
       summary: { next_events: [] },
       messages: {},
       lang: 'en',
+      weekStart: 'monday',
       timeFormat: '24h',
       members: [{ user_id: 7, display_name: 'Max' }],
       birthdays: [],
@@ -520,5 +522,83 @@ describe('useCalendar duplicate flow', () => {
     expect(result.current.duplicateSource).toBeNull();
     expect(result.current.title).toBe('');
     expect(result.current.assignedTo).toEqual([]);
+  });
+});
+
+describe('useCalendar week-start preference', () => {
+  const { renderHook, act } = require('@testing-library/react');
+
+  function setupAppContext(overrides = {}) {
+    const { useApp } = require('../../contexts/AppContext');
+    useApp.mockReturnValue({
+      familyId: '1',
+      events: [],
+      setEvents: jest.fn(),
+      setSummary: jest.fn(),
+      messages: {},
+      lang: 'en',
+      weekStart: 'monday',
+      members: [],
+      birthdays: [],
+      loadDashboard: jest.fn(() => Promise.resolve()),
+      demoMode: true,
+      ...overrides,
+    });
+  }
+
+  function renderForWeek(weekStart, events = []) {
+    setupAppContext({ weekStart, events });
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const rendered = renderHook(() => useCalendar());
+    act(() => rendered.result.current.setSelectedDate(new Date(2026, 5, 10)));
+    act(() => rendered.result.current.setCalendarView('week'));
+    return rendered;
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    window.sessionStorage.clear();
+  });
+
+  it('keeps a month beginning on Monday aligned to the first column by default', () => {
+    setupAppContext();
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => result.current.setCalendarMonth(new Date(2026, 5, 1)));
+
+    expect(result.current.monthCells[0]).toEqual(expect.objectContaining({ day: 1 }));
+  });
+
+  it('moves a month beginning on Monday to the second column for Sunday start', () => {
+    setupAppContext({ weekStart: 'sunday' });
+    const { useCalendar } = require('../../hooks/useCalendar');
+    const { result } = renderHook(() => useCalendar());
+
+    act(() => result.current.setCalendarMonth(new Date(2026, 5, 1)));
+
+    expect(result.current.monthCells[0].empty).toBe(true);
+    expect(result.current.monthCells[1].day).toBe(1);
+  });
+
+  it.each([
+    ['monday', new Date(2026, 5, 8)],
+    ['sunday', new Date(2026, 5, 7)],
+  ])('builds a seven-day %s week with a stable ISO week number', (weekStart, expectedStart) => {
+    const { result } = renderForWeek(weekStart);
+
+    expect(result.current.weekInfo.weekStart).toEqual(expectedStart);
+    expect(result.current.weekInfo.days).toHaveLength(7);
+    expect(result.current.weekInfo.weekNumber).toBe(24);
+  });
+
+  it('includes the leading Sunday event only in the Sunday-start displayed week', () => {
+    const sundayEvent = { id: 7, title: 'Sunday event', starts_at: '2026-06-07T12:00:00' };
+    const monday = renderForWeek('monday', [sundayEvent]);
+    expect(monday.result.current.weekInfo.weekEvents).not.toContainEqual(sundayEvent);
+    monday.unmount();
+
+    const sunday = renderForWeek('sunday', [sundayEvent]);
+    expect(sunday.result.current.weekInfo.weekEvents).toContainEqual(sundayEvent);
   });
 });

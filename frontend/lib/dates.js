@@ -7,6 +7,10 @@ export function weekStartsOn(lang) {
   return lang === 'en' ? 0 : 1;
 }
 
+export function weekStartIndex(weekStart) {
+  return weekStart === 'sunday' ? 0 : 1;
+}
+
 export function startOfWeek(date, firstDay = 1) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);

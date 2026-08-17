@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AccountTab from '../../components/settings/AccountTab';
 import * as api from '../../lib/api';
@@ -35,6 +35,10 @@ const messages = {
   color_taken_by: 'Taken by {name}',
   theme: 'Theme',
   language: 'Language',
+  week_start_title: 'Week starts on',
+  week_start_desc: 'Choose which day your calendar week begins.',
+  week_start_monday: 'Monday',
+  week_start_sunday: 'Sunday',
   child: 'Child',
   member: 'Member',
   danger_zone: 'Danger zone',
@@ -60,6 +64,8 @@ function baseState(overrides = {}) {
     setTheme: jest.fn(),
     lang: 'en',
     setLang: jest.fn(),
+    weekStart: 'monday',
+    setWeekStart: jest.fn(),
     availableThemes: [{ key: 'light', name: 'Light' }],
     availableLanguages: [{ key: 'en', nativeName: 'English' }],
     messages,
@@ -76,6 +82,21 @@ function baseState(overrides = {}) {
     ...overrides,
   };
 }
+
+describe('AccountTab week-start preference', () => {
+  test('renders accessible Monday and Sunday controls and updates the preference', () => {
+    renderAccount();
+
+    const group = screen.getByRole('group', { name: 'Week starts on' });
+    const monday = within(group).getByRole('button', { name: 'Monday' });
+    const sunday = within(group).getByRole('button', { name: 'Sunday' });
+
+    expect(monday).toHaveAttribute('aria-pressed', 'true');
+    expect(sunday).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(sunday);
+    expect(mockAppState.setWeekStart).toHaveBeenCalledWith('sunday');
+  });
+});
 
 function renderAccount(overrides = {}) {
   mockAppState = baseState(overrides);

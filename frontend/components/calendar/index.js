@@ -39,10 +39,13 @@ export function retargetCreateDraft(date, startsAt, endsAt) {
 }
 
 export default function CalendarView() {
-  const { familyId, families, messages, isMobile, lang, demoMode, events, setActiveView, isChild, members, timeFormat } = useApp();
+  const { familyId, families, messages, isMobile, lang, demoMode, events, setActiveView, isChild, members, timeFormat, weekStart } = useApp();
   const cal = useCalendar();
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
-  const weekdays = t(messages, 'module.calendar.weekdays').split(',');
+  const weekdayLabels = t(messages, 'module.calendar.weekdays').split(',');
+  const weekdays = weekStart === 'sunday'
+    ? [weekdayLabels[6], ...weekdayLabels.slice(0, 6)]
+    : weekdayLabels;
   const familyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
 
   const today = new Date();
