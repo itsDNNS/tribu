@@ -3,6 +3,7 @@
 from datetime import datetime
 from types import SimpleNamespace
 
+from icalendar import Calendar
 
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 
@@ -119,6 +120,140 @@ class TestEventsToIcs:
         assert "Event A" in ics
         assert "Event B" in ics
         assert "Event C" in ics
+
+
+# --- member/category/color projection ---
+
+
+def _vevents(ics: str):
+    return [c for c in Calendar.from_ical(ics).walk("VEVENT")]
+
+
+def _attendees(component):
+    value = component.get("attendee")
+    if value is None:
+        return []
+    return value if isinstance(value, list) else [value]
+
+
+class TestMemberProjection:
+    MEMBERS = {1: "Anna", 2: "Ben", 3: "Chris, the 3rd"}
+
+    def test_attendee_per_assigned_member(self):
+        ev = make_event(assigned_to=[1, 2])
+        ics = events_to_ics([ev], member_names=self.MEMBERS)
+        (vevent,) = _vevents(ics)
+        attendees = _attendees(vevent)
+        assert len(attendees) == 2
+        by_id = {str(a.params["X-TRIBU-USER-ID"]): a for a in attendees}
+        assert set(by_id) == {"1", "2"}
+        anna = by_id["1"]
+        assert str(anna) == "mailto:user-1@tribu.invalid"
+        assert str(anna.params["CN"]) == "Anna"
+        assert str(anna.params["CUTYPE"]) == "INDIVIDUAL"
+        assert str(anna.params["ROLE"]) == "REQ-PARTICIPANT"
+        assert str(anna.params["PARTSTAT"]) == "ACCEPTED"
+        assert str(anna.params["RSVP"]) == "FALSE"
+
+    def test_assigned_all_emits_every_member_and_marker(self):
+        ev = make_event(assigned_to="all")
+        ics = events_to_ics([ev], member_names=self.MEMBERS)
+        (vevent,) = _vevents(ics)
+        attendees = _attendees(vevent)
+        assert len(attendees) == len(self.MEMBERS)
+        ids = {str(a.params["X-TRIBU-USER-ID"]) for a in attendees}
+        assert ids == {"1", "2", "3"}
+        assert str(vevent.get("X-TRIBU-ASSIGNED")) == "ALL"
+
+    def test_list_assignment_has_no_all_marker(self):
+        ev = make_event(assigned_to=[1])
+        ics = events_to_ics([ev], member_names=self.MEMBERS)
+        assert "X-TRIBU-ASSIGNED" not in ics
+
+    def test_stale_member_ids_are_skipped(self):
+        ev = make_event(assigned_to=[1, 999, "not-an-id", None])
+        ics = events_to_ics([ev], member_names=self.MEMBERS)
+        (vevent,) = _vevents(ics)
+        attendees = _attendees(vevent)
+        assert len(attendees) == 1
+        assert str(attendees[0].params["X-TRIBU-USER-ID"]) == "1"
+
+    def test_no_attendees_without_mapping(self):
+        ev = make_event(assigned_to=[1, 2])
+        ics = events_to_ics([ev])
+        assert "ATTENDEE" not in ics
+        assert "X-TRIBU-ASSIGNED" not in ics
+
+    def test_no_attendees_for_null_or_empty_assignment(self):
+        for assigned in (None, []):
+            ev = make_event(assigned_to=assigned)
+            ics = events_to_ics([ev], member_names=self.MEMBERS)
+            assert "ATTENDEE" not in ics
+            assert "X-TRIBU-ASSIGNED" not in ics
+
+    def test_no_real_email_addresses_leak(self):
+        members = {1: "anna.real@example.com"}
+        ev = make_event(assigned_to=[1])
+        ics = events_to_ics([ev], member_names=members)
+        (vevent,) = _vevents(ics)
+        (attendee,) = _attendees(vevent)
+        # The cal-address must be synthetic even if a display name looks
+        # like an email; the name only ever appears as the CN parameter.
+        assert str(attendee) == "mailto:user-1@tribu.invalid"
+        assert "mailto:anna.real@example.com" not in ics
+
+    def test_no_organizer_emitted(self):
+        ev = make_event(assigned_to=[1, 2])
+        ics = events_to_ics([ev], member_names=self.MEMBERS)
+        assert "ORGANIZER" not in ics
+
+    def test_attendee_output_reparses_cleanly(self):
+        ev = make_event(assigned_to="all")
+        ics = events_to_ics([ev], member_names=self.MEMBERS)
+        valid, errors = ics_to_event_dicts(ics, family_id=1, user_id=1)
+        assert errors == []
+        assert len(valid) == 1
+
+
+class TestCategoryProjection:
+    def test_category_emitted_as_categories(self):
+        ev = make_event(category="Sport")
+        ics = events_to_ics([ev])
+        (vevent,) = _vevents(ics)
+        cats = vevent.get("categories")
+        assert [str(c) for c in cats.cats] == ["Sport"]
+
+    def test_category_with_comma_survives_as_single_category(self):
+        ev = make_event(category="Family, Fun")
+        ics = events_to_ics([ev])
+        (vevent,) = _vevents(ics)
+        cats = vevent.get("categories")
+        # One Tribu category containing a comma must stay ONE category
+        # (escaped per RFC 5545), not split into two.
+        assert [str(c) for c in cats.cats] == ["Family, Fun"]
+
+    def test_no_categories_for_empty_or_missing_category(self):
+        for category in (None, "", "   "):
+            ev = make_event(category=category)
+            ics = events_to_ics([ev])
+            assert "CATEGORIES" not in ics
+
+
+class TestColorProjection:
+    def test_hex_color_emitted_as_x_prop_only(self):
+        ev = make_event(color="#a1b2c3")
+        ics = events_to_ics([ev])
+        (vevent,) = _vevents(ics)
+        assert str(vevent.get("X-TRIBU-COLOR")) == "#a1b2c3"
+        # RFC 7986 COLOR only allows CSS3 named colors; emitting the hex
+        # value there would be lossy/non-conformant, so it must be absent.
+        assert vevent.get("COLOR") is None
+
+    def test_no_color_props_when_color_missing(self):
+        ev = make_event(color=None)
+        ics = events_to_ics([ev])
+        assert "X-TRIBU-COLOR" not in ics
+        assert "COLOR" not in ics.replace("X-TRIBU-COLOR", "")
 
 
 # --- ics_to_event_dicts ---

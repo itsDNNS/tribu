@@ -1,11 +1,12 @@
 """ICS (RFC 5545) import/export utilities for Tribu calendar events."""
 
 from datetime import datetime, date, timedelta
+from typing import Mapping, Optional
 
 from app.core.clock import to_local_wall_naive
 from app.core.utils import utcnow
 
-from icalendar import Calendar, Event
+from icalendar import Calendar, Event, vCalAddress, vText
 
 RECURRENCE_MAP = {
     "daily": "DAILY",
@@ -23,8 +24,61 @@ ICS_FREQ_TO_TRIBU = {
 }
 
 
-def events_to_ics(events, calendar_name="Tribu") -> str:
-    """Convert a list of CalendarEvent ORM objects to an RFC 5545 ICS string."""
+def _assigned_member_ids(assigned_to, member_names: Mapping[int, str]) -> list[int]:
+    """Resolve an event's ``assigned_to`` value to current member ids.
+
+    ``assigned_to`` is null (nobody), ``"all"`` (whole family), or a list
+    of user ids. Membership is recomputed against ``member_names`` so
+    stale ids of users who left the family are silently skipped.
+    """
+    if assigned_to == "all":
+        return sorted(member_names)
+    if not isinstance(assigned_to, list):
+        return []
+    ids: list[int] = []
+    for value in assigned_to:
+        if isinstance(value, bool):
+            continue
+        try:
+            user_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if user_id in member_names and user_id not in ids:
+            ids.append(user_id)
+    return ids
+
+
+def _member_attendee(user_id: int, display_name: str) -> vCalAddress:
+    """Build a privacy-safe ATTENDEE for a family member.
+
+    The cal-address is synthetic (``.invalid`` is reserved by RFC 2606,
+    so no mail can ever be routed to it); the member's real login email
+    must never leak into calendar data. ``X-TRIBU-USER-ID`` carries the
+    stable id for round-tripping/debugging.
+    """
+    address = vCalAddress(f"mailto:user-{user_id}@tribu.invalid")
+    address.params["CN"] = vText(display_name)
+    address.params["CUTYPE"] = vText("INDIVIDUAL")
+    address.params["ROLE"] = vText("REQ-PARTICIPANT")
+    address.params["PARTSTAT"] = vText("ACCEPTED")
+    address.params["RSVP"] = vText("FALSE")
+    address.params["X-TRIBU-USER-ID"] = vText(str(user_id))
+    return address
+
+
+def events_to_ics(
+    events,
+    calendar_name="Tribu",
+    member_names: Optional[Mapping[int, str]] = None,
+) -> str:
+    """Convert a list of CalendarEvent ORM objects to an RFC 5545 ICS string.
+
+    ``member_names`` is an optional preloaded ``{user_id: display_name}``
+    mapping for the events' family. When supplied, assigned members are
+    projected as ATTENDEE properties; without it no attendee data is
+    emitted at all, so callers stay in control of what member
+    information leaves the system.
+    """
     cal = Calendar()
     cal.add("prodid", "-//Tribu//Family Calendar//EN")
     cal.add("version", "2.0")
@@ -42,6 +96,27 @@ def events_to_ics(events, calendar_name="Tribu") -> str:
             vevent.add("description", ev.description)
         if getattr(ev, "location", None):
             vevent.add("location", ev.location)
+
+        assigned_to = getattr(ev, "assigned_to", None)
+        if member_names:
+            for user_id in _assigned_member_ids(assigned_to, member_names):
+                vevent.add("attendee", _member_attendee(user_id, member_names[user_id]), encode=False)
+            if assigned_to == "all":
+                vevent.add("X-TRIBU-ASSIGNED", vText("ALL"))
+
+        category = getattr(ev, "category", None)
+        if isinstance(category, str) and category.strip():
+            # One Tribu category maps to one CATEGORIES entry; the list
+            # form makes icalendar escape embedded commas instead of
+            # splitting the value into several categories.
+            vevent.add("categories", [category])
+
+        color = getattr(ev, "color", None)
+        if isinstance(color, str) and color.strip():
+            # Tribu colors are exact hex strings, but RFC 7986 COLOR only
+            # permits CSS3 color names. Emitting a rounded name would be
+            # lossy, so the exact value travels as an X- property instead.
+            vevent.add("X-TRIBU-COLOR", vText(color))
 
         if ev.all_day:
             dt_start = ev.starts_at.date() if isinstance(ev.starts_at, datetime) else ev.starts_at

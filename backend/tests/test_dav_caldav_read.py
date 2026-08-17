@@ -69,6 +69,9 @@ def seeded(app_under_test):
             ends_at=datetime(2026, 5, 4, 11, 0),
             all_day=False,
             created_by_user_id=user.id,
+            assigned_to=[user.id],
+            category="Sport, Outdoor",
+            color="#ff0000",
         ))
         db.add(CalendarEvent(
             family_id=family.id,
@@ -100,6 +103,25 @@ def seeded(app_under_test):
 
 def _basic(login: str, token: str) -> str:
     return "Basic " + base64.b64encode(f"{login}:{token}".encode("utf-8")).decode("ascii")
+
+
+def _fetch_ctag(client: TestClient, headers: dict, family_id: int) -> str:
+    import re
+
+    body = (
+        '<?xml version="1.0"?>'
+        '<propfind xmlns="DAV:" xmlns:CS="http://calendarserver.org/ns/">'
+        '<prop><CS:getctag/></prop></propfind>'
+    )
+    resp = client.request(
+        "PROPFIND",
+        f"/dav/{EMAIL}/cal-{family_id}/",
+        headers={**headers, "Depth": "0", "Content-Type": "application/xml"},
+        content=body,
+    )
+    assert resp.status_code == 207, resp.text
+    match = re.search(r"<CS:getctag[^>]*>([^<]+)</CS:getctag>", resp.text)
+    return match.group(1) if match else ""
 
 
 def _propfind(client: TestClient, path: str, *, headers=None, depth="1"):
@@ -167,30 +189,13 @@ class TestCalDAVRead:
     def test_ctag_changes_when_event_is_edited(self, app_under_test, seeded):
         """Editing a stored event must bump the collection ctag so clients
         that poll CS:getctag before refetching notice the change."""
-        import re
         import time
 
         token, family_id = seeded
         client = TestClient(app_under_test)
         headers = {"Authorization": _basic(EMAIL, token)}
 
-        def fetch_ctag() -> str:
-            body = (
-                '<?xml version="1.0"?>'
-                '<propfind xmlns="DAV:" xmlns:CS="http://calendarserver.org/ns/">'
-                '<prop><CS:getctag/></prop></propfind>'
-            )
-            resp = client.request(
-                "PROPFIND",
-                f"/dav/{EMAIL}/cal-{family_id}/",
-                headers={**headers, "Depth": "0", "Content-Type": "application/xml"},
-                content=body,
-            )
-            assert resp.status_code == 207, resp.text
-            match = re.search(r"<CS:getctag[^>]*>([^<]+)</CS:getctag>", resp.text)
-            return match.group(1) if match else ""
-
-        ctag_before = fetch_ctag()
+        ctag_before = _fetch_ctag(client, headers, family_id)
         assert ctag_before, "ctag must be present"
 
         # Edit an existing event directly and bump updated_at.
@@ -204,7 +209,7 @@ class TestCalDAVRead:
         finally:
             db.close()
 
-        ctag_after = fetch_ctag()
+        ctag_after = _fetch_ctag(client, headers, family_id)
         assert ctag_after != ctag_before, (
             f"Expected ctag to change after edit. before={ctag_before!r} after={ctag_after!r}"
         )
@@ -372,3 +377,216 @@ class TestCalDAVRead:
         )
         # Radicale maps a ValueError from storage to a 4xx.
         assert 400 <= put.status_code < 500, put.text
+
+
+def _seeded_ids(family_id: int) -> tuple[int, int]:
+    """Return ``(user_id, team_sync_event_id)`` for the seeded fixture."""
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == EMAIL).one()
+        ev = (
+            db.query(CalendarEvent)
+            .filter(CalendarEvent.family_id == family_id, CalendarEvent.title == "Team sync")
+            .one()
+        )
+        return user.id, ev.id
+    finally:
+        db.close()
+
+
+def _attendee_list(vevent):
+    value = vevent.get("attendee")
+    if value is None:
+        return []
+    return value if isinstance(value, list) else [value]
+
+
+class TestMembershipFingerprint:
+    def test_separator_characters_in_names_cannot_collide(self):
+        from app.dav.caldav_storage import _membership_fingerprint
+
+        # A display name containing the old separator characters must not
+        # serialize to the same fingerprint as a two-member family.
+        tricky = _membership_fingerprint({1: "A,2=B"})
+        two_members = _membership_fingerprint({1: "A", 2: "B"})
+        assert tricky != two_members
+
+    def test_equivalent_mappings_share_a_stable_fingerprint(self):
+        from app.dav.caldav_storage import _membership_fingerprint
+
+        ordered = _membership_fingerprint({1: "Änna", 2: "Ben"})
+        reversed_insertion = _membership_fingerprint({2: "Ben", 1: "Änna"})
+        assert ordered == reversed_insertion
+
+
+class TestCalDAVMemberProjection:
+    """Discussion #438: assigned members, category, and color must be
+    visible to CalDAV clients without letting lossy clients erase them."""
+
+    def test_event_get_emits_member_attendees_category_and_color(self, app_under_test, seeded):
+        from icalendar import Calendar
+
+        token, family_id = seeded
+        user_id, event_id = _seeded_ids(family_id)
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token)}
+
+        resp = client.get(
+            f"/dav/{EMAIL}/cal-{family_id}/tribu-event-{event_id}.ics",
+            headers=auth,
+        )
+        assert resp.status_code == 200, resp.text
+        (vevent,) = [c for c in Calendar.from_ical(resp.text).walk("VEVENT")]
+
+        (attendee,) = _attendee_list(vevent)
+        assert str(attendee) == f"mailto:user-{user_id}@tribu.invalid"
+        assert str(attendee.params["CN"]) == "CalDAV User"
+        assert str(attendee.params["X-TRIBU-USER-ID"]) == str(user_id)
+
+        cats = vevent.get("categories")
+        assert [str(c) for c in cats.cats] == ["Sport, Outdoor"]
+        assert str(vevent.get("X-TRIBU-COLOR")) == "#ff0000"
+
+        # Privacy: the member's real login email must never appear in
+        # calendar data, and we do not emit ORGANIZER or lossy COLOR.
+        assert EMAIL not in resp.text
+        assert "ORGANIZER" not in resp.text
+        assert vevent.get("COLOR") is None
+
+    def test_lossy_put_preserves_assignment_category_and_color(self, app_under_test, seeded):
+        """A phone client that never saw ATTENDEE/CATEGORIES/X-TRIBU-COLOR
+        PUTs the event back without them; Tribu's fields must survive and
+        the following GET must re-emit them."""
+        token, family_id = seeded
+        user_id, _ = _seeded_ids(family_id)
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token)}
+        put_headers = {**auth, "Content-Type": "text/calendar"}
+
+        def phone_ics(summary: str) -> str:
+            return (
+                "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Phone//EN\r\n"
+                "BEGIN:VEVENT\r\nUID:phone-lossy@example.com\r\n"
+                "DTSTAMP:20260101T000000Z\r\n"
+                "DTSTART:20260901T100000Z\r\nDTEND:20260901T110000Z\r\n"
+                f"SUMMARY:{summary}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+            )
+
+        put1 = client.put(
+            f"/dav/{EMAIL}/cal-{family_id}/phone-lossy.ics",
+            headers=put_headers,
+            content=phone_ics("Doctor"),
+        )
+        assert put1.status_code in (201, 204), put1.text
+
+        # The family assigns the event in the Tribu UI.
+        db = SessionLocal()
+        try:
+            ev = (
+                db.query(CalendarEvent)
+                .filter(CalendarEvent.family_id == family_id, CalendarEvent.dav_href == "phone-lossy.ics")
+                .one()
+            )
+            ev.assigned_to = [user_id]
+            ev.category = "Health"
+            ev.color = "#00ff00"
+            db.commit()
+            event_pk = ev.id
+        finally:
+            db.close()
+
+        # Phone-like lossy overwrite: only the summary changed.
+        put2 = client.put(
+            f"/dav/{EMAIL}/cal-{family_id}/phone-lossy.ics",
+            headers=put_headers,
+            content=phone_ics("Doctor (moved)"),
+        )
+        assert put2.status_code in (201, 204), put2.text
+
+        db = SessionLocal()
+        try:
+            ev = db.query(CalendarEvent).filter(CalendarEvent.id == event_pk).one()
+            assert ev.title == "Doctor (moved)"
+            assert ev.assigned_to == [user_id]
+            assert ev.category == "Health"
+            assert ev.color == "#00ff00"
+        finally:
+            db.close()
+
+        get = client.get(f"/dav/{EMAIL}/cal-{family_id}/phone-lossy.ics", headers=auth)
+        assert get.status_code == 200, get.text
+        assert "Doctor (moved)" in get.text
+        assert f"mailto:user-{user_id}@tribu.invalid" in get.text
+        assert "CATEGORIES:Health" in get.text
+        assert "X-TRIBU-COLOR:#00ff00" in get.text
+
+    def test_ctag_changes_after_member_rename_and_membership_change(self, app_under_test, seeded):
+        """Member renames/additions change emitted ATTENDEE content without
+        touching any event row, so the collection ctag must reflect the
+        family membership fingerprint."""
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        headers = {"Authorization": _basic(EMAIL, token)}
+
+        ctag_initial = _fetch_ctag(client, headers, family_id)
+        assert ctag_initial
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.email == EMAIL).one()
+            user.display_name = "CalDAV User (renamed)"
+            db.commit()
+        finally:
+            db.close()
+
+        ctag_after_rename = _fetch_ctag(client, headers, family_id)
+        assert ctag_after_rename != ctag_initial
+
+        db = SessionLocal()
+        try:
+            extra = User(
+                email="dav-caldav-second@example.com",
+                password_hash=hash_password("x"),
+                display_name="Second Member",
+            )
+            db.add(extra)
+            db.flush()
+            db.add(Membership(user_id=extra.id, family_id=family_id, role="member", is_adult=True))
+            db.commit()
+        finally:
+            db.close()
+
+        ctag_after_join = _fetch_ctag(client, headers, family_id)
+        assert ctag_after_join not in (ctag_initial, ctag_after_rename)
+
+    def test_collection_serialize_has_no_per_event_member_queries(self, app_under_test, seeded):
+        """The member mapping must be preloaded once per collection
+        operation, not looked up per event (N+1)."""
+        from typing import cast
+
+        from sqlalchemy import event as sa_event
+
+        from app.database import engine
+        from app.dav.caldav_storage import CalendarCollection, Storage
+
+        token, family_id = seeded
+        coll = CalendarCollection(cast(Storage, None), EMAIL, family_id, "CalDAV Family")
+
+        statements: list[str] = []
+
+        def record(conn, cursor, statement, parameters, context, executemany):
+            statements.append(statement)
+
+        sa_event.listen(engine, "before_cursor_execute", record)
+        try:
+            ics = coll.serialize()
+        finally:
+            sa_event.remove(engine, "before_cursor_execute", record)
+
+        # Both seeded events serialize with member context...
+        assert ics.count("BEGIN:VEVENT") == 2
+        # ...from exactly one event query and at most one member query.
+        event_queries = [s for s in statements if "calendar_events" in s]
+        member_queries = [s for s in statements if "users" in s]
+        assert len(event_queries) == 1, statements
+        assert len(member_queries) <= 1, statements
