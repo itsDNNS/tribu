@@ -21,7 +21,7 @@ function baseApp() {
     families: [{ family_id: 1, family_name: 'Family' }],
     messages: {
       calendar: 'Calendar',
-      'module.calendar.weekdays': 'Sun,Mon,Tue,Wed,Thu,Fri,Sat',
+      'module.calendar.weekdays': 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
       'module.calendar.today': 'Today',
       'module.calendar.month': 'Month',
       'module.calendar.week': 'Week',
@@ -37,6 +37,7 @@ function baseApp() {
     isChild: false,
     members: [],
     timeFormat: '24h',
+    weekStart: 'monday',
   };
 }
 
@@ -76,6 +77,18 @@ function baseCalendar(cells) {
 describe('CalendarView birthday month indicators', () => {
   beforeEach(() => {
     mockUseApp.mockReturnValue(baseApp());
+  });
+
+  it.each([
+    ['monday', 'Mon'],
+    ['sunday', 'Sun'],
+  ])('starts weekday headers on %s when that preference is selected', (weekStart, expected) => {
+    mockUseApp.mockReturnValue({ ...baseApp(), weekStart });
+    mockUseCalendar.mockReturnValue(baseCalendar([monthCell(1, [])]));
+
+    const { container } = render(<CalendarView />);
+
+    expect(container.querySelector('.calendar-weekday')).toHaveTextContent(expected);
   });
 
   it('wraps month view in the warm calendar board shell', () => {

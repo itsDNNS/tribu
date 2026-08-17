@@ -1,4 +1,4 @@
-import { formatDayMonth, formatWeekRange, localeForLang, startOfWeek, weekStartsOn } from '../../lib/dates';
+import { formatDayMonth, formatWeekRange, localeForLang, startOfWeek, weekStartIndex, weekStartsOn } from '../../lib/dates';
 import { formatIsoDate } from '../../hooks/useMealPlans';
 
 function normalizeRange(value) {
@@ -6,6 +6,15 @@ function normalizeRange(value) {
 }
 
 describe('localized date helpers', () => {
+  it.each([
+    ['monday', 1],
+    ['sunday', 0],
+    [undefined, 1],
+    ['garbage', 1],
+  ])('maps the %s calendar preference to weekday index %i', (preference, expected) => {
+    expect(weekStartIndex(preference)).toBe(expected);
+  });
+
   it('maps English meal planning weeks to Sunday and other languages to Monday', () => {
     expect(weekStartsOn('en')).toBe(0);
     expect(weekStartsOn('de')).toBe(1);

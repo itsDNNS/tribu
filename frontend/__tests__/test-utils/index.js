@@ -33,6 +33,8 @@ export function buildMockAppState(overrides = {}) {
     demoMode: false,
     loggedIn: true,
     timeFormat: '24h',
+    weekStart: 'monday',
+    setWeekStart: jest.fn(),
     setActiveView: jest.fn(),
     setNotifications: jest.fn(),
     setUnreadCount: jest.fn(),

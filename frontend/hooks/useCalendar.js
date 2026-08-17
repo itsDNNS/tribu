@@ -4,6 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { errorText, toIsoOrNull, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
+import { weekStartIndex } from '../lib/dates';
 import * as api from '../lib/api';
 
 function formatLocalDateTimeInput(date, hour = date.getHours(), minute = date.getMinutes()) {
@@ -13,8 +14,9 @@ function formatLocalDateTimeInput(date, hour = date.getHours(), minute = date.ge
 }
 
 export function useCalendar() {
-  const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members, birthdays } = useApp();
+  const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members, birthdays, weekStart } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
+  const startIdx = weekStartIndex(weekStart);
 
   const [calendarView, setCalendarViewRaw] = useState('month');
 
@@ -157,7 +159,7 @@ export function useCalendar() {
     const m = calendarMonth.getMonth();
     const first = new Date(y, m, 1);
     const lastDay = new Date(y, m + 1, 0).getDate();
-    const startOffset = (first.getDay() + 6) % 7;
+    const startOffset = (first.getDay() - startIdx + 7) % 7;
 
     const dayEvents = {};
     for (const ev of allEvents) {
@@ -174,12 +176,12 @@ export function useCalendar() {
     for (let d = 1; d <= lastDay; d += 1) cells.push({ day: d, count: (dayEvents[d] || []).length, events: dayEvents[d] || [] });
     while (cells.length % 7 !== 0) cells.push({ empty: true });
     return cells;
-  }, [calendarMonth, allEvents]);
+  }, [calendarMonth, allEvents, weekStart]);
 
   const weekInfo = useMemo(() => {
     const ref = weekAnchor;
     const current = new Date(ref);
-    const day = (current.getDay() + 6) % 7;
+    const day = (current.getDay() - startIdx + 7) % 7;
     const weekStart = new Date(current);
     weekStart.setDate(current.getDate() - day);
     weekStart.setHours(0, 0, 0, 0);
@@ -187,13 +189,22 @@ export function useCalendar() {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
 
-    const firstThursday = new Date(current.getFullYear(), 0, 4);
+    const thursday = new Date(weekStart);
+    thursday.setDate(weekStart.getDate() + ((4 - weekStart.getDay() + 7) % 7));
+
+    const firstThursday = new Date(thursday.getFullYear(), 0, 4);
     const firstThursdayDay = (firstThursday.getDay() + 6) % 7;
     const firstWeekStart = new Date(firstThursday);
     firstWeekStart.setDate(firstThursday.getDate() - firstThursdayDay);
     firstWeekStart.setHours(0, 0, 0, 0);
 
-    const diffMs = weekStart - firstWeekStart;
+    const displayedIsoWeekStart = new Date(thursday);
+    displayedIsoWeekStart.setDate(thursday.getDate() - ((thursday.getDay() + 6) % 7));
+    displayedIsoWeekStart.setHours(0, 0, 0, 0);
+
+    const displayedUtc = Date.UTC(displayedIsoWeekStart.getFullYear(), displayedIsoWeekStart.getMonth(), displayedIsoWeekStart.getDate());
+    const firstUtc = Date.UTC(firstWeekStart.getFullYear(), firstWeekStart.getMonth(), firstWeekStart.getDate());
+    const diffMs = displayedUtc - firstUtc;
     const weekNumber = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
 
     const weekEvents = allEvents.filter((ev) => {
@@ -213,7 +224,7 @@ export function useCalendar() {
     }
 
     return { weekStart, weekEnd, weekNumber, weekEvents, days };
-  }, [allEvents, weekAnchor]);
+  }, [allEvents, weekAnchor, weekStart]);
 
   const prevWeek = useCallback(() => {
     setWeekAnchor((prev) => {
