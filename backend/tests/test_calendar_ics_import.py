@@ -11,6 +11,7 @@ Covers two pieces of the calendar interoperability work:
 """
 
 import hashlib
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -276,3 +277,57 @@ class TestReimportUpdates:
         assert resp.status_code == 200, resp.text
         assert resp.json()["created"] == 2
         assert resp.json()["updated"] == 0
+
+
+# --- export / feed member projection -----------------------------------
+
+
+class TestExportMemberProjection:
+    def _seed_assigned_event(self) -> tuple[str, int, int]:
+        token, family_id = _seed_adult()
+        db = TestSession()
+        try:
+            user = db.query(User).filter(User.email == "cal@example.com").one()
+            db.add(CalendarEvent(
+                family_id=family_id,
+                title="Swim class",
+                starts_at=datetime(2026, 4, 1, 16, 0),
+                ends_at=datetime(2026, 4, 1, 17, 0),
+                all_day=False,
+                created_by_user_id=user.id,
+                assigned_to=[user.id],
+                category="Sport",
+                color="#123abc",
+            ))
+            db.commit()
+            return token, family_id, user.id
+        finally:
+            db.close()
+
+    def test_export_ics_includes_member_attendees(self):
+        token, family_id, user_id = self._seed_assigned_event()
+        client = TestClient(app)
+
+        resp = client.get(
+            f"/calendar/events/export.ics?family_id={family_id}",
+            headers=_auth_headers(token),
+        )
+        assert resp.status_code == 200, resp.text
+        assert f"mailto:user-{user_id}@tribu.invalid" in resp.text
+        assert "CN=Cal" in resp.text
+        assert "CATEGORIES:Sport" in resp.text
+        assert "X-TRIBU-COLOR:#123abc" in resp.text
+        # Never the real login email.
+        assert "cal@example.com" not in resp.text
+
+    def test_feed_ics_includes_member_attendees(self):
+        token, family_id, user_id = self._seed_assigned_event()
+        client = TestClient(app)
+
+        resp = client.get(
+            f"/calendar/events/feed.ics?family_id={family_id}",
+            headers=_auth_headers(token),
+        )
+        assert resp.status_code == 200, resp.text
+        assert f"mailto:user-{user_id}@tribu.invalid" in resp.text
+        assert "cal@example.com" not in resp.text

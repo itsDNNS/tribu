@@ -12,6 +12,7 @@ back into ``CalendarEvent`` rows and handling DELETE.
 from __future__ import annotations
 
 import hashlib
+import json
 import threading
 from contextlib import contextmanager
 from datetime import datetime
@@ -70,6 +71,34 @@ def _http_last_modified(dt: Optional[datetime]) -> str:
     if dt is None:
         dt = datetime(2000, 1, 1)
     return dt.strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+
+def _family_member_names(db, family_id: int) -> dict[int, str]:
+    """Preload ``{user_id: display_name}`` for a family in one query.
+
+    Collection operations pass the mapping down to ``events_to_ics`` so
+    attendee projection never triggers per-event member lookups.
+    """
+    rows = (
+        db.query(User.id, User.display_name)
+        .join(Membership, Membership.user_id == User.id)
+        .filter(Membership.family_id == family_id)
+        .all()
+    )
+    return {int(user_id): display_name for user_id, display_name in rows}
+
+
+def _membership_fingerprint(member_names: Mapping[int, str]) -> str:
+    """Stable identity/display-name fingerprint of a family's membership.
+
+    Canonical JSON of the sorted ``(user_id, display_name)`` pairs keeps
+    the encoding unambiguous: display names containing separator
+    characters cannot collide with a differently-shaped membership, and
+    Unicode names serialize deterministically (``ensure_ascii=False``
+    with fixed separators).
+    """
+    pairs = sorted((int(user_id), name) for user_id, name in member_names.items())
+    return json.dumps(pairs, separators=(",", ":"), ensure_ascii=False)
 
 
 CALENDAR_PREFIX = "cal-"
@@ -141,13 +170,16 @@ class CalendarCollection(BaseCollection):
                 .order_by(CalendarEvent.id.asc())
                 .all()
             )
+            member_names = _family_member_names(db, self._family_id)
         for ev in rows:
-            yield self._event_to_item(ev)
+            yield self._event_to_item(ev, member_names)
 
     def get_multi(self, hrefs: Iterable[str]) -> Iterable[Tuple[str, Optional["radicale_item.Item"]]]:
+        with _db() as db:
+            member_names = _family_member_names(db, self._family_id)
         for href in hrefs:
             ev = self._find_event_by_href(href)
-            yield href, (self._event_to_item(ev) if ev is not None else None)
+            yield href, (self._event_to_item(ev, member_names) if ev is not None else None)
 
     def has_uid(self, uid: str) -> bool:
         with _db() as db:
@@ -185,7 +217,8 @@ class CalendarCollection(BaseCollection):
                 .order_by(CalendarEvent.id.asc())
                 .all()
             )
-        return events_to_ics(events, calendar_name=self._family_name)
+            member_names = _family_member_names(db, self._family_id)
+        return events_to_ics(events, calendar_name=self._family_name, member_names=member_names)
 
     def sync(self, old_token: str = "") -> Tuple[str, Iterable[str]]:
         # Deletion tombstones are not tracked yet, so handing a client
@@ -228,6 +261,7 @@ class CalendarCollection(BaseCollection):
             uid = str(fields.get("title") or href)
 
         with _db() as db:
+            member_names = _family_member_names(db, self._family_id)
             existing_by_href = (
                 db.query(CalendarEvent)
                 .filter(
@@ -255,7 +289,7 @@ class CalendarCollection(BaseCollection):
             existing = existing_by_href
             replaced_item: Optional["radicale_item.Item"] = None
             if existing is not None:
-                replaced_item = self._event_to_item(existing)
+                replaced_item = self._event_to_item(existing, member_names)
                 _apply_event_fields(existing, fields)
                 existing.ical_uid = uid
                 existing.dav_href = href
@@ -278,7 +312,7 @@ class CalendarCollection(BaseCollection):
                 # deterministic 4xx instead of letting the 500 leak.
                 raise ValueError(f"concurrent write conflict: {exc.orig}") from exc
             db.refresh(row)
-            stored_item = self._event_to_item(row)
+            stored_item = self._event_to_item(row, member_names)
         return stored_item, replaced_item
 
     def delete(self, href: Optional[str] = None) -> None:
@@ -327,8 +361,15 @@ class CalendarCollection(BaseCollection):
             .first()
         )
 
-    def _event_to_item(self, ev: CalendarEvent) -> "radicale_item.Item":
-        ics = events_to_ics([ev], calendar_name=self._family_name)
+    def _event_to_item(
+        self,
+        ev: CalendarEvent,
+        member_names: Optional[Mapping[int, str]] = None,
+    ) -> "radicale_item.Item":
+        if member_names is None:
+            with _db() as db:
+                member_names = _family_member_names(db, self._family_id)
+        ics = events_to_ics([ev], calendar_name=self._family_name, member_names=member_names)
         etag = f'"{hashlib.sha256(ics.encode("utf-8")).hexdigest()[:16]}"'
         mtime = ev.updated_at or ev.created_at
         return radicale_item.Item(
@@ -356,8 +397,18 @@ class CalendarCollection(BaseCollection):
                 .filter(CalendarEvent.family_id == self._family_id)
                 .count()
             )
-            latest = self._latest_change()
-        return hashlib.sha256(f"{count}:{latest}".encode("utf-8")).hexdigest()
+            latest = (
+                db.query(CalendarEvent.updated_at)
+                .filter(CalendarEvent.family_id == self._family_id)
+                .order_by(CalendarEvent.updated_at.desc())
+                .limit(1)
+                .scalar()
+            )
+            # Membership identity/display names feed the emitted ATTENDEE
+            # content, so a member add/remove/rename must invalidate
+            # collection enumeration even though no event row changed.
+            members = _membership_fingerprint(_family_member_names(db, self._family_id))
+        return hashlib.sha256(f"{count}:{latest}:{members}".encode("utf-8")).hexdigest()
 
     @staticmethod
     def _uid_to_event_id(uid: str) -> Optional[int]:

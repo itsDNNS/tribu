@@ -95,6 +95,18 @@ def list_calendar_events(
     return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
 
 
+def _family_member_names(db: Session, family_id: int) -> dict[int, str]:
+    """Preload ``{user_id: display_name}`` once so ICS attendee
+    projection needs no per-event member queries."""
+    rows = (
+        db.query(User.id, User.display_name)
+        .join(Membership, Membership.user_id == User.id)
+        .filter(Membership.family_id == family_id)
+        .all()
+    )
+    return {int(user_id): display_name for user_id, display_name in rows}
+
+
 @router.get(
     "/events/export.ics",
     summary="Export calendar as ICS",
@@ -109,7 +121,7 @@ def export_calendar_ics(
 ):
     ensure_adult(db, user.id, family_id)
     events = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).all()
-    ics_text = events_to_ics(events)
+    ics_text = events_to_ics(events, member_names=_family_member_names(db, family_id))
     return Response(
         content=ics_text,
         media_type="text/calendar",
@@ -131,7 +143,7 @@ def calendar_feed_ics(
 ):
     ensure_family_membership(db, user.id, family_id)
     events = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).all()
-    ics_text = events_to_ics(events)
+    ics_text = events_to_ics(events, member_names=_family_member_names(db, family_id))
     return Response(
         content=ics_text,
         media_type="text/calendar",
