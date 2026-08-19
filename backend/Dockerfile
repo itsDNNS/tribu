@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION}
