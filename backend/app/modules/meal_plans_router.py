@@ -28,9 +28,10 @@ from app.core.errors import (
 )
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
+from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item
 from app.core.ws_broadcast import broadcast_shopping_event
 from app.database import get_db
-from app.models import MealPlan, Membership, ShoppingItem, ShoppingList, User
+from app.models import MealPlan, Membership, ShoppingList, User
 from app.schemas import (
     AUTH_RESPONSES,
     MEAL_SLOTS,
@@ -457,37 +458,41 @@ def add_week_ingredients_to_shopping(
         .all()
     )
 
-    created: list[ShoppingItem] = []
+    transitions: list[ShoppingItemTransition] = []
     for entry in _aggregate_week_ingredients(plans):
-        item = ShoppingItem(
-            list_id=shopping_list.id,
+        transitions.append(add_or_merge_shopping_item(
+            db,
+            shopping_list=shopping_list,
             name=entry["name"].strip(),
             spec=_format_spec(entry["amount"], entry["unit"]),
             added_by_user_id=user.id,
-        )
-        db.add(item)
-        created.append(item)
+        ))
     db.commit()
-    for item in created:
+    for transition in transitions:
+        item = transition.item
         db.refresh(item)
         broadcast_shopping_event(
             "list",
             shopping_list.id,
-            "item_added",
+            "item_added" if transition.action == "created" else "item_updated",
             {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
         )
-    if created:
+    if transitions:
         dispatch_shopping_destination_event(
             family_id=payload.family_id,
             event_type="shopping.item.changed",
             title="Meal plan ingredients added",
-            body=f'{user.display_name or "Someone"} added {len(created)} ingredients from the meal plan week to "{shopping_list.name}".',
+            body=f'{user.display_name or "Someone"} added {len(transitions)} ingredients from the meal plan week to "{shopping_list.name}".',
             link=f"/shopping?list={shopping_list.id}",
             source_type="shopping_list",
             source_id=shopping_list.id,
             action="meal_plan_week_added",
         )
-    return MealPlanAddToShoppingResponse(added_count=len(created))
+    return MealPlanAddToShoppingResponse(
+        added_count=len(transitions),
+        created_count=sum(result.action == "created" for result in transitions),
+        merged_count=sum(result.action != "created" for result in transitions),
+    )
 
 
 @router.post(
@@ -541,34 +546,38 @@ def add_ingredients_to_shopping(
                 )
             selected.append(match)
 
-    created: list[ShoppingItem] = []
+    transitions: list[ShoppingItemTransition] = []
     for entry in selected:
-        item = ShoppingItem(
-            list_id=shopping_list.id,
+        transitions.append(add_or_merge_shopping_item(
+            db,
+            shopping_list=shopping_list,
             name=entry["name"].strip(),
             spec=_format_spec(entry["amount"], entry["unit"]),
             added_by_user_id=user.id,
-        )
-        db.add(item)
-        created.append(item)
+        ))
     db.commit()
-    for item in created:
+    for transition in transitions:
+        item = transition.item
         db.refresh(item)
         broadcast_shopping_event(
             "list",
             shopping_list.id,
-            "item_added",
+            "item_added" if transition.action == "created" else "item_updated",
             {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
         )
-    if created:
+    if transitions:
         dispatch_shopping_destination_event(
             family_id=plan.family_id,
             event_type="shopping.item.changed",
             title="Meal ingredients added",
-            body=f'{user.display_name or "Someone"} added {len(created)} ingredients from "{plan.meal_name}" to "{shopping_list.name}".',
+            body=f'{user.display_name or "Someone"} added {len(transitions)} ingredients from "{plan.meal_name}" to "{shopping_list.name}".',
             link=f"/shopping?list={shopping_list.id}",
             source_type="shopping_list",
             source_id=shopping_list.id,
             action="meal_plan_added",
         )
-    return MealPlanAddToShoppingResponse(added_count=len(created))
+    return MealPlanAddToShoppingResponse(
+        added_count=len(transitions),
+        created_count=sum(result.action == "created" for result in transitions),
+        merged_count=sum(result.action != "created" for result in transitions),
+    )

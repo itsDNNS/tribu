@@ -9,8 +9,10 @@ from app.core.deps import current_user, ensure_adult
 from app.core.errors import error_detail, SHOPPING_LIST_NOT_FOUND
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
+from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item
+from app.core.ws_broadcast import broadcast_shopping_event
 from app.database import get_db
-from app.models import HouseholdTemplate, ShoppingItem, ShoppingList, Task, User
+from app.models import HouseholdTemplate, ShoppingList, Task, User
 from app.schemas import (
     AUTH_RESPONSES,
     NOT_FOUND_RESPONSE,
@@ -194,23 +196,20 @@ def _apply_template(
         shopping_items=shopping_items,
         payload=payload,
     )
-    created_shopping_items: list[ShoppingItem] = []
+    shopping_transitions: list[ShoppingItemTransition] = []
     if shopping_list is not None:
-        max_position = max((item.position for item in shopping_list.items), default=-1)
-        for offset, item in enumerate(shopping_items):
-            shopping_item = ShoppingItem(
-                list_id=shopping_list.id,
+        for item in shopping_items:
+            shopping_transitions.append(add_or_merge_shopping_item(
+                db,
+                shopping_list=shopping_list,
                 name=item["name"],
                 spec=item.get("spec"),
                 category=item.get("category"),
                 added_by_user_id=user.id,
-                position=max_position + offset + 1,
-            )
-            db.add(shopping_item)
-            created_shopping_items.append(shopping_item)
+            ))
 
     db.flush()
-    if created_tasks or created_shopping_items:
+    if created_tasks or shopping_transitions:
         record_activity(
             db,
             family_id=family_id,
@@ -226,8 +225,14 @@ def _apply_template(
     db.commit()
     for task in created_tasks:
         db.refresh(task)
-    for item in created_shopping_items:
-        db.refresh(item)
+    for transition in shopping_transitions:
+        db.refresh(transition.item)
+        broadcast_shopping_event(
+            "list",
+            transition.item.list_id,
+            "item_added" if transition.action == "created" else "item_updated",
+            {"item": ShoppingItemResponse.model_validate(transition.item).model_dump(mode="json")},
+        )
     if shopping_list is not None:
         db.refresh(shopping_list)
         if shopping_list_created:
@@ -241,12 +246,12 @@ def _apply_template(
                 source_id=shopping_list.id,
                 action="household_template_list_created",
             )
-        if created_shopping_items:
+        if shopping_transitions:
             dispatch_shopping_destination_event(
                 family_id=family_id,
                 event_type="shopping.item.changed",
                 title="Shopping items added",
-                body=f'{user.display_name or "Someone"} added {len(created_shopping_items)} items from a household template to "{shopping_list.name}".',
+                body=f'{user.display_name or "Someone"} added {len(shopping_transitions)} items from a household template to "{shopping_list.name}".',
                 link=f"/shopping?list={shopping_list.id}",
                 source_type="shopping_list",
                 source_id=shopping_list.id,
@@ -255,10 +260,11 @@ def _apply_template(
     return HouseholdTemplateApplyResponse(
         template_id=template_id,
         created_task_count=len(created_tasks),
-        created_shopping_count=len(created_shopping_items),
+        created_shopping_count=sum(result.action == "created" for result in shopping_transitions),
+        merged_shopping_count=sum(result.action != "created" for result in shopping_transitions),
         shopping_list_id=shopping_list.id if shopping_list else None,
         tasks=[TaskResponse.model_validate(task) for task in created_tasks],
-        shopping_items=[ShoppingItemResponse.model_validate(item) for item in created_shopping_items],
+        shopping_items=[ShoppingItemResponse.model_validate(result.item) for result in shopping_transitions],
     )
 
 

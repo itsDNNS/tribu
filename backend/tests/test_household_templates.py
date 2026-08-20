@@ -191,6 +191,21 @@ def test_apply_custom_template_adds_tasks_and_shopping_without_overwriting_exist
     assert shopping_items.status_code == 200
     assert [item["name"] for item in shopping_items.json()] == ["Existing milk", "Apples", "Bread"]
 
+    reapplied = client.post(
+        f"/household-templates/{created.json()['id']}/apply",
+        json={"target_date": "2026-05-04", "shopping_list_id": list_id},
+        headers=_auth(token),
+    )
+    assert reapplied.status_code == 200, reapplied.json()
+    assert reapplied.json()["created_shopping_count"] == 0
+    assert reapplied.json()["merged_shopping_count"] == 2
+    merged = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+    assert [(item["name"], item["spec"]) for item in merged] == [
+        ("Existing milk", None),
+        ("Apples", "12"),
+        ("Bread", None),
+    ]
+
 
 def test_apply_builtin_template_can_create_a_new_shopping_list():
     token, family_id = _seed_member(suffix="builtin")

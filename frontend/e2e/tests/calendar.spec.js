@@ -233,7 +233,11 @@ test.describe('Calendar', () => {
     const candidateDays = [21, 22, 23, 24, 25, 26, 27].filter((day) => {
       const iconDate = new Date(now.getFullYear(), now.getMonth(), day, 9, 0, 0);
       const plainDate = new Date(now.getFullYear(), now.getMonth(), day + 1, 9, 0, 0);
-      return plainDate.getMonth() === now.getMonth() && iconDate.getDay() !== 0 && iconDate.getDay() !== 6;
+      return plainDate.getMonth() === now.getMonth()
+        && iconDate.toDateString() !== now.toDateString()
+        && plainDate.toDateString() !== now.toDateString()
+        && iconDate.getDay() !== 0
+        && iconDate.getDay() !== 6;
     });
 
     await navigateTo(page, 'Calendar');
@@ -254,31 +258,41 @@ test.describe('Calendar', () => {
     expect(plainDayNumber).toBeDefined();
 
     const iconDate = new Date(now.getFullYear(), now.getMonth(), iconDayNumber, 9, 0, 0);
-    await seedCalendarEvent(apiCtx, familyId, {
-      title: 'Alignment Soccer',
-      starts_at: iconDate.toISOString(),
-      icon: 'soccer',
-    });
+    let iconEvent;
+    let primaryError;
 
-    await page.reload();
-    await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+    try {
+      iconEvent = await seedCalendarEvent(apiCtx, familyId, {
+        title: 'Alignment Soccer',
+        starts_at: iconDate.toISOString(),
+        icon: 'soccer',
+      });
 
-    const iconDay = page.locator('.calendar-day:not(.empty)').filter({ has: page.locator('.calendar-day-num', { hasText: new RegExp(`^${iconDayNumber}$`) }) }).first();
-    const plainDay = page.locator('.calendar-day:not(.empty)').filter({ has: page.locator('.calendar-day-num', { hasText: new RegExp(`^${plainDayNumber}$`) }) }).first();
-    await expect(iconDay.locator('.calendar-day-icon-indicator').first()).toBeVisible({ timeout: 10000 });
-    await expect(plainDay.locator('.calendar-day-dots > *')).toHaveCount(0);
+      await page.reload();
+      await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
 
-    const iconBox = await iconDay.locator('.calendar-day-num').boundingBox();
-    const plainBox = await plainDay.locator('.calendar-day-num').boundingBox();
-    const iconCellBox = await iconDay.boundingBox();
-    const plainCellBox = await plainDay.boundingBox();
-    expect(iconBox).not.toBeNull();
-    expect(plainBox).not.toBeNull();
-    expect(iconCellBox).not.toBeNull();
-    expect(plainCellBox).not.toBeNull();
-    expect(Math.abs(iconBox.y - plainBox.y)).toBeLessThanOrEqual(0.5);
-    expect(Math.abs((iconBox.x + iconBox.width / 2) - (iconCellBox.x + iconCellBox.width / 2))).toBeLessThanOrEqual(1);
-    expect(Math.abs((plainBox.x + plainBox.width / 2) - (plainCellBox.x + plainCellBox.width / 2))).toBeLessThanOrEqual(1);
+      const iconDay = page.locator('.calendar-day:not(.empty)').filter({ has: page.locator('.calendar-day-num', { hasText: new RegExp(`^${iconDayNumber}$`) }) }).first();
+      const plainDay = page.locator('.calendar-day:not(.empty)').filter({ has: page.locator('.calendar-day-num', { hasText: new RegExp(`^${plainDayNumber}$`) }) }).first();
+      await expect(iconDay.locator('.calendar-day-icon-indicator').first()).toBeVisible({ timeout: 10000 });
+      await expect(plainDay.locator('.calendar-day-dots > *')).toHaveCount(0);
+
+      const iconBox = await iconDay.locator('.calendar-day-num').boundingBox();
+      const plainBox = await plainDay.locator('.calendar-day-num').boundingBox();
+      const iconCellBox = await iconDay.boundingBox();
+      const plainCellBox = await plainDay.boundingBox();
+      expect(iconBox).not.toBeNull();
+      expect(plainBox).not.toBeNull();
+      expect(iconCellBox).not.toBeNull();
+      expect(plainCellBox).not.toBeNull();
+      expect(Math.abs(iconBox.y - plainBox.y)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs((iconBox.x + iconBox.width / 2) - (iconCellBox.x + iconCellBox.width / 2))).toBeLessThanOrEqual(1);
+      expect(Math.abs((plainBox.x + plainBox.width / 2) - (plainCellBox.x + plainCellBox.width / 2))).toBeLessThanOrEqual(1);
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      await cleanupCalendarEvents(apiCtx, [iconEvent?.id], primaryError);
+    }
   });
 
   test('desktop event form gives date-time fields enough room for time entry', async ({ authedPage: page }) => {

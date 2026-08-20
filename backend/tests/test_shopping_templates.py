@@ -153,6 +153,18 @@ def test_template_create_edit_list_delete_and_apply_to_shopping_list():
         ("Milk", "2 L", "Dairy", False),
     ]
 
+    reapplied = client.post(
+        f"/shopping/templates/{template['id']}/apply",
+        json={"list_id": list_id},
+        headers=_auth(token),
+    )
+    assert reapplied.status_code == 200, reapplied.json()
+    assert reapplied.json()["added_count"] == 2
+    assert reapplied.json()["created_count"] == 0
+    assert reapplied.json()["merged_count"] == 2
+    merged_items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+    assert [(item["name"], item["spec"]) for item in merged_items] == [("Oats", "2 kg"), ("Milk", "4 L")]
+
     deleted = client.delete(f"/shopping/templates/{template['id']}", headers=_auth(token))
     assert deleted.status_code == 200
     assert deleted.json() == {"status": "deleted", "template_id": template["id"]}

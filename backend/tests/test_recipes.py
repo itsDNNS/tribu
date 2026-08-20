@@ -247,6 +247,56 @@ class TestRecipeShopping:
         assert data[0]["spec"] == "250 g"
         assert data[1]["spec"] is None
 
+        pushed_again = client.post(
+            f"/recipes/{recipe['id']}/add-to-shopping",
+            json={"shopping_list_id": list_id, "ingredient_names": ["Flour", "Salt"]},
+            headers=_auth(token),
+        )
+        assert pushed_again.status_code == 200, pushed_again.json()
+        assert pushed_again.json()["added_count"] == 2
+        assert pushed_again.json()["created_count"] == 0
+        assert pushed_again.json()["merged_count"] == 2
+        merged = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+        assert [(item["name"], item["spec"]) for item in merged] == [
+            ("Flour", "500 g"),
+            ("Salt", None),
+        ]
+
+    def test_recipe_push_inherits_category_after_manual_item_is_cleared(self):
+        token, family_id = _seed_member("*", "shopping-category-memory")
+        recipe = _create_recipe(token, family_id)
+        list_id = _seed_shopping_list(family_id)
+        manual = client.post(
+            f"/shopping/lists/{list_id}/items",
+            json={"name": "Flour", "spec": "250 g", "category": "Baking"},
+            headers=_auth(token),
+        )
+        assert manual.status_code == 200, manual.json()
+        checked = client.patch(
+            f"/shopping/items/{manual.json()['id']}",
+            json={"checked": True},
+            headers=_auth(token),
+        )
+        assert checked.status_code == 200, checked.json()
+        cleared = client.delete(f"/shopping/lists/{list_id}/checked", headers=_auth(token))
+        assert cleared.status_code == 200, cleared.json()
+
+        pushed = client.post(
+            f"/recipes/{recipe['id']}/add-to-shopping",
+            json={"shopping_list_id": list_id, "ingredient_names": ["Flour"]},
+            headers=_auth(token),
+        )
+        assert pushed.status_code == 200, pushed.json()
+        assert pushed.json() == {
+            "added_count": 1,
+            "created_count": 1,
+            "merged_count": 0,
+        }
+        items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+        assert [(item["name"], item["spec"], item["category"]) for item in items] == [
+            ("Flour", "250 g", "Baking"),
+        ]
+
     def test_rejects_unknown_ingredient_name(self):
         token, family_id = _seed_member("*", "shopping-b")
         recipe = _create_recipe(token, family_id)

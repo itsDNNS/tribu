@@ -17,24 +17,100 @@ function cleanOptionalText(value) {
   return cleaned || null;
 }
 
-function sameItemName(left, right) {
-  return left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
+function caseFold(value) {
+  return value.trim().normalize('NFKC').toLocaleLowerCase().replaceAll('ß', 'ss').replaceAll('ς', 'σ');
 }
 
-function sameOptionalText(left, right) {
-  return cleanOptionalText(left) === cleanOptionalText(right);
+function sameItemName(left, right) {
+  return caseFold(left) === caseFold(right);
+}
+
+function parseQuantity(value) {
+  const cleaned = cleanOptionalText(value);
+  if (cleaned == null) return null;
+  const match = cleaned.match(/^((?:\d+(?:[.,]\d+)?|[.,]\d+))\s*([^\d.,].*)?$/u);
+  if (!match) return null;
+  const amount = match[1].replace(',', '.');
+  const [whole, fraction = ''] = amount.split('.');
+  const unit = cleanOptionalText(match[2]);
+  return {
+    coefficient: BigInt(`${whole || '0'}${fraction}`),
+    scale: fraction.length,
+    unit: unit == null ? null : caseFold(unit.replace(/\s+/g, ' ')),
+    displayUnit: unit == null ? null : unit.replace(/\s+/g, ' '),
+  };
+}
+
+function formatQuantity(quantity, displayUnit = quantity.displayUnit) {
+  let digits = quantity.coefficient.toString();
+  if (quantity.scale) {
+    digits = digits.padStart(quantity.scale + 1, '0');
+    digits = `${digits.slice(0, -quantity.scale)}.${digits.slice(-quantity.scale)}`;
+    digits = digits.replace(/0+$/, '').replace(/\.$/, '');
+  }
+  return displayUnit ? `${digits} ${displayUnit}` : digits;
+}
+
+function normalizeSpec(value) {
+  const cleaned = cleanOptionalText(value);
+  const quantity = parseQuantity(cleaned);
+  return quantity ? formatQuantity(quantity) : cleaned;
+}
+
+export function shoppingSpecsAreCompatible(left, right) {
+  const leftClean = cleanOptionalText(left);
+  const rightClean = cleanOptionalText(right);
+  if (leftClean == null || rightClean == null) return true;
+  const leftQuantity = parseQuantity(leftClean);
+  const rightQuantity = parseQuantity(rightClean);
+  if (leftQuantity || rightQuantity) {
+    return Boolean(leftQuantity && rightQuantity && leftQuantity.unit === rightQuantity.unit);
+  }
+  return caseFold(leftClean) === caseFold(rightClean);
+}
+
+function mergeActiveSpec(existing, incoming) {
+  const existingClean = cleanOptionalText(existing);
+  const incomingClean = cleanOptionalText(incoming);
+  if (existingClean == null) return normalizeSpec(incomingClean);
+  if (incomingClean == null) return existingClean;
+  const left = parseQuantity(existingClean);
+  const right = parseQuantity(incomingClean);
+  if (!left || !right) return existingClean;
+  const scale = Math.max(left.scale, right.scale);
+  const coefficient = (
+    left.coefficient * (10n ** BigInt(scale - left.scale))
+    + right.coefficient * (10n ** BigInt(scale - right.scale))
+  );
+  return formatQuantity({ ...left, coefficient, scale }, left.displayUnit || right.displayUnit);
 }
 
 export function findReusableCheckedItem(items, payload) {
   const itemName = formatShoppingItemName(payload.name);
   const itemSpec = cleanOptionalText(payload.spec);
-  const itemCategory = cleanOptionalText(payload.category);
   return items.find((item) => (
     item.checked
     && sameItemName(item.name, itemName)
-    && sameOptionalText(item.spec, itemSpec)
-    && sameOptionalText(item.category, itemCategory)
+    && shoppingSpecsAreCompatible(item.spec, itemSpec)
   )) || null;
+}
+
+export function predictShoppingItemTransition(items, payload) {
+  const itemName = formatShoppingItemName(payload.name);
+  const itemSpec = cleanOptionalText(payload.spec);
+  const candidates = [...items.filter((item) => !item.checked), ...items.filter((item) => item.checked)];
+  const item = candidates.find((candidate) => (
+    sameItemName(candidate.name, itemName)
+    && shoppingSpecsAreCompatible(candidate.spec, itemSpec)
+  ));
+  if (!item) return null;
+  return {
+    item,
+    action: item.checked ? 'restored' : 'merged',
+    spec: item.checked
+      ? (itemSpec == null ? cleanOptionalText(item.spec) : normalizeSpec(itemSpec))
+      : mergeActiveSpec(item.spec, itemSpec),
+  };
 }
 
 export function useShopping() {
@@ -239,19 +315,28 @@ export function useShopping() {
       spec: cleanOptionalText(newItemSpec),
       category: cleanOptionalText(newItemCategory),
     };
-    const reusableCheckedItem = findReusableCheckedItem(items, payload);
+    const predictedTransition = predictShoppingItemTransition(items, payload);
     if (demoMode) {
-      if (reusableCheckedItem) {
-        setItems((prev) => prev.map((item) => item.id === reusableCheckedItem.id
-          ? { ...item, ...payload, checked: false, checked_at: null }
+      if (predictedTransition) {
+        const mergedPayload = {
+          name: payload.name,
+          spec: predictedTransition.spec,
+          category: payload.category || predictedTransition.item.category || null,
+          checked: false,
+          checked_at: null,
+        };
+        setItems((prev) => prev.map((item) => item.id === predictedTransition.item.id
+          ? { ...item, ...mergedPayload }
           : item));
         setShoppingLists((prev) =>
           prev.map((l) => l.id === activeListId
             ? {
                 ...l,
-                checked_count: Math.max((l.checked_count || 0) - 1, 0),
-                items: (l.items || []).map((item) => item.id === reusableCheckedItem.id
-                  ? { ...item, ...payload, checked: false, checked_at: null }
+                checked_count: predictedTransition.action === 'restored'
+                  ? Math.max((l.checked_count || 0) - 1, 0)
+                  : (l.checked_count || 0),
+                items: (l.items || []).map((item) => item.id === predictedTransition.item.id
+                  ? { ...item, ...mergedPayload }
                   : item),
               }
             : l
@@ -262,6 +347,7 @@ export function useShopping() {
           id: Date.now(),
           list_id: activeListId,
           ...payload,
+          spec: normalizeSpec(payload.spec),
           checked: false,
           checked_at: null,
           added_by_user_id: 1,
