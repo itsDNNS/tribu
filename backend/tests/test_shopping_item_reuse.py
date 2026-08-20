@@ -118,6 +118,123 @@ def test_add_item_reactivates_checked_match_without_creating_duplicate():
     ]
 
 
+def test_add_item_merges_compatible_active_quantity_instead_of_creating_duplicate():
+    token, _family_id, list_id = _seed_owner()
+    first = client.post(
+        f"/shopping/lists/{list_id}/items",
+        json={"name": "Milk", "spec": "2 L"},
+        headers=_auth(token),
+    )
+    assert first.status_code == 200, first.json()
+
+    second = client.post(
+        f"/shopping/lists/{list_id}/items",
+        json={"name": " milk ", "spec": "1 l"},
+        headers=_auth(token),
+    )
+
+    assert second.status_code == 200, second.json()
+    assert second.json()["id"] == first.json()["id"]
+    assert second.json()["spec"] == "3 L"
+    items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token))
+    assert items.status_code == 200
+    assert [(item["name"], item["spec"], item["checked"]) for item in items.json()] == [
+        ("Milk", "3 L", False),
+    ]
+
+
+def test_add_item_emits_created_then_updated_events_for_merge(monkeypatch):
+    token, _family_id, list_id = _seed_owner()
+    from app.modules import shopping_router
+
+    ws_events = []
+    webhook_events = []
+    monkeypatch.setattr(
+        shopping_router,
+        "broadcast_shopping_event",
+        lambda scope, scope_id, event_type, payload: ws_events.append(event_type),
+    )
+    monkeypatch.setattr(
+        shopping_router,
+        "dispatch_webhook_event",
+        lambda _db, **kwargs: webhook_events.append(kwargs["event_type"]),
+    )
+    monkeypatch.setattr(shopping_router, "dispatch_shopping_destination_event", lambda **_kwargs: None)
+
+    first = client.post(
+        f"/shopping/lists/{list_id}/items",
+        json={"name": "Milk", "spec": "2 L"},
+        headers=_auth(token),
+    )
+    second = client.post(
+        f"/shopping/lists/{list_id}/items",
+        json={"name": "milk", "spec": "1 l"},
+        headers=_auth(token),
+    )
+
+    assert first.status_code == second.status_code == 200
+    assert ws_events == ["item_added", "item_updated"]
+    assert webhook_events == ["shopping.item.created", "shopping.item.updated"]
+
+
+def test_category_is_remembered_after_checked_item_is_cleared_and_readded():
+    token, _family_id, list_id = _seed_owner()
+    created = client.post(
+        f"/shopping/lists/{list_id}/items",
+        json={"name": "Limes", "category": "Fruit & Vegetables"},
+        headers=_auth(token),
+    )
+    assert created.status_code == 200, created.json()
+    checked = client.patch(
+        f"/shopping/items/{created.json()['id']}",
+        json={"checked": True},
+        headers=_auth(token),
+    )
+    assert checked.status_code == 200, checked.json()
+    cleared = client.delete(f"/shopping/lists/{list_id}/checked", headers=_auth(token))
+    assert cleared.status_code == 200, cleared.json()
+    assert cleared.json()["deleted_count"] == 1
+
+    readded = client.post(
+        f"/shopping/lists/{list_id}/items",
+        json={"name": "limes"},
+        headers=_auth(token),
+    )
+
+    assert readded.status_code == 200, readded.json()
+    assert readded.json()["category"] == "Fruit & Vegetables"
+
+
+def test_explicit_category_edit_wins_and_updates_memory():
+    token, _family_id, list_id = _seed_owner()
+    created = client.post(
+        f"/shopping/lists/{list_id}/items",
+        json={"name": "Bread", "category": "Pantry"},
+        headers=_auth(token),
+    )
+    edited = client.patch(
+        f"/shopping/items/{created.json()['id']}",
+        json={"category": " Bakery "},
+        headers=_auth(token),
+    )
+    assert edited.status_code == 200, edited.json()
+    assert edited.json()["category"] == "Bakery"
+    assert client.patch(
+        f"/shopping/items/{created.json()['id']}",
+        json={"checked": True},
+        headers=_auth(token),
+    ).status_code == 200
+    assert client.delete(f"/shopping/lists/{list_id}/checked", headers=_auth(token)).status_code == 200
+
+    readded = client.post(
+        f"/shopping/lists/{list_id}/items",
+        json={"name": "bread", "category": ""},
+        headers=_auth(token),
+    )
+    assert readded.status_code == 200, readded.json()
+    assert readded.json()["category"] == "Bakery"
+
+
 def test_add_item_keeps_separate_rows_when_details_differ_and_capitalizes_names():
     token, _family_id, list_id = _seed_owner()
     db = TestSession()
@@ -135,20 +252,20 @@ def test_add_item_keeps_separate_rows_when_details_differ_and_capitalizes_names(
 
     response = client.post(
         f"/shopping/lists/{list_id}/items",
-        json={"name": "milk", "spec": "2 L"},
+        json={"name": "milk", "spec": "2 kg"},
         headers=_auth(token),
     )
 
     assert response.status_code == 200, response.json()
     assert response.json()["id"] != existing_id
     assert response.json()["name"] == "Milk"
-    assert response.json()["spec"] == "2 L"
+    assert response.json()["spec"] == "2 kg"
     assert response.json()["checked"] is False
 
     items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token))
     assert items.status_code == 200
     assert [(item["name"], item["spec"], item["checked"]) for item in items.json()] == [
-        ("Milk", "2 L", False),
+        ("Milk", "2 kg", False),
         ("Milk", "1 L", True),
     ]
 

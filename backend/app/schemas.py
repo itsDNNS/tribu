@@ -749,7 +749,9 @@ class ShoppingTemplateApplyResponse(BaseModel):
     template_id: int = Field(..., description="Template ID")
     list_id: int = Field(..., description="Destination shopping list ID")
     added_count: int = Field(0, description="Number of added items")
-    items: list[ShoppingItemResponse] = Field(default_factory=list, description="Created shopping items")
+    created_count: int = Field(0, description="Number of newly created rows")
+    merged_count: int = Field(0, description="Number of existing rows merged or restored")
+    items: list[ShoppingItemResponse] = Field(default_factory=list, description="Affected shopping items")
 
 
 # ---------------------------------------------------------------------------
@@ -815,6 +817,7 @@ class HouseholdTemplateApplyResponse(BaseModel):
     template_id: Union[int, str]
     created_task_count: int = 0
     created_shopping_count: int = 0
+    merged_shopping_count: int = 0
     shopping_list_id: Optional[int] = None
     tasks: list[TaskResponse] = Field(default_factory=list)
     shopping_items: list[ShoppingItemResponse] = Field(default_factory=list)
@@ -1684,6 +1687,8 @@ class MealPlanAddToShoppingRequest(BaseModel):
 
 class MealPlanAddToShoppingResponse(BaseModel):
     added_count: int
+    created_count: int = 0
+    merged_count: int = 0
 
 
 
@@ -1772,6 +1777,8 @@ class RecipeAddToShoppingRequest(BaseModel):
 
 class RecipeAddToShoppingResponse(BaseModel):
     added_count: int
+    created_count: int = 0
+    merged_count: int = 0
 
 
 # ---------------------------------------------------------------------------

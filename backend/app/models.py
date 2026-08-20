@@ -1,7 +1,7 @@
 
 from app.core.clock import utcnow, utcnow_aware
 
-from sqlalchemy import Column, Date, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
+from sqlalchemy import CheckConstraint, Column, Date, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -56,6 +56,7 @@ class Family(Base):
     birthdays = relationship("FamilyBirthday", back_populates="family", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="family", cascade="all, delete-orphan")
     shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
+    product_preferences = relationship("FamilyProductPreference", back_populates="family", cascade="all, delete-orphan")
     shopping_templates = relationship("ShoppingTemplate", back_populates="family", cascade="all, delete-orphan")
     household_templates = relationship("HouseholdTemplate", back_populates="family", cascade="all, delete-orphan")
     recipes = relationship("Recipe", back_populates="family", cascade="all, delete-orphan")
@@ -480,6 +481,23 @@ class ShoppingItem(Base):
     position = Column(Integer, nullable=False, default=0)
 
     shopping_list = relationship("ShoppingList", back_populates="items")
+
+
+class FamilyProductPreference(Base):
+    __tablename__ = "family_product_preferences"
+    __table_args__ = (
+        UniqueConstraint("family_id", "normalized_name", name="uq_family_product_preference_family_name"),
+        CheckConstraint("length(trim(category)) > 0", name="ck_family_product_preference_category_nonempty"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    normalized_name = Column(String(400), nullable=False)
+    category = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="product_preferences")
 
 
 class ShoppingTemplate(Base):

@@ -137,6 +137,40 @@ def test_quick_capture_routes_to_task_shopping_and_inbox_public_safely():
     assert long_resp.json()["inbox_item"]["text"] == long_text
 
 
+def test_quick_capture_direct_and_inbox_conversion_reuse_active_item():
+    token, family_id, _ = _seed_member("*", "shopping-reuse")
+    first = client.post(
+        "/quick-capture",
+        json={"family_id": family_id, "text": "dish soap", "destination": "shopping"},
+        headers=_auth(token),
+    )
+    second = client.post(
+        "/quick-capture",
+        json={"family_id": family_id, "text": " Dish soap ", "destination": "shopping"},
+        headers=_auth(token),
+    )
+    inbox = client.post(
+        "/quick-capture",
+        json={"family_id": family_id, "text": "DISH SOAP", "destination": "inbox"},
+        headers=_auth(token),
+    )
+    converted = client.post(
+        f"/quick-capture/inbox/{inbox.json()['inbox_item']['id']}/convert",
+        json={"destination": "shopping"},
+        headers=_auth(token),
+    )
+
+    assert first.status_code == second.status_code == converted.status_code == 200
+    item_id = first.json()["created_item"]["id"]
+    assert second.json()["created_item"]["id"] == item_id
+    assert converted.json()["converted_item"]["id"] == item_id
+    db = TestSession()
+    try:
+        assert db.query(ShoppingItem).filter(ShoppingItem.id == item_id).count() == 1
+    finally:
+        db.close()
+
+
 def test_quick_capture_inbox_convert_and_dismiss_enforces_family_scope():
     token, family_id, _ = _seed_member("*", "owner")
     intruder_token, _, _ = _seed_member("*", "intruder")

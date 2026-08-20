@@ -81,28 +81,43 @@ test.describe('Dashboard', () => {
     const startsAt = localIsoDaysFromToday(2, 9, 0);
     const expectedDate = new Date(startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const familyId = await getFamilyId(apiCtx);
-    await seedCalendarEvent(apiCtx, familyId, {
-      title: 'Future next-up chip event',
-      starts_at: startsAt,
-      location: 'Kitchen calendar',
-    });
+    let event;
+    let primaryError;
 
-    await page.reload();
-    await expect(page.getByRole('region', { name: 'Next up' })).toBeVisible({ timeout: 10000 });
+    try {
+      event = await seedCalendarEvent(apiCtx, familyId, {
+        title: 'Future next-up chip event',
+        starts_at: startsAt,
+        location: 'Kitchen calendar',
+      });
 
-    const nextUp = page.getByRole('region', { name: 'Next up' });
-    await expect(nextUp).toContainText('Future next-up chip event');
-    const chip = nextUp.locator('.next-up-time-chip');
-    await expect(chip).toHaveClass(/is-stacked/);
-    await expect(chip.locator('.next-up-chip-date')).toContainText(expectedDate);
-    await expect(chip.locator('.next-up-chip-time')).toContainText(/^0?9:00(\s?[AP]M)?$/i);
+      await page.reload();
+      await expect(page.getByRole('region', { name: 'Next up' })).toBeVisible({ timeout: 10000 });
 
-    const chipBox = await chip.boundingBox();
-    const cardBox = await nextUp.boundingBox();
-    expect(chipBox).not.toBeNull();
-    expect(cardBox).not.toBeNull();
-    expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
-    expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(cardBox.y + cardBox.height + 1);
+      const nextUp = page.getByRole('region', { name: 'Next up' });
+      await expect(nextUp).toContainText('Future next-up chip event');
+      const chip = nextUp.locator('.next-up-time-chip');
+      await expect(chip).toHaveClass(/is-stacked/);
+      await expect(chip.locator('.next-up-chip-date')).toContainText(expectedDate);
+      await expect(chip.locator('.next-up-chip-time')).toContainText(/^0?9:00(\s?[AP]M)?$/i);
+
+      const chipBox = await chip.boundingBox();
+      const cardBox = await nextUp.boundingBox();
+      expect(chipBox).not.toBeNull();
+      expect(cardBox).not.toBeNull();
+      expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
+      expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(cardBox.y + cardBox.height + 1);
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      if (event?.id) {
+        const cleanup = await apiCtx.delete(`/api/calendar/events/${event.id}`);
+        if (!cleanup.ok() && !primaryError) {
+          throw new Error(`Failed to clean up dashboard event ${event.id}: ${cleanup.status()}`);
+        }
+      }
+    }
   });
 
   test('keeps dashboard header search usable on narrow desktop widths', async ({ authedPage: page }) => {

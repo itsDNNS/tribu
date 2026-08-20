@@ -10,6 +10,14 @@ from app.database import get_db
 from app.models import ShoppingItem, ShoppingList, ShoppingTemplate, ShoppingTemplateItem, User
 from app.core.ws_broadcast import broadcast_shopping_event
 from app.core.shopping_notifications import dispatch_shopping_destination_event
+from app.core.shopping_domain import (
+    InvalidShoppingItemName,
+    ShoppingItemTransition,
+    add_or_merge_shopping_item,
+    clean_optional_text,
+    normalize_item_name,
+    remember_category,
+)
 from app.core.webhooks import dispatch_webhook_event
 from app.schemas import (
     AUTH_RESPONSES,
@@ -38,32 +46,14 @@ router = APIRouter(prefix="/shopping", tags=["shopping"], responses={**AUTH_RESP
 
 
 def _clean_optional_text(value: str | None) -> str | None:
-    if value is None:
-        return None
-    cleaned = value.strip()
-    return cleaned or None
-
-
-def _capitalize_first(value: str) -> str:
-    cleaned = value.strip()
-    if not cleaned:
-        return cleaned
-    return f"{cleaned[:1].upper()}{cleaned[1:]}"
+    return clean_optional_text(value)
 
 
 def _normalize_item_name(value: str) -> str:
-    item_name = _capitalize_first(value)
-    if not item_name:
+    try:
+        return normalize_item_name(value)
+    except InvalidShoppingItemName:
         raise HTTPException(status_code=422, detail="Shopping item name cannot be blank")
-    return item_name
-
-
-def _same_item_name(left: str, right: str) -> bool:
-    return left.strip().casefold() == right.strip().casefold()
-
-
-def _same_optional_text(left: str | None, right: str | None) -> bool:
-    return _clean_optional_text(left) == _clean_optional_text(right)
 
 
 def _list_response(sl: ShoppingList) -> ShoppingListResponse:
@@ -233,36 +223,38 @@ def apply_template(
     if not sl or sl.family_id != template.family_id:
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
 
-    created_items = []
+    transitions: list[ShoppingItemTransition] = []
     ordered_template_items = sorted(template.items, key=lambda item: item.position)
-    max_position = max((item.position for item in sl.items), default=-1)
-    for offset, template_item in enumerate(ordered_template_items):
-        item = ShoppingItem(
-            list_id=sl.id,
-            name=template_item.name,
-            spec=template_item.spec,
-            category=template_item.category,
-            added_by_user_id=user.id,
-            position=max_position + offset + 1,
-        )
-        db.add(item)
-        created_items.append(item)
+    for template_item in ordered_template_items:
+        try:
+            transition = add_or_merge_shopping_item(
+                db,
+                shopping_list=sl,
+                name=template_item.name,
+                spec=template_item.spec,
+                category=template_item.category,
+                added_by_user_id=user.id,
+            )
+        except InvalidShoppingItemName:
+            raise HTTPException(status_code=422, detail="Shopping item name cannot be blank")
+        transitions.append(transition)
 
     db.commit()
-    for item in created_items:
+    for transition in transitions:
+        item = transition.item
         db.refresh(item)
         broadcast_shopping_event(
             "list",
             sl.id,
-            "item_added",
+            "item_added" if transition.action == "created" else "item_updated",
             {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
         )
-    if created_items:
+    if transitions:
         dispatch_shopping_destination_event(
             family_id=sl.family_id,
             event_type="shopping.item.changed",
             title="Shopping items added",
-            body=f'{user.display_name or "Someone"} added {len(created_items)} items from "{template.name}" to "{sl.name}".',
+            body=f'{user.display_name or "Someone"} added {len(transitions)} items from "{template.name}" to "{sl.name}".',
             link=f"/shopping?list={sl.id}",
             source_type="shopping_list",
             source_id=sl.id,
@@ -272,8 +264,10 @@ def apply_template(
     return ShoppingTemplateApplyResponse(
         template_id=template.id,
         list_id=sl.id,
-        added_count=len(created_items),
-        items=created_items,
+        added_count=len(transitions),
+        created_count=sum(result.action == "created" for result in transitions),
+        merged_count=sum(result.action != "created" for result in transitions),
+        items=[result.item for result in transitions],
     )
 
 
@@ -508,92 +502,64 @@ def add_item(
     if not sl:
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
     ensure_adult(db, user.id, sl.family_id)
-    item_name = _normalize_item_name(payload.name)
-    item_spec = _clean_optional_text(payload.spec)
-    item_category = _clean_optional_text(payload.category)
-    checked_match = next(
-        (
-            existing
-            for existing in sl.items
-            if existing.checked
-            and _same_item_name(existing.name, item_name)
-            and _same_optional_text(existing.spec, item_spec)
-            and _same_optional_text(existing.category, item_category)
-        ),
-        None,
-    )
-    if checked_match:
-        checked_match.name = item_name
-        checked_match.spec = item_spec
-        checked_match.category = item_category
-        checked_match.checked = False
-        checked_match.checked_at = None
-        db.commit()
-        db.refresh(checked_match)
-        resp = ShoppingItemResponse.model_validate(checked_match).model_dump(mode="json")
-        broadcast_shopping_event("list", list_id, "item_updated", {"item": resp})
-        dispatch_webhook_event(
+    try:
+        transition = add_or_merge_shopping_item(
+            db,
+            shopping_list=sl,
+            name=payload.name,
+            spec=payload.spec,
+            category=payload.category,
+            added_by_user_id=user.id,
+        )
+    except InvalidShoppingItemName:
+        raise HTTPException(status_code=422, detail="Shopping item name cannot be blank")
+    item = transition.item
+    if transition.action == "created":
+        record_activity(
             db,
             family_id=sl.family_id,
-            event_type="shopping.item.updated",
-            data={"list_id": list_id, "item_id": checked_match.id, "name": checked_match.name, "checked": checked_match.checked},
+            actor_user_id=user.id,
+            actor_display_name=user.display_name,
+            action="added",
+            object_type="shopping_item",
+            object_id=item.id,
+            object_label=item.name,
+            verb="added",
+            object_kind="to shopping",
         )
-        dispatch_shopping_destination_event(
-            family_id=sl.family_id,
-            event_type="shopping.item.changed",
-            title="Shopping item restored",
-            body=f'{user.display_name or "Someone"} restored "{checked_match.name}" on "{sl.name}".',
-            link=f"/shopping?list={list_id}&item={checked_match.id}",
-            source_type="shopping_item",
-            source_id=checked_match.id,
-            action="restored",
-        )
-        return checked_match
-
-    item = ShoppingItem(
-        list_id=list_id,
-        name=item_name,
-        spec=item_spec,
-        category=item_category,
-        added_by_user_id=user.id,
-    )
-    db.add(item)
-    db.flush()
-    record_activity(
-        db,
-        family_id=sl.family_id,
-        actor_user_id=user.id,
-        actor_display_name=user.display_name,
-        action="added",
-        object_type="shopping_item",
-        object_id=item.id,
-        object_label=item.name,
-        verb="added",
-        object_kind="to shopping",
-    )
     db.commit()
     db.refresh(item)
+    created = transition.action == "created"
     broadcast_shopping_event(
         "list",
         list_id,
-        "item_added",
+        "item_added" if created else "item_updated",
         {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
     )
     dispatch_webhook_event(
         db,
         family_id=sl.family_id,
-        event_type="shopping.item.created",
+        event_type="shopping.item.created" if created else "shopping.item.updated",
         data={"list_id": list_id, "item_id": item.id, "name": item.name, "checked": item.checked},
     )
+    if transition.action == "created":
+        title = "Shopping item added"
+        body = f'{user.display_name or "Someone"} added "{item.name}" to "{sl.name}".'
+    elif transition.action == "merged":
+        title = "Shopping item merged"
+        body = f'{user.display_name or "Someone"} merged "{item.name}" on "{sl.name}".'
+    else:
+        title = "Shopping item restored"
+        body = f'{user.display_name or "Someone"} restored "{item.name}" on "{sl.name}".'
     dispatch_shopping_destination_event(
         family_id=sl.family_id,
         event_type="shopping.item.changed",
-        title="Shopping item added",
-        body=f'{user.display_name or "Someone"} added "{item.name}" to "{sl.name}".',
+        title=title,
+        body=body,
         link=f"/shopping?list={list_id}&item={item.id}",
         source_type="shopping_item",
         source_id=item.id,
-        action="created",
+        action=transition.action,
     )
     return item
 
@@ -634,6 +600,13 @@ def update_item(
         item.spec = _clean_optional_text(payload.spec)
     if "category" in fields:
         item.category = _clean_optional_text(payload.category)
+        if item.category is not None:
+            remember_category(
+                db,
+                family_id=sl.family_id,
+                name=item.name,
+                category=item.category,
+            )
     if payload.list_id is not None and payload.list_id != item.list_id:
         target_list = db.query(ShoppingList).filter(ShoppingList.id == payload.list_id).first()
         if not target_list or target_list.family_id != sl.family_id:

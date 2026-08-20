@@ -443,6 +443,7 @@ class TestWeeklyMealPlanShoppingIntegration:
         )
         assert push.status_code == 200, push.json()
         assert push.json()["added_count"] == 5
+        assert push.json()["created_count"] == 5
 
         items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
         pairs = sorted((item["name"], item["spec"]) for item in items)
@@ -453,6 +454,20 @@ class TestWeeklyMealPlanShoppingIntegration:
             ("Milk", "500 ml"),
             ("Sugar", "2 tbsp"),
         ])
+
+        pushed_again = client.post(
+            "/meal-plans/week/add-to-shopping",
+            json={
+                "family_id": family_id,
+                "week_start": "2026-04-13",
+                "shopping_list_id": list_id,
+            },
+            headers=_auth(token),
+        )
+        assert pushed_again.status_code == 200, pushed_again.json()
+        assert pushed_again.json()["added_count"] == 5
+        assert pushed_again.json()["created_count"] == 0
+        assert pushed_again.json()["merged_count"] == 5
 
     def test_push_week_only_uses_selected_family_week_and_target_list_family(self):
         token, family_id = _seed_member("*", "week-scope")
@@ -575,6 +590,20 @@ class TestMealPlanShoppingIntegration:
 
         items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
         assert sorted(i["name"] for i in items) == ["Kartoffeln", "Zwiebeln"]
+
+        pushed_again = client.post(
+            f"/meal-plans/{plan_id}/add-to-shopping",
+            json={"shopping_list_id": list_id, "ingredient_names": ["Zwiebeln", "Kartoffeln"]},
+            headers=_auth(token),
+        )
+        assert pushed_again.status_code == 200, pushed_again.json()
+        assert pushed_again.json()["created_count"] == 0
+        assert pushed_again.json()["merged_count"] == 2
+        merged = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+        assert sorted((item["name"], item["spec"]) for item in merged) == [
+            ("Kartoffeln", "2 kg"),
+            ("Zwiebeln", "4 Stueck"),
+        ]
 
     def test_push_unknown_ingredient_returns_400(self):
         """Reject names that aren't on the meal so this endpoint can't be a backdoor shopping writer."""

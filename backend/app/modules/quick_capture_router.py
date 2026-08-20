@@ -8,6 +8,8 @@ from app.core.deps import current_user, ensure_adult
 from app.core.errors import error_detail
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
+from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item
+from app.core.ws_broadcast import broadcast_shopping_event
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
 from app.models import QuickCaptureItem, ShoppingItem, ShoppingList, Task, User
@@ -88,28 +90,34 @@ def _create_task(db: Session, *, family_id: int, user: User, text: str) -> Task:
     return task
 
 
-def _create_shopping_item(db: Session, *, family_id: int, user: User, text: str) -> tuple[ShoppingItem, ShoppingList, bool]:
+def _create_shopping_item(
+    db: Session,
+    *,
+    family_id: int,
+    user: User,
+    text: str,
+) -> tuple[ShoppingItemTransition, ShoppingList, bool]:
     shopping_list, shopping_list_created = _get_or_create_quick_list(db, family_id, user.id)
-    item = ShoppingItem(
-        list_id=shopping_list.id,
+    transition = add_or_merge_shopping_item(
+        db,
+        shopping_list=shopping_list,
         name=text,
         added_by_user_id=user.id,
     )
-    db.add(item)
-    db.flush()
-    record_activity(
-        db,
-        family_id=family_id,
-        actor_user_id=user.id,
-        actor_display_name=user.display_name,
-        action="added",
-        object_type="shopping_item",
-        object_id=item.id,
-        object_label=item.name,
-        verb="added",
-        object_kind="to shopping",
-    )
-    return item, shopping_list, shopping_list_created
+    if transition.action == "created":
+        record_activity(
+            db,
+            family_id=family_id,
+            actor_user_id=user.id,
+            actor_display_name=user.display_name,
+            action="added",
+            object_type="shopping_item",
+            object_id=transition.item.id,
+            object_label=transition.item.name,
+            verb="added",
+            object_kind="to shopping",
+        )
+    return transition, shopping_list, shopping_list_created
 
 
 def _created_payload(destination: QuickCaptureDestination, created_item: Task | ShoppingItem) -> QuickCaptureResponse:
@@ -123,9 +131,10 @@ def _dispatch_quick_capture_shopping_events(
     family_id: int,
     user: User,
     shopping_list: ShoppingList,
-    item: ShoppingItem,
+    transition: ShoppingItemTransition,
     shopping_list_created: bool,
 ) -> None:
+    item = transition.item
     if shopping_list_created:
         dispatch_shopping_destination_event(
             family_id=family_id,
@@ -137,15 +146,38 @@ def _dispatch_quick_capture_shopping_events(
             source_id=shopping_list.id,
             action="quick_capture_list_created",
         )
+    broadcast_shopping_event(
+        "list",
+        shopping_list.id,
+        "item_added" if transition.action == "created" else "item_updated",
+        {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
+    )
+    action_copy = {
+        "created": (
+            "Shopping item added",
+            f'{user.display_name or "Someone"} added "{item.name}" to "{shopping_list.name}" from quick capture.',
+            "quick_capture_added",
+        ),
+        "merged": (
+            "Shopping item merged",
+            f'{user.display_name or "Someone"} merged "{item.name}" on "{shopping_list.name}" from quick capture.',
+            "quick_capture_merged",
+        ),
+        "restored": (
+            "Shopping item restored",
+            f'{user.display_name or "Someone"} restored "{item.name}" on "{shopping_list.name}" from quick capture.',
+            "quick_capture_restored",
+        ),
+    }[transition.action]
     dispatch_shopping_destination_event(
         family_id=family_id,
         event_type="shopping.item.changed",
-        title="Shopping item added",
-        body=f'{user.display_name or "Someone"} added "{item.name}" to "{shopping_list.name}" from quick capture.',
+        title=action_copy[0],
+        body=action_copy[1],
         link=f"/shopping?list={shopping_list.id}&item={item.id}",
         source_type="shopping_item",
         source_id=item.id,
-        action="quick_capture_added",
+        action=action_copy[2],
     )
 
 
@@ -177,21 +209,22 @@ def create_quick_capture(
         return _created_payload(payload.destination, task)
 
     if payload.destination == QuickCaptureDestination.shopping:
-        item, shopping_list, shopping_list_created = _create_shopping_item(db, family_id=payload.family_id, user=user, text=text)
+        transition, shopping_list, shopping_list_created = _create_shopping_item(db, family_id=payload.family_id, user=user, text=text)
+        item = transition.item
         db.commit()
         db.refresh(item)
         db.refresh(shopping_list)
         dispatch_webhook_event(
             db,
             family_id=payload.family_id,
-            event_type="shopping.item.created",
+            event_type="shopping.item.created" if transition.action == "created" else "shopping.item.updated",
             data={"list_id": item.list_id, "item_id": item.id, "name": item.name, "source": "quick_capture"},
         )
         _dispatch_quick_capture_shopping_events(
             family_id=payload.family_id,
             user=user,
             shopping_list=shopping_list,
-            item=item,
+            transition=transition,
             shopping_list_created=shopping_list_created,
         )
         return _created_payload(payload.destination, item)
@@ -274,7 +307,13 @@ def convert_quick_capture_item(
     if payload.destination == QuickCaptureDestination.task:
         created = _create_task(db, family_id=item.family_id, user=user, text=item.text)
     else:
-        created, shopping_list, shopping_list_created = _create_shopping_item(db, family_id=item.family_id, user=user, text=item.text)
+        shopping_transition, shopping_list, shopping_list_created = _create_shopping_item(
+            db,
+            family_id=item.family_id,
+            user=user,
+            text=item.text,
+        )
+        created = shopping_transition.item
 
     item.status = "converted"
     item.converted_to = payload.destination.value
@@ -284,11 +323,22 @@ def convert_quick_capture_item(
     db.refresh(created)
     if payload.destination == QuickCaptureDestination.shopping and shopping_list is not None:
         db.refresh(shopping_list)
+        dispatch_webhook_event(
+            db,
+            family_id=item.family_id,
+            event_type="shopping.item.created" if shopping_transition.action == "created" else "shopping.item.updated",
+            data={
+                "list_id": created.list_id,
+                "item_id": created.id,
+                "name": created.name,
+                "source": "quick_capture_inbox",
+            },
+        )
         _dispatch_quick_capture_shopping_events(
             family_id=item.family_id,
             user=user,
             shopping_list=shopping_list,
-            item=created,
+            transition=shopping_transition,
             shopping_list_created=shopping_list_created,
         )
     return QuickCaptureConvertResponse(
