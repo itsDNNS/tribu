@@ -939,7 +939,8 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .quick-capture-intro { margin: 4px 0 0; color: var(--text-muted); font-size: 0.84rem; }
 .quick-capture-form { display: grid; gap: var(--space-sm); }
 .quick-capture-form--command { grid-template-columns: minmax(220px, 1fr) auto; align-items: center; gap: 12px; }
-.quick-capture-input { width: 100%; min-height: 44px; max-height: 44px; resize: none; border: 1px solid rgba(120, 130, 180, 0.16); border-radius: 10px; padding: 12px 14px; background: rgba(255, 255, 255, 0.36); color: var(--text-primary); font: inherit; line-height: 1.2; overflow: hidden; }
+.quick-capture-input { width: 100%; min-height: 44px; max-height: 44px; resize: none; border: 1px solid rgba(120, 130, 180, 0.16); border-radius: 10px; padding: 12px 14px; background: var(--surface-raised); color: var(--text-primary); font: inherit; line-height: 1.2; overflow: hidden; }
+.quick-capture-input::placeholder { color: var(--text-muted); opacity: 1; }
 .quick-capture-input:focus { outline: 2px solid rgba(139, 92, 246, 0.24); border-color: rgba(139, 92, 246, 0.36); }
 .quick-capture-actions { display: flex; flex-wrap: nowrap; gap: 10px; justify-content: flex-start; }
 .quick-capture-actions .btn-sm { min-height: 44px; padding: 0 15px; border-radius: 10px; background: var(--surface-raised); border: 1px solid var(--glass-border); color: var(--text-primary); box-shadow: none; white-space: nowrap; }

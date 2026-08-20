@@ -8,6 +8,14 @@ function parseRgb(value) {
   return match.slice(1, 4).map(Number);
 }
 
+function compositeRgb(foreground, background, opacity = 1) {
+  const foregroundRgb = parseRgb(foreground);
+  const backgroundRgb = Array.isArray(background) ? background : parseRgb(background);
+  const alphaMatch = foreground.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\s*\)/);
+  const alpha = (alphaMatch ? Number(alphaMatch[1]) : 1) * opacity;
+  return foregroundRgb.map((channel, index) => (channel * alpha) + (backgroundRgb[index] * (1 - alpha)));
+}
+
 function relativeLuminance([r, g, b]) {
   const [rs, gs, bs] = [r, g, b].map((channel) => {
     const value = channel / 255;
@@ -175,6 +183,41 @@ test.describe('Dashboard', () => {
     await expect(quickCapture.getByRole('button', { name: 'Task' })).toBeEnabled();
     await expect(quickCapture.getByRole('button', { name: 'Shopping' })).toBeEnabled();
     await expect(quickCapture.getByRole('button', { name: 'Note' })).toBeEnabled();
+  });
+
+  test('keeps the quick capture placeholder readable in all themes', async ({ authedPage: page }) => {
+    for (const theme of ['light', 'dark', 'midnight-glass']) {
+      await page.evaluate((themeKey) => {
+        window.localStorage.setItem('tribu_theme', themeKey);
+      }, theme);
+      await page.reload();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme, { timeout: 10000 });
+
+      const input = page.locator('.quick-capture-input');
+      await expect(input).toBeVisible({ timeout: 10000 });
+      const colors = await input.evaluate((element) => {
+        const inputStyle = window.getComputedStyle(element);
+        const placeholderStyle = window.getComputedStyle(element, '::placeholder');
+        const surfaceStyle = window.getComputedStyle(element.closest('.bento-card'));
+        return {
+          inputBackground: inputStyle.backgroundColor,
+          inputColor: inputStyle.color,
+          placeholderColor: placeholderStyle.color,
+          placeholderOpacity: Number(placeholderStyle.opacity),
+          surfaceBackground: surfaceStyle.backgroundColor,
+        };
+      });
+
+      const renderedBackground = compositeRgb(colors.inputBackground, colors.surfaceBackground);
+      const renderedPlaceholder = compositeRgb(colors.placeholderColor, renderedBackground, colors.placeholderOpacity);
+      const ratio = contrastRatio(renderedPlaceholder, renderedBackground);
+      expect(ratio, `${theme} quick capture placeholder contrast`).toBeGreaterThanOrEqual(4.5);
+
+      await input.fill('Readable quick capture text');
+      await expect(input).toHaveValue('Readable quick capture text');
+      const inputRatio = contrastRatio(parseRgb(colors.inputColor), renderedBackground);
+      expect(inputRatio, `${theme} quick capture text contrast`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   test('today status tiles navigate to their owning modules', async ({ authedPage: page }) => {
