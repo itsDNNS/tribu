@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Voer hierboven de server URL in. Uw gebruikersnaam is uw e-mailadres en uw wachtwoord is het persoonlijke toegangstoken.",
   "phone_sync_android_step3": "Schakel na het inloggen de gewenste agenda's en adresboeken in; DAVx5 verzorgt de bidirectionele synchronisatie.",
   "phone_sync_limits_heading": "Bekende limieten",
+  "phone_sync_limit_tasks": "Agenda's en contacten synchroniseren in beide richtingen. Tribu-taken, iOS-herinneringen en VTODO worden momenteel niet gesynchroniseerd.",
   "phone_sync_limit_incremental": "Synchronisatietokens worden nog niet gehonoreerd; klanten vallen bij elk conflict terug op een volledige vernieuwing. Prestatie, niet correctheid.",
   "phone_sync_limit_fields": "Tribu modelleert alleen naam, e-mailadres, telefoonnummer en verjaardag per contact. Eventuele extra velden (ORG, ADR, notities, etc.) zijn intact, maar verschijnen niet in de gebruikersinterface van Tribu.",
   "phone_sync_coexist_heading": "Tribu gebruiken naast Apple, Google of Outlook",

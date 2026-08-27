@@ -1,14 +1,15 @@
-"""Phase B1: read-only CalDAV storage integration tests.
+"""CalDAV storage integration tests.
 
 Seeds a user, family membership, and a handful of calendar events,
 then exercises the DAV mount with CalDAV-specific PROPFIND and REPORT
-queries. Confirms that events surface as VEVENT items and that
-client write attempts are rejected with 403 until Phase B2.
+queries. Confirms that VEVENT items round-trip and unsupported writes
+are rejected without changing stored events.
 """
 from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import os
 import tempfile
 
@@ -377,6 +378,119 @@ class TestCalDAVRead:
         )
         # Radicale maps a ValueError from storage to a 4xx.
         assert 400 <= put.status_code < 500, put.text
+
+    def test_vtodo_put_is_rejected_without_mutating_events(self, app_under_test, seeded, caplog):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        headers = {
+            "Authorization": _basic(EMAIL, token),
+            "Content-Type": "text/calendar",
+        }
+        todo = (
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
+            "BEGIN:VTODO\r\nUID:todo@example.com\r\n"
+            "DTSTAMP:20260101T000000Z\r\nDUE:20260601T120000Z\r\n"
+            "SUMMARY:Buy milk\r\nEND:VTODO\r\nEND:VCALENDAR\r\n"
+        )
+        db = SessionLocal()
+        try:
+            before = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).count()
+        finally:
+            db.close()
+
+        with caplog.at_level(logging.WARNING):
+            put = client.put(
+                f"/dav/{EMAIL}/cal-{family_id}/todo.ics",
+                headers=headers,
+                content=todo,
+            )
+
+        assert 400 <= put.status_code < 500, put.text
+        assert "PUT" in caplog.text
+        assert f"cal-{family_id}/todo.ics" in caplog.text
+        assert "tasks" in caplog.text.lower()
+        assert "reminders" in caplog.text.lower()
+        assert "not supported" in caplog.text.lower()
+        db = SessionLocal()
+        try:
+            assert db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).count() == before
+            assert (
+                db.query(CalendarEvent)
+                .filter(CalendarEvent.family_id == family_id, CalendarEvent.dav_href == "todo.ics")
+                .first()
+                is None
+            )
+        finally:
+            db.close()
+
+    def test_whole_collection_put_is_rejected_without_mutation(self, app_under_test, seeded, caplog):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        headers = {
+            "Authorization": _basic(EMAIL, token),
+            "Content-Type": "text/calendar",
+        }
+        replacement = (
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
+            "BEGIN:VEVENT\r\nUID:replacement@example.com\r\n"
+            "DTSTAMP:20260101T000000Z\r\n"
+            "DTSTART:20260601T120000Z\r\nDTEND:20260601T130000Z\r\n"
+            "SUMMARY:Replacement event\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        )
+        db = SessionLocal()
+        try:
+            before = [
+                (event.id, event.title, event.dav_href)
+                for event in db.query(CalendarEvent)
+                .filter(CalendarEvent.family_id == family_id)
+                .order_by(CalendarEvent.id)
+                .all()
+            ]
+        finally:
+            db.close()
+
+        with caplog.at_level(logging.WARNING):
+            put = client.put(
+                f"/dav/{EMAIL}/cal-{family_id}/",
+                headers=headers,
+                content=replacement,
+            )
+
+        assert 400 <= put.status_code < 500, put.text
+        assert "PUT" in caplog.text
+        assert f"cal-{family_id}" in caplog.text
+        assert "managed by Tribu" in caplog.text
+        db = SessionLocal()
+        try:
+            after = [
+                (event.id, event.title, event.dav_href)
+                for event in db.query(CalendarEvent)
+                .filter(CalendarEvent.family_id == family_id)
+                .order_by(CalendarEvent.id)
+                .all()
+            ]
+        finally:
+            db.close()
+        assert after == before
+
+    def test_collection_delete_is_rejected_without_mutation(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token)}
+        db = SessionLocal()
+        try:
+            before = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).count()
+        finally:
+            db.close()
+
+        delete = client.request("DELETE", f"/dav/{EMAIL}/cal-{family_id}/", headers=auth)
+
+        assert 400 <= delete.status_code < 500, delete.text
+        db = SessionLocal()
+        try:
+            assert db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).count() == before
+        finally:
+            db.close()
 
 
 def _seeded_ids(family_id: int) -> tuple[int, int]:

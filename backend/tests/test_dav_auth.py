@@ -1,9 +1,4 @@
-"""Integration tests for the Radicale mount and PAT auth plugin.
-
-Only the auth path is exercised here; Phase B will add tests around
-the actual CalDAV storage plugin that projects Tribu's calendar
-events onto DAV collections.
-"""
+"""Integration tests for the Radicale mount and PAT auth plugin."""
 from __future__ import annotations
 
 import base64
@@ -17,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.database import Base, SessionLocal, engine
 from app.core.clock import utcnow
-from app.models import PersonalAccessToken, User
+from app.models import Family, Membership, PersonalAccessToken, User
 from app.schemas import PATResponse
 from app.security import hash_password, PAT_PREFIX
 
@@ -70,6 +65,20 @@ def _pat_by_token(TestSession, token: str) -> PersonalAccessToken:
         assert pat is not None
         db.expunge(pat)
         return pat
+    finally:
+        db.close()
+
+
+def _add_family_membership(TestSession, email: str) -> int:
+    db = TestSession()
+    try:
+        user = db.query(User).filter(User.email == email).one()
+        family = Family(name=f"{email} family")
+        db.add(family)
+        db.flush()
+        db.add(Membership(user_id=user.id, family_id=family.id, role="member", is_adult=True))
+        db.commit()
+        return family.id
     finally:
         db.close()
 
@@ -209,16 +218,21 @@ class TestDavAuth:
 
     def test_wildcard_scope_works(self, app_under_test):
         app, TestSession = app_under_test
+        email = "dav-star@example.com"
         token = _seed_pat(
             TestSession,
-            email="dav-star@example.com",
+            email=email,
             scopes="*",
             suffix="star",
         )
+        family_id = _add_family_membership(TestSession, email)
         client = TestClient(app)
-        headers = {"Authorization": _basic("dav-star@example.com", token)}
-        resp = _propfind(client, "/dav/dav-star@example.com/", headers=headers)
-        assert resp.status_code == 207
+        headers = {"Authorization": _basic(email, token)}
+        allowed = _propfind(client, f"/dav/{email}/cal-{family_id}/", headers=headers)
+        assert allowed.status_code == 207
+
+        denied = _propfind(client, f"/dav/{email}/cal-{family_id + 100000}/", headers=headers)
+        assert denied.status_code == 403
 
     def test_read_only_scope_cannot_write(self, app_under_test):
         """A PAT with only calendar:read can PROPFIND but not PUT."""

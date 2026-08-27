@@ -102,6 +102,7 @@
   "phone_sync_android_step2": "Saisissez l’URL du serveur ci-dessus. Votre nom d’utilisateur est votre e-mail et votre mot de passe est le jeton d’accès personnel.",
   "phone_sync_android_step3": "Après la connexion, activez les calendriers et carnets d’adresses souhaités ; DAVx5 gère la synchronisation bidirectionnelle.",
   "phone_sync_limits_heading": "Limites connues",
+  "phone_sync_limit_tasks": "Les calendriers et les contacts se synchronisent dans les deux sens. Les tâches Tribu, les rappels iOS et VTODO ne sont pas synchronisés pour le moment.",
   "phone_sync_limit_incremental": "Les jetons de synchronisation ne sont pas encore pris en compte ; les clients reviennent à une actualisation complète à chaque conflit. Cela affecte les performances, pas l’exactitude.",
   "phone_sync_limit_fields": "Tribu ne modélise que le nom, l’e-mail, le téléphone et l’anniversaire par contact. Les champs supplémentaires (ORG, ADR, notes, etc.) sont conservés à l’aller-retour mais n’apparaissent pas dans l’interface de Tribu.",
   "phone_sync_coexist_heading": "Utiliser Tribu avec Apple, Google ou Outlook",

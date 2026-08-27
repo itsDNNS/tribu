@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Írja be fent a URL szervert. A felhasználóneved az e-mail címed, a jelszavad pedig a Personal Access Token.",
   "phone_sync_android_step3": "A bejelentkezés után engedélyezze a kívánt naptárakat és címjegyzékeket; A DAVx5 kezeli a kétirányú szinkronizálást.",
   "phone_sync_limits_heading": "Ismert határok",
+  "phone_sync_limit_tasks": "A naptárak és névjegyek mindkét irányban szinkronizálódnak. A Tribu-feladatok, az iOS-emlékeztetők és a VTODO jelenleg nem szinkronizálódnak.",
   "phone_sync_limit_incremental": "A szinkronizálási tokenek még nincsenek tiszteletben tartva; az ügyfelek minden konfliktus esetén teljes frissítésre térnek vissza. Teljesítmény, nem korrektség.",
   "phone_sync_limit_fields": "A Tribu névjegyenként csak nevet, e-mail címet, telefonszámot és születésnapot modellez. Az esetleges extra mezők (ORG, ADR, megjegyzések stb.) érintetlenek, de nem jelennek meg a Tribu felhasználói felületen.",
   "phone_sync_coexist_heading": "A Tribu használata az Apple, a Google vagy az Outlook mellett",

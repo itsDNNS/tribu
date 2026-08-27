@@ -7,8 +7,8 @@ token against ``personal_access_tokens`` and confirms the token's
 owner matches the login email. It also enforces scope: the token
 must carry at least one of ``calendar:read``, ``calendar:write``,
 ``contacts:read``, ``contacts:write`` (or the ``*`` wildcard). This
-is a coarse gate; per-collection scope enforcement lands with the
-storage plugin in the next phases.
+is a coarse gate; the rights plugin applies per-collection scope and
+family-membership checks.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from radicale.log import logger
 from app.core.clock import to_utc_naive, utcnow
 from app.core.scopes import has_scope, parse_scopes
 from app.database import SessionLocal
-from app.models import PersonalAccessToken, User
+from app.models import Membership, PersonalAccessToken, User
 from app.security import PAT_PREFIX, hash_pat, pat_lookup_key, verify_pat
 from .rights_plugin import remember_scopes
 
@@ -96,6 +96,14 @@ class Auth(BaseAuth):
                 _record_dav_failure(pat, "scope_mismatch")
                 db.commit()
                 return ""
+            family_ids = {
+                int(family_id)
+                for (family_id,) in (
+                    db.query(Membership.family_id)
+                    .filter(Membership.user_id == user.id)
+                    .all()
+                )
+            }
             # Lazy-migrate legacy SHA-256 rows to bcrypt. token_lookup
             # already matches (migration 0027 backfilled it from
             # token_hash), so nothing more to write on the index side.
@@ -108,7 +116,7 @@ class Auth(BaseAuth):
             # run back-to-back on the same thread per request, so a
             # threading.local context is the narrowest handoff that
             # does not require patching Radicale's plugin contract.
-            remember_scopes(user.email, user.id, granted)
+            remember_scopes(user.email, user.id, granted, family_ids)
             return user.email
 
 

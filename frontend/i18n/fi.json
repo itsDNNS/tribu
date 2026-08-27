@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Kirjoita yllä oleva palvelin URL. Käyttäjätunnuksesi on sähköpostiosoitteesi ja salasanasi Personal Access Token.",
   "phone_sync_android_step3": "Ota haluamasi kalenterit ja osoitekirjat käyttöön kirjautumisen jälkeen. DAVx5 hoitaa kaksisuuntaisen synkronoinnin.",
   "phone_sync_limits_heading": "Tunnetut rajat",
+  "phone_sync_limit_tasks": "Kalenterit ja yhteystiedot synkronoituvat molempiin suuntiin. Tribu-tehtäviä, iOS-muistutuksia ja VTODO-tietoja ei tällä hetkellä synkronoida.",
   "phone_sync_limit_incremental": "Synkronointitokeneita ei ole vielä kunnioitettu; asiakkaat palaavat täyden päivityksen jokaiseen konfliktiin. Suorituskyky, ei oikeellisuus.",
   "phone_sync_limit_fields": "Tribu mallintaa vain nimen, sähköpostiosoitteen, puhelinnumeron ja syntymäpäivän yhteystietoa kohti. Kaikki ylimääräiset kentät (ORG, ADR, muistiinpanot jne.) edestakaisin, mutta ne eivät näy Tribu-käyttöliittymässä.",
   "phone_sync_coexist_heading": "Tribu:n käyttö Applen, Googlen tai Outlookin kanssa",

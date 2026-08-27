@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Gore unesite poslužitelj URL. Vaše korisničko ime je vaša e-pošta, a vaša lozinka je osobni pristupni token.",
   "phone_sync_android_step3": "Nakon prijave omogućite kalendare i adresare koje želite; DAVx5 upravlja dvosmjernom sinkronizacijom.",
   "phone_sync_limits_heading": "Poznate granice",
+  "phone_sync_limit_tasks": "Kalendari i kontakti sinkroniziraju se u oba smjera. Tribu zadaci, iOS podsjetnici i VTODO trenutačno se ne sinkroniziraju.",
   "phone_sync_limit_incremental": "Tokeni sinkronizacije još nisu poštovani; klijenti se vraćaju na potpuno osvježavanje za svaki sukob. Izvedba, a ne ispravnost.",
   "phone_sync_limit_fields": "Tribu prikazuje samo ime modela, e-poštu, telefon i rođendan po kontaktu. Sva dodatna polja (ORG, ADR, bilješke, itd.) vraćaju se netaknuta, ali se ne pojavljuju u korisničkom sučelju Tribu.",
   "phone_sync_coexist_heading": "Korištenje Tribu uz Apple, Google ili Outlook",
