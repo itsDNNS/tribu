@@ -63,6 +63,16 @@ describe('PhoneSyncTab', () => {
     ).toBeInTheDocument();
   });
 
+  test('states that task and reminder sync is not supported', async () => {
+    mockAppState = baseState();
+
+    render(<PhoneSyncTab />);
+
+    expect(
+      await screen.findByText(/Tribu-Aufgaben, iOS-Erinnerungen und VTODO werden derzeit nicht synchronisiert/i),
+    ).toBeInTheDocument();
+  });
+
   test('shows DAV token health without exposing raw failure details', async () => {
   api.apiGetTokens.mockResolvedValue({
     ok: true,

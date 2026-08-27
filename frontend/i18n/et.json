@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Sisestage ülal server URL. Teie kasutajanimi on teie e-posti aadress ja teie parool on isiklik juurdepääsuluba.",
   "phone_sync_android_step3": "Pärast sisselogimist lubage soovitud kalendrid ja aadressiraamatud; DAVx5 tegeleb kahesuunalise sünkroonimisega.",
   "phone_sync_limits_heading": "Teadaolevad piirid",
+  "phone_sync_limit_tasks": "Kalendreid ja kontakte sünkroonitakse mõlemas suunas. Tribu ülesandeid, iOS-i meeldetuletusi ja VTODO-d praegu ei sünkroonita.",
   "phone_sync_limit_incremental": "Sünkroonimismärke pole veel austatud; kliendid saavad iga konflikti korral täieliku värskenduse. Toimivus, mitte korrektsus.",
   "phone_sync_limit_fields": "Tribu modelleerib ainult ühe kontakti nime, e-posti aadressi, telefoni ja sünnipäeva. Kõik lisaväljad (ORG, ADR, märkmed jne) on edasi-tagasi terved, kuid neid ei kuvata kasutajaliideses Tribu.",
   "phone_sync_coexist_heading": "Tribu kasutamine koos Apple'i, Google'i või Outlookiga",

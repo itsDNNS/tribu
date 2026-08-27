@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Indtast serveren URL ovenfor. Dit brugernavn er din e-mail, og din adgangskode er det personlige adgangstoken.",
   "phone_sync_android_step3": "Efter login skal du aktivere de ønskede kalendere og adressebøger; DAVx5 håndterer tovejssynkronisering.",
   "phone_sync_limits_heading": "Kendte grænser",
+  "phone_sync_limit_tasks": "Kalendere og kontakter synkroniseres i begge retninger. Tribu-opgaver, iOS-påmindelser og VTODO synkroniseres ikke i øjeblikket.",
   "phone_sync_limit_incremental": "Synkroniseringstokens er endnu ikke hædret; klienter falder tilbage til en fuld genopfriskning på hver konflikt. Ydeevne, ikke korrekthed.",
   "phone_sync_limit_fields": "Tribu modellerer kun navn, e-mail, telefon og fødselsdag pr. kontakt. Eventuelle ekstra felter (ORG, ADR, noter osv.) tur/retur intakte, men vises ikke i Tribu UI.",
   "phone_sync_coexist_heading": "Brug af Tribu sammen med Apple, Google eller Outlook",

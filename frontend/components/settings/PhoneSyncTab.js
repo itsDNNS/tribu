@@ -278,6 +278,7 @@ export default function PhoneSyncTab() {
 
         <div className="sync-section-heading">{t(messages, 'phone_sync_limits_heading')}</div>
         <ul className="sync-steps sync-limits">
+          <li>{t(messages, 'phone_sync_limit_tasks')}</li>
           <li>{t(messages, 'phone_sync_limit_incremental')}</li>
           <li>{t(messages, 'phone_sync_limit_fields')}</li>
         </ul>

@@ -1,11 +1,4 @@
-"""Build a ready-to-mount Radicale WSGI application.
-
-Phase A uses Radicale's ``multifilesystem`` storage in a configurable
-folder so the HTTP plumbing, PAT auth plugin, and scope-aware rights
-plugin can be exercised end-to-end. The follow-up phases replace the
-storage type with a custom plugin that projects Tribu's
-``calendar_events`` and ``contacts`` tables.
-"""
+"""Build the ready-to-mount Radicale WSGI application."""
 from __future__ import annotations
 
 import logging
@@ -80,6 +73,10 @@ def _build_configuration() -> Configuration:
             # read/write permissions so a ``calendar:read`` token can
             # only read.
             "type": Rights,
+            # Families own their DAV collections. Item DELETE remains
+            # available, but Radicale rejects collection DELETE before
+            # it reaches storage.
+            "permit_delete_collection": False,
         },
         "storage": {
             # DB-backed storage plugin that surfaces each Tribu family

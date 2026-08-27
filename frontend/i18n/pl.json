@@ -102,6 +102,7 @@
   "phone_sync_android_step2": "Wpisz powyższy adres URL serwera. Nazwa użytkownika to Twój email, a hasło to osobisty token dostępu.",
   "phone_sync_android_step3": "Po zalogowaniu włącz wybrane kalendarze i książki adresowe; DAVx5 obsłuży synchronizację dwukierunkową.",
   "phone_sync_limits_heading": "Znane ograniczenia",
+  "phone_sync_limit_tasks": "Kalendarze i kontakty synchronizują się w obu kierunkach. Zadania Tribu, Przypomnienia iOS i VTODO nie są obecnie synchronizowane.",
   "phone_sync_limit_incremental": "Tokeny synchronizacji nie są jeszcze honorowane; klienci wracają do pełnego odświeżenia przy każdym konflikcie. To kwestia wydajności, nie poprawności.",
   "phone_sync_limit_fields": "Tribu modeluje dla kontaktu tylko imię i nazwisko, email, telefon oraz urodziny. Dodatkowe pola (ORG, ADR, notatki itd.) przechodzą w obie strony bez zmian, ale nie pojawiają się w interfejsie Tribu.",
   "phone_sync_coexist_heading": "Używanie Tribu obok Apple, Google lub Outlooka",

@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Aukščiau įveskite serverį URL. Jūsų vartotojo vardas yra jūsų el. paštas, o slaptažodis yra asmeninės prieigos raktas.",
   "phone_sync_android_step3": "Prisijungę įgalinkite norimus kalendorius ir adresų knygas; DAVx5 tvarko dvikryptį sinchronizavimą.",
   "phone_sync_limits_heading": "Žinomos ribos",
+  "phone_sync_limit_tasks": "Kalendoriai ir kontaktai sinchronizuojami abiem kryptimis. „Tribu“ užduotys, „iOS“ priminimai ir VTODO šiuo metu nesinchronizuojami.",
   "phone_sync_limit_incremental": "Sinchronizavimo žetonai dar nepaisyti; Klientai grįžta į visišką atnaujinimą kiekvieno konflikto metu. Našumas, o ne teisingumas.",
   "phone_sync_limit_fields": "Tribu modeliuoja tik vieno kontakto vardą, el. pašto adresą, telefoną ir gimimo datą. Visi papildomi laukai (ORG, ADR, pastabos ir kt.) nepažeisti, bet nerodomi Tribu vartotojo sąsajoje.",
   "phone_sync_coexist_heading": "Tribu naudojimas kartu su Apple, Google ar Outlook",

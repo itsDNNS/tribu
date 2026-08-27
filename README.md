@@ -92,7 +92,7 @@ The README keeps one current visual proof asset: the Shared Home Display above. 
 
 ## Phone Sync
 
-Tribu supports CalDAV and CardDAV for bidirectional phone sync, so calendars and contacts can work with mobile devices and DAV-compatible clients.
+Tribu supports bidirectional calendar and contact sync over CalDAV and CardDAV. Tribu Tasks, iOS Reminders, and VTODO are not currently synced.
 
 **Works with:**
 

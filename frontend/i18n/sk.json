@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Vyššie zadajte server URL. Vaše používateľské meno je váš e-mail a vaše heslo je osobný prístupový token.",
   "phone_sync_android_step3": "Po prihlásení povoľte požadované kalendáre a adresáre; DAVx5 sa stará o obojsmernú synchronizáciu.",
   "phone_sync_limits_heading": "Známe limity",
+  "phone_sync_limit_tasks": "Kalendáre a kontakty sa synchronizujú oboma smermi. Úlohy Tribu, Pripomienky iOS a VTODO sa momentálne nesynchronizujú.",
   "phone_sync_limit_incremental": "Synchronizačné tokeny ešte nie sú rešpektované; klienti sa pri každom konflikte vrátia k úplnému obnoveniu. Výkon, nie korektnosť.",
   "phone_sync_limit_fields": "Tribu iba modelom meno, e-mail, telefón a dátum narodenia na kontakt. Akékoľvek ďalšie polia (ORG, ADR, poznámky atď.) sú neporušené, ale nezobrazujú sa v používateľskom rozhraní Tribu.",
   "phone_sync_coexist_heading": "Používanie Tribu spolu so spoločnosťami Apple, Google alebo Outlook",

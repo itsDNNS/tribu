@@ -18,6 +18,19 @@ async function openAccountSettings(page) {
   return birthdateInput;
 }
 
+async function openPhoneSyncSettings(page) {
+  await navigateTo(page, 'Settings');
+
+  const mobileItem = page.locator('.settings-mobile-item', { hasText: 'Phone Sync' });
+  if (await mobileItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await mobileItem.click();
+  } else {
+    await page.locator('.settings-sidebar-item', { hasText: 'Phone Sync' }).click();
+  }
+
+  await expect(page.locator('.settings-section-title', { hasText: 'Phone Sync' })).toBeVisible({ timeout: 10000 });
+}
+
 test.describe('Settings', () => {
   test('open settings and see account tab', async ({ authedPage: page, testUser }) => {
     await navigateTo(page, 'Settings');
@@ -59,6 +72,15 @@ test.describe('Settings', () => {
     await reloadedBirthdateInput.blur();
     await clearBirthdate;
     await expect(reloadedBirthdateInput).toHaveValue('');
+  });
+
+  test('states that Tasks, iOS Reminders, and VTODO do not sync', async ({ authedPage: page }) => {
+    await openPhoneSyncSettings(page);
+
+    const limits = page.locator('.sync-limits');
+    await expect(limits).toContainText('Tribu Tasks');
+    await expect(limits).toContainText('iOS Reminders');
+    await expect(limits).toContainText('VTODO');
   });
 
   test('keeps Account settings focused on preference selectors without duplicate pack inventory', async ({ authedPage: page }) => {

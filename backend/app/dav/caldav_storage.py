@@ -1,13 +1,12 @@
 """Database-backed CalDAV storage plugin.
 
 Maps each Tribu family the authenticated user belongs to onto one
-Radicale calendar collection at ``/<user_email>/family-<family_id>/``.
+Radicale calendar collection at ``/<user_email>/cal-<family_id>/``.
 Calendar events live at ``tribu-event-<id>.ics`` inside the collection.
 
-Phase B1 is read-only: ``upload``, ``delete``, ``set_meta`` and
-``create_collection`` raise ``PermissionError`` (clients see 403).
-Phase B2 turns the plugin bidirectional by parsing uploaded VEVENTs
-back into ``CalendarEvent`` rows and handling DELETE.
+VEVENT items and vCards sync bidirectionally. Tribu-managed collection
+changes and unsupported calendar component types are rejected through
+Radicale's handled ``ValueError`` path.
 """
 from __future__ import annotations
 
@@ -241,7 +240,7 @@ class CalendarCollection(BaseCollection):
         token = f"http://radicale.org/ns/sync/{self._ctag()}"
         return token, hrefs
 
-    # ── writes (Phase B2) ─────────────────────────────────
+    # ── writes ────────────────────────────────────────────
 
     def upload(self, href: str, item: "radicale_item.Item") -> Tuple["radicale_item.Item", Optional["radicale_item.Item"]]:
         """PUT ``href`` to write ``item``.
@@ -250,6 +249,13 @@ class CalendarCollection(BaseCollection):
         prior representation at the same href when the PUT overwrites an
         existing row, or ``None`` for a fresh create.
         """
+        component_name = getattr(item, "component_name", "")
+        if component_name == "VTODO":
+            raise ValueError(
+                "VTODO is not supported: Tribu Tasks and iOS Reminders do not currently sync over DAV"
+            )
+        if component_name != "VEVENT":
+            raise ValueError("Unsupported calendar component; only VEVENT can be stored")
         ics_text = getattr(item, "text", None) or item.serialize()
         uid = getattr(item, "uid", None) or ""
         valid, errors = ics_to_event_dicts(ics_text, self._family_id, current_user_id())
@@ -319,7 +325,7 @@ class CalendarCollection(BaseCollection):
         """DELETE ``href``. Radicale calls with ``href=None`` to drop the
         whole collection, which Tribu manages outside DAV so we refuse."""
         if href is None:
-            raise PermissionError("Collections are managed by Tribu, not DAV")
+            raise ValueError("Calendar collections are managed by Tribu, not DAV")
         with _db() as db:
             ev = self._find_event_by_href_scoped(db, href)
             if ev is None:
@@ -329,7 +335,8 @@ class CalendarCollection(BaseCollection):
             db.commit()
 
     def set_meta(self, props: Mapping[str, str]) -> None:
-        # No-op: metadata is derived from the family row.
+        # Display metadata is derived from the family row. DAV clients
+        # may still send harmless collection property updates during setup.
         return None
 
     # ── helpers ───────────────────────────────────────────
@@ -502,12 +509,12 @@ class Storage(BaseStorage):
             yield
 
     def create_collection(self, href, items=None, props=None):
-        raise PermissionError(
+        raise ValueError(
             "Families and their calendars are managed by Tribu, not DAV"
         )
 
     def move(self, item, to_collection, to_href) -> None:
-        raise PermissionError("DAV MOVE is not supported in Phase B1")
+        raise ValueError("DAV MOVE is not supported")
 
     def verify(self) -> bool:
         return True
@@ -695,7 +702,7 @@ class AddressBookCollection(BaseCollection):
 
     def delete(self, href: Optional[str] = None) -> None:
         if href is None:
-            raise PermissionError("Address books are managed by Tribu, not DAV")
+            raise ValueError("Address books are managed by Tribu, not DAV")
         with _db() as db:
             c = self._find_contact_by_href_scoped(db, href)
             if c is None:
@@ -706,6 +713,8 @@ class AddressBookCollection(BaseCollection):
         cache.invalidate_pattern(f"tribu:dashboard:{self._family_id}:*")
 
     def set_meta(self, props: Mapping[str, str]) -> None:
+        # Display metadata is derived from the family row. DAV clients
+        # may still send harmless collection property updates during setup.
         return None
 
     # helpers ---
@@ -796,10 +805,10 @@ class _PrincipalCollection(BaseCollection):
     def set_meta(self, props): return None
 
     def upload(self, href, item):
-        raise PermissionError("Principal home is read-only")
+        raise ValueError("Principal home is read-only")
 
     def delete(self, href=None):
-        raise PermissionError("Principal home is read-only")
+        raise ValueError("Principal home is read-only")
 
     def sync(self, old_token: str = ""):
         return "http://radicale.org/ns/sync/principal", []
@@ -841,10 +850,10 @@ class _RootCollection(BaseCollection):
         return None
 
     def upload(self, href, item):
-        raise PermissionError("DAV root is read-only")
+        raise ValueError("DAV root is read-only")
 
     def delete(self, href=None):
-        raise PermissionError("DAV root is read-only")
+        raise ValueError("DAV root is read-only")
 
     def sync(self, old_token: str = ""):
         return "http://radicale.org/ns/sync/root", []

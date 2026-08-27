@@ -103,6 +103,7 @@
   "phone_sync_android_step2": "Cuir isteach an freastalaí URL thuas. Is é d’ainm úsáideora do r-phost, agus is é an Comhartha Rochtana Pearsanta do phasfhocal.",
   "phone_sync_android_step3": "Tar éis síniú isteach, cumasaigh na féilirí agus na leabhair seoltaí atá uait; Láimhseálann DAVx5 an sioncronú déthreo.",
   "phone_sync_limits_heading": "Teorainneacha aitheanta",
+  "phone_sync_limit_tasks": "Sioncronaítear féilirí agus teagmhálaithe sa dá threo. Ní shioncronaítear Tascanna Tribu, Meabhrúcháin iOS ná VTODO faoi láthair.",
   "phone_sync_limit_incremental": "Ní thugtar onóir fós do chomharthaí sioncronaithe; titeann cliaint ar ais chuig athnuachan iomlán ar gach coinbhleacht. Feidhmíocht, ní cruinneas.",
   "phone_sync_limit_fields": "Tribu samhlacha amháin ainm, ríomhphost, guthán, agus lá breithe gach teagmhála. Aon réimsí breise (ORG, ADR, nótaí, etc.) turas cruinn slán ach níl siad le feiceáil san Chomhéadain Tribu.",
   "phone_sync_coexist_heading": "Ag baint úsáide as Tribu taobh le Apple, Google, nó Outlook",
