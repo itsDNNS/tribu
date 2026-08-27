@@ -563,10 +563,11 @@ class CalendarSubscriptionResponse(BaseModel):
 class TaskCreate(BaseModel):
     """Create a new task."""
     family_id: int = Field(..., description="Family ID")
-    title: str = Field(min_length=1, max_length=200, description="Task title")
+    title: str = Field(min_length=1, max_length=240, description="Task title")
     description: Optional[str] = Field(None, description="Task description")
     priority: str = Field("normal", description="Priority: 'low', 'normal', or 'high'")
     due_date: Optional[datetime] = Field(None, description="Due date (ISO 8601)")
+    due_is_date: bool = Field(False, description="Whether the due date has date-only precision")
     recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
     assigned_to_user_id: Optional[int] = Field(None, description="User ID to assign the task to")
     token_reward_amount: Optional[int] = Field(None, ge=0, description="Tokens awarded on completion")
@@ -579,11 +580,12 @@ class TaskCreate(BaseModel):
 
 class TaskUpdate(BaseModel):
     """Update an existing task (partial update)."""
-    title: Optional[str] = Field(None, min_length=1, max_length=200, description="Task title")
+    title: Optional[str] = Field(None, min_length=1, max_length=240, description="Task title")
     description: Optional[str] = Field(None, description="Task description")
     status: Optional[str] = Field(None, description="Status: 'open' or 'done'")
     priority: Optional[str] = Field(None, description="Priority: 'low', 'normal', or 'high'")
     due_date: Optional[datetime] = Field(None, description="Due date")
+    due_is_date: Optional[bool] = Field(None, description="Whether the due date has date-only precision")
     recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
     assigned_to_user_id: Optional[int] = Field(None, description="Assigned user ID")
     token_reward_amount: Optional[int] = Field(None, ge=0, description="Tokens awarded on completion")
@@ -601,10 +603,12 @@ class TaskResponse(BaseModel):
     status: str = Field(..., description="Status: 'open' or 'done'")
     priority: str = Field(..., description="Priority: 'low', 'normal', or 'high'")
     due_date: Optional[datetime] = Field(None, description="Due date")
+    due_is_date: bool = Field(False, description="Whether the due date has date-only precision")
     recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
     assigned_to_user_id: Optional[int] = Field(None, description="Assigned user ID")
     created_by_user_id: Optional[int] = Field(None, description="Creator user ID")
     created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
     completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
     token_reward_amount: Optional[int] = Field(None, description="Tokens awarded on completion")
     token_require_confirmation: bool = Field(True, description="Require adult confirmation")

@@ -8,7 +8,7 @@ tightens that by reading the PAT scopes captured by the auth plugin
 (on a ``threading.local``) and returning only the permissions the
 scopes actually grant:
 
-* ``*`` -> ``rRwW`` (full, within the user's families).
+* ``*`` -> ``rRwW`` for the existing calendar/contact collections only.
 * any ``calendar:write`` / ``contacts:write`` -> ``rRwW`` (full).
 * any ``calendar:read`` / ``contacts:read`` -> ``rR`` (read only).
 * otherwise -> ``""`` (denied).
@@ -67,6 +67,11 @@ def current_user_login() -> str:
     return str(user)
 
 
+def current_scopes() -> Set[str]:
+    """Return a defensive copy of the authenticated PAT's literal scopes."""
+    return set(getattr(_context, "scopes", set()))
+
+
 def forget_scopes() -> None:
     for attr in ("user", "user_id", "scopes", "family_ids"):
         if hasattr(_context, attr):
@@ -77,11 +82,13 @@ CALENDAR_READ_SCOPES = {"calendar:read", "calendar:write"}
 CALENDAR_WRITE_SCOPES = {"calendar:write"}
 CONTACTS_READ_SCOPES = {"contacts:read", "contacts:write"}
 CONTACTS_WRITE_SCOPES = {"contacts:write"}
+TASK_READ_SCOPES = {"tasks:read", "tasks:write"}
+TASK_WRITE_SCOPES = {"tasks:write"}
 
 
 def _collection_family(segment: str) -> tuple[str | None, int | None]:
     """Parse an exact Tribu collection segment into kind and family id."""
-    for prefix, kind in (("cal-", "calendar"), ("book-", "contacts")):
+    for prefix, kind in (("cal-", "calendar"), ("book-", "contacts"), ("task-", "tasks")):
         if not segment.startswith(prefix):
             continue
         suffix = segment[len(prefix) :]
@@ -122,6 +129,15 @@ class Rights(BaseRights):
         family_ids: Set[int] = getattr(_context, "family_ids", set())
         if kind is None or family_id is None or family_id not in family_ids:
             return ""
+        if kind == "tasks":
+            # Deliberately literal: legacy wildcard PATs must never discover
+            # or access VTODO collections.
+            if scopes & TASK_WRITE_SCOPES:
+                return "rRwW"
+            if scopes & TASK_READ_SCOPES:
+                return "rR"
+            return ""
+
         if "*" in scopes:
             return "rRwW"
 

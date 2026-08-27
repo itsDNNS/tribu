@@ -28,7 +28,8 @@ from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.vcard_utils import contact_to_vcard, contacts_to_vcards, vcard_to_contact_dict
 from app.database import SessionLocal
 from app.models import CalendarEvent, Contact, Family, Membership, User
-from .rights_plugin import current_user_id, current_user_login
+from .rights_plugin import current_scopes, current_user_id, current_user_login
+from .task_collection import TASK_PREFIX, TaskCollection
 
 
 def _db():
@@ -118,10 +119,17 @@ def _parse_collection_segment(segment: str) -> Tuple[Optional[str], Optional[int
     ``kind`` is ``"calendar"`` or ``"addressbook"``; ``(None, None)``
     indicates the segment is not a Tribu-managed collection.
     """
-    for prefix, kind in ((CALENDAR_PREFIX, "calendar"), (ADDRESSBOOK_PREFIX, "addressbook")):
+    for prefix, kind in (
+        (CALENDAR_PREFIX, "calendar"),
+        (ADDRESSBOOK_PREFIX, "addressbook"),
+        (TASK_PREFIX, "tasks"),
+    ):
         if segment.startswith(prefix):
+            suffix = segment[len(prefix) :]
+            if not suffix or not suffix.isascii() or not suffix.isdecimal():
+                return None, None
             try:
-                return kind, int(segment[len(prefix) :])
+                return kind, int(suffix)
             except ValueError:
                 return None, None
     return None, None
@@ -251,9 +259,7 @@ class CalendarCollection(BaseCollection):
         """
         component_name = getattr(item, "component_name", "")
         if component_name == "VTODO":
-            raise ValueError(
-                "VTODO is not supported: Tribu Tasks and iOS Reminders do not currently sync over DAV"
-            )
+            raise ValueError("VTODO must be stored in the separate Tribu task collection")
         if component_name != "VEVENT":
             raise ValueError("Unsupported calendar component; only VEVENT can be stored")
         ics_text = getattr(item, "text", None) or item.serialize()
@@ -469,6 +475,9 @@ class Storage(BaseStorage):
                 for family_id, family_name in families:
                     yield CalendarCollection(self, user_email, family_id, family_name)
                     yield AddressBookCollection(self, user_email, family_id, family_name)
+                    scopes = current_scopes()
+                    if "tasks:read" in scopes or "tasks:write" in scopes:
+                        yield TaskCollection(self, user_email, family_id, family_name)
             return
         kind, family_id = _parse_collection_segment(parts[1])
         if kind is None or family_id is None:
@@ -477,8 +486,12 @@ class Storage(BaseStorage):
         if family_name is None:
             return
         coll: BaseCollection
+        if kind == "tasks" and not ({"tasks:read", "tasks:write"} & current_scopes()):
+            return
         if kind == "calendar":
             coll = CalendarCollection(self, user_email, family_id, family_name)
+        elif kind == "tasks":
+            coll = TaskCollection(self, user_email, family_id, family_name)
         else:
             coll = AddressBookCollection(self, user_email, family_id, family_name)
         if len(parts) == 2:

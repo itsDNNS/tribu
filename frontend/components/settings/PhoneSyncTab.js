@@ -6,7 +6,7 @@ import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
 
-const DAV_SCOPES = ['calendar:read', 'calendar:write', 'contacts:read', 'contacts:write'];
+const DAV_SCOPES = ['calendar:read', 'calendar:write', 'contacts:read', 'contacts:write', 'tasks:read', 'tasks:write'];
 
 function tokenScopes(token) {
   if (!token?.scopes) return [];
@@ -130,6 +130,30 @@ export default function PhoneSyncTab() {
   }, [loggedIn, demoMode]);
 
   const davTokens = useMemo(() => tokens.filter(isDavToken), [tokens]);
+  const hasTaskToken = useMemo(
+    () => tokens.some(token => tokenScopes(token).some(scope => scope === 'tasks:read' || scope === 'tasks:write')),
+    [tokens],
+  );
+
+  async function handleEnableTaskSync() {
+    setTokenError(false);
+    try {
+      const res = await api.apiCreateToken({
+        name: t(messages, 'phone_sync_task_token_name'),
+        scopes: ['tasks:read', 'tasks:write'],
+      });
+      if (!res.ok) {
+        setTokenError(true);
+        return;
+      }
+      setCreatedToken(res.data?.token || null);
+      const list = await api.apiGetTokens();
+      if (list.ok) setTokens(list.data || []);
+      if (!list.ok) setTokenError(true);
+    } catch {
+      setTokenError(true);
+    }
+  }
 
   async function handleRenew(token) {
     setTokenError(false);
@@ -209,6 +233,24 @@ export default function PhoneSyncTab() {
           <div className="set-data-section-desc">{t(messages, 'phone_sync_available_body')}</div>
         </div>
 
+        <div className="sync-health-panel sync-task-opt-in">
+          <div className="sync-section-heading">{t(messages, 'phone_sync_task_heading')}</div>
+          <p className="set-data-section-desc">{t(messages, 'phone_sync_task_intro')}</p>
+          <p className="set-data-section-desc">{t(messages, 'phone_sync_task_scope_notice')}</p>
+          {hasTaskToken ? (
+            <div className="sync-health-empty">{t(messages, 'phone_sync_task_enabled')}</div>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={loadingTokens}
+              onClick={handleEnableTaskSync}
+            >
+              {t(messages, 'phone_sync_task_enable')}
+            </button>
+          )}
+        </div>
+
         <div className="sync-health-panel">
           <div className="sync-section-heading">{t(messages, 'phone_sync_health_heading')}</div>
           <p className="set-data-section-desc">{t(messages, 'phone_sync_health_body')}</p>
@@ -248,6 +290,7 @@ export default function PhoneSyncTab() {
           <li>{t(messages, 'phone_sync_ios_step3')}</li>
           <li>{t(messages, 'phone_sync_ios_step4')}</li>
         </ol>
+        <p className="set-data-section-desc">{t(messages, 'phone_sync_task_ios')}</p>
 
         <div className="sync-section-heading">{t(messages, 'phone_sync_android_heading')}</div>
         <p className="set-data-section-desc">
@@ -267,6 +310,7 @@ export default function PhoneSyncTab() {
           <li>{t(messages, 'phone_sync_android_step2')}</li>
           <li>{t(messages, 'phone_sync_android_step3')}</li>
         </ol>
+        <p className="set-data-section-desc">{t(messages, 'phone_sync_task_android')}</p>
 
         <div className="sync-section-heading">{t(messages, 'phone_sync_coexist_heading')}</div>
         <p className="set-data-section-desc">{t(messages, 'phone_sync_coexist_intro')}</p>
@@ -281,6 +325,9 @@ export default function PhoneSyncTab() {
           <li>{t(messages, 'phone_sync_limit_tasks')}</li>
           <li>{t(messages, 'phone_sync_limit_incremental')}</li>
           <li>{t(messages, 'phone_sync_limit_fields')}</li>
+          <li>{t(messages, 'phone_sync_task_fields')}</li>
+          <li>{t(messages, 'phone_sync_task_unknown_fields')}</li>
+          <li>{t(messages, 'phone_sync_task_recurrence')}</li>
         </ul>
       </div>
     </div>

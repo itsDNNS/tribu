@@ -137,6 +137,34 @@ def test_quick_capture_routes_to_task_shopping_and_inbox_public_safely():
     assert long_resp.json()["inbox_item"]["text"] == long_text
 
 
+def test_quick_capture_preserves_240_character_task_titles_during_create_and_conversion():
+    token, family_id, _ = _seed_member("*", "task-title-boundary")
+    text = "T" * 240
+
+    direct = client.post(
+        "/quick-capture",
+        json={"family_id": family_id, "text": text, "destination": "task"},
+        headers=_auth(token),
+    )
+    assert direct.status_code == 200, direct.json()
+    assert direct.json()["created_item"]["title"] == text
+
+    captured = client.post(
+        "/quick-capture",
+        json={"family_id": family_id, "text": text, "destination": "inbox"},
+        headers=_auth(token),
+    )
+    assert captured.status_code == 200, captured.json()
+
+    converted = client.post(
+        f"/quick-capture/inbox/{captured.json()['inbox_item']['id']}/convert",
+        json={"destination": "task"},
+        headers=_auth(token),
+    )
+    assert converted.status_code == 200, converted.json()
+    assert converted.json()["converted_item"]["title"] == text
+
+
 def test_quick_capture_direct_and_inbox_conversion_reuse_active_item():
     token, family_id, _ = _seed_member("*", "shopping-reuse")
     first = client.post(

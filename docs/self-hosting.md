@@ -55,9 +55,13 @@ External destinations are another place where household data is visible. Reminde
 
 By default Tribu only allows destination URLs that resolve to globally routable addresses, and blocks unresolved hostnames plus loopback, link-local, private, shared, multicast, reserved, or unspecified addresses. The same guard is applied again while Apprise resolves the destination for delivery. This avoids using notification destinations as a server-side request path into the host or LAN. If a self-hosted Gotify, ntfy, Matrix, or SMTP server is intentionally private, allow it explicitly with `NOTIFICATION_DESTINATION_ALLOWED_HOSTS=gotify.lan,192.168.1.10` or, for fully trusted single-household deployments, `NOTIFICATION_DESTINATION_ALLOW_PRIVATE_HOSTS=true`. Prefer the host allowlist over the global switch.
 
-## Phone Sync (CalDAV / CardDAV)
+## Phone Sync (CalDAV / CardDAV / VTODO)
 
 See [Self-Hosting: Phone Sync](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#phone-sync-caldav--carddav).
+
+Calendar and contact collections keep their existing scope behavior. Task sync is separate and opt-in: use **Settings -> Phone sync** to create a dedicated two-way token containing exactly `tasks:read,tasks:write`, or create a read-only `tasks:read` token under **API Tokens**. Existing wildcard and calendar/contact tokens cannot discover or access `task-<family_id>` collections.
+
+Add a separate CalDAV task account for Apple Reminders. On Android, use DAVx5 with Tasks.org or OpenTasks. DAV task edits are limited to title, notes, due date or date-time, priority, and completion; family, assignment, rewards, creator, identifiers, and recurrence remain controlled by Tribu. Safe unknown VTODO fields and alarms round-trip. Tribu creates recurring occurrences as separate tasks and does not accept or emit `RRULE`.
 
 ## Backup & Restore
 

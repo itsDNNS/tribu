@@ -50,6 +50,14 @@ export function prettyDate(value, lang = 'en', timeFormat = '24h') {
   });
 }
 
+export function prettyDateOnly(value, lang = 'en') {
+  if (!value) return '-';
+  const d = parseDate(value);
+  return d.toLocaleDateString(lang || 'en', {
+    weekday: 'short', day: '2-digit', month: '2-digit',
+  });
+}
+
 export function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

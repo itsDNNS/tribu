@@ -83,6 +83,7 @@ jest.mock('../../hooks/useTasks', () => ({
     filteredTasks: [
       { id: 1, title: 'Buy milk', status: 'open', priority: 'normal', description: 'From the store' },
       { id: 2, title: 'Clean house', status: 'done', priority: 'high', description: null, recurrence: 'weekly', assigned_to_user_id: 10 },
+      { id: 3, title: 'Date only', status: 'open', priority: 'low', due_date: '2099-12-31T00:00:00', due_is_date: true },
     ],
     createTask: jest.fn((e) => e.preventDefault()),
     toggleTask: mockToggleTask,
@@ -101,6 +102,7 @@ describe('TasksView', () => {
     expect(container.querySelector('.tasks-filter-tabs')).toHaveTextContent('Heute fällig');
     expect(container.querySelector('.tasks-filter-tabs')).toHaveTextContent('Meine');
     expect(container.querySelector('.tasks-new-btn')).toHaveTextContent('Neue Aufgabe');
+    expect(container.querySelector('.quick-add-input')).toHaveAttribute('maxlength', '240');
     expect(container.querySelector('.quick-add-bar .task-form-toggle')).toHaveTextContent('Mehr Optionen');
   });
 
@@ -137,10 +139,17 @@ describe('TasksView', () => {
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('renders date-only task due dates without a midnight time', () => {
+    render(<TasksView />);
+    const card = screen.getByText('Date only').closest('.task-card');
+    expect(card.querySelector('.task-due')).toBeInTheDocument();
+    expect(card.querySelector('.task-due')).not.toHaveTextContent(/00:00|12:00 AM/);
+  });
+
   it('renders task checkboxes for toggling', () => {
     const { container } = render(<TasksView />);
     const checkboxes = container.querySelectorAll('.task-checkbox');
-    expect(checkboxes).toHaveLength(2);
+    expect(checkboxes).toHaveLength(3);
     expect(checkboxes[0].classList.contains('checked')).toBe(false);
     expect(checkboxes[1].classList.contains('checked')).toBe(true);
   });
@@ -155,7 +164,7 @@ describe('TasksView', () => {
   it('renders delete buttons', () => {
     const { container } = render(<TasksView />);
     const deleteButtons = container.querySelectorAll('.task-delete-btn');
-    expect(deleteButtons).toHaveLength(2);
+    expect(deleteButtons).toHaveLength(3);
     // Delete now opens a ConfirmDialog; clicking the delete button sets confirmAction state
     fireEvent.click(deleteButtons[0]);
     // ConfirmDialog should now be rendered

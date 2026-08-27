@@ -234,6 +234,33 @@ class TestDavAuth:
         denied = _propfind(client, f"/dav/{email}/cal-{family_id + 100000}/", headers=headers)
         assert denied.status_code == 403
 
+        discovery = client.request(
+            "PROPFIND",
+            f"/dav/{email}/",
+            headers={**headers, "Depth": "1", "Content-Type": "application/xml"},
+            content='<?xml version="1.0"?><propfind xmlns="DAV:"><prop><displayname/></prop></propfind>',
+        )
+        assert f"task-{family_id}" not in discovery.text
+
+    def test_task_only_pat_authenticates_and_discovers_tasks(self, app_under_test):
+        app, TestSession = app_under_test
+        email = "dav-tasks@example.com"
+        token = _seed_pat(TestSession, email=email, scopes="tasks:read,tasks:write", suffix="tasks")
+        family_id = _add_family_membership(TestSession, email)
+        client = TestClient(app)
+        headers = {"Authorization": _basic(email, token)}
+
+        discovery = client.request(
+            "PROPFIND",
+            f"/dav/{email}/",
+            headers={**headers, "Depth": "1", "Content-Type": "application/xml"},
+            content='<?xml version="1.0"?><propfind xmlns="DAV:"><prop><displayname/></prop></propfind>',
+        )
+        assert discovery.status_code == 207, discovery.text
+        assert f"task-{family_id}" in discovery.text
+        assert f"cal-{family_id}" not in discovery.text
+        assert f"book-{family_id}" not in discovery.text
+
     def test_read_only_scope_cannot_write(self, app_under_test):
         """A PAT with only calendar:read can PROPFIND but not PUT."""
         app, TestSession = app_under_test

@@ -63,14 +63,17 @@ describe('PhoneSyncTab', () => {
     ).toBeInTheDocument();
   });
 
-  test('states that task and reminder sync is not supported', async () => {
+  test('offers explicit task sync without treating wildcard tokens as opted in', async () => {
     mockAppState = baseState();
 
     render(<PhoneSyncTab />);
 
-    expect(
-      await screen.findByText(/Tribu-Aufgaben, iOS-Erinnerungen und VTODO werden derzeit nicht synchronisiert/i),
-    ).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /Aufgabensynchronisierung aktivieren/i }));
+    await waitFor(() => expect(api.apiCreateToken).toHaveBeenCalledWith({
+      name: 'Tribu-Aufgabensynchronisierung',
+      scopes: ['tasks:read', 'tasks:write'],
+    }));
+    expect(await screen.findByText('tribu_pat_new')).toBeInTheDocument();
   });
 
   test('shows DAV token health without exposing raw failure details', async () => {
@@ -131,7 +134,7 @@ test('renews and disables DAV tokens from the health view', async () => {
     data: [{
       id: 7,
       name: 'DAVx5',
-      scopes: 'calendar:read,contacts:read,shopping:read',
+    scopes: 'calendar:read,contacts:read,shopping:read',
       last_dav_success_at: null,
       last_dav_failure_at: null,
       last_dav_failure_reason: null,
@@ -151,5 +154,29 @@ test('renews and disables DAV tokens from the health view', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: /Token deaktivieren/i }));
   await waitFor(() => expect(api.apiRevokeToken).toHaveBeenCalledWith(7));
+});
+
+test('detects an existing literal task token and renews its task scopes', async () => {
+  api.apiGetTokens.mockResolvedValue({
+    ok: true,
+    data: [{
+      id: 8,
+      name: 'Tasks',
+      scopes: 'tasks:read,tasks:write',
+      last_dav_success_at: null,
+      last_dav_failure_at: null,
+      last_dav_failure_reason: null,
+    }],
+  });
+  mockAppState = baseState();
+  render(<PhoneSyncTab />);
+
+  expect(await screen.findByText(/Aufgabensynchronisierung ist .*aktiviert/i)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Aufgabensynchronisierung aktivieren/i })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Token erneuern/i }));
+  await waitFor(() => expect(api.apiCreateToken).toHaveBeenCalledWith({
+    name: 'Tasks erneuert',
+    scopes: ['tasks:read', 'tasks:write'],
+  }));
 });
 });

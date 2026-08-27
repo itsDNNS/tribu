@@ -135,6 +135,25 @@ describe('useTasks', () => {
     expect(result.current.editForm.assigned_to_user_id).toBe('7');
   });
 
+  it('preserves date-only precision when editing another task field', async () => {
+    const api = require('../../lib/api');
+    const { result } = renderHook(() => useTasks());
+    act(() => result.current.openEdit({
+      id: 6,
+      title: 'Date-only task',
+      description: '',
+      priority: 'normal',
+      recurrence: '',
+      assigned_to_user_id: null,
+      due_date: '2099-12-31T00:00:00',
+      due_is_date: true,
+    }));
+    await act(async () => {
+      await result.current.updateTask({ preventDefault: () => {} });
+    });
+    expect(api.apiUpdateTask).toHaveBeenCalledWith(6, expect.objectContaining({ due_is_date: true }));
+  });
+
   it('closeEdit clears the edit state', () => {
     const { result } = renderHook(() => useTasks());
     act(() => result.current.openEdit({ id: 1, title: 'x', priority: 'normal' }));

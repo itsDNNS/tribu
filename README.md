@@ -49,7 +49,7 @@ Family life usually ends up split across calendars, chats, notes, shopping apps,
 - Make tasks, routines, meals, school, gifts, and responsibilities visible.
 - Keep shopping lists, contacts, birthdays, rewards, and reminders close to the calendar.
 - Put a read-only family dashboard on a kitchen tablet or hallway display.
-- Sync calendars and contacts to phones with CalDAV and CardDAV.
+- Sync calendars and contacts to phones with CalDAV and CardDAV, with optional bidirectional VTODO task sync.
 - Connect automations through Home Assistant, webhooks, and scoped API tokens.
 
 ## Best fit for
@@ -85,14 +85,16 @@ The README keeps one current visual proof asset: the Shared Home Display above. 
 | Motivate routines | Rewards, earning rules, reward catalog, child progress |
 | Find things fast | Global search across household data |
 | Put it on a shared screen | Pairable Shared Home Display with read-only display tokens |
-| Keep phones connected | CalDAV and CardDAV sync for calendars and contacts |
+| Keep phones connected | CalDAV/CardDAV sync for calendars and contacts, plus opt-in VTODO task sync |
 | Automate the household | Home Assistant package, webhooks, scoped API tokens |
 | Run it yourself | Docker Compose, GHCR images, backup docs, reverse proxy docs, MIT license |
 | Use it in your language | 24 UI languages |
 
 ## Phone Sync
 
-Tribu supports bidirectional calendar and contact sync over CalDAV and CardDAV. Tribu Tasks, iOS Reminders, and VTODO are not currently synced.
+Tribu supports bidirectional calendar and contact sync over CalDAV and CardDAV. Task sync is an explicit opt-in: **Settings -> Phone sync** creates a separate token with literal `tasks:read,tasks:write` scopes and exposes one VTODO-only `task-<family_id>` collection per family. Existing wildcard, calendar, and contact tokens do not discover task collections; advanced read-only clients can use a `tasks:read` token created under **API Tokens**.
+
+On iOS and iPadOS, add tasks as a separate CalDAV account and enable it in Reminders. On Android, enable the task collection in DAVx5 and use Tasks.org or OpenTasks. DAV can edit title, notes, due date or date-time, priority, and completion. Family, assignee, rewards, creator, identifiers, and recurrence remain Tribu-managed. Safe client-only VTODO properties and alarms round-trip; date-only deadlines remain dates. Recurrence is represented as separate Tribu-created occurrences. `RRULE` is neither accepted nor emitted.
 
 **Works with:**
 
@@ -100,7 +102,7 @@ Tribu supports bidirectional calendar and contact sync over CalDAV and CardDAV. 
 - Android through DAV-compatible clients such as DAVx5
 - DAV servers and clients documented in the [Self-Hosting guide](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#phone-sync-caldav--carddav)
 
-After setup, open **Settings -> Phone sync** in Tribu to copy the CalDAV and CardDAV URLs for each family.
+After setup, open **Settings -> Phone sync** in Tribu to copy the shared DAV server URL and optionally enable the dedicated task account.
 
 ## Shared Home Display
 
