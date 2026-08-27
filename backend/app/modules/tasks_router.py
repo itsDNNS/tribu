@@ -1,63 +1,54 @@
-from datetime import datetime, timedelta
+"""REST adapter for the shared Task domain service."""
 
-from app.core.clock import local_wall_now, to_local_wall_naive, utcnow
 from typing import Optional
 
-from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.deps import current_user, ensure_adult, ensure_family_membership
-from app.core.activity import record_activity
-from app.core.webhooks import dispatch_webhook_event
+from app.core.deps import current_user, ensure_family_membership
+from app.core.errors import (
+    ADULT_REQUIRED,
+    ASSIGNEE_NOT_FAMILY_MEMBER,
+    INVALID_PRIORITY,
+    INVALID_RECURRENCE,
+    INVALID_STATUS,
+    NO_FAMILY_ACCESS,
+    TASK_NOT_FOUND,
+    error_detail,
+)
 from app.core.scopes import require_scope
+from app.core.task_service import (
+    VALID_STATUSES,
+    TaskDomainError,
+    create_task as create_task_domain,
+    delete_task as delete_task_domain,
+    update_task as update_task_domain,
+)
 from app.database import get_db
-from app.models import Membership, RewardCurrency, Task, TokenTransaction, User
+from app.models import Task, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, PaginatedTasks, TaskCreate, TaskResponse, TaskUpdate
-from app.core.errors import error_detail, TASK_NOT_FOUND, INVALID_STATUS, INVALID_PRIORITY, INVALID_RECURRENCE, ASSIGNEE_NOT_FAMILY_MEMBER, ADULT_REQUIRED
+
 
 router = APIRouter(prefix="/tasks", tags=["tasks"], responses={**AUTH_RESPONSES})
 
-VALID_PRIORITIES = {"low", "normal", "high"}
-VALID_STATUSES = {"open", "done"}
-FIRST_WEEKDAY_RECURRENCES = {
-    "monthly_first_monday": 0,
-    "monthly_first_tuesday": 1,
-    "monthly_first_wednesday": 2,
-    "monthly_first_thursday": 3,
-    "monthly_first_friday": 4,
-    "monthly_first_saturday": 5,
-    "monthly_first_sunday": 6,
+_ERROR_CODES = {
+    "task_not_found": TASK_NOT_FOUND,
+    "no_family_access": NO_FAMILY_ACCESS,
+    "adult_required": ADULT_REQUIRED,
+    "invalid_priority": INVALID_PRIORITY,
+    "invalid_status": INVALID_STATUS,
+    "invalid_recurrence": INVALID_RECURRENCE,
+    "assignee_not_family_member": ASSIGNEE_NOT_FAMILY_MEMBER,
 }
-VALID_RECURRENCES = {"daily", "weekly", "monthly", "yearly", *FIRST_WEEKDAY_RECURRENCES.keys()}
 
 
-def _first_weekday_of_month(year: int, month: int, weekday: int, base_time: datetime) -> datetime:
-    first_day = datetime(year, month, 1, base_time.hour, base_time.minute, base_time.second, base_time.microsecond)
-    days_until_weekday = (weekday - first_day.weekday()) % 7
-    return first_day + timedelta(days=days_until_weekday)
-
-
-def _next_month(year: int, month: int) -> tuple[int, int]:
-    if month == 12:
-        return year + 1, 1
-    return year, month + 1
-
-
-def _compute_next_due(current_due: Optional[datetime], recurrence: str) -> datetime:
-    base = current_due if current_due else local_wall_now(utcnow())
-    if recurrence == "daily":
-        return base + timedelta(days=1)
-    if recurrence == "weekly":
-        return base + timedelta(weeks=1)
-    if recurrence == "monthly":
-        return base + relativedelta(months=1)
-    if recurrence in FIRST_WEEKDAY_RECURRENCES:
-        year, month = _next_month(base.year, base.month)
-        return _first_weekday_of_month(year, month, FIRST_WEEKDAY_RECURRENCES[recurrence], base)
-    if recurrence == "yearly":
-        return base + relativedelta(years=1)
-    return base
+def _translate_error(exc: TaskDomainError) -> HTTPException:
+    code = _ERROR_CODES.get(exc.code)
+    if code is None:
+        detail = {"code": exc.code, "message": exc.safe_reason}
+    else:
+        detail = error_detail(code, **exc.params)
+    return HTTPException(status_code=exc.status_code, detail=detail)
 
 
 @router.get(
@@ -105,55 +96,10 @@ def create_task(
     db: Session = Depends(get_db),
     _scope=require_scope("tasks:write"),
 ):
-    ensure_adult(db, user.id, payload.family_id)
-
-    if payload.priority not in VALID_PRIORITIES:
-        raise HTTPException(status_code=400, detail=error_detail(INVALID_PRIORITY, priority=payload.priority))
-    if payload.recurrence is not None and payload.recurrence not in VALID_RECURRENCES:
-        raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
-    if payload.assigned_to_user_id is not None:
-        member = db.query(Membership).filter(
-            Membership.user_id == payload.assigned_to_user_id,
-            Membership.family_id == payload.family_id,
-        ).first()
-        if not member:
-            raise HTTPException(status_code=400, detail=error_detail(ASSIGNEE_NOT_FAMILY_MEMBER))
-
-    task = Task(
-        family_id=payload.family_id,
-        title=payload.title,
-        description=payload.description,
-        priority=payload.priority,
-        due_date=to_local_wall_naive(payload.due_date),
-        recurrence=payload.recurrence,
-        assigned_to_user_id=payload.assigned_to_user_id,
-        created_by_user_id=user.id,
-        token_reward_amount=payload.token_reward_amount,
-        token_require_confirmation=payload.token_require_confirmation,
-    )
-    db.add(task)
-    db.flush()
-    record_activity(
-        db,
-        family_id=task.family_id,
-        actor_user_id=user.id,
-        actor_display_name=user.display_name,
-        action="created",
-        object_type="task",
-        object_id=task.id,
-        object_label=task.title,
-        verb="created",
-        object_kind="task",
-    )
-    db.commit()
-    db.refresh(task)
-    dispatch_webhook_event(
-        db,
-        family_id=task.family_id,
-        event_type="task.created",
-        data={"task_id": task.id, "title": task.title, "status": task.status, "assigned_to_user_id": task.assigned_to_user_id},
-    )
-    return task
+    try:
+        return create_task_domain(db, user, payload.model_dump())
+    except TaskDomainError as exc:
+        raise _translate_error(exc) from exc
 
 
 @router.patch(
@@ -171,109 +117,10 @@ def update_task(
     db: Session = Depends(get_db),
     _scope=require_scope("tasks:write"),
 ):
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if not task:
-        raise HTTPException(status_code=404, detail=error_detail(TASK_NOT_FOUND))
-
-    membership = ensure_family_membership(db, user.id, task.family_id)
-    if not membership.is_adult:
-        if task.assigned_to_user_id != user.id:
-            raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
-        fields = payload.model_dump(exclude_unset=True)
-        if set(fields.keys()) - {"status"}:
-            raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
-
-    if payload.priority is not None:
-        if payload.priority not in VALID_PRIORITIES:
-            raise HTTPException(status_code=400, detail=error_detail(INVALID_PRIORITY, priority=payload.priority))
-        task.priority = payload.priority
-    if payload.status is not None:
-        if payload.status not in VALID_STATUSES:
-            raise HTTPException(status_code=400, detail=error_detail(INVALID_STATUS, status=payload.status))
-    if payload.recurrence is not None and payload.recurrence not in VALID_RECURRENCES:
-        raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
-    if payload.assigned_to_user_id is not None:
-        member = db.query(Membership).filter(
-            Membership.user_id == payload.assigned_to_user_id,
-            Membership.family_id == task.family_id,
-        ).first()
-        if not member:
-            raise HTTPException(status_code=400, detail=error_detail(ASSIGNEE_NOT_FAMILY_MEMBER))
-
-    if payload.title is not None:
-        task.title = payload.title
-    if payload.description is not None:
-        task.description = payload.description
-    if payload.due_date is not None:
-        task.due_date = to_local_wall_naive(payload.due_date)
-    if payload.recurrence is not None:
-        task.recurrence = payload.recurrence
-    if payload.assigned_to_user_id is not None:
-        task.assigned_to_user_id = payload.assigned_to_user_id
-    if payload.token_reward_amount is not None:
-        task.token_reward_amount = payload.token_reward_amount or None
-    if payload.token_require_confirmation is not None:
-        task.token_require_confirmation = payload.token_require_confirmation
-
-    next_task = None
-    was_done = task.status == "done"
-    if payload.status is not None:
-        task.status = payload.status
-        if payload.status == "done":
-            task.completed_at = utcnow()
-            if task.token_reward_amount and task.assigned_to_user_id:
-                currency = db.query(RewardCurrency).filter(RewardCurrency.family_id == task.family_id).first()
-                if currency:
-                    auto_confirm = not task.token_require_confirmation
-                    txn = TokenTransaction(
-                        family_id=task.family_id, currency_id=currency.id,
-                        user_id=task.assigned_to_user_id, kind="earn",
-                        amount=task.token_reward_amount,
-                        status="confirmed" if auto_confirm else "pending",
-                        source_task_id=task.id,
-                        confirmed_by_user_id=user.id if auto_confirm else None,
-                        confirmed_at=utcnow() if auto_confirm else None,
-                    )
-                    db.add(txn)
-            if task.recurrence:
-                next_task = Task(
-                    family_id=task.family_id,
-                    title=task.title,
-                    description=task.description,
-                    priority=task.priority,
-                    due_date=_compute_next_due(task.due_date, task.recurrence),
-                    recurrence=task.recurrence,
-                    assigned_to_user_id=task.assigned_to_user_id,
-                    created_by_user_id=task.created_by_user_id,
-                    token_reward_amount=task.token_reward_amount,
-                    token_require_confirmation=task.token_require_confirmation,
-                )
-                db.add(next_task)
-        if payload.status == "done" and not was_done:
-            record_activity(
-                db,
-                family_id=task.family_id,
-                actor_user_id=user.id,
-                actor_display_name=user.display_name,
-                action="completed",
-                object_type="task",
-                object_id=task.id,
-                object_label=task.title,
-                verb="completed",
-                object_kind="task",
-            )
-
-    db.commit()
-    db.refresh(task)
-    if next_task:
-        db.refresh(next_task)
-    dispatch_webhook_event(
-        db,
-        family_id=task.family_id,
-        event_type="task.updated",
-        data={"task_id": task.id, "title": task.title, "status": task.status, "assigned_to_user_id": task.assigned_to_user_id},
-    )
-    return task
+    try:
+        return update_task_domain(db, user, task_id, payload.model_dump(exclude_unset=True))
+    except TaskDomainError as exc:
+        raise _translate_error(exc) from exc
 
 
 @router.delete(
@@ -289,11 +136,8 @@ def delete_task(
     db: Session = Depends(get_db),
     _scope=require_scope("tasks:write"),
 ):
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if not task:
-        raise HTTPException(status_code=404, detail=error_detail(TASK_NOT_FOUND))
-
-    ensure_adult(db, user.id, task.family_id)
-    db.delete(task)
-    db.commit()
+    try:
+        delete_task_domain(db, user, task_id)
+    except TaskDomainError as exc:
+        raise _translate_error(exc) from exc
     return {"status": "deleted", "task_id": task_id}

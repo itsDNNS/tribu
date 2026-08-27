@@ -8,7 +8,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 |---|---|---|
 | Dashboard | Daily household overview | Events, open tasks, birthdays, activity, quick actions, and family context. |
 | Calendar | Shared calendar | Month and week views, recurring events, event duplication, ICS import and export, external ICS feed import with manual refresh, day detail panels, and phone sync through CalDAV. |
-| Tasks | Responsibilities and routines | Assignees, priorities, due dates, recurrence, templates, and overdue tracking. |
+| Tasks | Responsibilities and routines | Assignees, priorities, date-only or timed due dates, recurrence, templates, overdue tracking, and opt-in VTODO sync. |
 | Shopping | Shared lists | Multiple lists, categories, progress, quick add, and real-time updates. |
 | Contacts | Family address book | Contact cards, CSV import and export, birthday extraction, and CardDAV sync. |
 | Birthdays | Birthday tracking | Lookahead, countdowns, and sync from contacts. |
@@ -22,7 +22,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Activity | Household timeline | Recent changes and quick context. |
 | Search | Global search | Fast lookup across core household data. |
 | Shared Home Display | Read-only household screen | Pairable device tokens for kitchen tablets, hallway screens, and wall displays. |
-| Phone sync | CalDAV and CardDAV | Calendar and contact sync for phones and DAV-compatible clients. |
+| Phone sync | CalDAV, CardDAV, and VTODO | Calendar/contact sync plus a separately scoped task collection for Apple Reminders or DAVx5 with Tasks.org/OpenTasks. |
 | Integrations | Home Assistant, webhooks, API tokens | Automation hooks for self-hosted homes. |
 | Self-hosting | Docker Compose and GHCR images | PostgreSQL, Valkey, frontend, backend, backups, reverse proxy, and update docs. |
 | Security model | Family boundaries | httpOnly cookies, scoped PATs, display tokens, a non-root frontend container, backend privilege drop when supported, and security policy. |

@@ -408,9 +408,9 @@ class TestCalDAVRead:
         assert 400 <= put.status_code < 500, put.text
         assert "PUT" in caplog.text
         assert f"cal-{family_id}/todo.ics" in caplog.text
-        assert "tasks" in caplog.text.lower()
-        assert "reminders" in caplog.text.lower()
-        assert "not supported" in caplog.text.lower()
+        assert "separate tribu task collection" in caplog.text.lower()
+        assert "buy milk" not in caplog.text.lower()
+        assert "todo@example.com" not in caplog.text.lower()
         db = SessionLocal()
         try:
             assert db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).count() == before

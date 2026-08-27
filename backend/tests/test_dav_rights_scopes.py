@@ -33,6 +33,14 @@ def test_contacts_scope_only_authorizes_address_book_collection():
 def test_wildcard_scope_keeps_full_collection_access():
     assert _auth({"*"}, f"/{USER}/cal-1/") == "rRwW"
     assert _auth({"*"}, f"/{USER}/book-1/") == "rRwW"
+    assert _auth({"*"}, f"/{USER}/task-1/") == ""
+
+
+def test_task_collection_requires_literal_task_scope():
+    assert _auth({"tasks:read"}, f"/{USER}/task-1/") == "rR"
+    assert _auth({"tasks:write"}, f"/{USER}/task-1/") == "rRwW"
+    assert _auth({"calendar:write"}, f"/{USER}/task-1/") == ""
+    assert _auth({"tasks:write"}, f"/{USER}/cal-1/") == ""
 
 
 def test_collection_rights_require_authenticated_family_membership():
@@ -55,6 +63,9 @@ def test_invalid_family_collection_segments_are_denied():
         "cal-1-extra",
         "book-",
         "book-fake",
+        "task-",
+        "task-fake",
+        "task-1-extra",
         "cal-" + "9" * 5000,
     )
     for collection in invalid:

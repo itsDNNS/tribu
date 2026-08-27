@@ -9,6 +9,7 @@ from app.core.errors import error_detail
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item
+from app.core.task_service import TaskDomainError, create_task as create_task_domain, dispatch_task_webhook
 from app.core.ws_broadcast import broadcast_shopping_event
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
@@ -66,28 +67,24 @@ def _get_or_create_quick_list(db: Session, family_id: int, user_id: int) -> tupl
     return shopping_list, True
 
 
-def _create_task(db: Session, *, family_id: int, user: User, text: str) -> Task:
-    task = Task(
-        family_id=family_id,
-        title=text,
-        priority="normal",
-        created_by_user_id=user.id,
-    )
-    db.add(task)
-    db.flush()
-    record_activity(
-        db,
-        family_id=family_id,
-        actor_user_id=user.id,
-        actor_display_name=user.display_name,
-        action="created",
-        object_type="task",
-        object_id=task.id,
-        object_label=task.title,
-        verb="created",
-        object_kind="task",
-    )
-    return task
+def _create_task(
+    db: Session,
+    *,
+    family_id: int,
+    user: User,
+    text: str,
+    commit: bool = True,
+) -> Task:
+    try:
+        return create_task_domain(
+            db,
+            user,
+            {"family_id": family_id, "title": text, "priority": "normal"},
+            commit=commit,
+            webhook_extra={"source": "quick_capture"} if commit else None,
+        )
+    except TaskDomainError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": exc.safe_reason}) from exc
 
 
 def _create_shopping_item(
@@ -198,14 +195,6 @@ def create_quick_capture(
 
     if payload.destination == QuickCaptureDestination.task:
         task = _create_task(db, family_id=payload.family_id, user=user, text=text)
-        db.commit()
-        db.refresh(task)
-        dispatch_webhook_event(
-            db,
-            family_id=payload.family_id,
-            event_type="task.created",
-            data={"task_id": task.id, "title": task.title, "status": task.status, "source": "quick_capture"},
-        )
         return _created_payload(payload.destination, task)
 
     if payload.destination == QuickCaptureDestination.shopping:
@@ -305,7 +294,7 @@ def convert_quick_capture_item(
     shopping_list = None
     shopping_list_created = False
     if payload.destination == QuickCaptureDestination.task:
-        created = _create_task(db, family_id=item.family_id, user=user, text=item.text)
+        created = _create_task(db, family_id=item.family_id, user=user, text=item.text, commit=False)
     else:
         shopping_transition, shopping_list, shopping_list_created = _create_shopping_item(
             db,
@@ -321,6 +310,13 @@ def convert_quick_capture_item(
     db.commit()
     db.refresh(item)
     db.refresh(created)
+    if payload.destination == QuickCaptureDestination.task:
+        dispatch_task_webhook(
+            db,
+            created,
+            "task.created",
+            extra={"source": "quick_capture_inbox"},
+        )
     if payload.destination == QuickCaptureDestination.shopping and shopping_list is not None:
         db.refresh(shopping_list)
         dispatch_webhook_event(

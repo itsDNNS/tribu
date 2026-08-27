@@ -74,13 +74,17 @@ test.describe('Settings', () => {
     await expect(reloadedBirthdateInput).toHaveValue('');
   });
 
-  test('states that Tasks, iOS Reminders, and VTODO do not sync', async ({ authedPage: page }) => {
+  test('shows the explicit task opt-in and separate iOS/Android setup', async ({ authedPage: page }) => {
     await openPhoneSyncSettings(page);
 
+    await expect(page.getByText('Optional task sync')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enable task sync' })).toBeVisible();
+    await expect(page.getByText(/wildcard, calendar, and contact tokens do not enable task sync/i)).toBeVisible();
+    await expect(page.getByText(/separate CalDAV account.*Reminders/i)).toBeVisible();
+    await expect(page.getByText(/Tasks\.org or OpenTasks/i)).toBeVisible();
     const limits = page.locator('.sync-limits');
-    await expect(limits).toContainText('Tribu Tasks');
-    await expect(limits).toContainText('iOS Reminders');
-    await expect(limits).toContainText('VTODO');
+    await expect(limits).toContainText('RRULE');
+    await expect(limits).toContainText('each next occurrence');
   });
 
   test('keeps Account settings focused on preference selectors without duplicate pack inventory', async ({ authedPage: page }) => {

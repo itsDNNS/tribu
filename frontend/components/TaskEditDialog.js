@@ -52,7 +52,7 @@ export default function TaskEditDialog({
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               required
-              maxLength={200}
+              maxLength={240}
             />
             <textarea
               className="form-input gift-form-notes"
@@ -65,7 +65,7 @@ export default function TaskEditDialog({
               className="form-input"
               type="datetime-local"
               value={form.due_date}
-              onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+              onChange={(e) => setForm({ ...form, due_date: e.target.value, due_is_date: false })}
               aria-label={t(messages, 'module.tasks.due_date')}
             />
             <select

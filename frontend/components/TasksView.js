@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Clock, Check, X, ChevronDown, Pencil, SlidersHorizontal } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
-import { prettyDate } from '../lib/helpers';
+import { prettyDate, prettyDateOnly } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { TASK_RECURRENCE_OPTIONS } from '../lib/taskRecurrenceOptions';
 import MemberAvatar from './MemberAvatar';
@@ -121,6 +121,7 @@ export default function TasksView() {
                   value={tk.taskTitle}
                   onChange={(e) => tk.setTaskTitle(e.target.value)}
                   required
+                  maxLength={240}
                 />
                 <button type="button" className="task-form-toggle" onClick={() => setShowFormDetails(prev => !prev)} aria-expanded={showFormDetails} aria-controls={showFormDetails ? 'task-form-details' : undefined}>
                   <ChevronDown size={14} className={showFormDetails ? 'task-form-toggle-open' : ''} />
@@ -256,7 +257,9 @@ export default function TasksView() {
                       {task.due_date && (
                         <span className={`task-due${isOverdue ? ' overdue' : ''}`}>
                           <Clock size={12} aria-hidden="true" />
-                          {prettyDate(task.due_date, lang, timeFormat)}
+                          {task.due_is_date
+                            ? prettyDateOnly(task.due_date, lang)
+                            : prettyDate(task.due_date, lang, timeFormat)}
                         </span>
                       )}
                     </div>

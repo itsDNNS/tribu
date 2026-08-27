@@ -5,8 +5,8 @@ via HTTP Basic Auth. They send the user's email as ``login`` and the
 Personal Access Token as ``password``. This plugin validates the
 token against ``personal_access_tokens`` and confirms the token's
 owner matches the login email. It also enforces scope: the token
-must carry at least one of ``calendar:read``, ``calendar:write``,
-``contacts:read``, ``contacts:write`` (or the ``*`` wildcard). This
+must carry a calendar, contact, or task DAV scope (or the ``*`` wildcard
+for the existing calendar/contact admission behavior). This
 is a coarse gate; the rights plugin applies per-collection scope and
 family-membership checks.
 """
@@ -26,7 +26,10 @@ from app.security import PAT_PREFIX, hash_pat, pat_lookup_key, verify_pat
 from .rights_plugin import remember_scopes
 
 
-DAV_SCOPES = ("calendar:read", "calendar:write", "contacts:read", "contacts:write")
+DAV_SCOPES = (
+    "calendar:read", "calendar:write", "contacts:read", "contacts:write",
+    "tasks:read", "tasks:write",
+)
 
 
 def _record_dav_failure(pat: PersonalAccessToken, reason: str) -> None:

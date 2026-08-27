@@ -245,13 +245,29 @@ class Task(Base):
     status = Column(String, nullable=False, default="open")
     priority = Column(String, nullable=False, default="normal")
     due_date = Column(DateTime, nullable=True)
+    due_is_date = Column(Boolean, nullable=False, default=False, server_default="false")
     recurrence = Column(String, nullable=True)
     assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+        server_default=func.now(),
+    )
     completed_at = Column(DateTime, nullable=True)
     token_reward_amount = Column(Integer, nullable=True)
     token_require_confirmation = Column(Boolean, nullable=False, default=True, server_default="true")
+    vtodo_uid = Column(String(200), nullable=True)
+    dav_href = Column(String(250), nullable=True)
+    raw_vtodo = Column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("uq_tasks_family_vtodo_uid", "family_id", "vtodo_uid", unique=True),
+        Index("uq_tasks_family_dav_href", "family_id", "dav_href", unique=True),
+    )
 
     family = relationship("Family", back_populates="tasks")
 

@@ -48,6 +48,17 @@ describe('Settings notification destinations visibility', () => {
     }
   });
 
+  it('keeps token-backed Phone Sync adult-only', () => {
+    mockAppState = baseState({ isChild: false });
+    const { unmount } = render(<SettingsView />);
+    expect(screen.getByRole('button', { name: 'Phone sync' })).toBeInTheDocument();
+    unmount();
+
+    mockAppState = baseState({ isChild: true, isAdmin: false });
+    render(<SettingsView />);
+    expect(screen.queryByRole('button', { name: 'Phone sync' })).not.toBeInTheDocument();
+  });
+
   it('resets the active tab when the current tab becomes hidden', () => {
     mockAppState = baseState();
     const { rerender } = render(<SettingsView />);

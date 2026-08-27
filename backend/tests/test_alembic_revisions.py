@@ -109,3 +109,58 @@ def test_product_preferences_migration_backfills_latest_and_downgrades(tmp_path,
     with sqlite3.connect(db_path) as conn:
         tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     assert "family_product_preferences" not in tables
+
+
+def test_task_vtodo_migration_backfills_constraints_and_downgrades(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "task-vtodo.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0054_product_preferences")
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'One'), (2, 'Two')")
+        conn.execute(
+            """
+            INSERT INTO tasks
+                (id, family_id, title, status, priority, created_at, completed_at, token_require_confirmation)
+            VALUES
+                (1, 1, 'Created', 'open', 'normal', '2026-01-01 10:00:00', NULL, 1),
+                (2, 1, 'Completed', 'done', 'normal', '2026-01-01 10:00:00', '2026-01-02 11:00:00', 1)
+            """
+        )
+        conn.commit()
+
+    command.upgrade(config, "0055_task_vtodo")
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT id, updated_at, due_is_date, vtodo_uid, dav_href, raw_vtodo FROM tasks ORDER BY id"
+        ).fetchall()
+        assert rows[0][1].startswith("2026-01-01 10:00:00")
+        assert rows[1][1].startswith("2026-01-02 11:00:00")
+        assert [row[2] for row in rows] == [0, 0]
+        assert all(row[3:] == (None, None, None) for row in rows)
+
+        conn.execute("UPDATE tasks SET vtodo_uid = 'same', dav_href = 'same.ics' WHERE id = 1")
+        conn.execute(
+            """
+            INSERT INTO tasks
+                (id, family_id, title, status, priority, created_at, vtodo_uid, dav_href, token_require_confirmation)
+            VALUES (3, 2, 'Other family', 'open', 'normal', CURRENT_TIMESTAMP, 'same', 'same.ics', 1)
+            """
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                """
+                INSERT INTO tasks
+                    (id, family_id, title, status, priority, created_at, vtodo_uid, dav_href, token_require_confirmation)
+                VALUES (4, 1, 'Duplicate', 'open', 'normal', CURRENT_TIMESTAMP, 'same', 'other.ics', 1)
+                """
+            )
+        conn.rollback()
+
+    command.downgrade(config, "0054_product_preferences")
+    with sqlite3.connect(db_path) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(tasks)")}
+    assert {"updated_at", "vtodo_uid", "dav_href", "raw_vtodo", "due_is_date"}.isdisjoint(columns)
