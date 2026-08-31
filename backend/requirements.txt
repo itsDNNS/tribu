@@ -1,5 +1,5 @@
 fastapi==0.141.1
-uvicorn[standard]==0.52.3
+uvicorn[standard]==0.52.4
 pydantic==2.13.4
 email-validator==2.3.0
 sqlalchemy==2.0.52
@@ -8,7 +8,7 @@ bcrypt==5.0.0
 PyJWT==2.13.0
 slowapi==0.1.10
 python-dateutil==2.9.0.post0
-icalendar==7.2.2
+icalendar==7.3.0
 alembic==1.19.1
 apscheduler==3.11.3
 python-multipart==0.0.32
@@ -16,5 +16,5 @@ redis==8.1.0
 pywebpush==2.4.0
 radicale==3.7.8
 a2wsgi==1.10.10
-apprise==1.12.0
-cryptography==50.0.0
+apprise==1.13.0
+cryptography==50.0.1
