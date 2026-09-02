@@ -1,5 +1,5 @@
 const { test, expect } = require('../helpers/fixtures');
-const { getFamilyId, seedShoppingList, seedShoppingItem, seedShoppingTemplate } = require('../helpers/api-setup');
+const { getFamilyId, seedShoppingList, seedShoppingItem, seedShoppingTemplate, seedShoppingStoreLink } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 const { shoppingListCard, selectShoppingList } = require('../helpers/shopping');
 
@@ -21,6 +21,71 @@ test.describe('Shopping', () => {
     await page.locator('.shopping-new-list-form .btn-sm').first().click();
 
     await expect(shoppingListCard(page, 'E2E Groceries')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('opens a configured store search safely without checking the item', async ({ authedPage: page, apiCtx }, testInfo) => {
+    const familyId = await getFamilyId(apiCtx);
+    const existing = await apiCtx.get(`/api/shopping/store-links?family_id=${familyId}`);
+    expect(existing.ok()).toBeTruthy();
+    for (const link of await existing.json()) {
+      const deleted = await apiCtx.delete(`/api/shopping/store-links/${link.id}`);
+      expect(deleted.ok()).toBeTruthy();
+    }
+    const list = await seedShoppingList(apiCtx, familyId, 'Store Search List');
+    await seedShoppingItem(apiCtx, list.id, 'Bread');
+
+    await navigateTo(page, 'Shopping');
+    await page.reload();
+    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+    await navigateTo(page, 'Shopping');
+    await selectShoppingList(page, 'Store Search List');
+    await expect(page.getByRole('button', { name: 'Search online: Bread' })).toHaveCount(0);
+
+    const base = process.env.BASE_URL || 'http://localhost:3000';
+    const store = await seedShoppingStoreLink(apiCtx, familyId, 'E2E Store', `${base}/?q={query}`);
+    let primaryError = null;
+    try {
+      await page.reload();
+      await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
+      await navigateTo(page, 'Shopping');
+      await selectShoppingList(page, 'Store Search List');
+
+      const row = page.getByRole('checkbox', { name: 'Bread' });
+      if (testInfo.project.name === 'Desktop Chrome') await row.hover();
+      await page.getByRole('button', { name: 'Search online: Bread' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Search for Bread' });
+      await expect(dialog.getByText('E2E Store')).toBeVisible();
+      await expect(dialog.getByText(new URL(base).hostname)).toBeVisible();
+      const [popup] = await Promise.all([
+        page.context().waitForEvent('page'),
+        dialog.getByRole('link', { name: /E2E Store/ }).click(),
+      ]);
+      await popup.waitForLoadState('domcontentloaded');
+      expect(popup.url()).toContain('q=Bread');
+      expect(await popup.evaluate(() => window.opener)).toBeNull();
+      expect(await popup.evaluate(() => document.referrer)).toBe('');
+      await popup.close();
+      await expect(dialog).toHaveCount(0);
+      await expect(row).toHaveAttribute('aria-checked', 'false');
+
+      if (testInfo.project.name === 'Mobile Chrome') {
+        await page.setViewportSize({ width: 360, height: 780 });
+        await expect(page.getByRole('button', { name: 'Search online: Bread' })).toBeVisible();
+        const widths = await page.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+        }));
+        expect(widths.scrollWidth).toBeLessThanOrEqual(widths.clientWidth + 1);
+      }
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      const cleanup = await apiCtx.delete(`/api/shopping/store-links/${store.id}`);
+      if (!cleanup.ok() && cleanup.status() !== 404 && !primaryError) {
+        throw new Error(`DELETE /api/shopping/store-links/${store.id} failed (${cleanup.status()})`);
+      }
+    }
   });
 
   test('add an item to a list', async ({ authedPage: page, apiCtx }) => {

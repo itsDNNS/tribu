@@ -39,6 +39,7 @@ async function mockAuthenticatedFamily(page) {
     if (path === '/tasks') return json(route, { items: [] });
     if (path === '/shopping/lists') return json(route, []);
     if (path === '/shopping/templates') return json(route, []);
+    if (path === '/shopping/store-links') return json(route, []);
     if (path === '/activity') return json(route, { items: [] });
     if (path === '/quick-capture') return json(route, { items: [] });
     if (path === '/nav/order') return json(route, { nav_order: ['dashboard', 'calendar', 'shopping', 'tasks', 'activity', 'settings', 'admin'] });

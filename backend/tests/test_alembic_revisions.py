@@ -111,6 +111,53 @@ def test_product_preferences_migration_backfills_latest_and_downgrades(tmp_path,
     assert "family_product_preferences" not in tables
 
 
+def test_store_links_migration_creates_table_and_downgrades(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "store-links.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0055_task_vtodo")
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'One'), (2, 'Two')")
+        conn.commit()
+
+    command.upgrade(config, "0056_store_links")
+    expanded_key = "\u03b9\u0308\u0301" * 80
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO shopping_store_links (family_id, name, normalized_name, url_template) VALUES (?, ?, ?, ?)",
+            (1, "Amazon", "amazon", "https://example.com/?q={query}"),
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO shopping_store_links (family_id, name, normalized_name, url_template) VALUES (?, ?, ?, ?)",
+                (1, "AMAZON", "amazon", "https://example.com/?q={query}"),
+            )
+        conn.execute(
+            "INSERT INTO shopping_store_links (family_id, name, normalized_name, url_template) VALUES (?, ?, ?, ?)",
+            (2, "Amazon", "amazon", "https://example.com/?q={query}"),
+        )
+        conn.execute(
+            "INSERT INTO shopping_store_links (family_id, name, normalized_name, url_template) VALUES (?, ?, ?, ?)",
+            (1, "Long key", expanded_key, "https://example.com/?q={query}"),
+        )
+        assert conn.execute(
+            "SELECT normalized_name FROM shopping_store_links WHERE name = 'Long key'"
+        ).fetchone()[0] == expanded_key
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO shopping_store_links (family_id, name, normalized_name, url_template) VALUES (?, ?, ?, ?)",
+                (1, "Long key two", expanded_key, "https://example.com/?q={query}"),
+            )
+
+    command.downgrade(config, "0055_task_vtodo")
+    with sqlite3.connect(db_path) as conn:
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    assert "shopping_store_links" not in tables
+
+
 def test_task_vtodo_migration_backfills_constraints_and_downgrades(tmp_path, monkeypatch) -> None:
     db_path = tmp_path / "task-vtodo.db"
     config = Config(str(BACKEND_DIR / "alembic.ini"))

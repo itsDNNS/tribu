@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.utils import utcnow
@@ -7,16 +8,21 @@ from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.activity import record_activity
 from app.core.scopes import require_scope
 from app.database import get_db
-from app.models import ShoppingItem, ShoppingList, ShoppingTemplate, ShoppingTemplateItem, User
+from app.models import ShoppingItem, ShoppingList, ShoppingStoreLink, ShoppingTemplate, ShoppingTemplateItem, User
 from app.core.ws_broadcast import broadcast_shopping_event
 from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.shopping_domain import (
     InvalidShoppingItemName,
+    InvalidStoreUrlTemplate,
+    MAX_STORE_LINKS_PER_FAMILY,
     ShoppingItemTransition,
     add_or_merge_shopping_item,
     clean_optional_text,
     normalize_item_name,
     remember_category,
+    normalize_store_name,
+    store_name_key,
+    validate_store_url_template,
 )
 from app.core.webhooks import dispatch_webhook_event
 from app.schemas import (
@@ -28,6 +34,9 @@ from app.schemas import (
     ShoppingListCreate,
     ShoppingListResponse,
     ShoppingListUpdate,
+    ShoppingStoreLinkCreate,
+    ShoppingStoreLinkResponse,
+    ShoppingStoreLinkUpdate,
     ShoppingTemplateApplyRequest,
     ShoppingTemplateApplyResponse,
     ShoppingTemplateCreate,
@@ -39,6 +48,10 @@ from app.core.errors import (
     SHOPPING_LIST_NOT_FOUND,
     SHOPPING_ITEM_NOT_FOUND,
     SHOPPING_TEMPLATE_NOT_FOUND,
+    SHOPPING_STORE_LINK_INVALID_TEMPLATE,
+    SHOPPING_STORE_LINK_LIMIT_REACHED,
+    SHOPPING_STORE_LINK_NAME_TAKEN,
+    SHOPPING_STORE_LINK_NOT_FOUND,
     ADULT_REQUIRED,
 )
 
@@ -102,6 +115,46 @@ def _get_template_or_404(db: Session, template_id: int) -> ShoppingTemplate:
     if not template:
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_TEMPLATE_NOT_FOUND))
     return template
+
+
+def _get_store_link_or_404(db: Session, store_link_id: int) -> ShoppingStoreLink:
+    link = db.query(ShoppingStoreLink).filter(ShoppingStoreLink.id == store_link_id).first()
+    if not link:
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_STORE_LINK_NOT_FOUND))
+    return link
+
+
+def _validated_store_template(value: str) -> str:
+    try:
+        return validate_store_url_template(value)
+    except InvalidStoreUrlTemplate as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=error_detail(SHOPPING_STORE_LINK_INVALID_TEMPLATE, reason=exc.reason),
+        )
+
+
+def _clean_store_name(value: str) -> str:
+    name = normalize_store_name(value)
+    if not name:
+        raise HTTPException(status_code=422, detail="Store name cannot be blank")
+    return name
+
+
+def _store_name_is_taken(
+    db: Session,
+    *,
+    family_id: int,
+    normalized_name: str,
+    exclude_id: int | None = None,
+) -> bool:
+    query = db.query(ShoppingStoreLink.id).filter(
+        ShoppingStoreLink.family_id == family_id,
+        ShoppingStoreLink.normalized_name == normalized_name,
+    )
+    if exclude_id is not None:
+        query = query.filter(ShoppingStoreLink.id != exclude_id)
+    return query.first() is not None
 
 
 # ── Templates ──────────────────────────────────────────
@@ -269,6 +322,133 @@ def apply_template(
         merged_count=sum(result.action != "created" for result in transitions),
         items=[result.item for result in transitions],
     )
+
+
+# ── Store links ──────────────────────────────────────────
+
+
+@router.get(
+    "/store-links",
+    response_model=list[ShoppingStoreLinkResponse],
+    summary="List shopping store search links",
+    description="Return store search links configured for a family. Adult only. Scope: `shopping:read`.",
+    response_description="List of configured store search links",
+)
+def get_store_links(
+    family_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:read"),
+):
+    ensure_adult(db, user.id, family_id)
+    return (
+        db.query(ShoppingStoreLink)
+        .filter(ShoppingStoreLink.family_id == family_id)
+        .order_by(ShoppingStoreLink.created_at, ShoppingStoreLink.id)
+        .all()
+    )
+
+
+@router.post(
+    "/store-links",
+    response_model=ShoppingStoreLinkResponse,
+    summary="Create a shopping store search link",
+    description="Create a store search link for a family. Adult only. Scope: `shopping:write`.",
+    response_description="The created store search link",
+)
+def create_store_link(
+    payload: ShoppingStoreLinkCreate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+    name = _clean_store_name(payload.name)
+    url_template = _validated_store_template(payload.url_template)
+    count = db.query(ShoppingStoreLink).filter(ShoppingStoreLink.family_id == payload.family_id).count()
+    if count >= MAX_STORE_LINKS_PER_FAMILY:
+        raise HTTPException(
+            status_code=422,
+            detail=error_detail(SHOPPING_STORE_LINK_LIMIT_REACHED, limit=MAX_STORE_LINKS_PER_FAMILY),
+        )
+    normalized_name = store_name_key(name)
+    if _store_name_is_taken(db, family_id=payload.family_id, normalized_name=normalized_name):
+        raise HTTPException(status_code=409, detail=error_detail(SHOPPING_STORE_LINK_NAME_TAKEN))
+    link = ShoppingStoreLink(
+        family_id=payload.family_id,
+        name=name,
+        normalized_name=normalized_name,
+        url_template=url_template,
+        created_by_user_id=user.id,
+    )
+    db.add(link)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=error_detail(SHOPPING_STORE_LINK_NAME_TAKEN))
+    db.refresh(link)
+    return link
+
+
+@router.patch(
+    "/store-links/{store_link_id}",
+    response_model=ShoppingStoreLinkResponse,
+    summary="Update a shopping store search link",
+    description="Update a configured store search link. Adult only. Scope: `shopping:write`.",
+    response_description="The updated store search link",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def update_store_link(
+    store_link_id: int,
+    payload: ShoppingStoreLinkUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    link = _get_store_link_or_404(db, store_link_id)
+    ensure_adult(db, user.id, link.family_id)
+    if payload.name is not None:
+        name = _clean_store_name(payload.name)
+        normalized_name = store_name_key(name)
+        if _store_name_is_taken(
+            db,
+            family_id=link.family_id,
+            normalized_name=normalized_name,
+            exclude_id=link.id,
+        ):
+            raise HTTPException(status_code=409, detail=error_detail(SHOPPING_STORE_LINK_NAME_TAKEN))
+        link.name = name
+        link.normalized_name = normalized_name
+    if payload.url_template is not None:
+        link.url_template = _validated_store_template(payload.url_template)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=error_detail(SHOPPING_STORE_LINK_NAME_TAKEN))
+    db.refresh(link)
+    return link
+
+
+@router.delete(
+    "/store-links/{store_link_id}",
+    summary="Delete a shopping store search link",
+    description="Delete a configured store search link. Adult only. Scope: `shopping:write`.",
+    response_description="Deletion confirmation",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def delete_store_link(
+    store_link_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    link = _get_store_link_or_404(db, store_link_id)
+    ensure_adult(db, user.id, link.family_id)
+    db.delete(link)
+    db.commit()
+    return {"status": "deleted", "store_link_id": store_link_id}
 
 
 # ── Lists ──────────────────────────────────────────────

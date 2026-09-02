@@ -1,8 +1,8 @@
-"""Backend-authoritative shopping-item reuse and product preferences.
+"""Backend-authoritative shopping domain rules.
 
-This module owns shopping name/detail normalization and the add/merge/restore
-state transition.  It deliberately does not commit or dispatch any events;
-route handlers retain those orchestration responsibilities.
+This module owns shopping name/detail normalization, store search validation,
+and the add/merge/restore state transition. It deliberately does not commit or
+dispatch any events; route handlers retain those orchestration responsibilities.
 """
 
 from __future__ import annotations
@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import re
 from typing import Literal
+import unicodedata
+from urllib.parse import urlsplit
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +23,17 @@ from app.models import FamilyProductPreference, ShoppingItem, ShoppingList
 
 
 ShoppingItemAction = Literal["created", "merged", "restored"]
+
+STORE_LINK_PLACEHOLDER = "{query}"
+MAX_STORE_LINKS_PER_FAMILY = 20
+MAX_STORE_URL_TEMPLATE_LENGTH = 500
+MAX_STORE_NAME_KEY_LENGTH = 240  # casefold expands at most 3 code points per input character
+
+
+class InvalidStoreUrlTemplate(ValueError):
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 class InvalidShoppingItemName(ValueError):
@@ -64,6 +77,52 @@ def normalize_item_name(value: str) -> str:
 def normalize_product_name(value: str) -> str:
     """Return the durable family-preference and matching key for a name."""
     return value.strip().casefold()
+
+
+def normalize_store_name(value: str) -> str:
+    """Return the trimmed display name with whitespace runs collapsed."""
+    return " ".join(value.split())
+
+
+def store_name_key(value: str) -> str:
+    """Return the family-scoped uniqueness key for a store display name."""
+    return normalize_product_name(normalize_store_name(value))
+
+
+def validate_store_url_template(value: str) -> str:
+    """Validate a URL-addressable store search without performing I/O."""
+    cleaned = value.strip()
+    if not cleaned:
+        raise InvalidStoreUrlTemplate("empty")
+    if len(cleaned) > MAX_STORE_URL_TEMPLATE_LENGTH:
+        raise InvalidStoreUrlTemplate("too_long")
+    if any(ch.isspace() or unicodedata.category(ch).startswith("C") for ch in cleaned):
+        raise InvalidStoreUrlTemplate("whitespace_or_control")
+
+    placeholder_count = cleaned.count(STORE_LINK_PLACEHOLDER)
+    if placeholder_count == 0:
+        raise InvalidStoreUrlTemplate("placeholder_missing")
+    if placeholder_count > 1:
+        raise InvalidStoreUrlTemplate("placeholder_repeated")
+    without_placeholder = cleaned.replace(STORE_LINK_PLACEHOLDER, "", 1)
+    if "{" in without_placeholder or "}" in without_placeholder:
+        raise InvalidStoreUrlTemplate("stray_brace")
+
+    try:
+        parsed = urlsplit(cleaned)
+        hostname = parsed.hostname
+        _ = parsed.port
+    except ValueError as exc:
+        raise InvalidStoreUrlTemplate("unparseable") from exc
+    if parsed.scheme.lower() not in {"http", "https"}:
+        raise InvalidStoreUrlTemplate("scheme")
+    if not hostname:
+        raise InvalidStoreUrlTemplate("host_missing")
+    if parsed.username is not None or parsed.password is not None:
+        raise InvalidStoreUrlTemplate("credentials")
+    if STORE_LINK_PLACEHOLDER in parsed.scheme or STORE_LINK_PLACEHOLDER in parsed.netloc:
+        raise InvalidStoreUrlTemplate("placeholder_in_authority")
+    return cleaned
 
 
 def _clean_unit(value: str | None) -> str | None:

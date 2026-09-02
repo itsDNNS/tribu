@@ -222,6 +222,45 @@ test.describe('Settings', () => {
     await expect(page.getByText(/placeholder-secret/)).toHaveCount(0);
   });
 
+  test('creates a store search link', async ({ authedPage: page, apiCtx }) => {
+    let createdId = null;
+    let primaryError = null;
+    try {
+      await navigateTo(page, 'Settings');
+      const storeLinksItem = page.locator('.settings-mobile-item', { hasText: 'Store searches' });
+      if (await storeLinksItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await storeLinksItem.click();
+      } else {
+        await page.locator('.settings-sidebar-item', { hasText: 'Store searches' }).click();
+      }
+
+      await page.getByLabel('Store name').fill('Settings E2E Store');
+      await page.getByLabel('Search address').fill('https://www.example.com/search?q={query}');
+      const createResponsePromise = page.waitForResponse((response) => (
+        response.request().method() === 'POST'
+        && new URL(response.url()).pathname.endsWith('/api/shopping/store-links')
+      ));
+      await page.getByRole('button', { name: 'Add store' }).click();
+      const createResponse = await createResponsePromise;
+      expect(createResponse.ok()).toBeTruthy();
+      const created = await createResponse.json();
+      createdId = created.id;
+
+      await expect(page.getByText('Settings E2E Store')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText('www.example.com')).toBeVisible();
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      if (createdId !== null) {
+        const cleanup = await apiCtx.delete(`/api/shopping/store-links/${createdId}`);
+        if (!cleanup.ok() && !primaryError) {
+          throw new Error(`DELETE /api/shopping/store-links/${createdId} failed (${cleanup.status()})`);
+        }
+      }
+    }
+  });
+
   test('creates a household notification destination without exposing the Apprise URL', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 

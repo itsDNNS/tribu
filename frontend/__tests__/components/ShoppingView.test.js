@@ -53,12 +53,16 @@ const messages = {
   'module.shopping.keep_current_list': 'Keep in current list',
   'module.shopping.save': 'Save',
   'module.shopping.cancel': 'Cancel',
+  'module.shopping.search_online_title': 'Search for {name}',
+  'module.shopping.search_online_hint': 'Opens the store website in a new tab.',
   'aria.rename_list': 'Rename list: {name}',
   'aria.edit_item': 'Edit item: {name}',
   'aria.delete_item': 'Delete item: {name}',
   'aria.delete_list': 'Delete list: {name}',
   'aria.delete_template': 'Delete template: {name}',
   'aria.add_item': 'Add item',
+  'aria.search_item': 'Search online: {name}',
+  'cancel': 'Cancel',
 };
 
 function setup(overrides = {}, appOverrides = {}) {
@@ -106,6 +110,7 @@ function setup(overrides = {}, appOverrides = {}) {
         { id: 52, name: 'Bananas', spec: '6', category: 'Produce' },
       ] },
     ],
+    storeLinks: [],
     createTemplate: jest.fn(),
     updateTemplate: jest.fn(),
     deleteTemplate: jest.fn(),
@@ -135,6 +140,63 @@ describe('ShoppingView redesign shell', () => {
     expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Produce');
     expect(container.querySelector('.shopping-category-summary')).toHaveTextContent('2 Items');
     expect(container.querySelector('.shopping-total-chip')).not.toBeInTheDocument();
+  });
+});
+
+describe('shopping store search picker', () => {
+  const bread = { id: 1, list_id: 10, name: 'Bread', checked: false, added_by_user_id: null };
+  const validStore = { id: 4, name: 'E2E Store', url_template: 'https://www.example.com/search?q={query}' };
+
+  function storeSetup(overrides = {}, appOverrides = {}) {
+    return setup({
+      shoppingLists: [{ id: 10, name: 'Groceries', item_count: 1, checked_count: 0 }],
+      activeList: { id: 10, name: 'Groceries', item_count: 1, checked_count: 0 },
+      items: [bread],
+      uncheckedItems: [bread],
+      checkedItems: [],
+      ...overrides,
+    }, appOverrides);
+  }
+
+  it('renders no action for zero stores or invalid-only stores', () => {
+    const first = storeSetup();
+    expect(screen.queryByRole('button', { name: 'Search online: Bread' })).not.toBeInTheDocument();
+    first.unmount();
+    storeSetup({ storeLinks: [{ id: 1, name: 'Broken', url_template: 'javascript:{query}' }] });
+    expect(screen.queryByRole('button', { name: 'Search online: Bread' })).not.toBeInTheDocument();
+  });
+
+  it('hides the action for children even when a store is valid', () => {
+    storeSetup({ storeLinks: [validStore] }, { isChild: true });
+    expect(screen.queryByRole('button', { name: 'Search online: Bread' })).not.toBeInTheDocument();
+  });
+
+  it('opens a safe native-link picker without toggling the item', () => {
+    storeSetup({ storeLinks: [validStore] });
+    const searchButton = screen.getByRole('button', { name: 'Search online: Bread' });
+    fireEvent.click(searchButton);
+    const dialog = screen.getByRole('dialog', { name: 'Search for Bread' });
+    const link = within(dialog).getByRole('link', { name: /E2E Store/ });
+    expect(link).toHaveAttribute('href', 'https://www.example.com/search?q=Bread');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link).toHaveTextContent('www.example.com');
+    expect(mockShoppingState.toggleItem).not.toHaveBeenCalled();
+    fireEvent.click(link);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mockShoppingState.toggleItem).not.toHaveBeenCalled();
+  });
+
+  it('focuses the first link and restores focus after Escape', async () => {
+    storeSetup({ storeLinks: [validStore] });
+    const searchButton = screen.getByRole('button', { name: 'Search online: Bread' });
+    searchButton.focus();
+    fireEvent.click(searchButton);
+    const link = screen.getByRole('link', { name: /E2E Store/ });
+    await waitFor(() => expect(link).toHaveFocus());
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(searchButton).toHaveFocus());
   });
 });
 

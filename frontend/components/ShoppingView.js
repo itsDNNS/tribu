@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Plus, Check, Trash2, X, ShoppingCart, Pencil } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Plus, Check, Trash2, X, ShoppingCart, Pencil, Search } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useShopping } from '../hooks/useShopping';
 import { t } from '../lib/i18n';
 import MemberAvatar from './MemberAvatar';
 import ConfirmDialog from './ConfirmDialog';
+import StoreSearchMenu from './StoreSearchMenu';
+import { buildStoreSearchUrl } from '../lib/storeSearch';
 
 const EMPTY_TEMPLATE_ITEM = { name: '', spec: '', category: '' };
 
@@ -167,7 +169,7 @@ function ShoppingItemEditForm({ item, shoppingLists, activeListId, messages, onS
   );
 }
 
-function ShoppingItem({ item, checked, members, messages, onToggle, onEdit, onDelete }) {
+function ShoppingItem({ item, checked, members, messages, onToggle, onStoreSearch, onEdit, onDelete }) {
   const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
   const memberIdx = addedBy ? members.indexOf(addedBy) : 0;
 
@@ -201,6 +203,16 @@ function ShoppingItem({ item, checked, members, messages, onToggle, onEdit, onDe
         {addedBy && <MemberAvatar member={addedBy} index={memberIdx} size={22} />}
       </div>
       <div className="shopping-item-actions">
+        {onStoreSearch && (
+          <button
+            className="shopping-item-action shopping-item-search"
+            type="button"
+            onClick={() => onStoreSearch(item)}
+            aria-label={t(messages, 'aria.search_item').replace('{name}', item.name)}
+          >
+            <Search size={14} aria-hidden="true" />
+          </button>
+        )}
         {onEdit && (
           <button
             className="shopping-item-action"
@@ -368,6 +380,7 @@ export default function ShoppingView() {
   const { members, messages, isMobile, isChild } = useApp();
   const sh = useShopping();
   const [confirmAction, setConfirmAction] = useState(null);
+  const [storeSearchItem, setStoreSearchItem] = useState(null);
   const [editingListId, setEditingListId] = useState(null);
   const [editingListName, setEditingListName] = useState('');
   const [editingItemId, setEditingItemId] = useState(null);
@@ -377,6 +390,10 @@ export default function ShoppingView() {
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [itemSuggestionsOpen, setItemSuggestionsOpen] = useState(false);
   const [activeItemSuggestion, setActiveItemSuggestion] = useState(null);
+  const searchableStores = useMemo(
+    () => (sh.storeLinks || []).filter((link) => buildStoreSearchUrl(link.url_template, 'x')),
+    [sh.storeLinks],
+  );
   const itemSuggestionQuery = sh.newItemName.trim().toLocaleLowerCase();
   const itemSuggestions = itemSuggestionQuery
     ? Array.from(new Set((sh.items || [])
@@ -490,6 +507,14 @@ export default function ShoppingView() {
           onConfirm={confirmAction.action}
           onCancel={() => setConfirmAction(null)}
           messages={messages}
+        />
+      )}
+      {storeSearchItem && (
+        <StoreSearchMenu
+          item={storeSearchItem}
+          stores={searchableStores}
+          messages={messages}
+          onClose={() => setStoreSearchItem(null)}
         />
       )}
       <div className={`shopping-layout${isChild ? ' shopping-layout-readonly' : ''}`}>
@@ -791,6 +816,7 @@ export default function ShoppingView() {
                             members={members}
                             messages={messages}
                             onToggle={sh.toggleItem}
+                            onStoreSearch={!isChild && searchableStores.length ? setStoreSearchItem : null}
                             onEdit={isChild ? null : (currentItem) => setEditingItemId(currentItem.id)}
                             onDelete={isChild ? null : sh.deleteItem}
                           />
@@ -824,6 +850,7 @@ export default function ShoppingView() {
                             members={members}
                             messages={messages}
                             onToggle={sh.toggleItem}
+                            onStoreSearch={!isChild && searchableStores.length ? setStoreSearchItem : null}
                             onEdit={isChild ? null : (currentItem) => setEditingItemId(currentItem.id)}
                             onDelete={isChild ? null : sh.deleteItem}
                           />
