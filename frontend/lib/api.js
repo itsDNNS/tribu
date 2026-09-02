@@ -389,6 +389,22 @@ export function apiApplyShoppingTemplate(templateId, payload) {
   return post(`/shopping/templates/${templateId}/apply`, payload);
 }
 
+export function apiGetShoppingStoreLinks(familyId) {
+  return request(`/shopping/store-links?family_id=${familyId}`);
+}
+
+export function apiCreateShoppingStoreLink(payload) {
+  return post('/shopping/store-links', payload);
+}
+
+export function apiUpdateShoppingStoreLink(storeLinkId, payload) {
+  return patch(`/shopping/store-links/${storeLinkId}`, payload);
+}
+
+export function apiDeleteShoppingStoreLink(storeLinkId) {
+  return del(`/shopping/store-links/${storeLinkId}`);
+}
+
 // Household templates
 export function apiGetHouseholdTemplates(familyId) {
   return request(`/household-templates?family_id=${familyId}`);

@@ -116,7 +116,7 @@ export function predictShoppingItemTransition(items, payload) {
 export function useShopping() {
   const {
     shoppingLists, setShoppingLists, familyId, messages,
-    loadShoppingLists, demoMode, isMobile,
+    loadShoppingLists, demoMode, isMobile, isChild,
   } = useApp();
   const { error: toastError } = useToast();
 
@@ -128,6 +128,7 @@ export function useShopping() {
   const [newItemCategory, setNewItemCategory] = useState('');
   const [showCreateList, setShowCreateList] = useState(false);
   const [templates, setTemplates] = useState([]);
+  const [storeLinks, setStoreLinks] = useState([]);
   const itemInputRef = useRef(null);
 
 
@@ -214,6 +215,13 @@ export function useShopping() {
       if (ok) setTemplates(data);
     });
   }, [familyId, demoMode]);
+
+  useEffect(() => {
+    if (!familyId || demoMode || isChild) { setStoreLinks([]); return; }
+    api.apiGetShoppingStoreLinks(familyId).then(({ ok, data }) => {
+      if (ok) setStoreLinks(data || []);
+    });
+  }, [familyId, demoMode, isChild]);
 
   const loadTemplates = useCallback(async () => {
     if (!familyId || demoMode) return;
@@ -647,7 +655,7 @@ export function useShopping() {
     newItemSpec, setNewItemSpec,
     newItemCategory, setNewItemCategory,
     showCreateList, setShowCreateList,
-    templates,
+    templates, storeLinks,
     itemInputRef,
     createList, renameList, deleteList,
     addItem, toggleItem, editItem, moveItem, deleteItem, clearChecked,

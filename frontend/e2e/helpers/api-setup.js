@@ -85,6 +85,16 @@ async function seedShoppingTemplate(request, familyId, name = 'Weekly groceries'
   return res.json();
 }
 
+async function seedShoppingStoreLink(request, familyId, name, urlTemplate) {
+  const res = await request.post('/api/shopping/store-links', {
+    data: { family_id: familyId, name, url_template: urlTemplate },
+  });
+  if (!res.ok()) {
+    throw new Error(`POST /api/shopping/store-links failed (${res.status()}): ${await res.text()}`);
+  }
+  return res.json();
+}
+
 async function seedHouseholdTemplate(request, familyId, overrides = {}) {
   const res = await request.post('/api/household-templates', {
     data: {
@@ -128,6 +138,7 @@ module.exports = {
   seedShoppingList,
   seedShoppingItem,
   seedShoppingTemplate,
+  seedShoppingStoreLink,
   seedHouseholdTemplate,
   seedMealPlan,
 };

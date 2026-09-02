@@ -58,6 +58,7 @@ class Family(Base):
     shopping_lists = relationship("ShoppingList", back_populates="family", cascade="all, delete-orphan")
     product_preferences = relationship("FamilyProductPreference", back_populates="family", cascade="all, delete-orphan")
     shopping_templates = relationship("ShoppingTemplate", back_populates="family", cascade="all, delete-orphan")
+    shopping_store_links = relationship("ShoppingStoreLink", back_populates="family", cascade="all, delete-orphan")
     household_templates = relationship("HouseholdTemplate", back_populates="family", cascade="all, delete-orphan")
     recipes = relationship("Recipe", back_populates="family", cascade="all, delete-orphan")
     invitations = relationship("FamilyInvitation", back_populates="family", cascade="all, delete-orphan")
@@ -547,6 +548,32 @@ class ShoppingTemplateItem(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     template = relationship("ShoppingTemplate", back_populates="items")
+
+
+class ShoppingStoreLink(Base):
+    __tablename__ = "shopping_store_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "family_id",
+            "normalized_name",
+            name="uq_shopping_store_links_family_normalized_name",
+        ),
+        CheckConstraint(
+            "length(trim(name)) > 0",
+            name="ck_shopping_store_links_name_nonempty",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(80), nullable=False)
+    normalized_name = Column(String(240), nullable=False)
+    url_template = Column(String(500), nullable=False)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="shopping_store_links")
 
 
 class HouseholdTemplate(Base):

@@ -15,6 +15,9 @@ jest.mock('../../components/settings/AccountTab', () => function AccountTab() {
 jest.mock('../../components/settings/NotificationDestinationsTab', () => function NotificationDestinationsTab() {
   return <div>Notification destination panel</div>;
 });
+jest.mock('../../components/settings/StoreLinksTab', () => function StoreLinksTab() {
+  return <div>Store links panel</div>;
+});
 
 function baseState(overrides = {}) {
   return {
@@ -28,6 +31,21 @@ function baseState(overrides = {}) {
 }
 
 describe('Settings notification destinations visibility', () => {
+  it('shows store searches to adults without requiring admin', () => {
+    mockAppState = baseState({ isAdmin: false });
+    render(<SettingsView />);
+    expect(screen.getByRole('button', { name: 'Store searches' })).toBeInTheDocument();
+  });
+
+  it('hides store searches from children and demo mode', () => {
+    for (const state of [baseState({ isChild: true }), baseState({ demoMode: true })]) {
+      mockAppState = state;
+      const { unmount } = render(<SettingsView />);
+      expect(screen.queryByRole('button', { name: 'Store searches' })).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
   it('shows household notification destinations to admins', () => {
     mockAppState = baseState();
     render(<SettingsView />);

@@ -9,6 +9,7 @@ import {
   apiGetSetupChecklist, apiDismissSetupChecklist, apiResetSetupChecklist, apiCompleteSetupChecklistStep,
   apiGetHouseholdTemplates, apiCreateHouseholdTemplate, apiUpdateHouseholdTemplate, apiDeleteHouseholdTemplate, apiApplyHouseholdTemplate,
   apiGetTasks, apiCreateTask, apiUpdateTask, apiDeleteTask,
+  apiGetShoppingStoreLinks, apiCreateShoppingStoreLink, apiUpdateShoppingStoreLink, apiDeleteShoppingStoreLink,
   apiListRecipes, apiCreateRecipe, apiUpdateRecipe, apiDeleteRecipe, apiAddRecipeIngredientsToShopping,
 } from '../../lib/api';
 
@@ -23,6 +24,36 @@ afterEach(() => jest.restoreAllMocks());
 function lastCall() {
   return global.fetch.mock.calls[global.fetch.mock.calls.length - 1];
 }
+
+describe('Shopping store links API', () => {
+  it('lists store links for a family', async () => {
+    await apiGetShoppingStoreLinks(7);
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/shopping/store-links?family_id=7');
+    expect(opts?.method).toBeUndefined();
+  });
+
+  it('creates a store link', async () => {
+    await apiCreateShoppingStoreLink({ family_id: 7, name: 'Store', url_template: 'https://example.com/?q={query}' });
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/shopping/store-links');
+    expect(opts.method).toBe('POST');
+  });
+
+  it('updates a store link', async () => {
+    await apiUpdateShoppingStoreLink(4, { name: 'Store' });
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/shopping/store-links/4');
+    expect(opts.method).toBe('PATCH');
+  });
+
+  it('deletes a store link', async () => {
+    await apiDeleteShoppingStoreLink(4);
+    const [url, opts] = lastCall();
+    expect(url).toBe('/api/shopping/store-links/4');
+    expect(opts.method).toBe('DELETE');
+  });
+});
 
 describe('Auth API', () => {
   it('apiLogin sends POST to /api/auth/login', async () => {

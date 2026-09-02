@@ -1539,7 +1539,11 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .shopping-item-row:hover .shopping-item-action,
 .shopping-item-row:focus-within .shopping-item-action { opacity: 1; pointer-events: auto; }
 .shopping-item-action:hover { color: var(--amethyst); background: rgba(124, 58, 237, 0.1); }
+.shopping-item-search:hover { color: var(--amethyst); background: rgba(124, 58, 237, 0.1); }
 .shopping-item-delete:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+a.store-search-option { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; text-decoration: none; }
+.store-search-option-host { font-size: 0.8rem; color: var(--text-muted); word-break: break-all; }
+.store-link-preview { overflow-wrap: anywhere; }
 .shopping-item-edit-form { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(150px, 0.8fr) auto; gap: var(--space-xs); align-items: center; padding: var(--space-sm) var(--space-md); border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.03); }
 .shopping-item-edit-form .quick-add-input,
 .shopping-item-edit-form .form-input { width: 100%; min-width: 0; }
@@ -1901,6 +1905,8 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .shopping-item:focus-visible,
 .shopping-list-action:focus-visible,
 .shopping-item-action:focus-visible,
+.shopping-item-search:focus-visible,
+.store-search-option:focus-visible,
 .shopping-template-toggle:focus-visible,
 .shopping-list-delete:focus-visible,
 .shopping-item-delete:focus-visible,

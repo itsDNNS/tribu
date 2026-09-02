@@ -758,6 +758,40 @@ class ShoppingTemplateApplyResponse(BaseModel):
     items: list[ShoppingItemResponse] = Field(default_factory=list, description="Affected shopping items")
 
 
+class ShoppingStoreLinkCreate(BaseModel):
+    """Create a store search link for a family."""
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(min_length=1, max_length=80, description="Store name")
+    url_template: str = Field(description="Search address containing {query}")
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{
+            "family_id": 1,
+            "name": "Corner Market",
+            "url_template": "https://www.example.com/search?q={query}",
+        }]
+    })
+
+
+class ShoppingStoreLinkUpdate(BaseModel):
+    """Update a store search link."""
+    name: Optional[str] = Field(None, min_length=1, max_length=80, description="Store name")
+    url_template: Optional[str] = Field(None, description="Search address containing {query}")
+
+
+class ShoppingStoreLinkResponse(BaseModel):
+    """Family store search link."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Store link ID")
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(..., description="Store name")
+    url_template: str = Field(..., description="Search address containing {query}")
+    created_by_user_id: Optional[int] = Field(None, description="Creator user ID")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+
 # ---------------------------------------------------------------------------
 # Household templates
 # ---------------------------------------------------------------------------
