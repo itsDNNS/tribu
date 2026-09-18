@@ -1,5 +1,5 @@
-const CACHE_NAME = 'tribu-v7';
-const STATIC_ASSETS = ['/manifest.json', '/offline.html'];
+const CACHE_NAME = 'tribu-v8';
+const STATIC_ASSETS = ['/manifest.json', '/offline.html', '/icons/icon-192.png', '/icons/notification-badge-96.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -120,7 +120,8 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
+      // Android uses the alpha mask for its small monochrome notification icon.
+      badge: '/icons/notification-badge-96.png',
       data: { url: data.url || '/' },
     })
   );

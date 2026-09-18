@@ -6,7 +6,9 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is required. Set it via environment variable.")
 
-engine = create_engine(DATABASE_URL)
+# Recover pooled connections after database restarts before a scheduler tick
+# starts its transaction, instead of losing that reminder attempt.
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
