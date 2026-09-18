@@ -7,14 +7,17 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field, asdict
+from datetime import datetime
 from typing import Any
 
 import jwt
 from sqlalchemy.orm import Session
 
 from app.models import PushSubscription
+from app.core.clock import to_utc_naive, utcnow
 
 logger = logging.getLogger(__name__)
+PUSH_TIMEOUT_SECONDS = 10
 
 
 @dataclass
@@ -122,7 +125,7 @@ def _short_error(exc: BaseException, limit: int = 200) -> str:
     return msg[:limit]
 
 
-def _send_expo_push(token: str, title: str, body: str, url: str | None = None) -> tuple[bool, str | None, bool]:
+def _send_expo_push(token: str, title: str, body: str, url: str | None = None, *, urgent: bool = False, ttl: int | None = None) -> tuple[bool, str | None, bool]:
     payload = {
         "to": token,
         "title": title,
@@ -130,6 +133,10 @@ def _send_expo_push(token: str, title: str, body: str, url: str | None = None) -
         "sound": "default",
         "data": {"url": url} if url else {},
     }
+    if urgent:
+        payload["priority"] = "high"
+    if ttl is not None:
+        payload["ttl"] = ttl
     request = urllib.request.Request(
         "https://exp.host/--/api/v2/push/send",
         data=json.dumps(payload).encode("utf-8"),
@@ -211,7 +218,7 @@ def _fcm_error_code(data: Any) -> str:
     return str(error.get("status") or error.get("message") or "fcm_send_failed")[:120]
 
 
-def _send_fcm_push(token: str, title: str, body: str, url: str | None = None) -> tuple[bool, str | None, bool]:
+def _send_fcm_push(token: str, title: str, body: str, url: str | None = None, *, urgent: bool = False, ttl: int | None = None) -> tuple[bool, str | None, bool]:
     account = _load_fcm_service_account()
     project_id = get_fcm_project_id()
     if not account or not project_id or not account.get("client_email") or not account.get("private_key"):
@@ -224,6 +231,12 @@ def _send_fcm_push(token: str, title: str, body: str, url: str | None = None) ->
             "data": {k: v for k, v in {"url": url or ""}.items() if v},
         }
     }
+    if urgent or ttl is not None:
+        payload["message"]["android"] = {
+            "priority": "high" if urgent else "normal",
+        }
+        if ttl is not None:
+            payload["message"]["android"]["ttl"] = f"{ttl}s"
     try:
         access_token = _fcm_access_token(account)
         request = urllib.request.Request(
@@ -255,6 +268,9 @@ def send_push_for_user(
     title: str,
     body: str,
     url: str | None = None,
+    *,
+    urgent: bool = False,
+    expires_at: datetime | None = None,
 ) -> PushResult:
     """Send a web-push payload to every active subscription for ``user_id``.
 
@@ -264,6 +280,17 @@ def send_push_for_user(
     as "push was not actually delivered" without raising.
     """
     result = PushResult()
+
+    def delivery_options() -> dict[str, Any] | None:
+        # Re-evaluate for each device: an earlier connection may have stalled.
+        options: dict[str, Any] = {"urgent": True} if urgent else {}
+        if expires_at is not None:
+            ttl = int((to_utc_naive(expires_at) - utcnow()).total_seconds())
+            if ttl <= 0:
+                result.skipped_reason = "expired"
+                return None
+            options["ttl"] = min(ttl, 2419200)
+        return options
 
     subscriptions = db.query(PushSubscription).filter(PushSubscription.user_id == user_id).all()
     if not subscriptions:
@@ -293,6 +320,9 @@ def send_push_for_user(
             else:
                 vapid_claims = {"sub": vapid_subject}
                 for sub in web_subscriptions:
+                    options = delivery_options()
+                    if options is None:
+                        break
                     result.attempted += 1
                     try:
                         webpush(
@@ -303,6 +333,9 @@ def send_push_for_user(
                             data=payload,
                             vapid_private_key=private_key,
                             vapid_claims=vapid_claims,
+                            headers={"Urgency": "high" if urgent else "normal"},
+                            ttl=options.get("ttl", 0),
+                            timeout=PUSH_TIMEOUT_SECONDS,
                         )
                         result.succeeded += 1
                     except WebPushException as e:
@@ -324,8 +357,11 @@ def send_push_for_user(
                         logger.exception("Unexpected push error for endpoint %s", sub.endpoint[:60])
 
     for sub in expo_subscriptions:
+        options = delivery_options()
+        if options is None:
+            break
         result.attempted += 1
-        ok, error, remove = _send_expo_push(sub.endpoint, title, body, url)
+        ok, error, remove = _send_expo_push(sub.endpoint, title, body, url, **options)
         if ok:
             result.succeeded += 1
             continue
@@ -341,8 +377,11 @@ def send_push_for_user(
     if fcm_subscriptions and not is_fcm_configured():
         result.skipped_reason = "fcm_not_configured" if result.attempted == 0 else result.skipped_reason
     for sub in fcm_subscriptions if is_fcm_configured() else []:
+        options = delivery_options()
+        if options is None:
+            break
         result.attempted += 1
-        ok, error, remove = _send_fcm_push(sub.endpoint, title, body, url)
+        ok, error, remove = _send_fcm_push(sub.endpoint, title, body, url, **options)
         if ok:
             result.succeeded += 1
             continue

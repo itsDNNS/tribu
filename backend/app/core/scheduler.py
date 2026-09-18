@@ -9,7 +9,7 @@ from sqlalchemy import or_
 
 from app.core import cache
 from app.core.backup import create_backup, enforce_retention
-from app.core.clock import local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
+from app.core.clock import app_timezone, local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
 from app.core.push import send_push_for_user
 from app.core.notification_preferences import should_push_notification_type
 from app.core.notification_destinations import EligibleReminderUser, dispatch_family_notification
@@ -257,6 +257,7 @@ def _check_notifications():
             source_type: str,
             source_id: int,
             trigger_key: str,
+            event_starts_at: datetime | None = None,
         ) -> None:
             """Idempotent reminder delivery for a (user, trigger_key) pair.
 
@@ -304,7 +305,17 @@ def _check_notifications():
             push_allowed, push_skip_reason = should_push_notification_type(pref, ntype)
             if push_allowed:
                 try:
-                    push_result = send_push_for_user(db, uid, title, body, link)
+                    if event_starts_at is not None:
+                        # A relative countdown becomes false when Android delays
+                        # delivery or the notification remains in the tray.
+                        push_body = f"Starts at {event_starts_at:%Y-%m-%d %H:%M} ({app_timezone().key})"
+                        push_result = send_push_for_user(
+                            db, uid, title, push_body, link,
+                            urgent=True,
+                            expires_at=local_wall_to_utc_naive(event_starts_at),
+                        )
+                    else:
+                        push_result = send_push_for_user(db, uid, title, body, link)
                 except Exception as exc:
                     logger.exception("Push notification failed for user %s", uid)
                     log.delivery_attempts = (log.delivery_attempts or 0) + 1
@@ -419,6 +430,7 @@ def _check_notifications():
                         body,
                         f"/calendar?event={ev.id}", "event", ev.id,
                         trigger_key,
+                        event_starts_at=starts_at,
                     )
 
 
@@ -515,11 +527,11 @@ def start_notification_job():
         scheduler.remove_job(NOTIFICATION_JOB_ID)
     scheduler.add_job(
         _check_notifications,
-        trigger=IntervalTrigger(minutes=5),
+        trigger=IntervalTrigger(minutes=1),
         id=NOTIFICATION_JOB_ID,
         replace_existing=True,
     )
-    logger.info("Notification check job started (every 5 min).")
+    logger.info("Notification check job started (every 1 min).")
 
 
 def _refresh_active_calendar_subscriptions():

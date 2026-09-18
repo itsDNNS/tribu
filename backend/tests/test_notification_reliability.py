@@ -147,6 +147,49 @@ def test_event_reminder_uses_configured_local_wall_clock_and_utc_audit_timestamp
         db.close()
 
 
+@pytest.mark.parametrize("recurrence", [None, "weekly"])
+def test_calendar_push_uses_occurrence_start_and_urgent_expiry(monkeypatch, recurrence):
+    from app.core import scheduler as scheduler_module
+    from app.core.push import PushResult
+
+    with TestSession() as db:
+        user, fam = _seed_user(db)
+        _set_pref(db, user.id, push_enabled=True, reminder_minutes=60)
+        db.add(CalendarEvent(
+            family_id=fam.id, title="Music lesson", all_day=False,
+            starts_at=datetime(2026, 9, 10 if recurrence else 17, 16, 45),
+            recurrence=recurrence,
+        ))
+        db.commit()
+
+    _freeze_scheduler_clocks(monkeypatch, audit_now=datetime(2026, 9, 17, 13, 45), wall_now=datetime(2026, 9, 17, 15, 45))
+    calls = []
+
+    def send(db, uid, title, body, link, **options):
+        calls.append((body, options))
+        return PushResult(attempted=1, succeeded=1)
+
+    monkeypatch.setattr(scheduler_module, "send_push_for_user", send)
+    scheduler_module._check_notifications()
+    scheduler_module._check_notifications()
+    assert calls == [(
+        "Starts at 2026-09-17 16:45 (Europe/Berlin)",
+        {"urgent": True, "expires_at": datetime(2026, 9, 17, 14, 45)},
+    )]
+    with TestSession() as db:
+        assert db.query(Notification).one().body == "Starts in 60 minutes"
+
+
+def test_reminder_job_checks_preferences_every_minute(monkeypatch):
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from app.core import scheduler as scheduler_module
+
+    scheduler = BackgroundScheduler()
+    monkeypatch.setattr(scheduler_module, "get_scheduler", lambda: scheduler)
+    scheduler_module.start_notification_job()
+    assert scheduler.get_job(scheduler_module.NOTIFICATION_JOB_ID).trigger.interval == timedelta(minutes=1)
+
+
 def test_event_reminder_does_not_fire_late_when_utc_clock_matches_future_window(monkeypatch):
     db = TestSession()
     try:
@@ -525,13 +568,13 @@ def test_transient_push_failure_keeps_one_notification_and_retries(monkeypatch):
 
     call_count = {"n": 0}
 
-    def fake_push_fail(db, uid, title, body, url=None):
+    def fake_push_fail(db, uid, title, body, url=None, **kwargs):
         call_count["n"] += 1
         return push_module.PushResult(
             attempted=1, succeeded=0, failed=1, removed=0, errors=["boom"]
         )
 
-    def fake_push_ok(db, uid, title, body, url=None):
+    def fake_push_ok(db, uid, title, body, url=None, **kwargs):
         call_count["n"] += 1
         return push_module.PushResult(attempted=1, succeeded=1)
 
@@ -603,7 +646,7 @@ def test_disabled_push_category_keeps_in_app_reminder_and_skips_push(monkeypatch
 
     calls = {"n": 0}
 
-    def fake_push(db, uid, title, body, url=None):
+    def fake_push(db, uid, title, body, url=None, **kwargs):
         calls["n"] += 1
         raise AssertionError("disabled category must not attempt browser push")
 
@@ -650,7 +693,7 @@ def test_enabled_push_category_sends_push(monkeypatch):
 
     calls = {"n": 0}
 
-    def fake_push(db, uid, title, body, url=None):
+    def fake_push(db, uid, title, body, url=None, **kwargs):
         calls["n"] += 1
         return push_module.PushResult(attempted=1, succeeded=1)
 
@@ -693,7 +736,7 @@ def test_destination_dispatch_runs_after_in_app_and_push_delivery(monkeypatch):
 
     calls = []
 
-    def fake_push(db, uid, title, body, url=None):
+    def fake_push(db, uid, title, body, url=None, **kwargs):
         calls.append("push")
         return push_module.PushResult(attempted=1, succeeded=1)
 
@@ -819,7 +862,7 @@ def test_removed_only_push_result_is_not_retried(monkeypatch):
 
     calls = {"n": 0}
 
-    def fake_removed_only(db, uid, title, body, url=None):
+    def fake_removed_only(db, uid, title, body, url=None, **kwargs):
         calls["n"] += 1
         return push_module.PushResult(attempted=1, succeeded=0, failed=0, removed=1)
 
@@ -985,7 +1028,7 @@ def test_event_assignment_push_respects_category_preference(monkeypatch):
     db = TestSession()
     calls = []
 
-    def fake_push(db, uid, title, body, url=None):
+    def fake_push(db, uid, title, body, url=None, **kwargs):
         calls.append({"uid": uid, "title": title, "body": body, "url": url})
 
     from app.modules import calendar_router
@@ -1030,7 +1073,7 @@ def test_event_assignment_disabled_category_keeps_in_app_without_push(monkeypatc
     db = TestSession()
     calls = []
 
-    def fake_push(db, uid, title, body, url=None):
+    def fake_push(db, uid, title, body, url=None, **kwargs):
         calls.append(uid)
 
     from app.modules import calendar_router
