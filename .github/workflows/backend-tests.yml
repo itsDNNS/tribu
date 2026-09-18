@@ -39,4 +39,8 @@ jobs:
             backend/tests/test_cors_headers.py \
             backend/tests/test_mobile_auth.py \
             backend/tests/test_oidc_flow.py \
+            backend/tests/test_push_delivery.py \
+            backend/tests/test_notification_reliability.py \
+            backend/tests/test_push_diagnostics.py \
+            backend/tests/test_notification_destinations.py \
             -q
