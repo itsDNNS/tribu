@@ -59,6 +59,14 @@ time and the device's actual receipt time. Calendar values are local wall times;
 audit timestamps are UTC. Offline devices, notification permissions and Android
 battery restrictions can still affect delivery.
 
+For a Chrome-installed Android web app, also check Chrome's battery optimization
+setting: Chrome runs the web app's background push handler. A working foreground
+test does not establish delivery while the phone is idle. If a controlled test
+confirms that delivery is deferred only in idle mode, a per-app battery
+optimization exception for Chrome may be needed even with high push urgency.
+This affects Chrome's background power use; keep the phone's general power-saving
+features enabled. See Android's [Doze and App Standby guidance](https://developer.android.com/training/monitoring-device-state/doze-standby).
+
 ## Household Notification Destinations (Optional)
 
 Admins can add Apprise-backed destinations for human-readable household reminders and opt-in shopping activity, such as Gotify, ntfy, Telegram, Matrix, or email. Use placeholder examples in public docs and screenshots, for example `ntfy://ntfy.sh/family-topic` or `gotify://host.example/token`, not real tokens. The destination API always uses Apprise for new destinations; `provider: "apprise"` is still returned for compatibility, and any legacy `provider` value sent on create is ignored.
