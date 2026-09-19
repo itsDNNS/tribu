@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Odkaz na obchod nebyl nalezen",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Je povoleno nejvýše {limit} obchodů",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Obchod s tímto názvem již existuje",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Zadejte adresu http nebo https, která obsahuje {query} právě jednou"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Zadejte adresu http nebo https, která obsahuje {query} právě jednou",
+  "module.shopping.show_overview": "Zobrazit přehled kategorií",
+  "module.shopping.hide_overview": "Skrýt přehled kategorií",
+  "module.shopping.undo": "Zpět",
+  "module.shopping.item_checked": "Zaškrtnuto: {name}",
+  "module.shopping.item_unchecked": "Odškrtnuto: {name}"
 }

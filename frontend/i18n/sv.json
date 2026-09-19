@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Butikslänken hittades inte",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Högst {limit} butiker tillåtna",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Det finns redan en butik med det namnet",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Ange en http- eller https-adress som innehåller {query} exakt en gång"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Ange en http- eller https-adress som innehåller {query} exakt en gång",
+  "module.shopping.show_overview": "Visa kategoriöversikt",
+  "module.shopping.hide_overview": "Dölj kategoriöversikt",
+  "module.shopping.undo": "Ångra",
+  "module.shopping.item_checked": "Avbockad: {name}",
+  "module.shopping.item_unchecked": "Öppen igen: {name}"
 }

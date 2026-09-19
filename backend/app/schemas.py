@@ -665,12 +665,20 @@ class ShoppingItemCreate(BaseModel):
     })
 
 
+class ShoppingItemExpectedState(BaseModel):
+    """Conditional status change bound to the original list and observed state."""
+    list_id: int
+    checked: bool
+    checked_at: Optional[datetime] = None
+
+
 class ShoppingItemUpdate(BaseModel):
     """Update a shopping item (partial update)."""
     name: Optional[str] = Field(None, min_length=1, max_length=200, description="Item name")
     spec: Optional[str] = Field(None, max_length=200, description="Item specification")
     category: Optional[str] = Field(None, max_length=100, description="Optional category or aisle label")
     checked: Optional[bool] = Field(None, description="Check/uncheck the item")
+    expected_state: Optional[ShoppingItemExpectedState] = None
     list_id: Optional[int] = Field(None, description="Move the item to another shopping list in the same family")
 
 

@@ -243,3 +243,95 @@ def test_move_item_rejects_cross_family_targets_and_child_moves_but_allows_child
         headers=_auth(other_token),
     )
     assert outsider_move.status_code in {403, 404}
+
+
+def test_category_spelling_is_family_scoped_and_canonical_at_write_boundaries():
+    token, family_id, user_id = _seed_member(suffix="category-vocabulary")
+    list_id = _seed_list(family_id, "Groceries", user_id)
+    headers = _auth(token)
+    def add(name, category):
+        response = client.post(f"/shopping/lists/{list_id}/items", json={"name": name, "category": category}, headers=headers)
+        assert response.status_code == 200, response.text
+        return response.json()
+    first = add("Milk", " Dairy ")
+    assert add("Eggs", "dAIRY")["category"] == "Dairy"
+    response = client.patch(f"/shopping/items/{first['id']}", json={"category": " DAIRY "}, headers=headers)
+    assert response.json()["category"] == "Dairy"
+    template = client.post("/shopping/templates", json={"family_id": family_id, "name": "Basics", "items": [{"name": "Cheese", "category": "dairy"}]}, headers=headers)
+    assert template.status_code == 200, template.text
+    assert template.json()["items"][0]["category"] == "Dairy"
+    assert client.get(f"/shopping/categories?family_id={family_id}", headers=headers).json() == ["Dairy"]
+
+
+def test_conditional_check_rejects_stale_state_and_moved_item():
+    token, family_id, user_id = _seed_member(suffix="conditional-check")
+    list_id = _seed_list(family_id, "Groceries", user_id)
+    item_id = _seed_item(list_id)
+    headers = _auth(token)
+    payload = {"checked": True, "expected_state": {"list_id": list_id, "checked": False, "checked_at": None}}
+    response = client.patch(f"/shopping/items/{item_id}", json=payload, headers=headers)
+    assert response.status_code == 200, response.text
+    assert client.patch(f"/shopping/items/{item_id}", json=payload, headers=headers).status_code == 409
+    checked = response.json()
+    destination = _seed_list(family_id, "Other", user_id)
+    assert client.patch(f"/shopping/items/{item_id}", json={"list_id": destination}, headers=headers).status_code == 200
+    undo = {"checked": False, "expected_state": {"list_id": list_id, "checked": True, "checked_at": checked['checked_at']}}
+    assert client.patch(f"/shopping/items/{item_id}", json=undo, headers=headers).status_code == 409
+
+
+def test_category_vocabulary_unicode_isolation_templates_and_learned_categories():
+    token, family_id, user_id = _seed_member(suffix="unicode-categories")
+    other, other_family, other_user = _seed_member(suffix="other-categories")
+    list_id = _seed_list(family_id, "Groceries", user_id)
+    other_list = _seed_list(other_family, "Other", other_user)
+    headers = _auth(token)
+    def add(name, category=None):
+        response = client.post(f"/shopping/lists/{list_id}/items", json={"name": name, "category": category}, headers=headers)
+        assert response.status_code == 200, response.text
+        return response.json()
+    for index, (first, variant) in enumerate([("Straße", "STRASSE"), ("İçecek", "i̇çecek"), ("Σ", "ς")]):
+        assert add(f"First {index}", first)["category"] == first
+        assert add(f"Second {index}", f" {variant} ")["category"] == first
+    assert add("Dotless", "ıce")["category"] == "ıce"
+    assert add("Ascii", "ICE")["category"] == "ICE"
+    isolated = client.post(f"/shopping/lists/{other_list}/items", json={"name": "Other", "category": "STRASSE"}, headers=_auth(other))
+    assert isolated.json()["category"] == "STRASSE"
+    assert client.get(f"/shopping/categories?family_id={family_id}", headers=_auth(other)).status_code == 403
+    milk = add("Milk", "Dairy")
+    assert client.delete(f"/shopping/items/{milk['id']}", headers=headers).status_code == 200
+    assert add("Milk")["category"] == "Dairy"
+    template = client.post("/shopping/templates", json={"family_id": family_id, "name": "Basics", "items": [
+        {"name": "Peach", "category": "Fruit"}, {"name": "Plum", "category": " fruit "},
+    ]}, headers=headers).json()
+    assert [item["category"] for item in template["items"]] == ["Fruit", "Fruit"]
+    edited = client.patch(f"/shopping/templates/{template['id']}", json={"items": [{"name": "Cheese", "category": " DAIRY "}]}, headers=headers)
+    assert edited.json()["items"][0]["category"] == "Dairy"
+    assert client.post(f"/shopping/templates/{template['id']}/apply", json={"list_id": list_id}, headers=headers).status_code == 200
+    items = client.get(f"/shopping/lists/{list_id}/items", headers=headers).json()
+    assert next(item for item in items if item["name"] == "Cheese")["category"] == "Dairy"
+
+
+def test_conditional_child_toggle_undo_conflict_deletion_and_checked_order():
+    owner, family_id, user_id = _seed_member(suffix="status-owner")
+    child, _, _ = _seed_member(suffix="status-child", family_id=family_id, is_adult=False)
+    list_id = _seed_list(family_id, "Groceries", user_id)
+    first = _seed_item(list_id, "First")
+    second = _seed_item(list_id, "Second")
+    legacy = _seed_item(list_id, "Legacy", checked=True)
+    headers = _auth(child)
+    def toggle(item_id, checked, expected):
+        return client.patch(f"/shopping/items/{item_id}", json={"checked": checked, "expected_state": expected}, headers=headers)
+    expected = {"list_id": list_id, "checked": False, "checked_at": None}
+    checked_first = toggle(first, True, expected).json()
+    checked_second = toggle(second, True, expected).json()
+    items = client.get(f"/shopping/lists/{list_id}/items", headers=headers).json()
+    assert [item["id"] for item in items] == [second, first, legacy]
+    undo_expected = {key: checked_second[key] for key in ("list_id", "checked", "checked_at")}
+    unchecked = toggle(second, False, undo_expected)
+    assert unchecked.status_code == 200
+    assert toggle(second, False, undo_expected).status_code == 409
+    assert toggle(second, True, expected).status_code == 200
+    assert toggle(second, False, undo_expected).status_code == 409
+    assert client.patch(f"/shopping/items/{first}", json={"category": None, "checked": False, "expected_state": undo_expected}, headers=headers).status_code == 403
+    assert client.delete(f"/shopping/items/{second}", headers=_auth(owner)).status_code == 200
+    assert toggle(second, False, undo_expected).status_code == 404

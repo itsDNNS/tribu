@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "No se encontró el enlace de la tienda",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Se permiten como máximo {limit} tiendas",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Ya existe una tienda con este nombre",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Introduce una dirección http o https que contenga {query} exactamente una vez"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Introduce una dirección http o https que contenga {query} exactamente una vez",
+  "module.shopping.show_overview": "Mostrar resumen de categorías",
+  "module.shopping.hide_overview": "Ocultar resumen de categorías",
+  "module.shopping.undo": "Deshacer",
+  "module.shopping.item_checked": "Marcado: {name}",
+  "module.shopping.item_unchecked": "Desmarcado: {name}"
 }

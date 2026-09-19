@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Store link not found",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Maximum {limit} stores reached",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "A store with this name already exists",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Enter an http or https address that contains {query} exactly once"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Enter an http or https address that contains {query} exactly once",
+  "module.shopping.show_overview": "Show category overview",
+  "module.shopping.hide_overview": "Hide category overview",
+  "module.shopping.undo": "Undo",
+  "module.shopping.item_checked": "Checked: {name}",
+  "module.shopping.item_unchecked": "Unchecked: {name}"
 }

@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.utils import utcnow
-from app.models import FamilyProductPreference, ShoppingItem, ShoppingList
+from app.models import FamilyProductPreference, ShoppingItem, ShoppingList, ShoppingTemplate, ShoppingTemplateItem
 
 
 ShoppingItemAction = Literal["created", "merged", "restored"]
@@ -65,6 +65,40 @@ def clean_optional_text(value: str | None) -> str | None:
         return None
     cleaned = value.strip()
     return cleaned or None
+
+
+def category_vocabulary(db: Session, family_id: int) -> list[str]:
+    """Stable display spellings without changing historical category rows."""
+    rows = db.query(ShoppingItem.category).join(ShoppingList).filter(
+        ShoppingList.family_id == family_id,
+    ).order_by(ShoppingItem.id).all()
+    rows += db.query(FamilyProductPreference.category).filter(
+        FamilyProductPreference.family_id == family_id,
+    ).order_by(FamilyProductPreference.id).all()
+    rows += db.query(ShoppingTemplateItem.category).join(ShoppingTemplate).filter(
+        ShoppingTemplate.family_id == family_id,
+    ).order_by(ShoppingTemplateItem.id).all()
+    vocabulary = {}
+    for (value,) in rows:
+        cleaned = clean_optional_text(value)
+        if cleaned:
+            vocabulary.setdefault(normalize_product_name(cleaned), cleaned)
+    return list(vocabulary.values())
+
+
+def canonicalize_categories(db: Session, family_id: int, values: list[str | None]) -> list[str | None]:
+    vocabulary = {normalize_product_name(label): label for label in category_vocabulary(db, family_id)}
+    categories = []
+    for value in values:
+        cleaned = clean_optional_text(value)
+        categories.append(vocabulary.setdefault(normalize_product_name(cleaned), cleaned) if cleaned else None)
+    return categories
+
+
+def canonicalize_category(db: Session, family_id: int, value: str | None) -> str | None:
+    if clean_optional_text(value) is None:
+        return None
+    return canonicalize_categories(db, family_id, [value])[0]
 
 
 def normalize_item_name(value: str) -> str:
@@ -228,7 +262,7 @@ def remember_category(
     a savepoint.  The winning row is then loaded and updated portably without
     dialect-specific upsert syntax.
     """
-    cleaned_category = clean_optional_text(category)
+    cleaned_category = canonicalize_category(db, family_id, category)
     if cleaned_category is None:
         return None
     normalized_name = normalize_product_name(name)
@@ -269,7 +303,7 @@ def resolve_category(
     name: str,
     category: str | None,
 ) -> str | None:
-    explicit = clean_optional_text(category)
+    explicit = canonicalize_category(db, family_id, category)
     if explicit is not None:
         remember_category(db, family_id=family_id, name=name, category=explicit)
         return explicit
@@ -277,7 +311,7 @@ def resolve_category(
         FamilyProductPreference.family_id == family_id,
         FamilyProductPreference.normalized_name == normalize_product_name(name),
     ).first()
-    return preference.category if preference is not None else None
+    return canonicalize_category(db, family_id, preference.category) if preference is not None else None
 
 
 def add_or_merge_shopping_item(

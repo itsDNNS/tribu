@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Връзката към магазина не е намерена",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Разрешени са най-много {limit} магазина",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Вече има магазин с това име",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Въведете http или https адрес, който съдържа {query} точно веднъж"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Въведете http или https адрес, който съдържа {query} точно веднъж",
+  "module.shopping.show_overview": "Показване на категориите",
+  "module.shopping.hide_overview": "Скриване на категориите",
+  "module.shopping.undo": "Отмяна",
+  "module.shopping.item_checked": "Отметнато: {name}",
+  "module.shopping.item_unchecked": "Неотметнато: {name}"
 }

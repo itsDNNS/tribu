@@ -333,6 +333,10 @@ export function apiDeleteTask(taskId) {
 }
 
 // Shopping
+export function apiGetShoppingCategories(familyId) {
+  return request(`/shopping/categories?family_id=${familyId}`);
+}
+
 export function apiGetShoppingLists(familyId) {
   return request(`/shopping/lists?family_id=${familyId}`);
 }

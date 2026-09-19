@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Poe linki ei leitud",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Lubatud on kuni {limit} poodi",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Selle nimega pood on juba olemas",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Sisesta http- või https-aadress, mis sisaldab teksti {query} täpselt ühe korra"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Sisesta http- või https-aadress, mis sisaldab teksti {query} täpselt ühe korra",
+  "module.shopping.show_overview": "Näita kategooriate ülevaadet",
+  "module.shopping.hide_overview": "Peida kategooriate ülevaade",
+  "module.shopping.undo": "Võta tagasi",
+  "module.shopping.item_checked": "Märgitud: {name}",
+  "module.shopping.item_unchecked": "Taas avatud: {name}"
 }

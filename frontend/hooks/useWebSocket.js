@@ -58,6 +58,7 @@ export function useWebSocket(listId, { onMessage, enabled = true } = {}) {
       };
 
       ws.onmessage = (e) => {
+        if (cancelled) return;
         try {
           const msg = JSON.parse(e.data);
           if (msg.type === 'pong') return;

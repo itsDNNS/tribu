@@ -142,8 +142,8 @@ test.describe('Shopping', () => {
     await selectShoppingList(page, 'StoreB');
     const movedItem = page.locator('[role="checkbox"][aria-label="Baguette"]');
     await expect(movedItem).toBeVisible({ timeout: 10000 });
-    await expect(movedItem).toContainText('2 loaves');
-    await expect(movedItem).toContainText('Bakery aisle');
+    await expect(movedItem.locator('..')).toContainText('2 loaves');
+    await expect(movedItem.locator('..')).toContainText('Bakery aisle');
   });
 
   test('reactivates checked items and normalizes quick-add names', async ({ authedPage: page, apiCtx }) => {
@@ -235,8 +235,8 @@ test.describe('Shopping', () => {
     const milkItem = page.locator('[role="checkbox"][aria-label="Milk"]');
     await expect(milkItem).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[role="checkbox"][aria-label="Bananas"]')).toBeVisible();
-    await expect(milkItem).toContainText('2 L');
-    await expect(milkItem).toContainText('Dairy');
+    await expect(milkItem.locator('..')).toContainText('2 L');
+    await expect(milkItem.locator('..')).toContainText('Dairy');
   });
 
   test('apply a seeded shopping template to a list', async ({ authedPage: page, apiCtx }) => {
@@ -417,4 +417,82 @@ test.describe('Shopping', () => {
     expect(ordering).toBe(true);
   });
 
+});
+
+test('shopping usability: category suggestions, explicit checking, Undo and recent checked order', async ({ authedPage: page, apiCtx }, testInfo) => {
+  test.setTimeout(90000);
+  const familyId = await getFamilyId(apiCtx);
+  const list = await seedShoppingList(apiCtx, familyId, 'Usability Market');
+  const vocabularyList = await seedShoppingList(apiCtx, familyId, 'Category Vocabulary');
+  await seedShoppingItem(apiCtx, vocabularyList.id, 'Pear', '', 'Fresh produce');
+  const apple = await seedShoppingItem(apiCtx, list.id, 'Apple', '', 'Fruit');
+  const bread = await seedShoppingItem(apiCtx, list.id, 'Bread', '', 'Bakery');
+  await apiCtx.patch(`/api/shopping/items/${bread.id}`, { data: { checked: true } });
+  await page.reload();
+  await navigateTo(page, 'Shopping');
+  await selectShoppingList(page, 'Usability Market');
+  const overview = page.locator('#shopping-category-overview');
+  await expect(overview).toContainText('Fruit');
+  await expect(overview).not.toContainText('Bakery');
+  await page.getByRole('button', { name: 'Hide category overview' }).click();
+  await expect(overview).toHaveCount(0);
+  await page.getByRole('button', { name: 'Show category overview' }).click();
+  if (page.viewportSize().width <= 1024) expect((await overview.boundingBox()).height).toBeLessThan(65);
+
+  const category = page.getByRole('combobox', { name: 'Category', exact: true }).first();
+  await category.focus();
+  await expect(page.getByRole('listbox', { name: 'Category', exact: true })).toHaveCount(0);
+  await category.fill('   ');
+  await expect(page.getByRole('listbox', { name: 'Category', exact: true })).toHaveCount(0);
+  await category.fill('fr');
+  const suggestions = page.getByRole('listbox', { name: 'Category', exact: true });
+  await expect(suggestions.getByRole('option', { name: 'Fresh produce' })).toBeVisible();
+  expect(await suggestions.evaluate((element) => getComputedStyle(element).backgroundColor)).toMatch(/^rgb\(/);
+  expect((await suggestions.boundingBox()).width).toBeGreaterThan(150);
+  await page.screenshot({ path: testInfo.outputPath('category-suggestions.png'), fullPage: true });
+  await category.press('Escape');
+  await expect(suggestions).toHaveCount(0);
+  await category.clear();
+  await category.fill('fresh');
+  const freshProduce = suggestions.getByRole('option', { name: 'Fresh produce' });
+  if (testInfo.project.name === 'Mobile Chrome') await freshProduce.tap();
+  else await freshProduce.click();
+  await expect(category).toHaveValue('Fresh produce');
+  await page.getByPlaceholder('Add an item...').fill('Peach');
+  await page.locator('.quick-add-bar').getByRole('button', { name: 'Add item', exact: true }).click();
+  await expect(page.getByRole('checkbox', { name: 'Peach', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit item: Peach' }).click();
+  const editCategory = page.locator('.shopping-item-edit-form').getByRole('combobox', { name: 'Category', exact: true });
+  await editCategory.fill('fru');
+  await editCategory.press('ArrowDown');
+  await editCategory.press('Enter');
+  await expect(editCategory).toHaveValue('Fruit');
+  await page.locator('.shopping-item-edit-form').getByRole('button', { name: 'Save', exact: true }).click();
+
+  const appleCheck = page.getByRole('checkbox', { name: 'Apple', exact: true });
+  await page.locator('.shopping-item-name').getByText('Apple', { exact: true }).click();
+  await expect(appleCheck).toHaveAttribute('aria-checked', 'false');
+  await appleCheck.click();
+  await expect(appleCheck).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(appleCheck).toHaveAttribute('aria-checked', 'false');
+  await expect(appleCheck).toBeEnabled();
+  await appleCheck.focus();
+  await appleCheck.press('Space');
+  await expect(appleCheck).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.shopping-item.checked .shopping-item-name')).toHaveText(['Apple', 'Bread']);
+  await expect(appleCheck.locator('..').locator('.shopping-category-pill')).toBeVisible();
+  await page.reload();
+  await navigateTo(page, 'Shopping');
+  await selectShoppingList(page, 'Usability Market');
+  await expect(page.locator('.shopping-item.checked .shopping-item-name')).toHaveText(['Apple', 'Bread']);
+  await apiCtx.patch(`/api/shopping/items/${bread.id}`, { data: { checked: false } });
+  await expect(page.getByRole('checkbox', { name: 'Bread', exact: true })).toHaveAttribute('aria-checked', 'false');
+  await apiCtx.patch(`/api/shopping/items/${bread.id}`, { data: { checked: true } });
+  await expect(page.locator('.shopping-item.checked .shopping-item-name')).toHaveText(['Bread', 'Apple']);
+  await page.getByRole('checkbox', { name: 'Peach', exact: true }).click();
+  await expect(overview.locator('.shopping-category-overview-chip')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Hide category overview' }).click();
+  await expect(page.getByRole('button', { name: 'Show category overview' })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('shopping-checked.png'), fullPage: true });
 });

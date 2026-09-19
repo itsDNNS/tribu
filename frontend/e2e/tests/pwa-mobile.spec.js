@@ -38,6 +38,7 @@ async function mockAuthenticatedFamily(page) {
     if (path === '/birthdays') return json(route, []);
     if (path === '/tasks') return json(route, { items: [] });
     if (path === '/shopping/lists') return json(route, []);
+    if (path === '/shopping/categories') return json(route, []);
     if (path === '/shopping/templates') return json(route, []);
     if (path === '/shopping/store-links') return json(route, []);
     if (path === '/activity') return json(route, { items: [] });

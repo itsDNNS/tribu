@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Lien du magasin introuvable",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Maximum de {limit} magasins atteint",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Un magasin portant ce nom existe déjà",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Saisissez une adresse http ou https contenant {query} exactement une fois"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Saisissez une adresse http ou https contenant {query} exactement une fois",
+  "module.shopping.show_overview": "Afficher les catégories",
+  "module.shopping.hide_overview": "Masquer les catégories",
+  "module.shopping.undo": "Annuler",
+  "module.shopping.item_checked": "Coché : {name}",
+  "module.shopping.item_unchecked": "Décoché : {name}"
 }

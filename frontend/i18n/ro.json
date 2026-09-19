@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Linkul magazinului nu a fost găsit",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Sunt permise maximum {limit} magazine",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Există deja un magazin cu acest nume",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Introdu o adresă http sau https care conține {query} exact o dată"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Introdu o adresă http sau https care conține {query} exact o dată",
+  "module.shopping.show_overview": "Arată lista categoriilor",
+  "module.shopping.hide_overview": "Ascunde lista categoriilor",
+  "module.shopping.undo": "Anulează",
+  "module.shopping.item_checked": "Bifat: {name}",
+  "module.shopping.item_unchecked": "Debifat: {name}"
 }

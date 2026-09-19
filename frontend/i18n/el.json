@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Δεν βρέθηκε ο σύνδεσμος καταστήματος",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Επιτρέπονται έως {limit} καταστήματα",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Υπάρχει ήδη κατάστημα με αυτό το όνομα",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Εισαγάγετε μια διεύθυνση http ή https που περιέχει το {query} ακριβώς μία φορά"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Εισαγάγετε μια διεύθυνση http ή https που περιέχει το {query} ακριβώς μία φορά",
+  "module.shopping.show_overview": "Εμφάνιση επισκόπησης κατηγοριών",
+  "module.shopping.hide_overview": "Απόκρυψη επισκόπησης κατηγοριών",
+  "module.shopping.undo": "Αναίρεση",
+  "module.shopping.item_checked": "Επιλέχθηκε: {name}",
+  "module.shopping.item_unchecked": "Αποεπιλέχθηκε: {name}"
 }

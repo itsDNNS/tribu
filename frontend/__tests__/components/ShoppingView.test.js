@@ -14,6 +14,8 @@ jest.mock('../../hooks/useShopping', () => ({
 }));
 
 const messages = {
+  'module.shopping.show_overview': 'Show category overview',
+  'module.shopping.hide_overview': 'Hide category overview',
   'module.shopping.name': 'Shopping',
   'module.shopping.new_list': 'New list',
   'module.shopping.list_name': 'List name',
@@ -385,7 +387,7 @@ describe('ShoppingView quick add', () => {
     });
 
     expect(screen.getByPlaceholderText('Category or aisle')).toBeInTheDocument();
-    const vegetablesToggle = document.querySelector('#shopping-category-vegetables-items').previousElementSibling;
+    const vegetablesToggle = screen.getByRole('button', { name: 'Vegetables 1' });
     expect(vegetablesToggle).toHaveAttribute('aria-expanded', 'true');
     fireEvent.click(vegetablesToggle);
     expect(vegetablesToggle).toHaveAttribute('aria-expanded', 'false');
@@ -485,4 +487,39 @@ test('mobile template toggle closes an open template form when hiding templates'
   fireEvent.click(screen.getByRole('button', { name: 'Hide templates' }));
   expect(screen.queryByPlaceholderText('e.g. Weekly groceries')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show templates' })).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('article text does not toggle, and only open categories appear in the hideable overview', () => {
+  const open = { id: 1, name: 'Apples', category: 'Produce', checked: false };
+  const done = { id: 2, name: 'Milk', category: 'Dairy', checked: true };
+  const { container } = setup({ items: [open, done], uncheckedItems: [open], checkedItems: [done] });
+  fireEvent.click(screen.getByText('Apples'));
+  expect(mockShoppingState.toggleItem).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Apples' }));
+  expect(mockShoppingState.toggleItem).toHaveBeenCalledWith(1, false);
+  expect(container.querySelector('.shopping-category-overview')).not.toHaveTextContent('Dairy');
+  const toggle = screen.getByRole('button', { name: 'Hide category overview' });
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.getByRole('button', { name: 'Show category overview' })).toBeVisible();
+});
+
+test('historic category case variants share one open group', () => {
+  const items = [
+    { id: 1, name: 'Milk', category: 'Dairy', checked: false },
+    { id: 2, name: 'Eggs', category: ' dairy ', checked: false },
+  ];
+  const { container } = setup({ items, uncheckedItems: items });
+  expect(container.querySelectorAll('.shopping-category-group')).toHaveLength(1);
+});
+
+test('uncategorized, arbitrary labels and Unicode groups remain visible with distinct controls', () => {
+  const items = [null, 'uncategorized', '__proto__', 'α', 'β'].map((category, index) => ({ id: index + 1, name: `Item ${index}`, category, checked: false }));
+  const { container } = setup({ items, uncheckedItems: items });
+  expect(screen.getAllByRole('checkbox')).toHaveLength(5);
+  const controls = [...container.querySelectorAll('.shopping-category-header')].map((button) => button.getAttribute('aria-controls'));
+  expect(new Set(controls).size).toBe(5);
+  controls.forEach((id) => expect(document.getElementById(id)).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: '__proto__ 1' }));
+  expect(screen.queryByRole('checkbox', { name: 'Item 2' })).toBeNull();
 });

@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Kauppalinkkiä ei löytynyt",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Enintään {limit} kauppaa sallitaan",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Tämän niminen kauppa on jo olemassa",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Anna http- tai https-osoite, joka sisältää merkinnän {query} täsmälleen kerran"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Anna http- tai https-osoite, joka sisältää merkinnän {query} täsmälleen kerran",
+  "module.shopping.show_overview": "Näytä kategoriayhteenveto",
+  "module.shopping.hide_overview": "Piilota kategoriayhteenveto",
+  "module.shopping.undo": "Kumoa",
+  "module.shopping.item_checked": "Merkitty ostetuksi: {name}",
+  "module.shopping.item_unchecked": "Ostettava uudelleen: {name}"
 }
