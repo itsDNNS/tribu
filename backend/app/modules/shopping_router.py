@@ -18,6 +18,9 @@ from app.core.shopping_domain import (
     ShoppingItemTransition,
     add_or_merge_shopping_item,
     clean_optional_text,
+    canonicalize_category,
+    canonicalize_categories,
+    category_vocabulary,
     normalize_item_name,
     remember_category,
     normalize_store_name,
@@ -97,14 +100,15 @@ def _template_response(template: ShoppingTemplate) -> ShoppingTemplateResponse:
     )
 
 
-def _replace_template_items(template: ShoppingTemplate, items) -> None:
+def _replace_template_items(db: Session, template: ShoppingTemplate, items) -> None:
+    categories = canonicalize_categories(db, template.family_id, [item.category for item in items])
     template.items.clear()
     for position, item in enumerate(items):
         template.items.append(
             ShoppingTemplateItem(
                 name=item.name,
                 spec=item.spec,
-                category=item.category,
+                category=categories[position],
                 position=position,
             )
         )
@@ -160,6 +164,17 @@ def _store_name_is_taken(
 # ── Templates ──────────────────────────────────────────
 
 
+@router.get("/categories", response_model=list[str])
+def get_categories(
+    family_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:read"),
+):
+    ensure_family_membership(db, user.id, family_id)
+    return category_vocabulary(db, family_id)
+
+
 @router.get(
     "/templates",
     response_model=list[ShoppingTemplateResponse],
@@ -202,7 +217,7 @@ def create_template(
         name=payload.name,
         created_by_user_id=user.id,
     )
-    _replace_template_items(template, payload.items)
+    _replace_template_items(db, template, payload.items)
     db.add(template)
     db.commit()
     db.refresh(template)
@@ -229,7 +244,7 @@ def update_template(
     if payload.name is not None:
         template.name = payload.name
     if payload.items is not None:
-        _replace_template_items(template, payload.items)
+        _replace_template_items(db, template, payload.items)
     db.commit()
     db.refresh(template)
     return _template_response(template)
@@ -640,7 +655,7 @@ def delete_list(
     "/lists/{list_id}/items",
     response_model=list[ShoppingItemResponse],
     summary="List shopping items",
-    description="Return all items in a shopping list, sorted by checked status then creation date. Scope: `shopping:read`.",
+    description="Return all items in a shopping list, sorted by checked status, most recently checked first, then creation date. Scope: `shopping:read`.",
     response_description="List of shopping items",
     responses={**NOT_FOUND_RESPONSE},
 )
@@ -657,7 +672,7 @@ def get_items(
     items = (
         db.query(ShoppingItem)
         .filter(ShoppingItem.list_id == list_id)
-        .order_by(ShoppingItem.checked, ShoppingItem.created_at)
+        .order_by(ShoppingItem.checked, ShoppingItem.checked_at.desc().nullslast(), ShoppingItem.created_at, ShoppingItem.id)
         .all()
     )
     return items
@@ -766,8 +781,25 @@ def update_item(
     membership = ensure_family_membership(db, user.id, sl.family_id)
     fields = payload.model_dump(exclude_unset=True)
     if not membership.is_adult:
-        if set(fields.keys()) - {"checked"}:
+        if set(fields.keys()) - {"checked", "expected_state"}:
             raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
+
+    if payload.expected_state is not None:
+        expected = payload.expected_state
+        if payload.checked is None or set(fields) - {"checked", "expected_state"}:
+            raise HTTPException(status_code=422, detail="Expected state is only valid for a status change")
+        # Compare and write in one SQL statement, including the original list.
+        changed = db.query(ShoppingItem).filter(
+            ShoppingItem.id == item.id,
+            ShoppingItem.list_id == expected.list_id,
+            ShoppingItem.checked == expected.checked,
+            ShoppingItem.checked_at == expected.checked_at,
+        ).update({
+            ShoppingItem.checked: payload.checked,
+            ShoppingItem.checked_at: utcnow() if payload.checked else None,
+        }, synchronize_session=False)
+        if not changed:
+            raise HTTPException(status_code=409, detail="Shopping item changed; reload before trying again")
 
     old_list_id = item.list_id
     old_list_name = sl.name
@@ -779,7 +811,7 @@ def update_item(
     if "spec" in fields:
         item.spec = _clean_optional_text(payload.spec)
     if "category" in fields:
-        item.category = _clean_optional_text(payload.category)
+        item.category = canonicalize_category(db, sl.family_id, payload.category)
         if item.category is not None:
             remember_category(
                 db,
@@ -795,8 +827,11 @@ def update_item(
         moved = True
     if payload.checked is not None:
         was_checked = item.checked
-        item.checked = payload.checked
-        item.checked_at = utcnow() if payload.checked else None
+        if payload.expected_state is not None:
+            db.refresh(item)
+        elif item.checked != payload.checked:
+            item.checked = payload.checked
+            item.checked_at = utcnow() if payload.checked else None
         if payload.checked and not was_checked:
             record_activity(
                 db,

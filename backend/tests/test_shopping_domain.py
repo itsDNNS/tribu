@@ -173,3 +173,31 @@ def test_shopping_item_construction_is_centralized():
         if "ShoppingItem(" in path.read_text()
     ]
     assert offenders == []
+
+
+def test_historic_category_variants_remain_unchanged_and_template_application_canonicalizes(tmp_path):
+    from app.core.shopping_domain import canonicalize_category, category_vocabulary
+    from app.models import ShoppingTemplate, ShoppingTemplateItem
+    engine = create_engine(f"sqlite:///{tmp_path / 'categories.db'}")
+    Base.metadata.create_all(engine)
+    with sessionmaker(bind=engine)() as db:
+        family = Family(name="Categories")
+        db.add(family)
+        db.flush()
+        shopping_list = ShoppingList(family_id=family.id, name="Groceries")
+        db.add(shopping_list)
+        db.flush()
+        old = ShoppingItem(list_id=shopping_list.id, name="Milk", category="Dairy")
+        variant = ShoppingItem(list_id=shopping_list.id, name="Eggs", category=" dairy ")
+        template = ShoppingTemplate(family_id=family.id, name="Old template", items=[ShoppingTemplateItem(name="Cheese", category="DAIRY", position=0)])
+        db.add_all([old, variant, template])
+        db.flush()
+        assert category_vocabulary(db, family.id) == ["Dairy"]
+        assert canonicalize_category(db, family.id, None) is None
+        applied = add_or_merge_shopping_item(db, shopping_list=shopping_list, name=template.items[0].name, category=template.items[0].category)
+        assert applied.item.category == "Dairy"
+        db.refresh(variant)
+        db.refresh(template.items[0])
+        assert variant.category == " dairy "
+        assert template.items[0].category == "DAIRY"
+    engine.dispose()

@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Az áruház hivatkozása nem található",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Legfeljebb {limit} áruház engedélyezett",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Már létezik ilyen nevű áruház",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Adj meg egy http vagy https címet, amely pontosan egyszer tartalmazza ezt: {query}"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Adj meg egy http vagy https címet, amely pontosan egyszer tartalmazza ezt: {query}",
+  "module.shopping.show_overview": "Kategóriaáttekintés megjelenítése",
+  "module.shopping.hide_overview": "Kategóriaáttekintés elrejtése",
+  "module.shopping.undo": "Visszavonás",
+  "module.shopping.item_checked": "Kipipálva: {name}",
+  "module.shopping.item_unchecked": "Újra nyitott: {name}"
 }

@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Winkellink niet gevonden",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Maximaal {limit} winkels toegestaan",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Er bestaat al een winkel met deze naam",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Voer een http- of https-adres in dat precies één keer {query} bevat"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Voer een http- of https-adres in dat precies één keer {query} bevat",
+  "module.shopping.show_overview": "Categorieoverzicht tonen",
+  "module.shopping.hide_overview": "Categorieoverzicht verbergen",
+  "module.shopping.undo": "Ongedaan maken",
+  "module.shopping.item_checked": "Afgevinkt: {name}",
+  "module.shopping.item_unchecked": "Weer open: {name}"
 }

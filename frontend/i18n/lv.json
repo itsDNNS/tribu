@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Veikala saite nav atrasta",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Atļauti ne vairāk kā {limit} veikali",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Veikals ar šādu nosaukumu jau pastāv",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Ievadiet http vai https adresi, kurā {query} ir tieši vienu reizi"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Ievadiet http vai https adresi, kurā {query} ir tieši vienu reizi",
+  "module.shopping.show_overview": "Rādīt kategoriju pārskatu",
+  "module.shopping.hide_overview": "Paslēpt kategoriju pārskatu",
+  "module.shopping.undo": "Atsaukt",
+  "module.shopping.item_checked": "Atzīmēts: {name}",
+  "module.shopping.item_unchecked": "Atkal atvērts: {name}"
 }

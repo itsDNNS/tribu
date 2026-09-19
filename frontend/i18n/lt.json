@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Parduotuvės nuoroda nerasta",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Leidžiama ne daugiau kaip {limit} parduotuvių",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Parduotuvė tokiu pavadinimu jau yra",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Įveskite http arba https adresą, kuriame {query} yra lygiai vieną kartą"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Įveskite http arba https adresą, kuriame {query} yra lygiai vieną kartą",
+  "module.shopping.show_overview": "Rodyti kategorijų apžvalgą",
+  "module.shopping.hide_overview": "Slėpti kategorijų apžvalgą",
+  "module.shopping.undo": "Atšaukti",
+  "module.shopping.item_checked": "Pažymėta: {name}",
+  "module.shopping.item_unchecked": "Vėl atvira: {name}"
 }

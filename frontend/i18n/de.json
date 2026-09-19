@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Shop-Link nicht gefunden",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Maximal {limit} Shops erlaubt",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Ein Shop mit diesem Namen existiert bereits",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Gib eine http- oder https-Adresse ein, die {query} genau einmal enthält"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Gib eine http- oder https-Adresse ein, die {query} genau einmal enthält",
+  "module.shopping.show_overview": "Kategorieübersicht anzeigen",
+  "module.shopping.hide_overview": "Kategorieübersicht ausblenden",
+  "module.shopping.undo": "Rückgängig",
+  "module.shopping.item_checked": "Abgehakt: {name}",
+  "module.shopping.item_unchecked": "Wieder offen: {name}"
 }

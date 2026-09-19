@@ -17,6 +17,10 @@ const nextConfig = {
         destination: `${backendUrl}/:path*`,
       },
       {
+        source: '/ws/shopping/:path*',
+        destination: `${backendUrl}/ws/shopping/:path*`,
+      },
+      {
         source: '/dav',
         destination: `${backendUrl}/dav/`,
       },

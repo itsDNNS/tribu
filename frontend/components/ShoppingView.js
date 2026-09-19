@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Plus, Check, Trash2, X, ShoppingCart, Pencil, Search } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useShopping } from '../hooks/useShopping';
@@ -7,6 +7,8 @@ import MemberAvatar from './MemberAvatar';
 import ConfirmDialog from './ConfirmDialog';
 import StoreSearchMenu from './StoreSearchMenu';
 import { buildStoreSearchUrl } from '../lib/storeSearch';
+import ShoppingCategoryInput from './ShoppingCategoryInput';
+import { categoryVocabulary, groupItemsByCategory } from '../lib/shoppingPresentation';
 
 const EMPTY_TEMPLATE_ITEM = { name: '', spec: '', category: '' };
 
@@ -20,29 +22,8 @@ function normaliseTemplateItems(items) {
     .filter((item) => item.name);
 }
 
-function categoryLabel(messages, category) {
-  return category || t(messages, 'module.shopping.uncategorized');
-}
-
-function groupItemsByCategory(items, messages) {
-  const groups = new Map();
-  items.forEach((item) => {
-    const key = item.category?.trim() || '';
-    if (!groups.has(key)) {
-      groups.set(key, { key, label: categoryLabel(messages, key), items: [] });
-    }
-    groups.get(key).items.push(item);
-  });
-  return [...groups.values()]
-    .map((group) => ({
-      ...group,
-      items: [...group.items].sort((a, b) => a.name.localeCompare(b.name)),
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
-
 function ShoppingCategoryGroup({ group, collapsed, onToggle, children }) {
-  const itemsId = `shopping-category-${(group.key || 'uncategorized').toLowerCase().replace(/[^a-z0-9_-]+/g, '-')}-items`;
+  const itemsId = useId();
 
   return (
     <section className="shopping-category-group" aria-label={group.label}>
@@ -99,7 +80,7 @@ function ShoppingListRenameForm({ messages, name, onChange, onSubmit, onCancel }
   );
 }
 
-function ShoppingItemEditForm({ item, shoppingLists, activeListId, messages, onSave, onCancel }) {
+function ShoppingItemEditForm({ item, categories, shoppingLists, activeListId, messages, onSave, onCancel }) {
   const [name, setName] = useState(item.name || '');
   const [spec, setSpec] = useState(item.spec || '');
   const [category, setCategory] = useState(item.category || '');
@@ -141,13 +122,9 @@ function ShoppingItemEditForm({ item, shoppingLists, activeListId, messages, onS
         aria-label={t(messages, 'module.shopping.item_spec')}
         placeholder={t(messages, 'module.shopping.item_spec_placeholder')}
       />
-      <input
-        className="quick-add-input shopping-category-input"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        aria-label={t(messages, 'module.shopping.item_category')}
-        placeholder={t(messages, 'module.shopping.item_category_placeholder')}
-      />
+      <ShoppingCategoryInput value={category} onChange={setCategory} categories={categories}
+        label={t(messages, 'module.shopping.item_category')}
+        placeholder={t(messages, 'module.shopping.item_category_placeholder')} />
       {otherLists.length > 0 && (
         <select
           className="form-input shopping-item-move-select"
@@ -169,32 +146,20 @@ function ShoppingItemEditForm({ item, shoppingLists, activeListId, messages, onS
   );
 }
 
-function ShoppingItem({ item, checked, members, messages, onToggle, onStoreSearch, onEdit, onDelete }) {
+function ShoppingItem({ item, checked, pending, members, messages, onToggle, onStoreSearch, onEdit, onDelete }) {
   const addedBy = members.find((m) => m.user_id === item.added_by_user_id);
   const memberIdx = addedBy ? members.indexOf(addedBy) : 0;
 
-  function handleKeyDown(e) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onToggle(item.id, item.checked);
-    }
-  }
-
   return (
     <div className="shopping-item-row">
-      <div
-        className={`shopping-item${checked ? ' checked' : ''}`}
-        role="checkbox"
-        aria-checked={checked}
-        aria-label={item.name}
-        tabIndex={0}
-        onPointerDown={blurActiveTextInput}
-        onClick={() => onToggle(item.id, item.checked)}
-        onKeyDown={handleKeyDown}
-      >
-        <div className={`shopping-check${checked ? ' done' : ''}`} aria-hidden="true">
-          {checked && <Check size={14} color="white" />}
-        </div>
+      <div className={`shopping-item${checked ? ' checked' : ''}`}>
+        <button type="button" role="checkbox"
+          className={`shopping-check${checked ? ' done' : ''}`}
+          aria-checked={checked} aria-label={item.name} disabled={pending}
+          onPointerDown={blurActiveTextInput}
+          onClick={() => onToggle(item.id, item.checked)}>
+          {checked && <Check size={14} color="white" aria-hidden="true" />}
+        </button>
         <div className="shopping-item-info">
           <span className="shopping-item-name">{item.name}</span>
           {item.spec && <span className="shopping-spec">{item.spec}</span>}
@@ -387,6 +352,7 @@ export default function ShoppingView() {
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [templatesExpanded, setTemplatesExpanded] = useState(false);
+  const [overviewVisible, setOverviewVisible] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [itemSuggestionsOpen, setItemSuggestionsOpen] = useState(false);
   const [activeItemSuggestion, setActiveItemSuggestion] = useState(null);
@@ -401,8 +367,9 @@ export default function ShoppingView() {
         .filter((name) => name && name.toLocaleLowerCase().includes(itemSuggestionQuery))))
         .sort((a, b) => a.localeCompare(b))
     : [];
-  const uncheckedGroups = groupItemsByCategory(sh.uncheckedItems, messages);
-  const allGroups = groupItemsByCategory(sh.items, messages);
+  const categories = categoryVocabulary([...(sh.categories || []), ...sh.items.map((item) => item.category),
+    ...sh.templates.flatMap((template) => template.items.map((item) => item.category))]);
+  const uncheckedGroups = groupItemsByCategory(sh.uncheckedItems, t(messages, 'module.shopping.uncategorized'), categories);
   const templatesVisible = !isMobile || templatesExpanded || showTemplateForm;
   const templatesToggleLabel = templatesVisible
     ? t(messages, 'module.shopping.hide_templates')
@@ -456,7 +423,7 @@ export default function ShoppingView() {
   }
 
   function toggleCategory(category) {
-    setCollapsedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
+    setCollapsedCategories((prev) => ({ ...prev, [category]: prev[category] !== true }));
   }
 
   function beginRenameList(list) {
@@ -765,19 +732,27 @@ export default function ShoppingView() {
                     value={sh.newItemSpec}
                     onChange={(e) => sh.setNewItemSpec(e.target.value)}
                   />
-                  <input
-                    className="quick-add-input shopping-category-input"
-                    placeholder={t(messages, 'module.shopping.item_category_placeholder')}
-                    value={sh.newItemCategory}
-                    onChange={(e) => sh.setNewItemCategory(e.target.value)}
-                  />
+                  <ShoppingCategoryInput value={sh.newItemCategory} onChange={sh.setNewItemCategory} categories={categories}
+                    label={t(messages, 'module.shopping.item_category')}
+                    placeholder={t(messages, 'module.shopping.item_category_placeholder')} />
                   <button className="quick-add-btn" type="submit" aria-label={t(messages, 'aria.add_item')}>
                     <Plus size={22} />
                   </button>
                 </form>
               )}
 
-              <div className="shopping-market-layout">
+              {sh.undo && (
+                <div className="shopping-undo" role="status">
+                  <span>{t(messages, sh.undo.checked ? 'module.shopping.item_checked' : 'module.shopping.item_unchecked').replace('{name}', sh.undo.name)}</span>
+                  <button type="button" className="btn-ghost" onClick={sh.undoToggle}>{t(messages, 'module.shopping.undo')}</button>
+                </div>
+              )}
+              <button type="button" className="btn-ghost shopping-overview-toggle"
+                aria-expanded={overviewVisible} aria-controls="shopping-category-overview"
+                onClick={() => setOverviewVisible((visible) => !visible)}>
+                {t(messages, overviewVisible ? 'module.shopping.hide_overview' : 'module.shopping.show_overview')}
+              </button>
+              <div className={`shopping-market-layout${overviewVisible ? '' : ' overview-hidden'}`}>
                 {/* Unchecked Items */}
                 <div className="shopping-items-list">
                   {sh.uncheckedItems.length === 0 && sh.checkedItems.length === 0 && (
@@ -792,9 +767,9 @@ export default function ShoppingView() {
                   )}
                   {uncheckedGroups.map((group) => (
                     <ShoppingCategoryGroup
-                      key={group.key || 'uncategorized'}
+                      key={group.key}
                       group={group}
-                      collapsed={!!collapsedCategories[group.key]}
+                      collapsed={collapsedCategories[group.key] === true}
                       onToggle={toggleCategory}
                     >
                       {group.items.map((item) => (
@@ -802,6 +777,7 @@ export default function ShoppingView() {
                           <ShoppingItemEditForm
                             key={`edit-${item.id}`}
                             item={item}
+                            categories={categories}
                             shoppingLists={sh.shoppingLists}
                             activeListId={sh.activeListId}
                             messages={messages}
@@ -815,6 +791,7 @@ export default function ShoppingView() {
                             checked={false}
                             members={members}
                             messages={messages}
+                            pending={sh.pendingItemIds?.has(item.id)}
                             onToggle={sh.toggleItem}
                             onStoreSearch={!isChild && searchableStores.length ? setStoreSearchItem : null}
                             onEdit={isChild ? null : (currentItem) => setEditingItemId(currentItem.id)}
@@ -836,6 +813,7 @@ export default function ShoppingView() {
                           <ShoppingItemEditForm
                             key={`edit-${item.id}`}
                             item={item}
+                            categories={categories}
                             shoppingLists={sh.shoppingLists}
                             activeListId={sh.activeListId}
                             messages={messages}
@@ -849,6 +827,7 @@ export default function ShoppingView() {
                             checked={true}
                             members={members}
                             messages={messages}
+                            pending={sh.pendingItemIds?.has(item.id)}
                             onToggle={sh.toggleItem}
                             onStoreSearch={!isChild && searchableStores.length ? setStoreSearchItem : null}
                             onEdit={isChild ? null : (currentItem) => setEditingItemId(currentItem.id)}
@@ -873,16 +852,16 @@ export default function ShoppingView() {
                   )}
                 </div>
 
-                {allGroups.length > 0 && (
-                  <aside className="shopping-category-overview" aria-label={t(messages, 'module.shopping.items')}>
+                {overviewVisible && (
+                  <aside id="shopping-category-overview" className="shopping-category-overview" aria-label={t(messages, 'module.shopping.items')}>
                     <div className="shopping-category-summary">
                       <ShoppingCart size={13} aria-hidden="true" />
-                      <span><strong>{sh.items.length}</strong> {t(messages, 'module.shopping.items')}</span>
+                      <span><strong>{sh.uncheckedItems.length}</strong> {t(messages, 'module.shopping.items')}</span>
                     </div>
-                    {allGroups.map((group) => (
+                    {uncheckedGroups.map((group) => (
                       <div
-                        key={group.key || 'uncategorized-overview'}
-                        className={`shopping-category-overview-chip${collapsedCategories[group.key] ? ' muted' : ''}`}
+                        key={group.key}
+                        className={`shopping-category-overview-chip${collapsedCategories[group.key] === true ? ' muted' : ''}`}
                       >
                         <span className="shopping-category-overview-label">
                           <span className="shopping-category-overview-marker" aria-hidden="true" />

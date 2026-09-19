@@ -4,6 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 import { useWebSocket } from './useWebSocket';
+import { compareCheckedItems } from '../lib/shoppingPresentation';
 
 export function formatShoppingItemName(value) {
   const cleaned = value.trim();
@@ -116,7 +117,7 @@ export function predictShoppingItemTransition(items, payload) {
 export function useShopping() {
   const {
     shoppingLists, setShoppingLists, familyId, messages,
-    loadShoppingLists, demoMode, isMobile, isChild,
+    demoMode, isMobile, isChild,
   } = useApp();
   const { error: toastError } = useToast();
 
@@ -130,9 +131,75 @@ export function useShopping() {
   const [templates, setTemplates] = useState([]);
   const [storeLinks, setStoreLinks] = useState([]);
   const itemInputRef = useRef(null);
+  const [categories, setCategories] = useState([]);
+  const [undoState, setUndoState] = useState(null);
+  const [pendingItemIds, setPendingItemIds] = useState(new Set());
+  const pending = useRef(new Map());
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const scope = useRef(null);
+  const itemsRef = useRef(items);
+  const revision = useRef(0);
+  const readSequence = useRef(0);
+  if (!scope.current || scope.current.familyId !== familyId || scope.current.listId !== activeListId) {
+    scope.current = { familyId, listId: activeListId };
+  }
+  itemsRef.current = items;
+  const currentScope = scope.current;
+  const sameStatus = (item, expected) => item && item.list_id === expected.list_id
+    && item.checked === expected.checked && (item.checked_at || null) === (expected.checked_at || null);
+  const undo = undoState?.scope === currentScope && sameStatus(items.find((item) => item.id === undoState.id), undoState)
+    ? undoState : null;
+
+  const loadShoppingLists = useCallback(async () => {
+    if (!familyId || demoMode) return;
+    const requestScope = scope.current;
+    const { ok, data } = await api.apiGetShoppingLists(familyId);
+    if (ok && mounted.current && scope.current === requestScope) setShoppingLists(data);
+  }, [familyId, demoMode, setShoppingLists]);
+
+  useEffect(() => {
+    setUndoState(null);
+    setPendingItemIds(new Set());
+    setItems([]);
+  }, [familyId, activeListId]);
+
+  useEffect(() => { setCategories([]); }, [familyId]);
+
+  useEffect(() => {
+    if (!undoState) return;
+    const timer = setTimeout(() => setUndoState(null), 6000);
+    return () => clearTimeout(timer);
+  }, [undoState]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!familyId || demoMode) { setCategories([]); return; }
+    api.apiGetShoppingCategories(familyId).then(({ ok, data }) => {
+      if (!cancelled && ok) setCategories(data);
+    });
+    return () => { cancelled = true; };
+  }, [familyId, demoMode, shoppingLists, templates]);
 
 
   const handleWsMessage = useCallback((msg) => {
+    if (msg.item && msg.item.list_id !== scope.current.listId) return;
+    revision.current += 1;
+    const operation = pending.current.get(msg.item?.id || msg.item_id);
+    if (operation) {
+      if (msg.type === 'item_updated') operation.observed = msg.item;
+      if (msg.type === 'item_deleted') operation.deleted = true;
+    }
+    if (msg.type === 'items_cleared') pending.current.forEach((entry) => { entry.invalidated = true; });
+    setUndoState((previous) => {
+      if (!previous) return null;
+      if (msg.type === 'items_cleared' || (msg.type === 'item_deleted' && msg.item_id === previous.id)) return null;
+      if (msg.type === 'item_updated' && msg.item.id === previous.id && !sameStatus(msg.item, previous)) return null;
+      return previous;
+    });
     switch (msg.type) {
       case 'item_added':
         setItems((prev) => {
@@ -210,10 +277,13 @@ export function useShopping() {
   }, [shoppingLists, activeListId]);
 
   useEffect(() => {
-    if (!familyId || demoMode) { setTemplates([]); return; }
+    let cancelled = false;
+    setTemplates([]);
+    if (!familyId || demoMode) return;
     api.apiGetShoppingTemplates(familyId).then(({ ok, data }) => {
-      if (ok) setTemplates(data);
+      if (!cancelled && ok) setTemplates(data);
     });
+    return () => { cancelled = true; };
   }, [familyId, demoMode]);
 
   useEffect(() => {
@@ -230,16 +300,28 @@ export function useShopping() {
   }, [familyId, demoMode]);
 
   useEffect(() => {
-    if (!activeListId) { setItems([]); return; }
+    let cancelled = false;
+    const requestScope = scope.current;
+    const version = revision.current;
+    const sequence = ++readSequence.current;
+    const selectedList = shoppingLists.find((list) => list.id === activeListId);
+    if (!activeListId || (selectedList?.family_id != null && Number(selectedList.family_id) !== Number(familyId))) {
+      setItems([]);
+      return;
+    }
     if (demoMode) {
       const list = shoppingLists.find((l) => l.id === activeListId);
       if (list?.items) setItems(list.items);
       return;
     }
     api.apiGetShoppingItems(activeListId).then(({ ok, data }) => {
-      if (ok) setItems(data);
+      if (!cancelled && ok && mounted.current && scope.current === requestScope && revision.current === version && readSequence.current === sequence) {
+        setItems(data);
+        setUndoState((previous) => previous && sameStatus(data.find((item) => item.id === previous.id), previous) ? previous : null);
+      }
     });
-  }, [activeListId, demoMode, shoppingLists]);
+    return () => { cancelled = true; };
+  }, [activeListId, familyId, demoMode, shoppingLists]);
 
   const activeList = useMemo(
     () => shoppingLists.find((l) => l.id === activeListId) || null,
@@ -247,12 +329,18 @@ export function useShopping() {
   );
 
   const uncheckedItems = useMemo(() => items.filter((i) => !i.checked), [items]);
-  const checkedItems = useMemo(() => items.filter((i) => i.checked), [items]);
+  const checkedItems = useMemo(() => items.filter((i) => i.checked).sort(compareCheckedItems), [items]);
 
   const reloadItems = useCallback(async () => {
     if (!activeListId || demoMode) return;
+    const requestScope = scope.current;
+    const version = revision.current;
+    const sequence = ++readSequence.current;
     const { ok, data } = await api.apiGetShoppingItems(activeListId);
-    if (ok) setItems(data);
+    if (ok && mounted.current && scope.current === requestScope && revision.current === version && readSequence.current === sequence) {
+      setItems(data);
+      setUndoState((previous) => previous && sameStatus(data.find((item) => item.id === previous.id), previous) ? previous : null);
+    }
   }, [activeListId, demoMode]);
 
 
@@ -386,28 +474,68 @@ export function useShopping() {
     if (!isMobile) itemInputRef.current?.focus();
   }
 
-  async function toggleItem(id, currentChecked) {
-    if (demoMode) {
-      setItems((prev) =>
-        prev.map((i) => i.id === id ? { ...i, checked: !currentChecked, checked_at: !currentChecked ? new Date().toISOString() : null } : i),
-      );
-      const delta = currentChecked ? -1 : 1;
-      setShoppingLists((prev) =>
-        prev.map((l) => l.id === activeListId
-          ? { ...l, checked_count: l.checked_count + delta, items: (l.items || []).map((i) => i.id === id ? { ...i, checked: !currentChecked } : i) }
-          : l
-        ),
-      );
-    } else {
-      setItems((prev) =>
-        prev.map((i) => i.id === id ? { ...i, checked: !currentChecked, checked_at: !currentChecked ? new Date().toISOString() : null } : i),
-      );
-      const { ok } = await api.apiUpdateShoppingItem(id, { checked: !currentChecked });
-      if (!ok || !wsConnected) {
-        await reloadItems();
-        await loadShoppingLists();
+  async function changeChecked(item, checked, offerUndo) {
+    const requestScope = scope.current;
+    if (pending.current.has(item.id) || item.list_id !== requestScope.listId) return;
+    const operation = { scope: requestScope };
+    pending.current.set(item.id, operation);
+    setPendingItemIds(new Set(pending.current.keys()));
+    setUndoState(null);
+    revision.current += 1;
+    const optimistic = { ...item, checked, checked_at: checked ? new Date().toISOString() : null };
+    setItems((previous) => previous.map((entry) => entry.id === item.id ? optimistic : entry));
+    try {
+      const result = await (demoMode ? { ok: true, data: optimistic } : api.apiUpdateShoppingItem(item.id, {
+        checked,
+        expected_state: { list_id: item.list_id, checked: item.checked, checked_at: item.checked_at || null },
+      }));
+      if (!mounted.current || scope.current !== requestScope) return;
+      if (!result.ok) throw new Error('Status update failed');
+      const confirmed = operation.observed || result.data;
+      if (!operation.deleted && !operation.invalidated) {
+        setItems((previous) => previous.map((entry) => entry.id === item.id ? confirmed : entry));
+        if (offerUndo && sameStatus(confirmed, result.data)) {
+          setUndoState({ ...confirmed, scope: requestScope });
+        }
+      }
+      if (demoMode) {
+        setShoppingLists((previous) => previous.map((list) => list.id === requestScope.listId ? {
+          ...list,
+          checked_count: (list.checked_count || 0) + (checked ? 1 : -1),
+          items: (list.items || []).map((entry) => entry.id === item.id ? confirmed : entry),
+        } : list));
+      }
+    } catch {
+      if (!mounted.current || scope.current !== requestScope) return;
+      toastError(t(messages, 'toast.error'));
+      setItems((previous) => previous.map((entry) => entry.id === item.id ? (operation.observed || item) : entry));
+    } finally {
+      pending.current.delete(item.id);
+      if (mounted.current && scope.current === requestScope) {
+        setPendingItemIds(new Set(pending.current.keys()));
+        if (!demoMode) {
+          try {
+            await reloadItems();
+            if (mounted.current && scope.current === requestScope) await loadShoppingLists();
+          } catch {
+            if (mounted.current && scope.current === requestScope) toastError(t(messages, 'toast.error'));
+          }
+        }
       }
     }
+  }
+
+  async function toggleItem(id, currentChecked) {
+    const item = itemsRef.current.find((entry) => entry.id === id);
+    if (!item || item.checked !== currentChecked) return;
+    return changeChecked(item, !currentChecked, true);
+  }
+
+  async function undoToggle() {
+    if (!undo || undo.scope !== scope.current) return;
+    const item = itemsRef.current.find((entry) => entry.id === undo.id);
+    if (!sameStatus(item, undo)) { setUndoState(null); return; }
+    return changeChecked(item, !undo.checked, false);
   }
 
   async function editItem(id, payload) {
@@ -649,7 +777,7 @@ export function useShopping() {
     shoppingLists,
     activeListId, setActiveListId,
     activeList,
-    items, uncheckedItems, checkedItems,
+    items, uncheckedItems, checkedItems, categories, undo, undoToggle, pendingItemIds,
     newListName, setNewListName,
     newItemName, setNewItemName,
     newItemSpec, setNewItemSpec,

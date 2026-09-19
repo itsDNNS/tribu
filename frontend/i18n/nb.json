@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Butikklenken ble ikke funnet",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Maksimalt {limit} butikker",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Det finnes allerede en butikk med dette navnet",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Skriv inn en http- eller https-adresse som inneholder {query} nøyaktig én gang"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Skriv inn en http- eller https-adresse som inneholder {query} nøyaktig én gang",
+  "module.shopping.show_overview": "Vis kategorioversikt",
+  "module.shopping.hide_overview": "Skjul kategorioversikt",
+  "module.shopping.undo": "Angre",
+  "module.shopping.item_checked": "Avkrysset: {name}",
+  "module.shopping.item_unchecked": "Åpen igjen: {name}"
 }

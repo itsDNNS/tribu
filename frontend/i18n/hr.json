@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Poveznica trgovine nije pronađena",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Dopušteno je najviše {limit} trgovina",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Trgovina s ovim nazivom već postoji",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Unesite http ili https adresu koja sadrži {query} točno jednom"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Unesite http ili https adresu koja sadrži {query} točno jednom",
+  "module.shopping.show_overview": "Prikaži pregled kategorija",
+  "module.shopping.hide_overview": "Sakrij pregled kategorija",
+  "module.shopping.undo": "Poništi",
+  "module.shopping.item_checked": "Označeno: {name}",
+  "module.shopping.item_unchecked": "Ponovno otvoreno: {name}"
 }

@@ -1460,5 +1460,10 @@
   "error.SHOPPING_STORE_LINK_NOT_FOUND": "Níor aimsíodh nasc an tsiopa",
   "error.SHOPPING_STORE_LINK_LIMIT_REACHED": "Uasmhéid de {limit} siopa",
   "error.SHOPPING_STORE_LINK_NAME_TAKEN": "Tá siopa leis an ainm seo ann cheana",
-  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Cuir isteach seoladh http nó https ina bhfuil {query} díreach uair amháin"
+  "error.SHOPPING_STORE_LINK_INVALID_TEMPLATE": "Cuir isteach seoladh http nó https ina bhfuil {query} díreach uair amháin",
+  "module.shopping.show_overview": "Taispeáin forbhreathnú na gcatagóirí",
+  "module.shopping.hide_overview": "Folaigh forbhreathnú na gcatagóirí",
+  "module.shopping.undo": "Cealaigh",
+  "module.shopping.item_checked": "Ticeáilte: {name}",
+  "module.shopping.item_unchecked": "Gan tic: {name}"
 }
