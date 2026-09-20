@@ -18,16 +18,12 @@ async function seedContact(request, familyId, fullName, month, day) {
 }
 
 async function openCalendarDay(page, day) {
-  const calendarDay = page.locator('.calendar-day:not(.other-month)', { hasText: new RegExp(`^${day}$`) }).first();
-  await calendarDay.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
-  await calendarDay.focus();
-  await page.keyboard.press('Enter');
+  await page.locator('.tc-calendar-day:not(.outside) .tc-day-number').filter({hasText:new RegExp(`^${day}$`)}).click();
 }
 
 async function expectBirthdayCakeIndicator(page, day) {
-  const birthdayDay = page.getByRole('button', { name: new RegExp(`${day}.*birthday`, 'i') }).first();
-  await expect(birthdayDay.locator('.calendar-day-birthday-indicator')).toBeVisible();
-  await expect(birthdayDay.locator('.calendar-day-dot')).toHaveCount(0);
+  const birthdayDay = page.locator('.tc-calendar-day:not(.outside)').filter({has:page.locator('.tc-day-number',{hasText:new RegExp(`^${day}$`)})});
+  await expect(birthdayDay.locator('.tc-calendar-event svg').first()).toBeVisible();
 }
 
 test.describe('Birthday identity regression', () => {
@@ -42,11 +38,11 @@ test.describe('Birthday identity regression', () => {
 
     await page.reload();
     await navigateTo(page, 'Calendar');
-    await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+    await page.locator('.tc-calendar-grid').waitFor({ timeout: 10000 });
     await expectBirthdayCakeIndicator(page, day);
     await openCalendarDay(page, day);
 
-    await expect(page.locator('.day-detail-events .event-card-title', { hasText: name })).toHaveCount(2);
+    await expect(page.locator('.tc-day-events strong', { hasText: name })).toHaveCount(2);
 
     const renamed = `Renamed Twin ${Date.now()}`;
     const renameRes = await apiCtx.patch(`/api/contacts/${second.id}`, {
@@ -55,20 +51,20 @@ test.describe('Birthday identity regression', () => {
     expect(renameRes.ok()).toBeTruthy();
 
     await page.reload();
-    await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+    await page.locator('.tc-calendar-grid').waitFor({ timeout: 10000 });
     await openCalendarDay(page, day);
 
-    await expect(page.locator('.day-detail-events .event-card-title', { hasText: name })).toHaveCount(1);
-    await expect(page.locator('.day-detail-events .event-card-title', { hasText: renamed })).toHaveCount(1);
+    await expect(page.locator('.tc-day-events strong', { hasText: name })).toHaveCount(1);
+    await expect(page.locator('.tc-day-events strong', { hasText: renamed })).toHaveCount(1);
 
     const deleteRes = await apiCtx.delete(`/api/contacts/${first.id}`);
     expect(deleteRes.ok()).toBeTruthy();
 
     await page.reload();
-    await page.locator('.calendar-grid-wrapper').waitFor({ timeout: 10000 });
+    await page.locator('.tc-calendar-grid').waitFor({ timeout: 10000 });
     await openCalendarDay(page, day);
 
-    await expect(page.locator('.day-detail-events .event-card-title', { hasText: name })).toHaveCount(0);
-    await expect(page.locator('.day-detail-events .event-card-title', { hasText: renamed })).toHaveCount(1);
+    await expect(page.locator('.tc-day-events strong', { hasText: name })).toHaveCount(0);
+    await expect(page.locator('.tc-day-events strong', { hasText: renamed })).toHaveCount(1);
   });
 });

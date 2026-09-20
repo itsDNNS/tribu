@@ -169,8 +169,8 @@ describe('AppShell mobile bottom navigation', () => {
     expect(screen.getByRole('dialog', { name: 'Search' })).toBeInTheDocument();
   });
 
-  it('keeps desktop sidebar search available outside the dashboard', () => {
-    mockAppState = baseState({ isMobile: false, activeView: 'calendar' });
+  it('keeps desktop sidebar search available outside the dashboard and calendar', () => {
+    mockAppState = baseState({ isMobile: false, activeView: 'tasks' });
     const { container } = render(<AppShell />);
 
     expect(container.querySelector('.sidebar-search-btn')).toBeInTheDocument();

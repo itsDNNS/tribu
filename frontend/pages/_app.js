@@ -8,6 +8,7 @@ import { ToastContainer } from '../components/Toast';
 import { PWABanners } from '../components/PWABanners';
 import '../styles/globals.css';
 import '../styles/dashboard.css';
+import '../styles/calendar.css';
 
 // Routes that MUST NOT mount the global app bootstrap (AppProvider,
 // ToastProvider, PWABanners). AppProvider hits /auth/me, /families/me,

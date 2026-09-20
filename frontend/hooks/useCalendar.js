@@ -104,7 +104,7 @@ export function useCalendar() {
     const y = calendarMonth.getFullYear();
     const m = calendarMonth.getMonth();
     const rangeStart = new Date(y, m, -7);
-    const rangeEnd = new Date(y, m + 1, 8);
+    const rangeEnd = new Date(y, m + 1, 15);
     const { ok, data } = await api.apiGetEvents(
       familyId,
       rangeStart.toISOString(),
@@ -135,11 +135,11 @@ export function useCalendar() {
   // registry and member date-of-birth fields so imported contact
   // birthdays show up in the calendar as well.
   const allEvents = useMemo(() => {
-    const birthdayEvents = buildBirthdayEvents({
+    const birthdayEvents = [-1, 0, 1].flatMap(offset => buildBirthdayEvents({
       birthdays,
       members,
-      viewYear: calendarMonth.getFullYear(),
-    });
+      viewYear: calendarMonth.getFullYear() + offset,
+    }));
     return [...events, ...birthdayEvents];
   }, [events, birthdays, members, calendarMonth]);
 
@@ -346,6 +346,7 @@ export function useCalendar() {
       const msg = t(messages, 'toast.event_created');
       toastSuccess(msg);
       announce(msg);
+      return true;
     } finally {
       creatingRef.current = false;
       setCreating(false);
@@ -415,6 +416,7 @@ export function useCalendar() {
     // switched to editing another event while the save was running.
     setEditingEvent((current) => (current && current.id === eventId ? null : current));
     toastSuccess(t(messages, 'toast.event_updated'));
+    return true;
   }
 
   async function deleteEvent(ev) {
@@ -449,6 +451,7 @@ export function useCalendar() {
     const msg = t(messages, 'toast.event_deleted');
     toastSuccess(msg);
     announce(msg);
+    return true;
   }
 
   async function addBirthday(e) {
@@ -503,7 +506,7 @@ export function useCalendar() {
     birthdayName, setBirthdayName,
     birthdayMonth, setBirthdayMonth,
     birthdayDay, setBirthdayDay,
-    monthLabel, selectedDayEvents, monthCells, weekInfo,
+    monthLabel, selectedDayEvents, monthCells, weekInfo, allEvents,
     prevWeek, nextWeek, goToCurrentWeek,
     createEvent, deleteEvent, performDelete, addBirthday, loadEventsForRange,
     editingEvent, startEdit, cancelEdit, saveEdit,

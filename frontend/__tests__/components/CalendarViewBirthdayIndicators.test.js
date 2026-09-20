@@ -1,248 +1,149 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
+import React, { useState } from 'react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
-
 import CalendarView from '../../components/calendar';
+import en from '../../i18n/en.json';
+import { useApp } from '../../contexts/AppContext';
+import * as api from '../../lib/api';
 
-const mockUseApp = jest.fn();
-const mockUseCalendar = jest.fn();
+jest.mock('../../contexts/AppContext', () => ({ useApp: jest.fn() }));
+jest.mock('../../contexts/ToastContext', () => ({ useToast: () => ({ success: jest.fn(), error: jest.fn() }) }));
+jest.mock('../../lib/api', () => ({ apiCreateEvent: jest.fn(), apiUpdateEvent: jest.fn(), apiDeleteEvent: jest.fn(), apiGetEvents: jest.fn() }));
 
-jest.mock('../../contexts/AppContext', () => ({
-  useApp: () => mockUseApp(),
-}));
-
-jest.mock('../../hooks/useCalendar', () => ({
-  useCalendar: () => mockUseCalendar(),
-}));
-
-function baseApp() {
-  return {
-    familyId: 1,
-    families: [{ family_id: 1, family_name: 'Family' }],
-    messages: {
-      calendar: 'Calendar',
-      'module.calendar.weekdays': 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
-      'module.calendar.today': 'Today',
-      'module.calendar.month': 'Month',
-      'module.calendar.week': 'Week',
-      'aria.previous_month': 'Previous month',
-      'aria.next_month': 'Next month',
-      'aria.events': '{count} events',
-    },
-    isMobile: false,
-    lang: 'en',
-    demoMode: false,
-    events: [],
-    setActiveView: jest.fn(),
-    isChild: false,
-    members: [],
-    timeFormat: '24h',
-    weekStart: 'monday',
-  };
+const member = { user_id: 1, display_name: 'Alex' };
+const event = { id: 1, title: 'Piano lesson', starts_at: '2026-05-04T14:00:00', ends_at: '2026-05-04T15:00:00', assigned_to: [1], description: 'Bring music', color: '#8052a3' };
+function Harness({ initialEvents = [event], ...overrides }) {
+  const [events, setEvents] = useState(initialEvents);
+  const [summary, setSummary] = useState({ next_events: [] });
+  useApp.mockReturnValue({ familyId: 1, me: member, members: [member, { user_id: 2, display_name: 'Sam' }], messages: en, lang: 'en', weekStart: 'monday', timeFormat: '24h', isChild: false, demoMode: true, birthdays: [], loadDashboard: jest.fn(), events, setEvents, summary, setSummary, ...overrides });
+  return <CalendarView />;
 }
+const openEvent = () => fireEvent.click(screen.getByRole('button', { name: /Piano lesson/ }));
+const openEditor = () => { openEvent(); fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true })); };
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
+});
+beforeEach(() => {
+  jest.clearAllMocks();
+  sessionStorage.setItem('tribu_calendar_focus', '2026-05-04T12:00:00');
+  api.apiGetEvents.mockResolvedValue({ ok: true, data: [event] });
+  api.apiCreateEvent.mockResolvedValue({ ok: true, data: {} });
+  api.apiUpdateEvent.mockResolvedValue({ ok: true, data: {} });
+});
 
-function monthCell(day, events = []) {
-  return { empty: false, day, count: events.length, events };
-}
-
-function emptyCell() {
-  return { empty: true };
-}
-
-function baseCalendar(cells) {
-  return {
-    calendarView: 'month',
-    calendarMonth: new Date(2026, 4, 1),
-    selectedDate: null,
-    monthCells: cells,
-    setCalendarMonth: jest.fn(),
-    setSelectedDate: jest.fn(),
-    startsAt: '',
-    setStartsAt: jest.fn(),
-    endsAt: '',
-    setEndsAt: jest.fn(),
-    weekInfo: { weekNumber: 18, weekStart: new Date(2026, 4, 1), weekEnd: new Date(2026, 4, 8), days: [] },
-    setCalendarView: jest.fn(),
-    prevWeek: jest.fn(),
-    nextWeek: jest.fn(),
-    goToCurrentWeek: jest.fn(),
-    deleteConfirm: null,
-    setDeleteConfirm: jest.fn(),
-    performDelete: jest.fn(),
-    deleteEvent: jest.fn(),
-    startEdit: jest.fn(),
-  };
-}
-
-describe('CalendarView birthday month indicators', () => {
-  beforeEach(() => {
-    mockUseApp.mockReturnValue(baseApp());
+describe('Mockup calendar and event overlays', () => {
+  it.each([['monday','Monday'],['sunday','Sunday']])('uses six weeks with the %s preference and clickable adjacent days', (weekStart, firstDay) => {
+    const { container } = render(<Harness weekStart={weekStart} />);
+    expect(container.querySelectorAll('.tc-calendar-day')).toHaveLength(42);
+    expect(container.querySelector('.tc-weekday')).toHaveTextContent(firstDay);
+    fireEvent.click(container.querySelector('.tc-calendar-day.outside .tc-day-number'));
+    expect(screen.getByRole('dialog')).toBeVisible();
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Create event' })).toBeVisible();
+  });
+  it('shows separately named birthdays and event icons in the same day', () => {
+    const birthdays = [{id:11, contact_id:21, person_name:'Twin',month:5,day:4},{id:12,contact_id:22,person_name:'Twin',month:5,day:4}];
+    const { container } = render(<Harness birthdays={birthdays} initialEvents={[{...event, icon:'soccer'}]} />);
+    expect(container.querySelectorAll('.tc-calendar-event')).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /Twin/ })).toHaveLength(2);
+    expect(container.querySelector('.tc-calendar-event svg')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Piano lesson/ })).toHaveTextContent('⚽');
+  });
+  it('filters the calendar by member and restores all events when toggled off', () => {
+    render(<Harness initialEvents={[event,{...event,id:2,title:'Sam appointment',assigned_to:[2]}]} />);
+    fireEvent.click(screen.getByRole('button',{name:'Sam',exact:true}));
+    expect(screen.queryByRole('button',{name:/Piano lesson/})).not.toBeInTheDocument();
+    expect(screen.getByRole('button',{name:/Sam appointment/})).toBeVisible();
+    fireEvent.click(screen.getByRole('button',{name:'Sam',exact:true}));
+    expect(screen.getByRole('button',{name:/Piano lesson/})).toBeVisible();
+  });
+  it('creates a dated event through a modal and displays it in the calendar', async () => {
+    render(<Harness initialEvents={[]} />);
+    fireEvent.click(screen.getByRole('button',{name:'Create event'}));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByLabelText('What is happening?')).toHaveFocus();
+    expect(within(dialog).getByLabelText('Date')).toHaveValue('2026-05-04');
+    fireEvent.change(within(dialog).getByLabelText('What is happening?'),{target:{value:'New plan'}});
+    fireEvent.change(within(dialog).getByLabelText('Notes'),{target:{value:'Remember this'}});
+    fireEvent.click(within(dialog).getByRole('button',{name:'Save',exact:true}));
+    await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button',{name:/New plan/}));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Remember this');
+  });
+  it('edits from the week view and retains notes and multi-day dates', async () => {
+    render(<Harness initialEvents={[{...event, ends_at:'2026-05-06T15:00:00'}]} />);
+    fireEvent.click(screen.getByRole('button',{name:'Week',exact:true}));
+    openEditor();
+    expect(screen.getByLabelText('Notes')).toHaveValue('Bring music');
+    expect(screen.getByLabelText('End date')).toHaveValue('2026-05-06');
+    fireEvent.change(screen.getByLabelText('Date'),{target:{value:'2026-05-05'}});
+    expect(screen.getByLabelText('End date')).toHaveValue('2026-05-07');
+    fireEvent.change(screen.getByLabelText('What is happening?'),{target:{value:'Updated lesson'}});
+    fireEvent.click(screen.getByRole('button',{name:'Save',exact:true}));
+    await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button',{name:/Updated lesson/})).toBeVisible();
+  });
+  it('keeps a failed save open with the draft and permits a retry', async () => {
+    api.apiUpdateEvent.mockResolvedValueOnce({ok:false,data:{detail:'failed'}}).mockResolvedValueOnce({ok:true,data:{}});
+    render(<Harness demoMode={false} />);
+    openEditor();
+    fireEvent.change(screen.getByLabelText('What is happening?'),{target:{value:'Keep my draft'}});
+    fireEvent.click(screen.getByRole('button',{name:'Save',exact:true}));
+    await screen.findByRole('alert');
+    expect(screen.getByLabelText('What is happening?')).toHaveValue('Keep my draft');
+    fireEvent.click(screen.getByRole('button',{name:'Save',exact:true}));
+    await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(api.apiUpdateEvent).toHaveBeenCalledTimes(2);
+  });
+  it('validates end time before submitting and keeps the editor open', async () => {
+    render(<Harness demoMode={false} />);openEditor();
+    fireEvent.change(screen.getByLabelText('Until'),{target:{value:'13:00'}});
+    fireEvent.click(screen.getByRole('button',{name:'Save',exact:true}));
+    expect(screen.getByRole('alert')).toHaveTextContent('The end must be after the start.');
+    expect(api.apiUpdateEvent).not.toHaveBeenCalled();
+  });
+  it('requires confirmation before deleting an event', async () => {
+    render(<Harness />);openEditor();
+    fireEvent.click(screen.getByRole('button',{name:'Delete',exact:true}));
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Delete this event?');
+    fireEvent.click(screen.getByRole('button',{name:'Delete',exact:true}));
+    await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByRole('button',{name:/Piano lesson/})).not.toBeInTheDocument();
+  });
+  it('keeps imported events read-only but allows independent duplication', () => {
+    render(<Harness initialEvents={[{...event,source_type:'subscription'}]} />);openEvent();
+    expect(screen.queryByRole('button',{name:'Edit',exact:true})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Duplicate event',exact:true}));
+    expect(screen.getByLabelText('What is happening?')).toHaveValue('Piano lesson');
+    expect(screen.getByLabelText('Notes')).toHaveValue('Bring music');
+    expect(screen.getByRole('button',{name:'Save',exact:true})).toBeVisible();
+  });
+  it('does not expose mutations to children', () => {
+    render(<Harness isChild />);openEvent();
+    expect(screen.queryByRole('button',{name:'Create event'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Edit',exact:true})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Duplicate event',exact:true})).not.toBeInTheDocument();
+  });
+  it('does not submit twice while a save is pending', async () => {
+    let resolve;
+    api.apiUpdateEvent.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+    render(<Harness demoMode={false} />);openEditor();
+    const form = screen.getByLabelText('What is happening?').closest('form');
+    fireEvent.submit(form);fireEvent.submit(form);
+    expect(api.apiUpdateEvent).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button',{name:'Save',exact:true})).toBeDisabled();
+    resolve({ok:true,data:{}});
+    await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+  it('offers separate occurrence and series deletion for recurring events', async () => {
+    const recurring = {...event, is_recurring:true, recurrence:'weekly', occurrence_date:'2026-05-04'};
+    api.apiDeleteEvent.mockResolvedValue({ok:true});
+    api.apiGetEvents.mockResolvedValue({ok:true,data:[recurring]});
+    render(<Harness demoMode={false} initialEvents={[recurring]} />);openEditor();
+    fireEvent.click(screen.getByRole('button',{name:'Delete',exact:true}));
+    fireEvent.click(screen.getByRole('button',{name:en['module.calendar.delete_this_only'],exact:true}));
+    await waitFor(()=>expect(api.apiDeleteEvent).toHaveBeenCalledWith(1,'2026-05-04'));
+    await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it.each([
-    ['monday', 'Mon'],
-    ['sunday', 'Sun'],
-  ])('starts weekday headers on %s when that preference is selected', (weekStart, expected) => {
-    mockUseApp.mockReturnValue({ ...baseApp(), weekStart });
-    mockUseCalendar.mockReturnValue(baseCalendar([monthCell(1, [])]));
-
-    const { container } = render(<CalendarView />);
-
-    expect(container.querySelector('.calendar-weekday')).toHaveTextContent(expected);
-  });
-
-  it('wraps month view in the warm calendar board shell', () => {
-    mockUseCalendar.mockReturnValue(baseCalendar([emptyCell(), monthCell(1, [])]));
-
-    const { container } = render(<CalendarView />);
-
-    expect(container.querySelector('.calendar-page')).toBeInTheDocument();
-    expect(container.querySelector('.calendar-board')).toBeInTheDocument();
-    expect(container.querySelector('.calendar-board-title')).toHaveTextContent('Calendar');
-    expect(container.querySelector('.calendar-controls-surface')).toBeInTheDocument();
-    expect(container.querySelector('.calendar-day.empty')).toBeDisabled();
-  });
-
-  it('preserves a custom quick-add time when choosing another day', () => {
-    const cal = baseCalendar([emptyCell(), monthCell(4, [])]);
-    cal.startsAt = '2026-05-01T15:30';
-    mockUseCalendar.mockReturnValue(cal);
-
-    render(<CalendarView />);
-
-    screen.getByRole('button', { name: /^May 4$/i }).click();
-
-    expect(cal.setSelectedDate).toHaveBeenCalledWith(new Date(2026, 4, 4));
-    expect(cal.setStartsAt).toHaveBeenCalledWith('2026-05-04T15:30');
-  });
-
-  it('retargets both draft dates by the same delta when choosing another day', () => {
-    const cal = baseCalendar([emptyCell(), monthCell(4, [])]);
-    cal.startsAt = '2026-05-01T15:30';
-    cal.endsAt = '2026-05-02T17:00';
-    mockUseCalendar.mockReturnValue(cal);
-
-    render(<CalendarView />);
-
-    screen.getByRole('button', { name: /^May 4$/i }).click();
-
-    expect(cal.setStartsAt).toHaveBeenCalledWith('2026-05-04T15:30');
-    expect(cal.setEndsAt).toHaveBeenCalledWith('2026-05-05T17:00');
-  });
-
-  it('retargets both draft dates when returning to today', () => {
-    const cal = baseCalendar([emptyCell(), monthCell(4, [])]);
-    cal.startsAt = '2026-05-01T15:30';
-    cal.endsAt = '2026-05-02T17:00';
-    mockUseCalendar.mockReturnValue(cal);
-    const today = new Date();
-    const nextDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-    const datePart = (date) => [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, '0'),
-      String(date.getDate()).padStart(2, '0'),
-    ].join('-');
-
-    render(<CalendarView />);
-
-    screen.getByRole('button', { name: 'Today' }).click();
-
-    expect(cal.setStartsAt).toHaveBeenCalledWith(`${datePart(today)}T15:30`);
-    expect(cal.setEndsAt).toHaveBeenCalledWith(`${datePart(nextDay)}T17:00`);
-  });
-
-  it('retargets an active draft start and end together when choosing a week-day header', () => {
-    const targetDay = new Date(2026, 4, 4);
-    const cal = baseCalendar([]);
-    cal.calendarView = 'week';
-    cal.startsAt = '2026-05-01T23:30';
-    cal.endsAt = '2026-05-02T01:00';
-    cal.weekInfo = {
-      weekNumber: 19,
-      weekStart: targetDay,
-      weekEnd: new Date(2026, 4, 11),
-      days: [{ date: targetDay, dayEvents: [] }],
-    };
-    mockUseCalendar.mockReturnValue(cal);
-
-    render(<CalendarView />);
-
-    screen.getByRole('button', { name: /Mon, May 4/i }).click();
-
-    expect(cal.setSelectedDate).toHaveBeenCalledWith(targetDay);
-    expect(cal.setStartsAt).toHaveBeenCalledWith('2026-05-04T23:30');
-    expect(cal.setEndsAt).toHaveBeenCalledWith('2026-05-05T01:00');
-  });
-
-  it('shows a cake indicator instead of a regular dot for a birthday-only day', () => {
-    mockUseCalendar.mockReturnValue(baseCalendar([
-      emptyCell(),
-      monthCell(1, [{ id: 'birthday-1', title: 'Mia Birthday', _isBirthday: true, color: '#f43f5e' }]),
-    ]));
-
-    render(<CalendarView />);
-
-    const birthdayDay = screen.getByRole('button', { name: /May 1, 1 birthday/i });
-    expect(birthdayDay.querySelector('.calendar-day-birthday-indicator')).toBeInTheDocument();
-    expect(birthdayDay.querySelector('.calendar-day-dot')).not.toBeInTheDocument();
-  });
-
-  it('shows both birthday and regular event cues on a mixed day', () => {
-    mockUseCalendar.mockReturnValue(baseCalendar([
-      emptyCell(),
-      monthCell(2, [
-        { id: 'birthday-2', title: 'Noah Birthday', _isBirthday: true, color: '#f43f5e' },
-        { id: 42, title: 'Football', color: '#2563eb' },
-      ]),
-    ]));
-
-    render(<CalendarView />);
-
-    const mixedDay = screen.getByRole('button', { name: /May 2, 1 birthday, 1 event/i });
-    expect(mixedDay.querySelector('.calendar-day-birthday-indicator')).toBeInTheDocument();
-    expect(mixedDay.querySelectorAll('.calendar-day-dot')).toHaveLength(1);
-  });
-
-  it('keeps regular event-only days on dot indicators', () => {
-    mockUseCalendar.mockReturnValue(baseCalendar([
-      emptyCell(),
-      monthCell(3, [{ id: 99, title: 'Dentist', color: '#16a34a' }]),
-    ]));
-
-    render(<CalendarView />);
-
-    const eventDay = screen.getByRole('button', { name: /May 3, 1 event/i });
-    expect(eventDay.querySelector('.calendar-day-birthday-indicator')).not.toBeInTheDocument();
-    expect(eventDay.querySelectorAll('.calendar-day-dot')).toHaveLength(1);
-  });
-
-  it('shows allowlisted event icons instead of regular dots in month cells', () => {
-    mockUseCalendar.mockReturnValue(baseCalendar([
-      emptyCell(),
-      monthCell(4, [{ id: 77, title: 'Soccer practice', color: '#16a34a', icon: 'soccer' }]),
-    ]));
-
-    render(<CalendarView />);
-
-    const eventDay = screen.getByRole('button', { name: /May 4, 1 event: Soccer training/i });
-    expect(eventDay.querySelector('.calendar-day-icon-indicator')).toHaveTextContent('⚽');
-    expect(eventDay.querySelector('.calendar-day-dot')).not.toBeInTheDocument();
-  });
-
-  it('reserves the indicator row for days without events so date numbers stay aligned', () => {
-    mockUseCalendar.mockReturnValue(baseCalendar([
-      emptyCell(),
-      monthCell(4, [{ id: 77, title: 'Soccer training', color: '#16a34a', icon: 'soccer' }]),
-      monthCell(5, []),
-    ]));
-
-    render(<CalendarView />);
-
-    const iconDay = screen.getByRole('button', { name: /May 4, 1 event: Soccer training/i });
-    const plainDay = screen.getByRole('button', { name: /^May 5$/i });
-
-    expect(iconDay.querySelector('.calendar-day-dots')).toBeInTheDocument();
-    expect(plainDay.querySelector('.calendar-day-dots')).toBeInTheDocument();
-    expect(plainDay.querySelector('.calendar-day-dots')).toBeEmptyDOMElement();
-  });
 });

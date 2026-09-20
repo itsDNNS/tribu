@@ -20,7 +20,7 @@ test.describe('Calendar week-start preference', () => {
     await page.reload();
 
     await navigateTo(page, 'Calendar');
-    await expect(page.locator('.calendar-weekday').first()).toHaveText('Mon');
+    await expect(page.locator('.tc-weekday').first()).toHaveText('Monday');
 
     let group = await openAccountSettings(page);
     const sundayButton = group.getByRole('button', { name: 'Sunday' });
@@ -28,10 +28,10 @@ test.describe('Calendar week-start preference', () => {
     await expect(sundayButton).toHaveAttribute('aria-pressed', 'true');
 
     await navigateTo(page, 'Calendar');
-    await expect(page.locator('.calendar-weekday').first()).toHaveText('Sun');
-    const sundayMonthAlignment = await page.locator('.calendar-days-grid').evaluate((grid) => {
-      const cells = Array.from(grid.querySelectorAll('.calendar-day'));
-      return cells.findIndex((cell) => !cell.classList.contains('empty'));
+    await expect(page.locator('.tc-weekday').first()).toHaveText('Sunday');
+    const sundayMonthAlignment = await page.locator('.tc-calendar-grid').evaluate((grid) => {
+      const cells = Array.from(grid.querySelectorAll('.tc-calendar-day'));
+      return cells.findIndex((cell) => !cell.classList.contains('outside'));
     });
     const expectedSundayOffset = await page.evaluate(() => {
       const now = new Date();
@@ -40,10 +40,10 @@ test.describe('Calendar week-start preference', () => {
     expect(sundayMonthAlignment).toBe(expectedSundayOffset);
 
     await page.getByRole('button', { name: 'Week', exact: true }).click();
-    await expect(page.locator('.week-day-header').first()).toContainText(/^Sun,/);
+    await expect(page.locator('.tc-week-heading').first()).toContainText(/^Sunday/);
 
     await page.reload();
-    await expect(page.locator('.calendar-weekday').first()).toHaveText('Sun');
+    await expect(page.locator('.tc-weekday').first()).toHaveText('Sunday');
 
     group = await openAccountSettings(page);
     const mondayButton = group.getByRole('button', { name: 'Monday' });
@@ -51,6 +51,6 @@ test.describe('Calendar week-start preference', () => {
     await expect(mondayButton).toHaveAttribute('aria-pressed', 'true');
 
     await navigateTo(page, 'Calendar');
-    await expect(page.locator('.calendar-weekday').first()).toHaveText('Mon');
+    await expect(page.locator('.tc-weekday').first()).toHaveText('Monday');
   });
 });
