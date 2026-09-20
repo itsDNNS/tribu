@@ -348,6 +348,67 @@ test.describe('Shopping with the backend', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 });
+test('custom favorites reuse checked products but leave archived history intact', async ({authedPage: page, apiCtx}) => {
+  const family = await getFamilyId(apiCtx);
+  const list = await seedShoppingList(apiCtx, family, 'Custom favorites');
+  const readRows = async () => {
+    const response = await apiCtx.get(`/api/shopping/lists/${list.id}/items?include_archived=true`);
+    expect(response.ok()).toBe(true);
+    return response.json();
+  };
+  const addFavorite = async () => {
+    const surface = await discovery(page);
+    await surface.getByRole('button', {name: 'Favourites', exact: true}).click();
+    await surface.getByRole('button', {name: 'Windeln, add', exact: true}).click();
+    await expect(surface.getByRole('button', {name: 'Windeln, already on the list', exact: true})).toBeVisible();
+    if (await page.getByRole('dialog').count()) await page.keyboard.press('Escape');
+    await expect(tile(page, 'Windeln')).not.toBeChecked();
+    await expect(page.locator('.shop-page').getByRole('alert')).toHaveCount(0);
+  };
+
+  await openList(page, 'Custom favorites');
+  await search(page).fill('Windeln');
+  await search(page).press('Enter');
+  await expect(tile(page, 'Windeln')).toBeVisible();
+  await page.getByRole('button', {name: 'Details for Windeln'}).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByLabel('Details for the family').fill('Size 4');
+  await editor.getByLabel('Priority').selectOption('urgent');
+  await editor.getByRole('button', {name: 'Save favourite', exact: true}).click();
+  await editor.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(editor).toHaveCount(0);
+  const initial = await readRows();
+  expect(initial).toHaveLength(1);
+  const original = initial[0];
+  expect(original).toMatchObject({name: 'Windeln', spec: '1', notes: 'Size 4', priority: 'urgent', checked: false});
+
+  await tile(page, 'Windeln').click();
+  await expect.poll(async () => (await readRows())[0].checked).toBe(true);
+  await addFavorite();
+  const reused = await readRows();
+  expect(reused).toHaveLength(1);
+  expect(reused[0]).toMatchObject({id: original.id, checked: false, archived: false, notes: 'Size 4', priority: 'urgent'});
+
+  await tile(page, 'Windeln').click();
+  await expect.poll(async () => (await readRows())[0].checked).toBe(true);
+  await menu(page);
+  await page.getByRole('dialog').getByRole('button', {name: 'Complete shopping', exact: true}).click();
+  await page.getByRole('dialog').getByRole('button', {name: 'Complete shopping', exact: true}).click();
+  await expect(tile(page, 'Windeln')).toHaveCount(0);
+  const history = await readRows();
+  expect(history).toHaveLength(1);
+  expect(history[0]).toMatchObject({id: original.id, checked: true, archived: true, notes: 'Size 4', priority: 'urgent'});
+
+  await page.reload();
+  await selectShoppingList(page, 'Custom favorites');
+  await addFavorite();
+  const rows = await readRows();
+  expect(rows).toHaveLength(2);
+  expect(rows.find(row => row.id === original.id)).toEqual(history[0]);
+  const live = rows.find(row => row.id !== original.id);
+  expect(live).toMatchObject({name: 'Windeln', spec: '1', category: 'Sonstiges', checked: false, archived: false, notes: null, photo: null, priority: 'normal'});
+});
+
 test('real backend persists photo/details through atomic move, finish and explicit history restore', async ({
   authedPage: page,
   apiCtx

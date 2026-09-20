@@ -133,8 +133,9 @@ export default function ShoppingView(props) {
     for (const item of items) {
       if (!seen.has(fold(item.name))) {
         all.push({
-          ...item,
-          id: `custom-${item.id}`
+          id: `custom-${item.id}`,
+          name: item.name,
+          category: item.category
         });
         seen.add(fold(item.name));
       }

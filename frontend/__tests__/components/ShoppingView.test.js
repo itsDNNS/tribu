@@ -926,3 +926,52 @@ test('a custom favourite remains available on another list in the same browser s
   view.rerender(<ShoppingView/>);
   expect(screen.getByRole('button',{name:'Oat drink, hinzufügen'})).toBeVisible();
 });
+
+test.each([
+  ['Favoriten', false],
+  ['Favoriten', true],
+  ['Katalog', false],
+  ['Katalog', true],
+])('%s adds a custom product descriptor when its saved row has archived=%s', async (tab, archived) => {
+  const custom = {
+    ...apple,
+    id: 77,
+    name: 'Windeln',
+    category: 'Babybedarf',
+    spec: '3 Packungen',
+    notes: 'Size 4',
+    photo: 'data:image/png;base64,iVBORw0KGgo=',
+    priority: 'urgent',
+  };
+  const view = setup({items: [custom], uncheckedItems: [custom]});
+  fireEvent.click(screen.getByRole('button', {name: 'Details zu Windeln'}));
+  fireEvent.click(dialog().getByRole('button', {name: 'Favorit speichern'}));
+  fireEvent.click(dialog().getByRole('button', {name: 'Abbrechen'}));
+
+  const checked = {...custom, checked: true, archived, checked_at: '2026-09-20T12:00:00Z'};
+  mockShopping = {
+    ...mockShopping,
+    items: [checked],
+    uncheckedItems: [],
+    checkedItems: archived ? [] : [checked],
+    restoreItem: jest.fn().mockResolvedValue(false),
+  };
+  view.rerender(<ShoppingView />);
+  fireEvent.click(within(screen.getByRole('group', {name: 'Artikel entdecken'})).getByRole('button', {name: tab}));
+  if (tab === 'Katalog') {
+    fireEvent.change(screen.getByRole('combobox', {name: 'Artikelkategorie'}), {
+      target: {value: 'Babybedarf'},
+    });
+  }
+  const add = screen.getByRole('button', {name: 'Windeln, hinzufügen'});
+  expect(add).toBeEnabled();
+  fireEvent.click(add);
+
+  await waitFor(() => expect(mockShopping.addProduct).toHaveBeenCalledWith({
+    name: 'Windeln', spec: '1', category: 'Babybedarf',
+  }));
+  expect(mockShopping.addProduct).toHaveBeenCalledTimes(1);
+  expect(mockShopping.restoreItem).not.toHaveBeenCalled();
+  await waitFor(() => expect(add).toBeEnabled());
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
