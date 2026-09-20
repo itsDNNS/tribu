@@ -6,10 +6,10 @@ import * as api from '../../lib/api';
 jest.mock('../../lib/api');
 
 function Probe() {
-  const { events, members, birthdays, tasks, summary, activity, loading, loggedIn, familyId, isMobile, isAdmin, isChild, theme, setTheme, weekStart, setWeekStart, switchFamily } = useApp();
+  const { events, members, birthdays, tasks, shoppingLists, summary, activity, loading, loggedIn, familyId, isMobile, isAdmin, isChild, theme, setTheme, weekStart, setWeekStart, switchFamily } = useApp();
   return (
     <div>
-      <output data-testid="household-data">{JSON.stringify({ events, members, birthdays, tasks, summary, activity })}</output>
+      <output data-testid="household-data">{JSON.stringify({ events, members, birthdays, tasks, shoppingLists, summary, activity })}</output>
       <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
       <span data-testid="logged-in">{loggedIn ? 'yes' : 'no'}</span>
       <span data-testid="family-id">{familyId}</span>
@@ -163,9 +163,9 @@ describe('AppProvider bootstrap', () => {
     expect(api.apiGetActivity).toHaveBeenCalledWith('8', 10, 0);
     expect(api.apiGetQuickCaptureInbox).toHaveBeenCalledWith('8', 10, 0);
   });
-  test('ignores delayed task, dashboard and activity data from the previous household', async () => {
+  test('ignores delayed task, shopping, dashboard and activity data from the previous household', async () => {
     const finish = [];
-    for (const method of ['apiGetTasks', 'apiGetDashboard', 'apiGetActivity', 'apiGetEvents', 'apiGetMembers', 'apiGetBirthdays']) {
+    for (const method of ['apiGetTasks', 'apiGetDashboard', 'apiGetActivity', 'apiGetEvents', 'apiGetMembers', 'apiGetBirthdays', 'apiGetShoppingLists']) {
       api[method].mockImplementationOnce(() => new Promise((resolve) => finish.push(resolve)));
     }
     render(<AppProvider><Probe /></AppProvider>);

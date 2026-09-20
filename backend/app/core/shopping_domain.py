@@ -336,7 +336,7 @@ def add_or_merge_shopping_item(
 
     candidates = (
         db.query(ShoppingItem)
-        .filter(ShoppingItem.list_id == shopping_list.id)
+        .filter(ShoppingItem.list_id == shopping_list.id, ShoppingItem.archived.is_(False))
         .order_by(ShoppingItem.checked.asc(), ShoppingItem.position.asc(), ShoppingItem.id.asc())
         .all()
     )
@@ -356,6 +356,7 @@ def add_or_merge_shopping_item(
         match.name = display_name
         if match.checked:
             match.spec = _restored_spec(match.spec, incoming_spec)
+            match.archived = False
             match.checked = False
             match.checked_at = None
             action: ShoppingItemAction = "restored"

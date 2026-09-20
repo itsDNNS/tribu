@@ -271,7 +271,7 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-content">
-          {!['dashboard', 'calendar', 'settings'].includes(activeView) && (
+          {!['dashboard', 'calendar', 'settings', 'shopping'].includes(activeView) && (
             <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)}>
               <Search size={14} />
               {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
@@ -398,6 +398,7 @@ export default function AppShell() {
         <div className="view-enter">
           {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
             <ActiveComponent
+              onOpenNavigation={() => setMobileOpen(true)}
               onOpenSearch={() => setSearchOpen(true)}
               onOpenNotifications={() => { setNotifPanelOpen(true); setOverflowOpen(false); }}
               unreadCount={showNotificationBadge ? unreadCount : 0}

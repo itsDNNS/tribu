@@ -62,3 +62,9 @@ describe('shopping item helpers', () => {
     expect(shoppingSpecsAreCompatible('2', 'organic')).toBe(false);
   });
 });
+
+test('ordinary reuse and template predictions never select archived history', () => {
+  const history = {id:1,name:'Milk',spec:'2 l',checked:true,archived:true};
+  expect(findReusableCheckedItem([history],{name:'Milk',spec:'1 l'})).toBeNull();
+  expect(predictShoppingItemTransition([history],{name:'Milk',spec:'1 l'})).toBeNull();
+});
