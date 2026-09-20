@@ -278,7 +278,7 @@ Day details, event details and create/edit forms use native modal dialogs with a
 
 Event colors default to the assigned members’ current profile colors, including the same palette fallback as the member legend. Shared events use a segmented accent and a soft background containing all participant colors. An explicit event color overrides automatic colors. The editor exposes this as “Family colors”; no stored event color means automatic, so changing a profile color updates existing events without rewriting them. Unassigned events use lavender.
 
-The calendar presentation is scoped in `frontend/styles/calendar.css`; persistence remains in `useCalendar`. Desktop proportions are taken from the mockup. On small screens the month/week grids scroll inside their own containers and dialogs fit the viewport.
+The calendar presentation is scoped in `frontend/styles/calendar.css`; persistence remains in `useCalendar`. Desktop proportions are taken from the mockup. On small screens the month/week grids scroll inside their own containers and dialogs fit the viewport. Time fields stack on narrow phones to keep native time controls readable. Automatic event stripes use the assigned members’ existing profile colors, including multiple color segments; choosing a manual color overrides them, and “Family colors” restores automatic colors. Loading and failed requests remain distinct from empty days, and household changes discard pending calendar views and drafts.
 
 Calendar views need density and confidence. Preserve clear date hierarchy, today indication, selected state, assigned people, and location/time metadata. Recurring events and all-day context must not look like errors.
 

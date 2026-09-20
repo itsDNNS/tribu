@@ -73,7 +73,9 @@ describe('Mockup calendar and event overlays', () => {
   it('edits from the week view and retains notes and multi-day dates', async () => {
     render(<Harness initialEvents={[{...event, ends_at:'2026-05-06T15:00:00'}]} />);
     fireEvent.click(screen.getByRole('button',{name:'Week',exact:true}));
-    openEditor();
+    expect(screen.getAllByRole('button',{name:/Piano lesson/})).toHaveLength(3);
+    fireEvent.click(screen.getAllByRole('button',{name:/Piano lesson/})[0]);
+    fireEvent.click(screen.getByRole('button',{name:'Edit',exact:true}));
     expect(screen.getByLabelText('Notes')).toHaveValue('Bring music');
     expect(screen.getByLabelText('End date')).toHaveValue('2026-05-06');
     fireEvent.change(screen.getByLabelText('Date'),{target:{value:'2026-05-05'}});
@@ -81,7 +83,7 @@ describe('Mockup calendar and event overlays', () => {
     fireEvent.change(screen.getByLabelText('What is happening?'),{target:{value:'Updated lesson'}});
     fireEvent.click(screen.getByRole('button',{name:'Save',exact:true}));
     await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByRole('button',{name:/Updated lesson/})).toBeVisible();
+    expect(screen.getAllByRole('button',{name:/Updated lesson/})).toHaveLength(3);
   });
   it('keeps a failed save open with the draft and permits a retry', async () => {
     api.apiUpdateEvent.mockResolvedValueOnce({ok:false,data:{detail:'failed'}}).mockResolvedValueOnce({ok:true,data:{}});
@@ -172,4 +174,11 @@ describe('Mockup calendar and event overlays', () => {
     await waitFor(()=>expect(api.apiUpdateEvent).toHaveBeenCalledWith(1,expect.objectContaining({color:'#759c5d'})));
   });
 
+});
+
+it('shows a multi-day event on each intersecting day, excluding its midnight end', () => {
+  const { container } = render(<Harness initialEvents={[{...event, ends_at:'2026-05-07T00:00:00'}]} />);
+  expect(container.querySelectorAll('.tc-calendar-event')).toHaveLength(3);
+  fireEvent.click(screen.getByRole('button',{name:'Week',exact:true}));
+  expect(container.querySelectorAll('.tc-week-item')).toHaveLength(3);
 });

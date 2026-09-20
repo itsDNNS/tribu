@@ -188,7 +188,7 @@ test.describe('Dashboard', () => {
 
     // Event → Calendar
     await quickCapture.getByRole('button', { name: 'Event' }).click();
-    await expect(page.locator('.calendar-grid-wrapper')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.tc-calendar-grid')).toBeVisible({ timeout: 10000 });
 
     // Back to Dashboard
     await navigateTo(page, 'Home');
@@ -248,7 +248,7 @@ test.describe('Dashboard', () => {
     await expect(todayStatus).toBeVisible({ timeout: 10000 });
 
     await todayStatus.getByRole('button', { name: /Events/i }).click();
-    await expect(page.locator('.calendar-grid-wrapper')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.tc-calendar-grid')).toBeVisible({ timeout: 10000 });
 
     await navigateTo(page, 'Home');
     await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });

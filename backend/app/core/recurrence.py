@@ -89,6 +89,12 @@ def _event_to_dict(event) -> dict:
         "icon": event.icon,
         "created_by_user_id": event.created_by_user_id,
         "created_at": event.created_at,
+        "source_type": event.source_type,
+        "source_name": event.source_name,
+        "source_url": event.source_url,
+        "imported_at": event.imported_at,
+        "last_synced_at": event.last_synced_at,
+        "sync_status": event.sync_status,
     }
 
 
@@ -126,7 +132,7 @@ def expand_event(
     recurrence_end = event.recurrence_end
 
     if range_start:
-        current = _smart_start(event.starts_at, range_start, recurrence)
+        current = _smart_start(event.starts_at, range_start - duration, recurrence)
     else:
         current = event.starts_at
 
@@ -143,7 +149,7 @@ def expand_event(
         occurrence_date = current.strftime("%Y-%m-%d")
 
         in_range = True
-        if range_start and current < range_start:
+        if range_start and current < range_start and current + duration <= range_start:
             in_range = False
         if range_end and current >= range_end:
             in_range = False

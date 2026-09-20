@@ -7,7 +7,7 @@ test.describe('Navigation UI', () => {
 
     const sidebarNav = page.locator('.nav-groups');
     await sidebarNav.locator('.nav-item', { hasText: 'Calendar' }).click();
-    await expect(page.locator('.calendar-grid-wrapper')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.tc-calendar-grid')).toBeVisible({ timeout: 10000 });
     await expect(sidebarNav.locator('.nav-item.active')).toContainText('Calendar');
 
     await sidebarNav.locator('.nav-item', { hasText: 'Dashboard' }).click();
@@ -21,7 +21,7 @@ test.describe('Navigation UI', () => {
 
     const bottomNav = page.locator('.bottom-nav');
     await bottomNav.locator('.bottom-nav-item', { hasText: 'Plan' }).click();
-    await expect(page.locator('.calendar-grid-wrapper')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.tc-calendar-grid')).toBeVisible({ timeout: 10000 });
     await expect(bottomNav.locator('.bottom-nav-item.active')).toContainText('Plan');
 
     await page.getByRole('button', { name: 'Open menu' }).click();

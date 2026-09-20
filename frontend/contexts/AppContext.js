@@ -86,12 +86,12 @@ export function AppProvider({ children }) {
 
   const loadEvents = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetEvents(fid);
-    if (ok) setEvents(data);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setEvents(data);
   }, []);
 
   const loadMembers = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetMembers(fid);
-    if (ok) setMembers(data);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setMembers(data);
   }, []);
 
   const loadContacts = useCallback(async (fid) => {
@@ -101,7 +101,7 @@ export function AppProvider({ children }) {
 
   const loadBirthdays = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetBirthdays(fid);
-    if (ok) setBirthdays(data);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setBirthdays(data);
   }, []);
 
   const loadTasks = useCallback(async (fid) => {
@@ -214,13 +214,16 @@ export function AppProvider({ children }) {
     setLoading(true);
     activeFamilyRef.current = fid;
     setFamilyId(fid);
+    setEvents([]);
+    setMembers([]);
+    setBirthdays([]);
     const selected = families.find((f) => String(f.family_id) === String(fid));
     if (selected) {
       setMyFamilyRole(selected.role);
       setMyFamilyIsAdult(selected.is_adult);
     }
     await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadActivity(fid), loadQuickCaptureInbox(fid)]);
-    setLoading(false);
+    if (String(activeFamilyRef.current) === String(fid)) setLoading(false);
   }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox]);
 
   const loadFamilyDataInBackground = useCallback((fid) => {

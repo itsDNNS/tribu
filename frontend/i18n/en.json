@@ -1509,5 +1509,8 @@
   "module.calendar.mockup.all_members": "The whole family",
   "module.calendar.mockup.location": "Location",
   "module.calendar.mockup.color": "Color",
-  "module.calendar.mockup.automatic_color": "Family colors"
+  "module.calendar.mockup.automatic_color": "Family colors",
+  "module.calendar.mockup.loading": "Loading calendar…",
+  "module.calendar.mockup.load_error": "The calendar could not be loaded.",
+  "module.calendar.mockup.retry": "Try again"
 }

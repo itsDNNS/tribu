@@ -4,7 +4,8 @@ import { useToast } from '../contexts/ToastContext';
 import { errorText, toIsoOrNull, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
-import { weekStartIndex } from '../lib/dates';
+import { weekStartIndex, localeForLang } from '../lib/dates';
+import { eventOccursOn } from '../lib/calendar-dates';
 import * as api from '../lib/api';
 
 function formatLocalDateTimeInput(date, hour = date.getHours(), minute = date.getMinutes()) {
@@ -17,6 +18,17 @@ export function useCalendar() {
   const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members, birthdays, weekStart } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const startIdx = weekStartIndex(weekStart);
+  const mounted = useRef(true);
+  const activeFamily = useRef(familyId);
+  activeFamily.current = familyId;
+  const rangeRequest = useRef(0);
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const [rangeError, setRangeError] = useState(false);
+  const isCurrentFamily = () => mounted.current && String(activeFamily.current) === String(familyId);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; rangeRequest.current += 1; };
+  }, []);
 
   const [calendarView, setCalendarViewRaw] = useState('month');
 
@@ -84,7 +96,7 @@ export function useCalendar() {
   const [birthdayMonth, setBirthdayMonth] = useState('');
   const [birthdayDay, setBirthdayDay] = useState('');
 
-  const locale = lang === 'de' ? 'de-DE' : 'en-US';
+  const locale = localeForLang(lang);
 
   const setCalendarView = useCallback((view) => {
     if (view === 'week') {
@@ -100,17 +112,23 @@ export function useCalendar() {
 
   // Range-based event loading when month changes (non-demo)
   const loadEventsForRange = useCallback(async () => {
-    if (demoMode) return;
+    if (demoMode || !familyId || !mounted.current || String(activeFamily.current) !== String(familyId)) return;
+    const request = ++rangeRequest.current;
+    setRangeLoading(true);
+    setRangeError(false);
     const y = calendarMonth.getFullYear();
     const m = calendarMonth.getMonth();
-    const rangeStart = new Date(y, m, -7);
-    const rangeEnd = new Date(y, m + 1, 15);
-    const { ok, data } = await api.apiGetEvents(
-      familyId,
-      rangeStart.toISOString(),
-      rangeEnd.toISOString(),
-    );
-    if (ok) setEvents(data);
+    const current = () => mounted.current && request === rangeRequest.current && String(activeFamily.current) === String(familyId);
+    try {
+      const { ok, data } = await api.apiGetEvents(familyId, new Date(y, m, -7).toISOString(), new Date(y, m + 1, 15).toISOString());
+      if (!current()) return;
+      if (ok) setEvents(data);
+      else setRangeError(true);
+    } catch {
+      if (current()) setRangeError(true);
+    } finally {
+      if (current()) setRangeLoading(false);
+    }
   }, [calendarMonth, familyId, demoMode, setEvents]);
 
   useEffect(() => {
@@ -140,18 +158,12 @@ export function useCalendar() {
       members,
       viewYear: calendarMonth.getFullYear() + offset,
     }));
-    return [...events, ...birthdayEvents];
-  }, [events, birthdays, members, calendarMonth]);
+    return [...events.filter(event => event.family_id == null || String(event.family_id) === String(familyId)), ...birthdayEvents];
+  }, [events, birthdays, members, calendarMonth, familyId]);
 
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
-    const y = selectedDate.getFullYear();
-    const m = selectedDate.getMonth();
-    const d = selectedDate.getDate();
-    return allEvents.filter((ev) => {
-      const dt = parseDate(ev.starts_at);
-      return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d;
-    });
+    return allEvents.filter(event => eventOccursOn(event, selectedDate));
   }, [allEvents, selectedDate]);
 
   const monthCells = useMemo(() => {
@@ -217,8 +229,7 @@ export function useCalendar() {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + i);
       const dayEvents = allEvents.filter((ev) => {
-        const dt = parseDate(ev.starts_at);
-        return dt.getFullYear() === date.getFullYear() && dt.getMonth() === date.getMonth() && dt.getDate() === date.getDate();
+        return eventOccursOn(ev, date);
       }).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
       days.push({ date, dayEvents });
     }
@@ -297,12 +308,13 @@ export function useCalendar() {
   useEffect(() => {
     if (previousFamilyIdRef.current === familyId) return;
     previousFamilyIdRef.current = familyId;
-    if (duplicateSourceRef.current) cancelDuplicate();
+    cancelDuplicate();
+    cancelEdit();
   }, [familyId]);
 
   async function createEvent(e) {
     e.preventDefault();
-    if (creatingRef.current) return;
+    if (creatingRef.current || !isCurrentFamily()) return;
     creatingRef.current = true;
     setCreating(true);
     const snapshotAtSubmit = duplicateSourceRef.current;
@@ -314,7 +326,7 @@ export function useCalendar() {
         location: location || null,
         starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
         recurrence: recurrence || null,
-        recurrence_end: toIsoOrNull(recurrenceEnd),
+        recurrence_end: recurrenceEnd ? `${recurrenceEnd}T00:00:00` : null,
         assigned_to: assignedPayload,
         color: color || null,
         category: category || null,
@@ -336,7 +348,8 @@ export function useCalendar() {
           toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
           return;
         }
-        await Promise.all([loadEventsForRange(), loadDashboard()]);
+        if (!isCurrentFamily()) return true;
+        await Promise.allSettled([loadEventsForRange(), loadDashboard()]);
       }
       if (duplicateSourceRef.current === snapshotAtSubmit) {
         duplicateSourceRef.current = null;
@@ -383,7 +396,7 @@ export function useCalendar() {
 
   async function saveEdit(e) {
     if (e) e.preventDefault();
-    if (!editingEvent) return;
+    if (!editingEvent || !isCurrentFamily()) return;
     const eventId = editingEvent.id;
     const assignedPayload = editAssignedTo.includes('all')
       ? 'all'
@@ -397,12 +410,12 @@ export function useCalendar() {
       title: editTitle,
       starts_at: toIsoOrNull(editStartsAt),
       ends_at: toIsoOrNull(editEndsAt),
-      description: editDescription || null,
+      description: editDescription,
       location: editLocation || null,
       recurrence: editRecurrence || '',
-      recurrence_end: editRecurrence ? toIsoOrNull(editRecurrenceEnd) : null,
-      assigned_to: assignedPayload,
-      color: editColor || null,
+      recurrence_end: editRecurrence && editRecurrenceEnd ? `${editRecurrenceEnd}T00:00:00` : null,
+      assigned_to: assignedPayload ?? [],
+      color: editColor,
       icon: editIcon || null,
     };
     if (demoMode) {
@@ -410,7 +423,8 @@ export function useCalendar() {
     } else {
       const { ok, data } = await api.apiUpdateEvent(eventId, payload);
       if (!ok) { toastError(errorText(data?.detail, t(messages, 'toast.error'), messages)); return; }
-      await Promise.all([loadEventsForRange(), loadDashboard()]);
+      if (!isCurrentFamily()) return true;
+      await Promise.allSettled([loadEventsForRange(), loadDashboard()]);
     }
     // Same in-flight guard as useTasks: only close if the user has not
     // switched to editing another event while the save was running.
@@ -429,6 +443,7 @@ export function useCalendar() {
   }
 
   async function performDelete(eventId, occurrenceDate) {
+    if (!isCurrentFamily()) return;
     if (demoMode) {
       if (occurrenceDate) {
         setEvents((prev) => prev.filter((ev) => !(ev.id === eventId && ev.occurrence_date === occurrenceDate)));
@@ -445,7 +460,8 @@ export function useCalendar() {
     } else {
       const { ok, data } = await api.apiDeleteEvent(eventId, occurrenceDate);
       if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      await Promise.all([loadEventsForRange(), loadDashboard()]);
+      if (!isCurrentFamily()) return true;
+      await Promise.allSettled([loadEventsForRange(), loadDashboard()]);
     }
     setDeleteConfirm(null);
     const msg = t(messages, 'toast.event_deleted');
@@ -485,6 +501,7 @@ export function useCalendar() {
   }
 
   return {
+    rangeLoading, rangeError,
     calendarView, setCalendarView,
     calendarMonth, setCalendarMonth,
     selectedDate, setSelectedDate,

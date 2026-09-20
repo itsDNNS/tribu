@@ -173,3 +173,25 @@ def test_create_update_clear_and_reject_calendar_event_icons():
         assert event.icon is None
     finally:
         db.close()
+
+
+def test_clear_optional_event_dates_without_changing_omitted_fields():
+    token, family_id = _seed_adult()
+    client = TestClient(app)
+    headers = _auth_headers(token)
+    created = client.post('/calendar/events', headers=headers, json={
+        'family_id': family_id, 'title': 'Long plan',
+        'starts_at': '2026-09-15T14:00:00', 'ends_at': '2026-09-17T15:00:00',
+        'recurrence': 'weekly', 'recurrence_end': '2026-12-31T00:00:00',
+    })
+    assert created.status_code == 200, created.text
+    event_id = created.json()['id']
+    renamed = client.patch(f'/calendar/events/{event_id}', headers=headers, json={'title': 'Renamed'})
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()['ends_at'] == '2026-09-17T15:00:00'
+    assert renamed.json()['recurrence_end'] == '2026-12-31T00:00:00'
+    cleared = client.patch(f'/calendar/events/{event_id}', headers=headers, json={'ends_at': None, 'recurrence_end': None})
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()['ends_at'] is None
+    assert cleared.json()['recurrence_end'] is None
+    assert cleared.json()['recurrence'] == 'weekly'
