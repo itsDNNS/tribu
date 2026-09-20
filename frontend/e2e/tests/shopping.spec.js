@@ -347,6 +347,31 @@ test.describe('Shopping with the backend', () => {
     await expect(page.locator('.bottom-nav')).not.toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
+  test('mobile shopping navigation stays opaque while quick add is focused and reopened', async ({ authedPage: page, apiCtx }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const family = await getFamilyId(apiCtx);
+    await seedShoppingList(apiCtx, family, 'Opaque Menu Market List');
+    await openList(page, 'Opaque Menu Market List');
+
+    const sidebar = page.locator('.sidebar.mobile-open');
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(value => document.documentElement.setAttribute('data-theme', value), theme);
+      await search(page).focus();
+      await expect(search(page)).toBeFocused();
+      await expect(page.locator('.shop-mobile-dock')).toBeVisible();
+      await expect(page.locator('.ui-bottom-nav')).toBeHidden();
+      await expect(page.locator('.ui-mobile-header')).toBeHidden();
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+        await expect(sidebar).toBeVisible();
+        const background = await sidebar.evaluate(element => getComputedStyle(element).backgroundColor);
+        const channels = background.match(/rgba?\(([^)]+)\)/)[1].split(',').map(Number);
+        expect(channels[3] ?? 1).toBe(1);
+        await page.mouse.click(370, 120);
+        await expect(sidebar).toBeHidden();
+      }
+    }
+  });
 });
 test('custom favorites reuse checked products but leave archived history intact', async ({authedPage: page, apiCtx}) => {
   const family = await getFamilyId(apiCtx);

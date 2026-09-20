@@ -597,24 +597,24 @@ export default function WeeklyPlanView({
               </AgendaDay>
             ))}
           </div>
-        </div>
-      )}
-      {compact && visibleSections.has('shopping') && (
-        <Section
-          sectionKey="shopping"
-          title={t(messages, 'module.weekly_plan.shopping')}
-          icon={ShoppingCart}
-          items={sections.shopping}
-          emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
-          renderItem={(item) => (
-            <WeeklyPlanItem
-              key={item.id}
-              accent="shopping"
-              meta={item.detail}
-              title={item.title}
+          {visibleSections.has('shopping') && (
+            <Section
+              sectionKey="shopping"
+              title={t(messages, 'module.weekly_plan.shopping')}
+              icon={ShoppingCart}
+              items={sections.shopping}
+              emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
+              renderItem={(item) => (
+                <WeeklyPlanItem
+                  key={item.id}
+                  accent="shopping"
+                  meta={item.detail}
+                  title={item.title}
+                />
+              )}
             />
           )}
-        />
+        </div>
       )}
       <div className={`weekly-plan-grid ${compact ? 'ui-print-only' : ''}`}>
         {visibleSections.has('events') && (

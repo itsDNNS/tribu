@@ -66,6 +66,9 @@ for (const width of [320, 390, 680, 768, 820, 1024, 1448])
         .getByRole("button", { name: "Ganze Woche", exact: true })
         .click();
       await expect(page.locator(".ui-agenda-day")).toHaveCount(7);
+    } else {
+      await expect(page.locator(".tc-week-column")).toHaveCount(7);
+      if (width === 1448) await shot(page, "week-1448.png");
     }
     expect(
       await page.evaluate(
