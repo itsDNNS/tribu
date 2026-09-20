@@ -5,6 +5,9 @@ import { buildMessages } from '../../lib/i18n';
 
 let mockAppState = {};
 
+beforeEach(() => sessionStorage.clear());
+jest.mock('../../components/FamilyTopbar', () => () => null);
+
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockAppState,
 }));
@@ -88,6 +91,48 @@ describe('Settings notification destinations visibility', () => {
     rerender(<SettingsView />);
 
     expect(screen.queryByText('Notification destination panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+  });
+});
+
+
+describe('Mockup settings overview', () => {
+  it('offers the same overview on mobile and supports returning from a detail', () => {
+    mockAppState = baseState({ isMobile: true });
+    render(<SettingsView />);
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
     expect(screen.getByText('Account panel')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'All settings' }));
+    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toHaveFocus();
+    expect(sessionStorage.getItem('tribu_settings_tab')).toBeNull();
+  });
+
+  it('honours a permitted deep link on mobile and rejects a hidden one', () => {
+    sessionStorage.setItem('tribu_settings_tab', 'notification_destinations');
+    mockAppState = baseState({ isMobile: true });
+    const { unmount } = render(<SettingsView />);
+    expect(screen.getByText('Notification destination panel')).toBeInTheDocument();
+    unmount();
+    mockAppState = baseState({ isAdmin: false });
+    render(<SettingsView />);
+    expect(screen.queryByText('Notification destination panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+  });
+
+  it('wires appearance and calendar controls to real preferences', () => {
+    const setters = Object.fromEntries(['setTheme', 'setLang', 'setWeekStart', 'setCompactDashboard', 'setShowNotificationBadge'].map(key => [key, jest.fn()]));
+    mockAppState = baseState({ ...setters, theme: 'light', lang: 'en', weekStart: 'monday', availableLanguages: [{key:'en',nativeName:'English'},{key:'de',nativeName:'Deutsch'}] });
+    render(<SettingsView />);
+    fireEvent.click(screen.getByRole('button', { name: 'Colour scheme' }));
+    expect(setters.setTheme).toHaveBeenCalledWith('dark');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), {target:{value:'de'}});
+    expect(setters.setLang).toHaveBeenCalledWith('de');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Week starts on' }), {target:{value:'sunday'}});
+    expect(setters.setWeekStart).toHaveBeenCalledWith('sunday');
+    fireEvent.click(screen.getByRole('switch', { name: 'Compact view' }));
+    expect(setters.setCompactDashboard).toHaveBeenCalledWith(true);
+    fireEvent.click(screen.getByRole('switch', { name: 'Notification badge' }));
+    expect(setters.setShowNotificationBadge).toHaveBeenCalledWith(false);
   });
 });

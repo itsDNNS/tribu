@@ -4,7 +4,7 @@ const { navigateTo } = require('../helpers/navigation');
 async function openAccountSettings(page) {
   await navigateTo(page, 'Settings');
 
-  const accountItem = page.locator('.settings-mobile-item').filter({ hasText: /^Account$/ });
+  const accountItem = page.getByRole('button', { name: 'Account', exact: true });
   const weekStartGroup = page.getByRole('group', { name: 'Week starts on' });
   await expect(accountItem.or(weekStartGroup).first()).toBeVisible({ timeout: 10000 });
   if (await accountItem.isVisible().catch(() => false)) {
