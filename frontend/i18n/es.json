@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Ocultar resumen de categorías",
   "module.shopping.undo": "Deshacer",
   "module.shopping.item_checked": "Marcado: {name}",
-  "module.shopping.item_unchecked": "Desmarcado: {name}"
+  "module.shopping.item_unchecked": "Desmarcado: {name}",
+  "module.dashboard.welcome_note": "¡Qué alegría tenerte aquí!",
+  "module.dashboard.hero_note": "Pequeños pasos. Grandes momentos en familia.",
+  "module.dashboard.family_note": "Hacemos más fácil el día a día. Juntos.",
+  "module.dashboard.day_note": "Cada día cuenta",
+  "module.dashboard.footer_note": "Más tiempo para lo que de verdad importa.",
+  "module.dashboard.capture_hint": "¿Qué te gustaría añadir?",
+  "module.dashboard.routines_title": "Rutinas diarias",
+  "module.dashboard.routines_progress": "{completed} de {total} completadas",
+  "module.dashboard.meals_title": "Comidas de hoy",
+  "module.dashboard.feed_title": "Novedades de la familia",
+  "module.dashboard.meals_label": "Comidas",
+  "module.dashboard.completed_short": "Completadas: {count}",
+  "module.dashboard.open_short": "Pendientes: {count}",
+  "module.dashboard.planned_short": "Planificadas",
+  "module.dashboard.birthdays_short": "Próximamente",
+  "module.dashboard.toggle_theme": "Cambiar entre apariencia clara y oscura"
 }

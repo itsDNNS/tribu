@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Paslēpt kategoriju pārskatu",
   "module.shopping.undo": "Atsaukt",
   "module.shopping.item_checked": "Atzīmēts: {name}",
-  "module.shopping.item_unchecked": "Atkal atvērts: {name}"
+  "module.shopping.item_unchecked": "Atkal atvērts: {name}",
+  "module.dashboard.welcome_note": "Prieks, ka esi šeit!",
+  "module.dashboard.hero_note": "Mazi soļi. Lieli ģimenes mirkļi.",
+  "module.dashboard.family_note": "Padarām ikdienu vieglāku. Kopā.",
+  "module.dashboard.day_note": "Katra diena ir svarīga",
+  "module.dashboard.footer_note": "Vairāk laika tam, kas patiesi svarīgs.",
+  "module.dashboard.capture_hint": "Ko vēlies pievienot?",
+  "module.dashboard.routines_title": "Ikdienas ieradumi",
+  "module.dashboard.routines_progress": "Pabeigti {completed} no {total}",
+  "module.dashboard.meals_title": "Šodienas maltītes",
+  "module.dashboard.feed_title": "Ģimenes jaunumi",
+  "module.dashboard.meals_label": "Maltītes",
+  "module.dashboard.completed_short": "Pabeigti: {count}",
+  "module.dashboard.open_short": "Atlikuši: {count}",
+  "module.dashboard.planned_short": "Ieplānots",
+  "module.dashboard.birthdays_short": "Drīzumā",
+  "module.dashboard.toggle_theme": "Pārslēgt gaišo vai tumšo izskatu"
 }

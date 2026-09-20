@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Slėpti kategorijų apžvalgą",
   "module.shopping.undo": "Atšaukti",
   "module.shopping.item_checked": "Pažymėta: {name}",
-  "module.shopping.item_unchecked": "Vėl atvira: {name}"
+  "module.shopping.item_unchecked": "Vėl atvira: {name}",
+  "module.dashboard.welcome_note": "Smagu, kad esi čia!",
+  "module.dashboard.hero_note": "Maži žingsniai. Didelės šeimos akimirkos.",
+  "module.dashboard.family_note": "Palengvinkime kasdienybę. Kartu.",
+  "module.dashboard.day_note": "Kiekviena diena svarbi",
+  "module.dashboard.footer_note": "Daugiau laiko tam, kas iš tiesų svarbu.",
+  "module.dashboard.capture_hint": "Ką norėtum pridėti?",
+  "module.dashboard.routines_title": "Kasdienės veiklos",
+  "module.dashboard.routines_progress": "Atlikta {completed} iš {total}",
+  "module.dashboard.meals_title": "Šios dienos valgiai",
+  "module.dashboard.feed_title": "Šeimos naujienos",
+  "module.dashboard.meals_label": "Valgiai",
+  "module.dashboard.completed_short": "Atlikta: {count}",
+  "module.dashboard.open_short": "Liko: {count}",
+  "module.dashboard.planned_short": "Suplanuota",
+  "module.dashboard.birthdays_short": "Netrukus",
+  "module.dashboard.toggle_theme": "Perjungti šviesią arba tamsią išvaizdą"
 }

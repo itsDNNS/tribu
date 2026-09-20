@@ -133,7 +133,7 @@ describe('DashboardView activation panel', () => {
 
     const moduleKeys = Array.from(container.querySelectorAll('.bento-grid > [data-dashboard-module]')).map((module) => module.getAttribute('data-dashboard-module'));
 
-    expect(moduleKeys.slice(0, 3)).toEqual(['quick_capture', 'daily_loop', 'events']);
+    expect(moduleKeys.slice(0, 3)).toEqual(['quick_capture', 'events', 'tasks']);
     expect(moduleKeys.at(-1)).toBe('setup_checklist');
   });
 

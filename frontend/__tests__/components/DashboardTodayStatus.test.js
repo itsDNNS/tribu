@@ -27,7 +27,7 @@ const messages = buildTestMessages({
   'module.tasks.no_tasks': 'No tasks yet',
   'module.dashboard.empty_birthdays': 'No birthdays',
   'module.dashboard.days': 'days',
-  'module.dashboard.activity_title': 'Recent activity',
+  'module.dashboard.feed_title': 'Family feed',
   'module.dashboard.activity_empty': 'No household activity yet.',
   'module.dashboard.activity_unknown_actor': 'Someone',
   'module.dashboard.today_command_center': 'Today command center',
@@ -39,7 +39,7 @@ const messages = buildTestMessages({
   'module.dashboard.next_up_title': 'Next up',
   'module.dashboard.next_up_empty': 'Nothing scheduled',
   'module.dashboard.next_up_empty_hint': 'The calendar is clear.',
-  'module.dashboard.daily_loop_title': 'Today loop',
+  'module.dashboard.routines_title': 'Daily routines',
   'module.dashboard.daily_loop_meals': 'Meals planned',
   'module.dashboard.daily_loop_shopping': 'Shopping open',
   'module.dashboard.daily_loop_routines': 'Routines due',
@@ -88,7 +88,7 @@ describe('DashboardView today status', () => {
     expect(within(status).getByTestId('today-status-tasks')).toHaveTextContent('1');
     expect(within(status).getByTestId('today-status-shopping')).toHaveTextContent('3');
     expect(within(status).getByTestId('today-status-birthdays')).toHaveTextContent('1');
-    expect(screen.getByRole('region', { name: 'Today loop' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Daily routines' })).toBeInTheDocument();
   });
 
   it('navigates from today status tiles to their owning modules', () => {
@@ -107,7 +107,7 @@ describe('DashboardView today status', () => {
     expect(setActiveView).toHaveBeenCalledWith('contacts');
   });
 
-  it('keeps household activity out of the permanent dashboard layout', () => {
+  it('shows household activity on the dashboard', () => {
     renderDashboard({
       activity: [{
         id: 1,
@@ -117,7 +117,7 @@ describe('DashboardView today status', () => {
       }],
     });
 
-    expect(screen.queryByRole('region', { name: 'Recent activity' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Dennis completed task "Pay school lunch"')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Family feed' })).toBeInTheDocument();
+    expect(screen.queryByText('Dennis completed task "Pay school lunch"')).toBeInTheDocument();
   });
 });

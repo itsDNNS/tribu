@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Peida kategooriate ülevaade",
   "module.shopping.undo": "Võta tagasi",
   "module.shopping.item_checked": "Märgitud: {name}",
-  "module.shopping.item_unchecked": "Taas avatud: {name}"
+  "module.shopping.item_unchecked": "Taas avatud: {name}",
+  "module.dashboard.welcome_note": "Tore, et oled siin!",
+  "module.dashboard.hero_note": "Väikesed sammud. Suured perehetked.",
+  "module.dashboard.family_note": "Muudame argipäeva lihtsamaks. Koos.",
+  "module.dashboard.day_note": "Iga päev on tähtis",
+  "module.dashboard.footer_note": "Rohkem aega sellele, mis on päriselt oluline.",
+  "module.dashboard.capture_hint": "Mida soovid lisada?",
+  "module.dashboard.routines_title": "Igapäevased rutiinid",
+  "module.dashboard.routines_progress": "Tehtud {completed}/{total}",
+  "module.dashboard.meals_title": "Tänased toidukorrad",
+  "module.dashboard.feed_title": "Pere uudised",
+  "module.dashboard.meals_label": "Toidukorrad",
+  "module.dashboard.completed_short": "Tehtud: {count}",
+  "module.dashboard.open_short": "Ootel: {count}",
+  "module.dashboard.planned_short": "Planeeritud",
+  "module.dashboard.birthdays_short": "Tulekul",
+  "module.dashboard.toggle_theme": "Vaheta heleda ja tumeda kujunduse vahel"
 }

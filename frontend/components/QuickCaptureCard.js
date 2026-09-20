@@ -1,7 +1,8 @@
-import { ListChecks, CalendarDays, ShoppingCart, Utensils, StickyNote, X } from 'lucide-react';
-import { useState } from 'react';
+import { ListChecks, CalendarDays, ShoppingCart, Utensils, StickyNote, X, Zap, Plus, Search } from 'lucide-react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { apiCreateQuickCapture, apiConvertQuickCapture, apiDismissQuickCapture } from '../lib/api';
 import { t } from '../lib/i18n';
+import { DashboardBadge, DashboardMotto } from './DashboardDetails';
 
 export default function QuickCaptureCard({
   familyId,
@@ -14,6 +15,25 @@ export default function QuickCaptureCard({
   loadActivity,
 }) {
   const [text, setText] = useState('');
+  const inputRef = useRef(null);
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input) return undefined;
+    const fitText = () => {
+      input.style.height = 'auto';
+      input.style.height = `${input.scrollHeight}px`;
+    };
+    fitText();
+    // Refit the placeholder or text when the responsive input width changes.
+    let width = input.getBoundingClientRect().width;
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width === width) return;
+      width = entry.contentRect.width;
+      fitText();
+    });
+    observer?.observe(input);
+    return () => observer?.disconnect();
+  }, [text, messages]);
   const [busy, setBusy] = useState(false);
   const [triagingId, setTriagingId] = useState(null);
 
@@ -78,11 +98,14 @@ export default function QuickCaptureCard({
   return (
     <section className={cardClassName} role="region" aria-label={t(messages, 'module.dashboard.quick_capture_title')}>
       <div className="bento-card-header quick-capture-header">
-        <h2 className="bento-card-title">{t(messages, 'module.dashboard.quick_capture_title')}</h2>
+        <DashboardBadge icon={Zap} tone="amber" />
+        <div className="quick-capture-heading-copy"><h2 className="bento-card-title">{t(messages, 'module.dashboard.quick_capture_title')}</h2><p>{t(messages, 'module.dashboard.capture_hint')}</p></div>
+        <DashboardMotto messages={messages} />
       </div>
 
       <div className="quick-capture-form quick-capture-form--command">
-        <textarea
+        <div className="quick-capture-input-wrap"><Search size={14} aria-hidden="true" /><textarea
+          ref={inputRef}
           value={text}
           onChange={(event) => setText(event.target.value)}
           aria-label={t(messages, 'module.dashboard.quick_capture_placeholder')}
@@ -90,10 +113,10 @@ export default function QuickCaptureCard({
           rows={1}
           maxLength={240}
           className="quick-capture-input"
-        />
+        /></div>
         <div className="quick-capture-actions">
           <button type="button" className="btn-sm quick-capture-action-task" onClick={() => capture('task')} disabled={!canSubmit}>
-            <ListChecks size={14} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_capture_add_task')}
+            <Plus size={17} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_capture_add_task')}
           </button>
           <button type="button" className="btn-sm quick-capture-action-event" onClick={() => openView('calendar')}>
             <CalendarDays size={14} aria-hidden="true" /> {t(messages, 'module.dashboard.quick_event')}

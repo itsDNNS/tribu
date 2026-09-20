@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AppProvider, useApp } from '../../contexts/AppContext';
 import * as api from '../../lib/api';
@@ -6,9 +6,10 @@ import * as api from '../../lib/api';
 jest.mock('../../lib/api');
 
 function Probe() {
-  const { loading, loggedIn, familyId, isMobile, isAdmin, isChild, theme, setTheme, weekStart, setWeekStart, switchFamily } = useApp();
+  const { tasks, summary, activity, loading, loggedIn, familyId, isMobile, isAdmin, isChild, theme, setTheme, weekStart, setWeekStart, switchFamily } = useApp();
   return (
     <div>
+      <output data-testid="household-data">{JSON.stringify({ tasks, summary, activity })}</output>
       <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
       <span data-testid="logged-in">{loggedIn ? 'yes' : 'no'}</span>
       <span data-testid="family-id">{familyId}</span>
@@ -162,4 +163,19 @@ describe('AppProvider bootstrap', () => {
     expect(api.apiGetActivity).toHaveBeenCalledWith('8', 10, 0);
     expect(api.apiGetQuickCaptureInbox).toHaveBeenCalledWith('8', 10, 0);
   });
+  test('ignores delayed task, dashboard and activity data from the previous household', async () => {
+    const finish = [];
+    for (const method of ['apiGetTasks', 'apiGetDashboard', 'apiGetActivity']) {
+      api[method].mockImplementationOnce(() => new Promise((resolve) => finish.push(resolve)));
+    }
+    render(<AppProvider><Probe /></AppProvider>);
+    await waitFor(() => expect(screen.getByTestId('family-id')).toHaveTextContent('7'));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch family' }));
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
+    await act(async () => {
+      for (const resolve of finish) resolve({ ok: true, data: { items: [{ title: 'Old household' }], title: 'Old household' } });
+    });
+    expect(screen.getByTestId('household-data')).not.toHaveTextContent('Old household');
+  });
+
 });

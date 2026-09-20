@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Categorieoverzicht verbergen",
   "module.shopping.undo": "Ongedaan maken",
   "module.shopping.item_checked": "Afgevinkt: {name}",
-  "module.shopping.item_unchecked": "Weer open: {name}"
+  "module.shopping.item_unchecked": "Weer open: {name}",
+  "module.dashboard.welcome_note": "Fijn dat je er bent!",
+  "module.dashboard.hero_note": "Kleine stappen. Grote gezinsmomenten.",
+  "module.dashboard.family_note": "Samen maken we het dagelijks leven makkelijker.",
+  "module.dashboard.day_note": "Elke dag telt",
+  "module.dashboard.footer_note": "Meer tijd voor wat er echt toe doet.",
+  "module.dashboard.capture_hint": "Wat wil je toevoegen?",
+  "module.dashboard.routines_title": "Dagelijkse routines",
+  "module.dashboard.routines_progress": "{completed} van {total} afgerond",
+  "module.dashboard.meals_title": "Maaltijden van vandaag",
+  "module.dashboard.feed_title": "Gezinsnieuws",
+  "module.dashboard.meals_label": "Maaltijden",
+  "module.dashboard.completed_short": "{count} afgerond",
+  "module.dashboard.open_short": "{count} openstaand",
+  "module.dashboard.planned_short": "Gepland",
+  "module.dashboard.birthdays_short": "Binnenkort",
+  "module.dashboard.toggle_theme": "Wisselen tussen lichte en donkere weergave"
 }

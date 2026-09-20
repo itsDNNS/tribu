@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Kategóriaáttekintés elrejtése",
   "module.shopping.undo": "Visszavonás",
   "module.shopping.item_checked": "Kipipálva: {name}",
-  "module.shopping.item_unchecked": "Újra nyitott: {name}"
+  "module.shopping.item_unchecked": "Újra nyitott: {name}",
+  "module.dashboard.welcome_note": "Örülünk, hogy itt vagy!",
+  "module.dashboard.hero_note": "Kis lépések. Nagy családi pillanatok.",
+  "module.dashboard.family_note": "Könnyebb hétköznapok. Együtt.",
+  "module.dashboard.day_note": "Minden nap számít",
+  "module.dashboard.footer_note": "Több idő arra, ami igazán fontos.",
+  "module.dashboard.capture_hint": "Mit szeretnél hozzáadni?",
+  "module.dashboard.routines_title": "Napi rutinok",
+  "module.dashboard.routines_progress": "{completed} / {total} kész",
+  "module.dashboard.meals_title": "Mai étkezések",
+  "module.dashboard.feed_title": "Családi hírek",
+  "module.dashboard.meals_label": "Étkezések",
+  "module.dashboard.completed_short": "Kész: {count}",
+  "module.dashboard.open_short": "Hátravan: {count}",
+  "module.dashboard.planned_short": "Tervezett",
+  "module.dashboard.birthdays_short": "Hamarosan",
+  "module.dashboard.toggle_theme": "Váltás világos és sötét megjelenés között"
 }

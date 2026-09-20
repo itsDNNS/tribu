@@ -60,7 +60,7 @@
   --radius-lg: 20px;
   --radius-xl: 28px;
   --radius-pill: 100px;
-  --sidebar-width: 240px;
+  --sidebar-width: 229px;
   --sidebar-collapsed: 70px;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -74,19 +74,19 @@
    "Morning Mist" — Light Theme
    ═══════════════════════════════════════════ */
 [data-theme="light"] {
-  --void: #f8f3eb;
-  --void-deep: #f0e7dc;
-  --void-surface: #fffdf8;
-  --void-elevated: #fbf5ed;
-  --void-hover: #f2e8da;
-  --surface-paper: #fffdf8;
-  --surface-raised: #fffaf3;
-  --surface-soft: #f7efe6;
-  --border-subtle: rgba(93, 74, 56, 0.13);
-  --glass: rgba(255, 253, 248, 0.88);
+  --void: #faf8f4;
+  --void-deep: #f5f2ee;
+  --void-surface: #fffefd;
+  --void-elevated: #faf9f7;
+  --void-hover: #f3edf9;
+  --surface-paper: #fffefd;
+  --surface-raised: #faf9f7;
+  --surface-soft: #f5f2ee;
+  --border-subtle: rgba(88, 65, 80, 0.10);
+  --glass: rgba(252, 250, 247, 0.96);
   --glass-border: var(--border-subtle);
   --glass-shine: rgba(255, 255, 255, 0.26);
-  --amethyst: #7b568a;
+  --amethyst: #73518d;
   --amethyst-glow: rgba(123, 86, 138, 0.14);
   --sapphire: #4d91bd;
   --sapphire-glow: rgba(77, 145, 189, 0.12);
@@ -99,9 +99,9 @@
   --grad-cool: linear-gradient(135deg, #68a4c9 0%, #7b568a 100%);
   --grad-life: linear-gradient(135deg, #739c78 0%, #68a4c9 100%);
   --grad-rose: linear-gradient(135deg, #bd7480 0%, #9f5e6b 100%);
-  --text-primary: #241d18;
-  --text-secondary: #5f554d;
-  --text-muted: #766b61;
+  --text-primary: #151828;
+  --text-secondary: #42414c;
+  --text-muted: #756f79;
   --text-on-primary: #ffffff;
   --success: #4f8a59;
   --warning: #b8731e;
@@ -148,7 +148,7 @@
 [data-theme="light"] .glow-emerald { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 32px -8px rgba(16, 185, 129, 0.08); }
 
 [data-theme="light"] .sidebar {
-  background: rgba(255, 250, 243, 0.95);
+  background: var(--glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-right: 1px solid var(--glass-border);
@@ -717,6 +717,10 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); height: 100vh; position: fixed; left: 0; top: 0; z-index: 30; display: flex; flex-direction: column; background: rgba(22, 27, 43, 0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-right: 1px solid var(--glass-border); transition: width 0.25s ease, min-width 0.25s ease; overflow: visible; }
 .sidebar-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-lg) var(--space-md); white-space: nowrap; }
 .sidebar-brand { display: flex; align-items: center; gap: var(--space-md); }
+.sidebar-household { margin-top: 14px; border-top: 1px solid var(--glass-border); }
+.sidebar-household-list { list-style: none; margin: 0; padding: 0; }
+.sidebar-household-list li { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 5px 8px; color: var(--text-secondary); font-size: 12px; }
+.sidebar-household-list li > span:last-child { overflow-wrap: anywhere; min-width: 0; }
 .sidebar-logo { width: 40px; height: 40px; background: var(--grad-primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sidebar-brand-text h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: 0; margin: 0; }
 .sidebar-brand-text span { font-size: 0.72rem; color: var(--text-muted); font-weight: 400; text-transform: uppercase; letter-spacing: 0.08em; }

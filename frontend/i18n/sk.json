@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Skryť prehľad kategórií",
   "module.shopping.undo": "Späť",
   "module.shopping.item_checked": "Zaškrtnuté: {name}",
-  "module.shopping.item_unchecked": "Odškrtnuté: {name}"
+  "module.shopping.item_unchecked": "Odškrtnuté: {name}",
+  "module.dashboard.welcome_note": "Teší nás, že si tu!",
+  "module.dashboard.hero_note": "Malé kroky. Veľké rodinné chvíle.",
+  "module.dashboard.family_note": "Uľahčujeme si každodenný život. Spoločne.",
+  "module.dashboard.day_note": "Na každom dni záleží",
+  "module.dashboard.footer_note": "Viac času na to, na čom skutočne záleží.",
+  "module.dashboard.capture_hint": "Čo chceš pridať?",
+  "module.dashboard.routines_title": "Denné rutiny",
+  "module.dashboard.routines_progress": "Dokončené: {completed} z {total}",
+  "module.dashboard.meals_title": "Dnešné jedlá",
+  "module.dashboard.feed_title": "Rodinné novinky",
+  "module.dashboard.meals_label": "Jedlá",
+  "module.dashboard.completed_short": "Dokončené: {count}",
+  "module.dashboard.open_short": "Zostáva: {count}",
+  "module.dashboard.planned_short": "Naplánované",
+  "module.dashboard.birthdays_short": "Už čoskoro",
+  "module.dashboard.toggle_theme": "Prepnúť svetlý alebo tmavý vzhľad"
 }

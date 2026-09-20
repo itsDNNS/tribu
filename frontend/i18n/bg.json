@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Скриване на категориите",
   "module.shopping.undo": "Отмяна",
   "module.shopping.item_checked": "Отметнато: {name}",
-  "module.shopping.item_unchecked": "Неотметнато: {name}"
+  "module.shopping.item_unchecked": "Неотметнато: {name}",
+  "module.dashboard.welcome_note": "Радваме се, че си тук!",
+  "module.dashboard.hero_note": "Малки стъпки. Големи семейни моменти.",
+  "module.dashboard.family_note": "Заедно правим ежедневието по-лесно.",
+  "module.dashboard.day_note": "Всеки ден е важен",
+  "module.dashboard.footer_note": "Повече време за истински важните неща.",
+  "module.dashboard.capture_hint": "Какво искаш да добавиш?",
+  "module.dashboard.routines_title": "Ежедневни занимания",
+  "module.dashboard.routines_progress": "Завършени: {completed} от {total}",
+  "module.dashboard.meals_title": "Менюто за днес",
+  "module.dashboard.feed_title": "Семейни новости",
+  "module.dashboard.meals_label": "Хранения",
+  "module.dashboard.completed_short": "Завършени: {count}",
+  "module.dashboard.open_short": "Предстоящи: {count}",
+  "module.dashboard.planned_short": "Планирани",
+  "module.dashboard.birthdays_short": "Наближават",
+  "module.dashboard.toggle_theme": "Превключване между светъл и тъмен изглед"
 }

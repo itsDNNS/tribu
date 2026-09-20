@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Απόκρυψη επισκόπησης κατηγοριών",
   "module.shopping.undo": "Αναίρεση",
   "module.shopping.item_checked": "Επιλέχθηκε: {name}",
-  "module.shopping.item_unchecked": "Αποεπιλέχθηκε: {name}"
+  "module.shopping.item_unchecked": "Αποεπιλέχθηκε: {name}",
+  "module.dashboard.welcome_note": "Χαιρόμαστε που είσαι εδώ!",
+  "module.dashboard.hero_note": "Μικρά βήματα. Μεγάλες οικογενειακές στιγμές.",
+  "module.dashboard.family_note": "Κάνουμε την καθημερινότητα πιο εύκολη. Μαζί.",
+  "module.dashboard.day_note": "Κάθε μέρα μετράει",
+  "module.dashboard.footer_note": "Περισσότερος χρόνος για όσα πραγματικά αξίζουν.",
+  "module.dashboard.capture_hint": "Τι θα ήθελες να προσθέσεις;",
+  "module.dashboard.routines_title": "Καθημερινές συνήθειες",
+  "module.dashboard.routines_progress": "Ολοκληρώθηκαν {completed} από {total}",
+  "module.dashboard.meals_title": "Τα σημερινά γεύματα",
+  "module.dashboard.feed_title": "Νέα της οικογένειας",
+  "module.dashboard.meals_label": "Γεύματα",
+  "module.dashboard.completed_short": "Ολοκληρώθηκαν: {count}",
+  "module.dashboard.open_short": "Εκκρεμούν: {count}",
+  "module.dashboard.planned_short": "Προγραμματισμένα",
+  "module.dashboard.birthdays_short": "Πλησιάζουν",
+  "module.dashboard.toggle_theme": "Εναλλαγή φωτεινής και σκοτεινής εμφάνισης"
 }

@@ -77,9 +77,10 @@ test.describe('Dashboard', () => {
     await expect(page.getByPlaceholder(/Search/i)).toBeFocused();
   });
 
-  test('promotes a future next-up date inside the time chip without overflowing', async ({ authedPage: page, apiCtx }) => {
+  test('shows a future next-up date and time without overflowing', async ({ authedPage: page, apiCtx }) => {
     const startsAt = localIsoDaysFromToday(2, 9, 0);
-    const expectedDate = new Date(startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const expectedDay = String(new Date(startsAt).getDate());
+    const expectedMonth = new Date(startsAt).toLocaleDateString('en-US', { month: 'short' });
     const familyId = await getFamilyId(apiCtx);
     let event;
     let primaryError;
@@ -97,9 +98,10 @@ test.describe('Dashboard', () => {
       const nextUp = page.getByRole('region', { name: 'Next up' });
       await expect(nextUp).toContainText('Future next-up chip event');
       const chip = nextUp.locator('.next-up-time-chip');
-      await expect(chip).toHaveClass(/is-stacked/);
-      await expect(chip.locator('.next-up-chip-date')).toContainText(expectedDate);
-      await expect(chip.locator('.next-up-chip-time')).toContainText(/^0?9:00(\s?[AP]M)?$/i);
+      await expect(chip.locator('strong')).toContainText(expectedDay);
+      await expect(chip).toContainText(expectedMonth);
+      await expect(nextUp.locator('.next-up-day-label')).toContainText('in 2 days');
+      await expect(nextUp.locator('.next-up-meta').first()).toContainText(/^0?9:00(\s?[AP]M)?$/i);
 
       const chipBox = await chip.boundingBox();
       const cardBox = await nextUp.boundingBox();
@@ -147,7 +149,7 @@ test.describe('Dashboard', () => {
     const nextUp = page.locator('.next-up-card');
     const statusCard = page.locator('.today-status-card');
     const quickCapture = page.getByRole('region', { name: 'Quick capture' });
-    const dailyLoop = page.getByRole('region', { name: 'Today loop' });
+    const dailyLoop = page.getByRole('region', { name: 'Daily routines' });
     const setupChecklist = page.getByRole('region', { name: 'Set up your first week' });
 
     const boxes = await Promise.all([
@@ -172,6 +174,12 @@ test.describe('Dashboard', () => {
     expect(quickCaptureBox.y).toBeGreaterThan(statusBox.y + statusBox.height);
     expect(dailyLoopBox.y).toBeGreaterThan(quickCaptureBox.y + quickCaptureBox.height);
     expect(setupBox.y).toBeGreaterThan(dailyLoopBox.y + dailyLoopBox.height);
+    const moduleBoxes = await page.locator('[data-dashboard-module]').evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().toJSON()).sort((a, b) => a.y - b.y));
+    for (let index = 1; index < moduleBoxes.length; index += 1) {
+      const gap = moduleBoxes[index].y - moduleBoxes[index - 1].bottom;
+      expect(gap).toBeGreaterThanOrEqual(0);
+      expect(gap).toBeLessThanOrEqual(24);
+    }
   });
 
   test('quick capture shortcuts navigate to planning views', async ({ authedPage: page }) => {
@@ -306,26 +314,31 @@ test.describe('Dashboard', () => {
     const eventsModule = page.locator('[data-dashboard-module="events"]');
     const dailyLoopModule = page.locator('[data-dashboard-module="daily_loop"]');
     await expect(tasksModule).toBeVisible({ timeout: 10000 });
-    await expect(dailyLoopModule).toHaveCSS('order', '1');
-    await expect(eventsModule).toHaveCSS('order', '2');
-    await expect(tasksModule).toHaveCSS('order', '3');
+    await expect(dailyLoopModule).toHaveCSS('order', '4');
+    await expect(eventsModule).toHaveCSS('order', '1');
+    await expect(tasksModule).toHaveCSS('order', '2');
 
     await page.getByRole('button', { name: 'Customize layout' }).click();
+    const saved = page.waitForResponse((response) => response.url().includes('/dashboard-layout') && response.request().method() === 'PUT');
     await page.getByRole('button', { name: 'Move Open tasks up' }).click();
+    expect((await saved).ok()).toBeTruthy();
 
-    await expect(tasksModule).toHaveCSS('order', '2');
-    await expect(eventsModule).toHaveCSS('order', '3');
+    await expect(tasksModule).toHaveCSS('order', '1');
+    await expect(eventsModule).toHaveCSS('order', '2');
 
     await page.reload();
     await page.locator('#main-content').waitFor({ timeout: 15000 });
-    await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '2');
-    await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '3');
+    await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '1');
+    await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '2');
 
     await page.getByRole('button', { name: 'Customize layout' }).click();
+    const reset = page.waitForResponse((response) => response.url().includes('/dashboard-layout') && response.request().method() === 'DELETE');
     await page.getByRole('button', { name: 'Reset layout' }).click();
-    await expect(page.locator('[data-dashboard-module="daily_loop"]')).toHaveCSS('order', '1');
-    await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '2');
-    await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '3');
+    expect((await reset).ok()).toBeTruthy();
+    await page.reload();
+    await expect(page.locator('[data-dashboard-module="daily_loop"]')).toHaveCSS('order', '4');
+    await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '1');
+    await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '2');
   });
 
   test('keeps weekly plan cards and filters readable in all themes', async ({ authedPage: page, apiCtx }) => {

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardView from '../../components/DashboardView';
 
@@ -66,7 +66,8 @@ const messages = {
   'module.dashboard.module_activity': 'Recent activity',
   'module.dashboard.module_rewards': 'Rewards',
   'module.dashboard.quick_capture_title': 'Quick capture',
-  'module.dashboard.daily_loop_title': 'Today loop',
+  'module.dashboard.routines_title': 'Daily routines',
+  'module.rewards.view_all': 'View all',
   'module.dashboard.daily_loop_meals': 'Meals planned',
   'module.dashboard.daily_loop_shopping': 'Shopping open',
   'module.dashboard.daily_loop_routines': 'Routines due',
@@ -113,25 +114,21 @@ describe('DashboardView desktop bento layout', () => {
     sessionStorage.clear();
   });
 
-  it('keeps the current desktop module order', async () => {
+  it('preserves legacy saved order and aligns keyboard order with the inserted modules', async () => {
     const { container } = render(<DashboardView />);
 
     await waitFor(() => expect(mockApiGetDashboardLayout).toHaveBeenCalledTimes(1));
     const modules = Array.from(container.querySelectorAll('.bento-grid > [data-dashboard-module]'));
     expect(modules.map((module) => module.getAttribute('data-dashboard-module'))).toEqual([
-      'quick_capture',
-      'daily_loop',
-      'events',
-      'tasks',
-      'birthdays',
-      'rewards',
+      'quick_capture', 'meals', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards', 'activity',
     ]);
-    expect(modules[1].querySelector('.bento-card')).toHaveAccessibleName('Today loop');
-    expect(modules[1].querySelector('.bento-card')).not.toHaveClass('bento-card-illustrated');
-    expect(modules[1].querySelector('.bento-card-visual')).not.toBeInTheDocument();
-    expect(modules[2].querySelector('.bento-card')).toHaveAccessibleName('Next events');
-    expect(modules[3].querySelector('.bento-card')).toHaveAccessibleName('Open tasks');
-    expect(modules[4].querySelector('.bento-card')).toHaveAccessibleName('Birthdays');
+    expect(modules.map((module) => Number(module.style.order))).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(modules[2].querySelector('.bento-card')).toHaveAccessibleName('Daily routines');
+    expect(modules[2].querySelector('.bento-card')).not.toHaveClass('bento-card-illustrated');
+    expect(modules[2].querySelector('.bento-card-visual')).not.toBeInTheDocument();
+    expect(modules[3].querySelector('.bento-card')).toHaveAccessibleName('Next events');
+    expect(modules[4].querySelector('.bento-card')).toHaveAccessibleName('Open tasks');
+    expect(modules[5].querySelector('.bento-card')).toHaveAccessibleName('Birthdays');
   });
 
   it('keeps dashboard layout customization as an accessible icon button', async () => {
@@ -145,16 +142,16 @@ describe('DashboardView desktop bento layout', () => {
     expect(container.querySelector('.dashboard-layout-toggle svg')).toBeInTheDocument();
   });
 
-  it('uses footer navigation buttons on the illustrated dashboard cards', async () => {
+  it('routes the compact card header links to their owning views', async () => {
     const setActiveView = jest.fn();
     mockAppState = baseApp({ setActiveView });
 
     render(<DashboardView />);
 
     await waitFor(() => expect(mockApiGetDashboardLayout).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByRole('button', { name: 'View calendar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'View all tasks' }));
-    fireEvent.click(screen.getByRole('button', { name: 'View all birthdays' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'Next events' })).getByRole('button', { name: 'View all' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'Open tasks' })).getByRole('button', { name: 'View all' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'Birthdays' })).getByRole('button', { name: 'View all' }));
 
     expect(setActiveView).toHaveBeenCalledWith('calendar');
     expect(setActiveView).toHaveBeenCalledWith('tasks');
@@ -197,9 +194,11 @@ describe('DashboardView desktop bento layout', () => {
       'events',
       'tasks',
       'quick_capture',
+      'meals',
       'daily_loop',
       'birthdays',
       'rewards',
+      'activity',
     ]));
   });
 
@@ -224,7 +223,7 @@ describe('DashboardView desktop bento layout', () => {
     expect(skeletonBlock).toBeDefined();
     expect(skeletonBlock.indexOf('bento-quick-capture')).toBeLessThan(skeletonBlock.indexOf('bento-events'));
     expect(skeletonBlock.indexOf('bento-daily-loop')).toBeGreaterThan(skeletonBlock.indexOf('bento-quick-capture'));
-    expect(skeletonBlock.indexOf('bento-daily-loop')).toBeLessThan(skeletonBlock.indexOf('bento-events'));
+    expect(skeletonBlock.indexOf('bento-daily-loop')).toBeGreaterThan(skeletonBlock.indexOf('bento-meals'));
     expect(skeletonBlock.indexOf('bento-events')).toBeLessThan(skeletonBlock.indexOf('bento-tasks'));
     expect(skeletonBlock.indexOf('bento-tasks')).toBeLessThan(skeletonBlock.indexOf('bento-birthdays'));
     expect(skeletonBlock.indexOf('bento-birthdays')).toBeLessThan(skeletonBlock.indexOf('bento-rewards'));

@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Skrij pregled kategorij",
   "module.shopping.undo": "Razveljavi",
   "module.shopping.item_checked": "Označeno: {name}",
-  "module.shopping.item_unchecked": "Znova odprto: {name}"
+  "module.shopping.item_unchecked": "Znova odprto: {name}",
+  "module.dashboard.welcome_note": "Lepo, da si tukaj!",
+  "module.dashboard.hero_note": "Majhni koraki. Veliki družinski trenutki.",
+  "module.dashboard.family_note": "Lažji vsakdan. Skupaj.",
+  "module.dashboard.day_note": "Vsak dan šteje",
+  "module.dashboard.footer_note": "Več časa za tisto, kar je res pomembno.",
+  "module.dashboard.capture_hint": "Kaj želiš dodati?",
+  "module.dashboard.routines_title": "Dnevne rutine",
+  "module.dashboard.routines_progress": "Opravljeno: {completed} od {total}",
+  "module.dashboard.meals_title": "Današnji obroki",
+  "module.dashboard.feed_title": "Družinske novice",
+  "module.dashboard.meals_label": "Obroki",
+  "module.dashboard.completed_short": "Opravljeno: {count}",
+  "module.dashboard.open_short": "Preostalo: {count}",
+  "module.dashboard.planned_short": "Načrtovano",
+  "module.dashboard.birthdays_short": "Kmalu",
+  "module.dashboard.toggle_theme": "Preklopi med svetlim in temnim videzom"
 }

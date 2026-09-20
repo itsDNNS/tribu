@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Dölj kategoriöversikt",
   "module.shopping.undo": "Ångra",
   "module.shopping.item_checked": "Avbockad: {name}",
-  "module.shopping.item_unchecked": "Öppen igen: {name}"
+  "module.shopping.item_unchecked": "Öppen igen: {name}",
+  "module.dashboard.welcome_note": "Vad roligt att du är här!",
+  "module.dashboard.hero_note": "Små steg. Stora familjestunder.",
+  "module.dashboard.family_note": "En enklare vardag. Tillsammans.",
+  "module.dashboard.day_note": "Varje dag räknas",
+  "module.dashboard.footer_note": "Mer tid för det som verkligen betyder något.",
+  "module.dashboard.capture_hint": "Vad vill du lägga till?",
+  "module.dashboard.routines_title": "Dagliga rutiner",
+  "module.dashboard.routines_progress": "{completed} av {total} klara",
+  "module.dashboard.meals_title": "Dagens måltider",
+  "module.dashboard.feed_title": "Nytt från familjen",
+  "module.dashboard.meals_label": "Måltider",
+  "module.dashboard.completed_short": "{count} klara",
+  "module.dashboard.open_short": "{count} kvar",
+  "module.dashboard.planned_short": "Planerat",
+  "module.dashboard.birthdays_short": "Snart",
+  "module.dashboard.toggle_theme": "Växla mellan ljust och mörkt utseende"
 }

@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Skjul kategorioversigt",
   "module.shopping.undo": "Fortryd",
   "module.shopping.item_checked": "Afkrydset: {name}",
-  "module.shopping.item_unchecked": "Åben igen: {name}"
+  "module.shopping.item_unchecked": "Åben igen: {name}",
+  "module.dashboard.welcome_note": "Dejligt, at du er her!",
+  "module.dashboard.hero_note": "Små skridt. Store familiestunder.",
+  "module.dashboard.family_note": "En lettere hverdag. Sammen.",
+  "module.dashboard.day_note": "Hver dag tæller",
+  "module.dashboard.footer_note": "Mere tid til det, der virkelig betyder noget.",
+  "module.dashboard.capture_hint": "Hvad vil du tilføje?",
+  "module.dashboard.routines_title": "Daglige rutiner",
+  "module.dashboard.routines_progress": "{completed} af {total} udført",
+  "module.dashboard.meals_title": "Dagens måltider",
+  "module.dashboard.feed_title": "Nyt fra familien",
+  "module.dashboard.meals_label": "Måltider",
+  "module.dashboard.completed_short": "{count} udført",
+  "module.dashboard.open_short": "{count} tilbage",
+  "module.dashboard.planned_short": "Planlagt",
+  "module.dashboard.birthdays_short": "Snart",
+  "module.dashboard.toggle_theme": "Skift mellem lyst og mørkt udseende"
 }

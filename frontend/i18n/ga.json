@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Folaigh forbhreathnú na gcatagóirí",
   "module.shopping.undo": "Cealaigh",
   "module.shopping.item_checked": "Ticeáilte: {name}",
-  "module.shopping.item_unchecked": "Gan tic: {name}"
+  "module.shopping.item_unchecked": "Gan tic: {name}",
+  "module.dashboard.welcome_note": "Is deas tú a bheith anseo!",
+  "module.dashboard.hero_note": "Céimeanna beaga. Chuimhneacháin mhóra teaghlaigh.",
+  "module.dashboard.family_note": "An saol laethúil a dhéanamh níos éasca. Le chéile.",
+  "module.dashboard.day_note": "Tá gach lá tábhachtach",
+  "module.dashboard.footer_note": "Tuilleadh ama do na rudaí atá fíorthábhachtach.",
+  "module.dashboard.capture_hint": "Cad ba mhaith leat a chur leis?",
+  "module.dashboard.routines_title": "Gnáthaimh laethúla",
+  "module.dashboard.routines_progress": "{completed} as {total} críochnaithe",
+  "module.dashboard.meals_title": "Béilí an lae inniu",
+  "module.dashboard.feed_title": "Nuacht an teaghlaigh",
+  "module.dashboard.meals_label": "Béilí",
+  "module.dashboard.completed_short": "Críochnaithe: {count}",
+  "module.dashboard.open_short": "Le déanamh: {count}",
+  "module.dashboard.planned_short": "Pleanáilte",
+  "module.dashboard.birthdays_short": "Ag teacht go luath",
+  "module.dashboard.toggle_theme": "Athraigh idir cuma gheal agus cuma dhorcha"
 }

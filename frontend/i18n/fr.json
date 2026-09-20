@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Masquer les catégories",
   "module.shopping.undo": "Annuler",
   "module.shopping.item_checked": "Coché : {name}",
-  "module.shopping.item_unchecked": "Décoché : {name}"
+  "module.shopping.item_unchecked": "Décoché : {name}",
+  "module.dashboard.welcome_note": "Quel plaisir de te retrouver ici !",
+  "module.dashboard.hero_note": "De petits pas. De grands moments en famille.",
+  "module.dashboard.family_note": "Un quotidien plus simple. Ensemble.",
+  "module.dashboard.day_note": "Chaque jour compte",
+  "module.dashboard.footer_note": "Plus de temps pour ce qui compte vraiment.",
+  "module.dashboard.capture_hint": "Que souhaites-tu ajouter ?",
+  "module.dashboard.routines_title": "Routines quotidiennes",
+  "module.dashboard.routines_progress": "{completed} sur {total} terminées",
+  "module.dashboard.meals_title": "Repas du jour",
+  "module.dashboard.feed_title": "Nouvelles de la famille",
+  "module.dashboard.meals_label": "Repas",
+  "module.dashboard.completed_short": "Terminées : {count}",
+  "module.dashboard.open_short": "À faire : {count}",
+  "module.dashboard.planned_short": "Prévus",
+  "module.dashboard.birthdays_short": "À venir",
+  "module.dashboard.toggle_theme": "Basculer entre les apparences claire et sombre"
 }

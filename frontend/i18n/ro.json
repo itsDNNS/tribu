@@ -1465,5 +1465,21 @@
   "module.shopping.hide_overview": "Ascunde lista categoriilor",
   "module.shopping.undo": "Anulează",
   "module.shopping.item_checked": "Bifat: {name}",
-  "module.shopping.item_unchecked": "Debifat: {name}"
+  "module.shopping.item_unchecked": "Debifat: {name}",
+  "module.dashboard.welcome_note": "Ne bucurăm că ești aici!",
+  "module.dashboard.hero_note": "Pași mici. Momente mari în familie.",
+  "module.dashboard.family_note": "Facem viața de zi cu zi mai ușoară. Împreună.",
+  "module.dashboard.day_note": "Fiecare zi contează",
+  "module.dashboard.footer_note": "Mai mult timp pentru ceea ce contează cu adevărat.",
+  "module.dashboard.capture_hint": "Ce ai vrea să adaugi?",
+  "module.dashboard.routines_title": "Rutine zilnice",
+  "module.dashboard.routines_progress": "{completed} din {total} finalizate",
+  "module.dashboard.meals_title": "Mesele de azi",
+  "module.dashboard.feed_title": "Noutățile familiei",
+  "module.dashboard.meals_label": "Mese",
+  "module.dashboard.completed_short": "Finalizate: {count}",
+  "module.dashboard.open_short": "Rămase: {count}",
+  "module.dashboard.planned_short": "Planificate",
+  "module.dashboard.birthdays_short": "În curând",
+  "module.dashboard.toggle_theme": "Comută între aspectul deschis și cel întunecat"
 }
