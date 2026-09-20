@@ -275,11 +275,13 @@ export default function EventEditor({
                 {copy('end_date')}
                 <input
                   type="date"
-                  value={endDate}
+                  value={endsAt?.slice(0, 10) || ''}
                   min={date}
                   onChange={(e) =>
                     setEndsAt(
-                      `${e.target.value}T${endsAt?.slice(11, 16) || '15:00'}`,
+                      e.target.value
+                        ? `${e.target.value}T${endsAt?.slice(11, 16) || '15:00'}`
+                        : '',
                     )
                   }
                 />

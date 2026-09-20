@@ -241,6 +241,24 @@ test.describe('Calendar persisted journeys', () => {
       // Week opens around the selected date, which can be outside the seeded span.
       await page.getByRole('button', { name: 'Month', exact: true }).click();
       await edit(page, 'Family trip');
+      await page.getByLabel('End date', { exact: true }).fill('');
+      const withoutEndDate = await save(page);
+      expect(withoutEndDate.ends_at).toBeNull();
+      const persisted = (await listed(apiCtx, familyId)).find(
+        (event) => event.id === source.id,
+      );
+      expect(persisted.ends_at).toBeNull();
+      expect(persisted.starts_at).toBe(source.starts_at);
+      await edit(page, 'Family trip');
+      await expect(page.getByLabel('End date', { exact: true })).toHaveValue('');
+      await expect(page.getByLabel('Until', { exact: true })).toHaveValue('');
+      // Restore a multi-day end through the date control, retaining its time.
+      await page.getByLabel('Until', { exact: true }).fill('15:00');
+      await page.getByLabel('End date', { exact: true }).fill(date(18));
+      await expect(page.getByLabel('Until', { exact: true })).toHaveValue('15:00');
+      const restored = await save(page);
+      expect(restored.ends_at).toContain(`${date(18)}T15:00`);
+      await edit(page, 'Family trip');
       await page.getByLabel('Until', { exact: true }).fill('');
       const cleared = await save(page);
       expect(cleared.ends_at).toBeNull();
