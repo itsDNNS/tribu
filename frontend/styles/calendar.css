@@ -533,7 +533,7 @@
 }
 .tc-family-filters button[aria-pressed='true'] {
   background: var(--tc-purple-bg);
-  color: var(--tc-purple);
+  color: var(--text-primary);
   outline: 1px solid var(--tc-purple);
 }
 .tc-week-heading > span {
