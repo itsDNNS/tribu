@@ -19,7 +19,7 @@ export default function ProductTile({
   useEffect(() => cancel, []);
   return <article className={`shop-tile ${item.checked ? 'done ' : ''}${item.priority === 'urgent' && !item.checked ? 'urgent' : ''}`}>
  <button className="shop-tile-main" role="checkbox" aria-checked={item.checked} aria-label={`${item.name}, ${item.spec || '1'}. ${item.checked ? tr("module.shopping.visual.wieder_auf_die_liste_setzen") : tr("module.shopping.visual.als_eingekauft_markieren")}`} disabled={pending} onPointerDown={e => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || !onEdit) return;
       cancel();
       suppressed.current = false;
       start.current = {

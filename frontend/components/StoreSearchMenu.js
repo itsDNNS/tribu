@@ -7,7 +7,7 @@ function format(messages, key, name) {
   return t(messages, key).replace('{name}', name);
 }
 
-export default function StoreSearchMenu({ item, stores, messages, onClose }) {
+export default function StoreSearchMenu({ item, stores, messages, onClose, restoreFocusTo }) {
   const dialogRef = useRef(null);
   const firstLinkRef = useRef(null);
   const previousFocusRef = useRef(null);
@@ -15,7 +15,7 @@ export default function StoreSearchMenu({ item, stores, messages, onClose }) {
   onCloseRef.current = onClose;
 
   useEffect(() => {
-    previousFocusRef.current = document.activeElement;
+    previousFocusRef.current = restoreFocusTo || document.activeElement;
     firstLinkRef.current?.focus();
     function handleKeyDown(event) {
       if (event.key === 'Escape') { onCloseRef.current(); return; }

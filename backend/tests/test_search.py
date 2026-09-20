@@ -67,6 +67,7 @@ def _seed_shopping_search() -> tuple[str, int]:
     db.add(shopping_list)
     db.flush()
     db.add(ShoppingItem(list_id=shopping_list.id, name="Zahnpasta", checked=False, added_by_user_id=user.id))
+    db.add(ShoppingItem(list_id=shopping_list.id, name="Zahn history", checked=True, archived=True, added_by_user_id=user.id))
     plain = f"{PAT_PREFIX}search-owner"
     fingerprint = hashlib.sha256(plain.encode()).hexdigest()
     db.add(PersonalAccessToken(
@@ -92,6 +93,7 @@ def test_shopping_search_result_includes_list_name_for_mobile_context():
     )
 
     assert response.status_code == 200, response.text
+    assert len(response.json()["shopping"]) == 1
     item = response.json()["shopping"][0]
     assert item["name"] == "Zahnpasta"
     assert item["list_name"] == "Drogerie"

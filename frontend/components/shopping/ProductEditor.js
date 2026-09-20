@@ -1,5 +1,5 @@
 import { useShoppingText } from "./useShoppingText";
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Heart, Trash2, Check, X, FileImage } from 'lucide-react';
 import ShoppingDialog from './ShoppingDialog';
 import { GroceryArt, splitSpec, CATEGORIES, fold } from './catalog';
@@ -16,6 +16,8 @@ export default function ProductEditor({
   onStoreSearch
 }) {
   const tr = useShoppingText();
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const parsed = splitSpec(item.spec);
   const [draft, setDraft] = useState({
     name: item.name || '',
@@ -71,6 +73,7 @@ export default function ProductEditor({
         spec: `${draft.qty}${draft.unit.trim() ? ' ' + draft.unit.trim() : ''}`,
         notes: draft.notes || null
       });
+      if (!mounted.current) return;
       if (ok !== false) onClose();else setError(tr("module.shopping.visual.speichern_fehlgeschlagen_bitte_erneut_versuchen"));
     } catch {
       setError(tr("module.shopping.visual.speichern_fehlgeschlagen_bitte_erneut_versuchen"));

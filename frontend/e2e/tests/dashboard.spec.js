@@ -253,7 +253,7 @@ test.describe('Dashboard', () => {
     await navigateTo(page, 'Home');
     await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });
     await page.getByRole('group', { name: 'Today status' }).getByRole('button', { name: /Shopping/i }).click();
-    await expect(page.locator('.shopping-lists-panel')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('navigation', {name:'Shopping lists'})).toBeVisible({ timeout: 10000 });
 
     await navigateTo(page, 'Home');
     await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });

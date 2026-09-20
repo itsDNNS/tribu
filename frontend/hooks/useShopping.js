@@ -90,7 +90,7 @@ export function findReusableCheckedItem(items, payload) {
   const itemName = formatShoppingItemName(payload.name);
   const itemSpec = cleanOptionalText(payload.spec);
   return items.find((item) => (
-    item.checked
+    item.checked && !item.archived
     && sameItemName(item.name, itemName)
     && shoppingSpecsAreCompatible(item.spec, itemSpec)
   )) || null;
@@ -99,7 +99,7 @@ export function findReusableCheckedItem(items, payload) {
 export function predictShoppingItemTransition(items, payload) {
   const itemName = formatShoppingItemName(payload.name);
   const itemSpec = cleanOptionalText(payload.spec);
-  const candidates = [...items.filter((item) => !item.checked), ...items.filter((item) => item.checked)];
+  const candidates = [...items.filter((item) => !item.checked && !item.archived), ...items.filter((item) => item.checked && !item.archived)];
   const item = candidates.find((candidate) => (
     sameItemName(candidate.name, itemName)
     && shoppingSpecsAreCompatible(candidate.spec, itemSpec)
@@ -117,7 +117,7 @@ export function predictShoppingItemTransition(items, payload) {
 export function useShopping() {
   const {
     shoppingLists, setShoppingLists, familyId, messages,
-    demoMode, isMobile, isChild,
+    demoMode, isMobile, isChild, me,
   } = useApp();
   const { error: toastError } = useToast();
 
@@ -144,28 +144,38 @@ export function useShopping() {
   const itemsRef = useRef(items);
   const revision = useRef(0);
   const readSequence = useRef(0);
-  if (!scope.current || scope.current.familyId !== familyId || scope.current.listId !== activeListId) {
-    scope.current = { familyId, listId: activeListId };
+  const listReadSequence = useRef(0);
+  if (!scope.current || scope.current.familyId !== familyId || scope.current.listId !== activeListId || scope.current.userId !== me?.id) {
+    scope.current = { familyId, listId: activeListId, userId: me?.id };
   }
   itemsRef.current = items;
   const currentScope = scope.current;
-  const sameStatus = (item, expected) => item && item.list_id === expected.list_id
+  const isCurrent = useCallback(() => mounted.current && scope.current === currentScope, [currentScope]);
+  const sameStatus = (item, expected) => item && !item.archived && item.list_id === expected.list_id
     && item.checked === expected.checked && (item.checked_at || null) === (expected.checked_at || null);
   const undo = undoState?.scope === currentScope && sameStatus(items.find((item) => item.id === undoState.id), undoState)
     ? undoState : null;
 
   const loadShoppingLists = useCallback(async () => {
-    if (!familyId || demoMode) return;
+    if (!familyId || demoMode || !isCurrent()) return;
     const requestScope = scope.current;
+    const sequence = ++listReadSequence.current;
+    const version = revision.current;
     const { ok, data } = await api.apiGetShoppingLists(familyId);
-    if (ok && mounted.current && scope.current === requestScope) setShoppingLists(data);
-  }, [familyId, demoMode, setShoppingLists]);
+    if (ok && isCurrent() && scope.current === requestScope && listReadSequence.current === sequence && revision.current === version) setShoppingLists(data);
+  }, [familyId, demoMode, setShoppingLists, isCurrent]);
 
   useEffect(() => {
     setUndoState(null);
+    pending.current.clear();
     setPendingItemIds(new Set());
     setItems([]);
-  }, [familyId, activeListId]);
+    setNewListName('');
+    setNewItemName('');
+    setNewItemSpec('');
+    setNewItemCategory('');
+    setShowCreateList(false);
+  }, [familyId, activeListId, me?.id]);
 
   useEffect(() => { setCategories([]); }, [familyId]);
 
@@ -186,6 +196,8 @@ export function useShopping() {
 
 
   const handleWsMessage = useCallback((msg) => {
+    if (!isCurrent()) return;
+    if (msg.list && Number(msg.list.family_id) !== Number(familyId)) return;
     if (msg.item && msg.item.list_id !== scope.current.listId) return;
     revision.current += 1;
     const operation = pending.current.get(msg.item?.id || msg.item_id);
@@ -239,7 +251,7 @@ export function useShopping() {
         break;
 
       case 'items_cleared':
-        setItems((prev) => prev.filter((i) => !i.checked));
+        setItems((prev) => prev.filter((i) => !i.checked || i.archived));
         loadShoppingLists();
         break;
 
@@ -258,7 +270,7 @@ export function useShopping() {
         setShoppingLists((prev) => prev.filter((l) => l.id !== msg.list_id));
         break;
     }
-  }, [setShoppingLists, loadShoppingLists]);
+  }, [setShoppingLists, loadShoppingLists, isCurrent, familyId]);
 
   const { connected: wsConnected } = useWebSocket(activeListId, {
     onMessage: handleWsMessage,
@@ -287,17 +299,20 @@ export function useShopping() {
   }, [familyId, demoMode]);
 
   useEffect(() => {
-    if (!familyId || demoMode || isChild) { setStoreLinks([]); return; }
+    let cancelled = false;
+    setStoreLinks([]);
+    if (!familyId || demoMode || isChild) return;
     api.apiGetShoppingStoreLinks(familyId).then(({ ok, data }) => {
-      if (ok) setStoreLinks(data || []);
+      if (!cancelled && ok) setStoreLinks(data || []);
     });
+    return () => { cancelled = true; };
   }, [familyId, demoMode, isChild]);
 
   const loadTemplates = useCallback(async () => {
-    if (!familyId || demoMode) return;
+    if (!familyId || demoMode || !isCurrent()) return;
     const { ok, data } = await api.apiGetShoppingTemplates(familyId);
-    if (ok) setTemplates(data);
-  }, [familyId, demoMode]);
+    if (ok && isCurrent()) setTemplates(data);
+  }, [familyId, demoMode, isCurrent]);
 
   useEffect(() => {
     let cancelled = false;
@@ -332,7 +347,7 @@ export function useShopping() {
   const checkedItems = useMemo(() => items.filter((i) => i.checked && !i.archived).sort(compareCheckedItems), [items]);
 
   const reloadItems = useCallback(async () => {
-    if (!activeListId || demoMode) return;
+    if (!activeListId || demoMode || !isCurrent()) return;
     const requestScope = scope.current;
     const version = revision.current;
     const sequence = ++readSequence.current;
@@ -341,10 +356,11 @@ export function useShopping() {
       setItems(data);
       setUndoState((previous) => previous && sameStatus(data.find((item) => item.id === previous.id), previous) ? previous : null);
     }
-  }, [activeListId, demoMode]);
+  }, [activeListId, demoMode, isCurrent]);
 
 
   async function createList(e) {
+    if (!isCurrent() || isChild) return false;
     e.preventDefault();
     if (!newListName.trim()) return;
     if (demoMode) {
@@ -362,6 +378,7 @@ export function useShopping() {
       setActiveListId(newList.id);
     } else {
       const { ok, data } = await api.apiCreateShoppingList({ family_id: Number(familyId), name: newListName.trim() });
+      if (!isCurrent()) return false;
       if (!ok) { toastError(t(messages, 'toast.error')); return false; }
       setShoppingLists((prev) => {
         if (prev.some((l) => l.id === data.id)) return prev;
@@ -375,15 +392,17 @@ export function useShopping() {
   }
 
   async function renameList(id, name) {
+    if (!isCurrent() || isChild) return false;
     const trimmedName = name.trim();
     if (!trimmedName) return;
-    const previousLists = shoppingLists;
-    setShoppingLists((prev) => prev.map((l) => l.id === id ? { ...l, name: trimmedName } : l));
-    if (demoMode) return;
+    if (demoMode) {
+      setShoppingLists(prev => prev.map(list => list.id === id ? {...list, name:trimmedName} : list));
+      return true;
+    }
     const { ok, data } = await api.apiUpdateShoppingList(id, { name: trimmedName });
+    if (!isCurrent()) return false;
     if (!ok) {
       toastError(t(messages, 'toast.error'));
-      setShoppingLists(previousLists);
       await loadShoppingLists();
       return;
     }
@@ -391,20 +410,24 @@ export function useShopping() {
   }
 
   async function deleteList(id) {
+    if (!isCurrent() || isChild) return false;
     if (demoMode) {
       setShoppingLists((prev) => prev.filter((l) => l.id !== id));
     } else {
-      setShoppingLists((prev) => prev.filter((l) => l.id !== id));
       const { ok } = await api.apiDeleteShoppingList(id);
+      if (!isCurrent()) return false;
       if (!ok) {
         toastError(t(messages, 'toast.error'));
-        await loadShoppingLists();
+        return false;
       }
+      setShoppingLists(prev => prev.filter(list => list.id !== id));
     }
+    return true;
   }
 
 
   async function addItem(e, draft) {
+    if (!isCurrent() || isChild) return false;
     e.preventDefault();
     if (!(draft?.name ?? newItemName).trim() || !activeListId) return false;
     const payload = {
@@ -428,6 +451,7 @@ export function useShopping() {
         return true;
       }
       const {ok} = await api.apiAddShoppingItem(targetId, payload);
+      if (!isCurrent()) return false;
       if (!ok) { toastError(t(messages, 'toast.error')); return false; }
       await loadShoppingLists();
       return true;
@@ -483,16 +507,18 @@ export function useShopping() {
       }
     } else {
       const { ok } = await api.apiAddShoppingItem(activeListId, payload);
+      if (!isCurrent()) return false;
       if (!ok) {
         toastError(t(messages, 'toast.error'));
         await reloadItems();
         await loadShoppingLists();
         return false;
-      } else if (!wsConnected) {
+      } else {
         await reloadItems();
         await loadShoppingLists();
       }
     }
+    if (!isCurrent()) return false;
     setNewItemName('');
     setNewItemSpec('');
     setNewItemCategory('');
@@ -502,7 +528,7 @@ export function useShopping() {
 
   async function changeChecked(item, checked, offerUndo) {
     const requestScope = scope.current;
-    if (pending.current.has(item.id) || item.list_id !== requestScope.listId) return;
+    if (!isCurrent() || item.archived || pending.current.has(item.id) || item.list_id !== requestScope.listId) return;
     const operation = { scope: requestScope };
     pending.current.set(item.id, operation);
     setPendingItemIds(new Set(pending.current.keys()));
@@ -536,7 +562,7 @@ export function useShopping() {
       toastError(t(messages, 'toast.error'));
       setItems((previous) => previous.map((entry) => entry.id === item.id ? (operation.observed || item) : entry));
     } finally {
-      pending.current.delete(item.id);
+      if (pending.current.get(item.id) === operation) pending.current.delete(item.id);
       if (mounted.current && scope.current === requestScope) {
         setPendingItemIds(new Set(pending.current.keys()));
         if (!demoMode) {
@@ -565,20 +591,30 @@ export function useShopping() {
   }
 
   async function editItem(id, payload) {
-    const itemName = formatShoppingItemName(payload.name || '');
-    if (!itemName) return;
+    if (!isCurrent() || isChild) return false;
+    const itemName = 'name' in payload ? formatShoppingItemName(payload.name || '') : undefined;
+    if ('name' in payload && !itemName) return false;
     const targetId = Number(payload.list_id);
     const isMove = Boolean(targetId && targetId !== Number(activeListId));
     const item = items.find((i) => i.id === id);
     const cleanedPayload = {
-      name: itemName,
-      spec: cleanOptionalText(payload.spec),
-      category: cleanOptionalText(payload.category),
+      ...('name' in payload ? {name: itemName} : {}),
+      ...('spec' in payload ? {spec: cleanOptionalText(payload.spec)} : {}),
+      ...('category' in payload ? {category: cleanOptionalText(payload.category)} : {}),
       ...Object.fromEntries(["notes", "photo", "priority"].filter(key => key in payload).map(key => [key, payload[key]])),
       ...(isMove ? { list_id: targetId } : {}),
     };
-    const previousItems = items;
-    const previousLists = shoppingLists;
+    if (!item || (isMove && !shoppingLists.some(list => list.id === targetId))) return false;
+    if (!demoMode) {
+      revision.current += 1;
+      const {ok} = await api.apiUpdateShoppingItem(id, cleanedPayload);
+      if (!isCurrent()) return false;
+      revision.current += 1;
+      if (!ok) { toastError(t(messages, 'toast.error')); return false; }
+      await reloadItems();
+      await loadShoppingLists();
+      return true;
+    }
     if (isMove) {
       setItems((prev) => prev.filter((i) => i.id !== id));
       setShoppingLists((prev) => prev.map((l) => {
@@ -606,61 +642,15 @@ export function useShopping() {
         ? { ...l, items: (l.items || []).map((i) => i.id === id ? { ...i, ...cleanedPayload } : i) }
         : l));
     }
-    if (demoMode) return true;
-    const { ok } = await api.apiUpdateShoppingItem(id, cleanedPayload);
-    if (!ok) {
-      toastError(t(messages, 'toast.error'));
-      setItems(previousItems);
-      setShoppingLists(previousLists);
-      await reloadItems();
-      return false;
-    }
-    if (isMove || !wsConnected) {
-      await reloadItems();
-      await loadShoppingLists();
-    }
     return true;
   }
 
   async function moveItem(id, targetListId) {
-    const targetId = Number(targetListId);
-    if (!targetId || targetId === Number(activeListId)) return;
-    const item = items.find((i) => i.id === id);
-    if (!item) return;
-    const previousItems = items;
-    const previousLists = shoppingLists;
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    setShoppingLists((prev) => prev.map((l) => {
-      if (l.id === activeListId) {
-        return {
-          ...l,
-          item_count: Math.max((l.item_count || 0) - 1, 0),
-          checked_count: item.checked ? Math.max((l.checked_count || 0) - 1, 0) : l.checked_count,
-          items: (l.items || []).filter((i) => i.id !== id),
-        };
-      }
-      if (l.id === targetId) {
-        return {
-          ...l,
-          item_count: (l.item_count || 0) + 1,
-          checked_count: item.checked ? (l.checked_count || 0) + 1 : l.checked_count,
-          items: [...(l.items || []), { ...item, list_id: targetId }],
-        };
-      }
-      return l;
-    }));
-    if (demoMode) return;
-    const { ok } = await api.apiUpdateShoppingItem(id, { list_id: targetId });
-    if (!ok) {
-      toastError(t(messages, 'toast.error'));
-      setItems(previousItems);
-      setShoppingLists(previousLists);
-      return;
-    }
-    await loadShoppingLists();
+    return editItem(id, {list_id: Number(targetListId)});
   }
 
   async function deleteItem(id) {
+    if (!isCurrent() || isChild) return false;
     if (demoMode) {
       const item = items.find((i) => i.id === id);
       setItems((prev) => prev.filter((i) => i.id !== id));
@@ -676,13 +666,13 @@ export function useShopping() {
         ),
       );
     } else {
-      const prevItems = items;
-      setItems((prev) => prev.filter((i) => i.id !== id));
+      revision.current += 1;
       const { ok } = await api.apiDeleteShoppingItem(id);
+      if (!isCurrent()) return false;
       if (!ok) {
         toastError(t(messages, 'toast.error'));
-        setItems(prevItems);
-      } else if (!wsConnected) {
+        return false;
+      } else {
         await reloadItems();
         await loadShoppingLists();
       }
@@ -690,6 +680,7 @@ export function useShopping() {
   }
 
   async function createTemplate(payload) {
+    if (!isCurrent() || isChild) return false;
     if (!payload.name?.trim()) return;
     if (demoMode) {
       const template = {
@@ -709,11 +700,13 @@ export function useShopping() {
       name: payload.name.trim(),
       items: payload.items || [],
     });
-    if (!ok) return toastError(t(messages, 'toast.error'));
+    if (!isCurrent()) return false;
+    if (!ok) { toastError(t(messages, 'toast.error')); return false; }
     setTemplates((prev) => [...prev.filter((tpl) => tpl.id !== data.id), data]);
   }
 
   async function updateTemplate(templateId, payload) {
+    if (!isCurrent() || isChild) return false;
     if (!payload.name?.trim()) return;
     if (demoMode) {
       setTemplates((prev) => prev.map((tpl) => tpl.id === templateId ? {
@@ -729,11 +722,13 @@ export function useShopping() {
       name: payload.name.trim(),
       items: payload.items || [],
     });
-    if (!ok) return toastError(t(messages, 'toast.error'));
+    if (!isCurrent()) return false;
+    if (!ok) { toastError(t(messages, 'toast.error')); return false; }
     setTemplates((prev) => prev.map((tpl) => tpl.id === templateId ? data : tpl));
   }
 
   async function deleteTemplate(templateId) {
+    if (!isCurrent() || isChild) return false;
     if (demoMode) {
       setTemplates((prev) => prev.filter((tpl) => tpl.id !== templateId));
       return;
@@ -741,13 +736,16 @@ export function useShopping() {
     const previous = templates;
     setTemplates((prev) => prev.filter((tpl) => tpl.id !== templateId));
     const { ok } = await api.apiDeleteShoppingTemplate(templateId);
+    if (!isCurrent()) return false;
     if (!ok) {
       toastError(t(messages, 'toast.error'));
       setTemplates(previous);
+      return false;
     }
   }
 
   async function applyTemplate(templateId) {
+    if (!isCurrent() || isChild) return false;
     if (!activeListId) return;
     if (demoMode) {
       const template = templates.find((tpl) => tpl.id === templateId);
@@ -769,32 +767,34 @@ export function useShopping() {
       return;
     }
     const { ok } = await api.apiApplyShoppingTemplate(templateId, { list_id: activeListId });
+    if (!isCurrent()) return false;
     if (!ok) {
       toastError(t(messages, 'toast.error'));
-      return;
+      return false;
     }
     await reloadItems();
     await loadShoppingLists();
   }
 
   async function clearChecked() {
+    if (!isCurrent() || isChild) return false;
     if (!activeListId) return;
     if (demoMode) {
-      setItems((prev) => prev.filter((i) => !i.checked));
+      setItems((prev) => prev.filter((i) => !i.checked || i.archived));
       setShoppingLists((prev) =>
         prev.map((l) => l.id === activeListId
-          ? { ...l, item_count: l.item_count - l.checked_count, checked_count: 0, items: (l.items || []).filter((i) => !i.checked) }
+          ? { ...l, item_count: l.item_count - l.checked_count, checked_count: 0, items: (l.items || []).filter((i) => !i.checked || i.archived) }
           : l
         ),
       );
     } else {
-      const prevItems = items;
-      setItems((prev) => prev.filter((i) => !i.checked));
+      revision.current += 1;
       const { ok } = await api.apiClearCheckedItems(activeListId);
+      if (!isCurrent()) return false;
       if (!ok) {
         toastError(t(messages, 'toast.error'));
-        setItems(prevItems);
-      } else if (!wsConnected) {
+        return false;
+      } else {
         await reloadItems();
         await loadShoppingLists();
       }
@@ -802,18 +802,22 @@ export function useShopping() {
   }
 
   async function updateListDetails(payload) {
+    if (!isCurrent() || isChild) return false;
     if (demoMode) {
       setShoppingLists(previous => previous.map(list => list.id === activeListId ? { ...list, ...payload } : list));
       return true;
     }
     const {ok, data} = await api.apiUpdateShoppingList(activeListId, payload);
+    if (!isCurrent()) return false;
     if (!ok) { toastError(t(messages, 'toast.error')); return false; }
     setShoppingLists(previous => previous.map(list => list.id === activeListId ? data : list));
     return true;
   }
 
   async function completeTrip() {
-    const requestScope = scope.current;
+    if (!isCurrent() || isChild) return false;
+    if (!activeListId) return false;
+    revision.current += 1;
     if (demoMode) {
       const archive = item => item.checked ? {...item, archived:true} : item;
       setItems(previous => previous.map(archive));
@@ -824,9 +828,40 @@ export function useShopping() {
       return true;
     }
     const {ok} = await api.apiCompleteShoppingTrip(activeListId);
+    if (!isCurrent()) return false;
     if (!ok) { toastError(t(messages, 'toast.error')); return false; }
-    if (scope.current !== requestScope) return true;
     setUndoState(null);
+    await reloadItems();
+    await loadShoppingLists();
+    return true;
+  }
+
+  async function restoreItem(id) {
+    if (!isCurrent() || isChild) return false;
+    const item = items.find(entry => entry.id === id && entry.list_id === activeListId && entry.checked);
+    if (!item) return false;
+    if (demoMode) {
+      const restore = entry => entry.id === id ? {...entry, checked:false, archived:false, checked_at:null} : entry;
+      setItems(previous => previous.map(restore));
+      setShoppingLists(previous => previous.map(list => list.id === activeListId ? {...list,
+        items:(list.items || []).map(restore), item_count:(list.item_count || 0) + (item.archived ? 1 : 0),
+        checked_count:Math.max(0, (list.checked_count || 0) - (item.archived ? 0 : 1))} : list));
+      return true;
+    }
+    revision.current += 1;
+    const {ok} = await api.apiUpdateShoppingItem(id, {checked:false});
+    if (!isCurrent()) return false;
+    if (!ok) { toastError(t(messages, 'toast.error')); return false; }
+    await reloadItems();
+    await loadShoppingLists();
+    return true;
+  }
+
+  async function addRecipeIngredients(recipeId, names) {
+    if (!isCurrent() || isChild || !activeListId) return false;
+    const {ok} = await api.apiAddRecipeIngredientsToShopping(recipeId, activeListId, names);
+    if (!isCurrent()) return false;
+    if (!ok) { toastError(t(messages, 'toast.error')); return false; }
     await reloadItems();
     await loadShoppingLists();
     return true;
@@ -846,7 +881,7 @@ export function useShopping() {
     itemInputRef,
     createList, renameList, deleteList,
     addProduct: draft => addItem({preventDefault() {}}, draft),
-    updateListDetails, completeTrip, reloadItems,
+    updateListDetails, completeTrip, restoreItem, addRecipeIngredients, reloadItems,
     addItem, toggleItem, editItem, moveItem, deleteItem, clearChecked,
     createTemplate, updateTemplate, deleteTemplate, applyTemplate, loadTemplates,
     wsConnected,

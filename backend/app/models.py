@@ -494,7 +494,7 @@ class ShoppingItem(Base):
     notes = Column(String(500), nullable=True)
     photo = Column(Text, nullable=True)
     priority = Column(String(10), nullable=False, default="normal", server_default="normal")
-    archived = Column(Boolean, nullable=False, default=False, server_default="false")
+    archived = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     spec = Column(String, nullable=True)
     category = Column(String, nullable=True)
     checked = Column(Boolean, nullable=False, default=False)

@@ -3,9 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Check, X, ShoppingCart, Search, Heart, Coffee, ShoppingBag, House, MoreVertical, Upload, ArrowRight, Grid2X2, List, SlidersHorizontal, ShieldCheck, Info, CheckCircle, ChevronDown, ArrowUp, ArrowDown, BookOpen, Menu, Copy, Download } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useShopping } from '../hooks/useShopping';
+import { useCurrentMinute } from '../hooks/useCurrentMinute';
 import { useToast } from '../contexts/ToastContext';
 import * as api from '../lib/api';
-import CalendarTopbar from './calendar/CalendarTopbar';
+import FamilyTopbar from './FamilyTopbar';
 import MemberAvatar from './MemberAvatar';
 import StoreSearchMenu from './StoreSearchMenu';
 import { buildStoreSearchUrl } from '../lib/storeSearch';
@@ -25,7 +26,8 @@ const DEFAULT_PREFS = {
   layout: 'tiles',
   doneOpen: false,
   favorites: ['milch', 'bananen', 'kaffee', 'mineralwasser', 'orangen', 'kase', 'brot', 'zahnpasta', 'avocado'],
-  tab: 'favorites'
+  tab: 'favorites',
+  favoriteNames: {}
 };
 function ListIcon({
   name = 'cart',
@@ -46,6 +48,8 @@ export default function ShoppingView(props) {
     setActiveView
   } = useApp();
   const sh = useShopping();
+  const today = useCurrentMinute().toLocaleDateString('en-CA');
+  const productOpener = useRef(null);
   const toast = useToast();
   const [prefs, setPrefs] = useState(DEFAULT_PREFS),
     [trip, setTrip] = useState(false),
@@ -85,29 +89,38 @@ export default function ShoppingView(props) {
     } catch {}
     return next;
   });
+  const scope = useRef(null);
+  if (!scope.current || scope.current.key !== key || scope.current.listId !== sh.activeListId) {
+    scope.current = {key, listId:sh.activeListId};
+  }
+  const currentScope = scope.current;
+  useEffect(() => () => { scope.current = null; }, []);
   useEffect(() => {
+    setDraft(null);
+    setStoreItem(null);
+    setBusy(false);
     setModal(null);
     setUrgent(false);
     setQuery('');
     setError('');
-  }, [sh.activeListId, familyId]);
+  }, [sh.activeListId, key]);
+  useEffect(() => { setTrip(false); }, [key]);
   useEffect(() => {
     let cancelled = false;
     setRecipes([]);
     setSelectedRecipe(null);
     if (demoMode || !familyId) return;
-    const date = new Date().toLocaleDateString('en-CA');
-    Promise.all([api.apiListRecipes(familyId), api.apiListMealPlans(familyId, date, date)]).then(([r, m]) => {
+    Promise.all([api.apiListRecipes(familyId), api.apiListMealPlans(familyId, today, today)]).then(([r, m]) => {
       if (cancelled) return;
       const all = Array.isArray(r.data) ? r.data : r.data?.items || [];
       setRecipes(all);
       const plans = Array.isArray(m.data) ? m.data : m.data?.items || [];
-      setSelectedRecipe(all.find(recipe => plans.some(plan => plan.recipe_id === recipe.id)) || null);
+      setSelectedRecipe(all.find(recipe => plans.some(plan => fold(plan.meal_name) === fold(recipe.title))) || null);
     }).catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [familyId, demoMode]);
+  }, [familyId, demoMode, today]);
   const open = sh.uncheckedItems || [],
     done = sh.checkedItems || [],
     items = sh.items || [],
@@ -126,8 +139,14 @@ export default function ShoppingView(props) {
         seen.add(fold(item.name));
       }
     }
+    for (const [id, name] of Object.entries(prefs.favoriteNames || {})) {
+      if (prefs.favorites.includes(id) && typeof name === 'string' && !seen.has(fold(name))) {
+        all.push({id:`favorite-${id}`, name});
+        seen.add(fold(name));
+      }
+    }
     return all;
-  }, [items]);
+  }, [items, prefs.favorites, prefs.favoriteNames]);
   const parsed = useMemo(() => parseProduct(query), [query]);
   const suggestions = query.trim() ? products.filter(p => fold(p.name).includes(fold(parsed.name)) || fold(p.aliases).includes(fold(parsed.name))).slice(0, 7) : [];
   const stores = (sh.storeLinks || []).filter(link => buildStoreSearchUrl(link.url_template, 'x'));
@@ -146,22 +165,28 @@ export default function ShoppingView(props) {
   const favorite = name => {
     const id = fold(name);
     if (!id) return;
+    const favoriteNames = {...prefs.favoriteNames};
+    if (prefs.favorites.includes(id)) delete favoriteNames[id];
+    else favoriteNames[id] = name;
     preference({
-      favorites: prefs.favorites.includes(id) ? prefs.favorites.filter(p => p !== id) : [...prefs.favorites, id]
+      favorites: prefs.favorites.includes(id) ? prefs.favorites.filter(p => p !== id) : [...prefs.favorites, id],
+      favoriteNames,
     });
   };
-  const edit = item => show('product', item);
+  const edit = item => { productOpener.current = document.activeElement; show('product', item); };
   async function run(action, after = close) {
-    if (busy) return;
+    if (busy || scope.current !== currentScope) return;
     setBusy(true);
     setError('');
     try {
       const ok = await action();
+      if (scope.current !== currentScope) return;
       if (ok !== false) after();else setError(tr("module.shopping.visual.das_hat_nicht_geklappt_bitte_erneut_versuchen"));
     } catch {
+      if (scope.current !== currentScope) return;
       setError(tr("module.shopping.visual.das_hat_nicht_geklappt_bitte_erneut_versuchen"));
     } finally {
-      setBusy(false);
+      if (scope.current === currentScope) setBusy(false);
     }
   }
   async function add(product, fromSearch = false) {
@@ -186,7 +211,7 @@ export default function ShoppingView(props) {
         priority: product.priority
       } : {})
     };
-    await run(() => sh.addProduct(payload), () => {
+    await run(() => product.checked && !fromSearch ? sh.restoreItem(product.id) : sh.addProduct(payload), () => {
       setQuery('');
       setFocused(false);
       setSuggestion(-1);
@@ -218,7 +243,7 @@ export default function ShoppingView(props) {
   function openSort() {
     show('sort', [...new Set([...(list?.category_order || []), ...groups.map(g => g.label), ...CATEGORIES])]);
   }
-  const snapshot = () => `${list?.name || tr("module.shopping.visual.einkauf")}\n\n${groupShoppingItems(open, list?.category_order).map(g => `${g.label}\n${g.items.map(i => `☐ ${i.name} · ${i.spec || '1'}${i.notes ? ' · ' + i.notes : ''}${i.priority === 'urgent' ? ' · Dringend' : ''}`).join('\n')}`).join('\n\n')}`;
+  const snapshot = () => `${list?.name || tr("module.shopping.visual.einkauf")}\n\n${groupShoppingItems(open, list?.category_order).map(g => `${g.label}\n${g.items.map(i => `☐ ${i.name} · ${i.spec || '1'}${i.notes ? ' · ' + i.notes : ''}${i.priority === 'urgent' ? ' · ' + tr('module.shopping.visual.dringend') : ''}`).join('\n')}`).join('\n\n')}`;
   const download = () => {
     const url = URL.createObjectURL(new Blob([snapshot()], {
       type: 'text/plain;charset=utf-8'
@@ -235,11 +260,11 @@ export default function ShoppingView(props) {
   }, () => {});
   const chooseRecipe = recipe => show('recipe', {
     recipe,
-    selected: (recipe.ingredients || []).filter(i => !open.some(p => fold(p.name) === fold(i.name))).map(i => i.name),
+    selected: (recipe.ingredients || []).filter(i => !items.some(p => !p.archived && fold(p.name) === fold(i.name))).map(i => i.name),
     list_id: sh.activeListId
   });
   return <div className={`shopping-page dashboard-today-page shop-page ${trip ? 'shopping-trip' : ''}`}>
- {!trip && <div className="shop-command-header"><button className="shop-navigation" aria-label={tr("module.shopping.visual.navigation_offnen")} onClick={props.onOpenNavigation}><Menu size={19} /></button><CalendarTopbar {...props} /></div>}
+ {!trip && <div className="shop-command-header"><button className="shop-navigation" aria-label={tr("module.shopping.visual.navigation_offnen")} onClick={props.onOpenNavigation}><Menu size={19} /></button><FamilyTopbar {...props} /></div>}
  {trip && <div className="shop-trip-banner"><div className="shop-trip-copy"><span className="badge-icon"><ShoppingCart size={21} /></span><div><strong>{tr("module.shopping.visual.einkaufsmodus")}</strong><small>{list?.name} · {open.length ? tr("module.shopping.visual.0_artikel_fehlen_noch", [open.length]) : tr("module.shopping.visual.alles_im_korb")}</small></div></div><button className="btn soft" onClick={() => setTrip(false)}><X className="icon sm" />{tr("module.shopping.visual.beenden")}</button></div>}
  <header className="shop-header"><div><div className="shop-kicker">{tr("module.shopping.visual.einkauf_euer_familienalltag")}</div><h1>{tr("module.shopping.visual.fur_alles_was_euch_fehlt")}</h1><p>{tr("module.shopping.visual.eine_liste_alle_lieblingsdinge_gemeinsam_dran_denken")}</p></div><button className="shop-people" aria-label={tr("module.shopping.visual.familienliste_und_speicherinformationen")} onClick={() => show('members')}><span className="avatar-stack">{members.slice(0, 3).map((member, index) => <MemberAvatar key={member.id || member.user_id} member={member} index={index} size={28} />)}</span><span className="shop-people-copy">{tr("module.shopping.visual.eure_familienliste")}<small><ShieldCheck className="icon xs" />{demoMode ? tr("module.shopping.visual.demo_modus") : sh.wsConnected ? tr("module.shopping.visual.live_verbunden") : tr("module.shopping.visual.fur_eure_familie")}</small></span></button></header>
  <nav className="shop-listbar" aria-label={tr("module.shopping.visual.einkaufslisten")}>{sh.shoppingLists.map(l => <button key={l.id} className={`shop-list-tab ${l.id === sh.activeListId ? 'active' : ''}`} aria-pressed={l.id === sh.activeListId} onClick={() => sh.setActiveListId(l.id)}><ListIcon name={l.icon} />{l.name}<span className="shop-list-count">{l.id === sh.activeListId ? open.length : Math.max(0, (l.item_count || 0) - (l.checked_count || 0))}</span></button>)}{!isChild && <button className="shop-list-new" aria-label={tr("module.shopping.visual.neue_einkaufsliste")} onClick={() => {
@@ -305,7 +330,7 @@ export default function ShoppingView(props) {
       setStoreItem(draft);
       close();
     } : undefined} onFavorite={favorite} onSave={payload => draft.id ? sh.editItem(draft.id, payload) : sh.addProduct(payload)} onDelete={() => show('delete-item', draft)} />}
- {modal && modal !== 'product' && <ShoppingDialog title={{
+ {modal && modal !== 'product' && (list || ['new-list', 'members', 'info'].includes(modal)) && <ShoppingDialog title={{
       catalog: tr("module.shopping.visual.schnell_hinzufugen"),
       share: tr("module.shopping.visual.liste_weitergeben"),
       sort: tr("module.shopping.visual.so_geht_ihr_durch_den_laden"),
@@ -355,13 +380,10 @@ export default function ShoppingView(props) {
               ...draft,
               selected: e.target.checked ? [...draft.selected, ingredient.name] : draft.selected.filter(name => name !== ingredient.name)
             })} /><span>{ingredient.name}</span><small>{ingredient.amount} {ingredient.unit}</small></label>)}</div><button className="btn primary" disabled={busy || !draft.selected.length || !list} onClick={() => run(async () => {
-          const response = await api.apiAddRecipeIngredientsToShopping(draft.recipe.id, draft.list_id, draft.selected);
-          if (!response.ok) return false;
-          await sh.reloadItems();
-          return true;
+          return sh.addRecipeIngredients(draft.recipe.id, draft.selected);
         })}>{tr("module.shopping.visual.ausgewahlte_zutaten_hinzufugen")}</button></>}
  {error && <p className="shop-error" role="alert">{error}</p>}
  </ShoppingDialog>}
- {storeItem && <StoreSearchMenu item={storeItem} stores={stores} messages={messages} onClose={() => setStoreItem(null)} />}
+ {storeItem && <StoreSearchMenu restoreFocusTo={productOpener.current} item={storeItem} stores={stores} messages={messages} onClose={() => setStoreItem(null)} />}
  </div>;
 }

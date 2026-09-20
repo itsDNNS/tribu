@@ -796,8 +796,9 @@ def update_item(
     sl = db.query(ShoppingList).filter(ShoppingList.id == item.list_id).first()
     membership = ensure_family_membership(db, user.id, sl.family_id)
     fields = payload.model_dump(exclude_unset=True)
+    was_archived = item.archived
     if not membership.is_adult:
-        if set(fields.keys()) - {"checked", "expected_state"}:
+        if item.archived or set(fields.keys()) - {"checked", "expected_state"}:
             raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
 
     if payload.expected_state is not None:
@@ -810,6 +811,7 @@ def update_item(
             ShoppingItem.list_id == expected.list_id,
             ShoppingItem.checked == expected.checked,
             ShoppingItem.checked_at == expected.checked_at,
+            ShoppingItem.archived.is_(False),
         ).update({
             ShoppingItem.checked: payload.checked,
             ShoppingItem.checked_at: utcnow() if payload.checked else None,
@@ -895,6 +897,8 @@ def update_item(
             {"item": item_payload},
         )
     webhook_data = {"list_id": item.list_id, "item_id": item.id, "name": item.name, "checked": item.checked}
+    if was_archived and not item.archived:
+        webhook_data["archived"] = False
     if moved:
         webhook_data["from_list_id"] = old_list_id
     dispatch_webhook_event(
@@ -909,6 +913,9 @@ def update_item(
     elif payload.checked is True:
         item_action = "checked"
         destination_body = f'{user.display_name or "Someone"} checked "{item.name}" on "{sl.name}".'
+    elif was_archived and not item.archived:
+        item_action = "restored"
+        destination_body = f'{user.display_name or "Someone"} restored "{item.name}" on "{sl.name}".'
     elif payload.checked is False:
         item_action = "unchecked"
         destination_body = f'{user.display_name or "Someone"} unchecked "{item.name}" on "{sl.name}".'
@@ -984,6 +991,7 @@ def clear_checked(
     deleted = db.query(ShoppingItem).filter(
         ShoppingItem.list_id == list_id,
         ShoppingItem.checked,
+        ShoppingItem.archived.is_(False),
     ).delete(synchronize_session="fetch")
     db.commit()
     broadcast_shopping_event(
@@ -1027,4 +1035,16 @@ def complete_shopping_trip(list_id: int, user: User = Depends(current_user),
     for item in items:
         broadcast_shopping_event("list", list_id, "item_updated", {
             "item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")})
+        dispatch_webhook_event(
+            db, family_id=sl.family_id, event_type="shopping.item.updated",
+            data={"list_id": list_id, "item_id": item.id, "name": item.name,
+                  "checked": item.checked, "archived": True},
+        )
+        dispatch_shopping_destination_event(
+            family_id=sl.family_id, event_type="shopping.item.changed",
+            title="Shopping item archived",
+            body=f'{user.display_name or "Someone"} completed shopping for "{item.name}" on "{sl.name}".',
+            link=f"/shopping?list={list_id}", source_type="shopping_item",
+            source_id=item.id, action="archived",
+        )
     return items

@@ -30,16 +30,18 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 
 ### Shopping in the store
 
-Tap a product tile to move it into **Already in the basket**; tap it again to restore it. A successful status change offers **Undo** for six seconds in the current list. Switching lists or families, removing the item, or receiving a conflicting status update makes that Undo unavailable. Completing a shopping trip archives checked products without deleting their details. **Recent** shows purchased products from the selected list so they can be added again.
+Tap a product tile to move it into **Already in the basket**; tap it again to restore it. A successful status change offers **Undo** for six seconds in the current list. Switching lists or families, removing the item, or receiving a conflicting status update makes that Undo unavailable. Completing a shopping trip archives checked products without deleting their details. **Recent** shows purchased products from the selected list and restores the selected record with its quantity, note, photo, category and urgency. Ordinary quick add and template application exclude archived records; clearing the current basket also leaves history intact. Archiving invalidates any pending Undo.
 
 Quick add understands quantities such as `2 kg Äpfel` and `½ l Milch`. The bundled German product catalog supplies illustrations and suggested categories. Open details using the three dots or a long press to edit the quantity, unit, note, photo, urgency, category, or destination list. JPEG, PNG and WebP uploads up to 5 MB are resized in the browser; the stored photo is limited to 700,000 characters and shared only through the existing family-authorized shopping API.
 
-Each list stores its own department order and icon. Empty departments are hidden. Favorites and tile/list display preferences stay in the current browser, scoped to the signed-in family and user. **Shopping mode** hides navigation and keeps the checklist in focus. Children can check products but cannot edit details, archive a trip, or manage lists.
+Each list stores its own department order and icon. Empty departments are hidden. Favorites and tile/list display preferences stay in the current browser, scoped to the signed-in family and user. **Shopping mode** hides navigation and keeps the checklist in focus. Children can check or uncheck current products but cannot edit details, archive a trip, restore history, or manage lists.
 
-The meal-plan card opens an ingredient selection for its recipe; ingredients already on the open list start deselected. **Share list** copies or downloads a text snapshot. Signed-in family members continue to receive live changes through the existing connection; the demo remains local. Shopping templates and configured store searches remain available through list options and product details.
+The meal-plan card matches today’s planned meal name to a family recipe and opens ingredient selection; ingredients already on the list, including those in the basket, start deselected. **Share list** copies or downloads a text snapshot. Signed-in family members continue to receive live changes through the existing connection; the demo remains local. Shopping templates and configured store searches remain available through list options and product details.
 
-The shopping update adds migration `0057_shopping_visual_details`. Run the normal database migration before serving the updated API. Existing list and product rows receive compatible defaults; a migration downgrade removes the new details and history flags.
+The shopping update adds migration `0057_shopping_visual_details`. Run the normal database migration before serving the updated API. Existing list and product rows receive compatible defaults; a migration downgrade removes the new details and history flags. Trip completion and history restoration publish the existing shopping update events to realtime clients, webhooks and opted-in notification destinations.
 
+
+Shopping interface copy is available in German and English. The other 22 locale bundles include explicit English fallback copy for the new shopping controls; the bundled product names, default units and departments remain German. Custom family product names and categories are preserved. [Browser screenshots and capture provenance](assets/shopping/README.md) document the illustrated layout.
 
 ## Planned or under evaluation
 

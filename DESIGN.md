@@ -290,6 +290,17 @@ Tasks and shopping lists are action lists. Rows should make owner, due state, pr
 
 Shopping should feel quick and cooperative. Do not hide add-item affordances behind large empty states.
 
+Shopping uses the original illustrated mockup and grocery SVG paths: lilac product
+tiles, department groups, list tabs, a desktop discovery/recipe rail and a mobile
+action dock. Tile text checks a product; three dots or a long press open details.
+The focused shopping mode hides navigation while keeping the checklist reachable.
+List options expose templates, sharing and department order on narrow screens.
+The shared `FamilyTopbar` supplies live greeting/date, search and notification
+controls. Shopping presentation lives in `frontend/styles/shopping.css`; mutations
+and lifecycle guards live in `useShopping`, with persistence and authorization in
+the shopping domain and router. See `docs/assets/shopping/README.md` for browser
+capture provenance.
+
 ### Notifications
 
 Notifications are parent action surfaces, not transport logs. They should show the human event, module context, local time, and action. Hide raw URLs, provider diagnostics, token fragments, internal IDs, and ISO timestamps.

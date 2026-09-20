@@ -44,5 +44,3 @@ export const SHOP_CATALOG=[
 ['chicken','Hähnchenbrust','Fleisch & Fisch','meat',500,'g','hähnchen hähnchenfilet'],['fish','Lachs','Fleisch & Fisch','fish',400,'g','fisch lachsfilet'],
 ['soap','Handseife','Haushalt','soap',1,'Flasche','seife'],['shampoo','Shampoo','Haushalt','shampoo',1,'Flasche','haarshampoo'],['toothpaste','Zahnpasta','Haushalt','toothpaste',1,'Tube','zahncreme'],['detergent','Spülmittel','Haushalt','soap',1,'Flasche',''],['tissue','Taschentücher','Haushalt','bag',1,'Packung','papiertaschentücher']
 ].map(([id,name,category,art,qty,unit,aliases])=>({id,name,category,art,qty,unit,aliases}));
-
-/* Shopping module v2. Local-only prototype; the list controls do not simulate live collaboration. */
