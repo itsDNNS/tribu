@@ -841,7 +841,7 @@ def update_calendar_event(
         event.location = (payload.location or "").strip() or None
     if payload.starts_at is not None:
         event.starts_at = to_local_wall_naive(payload.starts_at)
-    if payload.ends_at is not None:
+    if "ends_at" in payload.model_fields_set:
         event.ends_at = to_local_wall_naive(payload.ends_at)
     if payload.all_day is not None:
         event.all_day = payload.all_day
@@ -854,7 +854,7 @@ def update_calendar_event(
             raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
         else:
             event.recurrence = payload.recurrence
-    if payload.recurrence_end is not None:
+    if "recurrence_end" in payload.model_fields_set:
         event.recurrence_end = to_local_wall_naive(payload.recurrence_end)
 
     if payload.assigned_to is not None:

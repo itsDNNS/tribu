@@ -31,6 +31,12 @@ def make_event(**kwargs):
         "icon": None,
         "created_by_user_id": 1,
         "created_at": datetime(2026, 1, 1),
+        "source_type": "local",
+        "source_name": None,
+        "source_url": None,
+        "imported_at": None,
+        "last_synced_at": None,
+        "sync_status": None,
     }
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
@@ -280,3 +286,22 @@ class TestOccurrenceMetadata:
         assert occ["id"] == 1
         assert occ["title"] == "Test Event"
         assert occ["family_id"] == 1
+
+
+def test_expansion_preserves_import_provenance():
+    for recurrence in [None, "weekly"]:
+        event = make_event(recurrence=recurrence, source_type="subscription", source_name="School", source_url="https://example.invalid/calendar.ics", sync_status="ok")
+        occurrences = expand_event(event, datetime(2026, 3, 1), datetime(2026, 3, 20))
+        assert occurrences
+        assert all(item["source_type"] == "subscription" and item["source_name"] == "School" and item["sync_status"] == "ok" for item in occurrences)
+
+
+def test_recurring_span_that_started_before_the_range_is_included():
+    event = make_event(
+        starts_at=datetime(2026, 3, 1), ends_at=datetime(2026, 3, 4),
+        recurrence='weekly',
+    )
+    occurrences = expand_event(event, datetime(2026, 3, 3), datetime(2026, 3, 5))
+    assert len(occurrences) == 1
+    assert occurrences[0]['starts_at'] == datetime(2026, 3, 1)
+    assert occurrences[0]['ends_at'] == datetime(2026, 3, 4)

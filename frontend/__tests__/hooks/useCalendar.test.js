@@ -602,3 +602,66 @@ describe('useCalendar week-start preference', () => {
     expect(sunday.result.current.weekInfo.weekEvents).toContainEqual(sundayEvent);
   });
 });
+
+describe('calendar range and family isolation', () => {
+  const { renderHook, act } = require('@testing-library/react');
+  const { useApp } = require('../../contexts/AppContext');
+  const { useCalendar } = require('../../hooks/useCalendar');
+  const api = require('../../lib/api');
+  let ctx;
+  beforeEach(() => {
+    jest.clearAllMocks();
+    ctx = { familyId: '1', events: [], setEvents: jest.fn(), setSummary: jest.fn(), members: [], birthdays: [], messages: {}, lang: 'en', weekStart: 'monday', demoMode: false, loadDashboard: jest.fn() };
+    useApp.mockImplementation(() => ctx);
+    api.apiGetEvents.mockResolvedValue({ ok: true, data: [] });
+  });
+  it('ignores an older range response after navigating months', async () => {
+    let oldResolve;
+    api.apiGetEvents.mockImplementationOnce(() => new Promise(resolve => { oldResolve = resolve; }));
+    const { result } = renderHook(() => useCalendar());
+    await act(async () => { result.current.setCalendarMonth(new Date(2027, 0, 1)); });
+    ctx.setEvents.mockClear();
+    await act(async () => { oldResolve({ ok: true, data: [{ id: 99 }] }); });
+    expect(ctx.setEvents).not.toHaveBeenCalled();
+  });
+  it('ignores a response after unmounting for a family switch', async () => {
+    let oldResolve;
+    api.apiGetEvents.mockImplementationOnce(() => new Promise(resolve => { oldResolve = resolve; }));
+    const { unmount } = renderHook(() => useCalendar());
+    unmount();
+    ctx.setEvents.mockClear();
+    await act(async () => { oldResolve({ ok: true, data: [{ family_id: 1 }] }); });
+    expect(ctx.setEvents).not.toHaveBeenCalled();
+  });
+  it('does not let a completed save refresh the old family after unmount', async () => {
+    let resolveSave;
+    api.apiCreateEvent.mockImplementationOnce(() => new Promise(resolve => { resolveSave = resolve; }));
+    const { result, unmount } = renderHook(() => useCalendar());
+    await act(async () => { result.current.setTitle('Old family'); });
+    let pending;
+    act(() => { pending = result.current.createEvent({ preventDefault() {} }); });
+    unmount();
+    api.apiGetEvents.mockClear();
+    await act(async () => { resolveSave({ ok: true }); await pending; });
+    expect(api.apiGetEvents).not.toHaveBeenCalled();
+    expect(ctx.loadDashboard).not.toHaveBeenCalled();
+  });
+  it('acknowledges a successful create even if the dashboard refresh fails', async () => {
+    api.apiCreateEvent.mockResolvedValueOnce({ ok: true, data: { id: 44 } });
+    ctx.loadDashboard.mockRejectedValueOnce(new Error('Connection lost after save'));
+    const { result } = renderHook(() => useCalendar());
+    await act(async () => { result.current.setTitle('Saved once'); });
+    await act(async () => {
+      expect(await result.current.createEvent({ preventDefault() {} })).toBe(true);
+    });
+    expect(result.current.title).toBe('');
+    expect(api.apiCreateEvent).toHaveBeenCalledTimes(1);
+  });
+  it('sends clearing values supported by the PATCH contract', async () => {
+    const { result } = renderHook(() => useCalendar());
+    await act(async () => { result.current.startEdit({ id: 1, starts_at: '2026-05-04T14:00', color: '#123456', description: 'Notes', assigned_to: [1] }); });
+    act(() => { result.current.setEditColor(''); result.current.setEditDescription(''); result.current.setEditAssignedTo([]); });
+    await act(async () => { await result.current.saveEdit(); });
+    expect(api.apiUpdateEvent).toHaveBeenCalledWith(1, expect.objectContaining({ color: '', description: '', assigned_to: [] }));
+  });
+});

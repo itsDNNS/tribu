@@ -275,7 +275,7 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-content">
-          {activeView !== 'dashboard' && (
+          {!['dashboard', 'calendar'].includes(activeView) && (
             <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)}>
               <Search size={14} />
               {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
