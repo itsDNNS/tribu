@@ -221,7 +221,7 @@ test("compact editing and dark sheets retain family colors and reachable actions
     .getByRole("button", { name: "Bearbeiten", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByRole("textbox").first().fill("Perso abholen");
+  await dialog.getByRole("textbox").first().fill("Demo-Termin bearbeitet");
   await page.evaluate(() =>
     document.documentElement.setAttribute("data-theme", "dark"),
   );
@@ -230,9 +230,9 @@ test("compact editing and dark sheets retain family colors and reachable actions
   ).toBeInViewport();
   await shot(page, "event-sheet-dark.png");
   await dialog.getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.locator(".ui-agenda")).toContainText("Perso abholen");
+  await expect(page.locator(".ui-agenda")).toContainText("Demo-Termin bearbeitet");
   expect(
-    api.events.find((e) => e.title === "Perso abholen").assigned_to,
+    api.events.find((e) => e.title === "Demo-Termin bearbeitet").assigned_to,
   ).toEqual([2]);
   expect(
     await page.evaluate(
