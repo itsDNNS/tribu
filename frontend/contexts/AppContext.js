@@ -47,6 +47,8 @@ export function AppProvider({ children }) {
 
   // UI state
   const [theme, setTheme] = useState('light');
+  const [compactDashboard, setCompactDashboard] = useState(false);
+  const [showNotificationBadge, setShowNotificationBadge] = useState(true);
   const [lang, setLang] = useState('en');
   const [weekStart, setWeekStart] = useState('monday');
   const [activeView, setActiveViewRaw] = useState('dashboard');
@@ -284,6 +286,8 @@ export function AppProvider({ children }) {
   // Init: localStorage, resize, auto-login
   useEffect(() => {
     setTheme(window.localStorage.getItem('tribu_theme') || 'light');
+    setCompactDashboard(window.localStorage.getItem('tribu_compact_dashboard') === 'true');
+    setShowNotificationBadge(window.localStorage.getItem('tribu_notification_badge') !== 'false');
     const storedWeekStart = window.localStorage.getItem('tribu_week_start');
     setWeekStart(storedWeekStart === 'sunday' || storedWeekStart === 'monday' ? storedWeekStart : 'monday');
     const stored = window.localStorage.getItem('tribu_lang');
@@ -342,6 +346,15 @@ export function AppProvider({ children }) {
     window.localStorage.setItem('tribu_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    window.localStorage.setItem('tribu_compact_dashboard', String(compactDashboard));
+    document.documentElement.setAttribute('data-dashboard-density', compactDashboard ? 'compact' : 'comfortable');
+  }, [compactDashboard]);
+
+  useEffect(() => {
+    window.localStorage.setItem('tribu_notification_badge', String(showNotificationBadge));
+  }, [showNotificationBadge]);
 
   // Persist lang
   useEffect(() => {
@@ -516,6 +529,7 @@ export function AppProvider({ children }) {
     navOrder, setNavOrder,
     loading, setLoading,
     timeFormat, setTimeFormat,
+    compactDashboard, setCompactDashboard, showNotificationBadge, setShowNotificationBadge,
     loadNavOrder: loadNavOrderWrapped,
     // Cross-domain
     switchFamily,

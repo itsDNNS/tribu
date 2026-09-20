@@ -56,12 +56,7 @@ test.describe('About version', () => {
     });
 
     await page.goto('/#settings');
-    const viewport = page.viewportSize();
-    if (viewport && viewport.width < 768) {
-      await page.locator('.settings-mobile-item', { hasText: 'About & Support' }).click();
-    } else {
-      await page.locator('.settings-sidebar-item', { hasText: 'About & Support' }).click();
-    }
+    await page.getByRole('button', { name: 'About & Support', exact: true }).click();
 
     await expect(page.getByText('Version: v2026-04-24.412')).toBeVisible();
     await expect(page.getByText(/v2026-04-27\.1 available/)).toBeVisible();

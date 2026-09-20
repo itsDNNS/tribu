@@ -5,6 +5,9 @@ import { buildMessages } from '../../lib/i18n';
 
 let mockAppState = {};
 
+beforeEach(() => sessionStorage.clear());
+jest.mock('../../components/FamilyTopbar', () => () => null);
+
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockAppState,
 }));
@@ -88,6 +91,87 @@ describe('Settings notification destinations visibility', () => {
     rerender(<SettingsView />);
 
     expect(screen.queryByText('Notification destination panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+  });
+});
+
+
+describe('Mockup settings overview', () => {
+  const common = ['account', 'navigation', 'about'];
+  const adult = ['notifications', 'phone_sync', 'data', 'tokens', 'webhooks', 'store_links'];
+  const all = [...common, ...adult, 'notification_destinations'];
+  const labels = {
+    account: 'Account', navigation: 'Navigation', about: 'About & Support',
+    notifications: 'Notifications', phone_sync: 'Phone sync', data: 'Data',
+    tokens: 'API Tokens', webhooks: 'Automation Webhooks', store_links: 'Store searches',
+    notification_destinations: 'Household notifications',
+  };
+
+  it.each([
+    ['admin', {}, all],
+    ['adult member', { isAdmin: false }, [...common, ...adult]],
+    ['child', { isAdmin: false, isChild: true }, [...common, 'notifications']],
+    ['demo', { demoMode: true }, common],
+  ])('keeps every permitted section reachable for %s in the overview and selector', (_role, overrides, allowed) => {
+    mockAppState = baseState(overrides);
+    render(<SettingsView />);
+    for (const key of all) {
+      if (allowed.includes(key)) expect(screen.getByRole('button', { name: labels[key], exact: true })).toBeInTheDocument();
+      else expect(screen.queryByRole('button', { name: labels[key], exact: true })).not.toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Account', exact: true }));
+    expect(screen.getAllByRole('option').map(option => option.value).sort()).toEqual([...allowed].sort());
+  });
+
+  it.each(['phone_sync', 'data', 'tokens', 'webhooks', 'notification_destinations', 'store_links'])(
+    'rejects a saved restricted %s section for children and demo users', key => {
+      for (const overrides of [{ isAdmin: false, isChild: true }, { demoMode: true }]) {
+        sessionStorage.setItem('tribu_settings_tab', key);
+        mockAppState = baseState(overrides);
+        const { unmount } = render(<SettingsView />);
+        expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+        expect(screen.queryByRole('combobox', { name: 'Settings section' })).not.toBeInTheDocument();
+        unmount();
+      }
+    },
+  );
+
+  it('offers the same overview on mobile and supports returning from a detail', () => {
+    mockAppState = baseState({ isMobile: true });
+    render(<SettingsView />);
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
     expect(screen.getByText('Account panel')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'All settings' }));
+    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toHaveFocus();
+    expect(sessionStorage.getItem('tribu_settings_tab')).toBeNull();
+  });
+
+  it('honours a permitted deep link on mobile and rejects a hidden one', () => {
+    sessionStorage.setItem('tribu_settings_tab', 'notification_destinations');
+    mockAppState = baseState({ isMobile: true });
+    const { unmount } = render(<SettingsView />);
+    expect(screen.getByText('Notification destination panel')).toBeInTheDocument();
+    unmount();
+    mockAppState = baseState({ isAdmin: false });
+    render(<SettingsView />);
+    expect(screen.queryByText('Notification destination panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+  });
+
+  it('wires appearance and calendar controls to real preferences', () => {
+    const setters = Object.fromEntries(['setTheme', 'setLang', 'setWeekStart', 'setCompactDashboard', 'setShowNotificationBadge'].map(key => [key, jest.fn()]));
+    mockAppState = baseState({ ...setters, theme: 'light', lang: 'en', weekStart: 'monday', availableLanguages: [{key:'en',nativeName:'English'},{key:'de',nativeName:'Deutsch'}] });
+    render(<SettingsView />);
+    fireEvent.click(screen.getByRole('button', { name: 'Colour scheme' }));
+    expect(setters.setTheme).toHaveBeenCalledWith('dark');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), {target:{value:'de'}});
+    expect(setters.setLang).toHaveBeenCalledWith('de');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Week starts on' }), {target:{value:'sunday'}});
+    expect(setters.setWeekStart).toHaveBeenCalledWith('sunday');
+    fireEvent.click(screen.getByRole('switch', { name: 'Compact view' }));
+    expect(setters.setCompactDashboard).toHaveBeenCalledWith(true);
+    fireEvent.click(screen.getByRole('switch', { name: 'Notification badge' }));
+    expect(setters.setShowNotificationBadge).toHaveBeenCalledWith(false);
   });
 });

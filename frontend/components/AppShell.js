@@ -70,7 +70,7 @@ function DashboardSkeleton() {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, switchFamily, tasks, shoppingLists, unreadCount, logout, demoMode, loading, navOrder, profileImage } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, switchFamily, tasks, shoppingLists, unreadCount, showNotificationBadge = true, logout, demoMode, loading, navOrder, profileImage } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -275,7 +275,7 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-content">
-          {!['dashboard', 'calendar'].includes(activeView) && (
+          {!['dashboard', 'calendar', 'settings'].includes(activeView) && (
             <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)}>
               <Search size={14} />
               {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
@@ -425,7 +425,7 @@ export default function AppShell() {
                 style={{ position: 'relative' }}
               >
                 <Bell size={18} />
-                {unreadCount > 0 && (
+                {showNotificationBadge && unreadCount > 0 && (
                   <span className="sidebar-badge">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
@@ -455,7 +455,7 @@ export default function AppShell() {
             <ActiveComponent
               onOpenSearch={() => setSearchOpen(true)}
               onOpenNotifications={() => { setNotifPanelOpen(true); setOverflowOpen(false); }}
-              unreadCount={unreadCount}
+              unreadCount={showNotificationBadge ? unreadCount : 0}
               notificationButtonRef={bellBtnRef}
               onDashboardLayoutActionChange={activeView === 'dashboard' ? handleDashboardLayoutActionChange : undefined}
             />

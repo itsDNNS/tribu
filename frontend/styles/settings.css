@@ -1,0 +1,42 @@
+/* Settings composition and proportions from Tribu.html. */
+.mockup-settings-page{display:block;width:100%;max-width:none;margin:0;min-width:0;font:13px/1.45 var(--font-ui);color:var(--text-secondary);--ms-line:rgba(88,65,80,.085)}
+.mockup-settings-page .today-command-header{height:auto;min-height:78px;margin:0}
+.ms-header{margin:3px 0 24px}
+.ms-eyebrow{font-size:10px;font-weight:650;letter-spacing:1.4px;text-transform:uppercase;color:var(--dashboard-purple);margin-bottom:5px}
+.ms-header h1{font-size:30px;line-height:1.25;letter-spacing:-.8px;font-weight:680;color:var(--text-primary);margin:0}
+.ms-header h1:focus{outline:none}
+.ms-header p{color:var(--text-muted);font-size:13px;margin:7px 0 0}
+.ms-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:stretch}
+.ms-card{padding:24px;border:1px solid rgba(101,76,87,.045);border-radius:15px;background:var(--surface-paper);box-shadow:0 6px 24px rgba(65,47,29,.04);min-width:0}
+.ms-card h2{font-size:17px;font-weight:650;line-height:1.45;margin:0 0 8px;color:var(--text-primary)}
+.ms-card>p{font-size:12px;color:var(--text-muted);margin:0 0 20px;line-height:1.65}
+.ms-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:17px 0;border-top:1px solid var(--ms-line)}
+.ms-row>div{min-width:0}
+.ms-row strong{font-size:13px;font-weight:600;color:var(--text-primary)}
+.ms-small{color:var(--text-muted);margin-top:3px;max-width:270px;font-size:11px;line-height:1.5}
+.mockup-settings-page .ms-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:none;min-height:30px;padding:4px 11px;border:1px solid var(--ms-line);background:var(--surface-paper);border-radius:10px;color:var(--text-secondary);font:550 11px/1.45 var(--font-ui);cursor:pointer;transition:background .16s,transform .16s,box-shadow .16s}
+.mockup-settings-page .ms-button:hover{background:var(--surface-soft);box-shadow:0 2px 7px #00000006;transform:translateY(-1px)}
+.mockup-settings-page :is(.ms-row,.ms-detail-navigation) select{width:auto;max-width:156px;min-width:0;min-height:32px;border:1px solid var(--ms-line);border-radius:9px;background:var(--surface-paper);color:var(--text-secondary);padding:5px 25px 5px 10px;font:11px var(--font-ui)}
+.ms-heart{font-size:26px;color:#bc8caa;transform:rotate(12deg);padding:0 10px}
+.ms-detail-navigation{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.mockup-settings-page .settings-mobile-back{margin:0}
+.mockup-settings-page .ms-detail-navigation select{max-width:240px}
+.ms-detail{min-width:0}
+.mockup-settings-page .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:none;width:100%}
+.mockup-settings-page .settings-section{padding:24px;border-radius:15px;box-shadow:0 6px 24px rgba(65,47,29,.04);border:1px solid var(--ms-line)}
+.mockup-settings-page .settings-section-title{font-size:17px;line-height:1.45;font-weight:650;letter-spacing:0;text-transform:none;color:var(--text-primary);margin-bottom:20px}
+.mockup-settings-page .settings-section-title svg{color:var(--dashboard-purple);width:17px;height:17px}
+.mockup-settings-page .lang-toggle{flex-wrap:wrap}
+.mockup-settings-page .lang-btn{font-size:12px;border-radius:9px}
+.mockup-settings-page .theme-grid{grid-template-columns:1fr}
+.mockup-settings-page :is(button,select,input):focus-visible{outline:2px solid var(--dashboard-purple);outline-offset:3px}
+[data-theme="dark"] .mockup-settings-page,[data-theme="midnight-glass"] .mockup-settings-page{--ms-line:rgba(206,185,213,.12)}
+@media(max-width:1100px){.ms-grid,.mockup-settings-page .settings-grid{gap:14px}.ms-card,.mockup-settings-page .settings-section{padding:20px}.ms-row .ms-small{font-size:10px}}
+@media(max-width:900px){.ms-grid,.mockup-settings-page .settings-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.mockup-settings-page .today-command-header{height:auto;min-height:83px;align-items:flex-start}.ms-header h1{font-size:25px}.ms-header{margin-bottom:20px}.ms-card h2{font-size:16px}.ms-row{gap:10px}.mockup-settings-page .ms-row select{max-width:125px}.ms-detail-navigation{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.mockup-settings-page .ms-button{transition:none}.mockup-settings-page .ms-button:hover{transform:none}}
+.mockup-settings-page .ms-switch{width:38px;height:23px;padding:3px;flex:none;border:0;border-radius:20px;background:#d7d2dc;cursor:pointer;transition:background .18s}
+.ms-switch span{display:block;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0000000a;transition:transform .18s}
+.mockup-settings-page .ms-switch[aria-checked=true]{background:#73518d}
+.ms-switch[aria-checked=true] span{transform:translateX(15px)}
+@media(prefers-reduced-motion:reduce){.mockup-settings-page .ms-switch,.ms-switch span{transition:none}}

@@ -344,3 +344,7 @@
  .dashboard-today-page .today-status-detail{overflow-wrap:normal}
 }
 @media(prefers-reduced-motion:reduce){.app-shell *,.app-shell *:before,.app-shell *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Personal density preference from Settings. */
+[data-dashboard-density="compact"] .dashboard-today-page:not(.tc-page):not(.mockup-settings-page) .bento-card{padding:8px 12px}
+[data-dashboard-density="compact"] .dashboard-today-page:not(.tc-page):not(.mockup-settings-page) :is(.bento-grid,.today-hero-grid){gap:12px}

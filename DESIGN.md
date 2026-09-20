@@ -298,6 +298,15 @@ Notifications are parent action surfaces, not transport logs. They should show t
 
 Settings should keep family account/profile/preferences/security on the visible path. Owner/admin/support controls belong behind clearly labeled advanced sections. Avoid mixing family-facing settings with infrastructure diagnostics in the same first viewport.
 
+Settings opens with four cards: family appearance, date and display, data and
+connections, and additional settings. Cards use two columns on desktop and one
+on narrow screens. The existing ten sections remain available according to the
+user's role and demo restrictions, with a section selector and an “All settings”
+return action in detail views. Compact view changes dashboard spacing; the
+notification badge switch controls unread indicators on the bell without
+changing notification delivery or read state. Both preferences are saved in the
+current browser, alongside theme, language and calendar week start.
+
 ### Shared Home Display
 
 The display route is a calm glance surface for a shared room. It should show the day, upcoming family context, and safe household information. It must not look like a logged-in admin view and must not expose profile, session, token, or email details.

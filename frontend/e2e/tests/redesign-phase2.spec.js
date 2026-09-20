@@ -23,7 +23,8 @@ test.describe('Phase 2 redesign system views', () => {
 
     await navigateTo(page, 'Settings');
     await expect(page.locator('.settings-page')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.settings-page-icon')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Just the way you like it.' })).toBeVisible();
+    await expect(page.locator('.ms-card')).toHaveCount(4);
     await expectNoHorizontalOverflow(page);
 
     await navigateTo(page, 'Admin');

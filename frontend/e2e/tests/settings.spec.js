@@ -9,7 +9,7 @@ async function openAccountSettings(page) {
     return birthdateInput;
   }
 
-  const accountItem = page.locator('.settings-mobile-item', { hasText: 'Account' });
+  const accountItem = page.getByRole('button', { name: 'Account', exact: true });
   if (await accountItem.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false)) {
     await accountItem.click();
   }
@@ -21,11 +21,11 @@ async function openAccountSettings(page) {
 async function openPhoneSyncSettings(page) {
   await navigateTo(page, 'Settings');
 
-  const mobileItem = page.locator('.settings-mobile-item', { hasText: 'Phone Sync' });
+  const mobileItem = page.getByRole('button', { name: 'Phone sync', exact: true });
   if (await mobileItem.isVisible({ timeout: 2000 }).catch(() => false)) {
     await mobileItem.click();
   } else {
-    await page.locator('.settings-sidebar-item', { hasText: 'Phone Sync' }).click();
+    await page.getByRole('button', { name: 'Phone sync', exact: true }).click();
   }
 
   await expect(page.locator('.settings-section-title', { hasText: 'Phone Sync' })).toBeVisible({ timeout: 10000 });
@@ -35,8 +35,8 @@ test.describe('Settings', () => {
   test('open settings and see account tab', async ({ authedPage: page, testUser }) => {
     await navigateTo(page, 'Settings');
 
-    // On mobile, settings shows a list of tabs — click "Account" first
-    const accountItem = page.locator('.settings-mobile-item', { hasText: 'Account' });
+    // Open the account detail from the settings overview.
+    const accountItem = page.getByRole('button', { name: 'Account', exact: true });
     if (await accountItem.isVisible({ timeout: 2000 }).catch(() => false)) {
       await accountItem.click();
     }
@@ -90,7 +90,7 @@ test.describe('Settings', () => {
   test('keeps Account settings focused on preference selectors without duplicate pack inventory', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    const accountItem = page.locator('.settings-mobile-item', { hasText: 'Account' });
+    const accountItem = page.getByRole('button', { name: 'Account', exact: true });
     if (await accountItem.isVisible({ timeout: 2000 }).catch(() => false)) {
       await accountItem.click();
     }
@@ -156,9 +156,8 @@ test.describe('Settings', () => {
   test('switch theme and verify data-theme attribute', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    // On mobile, Settings first renders a list of sections. Wait for either
-    // the section list or the desktop account panel before checking themes.
-    const accountItem = page.locator('.settings-mobile-item').filter({ hasText: /^Account$/ });
+    // The overview links to the account detail on all screen sizes.
+    const accountItem = page.getByRole('button', { name: 'Account', exact: true });
     const profileName = page.locator('.profile-name');
     await expect(accountItem.or(profileName).first()).toBeVisible({ timeout: 10000 });
     if (await accountItem.isVisible().catch(() => false)) {
@@ -181,12 +180,8 @@ test.describe('Settings', () => {
   test('shows push diagnostics when server push is not configured', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    const notificationsItem = page.locator('.settings-mobile-item').filter({ hasText: /^Notifications$/ });
-    if (await notificationsItem.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await notificationsItem.click();
-    } else {
-      await page.locator('.settings-sidebar-item').filter({ hasText: /^Notifications$/ }).click();
-    }
+    await page.getByRole('region', { name: 'Everything in its place.' })
+      .getByRole('button', { name: 'Notifications', exact: true }).click();
 
     await expect(page.getByText('Server push is not configured')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Ask an admin to add VAPID keys on the server and restart Tribu.')).toBeVisible();
@@ -203,12 +198,7 @@ test.describe('Settings', () => {
   test('creates an automation webhook without exposing URL tokens', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    const webhooksItem = page.locator('.settings-mobile-item', { hasText: 'Automation Webhooks' });
-    if (await webhooksItem.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await webhooksItem.click();
-    } else {
-      await page.locator('.settings-sidebar-item', { hasText: 'Automation Webhooks' }).click();
-    }
+    await page.getByRole('button', { name: 'Automation Webhooks', exact: true }).click();
 
     await page.getByLabel('Name').fill('Home Assistant');
     await page.getByLabel('Webhook URL').fill('https://ha.example/api/webhook/placeholder-token');
@@ -227,11 +217,11 @@ test.describe('Settings', () => {
     let primaryError = null;
     try {
       await navigateTo(page, 'Settings');
-      const storeLinksItem = page.locator('.settings-mobile-item', { hasText: 'Store searches' });
+      const storeLinksItem = page.getByRole('button', { name: 'Store searches', exact: true });
       if (await storeLinksItem.isVisible({ timeout: 2000 }).catch(() => false)) {
         await storeLinksItem.click();
       } else {
-        await page.locator('.settings-sidebar-item', { hasText: 'Store searches' }).click();
+        await page.getByRole('button', { name: 'Store searches', exact: true }).click();
       }
 
       await page.getByLabel('Store name').fill('Settings E2E Store');
@@ -264,12 +254,7 @@ test.describe('Settings', () => {
   test('creates a household notification destination without exposing the Apprise URL', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    const destinationsItem = page.locator('.settings-mobile-item', { hasText: 'Household notifications' });
-    if (await destinationsItem.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await destinationsItem.click();
-    } else {
-      await page.locator('.settings-sidebar-item', { hasText: 'Household notifications' }).click();
-    }
+    await page.getByRole('button', { name: 'Household notifications', exact: true }).click();
 
     await expect(page.getByText(/Destination URLs may contain passwords or tokens/)).toBeVisible();
     await page.getByLabel('Name').fill('Kitchen ntfy');
