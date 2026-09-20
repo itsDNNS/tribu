@@ -22,6 +22,9 @@ jest.mock('../../components/MemberAvatar', () => () => <span data-testid="member
 jest.mock('../../components/ConfirmDialog', () => () => <div role="dialog">Confirm dialog</div>);
 
 jest.mock('../../lib/api', () => ({
+  apiGetInvitations: jest.fn().mockResolvedValue({ ok: true, data: [] }),
+  apiListDisplayDevices: jest.fn().mockResolvedValue({ ok: true, data: [] }),
+  apiGetAuditLog: jest.fn().mockResolvedValue({ ok: true, data: { items: [], total: 0 } }),
   apiCreateMember: jest.fn(),
   apiRemoveMember: jest.fn(),
   apiResetMemberPassword: jest.fn(),
@@ -42,6 +45,7 @@ const messages = {
   backup_title: 'Backups',
   audit_log_title: 'Audit Log',
   time_format: 'Time format',
+  admin_layout_time_title: 'Time format',
   member: 'Member',
   child: 'Child',
   add_member: 'Add member',

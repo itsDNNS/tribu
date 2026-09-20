@@ -161,7 +161,7 @@ export default function BackupSection() {
             <Archive size={20} />
           </span>
           <div>
-            <h1 className="view-title">{t(messages, 'backup_title')}</h1>
+            <h2 className="view-title">{t(messages, 'backup_title')}</h2>
           </div>
         </div>
       </div>
