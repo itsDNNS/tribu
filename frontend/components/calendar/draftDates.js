@@ -28,4 +28,3 @@ export function retargetCreateDraft(date, startsAt, endsAt) {
 
   return { startsAt: shift(startsAt), endsAt: shift(endsAt) };
 }
-
