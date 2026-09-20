@@ -72,6 +72,7 @@ def global_search(
         .join(ShoppingList, ShoppingItem.list_id == ShoppingList.id)
         .filter(
             ShoppingList.family_id == family_id,
+            ShoppingItem.archived.is_(False),
             or_(ShoppingItem.name.ilike(pattern), ShoppingItem.spec.ilike(pattern)),
         )
         .limit(MAX_PER_MODULE)

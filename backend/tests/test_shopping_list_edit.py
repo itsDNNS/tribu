@@ -335,3 +335,227 @@ def test_conditional_child_toggle_undo_conflict_deletion_and_checked_order():
     assert client.patch(f"/shopping/items/{first}", json={"category": None, "checked": False, "expected_state": undo_expected}, headers=headers).status_code == 403
     assert client.delete(f"/shopping/items/{second}", headers=_auth(owner)).status_code == 200
     assert toggle(second, False, undo_expected).status_code == 404
+
+# Visual-shopping persistence and authorization contracts.
+def test_product_details_archive_and_restore_preserve_metadata(monkeypatch):
+    token, family_id, user_id = _seed_member(suffix="visual")
+    list_id = _seed_list(family_id, "Weekly", user_id)
+    other = _seed_item(list_id, "Bread")
+    photo = "data:image/png;base64,iVBORw0KGgo="
+    response = client.post(f"/shopping/lists/{list_id}/items", headers=_auth(token), json={
+        "name":"Milk", "spec":"2 l", "category":"Dairy", "notes":"1.5% fat", "priority":"urgent", "photo":photo})
+    assert response.status_code == 200, response.text
+    item_id = response.json()["id"]
+    client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"checked":True})
+    events = []
+    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: events.append(args))
+    completed = client.post(f"/shopping/lists/{list_id}/complete", headers=_auth(token))
+    assert completed.status_code == 200
+    assert completed.json()[0]["archived"] is True
+    assert events[0][2] == "item_updated"
+    current = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+    assert [item["id"] for item in current] == [other]
+    history = client.get(f"/shopping/lists/{list_id}/items?include_archived=true", headers=_auth(token)).json()
+    archived = next(item for item in history if item["id"] == item_id)
+    assert archived["notes"] == "1.5% fat" and archived["photo"] == photo and archived["priority"] == "urgent"
+    counts = client.get(f"/shopping/lists?family_id={family_id}", headers=_auth(token)).json()[0]
+    assert counts["item_count"] == 1 and counts["checked_count"] == 0
+    restored = client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"checked":False})
+    assert restored.status_code == 200
+    assert restored.json()["id"] == item_id and restored.json()["archived"] is False
+    assert restored.json()["notes"] == "1.5% fat" and restored.json()["priority"] == "urgent"
+    removed_photo = client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"photo":None})
+    assert removed_photo.json()["photo"] is None
+
+
+def test_category_order_and_icon_are_per_list_and_broadcast(monkeypatch):
+    token, family_id, user_id = _seed_member(suffix="departments")
+    first = _seed_list(family_id, "Store A", user_id)
+    second = _seed_list(family_id, "Store B", user_id)
+    events = []
+    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: events.append(args))
+    response = client.patch(f"/shopping/lists/{first}", headers=_auth(token), json={"category_order":["Bakery","Dairy"],"icon":"coffee"})
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == "Store A" and response.json()["icon"] == "coffee"
+    assert events[0][2] == "list_updated"
+    lists = client.get(f"/shopping/lists?family_id={family_id}", headers=_auth(token)).json()
+    assert next(item for item in lists if item["id"] == first)["category_order"] == ["Bakery","Dairy"]
+    assert next(item for item in lists if item["id"] == second)["category_order"] == []
+
+
+def test_visual_fields_and_archive_keep_family_and_adult_boundaries():
+    owner, family_id, user_id = _seed_member(suffix="visual-owner")
+    child, _, _ = _seed_member(suffix="visual-child", family_id=family_id, is_adult=False)
+    outsider, _, _ = _seed_member(suffix="visual-outsider")
+    list_id = _seed_list(family_id, "Private", user_id)
+    item_id = _seed_item(list_id)
+    for token in [child, outsider]:
+        assert client.post(f"/shopping/lists/{list_id}/complete", headers=_auth(token)).status_code == 403
+        assert client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"notes":"change"}).status_code == 403
+        assert client.patch(f"/shopping/lists/{list_id}", headers=_auth(token), json={"category_order":["Bakery"]}).status_code == 403
+    assert client.get(f"/shopping/lists/{list_id}/items?include_archived=true", headers=_auth(outsider)).status_code == 403
+    assert client.patch(f"/shopping/items/{item_id}", headers=_auth(child), json={"checked":True}).status_code == 200
+    for payload in [{"photo":"https://example.com/photo.png"},{"photo":"data:image/svg+xml;base64,PHN2Zz4="},{"photo":"data:image/png;base64,invalid"},{"notes":"x"*501},{"priority":"invalid"}]:
+        assert client.patch(f"/shopping/items/{item_id}", headers=_auth(owner), json=payload).status_code == 422
+
+
+def test_children_cannot_restore_archived_items_and_stale_undo_cannot_unarchive():
+    owner, family_id, user_id = _seed_member(suffix="archive-owner")
+    child, _, _ = _seed_member(suffix="archive-child", family_id=family_id, is_adult=False)
+    list_id = _seed_list(family_id, "History", user_id)
+    item_id = _seed_item(list_id)
+    checked = client.patch(f"/shopping/items/{item_id}", json={"checked": True}, headers=_auth(child)).json()
+    assert client.post(f"/shopping/lists/{list_id}/complete", headers=_auth(owner)).status_code == 200
+    assert client.patch(f"/shopping/items/{item_id}", json={"checked": False}, headers=_auth(child)).status_code == 403
+    expected = {key: checked[key] for key in ("list_id", "checked", "checked_at")}
+    response = client.patch(f"/shopping/items/{item_id}", json={"checked": False, "expected_state": expected}, headers=_auth(owner))
+    assert response.status_code == 409
+    history = client.get(f"/shopping/lists/{list_id}/items?include_archived=true", headers=_auth(owner)).json()
+    assert history[0]["archived"] is True and history[0]["checked"] is True
+
+
+def test_trip_completion_emits_committed_events_once_and_clear_preserves_history(monkeypatch):
+    token, family_id, user_id = _seed_member(suffix="trip-events")
+    list_id = _seed_list(family_id, "Market", user_id)
+    item_id = _seed_item(list_id, checked=True)
+    open_id = _seed_item(list_id, "Still needed")
+    ws, hooks, destinations = [], [], []
+    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: ws.append(args))
+    monkeypatch.setattr(shopping_router, "dispatch_webhook_event", lambda db, **kw: hooks.append(kw))
+    monkeypatch.setattr(shopping_router, "dispatch_shopping_destination_event", lambda **kw: destinations.append(kw))
+    response = client.post(f"/shopping/lists/{list_id}/complete", headers=_auth(token))
+    assert response.status_code == 200
+    assert [row["id"] for row in response.json()] == [item_id]
+    assert ws[0][1:3] == (list_id, "item_updated")
+    assert ws[0][3]["item"]["archived"] is True
+    assert len(hooks) == 1
+    assert hooks[0]["family_id"] == family_id
+    assert hooks[0]["event_type"] == "shopping.item.updated"
+    assert hooks[0]["data"]["archived"] is True
+    assert hooks[0]["data"]["item_id"] == item_id
+    assert destinations[0]["action"] == "archived"
+    assert destinations[0]["family_id"] == family_id
+    assert client.post(f"/shopping/lists/{list_id}/complete", headers=_auth(token)).json() == []
+    assert len(ws) == len(hooks) == len(destinations) == 1
+    cleared = client.delete(f"/shopping/lists/{list_id}/checked", headers=_auth(token))
+    assert cleared.json()["deleted_count"] == 0
+    history = client.get(f"/shopping/lists/{list_id}/items?include_archived=true", headers=_auth(token)).json()
+    assert {row["id"] for row in history} == {item_id, open_id}
+
+
+def test_archived_items_are_excluded_from_ordinary_reuse_and_template_application():
+    token, family_id, user_id = _seed_member(suffix="archive-reuse")
+    list_id = _seed_list(family_id, "Weekly", user_id)
+    archived_id = _seed_item(list_id, checked=True)
+    headers = _auth(token)
+    client.post(f"/shopping/lists/{list_id}/complete", headers=headers)
+    added = client.post(f"/shopping/lists/{list_id}/items", json={"name": "Bread"}, headers=headers)
+    assert added.status_code == 200
+    assert added.json()["id"] != archived_id
+    template = client.post("/shopping/templates", json={"family_id": family_id, "name": "Bread", "items": [{"name": "Bread"}]}, headers=headers).json()
+    applied = client.post(f"/shopping/templates/{template['id']}/apply", json={"list_id": list_id}, headers=headers)
+    assert applied.status_code == 200
+    assert applied.json()["items"][0]["id"] == added.json()["id"]
+    history = client.get(f"/shopping/lists/{list_id}/items?include_archived=true", headers=headers).json()
+    assert next(row for row in history if row["id"] == archived_id)["archived"] is True
+
+
+def test_atomic_edit_move_clears_nulls_and_failed_target_leaves_all_fields_and_events_unchanged(monkeypatch):
+    owner, family_id, user_id = _seed_member(suffix="atomic")
+    outsider, other_family, other_user = _seed_member(suffix="atomic-other")
+    source = _seed_list(family_id, "Source", user_id)
+    target = _seed_list(family_id, "Target", user_id)
+    foreign = _seed_list(other_family, "Foreign", other_user)
+    headers = _auth(owner)
+    photo = "data:image/png;base64,iVBORw0KGgo="
+    item = client.post(f"/shopping/lists/{source}/items", json={"name":"Milk","notes":"Brand", "photo":photo, "priority":"urgent","category":"Dairy","spec":"2 l"}, headers=headers).json()
+    ws, hooks, destinations = [], [], []
+    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: ws.append(args))
+    monkeypatch.setattr(shopping_router, "dispatch_webhook_event", lambda db, **kw: hooks.append(kw))
+    monkeypatch.setattr(shopping_router, "dispatch_shopping_destination_event", lambda **kw: destinations.append(kw))
+    patch = {"name":"Changed", "spec":None, "category":None, "notes":None, "photo":None,"priority":"normal", "list_id":foreign}
+    assert client.patch(f"/shopping/items/{item['id']}", json=patch, headers=headers).status_code == 404
+    assert client.get(f"/shopping/lists/{source}/items", headers=headers).json() == [item]
+    assert ws == hooks == destinations == []
+    patch["list_id"] = target
+    response = client.patch(f"/shopping/items/{item['id']}", json=patch, headers=headers)
+    assert response.status_code == 200
+    changed = response.json()
+    assert all(changed[key] is None for key in ("spec", "category", "notes", "photo"))
+    assert changed["name"] == "Changed" and changed["priority"] == "normal"
+    assert [(event[1],event[2]) for event in ws] == [(source,"item_deleted"),(target,"item_added")]
+    assert ws[1][3]["item"] == changed
+    assert len(hooks) == len(destinations) == 1
+    assert hooks[0]["data"]["from_list_id"] == source
+    assert destinations[0]["action"] == "moved"
+    assert client.get(f"/shopping/lists/{target}/items", headers=_auth(outsider)).status_code == 403
+
+
+@pytest.mark.parametrize("field,value", [
+    ("notes", "x" * 501), ("photo", "data:image/png;base64," + "A" * 700000),
+    ("photo", "data:image/png;base64,a"), ("photo", "data:image/gif;base64,AAAA"),
+    ("priority", None), ("priority", "high"),
+])
+def test_metadata_limits_reject_invalid_create_and_update_without_partial_write(field, value):
+    token, family, user = _seed_member(suffix="limits")
+    list_id = _seed_list(family, "Limits", user)
+    item_id = _seed_item(list_id)
+    headers = _auth(token)
+    assert client.post(f"/shopping/lists/{list_id}/items", headers=headers, json={"name":"New",field:value}).status_code == 422
+    assert client.patch(f"/shopping/items/{item_id}", headers=headers, json={"name":"Wrong",field:value}).status_code == 422
+    items = client.get(f"/shopping/lists/{list_id}/items", headers=headers).json()
+    assert len(items) == 1 and items[0]["name"] == "Bread"
+
+
+def test_conditional_status_rejects_original_list_after_move_without_events(monkeypatch):
+    token, family, user = _seed_member(suffix="status-move")
+    source, target = _seed_list(family,"Source",user), _seed_list(family,"Target",user)
+    item_id = _seed_item(source)
+    headers = _auth(token)
+    checked = client.patch(f"/shopping/items/{item_id}", headers=headers, json={"checked":True}).json()
+    client.patch(f"/shopping/items/{item_id}", headers=headers, json={"list_id":target})
+    events=[]
+    monkeypatch.setattr(shopping_router,"broadcast_shopping_event",lambda *args:events.append(args))
+    response=client.patch(f"/shopping/items/{item_id}", headers=headers, json={"checked":False,"expected_state":{key:checked[key] for key in ("list_id","checked","checked_at")}})
+    assert response.status_code == 409
+    assert events == []
+    assert client.get(f"/shopping/lists/{target}/items",headers=headers).json()[0]["checked"] is True
+
+
+def test_history_restore_emits_restored_state_to_all_integrations(monkeypatch):
+    token, family, user = _seed_member(suffix="restore-events")
+    list_id = _seed_list(family,"History",user)
+    item_id = _seed_item(list_id,checked=True)
+    headers = _auth(token)
+    client.post(f"/shopping/lists/{list_id}/complete",headers=headers)
+    ws,hooks,destinations=[],[],[]
+    monkeypatch.setattr(shopping_router,"broadcast_shopping_event",lambda *args:ws.append(args))
+    monkeypatch.setattr(shopping_router,"dispatch_webhook_event",lambda db,**kw:hooks.append(kw))
+    monkeypatch.setattr(shopping_router,"dispatch_shopping_destination_event",lambda **kw:destinations.append(kw))
+    response=client.patch(f"/shopping/items/{item_id}",headers=headers,json={"checked":False})
+    assert response.status_code == 200
+    assert response.json()["archived"] is False
+    assert ws[0][3]["item"] == response.json()
+    assert hooks[0]["data"]["archived"] is False
+    assert destinations[0]["action"] == "restored"
+
+
+def test_finish_uses_current_checked_state_when_another_member_unchecks_after_authorization(monkeypatch):
+    token,family,user=_seed_member(suffix="concurrent-finish")
+    list_id=_seed_list(family,"Trip",user)
+    keep=_seed_item(list_id,"Changed by another member",checked=True)
+    archive=_seed_item(list_id,"Purchased",checked=True)
+    authorize=shopping_router.ensure_adult
+    def uncheck_during_request(db,user_id,family_id):
+        member=authorize(db,user_id,family_id)
+        with TestSession() as other:
+            other.query(ShoppingItem).filter(ShoppingItem.id==keep).update({"checked":False,"checked_at":None})
+            other.commit()
+        return member
+    monkeypatch.setattr(shopping_router,"ensure_adult",uncheck_during_request)
+    response=client.post(f"/shopping/lists/{list_id}/complete",headers=_auth(token))
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == [archive]
+    live=client.get(f"/shopping/lists/{list_id}/items",headers=_auth(token)).json()
+    assert [item["id"] for item in live] == [keep]
+    assert live[0]["checked"] is False and live[0]["archived"] is False

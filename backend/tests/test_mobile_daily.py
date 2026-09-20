@@ -158,6 +158,7 @@ def test_mobile_daily_snapshot_collects_today_loop_without_secrets():
     db.add_all([
         ShoppingItem(list_id=shopping.id, name="Milk", checked=False, position=1),
         ShoppingItem(list_id=shopping.id, name="Bread", checked=True, position=2),
+        ShoppingItem(list_id=shopping.id, name="Archived", checked=True, archived=True, position=3),
     ])
     db.commit()
     shopping_id = shopping.id

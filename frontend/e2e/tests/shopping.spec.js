@@ -1,498 +1,616 @@
-const { test, expect } = require('../helpers/fixtures');
-const { getFamilyId, seedShoppingList, seedShoppingItem, seedShoppingTemplate, seedShoppingStoreLink } = require('../helpers/api-setup');
-const { navigateTo } = require('../helpers/navigation');
-const { shoppingListCard, selectShoppingList } = require('../helpers/shopping');
-
-test.describe('Shopping', () => {
-  test.setTimeout(90000);
-
-  async function expandTemplatesIfCollapsed(page) {
-    const showTemplates = page.getByRole('button', { name: 'Show templates' });
-    if (await showTemplates.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await showTemplates.click();
-    }
-  }
-
-  test('create a shopping list', async ({ authedPage: page }) => {
+const {
+  test,
+  expect
+} = require('../helpers/fixtures');
+const {
+  getFamilyId,
+  seedShoppingList,
+  seedShoppingItem,
+  seedShoppingTemplate,
+  seedShoppingStoreLink,
+  seedMealPlan
+} = require('../helpers/api-setup');
+const {
+  navigateTo
+} = require('../helpers/navigation');
+const {
+  shoppingListCard,
+  selectShoppingList
+} = require('../helpers/shopping');
+test.use({
+  serviceWorkers: 'block'
+});
+const tile = (page, name) => page.getByRole('checkbox', {
+  name: new RegExp(`^${name},`)
+});
+const search = page => page.getByRole('combobox', {
+  name: 'Search products or add with a quantity'
+});
+async function openList(page, name) {
+  await page.reload();
+  await navigateTo(page, 'Shopping');
+  await selectShoppingList(page, name);
+}
+async function discovery(page) {
+  await expect(page.locator('.shop-board')).toBeVisible();
+  if (await page.locator('.shop-rail').isVisible()) return page.locator('.shop-rail');
+  await page.getByRole('button', {
+    name: 'Open product catalogue'
+  }).click();
+  return page.getByRole('dialog');
+}
+async function menu(page) {
+  await page.locator('.shop-page').getByRole('button', {
+    name: 'List options',
+    exact: true
+  }).first().click();
+}
+async function templates(page) {
+  await menu(page);
+  await page.getByRole('dialog').getByRole('button', {
+    name: 'Shopping templates',
+    exact: true
+  }).click();
+}
+test.describe('Shopping with the backend', () => {
+  test.setTimeout(60000);
+  test('create a shopping list', async ({
+    authedPage: page
+  }) => {
     await navigateTo(page, 'Shopping');
-
-    await page.getByText('New list').click();
-    await page.locator('input[placeholder="e.g. Grocery Store"]').fill('E2E Groceries');
-    await page.locator('.shopping-new-list-form .btn-sm').first().click();
-
-    await expect(shoppingListCard(page, 'E2E Groceries')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', {
+      name: 'New shopping list',
+      exact: true
+    }).click();
+    await page.getByRole('dialog').getByLabel('List name').fill('E2E Groceries');
+    await page.getByRole('dialog').getByRole('button', {
+      name: 'Save',
+      exact: true
+    }).click();
+    await expect(shoppingListCard(page, 'E2E Groceries')).toBeVisible();
   });
-
-  test('opens a configured store search safely without checking the item', async ({ authedPage: page, apiCtx }, testInfo) => {
-    const familyId = await getFamilyId(apiCtx);
-    const existing = await apiCtx.get(`/api/shopping/store-links?family_id=${familyId}`);
-    expect(existing.ok()).toBeTruthy();
-    for (const link of await existing.json()) {
-      const deleted = await apiCtx.delete(`/api/shopping/store-links/${link.id}`);
-      expect(deleted.ok()).toBeTruthy();
-    }
-    const list = await seedShoppingList(apiCtx, familyId, 'Store Search List');
-    await seedShoppingItem(apiCtx, list.id, 'Bread');
-
-    await navigateTo(page, 'Shopping');
+  test('add quantity and notes, rename a list and move the product', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    const family = await getFamilyId(apiCtx);
+    await seedShoppingList(apiCtx, family, 'Source Store');
+    await seedShoppingList(apiCtx, family, 'Target Store');
+    await openList(page, 'Source Store');
+    await search(page).fill('2 kg Bread');
+    await search(page).press('Enter');
+    await expect(tile(page, 'Bread')).toBeVisible();
+    await page.getByRole('button', {
+      name: 'Details for Bread'
+    }).click();
+    const d = page.getByRole('dialog');
+    await d.getByLabel('Details for the family').fill('Whole wheat');
+    await d.getByRole('combobox', {
+      name: 'Category',
+      exact: true
+    }).selectOption('__custom__');
+    await d.getByRole('textbox', {
+      name: 'Custom category',
+      exact: true
+    }).fill('Bakery aisle');
+    await d.getByRole('button', {
+      name: 'Save',
+      exact: true
+    }).click();
+    await expect(tile(page, 'Bread')).toContainText('Whole wheat');
+    await menu(page);
+    await page.getByRole('button', {
+      name: 'Edit list',
+      exact: true
+    }).click();
+    await page.getByRole('dialog').getByLabel('List name').fill('Renamed Source');
+    await page.getByRole('dialog').getByRole('button', {
+      name: 'Save',
+      exact: true
+    }).click();
+    await expect(shoppingListCard(page, 'Renamed Source')).toBeVisible();
+    await page.getByRole('button', {
+      name: 'Details for Bread'
+    }).click();
+    await page.getByRole('dialog').getByRole('combobox', {
+      name: 'Shopping list',
+      exact: true
+    }).selectOption({
+      label: 'Target Store'
+    });
+    await page.getByRole('dialog').getByRole('button', {
+      name: 'Save',
+      exact: true
+    }).click();
+    await expect(tile(page, 'Bread')).toHaveCount(0);
+    await selectShoppingList(page, 'Target Store');
+    await expect(tile(page, 'Bread')).toContainText('2 kg');
+    await expect(page.getByRole('region', {
+      name: 'Bakery aisle',
+      exact: true
+    })).toBeVisible();
+  });
+  test('check, Undo, archive and restore retain a single product', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    const family = await getFamilyId(apiCtx);
+    const list = await seedShoppingList(apiCtx, family, 'Trip History');
+    const original = await seedShoppingItem(apiCtx, list.id, 'Milk', '2 l', 'Dairy');
+    await apiCtx.patch(`/api/shopping/items/${original.id}`, {
+      data: {
+        notes: 'Brand',
+        priority: 'urgent'
+      }
+    });
+    await openList(page, 'Trip History');
+    await tile(page, 'Milk').click();
+    await page.getByRole('button', {
+      name: 'Undo',
+      exact: true
+    }).click();
+    await expect(tile(page, 'Milk')).not.toBeChecked();
+    await tile(page, 'Milk').click();
+    await page.locator('.shop-done summary').click();
+    await page.getByRole('button', {
+      name: 'Complete shopping',
+      exact: true
+    }).click();
+    await page.getByRole('dialog').getByRole('button', {
+      name: 'Complete shopping',
+      exact: true
+    }).click();
+    await expect(tile(page, 'Milk')).toHaveCount(0);
     await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-    await selectShoppingList(page, 'Store Search List');
-    await expect(page.getByRole('button', { name: 'Search online: Bread' })).toHaveCount(0);
-
+    await selectShoppingList(page, 'Trip History');
+    const recent = await discovery(page);
+    await recent.getByRole('button', {
+      name: 'Recent',
+      exact: true
+    }).click();
+    await recent.getByRole('button', {
+      name: 'Milk, add',
+      exact: true
+    }).click();
+    if (await page.getByRole('dialog').count()) await page.keyboard.press('Escape');
+    await expect(tile(page, 'Milk')).toHaveCount(1);
+    await expect(tile(page, 'Milk')).not.toBeChecked();
+    const rows = await (await apiCtx.get(`/api/shopping/lists/${list.id}/items?include_archived=true`)).json();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: original.id,
+      spec: '2 l',
+      notes: 'Brand',
+      priority: 'urgent',
+      checked: false,
+      archived: false
+    });
+  });
+  test('department order is persisted for the selected list', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    const family = await getFamilyId(apiCtx);
+    const list = await seedShoppingList(apiCtx, family, 'Department Order');
+    await seedShoppingItem(apiCtx, list.id, 'Bread', '1', 'Bakery');
+    const original = await seedShoppingItem(apiCtx, list.id, 'Milk', '2 l', 'Dairy');
+    await apiCtx.patch(`/api/shopping/items/${original.id}`, {
+      data: {
+        notes: 'Brand',
+        priority: 'urgent'
+      }
+    });
+    await openList(page, 'Department Order');
+    await menu(page);
+    await page.getByRole('button', {
+      name: 'Department order',
+      exact: true
+    }).click();
+    await page.getByRole('button', {
+      name: 'Dairy move up',
+      exact: true
+    }).click();
+    await page.getByRole('button', {
+      name: 'Save order',
+      exact: true
+    }).click();
+    await page.reload();
+    await selectShoppingList(page, 'Department Order');
+    await expect(page.locator('.shop-category-title').first()).toContainText('Dairy');
+  });
+  test('create, edit and apply a shopping template', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    const family = await getFamilyId(apiCtx);
+    await seedShoppingList(apiCtx, family, 'Template Target');
+    await openList(page, 'Template Target');
+    await templates(page);
+    await page.getByRole('button', {
+      name: 'New template',
+      exact: true
+    }).click();
+    await page.getByPlaceholder('e.g. Weekly groceries').fill('Weekly basics');
+    await page.getByPlaceholder('Template item', {
+      exact: true
+    }).fill('Milk');
+    await page.getByPlaceholder('Amount/details').fill('2 L');
+    await page.getByPlaceholder('Category', {
+      exact: true
+    }).fill('Dairy');
+    await page.getByRole('button', {
+      name: 'Save template'
+    }).click();
+    await page.getByRole('button', {
+      name: 'Edit template: Weekly basics'
+    }).click();
+    await page.getByPlaceholder('e.g. Weekly groceries').fill('Breakfast');
+    await page.getByRole('button', {
+      name: 'Save template'
+    }).click();
+    await page.getByRole('button', {
+      name: 'Add to list: Breakfast'
+    }).click();
+    await expect(tile(page, 'Milk')).toContainText('2 L');
+  });
+  test('apply a saved template', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    const family = await getFamilyId(apiCtx);
+    await seedShoppingList(apiCtx, family, 'Saved Template Target');
+    await seedShoppingTemplate(apiCtx, family, 'Saved basics', [{
+      name: 'Oats',
+      spec: '1 kg',
+      category: 'Pantry'
+    }]);
+    await openList(page, 'Saved Template Target');
+    await templates(page);
+    await page.getByRole('button', {
+      name: 'Add to list: Saved basics'
+    }).click();
+    await expect(tile(page, 'Oats')).toBeVisible();
+  });
+  test('store search opens a native link without checking the product', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    const family = await getFamilyId(apiCtx);
+    const list = await seedShoppingList(apiCtx, family, 'Store Search');
+    await seedShoppingItem(apiCtx, list.id, 'Bread');
     const base = process.env.BASE_URL || 'http://localhost:3000';
-    const store = await seedShoppingStoreLink(apiCtx, familyId, 'E2E Store', `${base}/?q={query}`);
-    let primaryError = null;
+    const store = await seedShoppingStoreLink(apiCtx, family, 'E2E Store', `${base}/?q={query}`);
     try {
-      await page.reload();
-      await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-      await navigateTo(page, 'Shopping');
-      await selectShoppingList(page, 'Store Search List');
-
-      const row = page.getByRole('checkbox', { name: 'Bread' });
-      if (testInfo.project.name === 'Desktop Chrome') await row.hover();
-      await page.getByRole('button', { name: 'Search online: Bread' }).click();
-      const dialog = page.getByRole('dialog', { name: 'Search for Bread' });
-      await expect(dialog.getByText('E2E Store')).toBeVisible();
-      await expect(dialog.getByText(new URL(base).hostname)).toBeVisible();
-      const [popup] = await Promise.all([
-        page.context().waitForEvent('page'),
-        dialog.getByRole('link', { name: /E2E Store/ }).click(),
-      ]);
+      await openList(page, 'Store Search');
+      await page.getByRole('button', {
+        name: 'Details for Bread'
+      }).click();
+      await page.getByRole('dialog').getByRole('button', {
+        name: 'Search online'
+      }).click();
+      const link = page.getByRole('link', {
+        name: /E2E Store/
+      });
+      const [popup] = await Promise.all([page.context().waitForEvent('page'), link.click()]);
       await popup.waitForLoadState('domcontentloaded');
       expect(popup.url()).toContain('q=Bread');
       expect(await popup.evaluate(() => window.opener)).toBeNull();
       expect(await popup.evaluate(() => document.referrer)).toBe('');
       await popup.close();
-      await expect(dialog).toHaveCount(0);
-      await expect(row).toHaveAttribute('aria-checked', 'false');
-
-      if (testInfo.project.name === 'Mobile Chrome') {
-        await page.setViewportSize({ width: 360, height: 780 });
-        await expect(page.getByRole('button', { name: 'Search online: Bread' })).toBeVisible();
-        const widths = await page.evaluate(() => ({
-          scrollWidth: document.documentElement.scrollWidth,
-          clientWidth: document.documentElement.clientWidth,
-        }));
-        expect(widths.scrollWidth).toBeLessThanOrEqual(widths.clientWidth + 1);
-      }
-    } catch (error) {
-      primaryError = error;
-      throw error;
+      await expect(tile(page, 'Bread')).not.toBeChecked();
     } finally {
-      const cleanup = await apiCtx.delete(`/api/shopping/store-links/${store.id}`);
-      if (!cleanup.ok() && cleanup.status() !== 404 && !primaryError) {
-        throw new Error(`DELETE /api/shopping/store-links/${store.id} failed (${cleanup.status()})`);
-      }
+      await apiCtx.delete(`/api/shopping/store-links/${store.id}`);
     }
   });
-
-  test('add an item to a list', async ({ authedPage: page, apiCtx }) => {
-    const familyId = await getFamilyId(apiCtx);
-    await seedShoppingList(apiCtx, familyId, 'Item Test List');
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-
-    await selectShoppingList(page, 'Item Test List');
-    await page.locator('input[placeholder="Add an item..."]').fill('Bread');
-    await page.locator('.shopping-spec-input').fill('whole wheat');
-    await page.locator('.shopping-category-input').fill('Bakery');
-    await page.locator('[aria-label="Add item"]').click();
-
-    await expect(page.getByRole('button', { name: /Bakery/ })).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('[role="checkbox"][aria-label="Bread"]')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('whole wheat')).toBeVisible();
+  test('delete a list only after confirmation', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    const family = await getFamilyId(apiCtx);
+    await seedShoppingList(apiCtx, family, 'Delete This List');
+    await openList(page, 'Delete This List');
+    await menu(page);
+    await page.getByRole('button', {
+      name: 'Delete list',
+      exact: true
+    }).click();
+    await page.getByRole('dialog').getByRole('button', {
+      name: 'Delete',
+      exact: true
+    }).click();
+    await expect(shoppingListCard(page, 'Delete This List')).toHaveCount(0);
+    await expect(page.getByRole('heading', {
+      name: 'For everything you need.'
+    })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
-
-  test('rename a list, edit item details, and move the item between lists', async ({ authedPage: page, apiCtx }) => {
-    const familyId = await getFamilyId(apiCtx);
-    const source = await seedShoppingList(apiCtx, familyId, 'StoreA');
-    await seedShoppingList(apiCtx, familyId, 'StoreB');
-    await seedShoppingItem(apiCtx, source.id, 'Bread', '1 loaf', 'Bakery');
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-
-    await selectShoppingList(page, 'StoreA');
-    const renameForm = page.locator('.shopping-list-rename-form');
-    await shoppingListCard(page, 'StoreA').getByRole('button', { name: 'Rename list: StoreA' }).click();
-    await expect(renameForm).toBeVisible({ timeout: 10000 });
-    await page.getByLabel('List name').fill('Store A market');
-    await renameForm.getByRole('button', { name: 'Save' }).click();
-    await expect(shoppingListCard(page, 'Store A market')).toBeVisible({ timeout: 10000 });
-
-    await page.locator('[role="checkbox"][aria-label="Bread"]').hover();
-    await page.getByRole('button', { name: 'Edit item: Bread' }).click();
-    const editForm = page.locator('.shopping-item-edit-form');
-    await editForm.getByLabel('Item').fill('baguette');
-    await editForm.getByLabel('Details').fill('2 loaves');
-    await editForm.getByLabel('Category').fill('Bakery aisle');
-    await editForm.getByLabel('Move to list').selectOption({ label: 'StoreB' });
-    await editForm.getByRole('button', { name: 'Save' }).click();
-
-    await expect(page.locator('[role="checkbox"][aria-label="Baguette"]')).not.toBeVisible({ timeout: 10000 });
-    await selectShoppingList(page, 'StoreB');
-    const movedItem = page.locator('[role="checkbox"][aria-label="Baguette"]');
-    await expect(movedItem).toBeVisible({ timeout: 10000 });
-    await expect(movedItem.locator('..')).toContainText('2 loaves');
-    await expect(movedItem.locator('..')).toContainText('Bakery aisle');
-  });
-
-  test('reactivates checked items and normalizes quick-add names', async ({ authedPage: page, apiCtx }) => {
-    const familyId = await getFamilyId(apiCtx);
-    const list = await seedShoppingList(apiCtx, familyId, 'Reuse Checked List');
-    const milk = await seedShoppingItem(apiCtx, list.id, 'Milk');
-    await apiCtx.patch(`/api/shopping/items/${milk.id}`, { data: { checked: true } });
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-
-    await selectShoppingList(page, 'Reuse Checked List');
-    await expect(page.locator('[role="checkbox"][aria-label="Milk"]')).toHaveAttribute('aria-checked', 'true', { timeout: 10000 });
-
-    await page.locator('input[placeholder="Add an item..."]').fill('milch');
-    await page.locator('[aria-label="Add item"]').click();
-    await expect(page.locator('[role="checkbox"][aria-label="Milch"]')).toHaveAttribute('aria-checked', 'false', { timeout: 10000 });
-
-    // The row can arrive over WebSocket before the previous form submission finishes.
-    await expect(page.getByPlaceholder('Add an item...')).toHaveValue('');
-    await page.locator('input[placeholder="Add an item..."]').fill('milk');
-    await page.locator('[aria-label="Add item"]').click();
-    const milkRows = page.locator('[role="checkbox"][aria-label="Milk"]');
-    await expect(milkRows).toHaveCount(1, { timeout: 10000 });
-    await expect(milkRows.first()).toHaveAttribute('aria-checked', 'false');
-  });
-
-  test('toggle an item checked / unchecked', async ({ authedPage: page, apiCtx }) => {
-    const familyId = await getFamilyId(apiCtx);
-    const list = await seedShoppingList(apiCtx, familyId, 'Toggle List');
-    await seedShoppingItem(apiCtx, list.id, 'Apples', '', 'Produce');
-    await seedShoppingItem(apiCtx, list.id, 'Pasta', '', 'Pantry');
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-
-    await selectShoppingList(page, 'Toggle List');
-
-    const produceGroup = page.getByRole('button', { name: /Produce/ });
-    await expect(produceGroup).toBeVisible({ timeout: 10000 });
-    await produceGroup.click();
-    await expect(page.locator('[role="checkbox"][aria-label="Apples"]')).not.toBeVisible({ timeout: 5000 });
-    await produceGroup.click();
-
-    const item = page.locator('[role="checkbox"][aria-label="Apples"]');
-    await expect(item).toBeVisible({ timeout: 10000 });
-    await expect(item).toHaveAttribute('aria-checked', 'false');
-
-    await item.click();
-    await expect(item).toHaveAttribute('aria-checked', 'true', { timeout: 5000 });
-
-    await item.click();
-    await expect(item).toHaveAttribute('aria-checked', 'false', { timeout: 5000 });
-  });
-
-  test('create, edit, and apply a shopping template', async ({ authedPage: page, apiCtx }) => {
-    const familyId = await getFamilyId(apiCtx);
-    await seedShoppingList(apiCtx, familyId, 'Template Target List');
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-
-    await selectShoppingList(page, 'Template Target List');
-    await expandTemplatesIfCollapsed(page);
-    await page.getByRole('button', { name: 'New template' }).click();
-    await page.locator('input[placeholder="e.g. Weekly groceries"]').fill('Weekly groceries');
-    await page.locator('input[placeholder="Template item"]').first().fill('Milk');
-    await page.locator('input[placeholder="Amount/details"]').first().fill('2 L');
-    await page.locator('input[placeholder="Category"]').first().fill('Dairy');
-    await page.getByRole('button', { name: 'Add template item' }).click();
-    await page.locator('input[placeholder="Template item"]').nth(1).fill('Bananas');
-    await page.locator('input[placeholder="Amount/details"]').nth(1).fill('6');
-    await page.locator('input[placeholder="Category"]').nth(1).fill('Produce');
-    await page.getByRole('button', { name: 'Save template' }).click();
-
-    await expect(page.getByRole('heading', { name: 'Weekly groceries' })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Milk')).toBeVisible();
-
-    await page.getByRole('button', { name: 'Edit template: Weekly groceries' }).click();
-    await page.locator('input[placeholder="e.g. Weekly groceries"]').fill('Weekly basics');
-    await page.getByRole('button', { name: 'Save template' }).click();
-    await expect(page.getByRole('heading', { name: 'Weekly basics' })).toBeVisible({ timeout: 10000 });
-
-    await page.getByRole('button', { name: 'Add to list: Weekly basics' }).click();
-    const milkItem = page.locator('[role="checkbox"][aria-label="Milk"]');
-    await expect(milkItem).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('[role="checkbox"][aria-label="Bananas"]')).toBeVisible();
-    await expect(milkItem.locator('..')).toContainText('2 L');
-    await expect(milkItem.locator('..')).toContainText('Dairy');
-  });
-
-  test('apply a seeded shopping template to a list', async ({ authedPage: page, apiCtx }) => {
-    test.setTimeout(90000);
-    const familyId = await getFamilyId(apiCtx);
-    await seedShoppingList(apiCtx, familyId, 'Seeded Template Target');
-    await seedShoppingTemplate(apiCtx, familyId, 'Seeded weekly groceries', [
-      { name: 'Oats', spec: '1 kg', category: 'Pantry' },
-      { name: 'Eggs', spec: '12', category: 'Dairy' },
-    ]);
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-
-    await selectShoppingList(page, 'Seeded Template Target');
-    await expandTemplatesIfCollapsed(page);
-    await page.getByRole('button', { name: 'Add to list: Seeded weekly groceries' }).click();
-
-    await expect(page.locator('[role="checkbox"][aria-label="Oats"]')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('[role="checkbox"][aria-label="Eggs"]')).toBeVisible();
-  });
-
-  test('delete a shopping list', async ({ authedPage: page, apiCtx }) => {
-    const familyId = await getFamilyId(apiCtx);
-    await seedShoppingList(apiCtx, familyId, 'Delete This List');
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-
-    await selectShoppingList(page, 'Delete This List');
-
-    // deleteList() now uses ConfirmDialog — click the confirm button
-    await page.locator('[aria-label="Delete list: Delete This List"]').click();
-    await page.locator('.cal-dialog .btn-sm').first().click();
-
-    await expect(shoppingListCard(page, 'Delete This List')).not.toBeVisible({ timeout: 10000 });
-  });
-
-  test('mobile in-store layout prioritizes active items and keeps keyboard focus out of the checklist', async ({ authedPage: page, apiCtx }) => {
-    const viewport = page.viewportSize();
-    test.skip(!viewport || viewport.width >= 768, 'Mobile-only shopping layout check');
-
-    const familyId = await getFamilyId(apiCtx);
-    const list = await seedShoppingList(apiCtx, familyId, 'Mobile Market List');
+  test('mobile trip mode has a clear checklist and hides navigation', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    await page.setViewportSize({
+      width: 390,
+      height: 844
+    });
+    const family = await getFamilyId(apiCtx);
+    const list = await seedShoppingList(apiCtx, family, 'Mobile Market');
     await seedShoppingItem(apiCtx, list.id, 'Apples', '6', 'Produce');
-    await seedShoppingItem(apiCtx, list.id, 'Milk', '2 L', 'Dairy');
-    await seedShoppingTemplate(apiCtx, familyId, 'Mobile breakfast plan', [
-      { name: 'Eggs', spec: '12', category: 'Dairy' },
-    ]);
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-    await selectShoppingList(page, 'Mobile Market List');
-
-    const itemsPanel = page.locator('.shopping-items-panel');
-    const templatesPanel = page.locator('.shopping-templates-panel');
-    await expect(itemsPanel).toBeVisible({ timeout: 10000 });
-    await expect(templatesPanel).toBeVisible({ timeout: 10000 });
-
-    const [itemsBox, templatesBox] = await Promise.all([
-      itemsPanel.boundingBox(),
-      templatesPanel.boundingBox(),
-    ]);
-    expect(itemsBox.y).toBeLessThan(templatesBox.y);
-
-    await expect(page.getByText('Mobile breakfast plan')).not.toBeVisible();
-    await page.getByRole('button', { name: 'Show templates' }).click();
-    await expect(page.getByText('Mobile breakfast plan')).toBeVisible({ timeout: 10000 });
-
-    const quickAdd = page.locator('input[placeholder="Add an item..."]');
-    await quickAdd.focus();
-    await expect(quickAdd).toBeFocused();
-    await expect(quickAdd).not.toHaveAttribute('list', 'shopping-item-suggestions');
-
-    await quickAdd.fill('Mi');
-    await expect(quickAdd).not.toHaveAttribute('list', 'shopping-item-suggestions');
-    const suggestionList = page.locator('#shopping-item-suggestions');
-    await expect(suggestionList).toBeVisible();
-    await expect.poll(async () => suggestionList.getByRole('option').evaluateAll((options) => options.map((option) => option.textContent))).toEqual(['Milk']);
-    await expect.poll(async () => suggestionList.evaluate((element) => {
-      const color = getComputedStyle(element).backgroundColor;
-      const alpha = color.match(/rgba?\(([^)]+)\)/)?.[1]?.split(',').map((part) => Number(part.trim()))[3] ?? 1;
-      return alpha;
-    })).toBe(1);
-
-    await quickAdd.clear();
-    await expect(suggestionList).toBeHidden();
-    await quickAdd.fill('Mi');
-    await expect(suggestionList).toBeVisible();
-    await expect.poll(async () => suggestionList.evaluate((element) => {
-      const color = getComputedStyle(element).backgroundColor;
-      const alpha = color.match(/rgba?\(([^)]+)\)/)?.[1]?.split(',').map((part) => Number(part.trim()))[3] ?? 1;
-      return alpha;
-    })).toBe(1);
-    await quickAdd.clear();
-    await page.locator('[role="checkbox"][aria-label="Apples"]').click();
-    await expect(quickAdd).not.toBeFocused();
-
-    await quickAdd.fill('Bananas');
-    await expect(quickAdd).toBeFocused();
-    await page.locator('.shopping-items-wrapper .quick-add-btn').click();
-    await expect(quickAdd).not.toBeFocused();
-    await expect(page.locator('[role="checkbox"][aria-label="Bananas"]')).toBeVisible({ timeout: 10000 });
+    await openList(page, 'Mobile Market');
+    await search(page).focus();
+    await tile(page, 'Apples').click();
+    await expect(search(page)).not.toBeFocused();
+    await page.locator('.shop-mobile-dock .shop-mode-button').click();
+    await expect(page.getByText('Shopping mode', {
+      exact: true
+    })).toBeVisible();
+    await expect(page.locator('.sidebar')).not.toBeVisible();
+    await expect(page.locator('.bottom-nav')).not.toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
+});
+test('custom favorites reuse checked products but leave archived history intact', async ({authedPage: page, apiCtx}) => {
+  const family = await getFamilyId(apiCtx);
+  const list = await seedShoppingList(apiCtx, family, 'Custom favorites');
+  const readRows = async () => {
+    const response = await apiCtx.get(`/api/shopping/lists/${list.id}/items?include_archived=true`);
+    expect(response.ok()).toBe(true);
+    return response.json();
+  };
+  const addFavorite = async () => {
+    const surface = await discovery(page);
+    await surface.getByRole('button', {name: 'Favourites', exact: true}).click();
+    await surface.getByRole('button', {name: 'Windeln, add', exact: true}).click();
+    await expect(surface.getByRole('button', {name: 'Windeln, already on the list', exact: true})).toBeVisible();
+    if (await page.getByRole('dialog').count()) await page.keyboard.press('Escape');
+    await expect(tile(page, 'Windeln')).not.toBeChecked();
+    await expect(page.locator('.shop-page').getByRole('alert')).toHaveCount(0);
+  };
 
-  test('mobile shopping menu stays opaque while quick add is focused and reopened', async ({ authedPage: page, apiCtx }) => {
-    const viewport = page.viewportSize();
-    test.skip(!viewport || viewport.width >= 768, 'Mobile-only shopping menu opacity check');
+  await openList(page, 'Custom favorites');
+  await search(page).fill('Windeln');
+  await search(page).press('Enter');
+  await expect(tile(page, 'Windeln')).toBeVisible();
+  await page.getByRole('button', {name: 'Details for Windeln'}).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByLabel('Details for the family').fill('Size 4');
+  await editor.getByLabel('Priority').selectOption('urgent');
+  await editor.getByRole('button', {name: 'Save favourite', exact: true}).click();
+  await editor.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(editor).toHaveCount(0);
+  const initial = await readRows();
+  expect(initial).toHaveLength(1);
+  const original = initial[0];
+  expect(original).toMatchObject({name: 'Windeln', spec: '1', notes: 'Size 4', priority: 'urgent', checked: false});
 
-    const familyId = await getFamilyId(apiCtx);
-    await seedShoppingList(apiCtx, familyId, 'Opaque Menu Market List');
+  await tile(page, 'Windeln').click();
+  await expect.poll(async () => (await readRows())[0].checked).toBe(true);
+  await addFavorite();
+  const reused = await readRows();
+  expect(reused).toHaveLength(1);
+  expect(reused[0]).toMatchObject({id: original.id, checked: false, archived: false, notes: 'Size 4', priority: 'urgent'});
 
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-    await selectShoppingList(page, 'Opaque Menu Market List');
+  await tile(page, 'Windeln').click();
+  await expect.poll(async () => (await readRows())[0].checked).toBe(true);
+  await menu(page);
+  await page.getByRole('dialog').getByRole('button', {name: 'Complete shopping', exact: true}).click();
+  await page.getByRole('dialog').getByRole('button', {name: 'Complete shopping', exact: true}).click();
+  await expect(tile(page, 'Windeln')).toHaveCount(0);
+  const history = await readRows();
+  expect(history).toHaveLength(1);
+  expect(history[0]).toMatchObject({id: original.id, checked: true, archived: true, notes: 'Size 4', priority: 'urgent'});
 
-    await page.evaluate(() => {
-      document.documentElement.setAttribute('data-theme', 'light');
-      document.documentElement.removeAttribute('data-display-mode');
-    });
-
-    const quickAdd = page.locator('input[placeholder="Add an item..."]');
-    await quickAdd.focus();
-    await expect(quickAdd).toBeFocused();
-
-    const sidebar = page.locator('.sidebar.mobile-open');
-    const assertOpaqueSidebar = async () => {
-      const sidebarBackground = await sidebar.evaluate((element) => getComputedStyle(element).backgroundColor);
-      const alphaMatch = sidebarBackground.match(/rgba?\(([^)]+)\)/);
-      const alpha = alphaMatch?.[1]?.split(',').map((part) => Number(part.trim()))[3] ?? 1;
-      expect(alpha).toBe(1);
-    };
-
-    await page.getByRole('button', { name: 'Open menu' }).click();
-    await expect(sidebar).toBeVisible();
-    await assertOpaqueSidebar();
-
-    await page.mouse.click(350, 120);
-    await expect(sidebar).toBeHidden();
-
-    await page.getByRole('button', { name: 'Open menu' }).click();
-    await expect(sidebar).toBeVisible();
-    await assertOpaqueSidebar();
-  });
-
-  test('768px shopping breakpoint keeps items before templates in DOM order', async ({ authedPage: page, apiCtx }) => {
-    await page.setViewportSize({ width: 768, height: 900 });
-    const familyId = await getFamilyId(apiCtx);
-    const list = await seedShoppingList(apiCtx, familyId, 'Breakpoint Market List');
-    await seedShoppingItem(apiCtx, list.id, 'Tea', '1 box', 'Pantry');
-    await seedShoppingTemplate(apiCtx, familyId, 'Breakpoint planning template', [
-      { name: 'Coffee', spec: '1 bag', category: 'Pantry' },
-    ]);
-
-    await navigateTo(page, 'Shopping');
-    await page.reload();
-    await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
-    await navigateTo(page, 'Shopping');
-    await selectShoppingList(page, 'Breakpoint Market List');
-
-    await expect(page.locator('.shopping-items-panel')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.shopping-templates-panel')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Breakpoint planning template')).not.toBeVisible();
-
-    const ordering = await page.evaluate(() => {
-      const items = document.querySelector('.shopping-items-panel');
-      const templates = document.querySelector('.shopping-templates-panel');
-      return Boolean(items && templates && (items.compareDocumentPosition(templates) & Node.DOCUMENT_POSITION_FOLLOWING));
-    });
-    expect(ordering).toBe(true);
-  });
-
+  await page.reload();
+  await selectShoppingList(page, 'Custom favorites');
+  await addFavorite();
+  const rows = await readRows();
+  expect(rows).toHaveLength(2);
+  expect(rows.find(row => row.id === original.id)).toEqual(history[0]);
+  const live = rows.find(row => row.id !== original.id);
+  expect(live).toMatchObject({name: 'Windeln', spec: '1', category: 'Sonstiges', checked: false, archived: false, notes: null, photo: null, priority: 'normal'});
 });
 
-test('shopping usability: category suggestions, explicit checking, Undo and recent checked order', async ({ authedPage: page, apiCtx }, testInfo) => {
-  test.setTimeout(90000);
-  const familyId = await getFamilyId(apiCtx);
-  const list = await seedShoppingList(apiCtx, familyId, 'Usability Market');
-  const vocabularyList = await seedShoppingList(apiCtx, familyId, 'Category Vocabulary');
-  await seedShoppingItem(apiCtx, vocabularyList.id, 'Pear', '', 'Fresh produce');
-  const apple = await seedShoppingItem(apiCtx, list.id, 'Apple', '', 'Fruit');
-  const bread = await seedShoppingItem(apiCtx, list.id, 'Bread', '', 'Bakery');
-  await apiCtx.patch(`/api/shopping/items/${bread.id}`, { data: { checked: true } });
+test('real backend persists photo/details through atomic move, finish and explicit history restore', async ({
+  authedPage: page,
+  apiCtx
+}) => {
+  const family = await getFamilyId(apiCtx);
+  const source = await seedShoppingList(apiCtx, family, 'Photo source');
+  const target = await seedShoppingList(apiCtx, family, 'Photo target');
+  const item = await seedShoppingItem(apiCtx, source.id, 'Oat drink', '2 l', 'Dairy');
+  await openList(page, 'Photo source');
+  await page.getByRole('button', {
+    name: 'Details for Oat drink'
+  }).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByLabel('Details for the family').fill('Unsweetened');
+  await editor.getByLabel('Priority').selectOption('urgent');
+  await editor.locator('input[type=file]').setInputFiles(require('path').join(__dirname, '../../public/illustrations/meal-lunch.jpg'));
+  await expect(editor.getByAltText('Product photo')).toBeVisible();
+  await editor.getByRole('combobox', {
+    name: 'Shopping list',
+    exact: true
+  }).selectOption(String(target.id));
+  await editor.getByRole('button', {
+    name: 'Save',
+    exact: true
+  }).click();
+  await expect(tile(page, 'Oat drink')).toHaveCount(0);
+  await selectShoppingList(page, 'Photo target');
   await page.reload();
-  await navigateTo(page, 'Shopping');
-  await selectShoppingList(page, 'Usability Market');
-  const overview = page.locator('#shopping-category-overview');
-  await expect(overview).toContainText('Fruit');
-  await expect(overview).not.toContainText('Bakery');
-  await page.getByRole('button', { name: 'Hide category overview' }).click();
-  await expect(overview).toHaveCount(0);
-  await page.getByRole('button', { name: 'Show category overview' }).click();
-  if (page.viewportSize().width <= 1024) expect((await overview.boundingBox()).height).toBeLessThan(65);
-
-  const category = page.getByRole('combobox', { name: 'Category', exact: true }).first();
-  await category.focus();
-  await expect(page.getByRole('listbox', { name: 'Category', exact: true })).toHaveCount(0);
-  await category.fill('   ');
-  await expect(page.getByRole('listbox', { name: 'Category', exact: true })).toHaveCount(0);
-  await category.fill('fr');
-  const suggestions = page.getByRole('listbox', { name: 'Category', exact: true });
-  await expect(suggestions.getByRole('option', { name: 'Fresh produce' })).toBeVisible();
-  expect(await suggestions.evaluate((element) => getComputedStyle(element).backgroundColor)).toMatch(/^rgb\(/);
-  expect((await suggestions.boundingBox()).width).toBeGreaterThan(150);
-  await page.screenshot({ path: testInfo.outputPath('category-suggestions.png'), fullPage: true });
-  await category.press('Escape');
-  await expect(suggestions).toHaveCount(0);
-  await category.clear();
-  await category.fill('fresh');
-  const freshProduce = suggestions.getByRole('option', { name: 'Fresh produce' });
-  if (testInfo.project.name === 'Mobile Chrome') await freshProduce.tap();
-  else await freshProduce.click();
-  await expect(category).toHaveValue('Fresh produce');
-  await page.getByPlaceholder('Add an item...').fill('Peach');
-  await page.locator('.quick-add-bar').getByRole('button', { name: 'Add item', exact: true }).click();
-  await expect(page.getByRole('checkbox', { name: 'Peach', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Edit item: Peach' }).click();
-  const editCategory = page.locator('.shopping-item-edit-form').getByRole('combobox', { name: 'Category', exact: true });
-  await editCategory.fill('fru');
-  await editCategory.press('ArrowDown');
-  await editCategory.press('Enter');
-  await expect(editCategory).toHaveValue('Fruit');
-  await page.locator('.shopping-item-edit-form').getByRole('button', { name: 'Save', exact: true }).click();
-
-  const appleCheck = page.getByRole('checkbox', { name: 'Apple', exact: true });
-  await page.locator('.shopping-item-name').getByText('Apple', { exact: true }).click();
-  await expect(appleCheck).toHaveAttribute('aria-checked', 'false');
-  await appleCheck.click();
-  await expect(appleCheck).toHaveAttribute('aria-checked', 'true');
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(appleCheck).toHaveAttribute('aria-checked', 'false');
-  await expect(appleCheck).toBeEnabled();
-  await appleCheck.focus();
-  await appleCheck.press('Space');
-  await expect(appleCheck).toHaveAttribute('aria-checked', 'true');
-  await expect(page.locator('.shopping-item.checked .shopping-item-name')).toHaveText(['Apple', 'Bread']);
-  await expect(appleCheck.locator('..').locator('.shopping-category-pill')).toBeVisible();
+  await selectShoppingList(page, 'Photo target');
+  await expect(tile(page, 'Oat drink')).toContainText('Unsweetened');
+  const before = await (await apiCtx.get(`/api/shopping/lists/${target.id}/items`)).json();
+  expect(before).toHaveLength(1);
+  expect(before[0]).toMatchObject({
+    id: item.id,
+    spec: '2 l',
+    notes: 'Unsweetened',
+    priority: 'urgent'
+  });
+  expect(before[0].photo).toMatch(/^data:image\/jpeg;base64,/);
+  await tile(page, 'Oat drink').click();
+  await menu(page);
+  await page.getByRole('dialog').getByRole('button', {
+    name: 'Complete shopping',
+    exact: true
+  }).click();
+  await page.getByRole('dialog').getByRole('button', {
+    name: 'Complete shopping',
+    exact: true
+  }).click();
+  await expect(tile(page, 'Oat drink')).toHaveCount(0);
+  expect(await (await apiCtx.get(`/api/shopping/lists/${target.id}/items`)).json()).toEqual([]);
   await page.reload();
-  await navigateTo(page, 'Shopping');
-  await selectShoppingList(page, 'Usability Market');
-  await expect(page.locator('.shopping-item.checked .shopping-item-name')).toHaveText(['Apple', 'Bread']);
-  await apiCtx.patch(`/api/shopping/items/${bread.id}`, { data: { checked: false } });
-  await expect(page.getByRole('checkbox', { name: 'Bread', exact: true })).toHaveAttribute('aria-checked', 'false');
-  await apiCtx.patch(`/api/shopping/items/${bread.id}`, { data: { checked: true } });
-  await expect(page.locator('.shopping-item.checked .shopping-item-name')).toHaveText(['Bread', 'Apple']);
-  await page.getByRole('checkbox', { name: 'Peach', exact: true }).click();
-  await expect(overview.locator('.shopping-category-overview-chip')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Hide category overview' }).click();
-  await expect(page.getByRole('button', { name: 'Show category overview' })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('shopping-checked.png'), fullPage: true });
+  await selectShoppingList(page, 'Photo target');
+  const recent = await discovery(page);
+  await recent.getByRole('button', {
+    name: 'Recent',
+    exact: true
+  }).click();
+  await recent.getByRole('button', {
+    name: 'Oat drink, add',
+    exact: true
+  }).click();
+  if (await page.getByRole('dialog').count()) await page.keyboard.press('Escape');
+  await expect(tile(page, 'Oat drink')).toBeVisible();
+  const restored = await (await apiCtx.get(`/api/shopping/lists/${target.id}/items?include_archived=true`)).json();
+  expect(restored).toHaveLength(1);
+  expect(restored[0]).toMatchObject({
+    id: item.id,
+    photo: before[0].photo,
+    notes: 'Unsweetened',
+    priority: 'urgent',
+    archived: false,
+    checked: false
+  });
+  await page.getByRole('button', {
+    name: 'Details for Oat drink'
+  }).click();
+  await page.getByRole('dialog').getByLabel('Details for the family').fill('');
+  await page.getByRole('button', {
+    name: 'Remove photo',
+    exact: true
+  }).click();
+  await page.getByRole('dialog').getByRole('button', {
+    name: 'Save',
+    exact: true
+  }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const cleared = await (await apiCtx.get(`/api/shopping/lists/${target.id}/items`)).json();
+  expect(cleared[0].notes).toBeNull();
+  expect(cleared[0].photo).toBeNull();
+});
+test('real meal plan selects its recipe and only selected missing ingredients reach the list', async ({
+  authedPage: page,
+  apiCtx
+}) => {
+  // The shared worker family retains other specs' plans. Give this case its own
+  // browser day so the meal card has exactly one planned recipe to select.
+  await page.clock.setFixedTime(new Date('2031-06-12T12:00:00'));
+  const family = await getFamilyId(apiCtx);
+  const list = await seedShoppingList(apiCtx, family, 'Recipe ingredients');
+  await seedShoppingItem(apiCtx, list.id, 'Pasta', '500 g');
+  const salt = await seedShoppingItem(apiCtx, list.id, 'Salt', '1 g');
+  await apiCtx.patch(`/api/shopping/items/${salt.id}`, {
+    data: {
+      checked: true
+    }
+  });
+  const recipeResponse = await apiCtx.post('/api/recipes', {
+    data: {
+      family_id: family,
+      title: 'E2E Supper',
+      servings: 4,
+      ingredients: [{
+        name: 'Pasta',
+        amount: 500,
+        unit: 'g'
+      }, {
+        name: 'Salt',
+        amount: 1,
+        unit: 'g'
+      }, {
+        name: 'Basil',
+        amount: 1,
+        unit: 'bunch'
+      }, {
+        name: 'Cheese',
+        amount: 50,
+        unit: 'g'
+      }]
+    }
+  });
+  expect(recipeResponse.ok()).toBe(true);
+  const today = await page.evaluate(() => new Date().toLocaleDateString('en-CA'));
+  await seedMealPlan(apiCtx, family, {
+    plan_date: today,
+    slot: 'evening',
+    meal_name: 'E2E Supper'
+  });
+  await openList(page, 'Recipe ingredients');
+  if (await page.locator('.shop-rail').isVisible()) {
+    await expect(page.locator('.shop-recipe-card')).toContainText('E2E Supper');
+    await page.getByRole('button', {
+      name: 'Choose ingredients',
+      exact: true
+    }).click();
+  } else {
+    await menu(page);
+    await page.getByRole('button', {
+      name: 'Ingredients from recipes',
+      exact: true
+    }).click();
+    await page.getByRole('button', {
+      name: 'E2E Supper'
+    }).click();
+  }
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('checkbox', {
+    name: /Pasta/
+  })).not.toBeChecked();
+  await expect(dialog.getByRole('checkbox', {
+    name: /Salt/
+  })).not.toBeChecked();
+  await expect(dialog.getByRole('checkbox', {
+    name: /Basil/
+  })).toBeChecked();
+  await dialog.getByRole('checkbox', {
+    name: /Cheese/
+  }).uncheck();
+  await dialog.getByRole('button', {
+    name: 'Add selected ingredients'
+  }).click();
+  await expect(tile(page, 'Basil')).toBeVisible();
+  const rows = await (await apiCtx.get(`/api/shopping/lists/${list.id}/items`)).json();
+  expect(rows.map(row => row.name).sort()).toEqual(['Basil', 'Pasta', 'Salt']);
+  expect(rows.find(row => row.name === 'Pasta').spec).toBe('500 g');
+  expect(rows.find(row => row.name === 'Salt').checked).toBe(true);
+});
+
+for (const width of [390, 768]) test(`quick-add suggestions stay opaque and reopen at ${width}px`, async ({authedPage:page,apiCtx}) => {
+  await page.setViewportSize({width,height:844});
+  const family = await getFamilyId(apiCtx);
+  const list = await seedShoppingList(apiCtx,family,`Suggestions ${width}`);
+  await seedShoppingItem(apiCtx,list.id,'Milk','1 l','Dairy');
+  await openList(page,`Suggestions ${width}`);
+  for (const theme of ['light','dark']) {
+    await page.evaluate(value=>document.documentElement.setAttribute('data-theme',value),theme);
+    await search(page).fill('');
+    await search(page).fill('Mil');
+    const suggestions=page.getByRole('listbox',{name:'Product suggestions'});
+    await expect(suggestions).toBeVisible();
+    const alpha=await suggestions.evaluate(node=>{
+      const color=getComputedStyle(node).backgroundColor;
+      return color.startsWith('rgba')?Number(color.match(/,\s*([\d.]+)\)$/)[1]):1;
+    });
+    expect(alpha).toBe(1);
+    await search(page).fill('');await expect(suggestions).toHaveCount(0);
+    await search(page).fill('Mil');await expect(suggestions).toBeVisible();
+    await search(page).press('Escape');await expect(suggestions).toHaveCount(0);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  await tile(page,'Milk').click();await expect(search(page)).not.toBeFocused();
+  await menu(page);await page.getByRole('button',{name:'Shopping templates',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Your shopping templates'})).toBeVisible();
+  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
 });

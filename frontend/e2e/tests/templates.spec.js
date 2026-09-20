@@ -55,6 +55,6 @@ test.describe('Household templates', () => {
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 30000 });
     await navigateTo(page, 'Shopping');
     await selectShoppingList(page, 'E2E prep shopping');
-    await expect(page.locator('[role="checkbox"][aria-label="Granola bars"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('checkbox', {name:/^Granola bars,/})).toBeVisible({ timeout: 10000 });
   });
 });

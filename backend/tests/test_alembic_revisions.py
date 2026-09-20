@@ -211,3 +211,54 @@ def test_task_vtodo_migration_backfills_constraints_and_downgrades(tmp_path, mon
     with sqlite3.connect(db_path) as conn:
         columns = {row[1] for row in conn.execute("PRAGMA table_info(tasks)")}
     assert {"updated_at", "vtodo_uid", "dav_href", "raw_vtodo", "due_is_date"}.isdisjoint(columns)
+
+
+def test_shopping_visual_migration_upgrades_populated_rows_and_persists_details(tmp_path, monkeypatch):
+    import json
+    db_path = tmp_path / "shopping-0057.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    command.upgrade(config, "0056_store_links")
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'Family')")
+        conn.execute("INSERT INTO shopping_lists (id, family_id, name) VALUES (1, 1, 'Weekly')")
+        conn.execute("INSERT INTO shopping_items (id, list_id, name, spec, category, checked, checked_at) VALUES (1, 1, 'Milk', '2 l', 'Dairy', 1, '2026-09-20 12:00:00')")
+    command.upgrade(config, "head")
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("SELECT icon, category_order FROM shopping_lists").fetchone() == ("cart", None)
+        assert conn.execute("SELECT priority, archived, notes, photo, checked, spec, category FROM shopping_items").fetchone() == ("normal", 0, None, None, 1, "2 l", "Dairy")
+        # Old clients can still insert without knowing the new fields.
+        conn.execute("INSERT INTO shopping_lists (id, family_id, name) VALUES (2, 1, 'New')")
+        conn.execute("INSERT INTO shopping_items (id, list_id, name, checked) VALUES (2, 2, 'Bread', 0)")
+        conn.execute("UPDATE shopping_lists SET icon='heart', category_order=? WHERE id=1", (json.dumps(["Dairy", "Bakery"]),))
+        conn.execute("UPDATE shopping_items SET priority='urgent', archived=1, notes='Brand', photo='data:image/png;base64,iVBORw0KGgo=' WHERE id=1")
+    # Reopen the connection to verify persisted data, not session defaults.
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("SELECT icon, category_order FROM shopping_lists WHERE id=2").fetchone() == ("cart", None)
+        assert conn.execute("SELECT priority, archived FROM shopping_items WHERE id=2").fetchone() == ("normal", 0)
+        assert conn.execute("SELECT icon, category_order FROM shopping_lists WHERE id=1").fetchone() == ("heart", '["Dairy", "Bakery"]')
+        assert conn.execute("SELECT priority, archived, notes, photo, checked_at FROM shopping_items WHERE id=1").fetchone() == ("urgent", 1, "Brand", "data:image/png;base64,iVBORw0KGgo=", "2026-09-20 12:00:00")
+        assert conn.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0057_shopping_visual_details"
+    command.downgrade(config, "0056_store_links")
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("SELECT name, spec, checked FROM shopping_items WHERE id=1").fetchone() == ("Milk", "2 l", 1)
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(shopping_items)")}
+        assert {"notes", "photo", "archived", "priority"}.isdisjoint(columns)
+
+
+def test_shopping_model_defaults_match_migration_for_legacy_inserts():
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import Session
+    from app.database import Base
+    from app.models import ShoppingItem
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO shopping_items (list_id, name, checked, position) VALUES (1, 'Legacy', 0, 0)"))
+    with Session(engine) as db:
+        item = db.query(ShoppingItem).one()
+        assert item.archived is False
+        assert item.priority == "normal"
+        assert item.notes is None and item.photo is None
+    engine.dispose()

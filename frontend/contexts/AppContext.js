@@ -113,7 +113,7 @@ export function AppProvider({ children }) {
 
   const loadShoppingLists = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetShoppingLists(fid);
-    if (ok) setShoppingLists(data);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setShoppingLists(data);
   }, []);
 
   const loadActivity = useCallback(async (fid) => {

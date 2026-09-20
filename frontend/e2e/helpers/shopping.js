@@ -5,15 +5,13 @@ function escapeRegExp(value) {
 }
 
 function shoppingListCard(page, name) {
-  return page.locator('.shopping-list-card').filter({
-    has: page.locator('.shopping-list-name', { hasText: new RegExp(`^${escapeRegExp(name)}$`) }),
-  }).first();
+  return page.locator('.shop-list-tab').filter({hasText:new RegExp(escapeRegExp(name))}).first();
 }
 
 async function selectShoppingList(page, name) {
   const card = shoppingListCard(page, name);
   await expect(card).toBeVisible({ timeout: 10000 });
-  await card.locator('.shopping-list-name').click();
+  await card.click();
 }
 
 module.exports = { shoppingListCard, selectShoppingList };

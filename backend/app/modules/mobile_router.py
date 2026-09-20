@@ -198,7 +198,7 @@ def _shopping_summaries(db: Session, family_id: int) -> list[MobileDailyShopping
     lists = db.query(ShoppingList).filter(ShoppingList.family_id == family_id).order_by(ShoppingList.created_at.asc(), ShoppingList.id.asc()).all()
     summaries: list[MobileDailyShoppingList] = []
     for shopping_list in lists:
-        items = db.query(ShoppingItem).filter(ShoppingItem.list_id == shopping_list.id).all()
+        items = db.query(ShoppingItem).filter(ShoppingItem.list_id == shopping_list.id, ShoppingItem.archived.is_(False)).all()
         item_count = len(items)
         checked_count = sum(1 for item in items if item.checked)
         summaries.append(MobileDailyShoppingList(
