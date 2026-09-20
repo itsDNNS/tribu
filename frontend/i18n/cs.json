@@ -1508,5 +1508,6 @@
   "module.calendar.mockup.remove": "Delete",
   "module.calendar.mockup.all_members": "The whole family",
   "module.calendar.mockup.location": "Location",
-  "module.calendar.mockup.color": "Color"
+  "module.calendar.mockup.color": "Color",
+  "module.calendar.mockup.automatic_color": "Family colors"
 }

@@ -1508,5 +1508,6 @@
   "module.calendar.mockup.remove": "Löschen",
   "module.calendar.mockup.all_members": "Die ganze Familie",
   "module.calendar.mockup.location": "Ort",
-  "module.calendar.mockup.color": "Farbe"
+  "module.calendar.mockup.color": "Farbe",
+  "module.calendar.mockup.automatic_color": "Familienfarben"
 }

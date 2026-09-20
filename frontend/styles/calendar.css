@@ -157,3 +157,8 @@
  .tc-field input,.tc-field select,.tc-field textarea{font-size:16px}.tc-family-filters{gap:10px}.tc-people{gap:8px 10px}
 }
 @media(prefers-reduced-motion:reduce){.tc-page *,.tribu-calendar-dialog *{transition:none!important}}
+/* Automatic member colors are shared by month, week and day-detail views. */
+.tc-page :is(.tc-calendar-event,.tc-week-item){border-left:0;background:var(--event-stripe) left / 3px 100% no-repeat,var(--event-tint);padding-left:10px}
+.tc-event-dot{background:var(--event-stripe)}
+.tc-colors .tc-color-auto{width:auto;height:28px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--tc-line);border-radius:7px;padding:3px 7px;background:var(--tc-surface);font-size:11px;color:var(--text-secondary);box-shadow:none}
+.tc-color-auto>span{width:14px;height:14px;border-radius:50%;background:var(--event-stripe)}

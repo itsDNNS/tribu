@@ -146,4 +146,30 @@ describe('Mockup calendar and event overlays', () => {
     await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('uses the same member color in month, week and day details and respects overrides', () => {
+    const coloredMembers = [{...member, color:'#06b6d4'}, {user_id:2,display_name:'Sam',color:'#f43f5e'}];
+    const { container } = render(<Harness members={coloredMembers} initialEvents={[{...event,color:null}]} />);
+    expect(screen.getByRole('button',{name:/Piano lesson/}).style.getPropertyValue('--event-color')).toBe('#06b6d4');
+    fireEvent.click(screen.getByRole('button',{name:'Week',exact:true}));
+    expect(screen.getByRole('button',{name:/Piano lesson/}).style.getPropertyValue('--event-color')).toBe('#06b6d4');
+    fireEvent.click(screen.getByRole('button',{name:'Month',exact:true}));
+    fireEvent.click(screen.getByRole('button',{name:'Monday, May 4, 2026',exact:true}));
+    expect(container.querySelector('.tc-event-dot').style.getPropertyValue('--event-color')).toBe('#06b6d4');
+  });
+  it('creates automatic member colors by default and allows a manual override', async () => {
+    render(<Harness demoMode={false} />);
+    fireEvent.click(screen.getByRole('button',{name:'Create event',exact:true}));
+    expect(screen.getByRole('button',{name:'Family colors',exact:true})).toHaveAttribute('aria-pressed','true');
+    fireEvent.change(screen.getByLabelText('What is happening?'),{target:{value:'Automatic plan'}});
+    fireEvent.click(screen.getByRole('checkbox',{name:'Sam',exact:true}));
+    fireEvent.click(screen.getByRole('button',{name:'Save',exact:true}));
+    await waitFor(()=>expect(api.apiCreateEvent).toHaveBeenCalledWith(expect.objectContaining({color:null,assigned_to:[1,2]})));
+    await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    openEditor();
+    expect(screen.getByRole('button',{name:'Family colors',exact:true})).toHaveAttribute('aria-pressed','false');
+    fireEvent.click(screen.getByRole('button',{name:'#759c5d',exact:true}));
+    fireEvent.click(screen.getByRole('button',{name:'Save',exact:true}));
+    await waitFor(()=>expect(api.apiUpdateEvent).toHaveBeenCalledWith(1,expect.objectContaining({color:'#759c5d'})));
+  });
+
 });

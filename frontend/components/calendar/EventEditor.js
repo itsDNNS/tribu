@@ -6,6 +6,7 @@ import { RECURRENCE_OPTIONS } from './CalendarHelpers';
 import { CALENDAR_EVENT_ICON_OPTIONS } from '../../lib/calendar-icons';
 import { t } from '../../lib/i18n';
 import { retargetCreateDraft } from './draftDates';
+import { calendarEventStyle } from '../../lib/calendar-colors';
 
 export const CALENDAR_COLORS = ['#79529e', '#759c5d', '#d8a245', '#71a4dc', '#b98aa1', '#d67e70'];
 
@@ -64,9 +65,9 @@ export default function EventEditor({ cal, editing, members, messages, onClose, 
         <label className="tc-field full">{copy('date')}<input type="date" required value={date} onChange={e => { if (e.target.value) changeDate(e.target.value); }} /></label>
         <label className="tc-field">{copy('from')}<input type="time" required value={startsAt?.slice(11,16) || ''} onChange={e => setStartsAt(`${date}T${e.target.value}`)} /></label>
         <label className="tc-field">{copy('until')}<input type="time" value={endsAt?.slice(11,16) || ''} onChange={e => setEndsAt(e.target.value ? `${endDate}T${e.target.value}` : '')} /></label>
-        <div className="tc-field full"><span>{copy('people')}</span><div className="tc-people">{members.map(member => <label key={member.user_id}><input type="checkbox" checked={assigned.includes('all') || assigned.map(Number).includes(Number(member.user_id))} onChange={() => toggleMember(member.user_id)} /><MemberAvatar member={member} size={22} /><span>{member.display_name}</span></label>)}</div></div>
+        <div className="tc-field full"><span>{copy('people')}</span><div className="tc-people">{members.map(member => <label key={member.user_id}><input type="checkbox" aria-label={member.display_name} checked={assigned.includes('all') || assigned.map(Number).includes(Number(member.user_id))} onChange={() => toggleMember(member.user_id)} /><MemberAvatar member={member} size={22} /><span>{member.display_name}</span></label>)}</div></div>
         <label className="tc-field full">{copy('location')}<input value={location} onChange={e => setLocation(e.target.value)} placeholder={copy('optional')} maxLength={180} /></label>
-        <div className="tc-field full"><span>{copy('color')}</span><div className="tc-colors">{[...new Set([...CALENDAR_COLORS, ...(color && !CALENDAR_COLORS.includes(color) ? [color] : [])])].map(c => <button type="button" key={c} aria-label={c} aria-pressed={color === c} style={{ '--swatch': c }} onClick={() => setColor(c)} />)}<button type="button" className="tc-color-none" aria-label={t(messages, 'module.calendar.color_none')} aria-pressed={!color} onClick={() => setColor('')} /></div></div>
+        <div className="tc-field full"><span>{copy('color')}</span><div className="tc-colors"><button type="button" className="tc-color-auto" aria-label={copy('automatic_color')} aria-pressed={!color} onClick={() => setColor('')}><span style={calendarEventStyle({ assigned_to: assigned.includes('all') ? 'all' : assigned }, members)} />{copy('automatic_color')}</button>{[...new Set([...CALENDAR_COLORS, ...(color && !CALENDAR_COLORS.includes(color) ? [color] : [])])].map(c => <button type="button" key={c} aria-label={c} aria-pressed={color === c} style={{ '--swatch': c }} onClick={() => setColor(c)} />)}</div></div>
         <label className="tc-field full">{copy('notes')}<textarea aria-label={copy('notes')} rows={4} value={description} onChange={e => setDescription(e.target.value)} /></label>
         <details className="tc-advanced full" open={advanced} onToggle={e => setAdvanced(e.currentTarget.open)}><summary>{copy('advanced')}</summary><div className="tc-form-grid">
           <label className="tc-field full">{copy('end_date')}<input type="date" value={endDate} min={date} onChange={e => setEndsAt(`${e.target.value}T${endsAt?.slice(11,16) || '15:00'}`)} /></label>

@@ -276,6 +276,8 @@ The calendar follows the supplied September 2026 mockup directly: full-width six
 
 Day details, event details and create/edit forms use native modal dialogs with a blurred backdrop, focus containment, Escape dismissal and focus restoration. The main form follows the mockup's title/date/time/participants/location/color/notes order. Existing recurrence, multi-day, all-day and icon settings remain under “More options”; editing preserves the existing all-day value. Imported events and birthdays retain their read-only rules. Destructive event actions require confirmation, including separate occurrence/series choices.
 
+Event colors default to the assigned members’ current profile colors, including the same palette fallback as the member legend. Shared events use a segmented accent and a soft background containing all participant colors. An explicit event color overrides automatic colors. The editor exposes this as “Family colors”; no stored event color means automatic, so changing a profile color updates existing events without rewriting them. Unassigned events use lavender.
+
 The calendar presentation is scoped in `frontend/styles/calendar.css`; persistence remains in `useCalendar`. Desktop proportions are taken from the mockup. On small screens the month/week grids scroll inside their own containers and dialogs fit the viewport.
 
 Calendar views need density and confidence. Preserve clear date hierarchy, today indication, selected state, assigned people, and location/time metadata. Recurring events and all-day context must not look like errors.
