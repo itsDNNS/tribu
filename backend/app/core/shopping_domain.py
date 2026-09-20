@@ -356,6 +356,7 @@ def add_or_merge_shopping_item(
         match.name = display_name
         if match.checked:
             match.spec = _restored_spec(match.spec, incoming_spec)
+            match.archived = False
             match.checked = False
             match.checked_at = None
             action: ShoppingItemAction = "restored"

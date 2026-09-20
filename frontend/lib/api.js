@@ -353,8 +353,8 @@ export function apiDeleteShoppingList(listId) {
   return del(`/shopping/lists/${listId}`);
 }
 
-export function apiGetShoppingItems(listId) {
-  return request(`/shopping/lists/${listId}/items`);
+export function apiGetShoppingItems(listId, includeArchived = false) {
+  return request(`/shopping/lists/${listId}/items${includeArchived ? "?include_archived=true" : ""}`);
 }
 
 export function apiAddShoppingItem(listId, payload) {
@@ -887,3 +887,5 @@ export function apiDisplayMe(token) {
 export function apiDisplayDashboard(token) {
   return displayRequest('/display/dashboard', token);
 }
+
+export function apiCompleteShoppingTrip(listId) { return post(`/shopping/lists/${listId}/complete`, {}); }

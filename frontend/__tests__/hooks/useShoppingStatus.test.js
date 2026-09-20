@@ -146,3 +146,36 @@ test('a delayed list summary cannot overwrite a newly selected family', async ()
   await act(async () => { lists.resolve({ ok: true, data: [{ id: 10 }] }); await operation; });
   expect(mockApp.setShoppingLists).not.toHaveBeenCalled();
 });
+
+test('archived purchases stay out of live sections and reappear after a successful complete request', async () => {
+  const { result } = await setup();
+  await act(async () => { await result.current.toggleItem(1, false); });
+  api.apiCompleteShoppingTrip.mockImplementation(async () => {
+    serverItems = serverItems.map(item => ({...item, archived:true}));
+    return {ok:true,data:serverItems};
+  });
+  await act(async () => { await result.current.completeTrip(); });
+  expect(result.current.checkedItems).toHaveLength(0);
+  expect(result.current.uncheckedItems).toHaveLength(0);
+  expect(result.current.items[0]).toMatchObject({id:1,archived:true,checked:true});
+  expect(result.current.undo).toBeNull();
+});
+
+test('failed completion preserves the basket and its Undo', async () => {
+  const { result } = await setup();
+  await act(async () => { await result.current.toggleItem(1, false); });
+  api.apiCompleteShoppingTrip.mockResolvedValue({ok:false});
+  await act(async () => { expect(await result.current.completeTrip()).toBe(false); });
+  expect(result.current.checkedItems).toHaveLength(1);
+  expect(result.current.undo).not.toBeNull();
+});
+
+test('a completion response from a previous list cannot replace the new list contents', async () => {
+  const { result } = await setup();
+  const response = deferred();api.apiCompleteShoppingTrip.mockReturnValue(response.promise);
+  let operation;act(() => { operation=result.current.completeTrip(); });
+  act(() => result.current.setActiveListId(20));
+  await waitFor(() => expect(result.current.items).toEqual([]));
+  await act(async()=>{response.resolve({ok:true});await operation;});
+  expect(result.current.items).toEqual([]);
+});

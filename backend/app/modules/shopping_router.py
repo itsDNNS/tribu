@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -73,12 +74,14 @@ def _normalize_item_name(value: str) -> str:
 
 
 def _list_response(sl: ShoppingList) -> ShoppingListResponse:
-    total = len(sl.items)
-    checked = sum(1 for i in sl.items if i.checked)
+    total = sum(1 for i in sl.items if not i.archived)
+    checked = sum(1 for i in sl.items if i.checked and not i.archived)
     return ShoppingListResponse(
         id=sl.id,
         family_id=sl.family_id,
         name=sl.name,
+        category_order=sl.category_order or [],
+        icon=sl.icon,
         created_by_user_id=sl.created_by_user_id,
         created_at=sl.created_at,
         item_count=total,
@@ -504,6 +507,8 @@ def create_list(
     sl = ShoppingList(
         family_id=payload.family_id,
         name=payload.name,
+        category_order=payload.category_order,
+        icon=payload.icon,
         created_by_user_id=user.id,
     )
     db.add(sl)
@@ -569,7 +574,13 @@ def update_list(
     if not sl:
         raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
     ensure_adult(db, user.id, sl.family_id)
-    new_name = payload.name.strip()
+    if payload.category_order is not None:
+        if any(not c.strip() or len(c) > 100 for c in payload.category_order):
+            raise HTTPException(status_code=422, detail="Invalid category order")
+        sl.category_order = list(dict.fromkeys(payload.category_order))
+    if payload.icon is not None:
+        sl.icon = payload.icon
+    new_name = payload.name.strip() if payload.name is not None else sl.name
     if not new_name:
         raise HTTPException(status_code=422, detail="Shopping list name cannot be blank")
     old_name = sl.name
@@ -579,11 +590,11 @@ def update_list(
         family_id=sl.family_id,
         actor_user_id=user.id,
         actor_display_name=user.display_name,
-        action="renamed",
+        action="renamed" if old_name != sl.name else "updated",
         object_type="shopping_list",
         object_id=sl.id,
         object_label=sl.name,
-        verb="renamed",
+        verb="renamed" if old_name != sl.name else "updated",
         object_kind="shopping list",
     )
     db.commit()
@@ -604,12 +615,12 @@ def update_list(
     dispatch_shopping_destination_event(
         family_id=sl.family_id,
         event_type="shopping.list.changed",
-        title="Shopping list renamed",
-        body=f'{user.display_name or "Someone"} renamed shopping list "{old_name}" to "{sl.name}".',
+        title="Shopping list renamed" if old_name != sl.name else "Shopping list updated",
+        body=(f'{user.display_name or "Someone"} renamed shopping list "{old_name}" to "{sl.name}".' if old_name != sl.name else f'{user.display_name or "Someone"} updated shopping list "{sl.name}".'),
         link=f"/shopping?list={sl.id}",
         source_type="shopping_list",
         source_id=sl.id,
-        action="renamed",
+        action="renamed" if old_name != sl.name else "updated",
     )
     return resp
 
@@ -661,6 +672,7 @@ def delete_list(
 )
 def get_items(
     list_id: int,
+    include_archived: bool = False,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
     _scope=require_scope("shopping:read"),
@@ -672,6 +684,7 @@ def get_items(
     items = (
         db.query(ShoppingItem)
         .filter(ShoppingItem.list_id == list_id)
+        .filter(True if include_archived else ShoppingItem.archived.is_(False))
         .order_by(ShoppingItem.checked, ShoppingItem.checked_at.desc().nullslast(), ShoppingItem.created_at, ShoppingItem.id)
         .all()
     )
@@ -709,6 +722,9 @@ def add_item(
     except InvalidShoppingItemName:
         raise HTTPException(status_code=422, detail="Shopping item name cannot be blank")
     item = transition.item
+    for field in ("notes", "photo", "priority"):
+        if field in payload.model_fields_set:
+            setattr(item, field, getattr(payload, field))
     if transition.action == "created":
         record_activity(
             db,
@@ -800,6 +816,12 @@ def update_item(
         }, synchronize_session=False)
         if not changed:
             raise HTTPException(status_code=409, detail="Shopping item changed; reload before trying again")
+
+    for field in ("notes", "photo", "priority"):
+        if field in fields:
+            setattr(item, field, getattr(payload, field))
+    if payload.checked is False:
+        item.archived = False
 
     old_list_id = item.list_id
     old_list_name = sl.name
@@ -982,3 +1004,27 @@ def clear_checked(
             action="clear_checked",
         )
     return {"status": "ok", "deleted_count": deleted}
+
+
+@router.post("/lists/{list_id}/complete", response_model=list[ShoppingItemResponse])
+def complete_shopping_trip(list_id: int, user: User = Depends(current_user),
+                           db: Session = Depends(get_db), _scope=require_scope("shopping:write")):
+    """Archive checked items for reuse without deleting their details."""
+    sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
+    if not sl:
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
+    ensure_adult(db, user.id, sl.family_id)
+    # Select and archive atomically: an item concurrently unchecked by another
+    # family member must not disappear into history.
+    items = db.execute(
+        update(ShoppingItem)
+        .where(ShoppingItem.list_id == list_id,
+               ShoppingItem.checked.is_(True), ShoppingItem.archived.is_(False))
+        .values(archived=True)
+        .returning(ShoppingItem)
+    ).scalars().all()
+    db.commit()
+    for item in items:
+        broadcast_shopping_event("list", list_id, "item_updated", {
+            "item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")})
+    return items

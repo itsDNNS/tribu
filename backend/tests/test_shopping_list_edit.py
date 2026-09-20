@@ -335,3 +335,65 @@ def test_conditional_child_toggle_undo_conflict_deletion_and_checked_order():
     assert client.patch(f"/shopping/items/{first}", json={"category": None, "checked": False, "expected_state": undo_expected}, headers=headers).status_code == 403
     assert client.delete(f"/shopping/items/{second}", headers=_auth(owner)).status_code == 200
     assert toggle(second, False, undo_expected).status_code == 404
+
+# Visual-shopping persistence and authorization contracts.
+def test_product_details_archive_and_restore_preserve_metadata(monkeypatch):
+    token, family_id, user_id = _seed_member(suffix="visual")
+    list_id = _seed_list(family_id, "Weekly", user_id)
+    other = _seed_item(list_id, "Bread")
+    photo = "data:image/png;base64,iVBORw0KGgo="
+    response = client.post(f"/shopping/lists/{list_id}/items", headers=_auth(token), json={
+        "name":"Milk", "spec":"2 l", "category":"Dairy", "notes":"1.5% fat", "priority":"urgent", "photo":photo})
+    assert response.status_code == 200, response.text
+    item_id = response.json()["id"]
+    client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"checked":True})
+    events = []
+    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: events.append(args))
+    completed = client.post(f"/shopping/lists/{list_id}/complete", headers=_auth(token))
+    assert completed.status_code == 200
+    assert completed.json()[0]["archived"] is True
+    assert events[0][2] == "item_updated"
+    current = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+    assert [item["id"] for item in current] == [other]
+    history = client.get(f"/shopping/lists/{list_id}/items?include_archived=true", headers=_auth(token)).json()
+    archived = next(item for item in history if item["id"] == item_id)
+    assert archived["notes"] == "1.5% fat" and archived["photo"] == photo and archived["priority"] == "urgent"
+    counts = client.get(f"/shopping/lists?family_id={family_id}", headers=_auth(token)).json()[0]
+    assert counts["item_count"] == 1 and counts["checked_count"] == 0
+    restored = client.post(f"/shopping/lists/{list_id}/items", headers=_auth(token), json={"name":"Milk","spec":"1 l"})
+    assert restored.status_code == 200
+    assert restored.json()["id"] == item_id and restored.json()["archived"] is False
+    assert restored.json()["notes"] == "1.5% fat" and restored.json()["priority"] == "urgent"
+    removed_photo = client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"photo":None})
+    assert removed_photo.json()["photo"] is None
+
+
+def test_category_order_and_icon_are_per_list_and_broadcast(monkeypatch):
+    token, family_id, user_id = _seed_member(suffix="departments")
+    first = _seed_list(family_id, "Store A", user_id)
+    second = _seed_list(family_id, "Store B", user_id)
+    events = []
+    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: events.append(args))
+    response = client.patch(f"/shopping/lists/{first}", headers=_auth(token), json={"category_order":["Bakery","Dairy"],"icon":"coffee"})
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == "Store A" and response.json()["icon"] == "coffee"
+    assert events[0][2] == "list_updated"
+    lists = client.get(f"/shopping/lists?family_id={family_id}", headers=_auth(token)).json()
+    assert next(item for item in lists if item["id"] == first)["category_order"] == ["Bakery","Dairy"]
+    assert next(item for item in lists if item["id"] == second)["category_order"] == []
+
+
+def test_visual_fields_and_archive_keep_family_and_adult_boundaries():
+    owner, family_id, user_id = _seed_member(suffix="visual-owner")
+    child, _, _ = _seed_member(suffix="visual-child", family_id=family_id, is_adult=False)
+    outsider, _, _ = _seed_member(suffix="visual-outsider")
+    list_id = _seed_list(family_id, "Private", user_id)
+    item_id = _seed_item(list_id)
+    for token in [child, outsider]:
+        assert client.post(f"/shopping/lists/{list_id}/complete", headers=_auth(token)).status_code == 403
+        assert client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"notes":"change"}).status_code == 403
+        assert client.patch(f"/shopping/lists/{list_id}", headers=_auth(token), json={"category_order":["Bakery"]}).status_code == 403
+    assert client.get(f"/shopping/lists/{list_id}/items?include_archived=true", headers=_auth(outsider)).status_code == 403
+    assert client.patch(f"/shopping/items/{item_id}", headers=_auth(child), json={"checked":True}).status_code == 200
+    for payload in [{"photo":"https://example.com/photo.png"},{"photo":"data:image/svg+xml;base64,PHN2Zz4="},{"photo":"data:image/png;base64,invalid"},{"notes":"x"*501},{"priority":"invalid"}]:
+        assert client.patch(f"/shopping/items/{item_id}", headers=_auth(owner), json=payload).status_code == 422

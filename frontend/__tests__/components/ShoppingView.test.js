@@ -1,525 +1,67 @@
-import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import {fireEvent,render,screen,waitFor,within,act} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ShoppingView from '../../components/ShoppingView';
-
-let mockAppState = {};
-let mockShoppingState = {};
-
-jest.mock('../../contexts/AppContext', () => ({
-  useApp: () => mockAppState,
-}));
-
-jest.mock('../../hooks/useShopping', () => ({
-  useShopping: () => mockShoppingState,
-}));
-
-const messages = {
-  'module.shopping.show_overview': 'Show category overview',
-  'module.shopping.hide_overview': 'Hide category overview',
-  'module.shopping.name': 'Shopping',
-  'module.shopping.new_list': 'New list',
-  'module.shopping.list_name': 'List name',
-  'module.shopping.list_name_placeholder': 'e.g. Grocery Store',
-  'module.shopping.item_name': 'Item',
-  'module.shopping.item_name_placeholder': 'Add an item...',
-  'module.shopping.item_spec': 'Details',
-  'module.shopping.item_spec_placeholder': 'e.g. 500g, organic',
-  'module.shopping.item_category': 'Category',
-  'module.shopping.item_category_placeholder': 'Category or aisle',
-  'module.shopping.items': 'Items',
-  'module.shopping.no_items': 'No items yet',
-  'module.shopping.add_first_item': 'Add first item',
-  'module.shopping.checked_section': 'Checked',
-  'module.shopping.clear_checked': 'Clear checked',
-  'module.shopping.clear_checked_confirm': 'Remove all checked items?',
-  'module.shopping.delete_list': 'Delete list',
-  'module.shopping.delete_list_confirm': 'Delete this list and all its items?',
-  'module.shopping.no_lists': 'No shopping lists yet',
-  'module.shopping.templates': 'Templates',
-  'module.shopping.new_template': 'New template',
-  'module.shopping.show_templates': 'Show templates',
-  'module.shopping.hide_templates': 'Hide templates',
-  'module.shopping.template_name_placeholder': 'e.g. Weekly groceries',
-  'module.shopping.template_item_name_placeholder': 'Template item',
-  'module.shopping.template_item_spec_placeholder': 'Amount/details',
-  'module.shopping.template_item_category_placeholder': 'Category',
-  'module.shopping.add_template_item': 'Add template item',
-  'module.shopping.save_template': 'Save template',
-  'module.shopping.cancel_template': 'Cancel',
-  'module.shopping.apply_template': 'Add to list',
-  'module.shopping.edit_template': 'Edit template',
-  'module.shopping.delete_template': 'Delete template',
-  'module.shopping.rename_list': 'Rename list',
-  'module.shopping.edit_item': 'Edit item',
-  'module.shopping.move_to_list': 'Move to list',
-  'module.shopping.keep_current_list': 'Keep in current list',
-  'module.shopping.save': 'Save',
-  'module.shopping.cancel': 'Cancel',
-  'module.shopping.search_online_title': 'Search for {name}',
-  'module.shopping.search_online_hint': 'Opens the store website in a new tab.',
-  'aria.rename_list': 'Rename list: {name}',
-  'aria.edit_item': 'Edit item: {name}',
-  'aria.delete_item': 'Delete item: {name}',
-  'aria.delete_list': 'Delete list: {name}',
-  'aria.delete_template': 'Delete template: {name}',
-  'aria.add_item': 'Add item',
-  'aria.search_item': 'Search online: {name}',
-  'cancel': 'Cancel',
-};
-
-function setup(overrides = {}, appOverrides = {}) {
-  mockAppState = {
-    familyId: '1',
-    families: [{ family_id: 1, family_name: 'Test Family' }],
-    members: [],
-    messages,
-    isMobile: false,
-    isChild: false,
-    ...appOverrides,
-  };
-  mockShoppingState = {
-    shoppingLists: [{ id: 10, name: 'Groceries', item_count: 0, checked_count: 0 }],
-    activeListId: 10,
-    setActiveListId: jest.fn(),
-    activeList: { id: 10, name: 'Groceries', item_count: 0, checked_count: 0 },
-    items: [],
-    uncheckedItems: [],
-    checkedItems: [],
-    newListName: '',
-    setNewListName: jest.fn(),
-    newItemName: '',
-    setNewItemName: jest.fn(),
-    newItemSpec: '',
-    setNewItemSpec: jest.fn(),
-    newItemCategory: '',
-    setNewItemCategory: jest.fn(),
-    showCreateList: false,
-    setShowCreateList: jest.fn(),
-    itemInputRef: { current: null },
-    createList: jest.fn(),
-    renameList: jest.fn(),
-    deleteList: jest.fn(),
-    addItem: jest.fn((event) => event.preventDefault()),
-    toggleItem: jest.fn(),
-    editItem: jest.fn(),
-    moveItem: jest.fn(),
-    deleteItem: jest.fn(),
-    clearChecked: jest.fn(),
-    wsConnected: true,
-    templates: [
-      { id: 5, name: 'Weekly groceries', item_count: 2, items: [
-        { id: 51, name: 'Milk', spec: '2 L', category: 'Dairy' },
-        { id: 52, name: 'Bananas', spec: '6', category: 'Produce' },
-      ] },
-    ],
-    storeLinks: [],
-    createTemplate: jest.fn(),
-    updateTemplate: jest.fn(),
-    deleteTemplate: jest.fn(),
-    applyTemplate: jest.fn(),
-    ...overrides,
-  };
-  return render(<ShoppingView />);
+import {buildMessages} from '../../lib/i18n';
+let mockApp, mockShopping;
+jest.mock('../../contexts/AppContext',()=>({useApp:()=>mockApp}));
+jest.mock('../../hooks/useShopping',()=>({useShopping:()=>mockShopping}));
+jest.mock('../../contexts/ToastContext',()=>({useToast:()=>({success:jest.fn(),error:jest.fn()})}));
+jest.mock('../../components/calendar/CalendarTopbar',()=>()=>null);
+const apple={id:1,list_id:10,name:'Äpfel',spec:'1 kg',category:'Obst & Gemüse',checked:false,notes:'Elstar'};
+const milk={id:2,list_id:10,name:'Milch',spec:'2 l',category:'Kühlregal',checked:false,priority:'urgent'};
+function setup(overrides={},app={}){
+ mockApp={members:[],messages:buildMessages('de'),demoMode:true,familyId:1,me:{id:1},isChild:false,...app};
+ mockShopping={shoppingLists:[{id:10,name:'Wocheneinkauf'},{id:20,name:'Drogerie'}],activeListId:10,activeList:{id:10,name:'Wocheneinkauf'},items:[apple,milk],uncheckedItems:[apple,milk],checkedItems:[],categories:[],templates:[],storeLinks:[],itemInputRef:{current:null},pendingItemIds:new Set(),newListName:'',...Object.fromEntries(['setActiveListId','setNewListName','createList','updateListDetails','addProduct','toggleItem','editItem','deleteItem','deleteList','completeTrip','undoToggle','createTemplate','updateTemplate','deleteTemplate','applyTemplate','reloadItems'].map(key=>[key,jest.fn().mockResolvedValue(true)])),...overrides};
+ return render(<ShoppingView/>);
 }
+beforeEach(()=>{localStorage.clear();HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};});
+const dialog=()=>within(screen.getByRole('dialog'));
 
-describe('ShoppingView redesign shell', () => {
-  test('renders the active list command header and category overview', () => {
-    const { container } = setup({
-      items: [
-        { id: 1, name: 'Milk', spec: null, category: 'Dairy', checked: false },
-        { id: 2, name: 'Apples', spec: null, category: 'Produce', checked: false },
-      ],
-      uncheckedItems: [
-        { id: 1, name: 'Milk', spec: null, category: 'Dairy', checked: false },
-        { id: 2, name: 'Apples', spec: null, category: 'Produce', checked: false },
-      ],
-      checkedItems: [],
-    });
-
-    expect(container.querySelector('.shopping-active-header')).toBeInTheDocument();
-    expect(container.querySelector('.shopping-active-select')).toBeInTheDocument();
-    expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Dairy');
-    expect(container.querySelector('.shopping-category-overview')).toHaveTextContent('Produce');
-    expect(container.querySelector('.shopping-category-summary')).toHaveTextContent('2 Items');
-    expect(container.querySelector('.shopping-total-chip')).not.toBeInTheDocument();
-  });
+test('renders the mockup tiles, department groups and real progress',()=>{
+ setup();expect(screen.getByRole('heading',{name:'Für alles, was euch fehlt.'})).toBeVisible();expect(screen.getByRole('region',{name:'Obst & Gemüse'})).toBeVisible();expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow','0');expect(screen.getByRole('checkbox',{name:/^Äpfel,/})).not.toBeChecked();
 });
-
-describe('shopping store search picker', () => {
-  const bread = { id: 1, list_id: 10, name: 'Bread', checked: false, added_by_user_id: null };
-  const validStore = { id: 4, name: 'E2E Store', url_template: 'https://www.example.com/search?q={query}' };
-
-  function storeSetup(overrides = {}, appOverrides = {}) {
-    return setup({
-      shoppingLists: [{ id: 10, name: 'Groceries', item_count: 1, checked_count: 0 }],
-      activeList: { id: 10, name: 'Groceries', item_count: 1, checked_count: 0 },
-      items: [bread],
-      uncheckedItems: [bread],
-      checkedItems: [],
-      ...overrides,
-    }, appOverrides);
-  }
-
-  it('renders no action for zero stores or invalid-only stores', () => {
-    const first = storeSetup();
-    expect(screen.queryByRole('button', { name: 'Search online: Bread' })).not.toBeInTheDocument();
-    first.unmount();
-    storeSetup({ storeLinks: [{ id: 1, name: 'Broken', url_template: 'javascript:{query}' }] });
-    expect(screen.queryByRole('button', { name: 'Search online: Bread' })).not.toBeInTheDocument();
-  });
-
-  it('hides the action for children even when a store is valid', () => {
-    storeSetup({ storeLinks: [validStore] }, { isChild: true });
-    expect(screen.queryByRole('button', { name: 'Search online: Bread' })).not.toBeInTheDocument();
-  });
-
-  it('opens a safe native-link picker without toggling the item', () => {
-    storeSetup({ storeLinks: [validStore] });
-    const searchButton = screen.getByRole('button', { name: 'Search online: Bread' });
-    fireEvent.click(searchButton);
-    const dialog = screen.getByRole('dialog', { name: 'Search for Bread' });
-    const link = within(dialog).getByRole('link', { name: /E2E Store/ });
-    expect(link).toHaveAttribute('href', 'https://www.example.com/search?q=Bread');
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(link).toHaveTextContent('www.example.com');
-    expect(mockShoppingState.toggleItem).not.toHaveBeenCalled();
-    fireEvent.click(link);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(mockShoppingState.toggleItem).not.toHaveBeenCalled();
-  });
-
-  it('focuses the first link and restores focus after Escape', async () => {
-    storeSetup({ storeLinks: [validStore] });
-    const searchButton = screen.getByRole('button', { name: 'Search online: Bread' });
-    searchButton.focus();
-    fireEvent.click(searchButton);
-    const link = screen.getByRole('link', { name: /E2E Store/ });
-    await waitFor(() => expect(link).toHaveFocus());
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    await waitFor(() => expect(searchButton).toHaveFocus());
-  });
+test('tile text checks an item while its three-dot control opens details',()=>{
+ setup();fireEvent.click(screen.getByRole('checkbox',{name:/^Äpfel,/}));expect(mockShopping.toggleItem).toHaveBeenCalledWith(1,false);fireEvent.click(screen.getByRole('button',{name:'Details zu Milch'}));expect(dialog().getByLabelText('Details für die Familie')).toBeVisible();expect(mockShopping.toggleItem).toHaveBeenCalledTimes(1);
 });
-
-
-
-describe('ShoppingView list and item editing', () => {
-  test('renames the active list from an inline form', async () => {
-    setup();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Rename list: Groceries' }));
-    const form = document.querySelector('.shopping-list-rename-form');
-    expect(form).toBeInTheDocument();
-    fireEvent.change(within(form).getByLabelText('List name'), { target: { value: 'Store B' } });
-    fireEvent.click(within(form).getByRole('button', { name: 'Save' }));
-
-    await waitFor(() => expect(mockShoppingState.renameList).toHaveBeenCalledWith(10, 'Store B'));
-  });
-
-  test('hides rename and item edit affordances from child members', () => {
-    setup({
-      uncheckedItems: [{ id: 1, name: 'Bread', spec: null, category: null, checked: false }],
-      items: [{ id: 1, name: 'Bread', spec: null, category: null, checked: false }],
-    }, { isChild: true });
-
-    expect(screen.queryByRole('button', { name: 'Rename list: Groceries' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit item: Bread' })).not.toBeInTheDocument();
-  });
-
-  test('edits item details and moves the item to another list', async () => {
-    setup({
-      shoppingLists: [
-        { id: 10, name: 'Groceries', item_count: 1, checked_count: 0 },
-        { id: 11, name: 'Store B', item_count: 0, checked_count: 0 },
-      ],
-      uncheckedItems: [{ id: 1, list_id: 10, name: 'Bread', spec: '1 loaf', category: 'Bakery', checked: false }],
-      items: [{ id: 1, list_id: 10, name: 'Bread', spec: '1 loaf', category: 'Bakery', checked: false }],
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Edit item: Bread' }));
-    const form = document.querySelector('.shopping-item-edit-form');
-    expect(form).toBeInTheDocument();
-    fireEvent.change(within(form).getByLabelText('Item'), { target: { value: 'baguette' } });
-    fireEvent.change(within(form).getByLabelText('Details'), { target: { value: '2 loaves' } });
-    fireEvent.change(within(form).getByLabelText('Category'), { target: { value: 'Bakery aisle' } });
-    fireEvent.change(within(form).getByLabelText('Move to list'), { target: { value: '11' } });
-    fireEvent.click(within(form).getByRole('button', { name: 'Save' }));
-
-    await waitFor(() => expect(mockShoppingState.editItem).toHaveBeenCalledWith(1, {
-      name: 'baguette',
-      spec: '2 loaves',
-      category: 'Bakery aisle',
-      list_id: 11,
-    }));
-    expect(mockShoppingState.moveItem).not.toHaveBeenCalled();
-  });
-
-  test('escape closes the item edit form without saving', () => {
-    setup({
-      uncheckedItems: [{ id: 1, list_id: 10, name: 'Bread', spec: null, category: null, checked: false }],
-      items: [{ id: 1, list_id: 10, name: 'Bread', spec: null, category: null, checked: false }],
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Edit item: Bread' }));
-    fireEvent.keyDown(within(document.querySelector('.shopping-item-edit-form')).getByLabelText('Item'), { key: 'Escape' });
-
-    expect(document.querySelector('.shopping-item-edit-form')).not.toBeInTheDocument();
-    expect(mockShoppingState.editItem).not.toHaveBeenCalled();
-    expect(mockShoppingState.moveItem).not.toHaveBeenCalled();
-  });
+test('search parses quantity and submits the product without losing its category',async()=>{
+ setup();const search=screen.getByRole('combobox',{name:'Artikel suchen oder mit Menge hinzufügen'});fireEvent.change(search,{target:{value:'2 kg Äpfel'}});fireEvent.submit(search.closest('form'));await waitFor(()=>expect(mockShopping.addProduct).toHaveBeenCalledWith(expect.objectContaining({name:'Äpfel',spec:'2 kg',category:'Obst & Gemüse'})));
 });
-
-describe('ShoppingView quick add', () => {
-  test('keeps quick-add suggestions inactive until the user types a real query', () => {
-    setup({
-      items: [
-        { id: 1, name: 'Milk', spec: null, checked: true },
-        { id: 2, name: 'Bread', spec: null, checked: false },
-        { id: 3, name: 'Milk', spec: null, checked: false },
-      ],
-      checkedItems: [{ id: 1, name: 'Milk', spec: null, checked: true }],
-      uncheckedItems: [{ id: 2, name: 'Bread', spec: null, checked: false }, { id: 3, name: 'Milk', spec: null, checked: false }],
-    });
-
-    const input = screen.getByPlaceholderText('Add an item...');
-    expect(input).not.toHaveAttribute('list');
-    expect(screen.queryByRole('listbox', { name: 'Add an item...' })).not.toBeInTheDocument();
-  });
-
-  test('keeps quick-add suggestions inactive for whitespace-only input', () => {
-    setup({
-      newItemName: '  ',
-      items: [
-        { id: 1, name: 'Milk', spec: null, checked: true },
-        { id: 2, name: 'Bread', spec: null, checked: false },
-      ],
-    });
-
-    const input = screen.getByPlaceholderText('Add an item...');
-    expect(input).not.toHaveAttribute('list');
-    expect(screen.queryByRole('listbox', { name: 'Add an item...' })).not.toBeInTheDocument();
-  });
-
-  test('filters quick-add suggestions after typed input', () => {
-    setup({
-      newItemName: 'mi',
-      items: [
-        { id: 1, name: 'Milk', spec: null, checked: true },
-        { id: 2, name: 'Bread', spec: null, checked: false },
-        { id: 3, name: 'Milk', spec: null, checked: false },
-      ],
-      checkedItems: [{ id: 1, name: 'Milk', spec: null, checked: true }],
-      uncheckedItems: [{ id: 2, name: 'Bread', spec: null, checked: false }, { id: 3, name: 'Milk', spec: null, checked: false }],
-    });
-
-    const input = screen.getByPlaceholderText('Add an item...');
-    fireEvent.focus(input);
-
-    expect(input).not.toHaveAttribute('list');
-    expect(input).toHaveAttribute('aria-expanded', 'true');
-    const options = screen.getByRole('listbox', { name: 'Add an item...' }).querySelectorAll('[role="option"]');
-    const optionLabels = Array.from(options).map((option) => option.textContent);
-    expect(optionLabels).toEqual(['Milk']);
-  });
-
-  test('supports keyboard selection in the app-controlled quick-add suggestions', () => {
-    setup({
-      newItemName: 'm',
-      items: [
-        { id: 1, name: 'Milk', spec: null, checked: true },
-        { id: 2, name: 'Muesli', spec: null, checked: false },
-      ],
-    });
-
-    const input = screen.getByPlaceholderText('Add an item...');
-    fireEvent.focus(input);
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
-
-    expect(input).toHaveAttribute('aria-activedescendant', 'shopping-item-suggestion-0');
-    expect(screen.getByRole('option', { name: 'Milk' })).toHaveAttribute('aria-selected', 'true');
-
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
-    expect(input).toHaveAttribute('aria-activedescendant', 'shopping-item-suggestion-1');
-    expect(screen.getByRole('option', { name: 'Muesli' })).toHaveAttribute('aria-selected', 'true');
-
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(mockShoppingState.setNewItemName).toHaveBeenCalledWith('Muesli');
-  });
-
-  test('reopens quick-add suggestions as an opaque app-controlled list after clearing and typing again', () => {
-    const { rerender } = setup({
-      newItemName: 'mi',
-      items: [
-        { id: 1, name: 'Milk', spec: null, checked: true },
-        { id: 2, name: 'Bread', spec: null, checked: false },
-      ],
-    });
-
-    const input = screen.getByPlaceholderText('Add an item...');
-    fireEvent.focus(input);
-    expect(screen.getByRole('listbox', { name: 'Add an item...' })).toHaveClass('shopping-item-suggestions');
-
-    mockShoppingState.newItemName = '';
-    rerender(<ShoppingView />);
-    expect(screen.queryByRole('listbox', { name: 'Add an item...' })).not.toBeInTheDocument();
-
-    mockShoppingState.newItemName = 'br';
-    rerender(<ShoppingView />);
-    fireEvent.focus(screen.getByPlaceholderText('Add an item...'));
-    expect(screen.getByRole('option', { name: 'Bread' })).toBeInTheDocument();
-    expect(screen.getByRole('listbox', { name: 'Add an item...' })).toHaveClass('shopping-item-suggestions');
-  });
-
-  test('adds a category field and groups items into collapsible category sections', () => {
-    setup({
-      uncheckedItems: [
-        { id: 1, name: 'Salmon', spec: null, category: 'Fish', checked: false },
-        { id: 2, name: 'Carrots', spec: null, category: 'Vegetables', checked: false },
-        { id: 3, name: 'Chocolate', spec: null, category: 'Sweets', checked: false },
-      ],
-      checkedItems: [],
-      items: [
-        { id: 1, name: 'Salmon', spec: null, category: 'Fish', checked: false },
-        { id: 2, name: 'Carrots', spec: null, category: 'Vegetables', checked: false },
-        { id: 3, name: 'Chocolate', spec: null, category: 'Sweets', checked: false },
-      ],
-    });
-
-    expect(screen.getByPlaceholderText('Category or aisle')).toBeInTheDocument();
-    const vegetablesToggle = screen.getByRole('button', { name: 'Vegetables 1' });
-    expect(vegetablesToggle).toHaveAttribute('aria-expanded', 'true');
-    fireEvent.click(vegetablesToggle);
-    expect(vegetablesToggle).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('checkbox', { name: 'Carrots' })).not.toBeInTheDocument();
-  });
+test('keyboard suggestions are not active before input and support selection and Escape',async()=>{
+ setup();const search=screen.getByRole('combobox',{name:'Artikel suchen oder mit Menge hinzufügen'});expect(screen.queryByRole('listbox')).not.toBeInTheDocument();fireEvent.focus(search);fireEvent.change(search,{target:{value:'Zitr'}});expect(screen.getByRole('option',{name:/Zitronen/})).toBeVisible();fireEvent.keyDown(search,{key:'ArrowDown'});expect(search).toHaveAttribute('aria-activedescendant','shop-suggestion-0');fireEvent.keyDown(search,{key:'Enter'});await waitFor(()=>expect(mockShopping.addProduct).toHaveBeenCalledWith(expect.objectContaining({name:'Zitronen'})));fireEvent.change(search,{target:{value:'Mil'}});fireEvent.keyDown(search,{key:'Escape'});expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 });
-
-describe('ShoppingView templates', () => {
-  test('renders saved templates and can apply one to the active list', () => {
-    setup();
-
-    expect(screen.getByRole('heading', { name: 'Templates' })).toBeInTheDocument();
-    expect(screen.getByText('Weekly groceries')).toBeInTheDocument();
-    expect(screen.getByText('Milk')).toBeInTheDocument();
-    expect(screen.getByText('2 L')).toBeInTheDocument();
-    expect(screen.getByText('Dairy')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Add to list: Weekly groceries' }));
-    expect(mockShoppingState.applyTemplate).toHaveBeenCalledWith(5);
-  });
-
-  test('creates and edits templates with name, spec, and category fields', async () => {
-    setup();
-
-    fireEvent.click(screen.getByRole('button', { name: 'New template' }));
-    fireEvent.change(screen.getByPlaceholderText('e.g. Weekly groceries'), { target: { value: 'Weekly basics' } });
-    fireEvent.change(screen.getByPlaceholderText('Template item'), { target: { value: 'Oats' } });
-    fireEvent.change(screen.getByPlaceholderText('Amount/details'), { target: { value: '1 kg' } });
-    fireEvent.change(screen.getByPlaceholderText('Category'), { target: { value: 'Pantry' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add template item' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save template' }));
-
-    await waitFor(() => expect(mockShoppingState.createTemplate).toHaveBeenCalledWith({
-      name: 'Weekly basics',
-      items: [{ name: 'Oats', spec: '1 kg', category: 'Pantry' }],
-    }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Edit template: Weekly groceries' }));
-    fireEvent.change(screen.getByPlaceholderText('e.g. Weekly groceries'), { target: { value: 'Weekly restock' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save template' }));
-
-    await waitFor(() => expect(mockShoppingState.updateTemplate).toHaveBeenCalledWith(5, expect.objectContaining({ name: 'Weekly restock' })));
-  });
+test('editing saves metadata and selected target list',async()=>{
+ setup();fireEvent.click(screen.getByRole('button',{name:'Details zu Äpfel'}));fireEvent.change(dialog().getByLabelText('Menge'),{target:{value:'3'}});fireEvent.change(dialog().getByLabelText('Details für die Familie'),{target:{value:'Bio'}});fireEvent.change(dialog().getByLabelText('Dringlichkeit'),{target:{value:'urgent'}});fireEvent.change(dialog().getByLabelText('Einkaufsliste'),{target:{value:'20'}});fireEvent.click(dialog().getByRole('button',{name:'Speichern',exact:true}));await waitFor(()=>expect(mockShopping.editItem).toHaveBeenCalledWith(1,expect.objectContaining({spec:'3 kg',notes:'Bio',priority:'urgent',list_id:20})));
 });
-
-
-describe('ShoppingView mobile store flow', () => {
-  test('keeps templates collapsed by default on mobile and expands them for planning', () => {
-    const { rerender } = setup({}, { isMobile: true });
-
-    expect(screen.getByRole('heading', { name: 'Templates' })).toBeInTheDocument();
-    expect(screen.queryByText('Weekly groceries')).not.toBeInTheDocument();
-
-    const toggle = screen.getByRole('button', { name: 'Show templates' });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    fireEvent.click(toggle);
-
-    expect(screen.getByRole('button', { name: 'Hide templates' })).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('Weekly groceries')).toBeInTheDocument();
-
-    const itemsPanel = document.querySelector('.shopping-items-panel');
-    const templatesPanel = document.querySelector('.shopping-templates-panel');
-    expect(itemsPanel.compareDocumentPosition(templatesPanel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    rerender(<ShoppingView />);
-    expect(screen.getByText('Weekly groceries')).toBeInTheDocument();
-  });
-
-  test('blurs the quick-add input when checking items on mobile', () => {
-    setup({
-      uncheckedItems: [{ id: 1, name: 'Apples', spec: '6', category: 'Produce', checked: false }],
-      checkedItems: [],
-      items: [{ id: 1, name: 'Apples', spec: '6', category: 'Produce', checked: false }],
-    }, { isMobile: true });
-
-    const input = screen.getByPlaceholderText('Add an item...');
-    act(() => input.focus());
-    expect(document.activeElement).toBe(input);
-
-    const item = screen.getByRole('checkbox', { name: 'Apples' });
-    fireEvent.pointerDown(item);
-    fireEvent.click(item);
-
-    expect(document.activeElement).not.toBe(input);
-    expect(mockShoppingState.toggleItem).toHaveBeenCalledWith(1, false);
-  });
+test('failed save keeps the editor and input visible',async()=>{
+ setup({editItem:jest.fn().mockResolvedValue(false)});fireEvent.click(screen.getByRole('button',{name:'Details zu Äpfel'}));fireEvent.click(dialog().getByRole('button',{name:'Speichern',exact:true}));expect(await dialog().findByRole('alert')).toBeVisible();expect(dialog().getByLabelText('Artikel')).toHaveValue('Äpfel');
 });
-
-
-test('mobile template toggle closes an open template form when hiding templates', () => {
-  setup({}, { isMobile: true });
-
-  fireEvent.click(screen.getByRole('button', { name: 'Show templates' }));
-  fireEvent.click(screen.getByRole('button', { name: 'New template' }));
-  expect(screen.getByPlaceholderText('e.g. Weekly groceries')).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Hide templates' }));
-  expect(screen.queryByPlaceholderText('e.g. Weekly groceries')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Show templates' })).toHaveAttribute('aria-expanded', 'false');
+test('Cancel closes details without a write',()=>{
+ setup();fireEvent.click(screen.getByRole('button',{name:'Details zu Äpfel'}));fireEvent.click(dialog().getByRole('button',{name:'Abbrechen'}));expect(screen.queryByRole('dialog')).toBeNull();expect(mockShopping.editItem).not.toHaveBeenCalled();
 });
-
-test('article text does not toggle, and only open categories appear in the hideable overview', () => {
-  const open = { id: 1, name: 'Apples', category: 'Produce', checked: false };
-  const done = { id: 2, name: 'Milk', category: 'Dairy', checked: true };
-  const { container } = setup({ items: [open, done], uncheckedItems: [open], checkedItems: [done] });
-  fireEvent.click(screen.getByText('Apples'));
-  expect(mockShoppingState.toggleItem).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('checkbox', { name: 'Apples' }));
-  expect(mockShoppingState.toggleItem).toHaveBeenCalledWith(1, false);
-  expect(container.querySelector('.shopping-category-overview')).not.toHaveTextContent('Dairy');
-  const toggle = screen.getByRole('button', { name: 'Hide category overview' });
-  fireEvent.click(toggle);
-  expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.getByRole('button', { name: 'Show category overview' })).toBeVisible();
+test('child controls allow checking but hide product/list mutations',()=>{
+ setup({}, {isChild:true});expect(screen.queryByRole('button',{name:'Details zu Äpfel'})).toBeNull();expect(screen.queryByRole('button',{name:'Neue Einkaufsliste',exact:true})).toBeNull();expect(screen.queryByRole('combobox',{name:'Artikel suchen oder mit Menge hinzufügen'})).toBeNull();fireEvent.click(screen.getByRole('checkbox',{name:/^Äpfel,/}));expect(mockShopping.toggleItem).toHaveBeenCalled();
 });
-
-test('historic category case variants share one open group', () => {
-  const items = [
-    { id: 1, name: 'Milk', category: 'Dairy', checked: false },
-    { id: 2, name: 'Eggs', category: ' dairy ', checked: false },
-  ];
-  const { container } = setup({ items, uncheckedItems: items });
-  expect(container.querySelectorAll('.shopping-category-group')).toHaveLength(1);
+test('only urgent filters open items without altering basket counts',()=>{
+ setup();fireEvent.click(screen.getByRole('button',{name:'Dringend 1'}));expect(screen.queryByRole('checkbox',{name:/^Äpfel,/})).toBeNull();expect(screen.getByRole('checkbox',{name:/^Milch,/})).toBeVisible();expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow','0');
 });
-
-test('uncategorized, arbitrary labels and Unicode groups remain visible with distinct controls', () => {
-  const items = [null, 'uncategorized', '__proto__', 'α', 'β'].map((category, index) => ({ id: index + 1, name: `Item ${index}`, category, checked: false }));
-  const { container } = setup({ items, uncheckedItems: items });
-  expect(screen.getAllByRole('checkbox')).toHaveLength(5);
-  const controls = [...container.querySelectorAll('.shopping-category-header')].map((button) => button.getAttribute('aria-controls'));
-  expect(new Set(controls).size).toBe(5);
-  controls.forEach((id) => expect(document.getElementById(id)).toBeInTheDocument());
-  fireEvent.click(screen.getByRole('button', { name: '__proto__ 1' }));
-  expect(screen.queryByRole('checkbox', { name: 'Item 2' })).toBeNull();
+test('department order saves against the current list and supports custom categories',async()=>{
+ setup({uncheckedItems:[{...apple,category:'Mein Laden'},milk]});fireEvent.click(screen.getByRole('button',{name:'Reihenfolge der Kategorien ändern'}));fireEvent.click(dialog().getByRole('button',{name:'Mein Laden nach unten'}));fireEvent.click(dialog().getByRole('button',{name:'Reihenfolge speichern'}));await waitFor(()=>expect(mockShopping.updateListDetails).toHaveBeenCalledWith(expect.objectContaining({category_order:expect.arrayContaining(['Mein Laden'])})));
+});
+test('completing uses the archive operation after confirmation and exposes recent products',async()=>{
+ const checked={...apple,checked:true};setup({items:[checked,milk],checkedItems:[checked],uncheckedItems:[milk]});const details=document.querySelector('.shop-done');details.open=true;fireEvent(details,new Event("toggle"));fireEvent.click(screen.getByRole('button',{name:'Einkauf abschließen',exact:true}));expect(mockShopping.completeTrip).not.toHaveBeenCalled();fireEvent.click(dialog().getByRole('button',{name:'Einkauf abschließen',exact:true}));await waitFor(()=>expect(mockShopping.completeTrip).toHaveBeenCalled());fireEvent.click(screen.getByRole('button',{name:'Zuletzt',exact:true}));expect(screen.getByRole('button',{name:'Äpfel, hinzufügen',exact:true})).toBeVisible();
+});
+test('preferences stay scoped to the family and user',()=>{
+ setup();fireEvent.click(screen.getByRole('button',{name:'Listenansicht',exact:true}));expect(JSON.parse(localStorage.getItem('tribu_shopping_ui:demo:1')).layout).toBe('list');
+});
+test('sharing is a text snapshot of open products and includes notes',()=>{
+ setup();fireEvent.click(screen.getByRole('button',{name:'Liste weitergeben',exact:true}));expect(dialog().getByRole('textbox',{name:'Einkaufsliste als Text'}).value).toContain('Äpfel · 1 kg · Elstar');
+});
+test('store search remains reachable from item details without checking',()=>{
+ setup({storeLinks:[{id:1,name:'Shop',url_template:'https://example.com/?q={query}'}]});fireEvent.click(screen.getByRole('button',{name:'Details zu Äpfel'}));fireEvent.click(dialog().getByRole('button',{name:'Online suchen'}));expect(screen.getByRole('link',{name:/Shop/})).toHaveAttribute('href','https://example.com/?q=%C3%84pfel');expect(mockShopping.toggleItem).not.toHaveBeenCalled();
+});
+test('list menu preserves template creation and application',async()=>{
+ setup({templates:[{id:1,name:'Frühstück',items:[{name:'Brot'}]}]});fireEvent.click(screen.getAllByRole('button',{name:'Listenoptionen'})[0]);fireEvent.click(dialog().getByRole('button',{name:'Einkaufsvorlagen'}));fireEvent.click(dialog().getByText('Frühstück').closest('article').querySelector('.shopping-template-apply'));await waitFor(()=>expect(mockShopping.applyTemplate).toHaveBeenCalledWith(1));
+});
+test('English UI uses the translation bundle',()=>{
+ setup({}, {messages:buildMessages('en')});expect(screen.getByRole('heading',{name:'For everything you need.'})).toBeVisible();expect(screen.getByRole('button',{name:'New shopping list',exact:true})).toBeVisible();
 });

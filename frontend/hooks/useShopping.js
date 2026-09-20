@@ -314,7 +314,7 @@ export function useShopping() {
       if (list?.items) setItems(list.items);
       return;
     }
-    api.apiGetShoppingItems(activeListId).then(({ ok, data }) => {
+    api.apiGetShoppingItems(activeListId, true).then(({ ok, data }) => {
       if (!cancelled && ok && mounted.current && scope.current === requestScope && revision.current === version && readSequence.current === sequence) {
         setItems(data);
         setUndoState((previous) => previous && sameStatus(data.find((item) => item.id === previous.id), previous) ? previous : null);
@@ -328,15 +328,15 @@ export function useShopping() {
     [shoppingLists, activeListId],
   );
 
-  const uncheckedItems = useMemo(() => items.filter((i) => !i.checked), [items]);
-  const checkedItems = useMemo(() => items.filter((i) => i.checked).sort(compareCheckedItems), [items]);
+  const uncheckedItems = useMemo(() => items.filter((i) => !i.checked && !i.archived), [items]);
+  const checkedItems = useMemo(() => items.filter((i) => i.checked && !i.archived).sort(compareCheckedItems), [items]);
 
   const reloadItems = useCallback(async () => {
     if (!activeListId || demoMode) return;
     const requestScope = scope.current;
     const version = revision.current;
     const sequence = ++readSequence.current;
-    const { ok, data } = await api.apiGetShoppingItems(activeListId);
+    const { ok, data } = await api.apiGetShoppingItems(activeListId, true);
     if (ok && mounted.current && scope.current === requestScope && revision.current === version && readSequence.current === sequence) {
       setItems(data);
       setUndoState((previous) => previous && sameStatus(data.find((item) => item.id === previous.id), previous) ? previous : null);
@@ -362,7 +362,7 @@ export function useShopping() {
       setActiveListId(newList.id);
     } else {
       const { ok, data } = await api.apiCreateShoppingList({ family_id: Number(familyId), name: newListName.trim() });
-      if (!ok) return toastError(t(messages, 'toast.error'));
+      if (!ok) { toastError(t(messages, 'toast.error')); return false; }
       setShoppingLists((prev) => {
         if (prev.some((l) => l.id === data.id)) return prev;
         return [...prev, data];
@@ -371,6 +371,7 @@ export function useShopping() {
     }
     setNewListName('');
     setShowCreateList(false);
+    return true;
   }
 
   async function renameList(id, name) {
@@ -403,22 +404,44 @@ export function useShopping() {
   }
 
 
-  async function addItem(e) {
+  async function addItem(e, draft) {
     e.preventDefault();
-    if (!newItemName.trim() || !activeListId) return;
+    if (!(draft?.name ?? newItemName).trim() || !activeListId) return false;
     const payload = {
-      name: formatShoppingItemName(newItemName),
-      spec: cleanOptionalText(newItemSpec),
-      category: cleanOptionalText(newItemCategory),
+      name: formatShoppingItemName(draft?.name ?? newItemName),
+      spec: cleanOptionalText(draft?.spec ?? newItemSpec),
+      category: cleanOptionalText(draft?.category ?? newItemCategory),
+      ...Object.fromEntries(["notes", "photo", "priority"].filter(key => draft && key in draft).map(key => [key, draft[key]])),
     };
+    const targetId = Number(draft?.list_id || activeListId);
+    if (targetId !== Number(activeListId)) {
+      if (!shoppingLists.some(list => Number(list.id) === targetId)) return false;
+      if (demoMode) {
+        const target = shoppingLists.find(list => Number(list.id) === targetId);
+        const transition = predictShoppingItemTransition(target.items || [], payload);
+        const entry = {...(transition?.item || {}), ...payload, id:transition?.item.id || Date.now(),
+          list_id:targetId, spec:transition?.spec || payload.spec, checked:false, archived:false, checked_at:null,
+          created_at:transition?.item.created_at || new Date().toISOString()};
+        const nextItems = transition ? target.items.map(item => item.id === entry.id ? entry : item) : [...(target.items || []), entry];
+        setShoppingLists(previous => previous.map(list => Number(list.id) === targetId ? {...list,items:nextItems,
+          item_count:nextItems.filter(item=>!item.archived).length,checked_count:nextItems.filter(item=>item.checked&&!item.archived).length} : list));
+        return true;
+      }
+      const {ok} = await api.apiAddShoppingItem(targetId, payload);
+      if (!ok) { toastError(t(messages, 'toast.error')); return false; }
+      await loadShoppingLists();
+      return true;
+    }
     const predictedTransition = predictShoppingItemTransition(items, payload);
     if (demoMode) {
       if (predictedTransition) {
         const mergedPayload = {
+          ...payload,
           name: payload.name,
           spec: predictedTransition.spec,
           category: payload.category || predictedTransition.item.category || null,
           checked: false,
+          archived: false,
           checked_at: null,
         };
         setItems((prev) => prev.map((item) => item.id === predictedTransition.item.id
@@ -428,7 +451,8 @@ export function useShopping() {
           prev.map((l) => l.id === activeListId
             ? {
                 ...l,
-                checked_count: predictedTransition.action === 'restored'
+                item_count: (l.item_count || 0) + (predictedTransition.item.archived ? 1 : 0),
+                checked_count: predictedTransition.action === 'restored' && !predictedTransition.item.archived
                   ? Math.max((l.checked_count || 0) - 1, 0)
                   : (l.checked_count || 0),
                 items: (l.items || []).map((item) => item.id === predictedTransition.item.id
@@ -463,6 +487,7 @@ export function useShopping() {
         toastError(t(messages, 'toast.error'));
         await reloadItems();
         await loadShoppingLists();
+        return false;
       } else if (!wsConnected) {
         await reloadItems();
         await loadShoppingLists();
@@ -472,6 +497,7 @@ export function useShopping() {
     setNewItemSpec('');
     setNewItemCategory('');
     if (!isMobile) itemInputRef.current?.focus();
+    return true;
   }
 
   async function changeChecked(item, checked, offerUndo) {
@@ -548,6 +574,7 @@ export function useShopping() {
       name: itemName,
       spec: cleanOptionalText(payload.spec),
       category: cleanOptionalText(payload.category),
+      ...Object.fromEntries(["notes", "photo", "priority"].filter(key => key in payload).map(key => [key, payload[key]])),
       ...(isMove ? { list_id: targetId } : {}),
     };
     const previousItems = items;
@@ -579,19 +606,20 @@ export function useShopping() {
         ? { ...l, items: (l.items || []).map((i) => i.id === id ? { ...i, ...cleanedPayload } : i) }
         : l));
     }
-    if (demoMode) return;
+    if (demoMode) return true;
     const { ok } = await api.apiUpdateShoppingItem(id, cleanedPayload);
     if (!ok) {
       toastError(t(messages, 'toast.error'));
       setItems(previousItems);
       setShoppingLists(previousLists);
       await reloadItems();
-      return;
+      return false;
     }
     if (isMove || !wsConnected) {
       await reloadItems();
       await loadShoppingLists();
     }
+    return true;
   }
 
   async function moveItem(id, targetListId) {
@@ -773,6 +801,37 @@ export function useShopping() {
     }
   }
 
+  async function updateListDetails(payload) {
+    if (demoMode) {
+      setShoppingLists(previous => previous.map(list => list.id === activeListId ? { ...list, ...payload } : list));
+      return true;
+    }
+    const {ok, data} = await api.apiUpdateShoppingList(activeListId, payload);
+    if (!ok) { toastError(t(messages, 'toast.error')); return false; }
+    setShoppingLists(previous => previous.map(list => list.id === activeListId ? data : list));
+    return true;
+  }
+
+  async function completeTrip() {
+    const requestScope = scope.current;
+    if (demoMode) {
+      const archive = item => item.checked ? {...item, archived:true} : item;
+      setItems(previous => previous.map(archive));
+      setShoppingLists(previous => previous.map(list => list.id === activeListId ? {
+        ...list, items:(list.items || []).map(archive), item_count:uncheckedItems.length, checked_count:0
+      } : list));
+      setUndoState(null);
+      return true;
+    }
+    const {ok} = await api.apiCompleteShoppingTrip(activeListId);
+    if (!ok) { toastError(t(messages, 'toast.error')); return false; }
+    if (scope.current !== requestScope) return true;
+    setUndoState(null);
+    await reloadItems();
+    await loadShoppingLists();
+    return true;
+  }
+
   return {
     shoppingLists,
     activeListId, setActiveListId,
@@ -786,6 +845,8 @@ export function useShopping() {
     templates, storeLinks,
     itemInputRef,
     createList, renameList, deleteList,
+    addProduct: draft => addItem({preventDefault() {}}, draft),
+    updateListDetails, completeTrip, reloadItems,
     addItem, toggleItem, editItem, moveItem, deleteItem, clearChecked,
     createTemplate, updateTemplate, deleteTemplate, applyTemplate, loadTemplates,
     wsConnected,

@@ -1,5 +1,5 @@
 from datetime import date, datetime, time
-from typing import Optional, Union
+from typing import Optional, Union, Literal, Annotated
 from urllib.parse import urlparse
 
 import binascii
@@ -626,8 +626,21 @@ class PaginatedTasks(BaseModel):
 # Shopping
 # ---------------------------------------------------------------------------
 
+class ShoppingProductDetails(BaseModel):
+    notes: Optional[str] = Field(None, max_length=500)
+    photo: Optional[str] = Field(None, max_length=700000, pattern=r"^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$")
+    priority: Literal["normal", "urgent"] = "normal"
+
+    @field_validator("photo")
+    @classmethod
+    def validate_product_photo(cls, value):
+        return ProfileImageUpdate.validate_profile_image(value) if value else None
+
+
 class ShoppingListCreate(BaseModel):
     """Create a new shopping list."""
+    category_order: list[Annotated[str, Field(min_length=1, max_length=100, pattern=r".*\S.*")]] = Field(default_factory=list, max_length=100)
+    icon: Literal["cart", "heart", "coffee", "bag", "home"] = "cart"
     family_id: int = Field(..., description="Family ID")
     name: str = Field(min_length=1, max_length=100, description="List name")
 
@@ -638,7 +651,9 @@ class ShoppingListCreate(BaseModel):
 
 class ShoppingListUpdate(BaseModel):
     """Rename a shopping list."""
-    name: str = Field(min_length=1, max_length=100, description="List name")
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    category_order: Optional[list[Annotated[str, Field(min_length=1, max_length=100, pattern=r".*\S.*")]]] = Field(None, max_length=100)
+    icon: Optional[Literal["cart", "heart", "coffee", "bag", "home"]] = None
 
 
 class ShoppingListResponse(BaseModel):
@@ -646,6 +661,8 @@ class ShoppingListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(..., description="List ID")
+    category_order: list[Annotated[str, Field(min_length=1, max_length=100, pattern=r".*\S.*")]] = Field(default_factory=list, max_length=100)
+    icon: Literal["cart", "heart", "coffee", "bag", "home"] = "cart"
     family_id: int = Field(..., description="Family ID")
     name: str = Field(..., description="List name")
     created_by_user_id: Optional[int] = Field(None, description="Creator user ID")
@@ -654,7 +671,7 @@ class ShoppingListResponse(BaseModel):
     checked_count: int = Field(0, description="Number of checked items")
 
 
-class ShoppingItemCreate(BaseModel):
+class ShoppingItemCreate(ShoppingProductDetails):
     """Add an item to a shopping list."""
     name: str = Field(min_length=1, max_length=200, description="Item name")
     spec: Optional[str] = Field(None, max_length=200, description="Specification (e.g. '500g', 'organic')")
@@ -672,7 +689,7 @@ class ShoppingItemExpectedState(BaseModel):
     checked_at: Optional[datetime] = None
 
 
-class ShoppingItemUpdate(BaseModel):
+class ShoppingItemUpdate(ShoppingProductDetails):
     """Update a shopping item (partial update)."""
     name: Optional[str] = Field(None, min_length=1, max_length=200, description="Item name")
     spec: Optional[str] = Field(None, max_length=200, description="Item specification")
@@ -682,7 +699,7 @@ class ShoppingItemUpdate(BaseModel):
     list_id: Optional[int] = Field(None, description="Move the item to another shopping list in the same family")
 
 
-class ShoppingItemResponse(BaseModel):
+class ShoppingItemResponse(ShoppingProductDetails):
     """Shopping item with metadata."""
     model_config = ConfigDict(from_attributes=True)
 
@@ -691,6 +708,7 @@ class ShoppingItemResponse(BaseModel):
     name: str = Field(..., description="Item name")
     spec: Optional[str] = Field(None, description="Item specification")
     category: Optional[str] = Field(None, description="Optional category or aisle label")
+    archived: bool = False
     checked: bool = Field(..., description="Whether the item is checked off")
     checked_at: Optional[datetime] = Field(None, description="When the item was checked")
     added_by_user_id: Optional[int] = Field(None, description="User who added the item")
