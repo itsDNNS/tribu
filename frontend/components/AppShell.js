@@ -6,6 +6,7 @@ import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import { isNavItemVisible, MOBILE_PRIMARY_NAV_KEYS, NAV_GROUPS, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
 import MemberAvatar from './MemberAvatar';
+import { DashboardMotto } from './DashboardDetails';
 import DashboardView from './DashboardView';
 import ActivityView from './ActivityView';
 import CalendarView from './calendar';
@@ -56,11 +57,13 @@ function DashboardSkeleton() {
       </div>
       <div className="bento-grid">
         <div className="bento-quick-capture skeleton skeleton-card" style={{ minHeight: 220 }} />
-        <div className="bento-daily-loop skeleton skeleton-card" style={{ minHeight: 140 }} />
         <div className="bento-events skeleton skeleton-card" style={{ minHeight: 180 }} />
         <div className="bento-tasks skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-meals skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-daily-loop skeleton skeleton-card" style={{ minHeight: 140 }} />
         <div className="bento-birthdays skeleton skeleton-card" style={{ minHeight: 180 }} />
         <div className="bento-rewards skeleton skeleton-card" style={{ minHeight: 180 }} />
+        <div className="bento-activity skeleton skeleton-card" style={{ minHeight: 180 }} />
       </div>
     </div>
   );
@@ -299,6 +302,19 @@ export default function AppShell() {
               </section>
             ))}
 
+            {!collapsed && members.length > 0 && (
+              <section className="sidebar-household" aria-label={t(messages, 'module.dashboard.members')}>
+                <div className="nav-section-label">{t(messages, 'module.dashboard.members')}</div>
+                <ul className="sidebar-household-list">
+                  {members.map((member, index) => (
+                    <li key={member.user_id}>
+                      <MemberAvatar member={member} index={index} size={30} />
+                      <span>{member.display_name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             <div className="sidebar-spacer" aria-hidden="true" />
 
             {systemNavGroup && (
@@ -324,6 +340,7 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-footer">
+          {!collapsed && <DashboardMotto messages={messages} sidebar />}
           <div className="sidebar-divider" />
 
           <div className="sidebar-user">

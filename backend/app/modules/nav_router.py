@@ -13,7 +13,7 @@ router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})
 
 DEFAULT_NAV_ORDER = ["dashboard", "calendar", "weekly_plan", "shopping", "tasks", "activity", "templates", "meal_plans", "school_timetables", "recipes", "rewards", "gifts", "contacts", "notifications", "settings", "admin"]
 KNOWN_KEYS = {"dashboard", "calendar", "weekly_plan", "shopping", "tasks", "activity", "templates", "rewards", "gifts", "meal_plans", "school_timetables", "recipes", "contacts", "notifications", "settings", "admin"}
-DEFAULT_DASHBOARD_LAYOUT = ["quick_capture", "daily_loop", "events", "tasks", "birthdays", "rewards"]
+DEFAULT_DASHBOARD_LAYOUT = ["quick_capture", "events", "tasks", "meals", "daily_loop", "birthdays", "rewards", "activity"]
 KNOWN_DASHBOARD_MODULES = set(DEFAULT_DASHBOARD_LAYOUT)
 DEFAULT_UI_THEME = "light"
 DEFAULT_UI_LANGUAGE = "en"
@@ -174,9 +174,6 @@ def _normalize_dashboard_modules(modules: list[str]) -> list[str]:
     normalized = list(seen)
     for default_index, module in enumerate(DEFAULT_DASHBOARD_LAYOUT):
         if module in normalized:
-            continue
-        if module == "daily_loop" and "quick_capture" in normalized:
-            normalized.insert(normalized.index("quick_capture") + 1, module)
             continue
         insert_at = len(normalized)
         for next_module in DEFAULT_DASHBOARD_LAYOUT[default_index + 1:]:

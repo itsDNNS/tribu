@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bell, CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Settings2, ArrowUp, ArrowDown, RotateCcw, MapPin, Search } from 'lucide-react';
+import { Bell, CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Settings2, ArrowUp, ArrowDown, RotateCcw, MapPin, Search, ArrowRight, Clock, UserRound, Check, UtensilsCrossed, Sun, Moon } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { prettyDate, parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
-import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetDashboardLayout, apiGetSetupChecklist, apiListMealPlans, apiResetDashboardLayout, apiUpdateDashboardLayout } from '../lib/api';
+import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetDashboardLayout, apiGetSetupChecklist, apiListMealPlans, apiResetDashboardLayout, apiUpdateDashboardLayout, apiUpdateTask } from '../lib/api';
 import { useCurrentMinute } from '../hooks/useCurrentMinute';
 import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
 import RewardsDashboardWidget from './RewardsDashboardWidget';
 import QuickCaptureCard from './QuickCaptureCard';
+import DashboardMealsCard from './DashboardMealsCard';
+import HouseholdActivityFeed from './HouseholdActivityFeed';
+import { DashboardBadge, DashboardDateTile, DashboardCardHeading, DashboardWelcome, DashboardFooter } from './DashboardDetails';
 
-const DEFAULT_DASHBOARD_LAYOUT = ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'];
+const DEFAULT_DASHBOARD_LAYOUT = ['quick_capture', 'events', 'tasks', 'meals', 'daily_loop', 'birthdays', 'rewards', 'activity'];
 
 function normalizeDashboardLayout(modules, availableModules = DEFAULT_DASHBOARD_LAYOUT) {
   const available = new Set(availableModules);
@@ -22,10 +25,6 @@ function normalizeDashboardLayout(modules, availableModules = DEFAULT_DASHBOARD_
   const normalized = [...ordered];
   availableModules.forEach((module, defaultIndex) => {
     if (normalized.includes(module)) return;
-    if (module === 'daily_loop' && normalized.includes('quick_capture')) {
-      normalized.splice(normalized.indexOf('quick_capture') + 1, 0, module);
-      return;
-    }
     let insertAt = normalized.length;
     for (let i = defaultIndex + 1; i < availableModules.length; i += 1) {
       const nextDefaultModule = availableModules[i];
@@ -97,14 +96,6 @@ function getOpenTaskCount(tasks) {
   return (Array.isArray(tasks) ? tasks : []).filter((task) => task?.status === 'open').length;
 }
 
-function countDueRoutines(tasks, today = todayIsoDate()) {
-  return (Array.isArray(tasks) ? tasks : []).filter((task) => {
-    if (task?.status !== 'open' || !task?.recurrence) return false;
-    const dueDate = normalizeDateOnly(task.due_date);
-    return Boolean(dueDate) && dueDate <= today;
-  }).length;
-}
-
 function getUpcomingBirthdayCount(summary) {
   return Array.isArray(summary?.upcoming_birthdays) ? summary.upcoming_birthdays.length : 0;
 }
@@ -115,12 +106,6 @@ function formatEventTime(value, locale, timeFormat) {
   return formatClockTime(date, locale, timeFormat);
 }
 
-function formatChipDate(value, locale) {
-  const date = parseDate(value);
-  if (!date) return '';
-  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-}
-
 function formatClockTime(value, locale, timeFormat) {
   return value.toLocaleTimeString(locale, {
     hour: timeFormat === '12h' ? 'numeric' : '2-digit',
@@ -129,7 +114,7 @@ function formatClockTime(value, locale, timeFormat) {
   });
 }
 
-function TodayStatusItem({ label, value, testId, icon: Icon, tone, onClick }) {
+function TodayStatusItem({ label, value, testId, icon: Icon, tone, onClick, detail, progress }) {
   return (
     <button type="button" className={`today-status-item today-status-item-${tone}`} onClick={onClick}>
       <span className="today-status-icon" aria-hidden="true">
@@ -137,66 +122,31 @@ function TodayStatusItem({ label, value, testId, icon: Icon, tone, onClick }) {
       </span>
       <span className="today-status-value" data-testid={testId}>{value}</span>
       <span className="today-status-label">{label}</span>
+      {detail && <span className="today-status-detail">{detail}</span>}
+      {progress != null && <span className="dashboard-progress"><span style={{ width: `${progress}%` }} /></span>}
     </button>
   );
 }
 
-function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, messages, setActiveView }) {
-  const items = [
-    {
-      key: 'meals',
-      icon: Utensils,
-      value: mealsTodayCount,
-      label: t(messages, 'module.dashboard.daily_loop_meals'),
-      action: t(messages, 'module.dashboard.daily_loop_open_meals'),
-      onClick: () => setActiveView('meal_plans'),
-    },
-    {
-      key: 'shopping',
-      icon: ShoppingCart,
-      value: shoppingOpenCount,
-      label: t(messages, 'module.dashboard.daily_loop_shopping'),
-      action: t(messages, 'module.dashboard.daily_loop_open_shopping'),
-      onClick: () => setActiveView('shopping'),
-    },
-    {
-      key: 'routines',
-      icon: ListChecks,
-      value: routineDueCount,
-      label: t(messages, 'module.dashboard.daily_loop_routines'),
-      action: t(messages, 'module.dashboard.daily_loop_open_routines'),
-      onClick: () => setActiveView('tasks'),
-    },
-  ];
+function DailyLoopCard({ routines, messages, setActiveView, completeTask, pendingTasks }) {
+  const completed = routines.filter((task) => task.status === 'done').length;
+  const percent = routines.length ? Math.round(completed / routines.length * 100) : 0;
   return (
-    <section className="bento-card bento-daily-loop" role="region" aria-label={t(messages, 'module.dashboard.daily_loop_title')}>
-      <div className="bento-card-header daily-loop-header">
-        <div>
-          <h2 className="bento-card-title">{t(messages, 'module.dashboard.daily_loop_title')}</h2>
-        </div>
-      </div>
-      <div className="daily-loop-actions">
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.key}
-              type="button"
-              className={`daily-loop-action daily-loop-action-${item.key}`}
-              onClick={item.onClick}
-              aria-label={`${item.label}: ${item.action}`}
-            >
-              <span className="daily-loop-action-art" aria-hidden="true">
-                <Icon size={24} />
-              </span>
-              <span className="daily-loop-action-copy">
-                <span className="daily-loop-action-value">{item.value}</span>
-                <span className="daily-loop-action-label">{item.label}</span>
-              </span>
-              <span className="daily-loop-action-link">{item.action}</span>
-            </button>
-          );
-        })}
+    <section className="bento-card bento-daily-loop" role="region" aria-label={t(messages, 'module.dashboard.routines_title')}>
+      <DashboardCardHeading title={t(messages, 'module.dashboard.routines_title')} icon={UtensilsCrossed} tone="amber" />
+      <button type="button" className="dashboard-routine-ring" onClick={() => setActiveView('tasks')} aria-label={`${t(messages, 'module.dashboard.daily_loop_open_routines')}: ${percent}%`}>
+        <svg viewBox="0 0 46 46" aria-hidden="true"><circle cx="23" cy="23" r="19" className="routine-ring-track" /><circle cx="23" cy="23" r="19" className="routine-ring-fill" strokeDasharray="119.38" strokeDashoffset={119.38 * (1 - percent / 100)} /></svg>
+        <span>{percent}%</span>
+      </button>
+      <p className="dashboard-routine-summary">{t(messages, 'module.dashboard.routines_progress').replace('{completed}', completed).replace('{total}', routines.length)}</p>
+      <div className="dashboard-routine-list">
+        {routines.slice(0, 5).map((task) => (
+          <div key={task.id} className={`dashboard-routine-row${task.status === 'done' ? ' is-done' : ''}`}>
+            <button type="button" role="checkbox" aria-checked={task.status === 'done'} className="task-checkbox" disabled={pendingTasks.has(task.id) || task.status === 'done'} aria-label={t(messages, 'aria.mark_task').replace('{title}', task.title)} onClick={() => completeTask(task.id)}>{task.status === 'done' && <Check size={12} aria-hidden="true" />}</button>
+            <button type="button" className="dashboard-row-link" onClick={() => setActiveView('tasks')}>{task.title}</button>
+          </div>
+        ))}
+        {routines.length === 0 && <button type="button" className="dashboard-card-link" onClick={() => setActiveView('tasks')}>{t(messages, 'module.dashboard.daily_loop_open_routines')} <ArrowRight size={12} /></button>}
       </div>
     </section>
   );
@@ -204,50 +154,39 @@ function DailyLoopCard({ mealsTodayCount, shoppingOpenCount, routineDueCount, me
 
 function NextUpCard({ event, locale, lang, timeFormat, messages, members, setActiveView, isChild }) {
   const eventDate = event ? parseDate(event.starts_at) : null;
-  const eventTime = event ? formatEventTime(event.starts_at, locale, timeFormat) : '';
-  const isEventToday = event ? getEventOccurrenceDate(event) === todayIsoDate() : false;
-  const chipDate = event && !isEventToday ? formatChipDate(event.starts_at, locale) : '';
-  const assignedMember = event?.assigned_to
-    ? members.find((member) => String(member.user_id) === String(event.assigned_to))
-    : null;
+  const assigned = event?.assigned_to === 'all' ? members : members.filter((member) => Array.isArray(event?.assigned_to) ? event.assigned_to.includes(member.user_id) : String(member.user_id) === String(event?.assigned_to));
   const goToEvent = () => {
-    if (!event) return;
     if (eventDate) sessionStorage.setItem('tribu_calendar_focus', eventDate.toISOString());
     setActiveView('calendar');
   };
-
+  const now = new Date();
+  const distance = eventDate ? Math.round((Date.UTC(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000) : 0;
   return (
     <section className={`next-up-card${event ? '' : ' next-up-empty'}`} role="region" aria-label={t(messages, 'module.dashboard.next_up_title')}>
-      <div className="next-up-eyebrow">{t(messages, 'module.dashboard.next_up_title')}</div>
+      <img className="next-up-landscape" src="/illustrations/family-landscape.svg" alt="" />
+      <div className="next-up-heading">
+        <h2 className="next-up-eyebrow"><DashboardBadge icon={Calendar} />{t(messages, 'module.dashboard.next_up_title')}</h2>
+        {event && <span className="next-up-day-label">{new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(distance, 'day')}</span>}
+      </div>
       {event ? (
         <button type="button" className="next-up-content" onClick={goToEvent}>
-          <span className={`next-up-time-chip${chipDate ? ' is-stacked' : ''}`}>
-            {chipDate && <span className="next-up-chip-date">{chipDate}</span>}
-            <span className="next-up-chip-time">{eventTime}</span>
-          </span>
+          <span className="next-up-time-chip"><DashboardDateTile value={event.starts_at} locale={locale} month /></span>
           <span className="next-up-details">
-            <span className="next-up-title">{event.title}</span>
-            <span className="next-up-meta">
-              {assignedMember && <span>{assignedMember.display_name}</span>}
-              {event.location && <span><MapPin size={14} aria-hidden="true" /> {event.location}</span>}
-              <span>{prettyDate(event.starts_at, lang, timeFormat)}</span>
-            </span>
+            <span className="next-up-title"><span className="event-dot" style={{ background: event.color || 'var(--amethyst)' }} />{event.title}</span>
+            <span className="next-up-meta"><Clock size={12} aria-hidden="true" />{event.all_day ? t(messages, 'module.calendar.all_day') : `${formatEventTime(event.starts_at, locale, timeFormat)}${event.ends_at ? ` – ${formatEventTime(event.ends_at, locale, timeFormat)}` : ''}`}</span>
+            {(assigned.length > 0 || event.location) && <span className="next-up-meta">{assigned.length ? <UserRound size={12} aria-hidden="true" /> : <MapPin size={12} aria-hidden="true" />}{assigned.length ? assigned.map((member) => member.display_name).join(', ') : event.location}</span>}
           </span>
-          <span className="next-up-visual" aria-hidden="true">
-            <span className="next-up-visual-orb"><CalendarClock size={34} /></span>
-          </span>
+          <span className="next-up-arrow" aria-hidden="true"><ArrowRight size={15} /></span>
         </button>
       ) : (
         <div className="next-up-clear">
           <div className="next-up-title">{t(messages, 'module.dashboard.next_up_empty')}</div>
           <p>{t(messages, 'module.dashboard.next_up_empty_hint')}</p>
-          {!isChild && (
-            <button type="button" className="next-up-empty-action" onClick={() => setActiveView('calendar')}>
-              {t(messages, 'module.dashboard.empty_events_action')}
-            </button>
-          )}
+          {!isChild && <button type="button" className="next-up-empty-action" onClick={goToEvent}>{t(messages, 'module.dashboard.empty_events_action')}</button>}
         </div>
       )}
+      <span className="next-up-visual" aria-hidden="true"><Calendar size={37} strokeWidth={1.7} /></span>
+      <p className="dashboard-handwritten next-up-quote">„{t(messages, 'module.dashboard.hero_note')}“</p>
     </section>
   );
 }
@@ -310,12 +249,37 @@ function ActivationPanel({ steps, completedCount, totalCount, messages, onDismis
 }
 
 export default function DashboardView({ onOpenSearch, onOpenNotifications, unreadCount = 0, notificationButtonRef = null, onDashboardLayoutActionChange } = {}) {
-  const { summary, me, members, tasks, events, shoppingLists, quickCaptureInbox, familyId, families, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity } = useApp();
-  const todayIso = useMemo(() => todayIsoDate(), []);
+  const { theme, setTheme, summary, me, members, tasks, setTasks, events, shoppingLists, mealPlans = [], activity = [], quickCaptureInbox, familyId, families, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity, loadDashboard } = useApp();
+  const currentMinute = useCurrentMinute();
+  const todayIso = todayIsoDate();
   const [setupChecklist, setSetupChecklist] = useState(null);
   const [layoutEditing, setLayoutEditing] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState(new Set());
+  const [taskError, setTaskError] = useState(false);
+  async function completeTask(id) {
+    if (pendingTasks.has(id)) return;
+    setPendingTasks((pending) => new Set(pending).add(id));
+    setTaskError(false);
+    try {
+      if (demoMode) {
+        setTasks((current) => current.map((task) => task.id === id ? { ...task, status: 'done', updated_at: new Date().toISOString() } : task));
+      } else {
+        const result = await apiUpdateTask(id, { status: 'done' });
+        if (!result.ok) throw new Error('Task update failed');
+        await Promise.all([loadTasks(familyId), loadDashboard?.(familyId), loadActivity?.(familyId)]);
+      }
+    } catch {
+      setTaskError(true);
+    } finally {
+      setPendingTasks((pending) => { const next = new Set(pending); next.delete(id); return next; });
+    }
+  }
   const [dashboardLayout, setDashboardLayout] = useState(DEFAULT_DASHBOARD_LAYOUT);
-  const [mealsTodayCount, setMealsTodayCount] = useState(0);
+  const [mealResult, setMealResult] = useState({ familyId: null, date: null, meals: [], loading: true, error: false });
+  const mealsToday = demoMode ? mealPlans.filter((meal) => meal.plan_date === todayIso)
+    : mealResult.familyId === familyId && mealResult.date === todayIso ? mealResult.meals : [];
+  const mealsTodayCount = mealsToday.length;
+  const mealsLoading = !demoMode && Boolean(familyId) && (mealResult.loading || mealResult.familyId !== familyId || mealResult.date !== todayIso);
   const customizeLayoutLabel = t(messages, 'module.dashboard.customize_layout');
   const toggleDashboardLayoutEditing = useCallback(() => {
     setLayoutEditing((current) => !current);
@@ -325,11 +289,9 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
   const shoppingOpenCount = useMemo(() => countOpenShoppingItems(shoppingLists), [shoppingLists]);
   const todayEventCount = useMemo(() => countTodayEvents(events, summary, todayIso), [events, summary, todayIso]);
   const openTaskCount = useMemo(() => getOpenTaskCount(tasks), [tasks]);
-  const routineDueCount = useMemo(() => countDueRoutines(tasks, todayIso), [tasks, todayIso]);
   const birthdaySoonCount = getUpcomingBirthdayCount(summary);
   const nextUpEvent = Array.isArray(summary?.next_events) ? summary.next_events[0] : null;
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
-  const currentMinute = useCurrentMinute();
   const todayStr = currentMinute.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const currentTimeStr = formatClockTime(currentMinute, locale, timeFormat);
   const currentFamily = Array.isArray(families) ? families.find((family) => String(family.family_id) === String(familyId)) : null;
@@ -365,13 +327,13 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
   useEffect(() => {
     let cancelled = false;
     if (!familyId || demoMode) {
-      setMealsTodayCount(0);
       return () => { cancelled = true; };
     }
+    setMealResult({ familyId, date: todayIso, meals: [], loading: true, error: false });
     apiListMealPlans(familyId, todayIso, todayIso).then((res) => {
-      if (!cancelled) setMealsTodayCount(res?.ok && Array.isArray(res.data) ? res.data.length : 0);
+      if (!cancelled) setMealResult({ familyId, date: todayIso, meals: res?.ok && Array.isArray(res.data) ? res.data : [], loading: false, error: !res?.ok });
     }).catch(() => {
-      if (!cancelled) setMealsTodayCount(0);
+      if (!cancelled) setMealResult({ familyId, date: todayIso, meals: [], loading: false, error: true });
     });
     return () => { cancelled = true; };
   }, [familyId, demoMode, todayIso]);
@@ -529,8 +491,8 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
     : DEFAULT_DASHBOARD_LAYOUT;
   const orderedDashboardLayout = normalizeDashboardLayout(dashboardLayout, availableDashboardModules);
   const moduleOrder = (moduleKey) => orderedDashboardLayout.indexOf(moduleKey);
+  const moduleLabel = (moduleKey) => t(messages, moduleKey === 'meals' ? 'module.meal_plans.name' : `module.dashboard.module_${moduleKey}`);
   const heroName = me?.display_name || currentFamily?.family_name || 'User';
-  const heroFamilyName = currentFamily?.family_name && currentFamily.family_name !== heroName ? currentFamily.family_name : null;
 
   return (
     <div className="dashboard-today-page">
@@ -538,7 +500,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
         <div className="today-command-header">
           <div>
             <h1 className="view-title today-command-title">
-              {getGreeting(messages)}, <span>{heroName}</span>{heroFamilyName && <span className="today-command-family-inline"> · {heroFamilyName}</span>} <span className="today-command-wave" aria-hidden="true">👋</span>
+              {getGreeting(messages)}, <span>{heroName}</span>
             </h1>
             <p className="today-command-family">
               <span>{todayStr}</span>
@@ -552,6 +514,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
               >
                 {currentTimeStr}
               </time>
+              <DashboardWelcome messages={messages} />
             </p>
           </div>
           <div className="dashboard-header-actions">
@@ -583,6 +546,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
                 )}
               </button>
             )}
+            {typeof setTheme === 'function' && <button type="button" className="dashboard-icon-action" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={t(messages, 'module.dashboard.toggle_theme')}>{theme === 'light' ? <Sun size={20} strokeWidth={1.6} /> : <Moon size={20} strokeWidth={1.6} />}</button>}
             <button
               type="button"
               className="dashboard-layout-toggle"
@@ -608,12 +572,13 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
             isChild={isChild}
           />
           <div className="today-status-card" role="group" aria-label={t(messages, 'module.dashboard.today_status_label')}>
-            <div className="today-status-heading">{t(messages, 'module.dashboard.today_status_label')}</div>
+            <div className="today-status-heading"><span><span className="dashboard-wave" aria-hidden="true">👋</span>{t(messages, 'module.dashboard.today_status_label')}</span><span className="today-status-date">{currentMinute.toLocaleDateString(locale, { day: 'numeric', month: 'long' })}</span></div>
             <div className="today-status-grid">
-              <TodayStatusItem icon={Calendar} tone="events" label={t(messages, 'module.dashboard.today_status_events')} value={todayEventCount} testId="today-status-events" onClick={() => setActiveView('calendar')} />
-              <TodayStatusItem icon={CheckCircle} tone="tasks" label={t(messages, 'module.dashboard.today_status_tasks')} value={openTaskCount} testId="today-status-tasks" onClick={() => setActiveView('tasks')} />
-              <TodayStatusItem icon={ShoppingCart} tone="shopping" label={t(messages, 'module.dashboard.today_status_shopping')} value={shoppingOpenCount} testId="today-status-shopping" onClick={() => setActiveView('shopping')} />
-              <TodayStatusItem icon={Cake} tone="birthdays" label={t(messages, 'module.dashboard.today_status_birthdays')} value={birthdaySoonCount} testId="today-status-birthdays" onClick={() => setActiveView('contacts')} />
+              <TodayStatusItem icon={Calendar} tone="events" label={t(messages, 'module.dashboard.today_status_events')} value={todayEventCount} detail={t(messages, 'module.dashboard.planned_short')} testId="today-status-events" onClick={() => setActiveView('calendar')} />
+              <TodayStatusItem icon={CheckCircle} tone="tasks" label={t(messages, 'module.dashboard.today_status_tasks')} value={openTaskCount} detail={t(messages, 'module.dashboard.completed_short').replace('{count}', tasks.filter((task) => task.status === 'done').length)} progress={tasks.length ? tasks.filter((task) => task.status === 'done').length / tasks.length * 100 : 0} testId="today-status-tasks" onClick={() => setActiveView('tasks')} />
+              <TodayStatusItem icon={ShoppingCart} tone="shopping" label={t(messages, 'module.dashboard.today_status_shopping')} value={shoppingOpenCount} detail={t(messages, 'module.dashboard.open_short').replace('{count}', shoppingOpenCount)} testId="today-status-shopping" onClick={() => setActiveView('shopping')} />
+              <TodayStatusItem icon={Utensils} tone="meals" label={t(messages, 'module.dashboard.meals_label')} value={mealsLoading || (!demoMode && mealResult.error) ? '–' : mealsTodayCount} detail={t(messages, 'module.dashboard.planned_short')} testId="today-status-meals" onClick={() => setActiveView('meal_plans')} />
+              <TodayStatusItem icon={Cake} tone="birthdays" label={t(messages, 'module.dashboard.today_status_birthdays')} value={birthdaySoonCount} detail={t(messages, 'module.dashboard.birthdays_short')} testId="today-status-birthdays" onClick={() => setActiveView('contacts')} />
             </div>
           </div>
         </div>
@@ -635,12 +600,12 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
           <ol className="dashboard-layout-list">
             {orderedDashboardLayout.map((moduleKey, index) => (
               <li key={moduleKey} className="dashboard-layout-item">
-                <span>{t(messages, `module.dashboard.module_${moduleKey}`)}</span>
+                <span>{moduleLabel(moduleKey)}</span>
                 <span className="dashboard-layout-controls">
-                  <button type="button" onClick={() => moveDashboardModule(moduleKey, -1)} disabled={index === 0} aria-label={t(messages, 'module.dashboard.move_module_up').replace('{module}', t(messages, `module.dashboard.module_${moduleKey}`))}>
+                  <button type="button" onClick={() => moveDashboardModule(moduleKey, -1)} disabled={index === 0} aria-label={t(messages, 'module.dashboard.move_module_up').replace('{module}', moduleLabel(moduleKey))}>
                     <ArrowUp size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => moveDashboardModule(moduleKey, 1)} disabled={index === orderedDashboardLayout.length - 1} aria-label={t(messages, 'module.dashboard.move_module_down').replace('{module}', t(messages, `module.dashboard.module_${moduleKey}`))}>
+                  <button type="button" onClick={() => moveDashboardModule(moduleKey, 1)} disabled={index === orderedDashboardLayout.length - 1} aria-label={t(messages, 'module.dashboard.move_module_down').replace('{module}', moduleLabel(moduleKey))}>
                     <ArrowDown size={14} aria-hidden="true" />
                   </button>
                 </span>
@@ -649,6 +614,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
           </ol>
         </section>
       )}
+      {taskError && <p role="alert" className="quick-capture-error">{t(messages, 'toast.error')}</p>}
       <div className="bento-grid">
         {!isChild && (
           <div className="dashboard-module-shell" style={{ order: moduleOrder('quick_capture') }} data-dashboard-module="quick_capture">
@@ -667,9 +633,9 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
 
         <div className="dashboard-module-shell" style={{ order: moduleOrder('daily_loop') }} data-dashboard-module="daily_loop">
           <DailyLoopCard
-            mealsTodayCount={mealsTodayCount}
-            shoppingOpenCount={shoppingOpenCount}
-            routineDueCount={routineDueCount}
+            routines={tasks.filter((task) => task.recurrence && (task.status === 'done' ? normalizeDateOnly(task.completed_at || task.updated_at) === todayIso : task.status === 'open' && normalizeDateOnly(task.due_date) && normalizeDateOnly(task.due_date) <= todayIso))}
+            completeTask={completeTask}
+            pendingTasks={pendingTasks}
             messages={messages}
             setActiveView={setActiveView}
           />
@@ -678,38 +644,24 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
         {/* Events Card */}
         <div className="dashboard-module-shell" style={{ order: moduleOrder('events') }} data-dashboard-module="events">
         <div className="bento-card bento-events bento-card-illustrated" role="region" aria-label={t(messages, 'next_events')}>
-          <span className="bento-card-visual bento-card-visual-events" aria-hidden="true">
-            <CalendarClock size={30} />
-          </span>
-          <div className="bento-card-header">
-            <h2 className="bento-card-title">{t(messages, 'next_events')}</h2>
-          </div>
+          <DashboardCardHeading icon={Calendar} tone="purple" title={t(messages, 'next_events')} action={t(messages, 'module.rewards.view_all')} onClick={() => setActiveView('calendar')} />
           <div className="event-list">
             {summary.next_events?.length === 0 && (
               <div className="bento-empty">
                 <span>{t(messages, 'module.dashboard.empty_events')}</span>
               </div>
             )}
-            {summary.next_events?.slice(0, 4).map((ev, i) => {
-              return (
-              <div key={ev.id} className="event-item">
-                <div className="event-time">{parseDate(ev.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}</div>
-                <div className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />
+            {summary.next_events?.slice(0, 4).map((ev, i) => (
+              <button type="button" key={`${ev.id}:${ev.starts_at}`} className="event-item" onClick={() => { sessionStorage.setItem('tribu_calendar_focus', parseDate(ev.starts_at).toISOString()); setActiveView('calendar'); }}>
+                <DashboardDateTile value={ev.starts_at} locale={locale} month />
                 <div className="event-info">
-                  <div className="event-title">{ev.title}</div>
-                  <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {prettyDate(ev.starts_at, lang, timeFormat)}
-                    <AssignedBadges assignedTo={ev.assigned_to} members={members} />
-                  </div>
+                  <div className="event-title"><span className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />{ev.title}</div>
+                  <div className="event-meta"><Clock size={11} aria-hidden="true" />{ev.all_day ? t(messages, 'module.calendar.all_day') : `${formatEventTime(ev.starts_at, locale, timeFormat)}${ev.ends_at ? ` – ${formatEventTime(ev.ends_at, locale, timeFormat)}` : ''}`}</div>
+                  {ev.location && <div className="event-meta"><MapPin size={11} aria-hidden="true" />{ev.location}</div>}
                 </div>
-              </div>
-              );
-            })}
-          </div>
-          <div className="bento-card-footer">
-            <button type="button" className="bento-card-action" onClick={() => setActiveView('calendar')}>
-              {t(messages, 'module.dashboard.view_calendar')}
-            </button>
+                <AssignedBadges assignedTo={ev.assigned_to} members={members} />
+              </button>
+            ))}
           </div>
         </div>
         </div>
@@ -717,12 +669,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
         {/* Tasks Card */}
         <div className="dashboard-module-shell" style={{ order: moduleOrder('tasks') }} data-dashboard-module="tasks">
         <div className="bento-card bento-tasks bento-card-illustrated" role="region" aria-label={t(messages, 'module.dashboard.open_tasks')}>
-          <span className="bento-card-visual bento-card-visual-tasks" aria-hidden="true">
-            <ListChecks size={30} />
-          </span>
-          <div className="bento-card-header">
-            <h2 className="bento-card-title">{t(messages, 'module.dashboard.open_tasks')}</h2>
-          </div>
+          <DashboardCardHeading icon={ListChecks} tone="amber" title={t(messages, 'module.dashboard.open_tasks')} action={t(messages, 'module.rewards.view_all')} onClick={() => setActiveView('tasks')} />
           <div className="task-preview-list">
             {openTasks.length === 0 && (
               <div className="bento-empty">
@@ -732,22 +679,19 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
             )}
             {openTasks.slice(0, 5).map((task) => {
               const assignee = members.find((m) => m.user_id === task.assigned_to_user_id);
-              const priorityColor = task.priority === 'high' ? 'var(--danger)' : task.priority === 'normal' ? 'var(--amethyst)' : 'var(--sapphire)';
               return (
                 <div key={task.id} className="task-preview-item">
+                  <button type="button" role="checkbox" aria-checked={false} className="task-checkbox" disabled={pendingTasks.has(task.id)} aria-label={t(messages, 'aria.mark_task').replace('{title}', task.title)} onClick={() => completeTask(task.id)} />
                   <div className="task-preview-info">
-                    <div className="task-preview-title">{task.title}</div>
+                    <button type="button" className="task-preview-title dashboard-row-link" onClick={() => setActiveView('tasks')}>{task.title}</button>
+
                   </div>
-                  <div className="task-priority-dot" style={{ background: priorityColor }} aria-hidden="true" />
-                  {assignee && <MemberAvatar member={assignee} index={members.indexOf(assignee)} size={22} />}
+                  {assignee && <span className="dashboard-task-person" style={{ '--person-color': getMemberColor(assignee, members.indexOf(assignee)) }}>{assignee.display_name}</span>}
+                  {task.due_date && <span className={`dashboard-task-due${normalizeDateOnly(task.due_date) <= todayIso ? ' is-due' : ''}`}>{normalizeDateOnly(task.due_date) === todayIso ? t(messages, 'module.calendar.today') : parseDate(task.due_date)?.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}</span>}
+
                 </div>
               );
             })}
-          </div>
-          <div className="bento-card-footer">
-            <button type="button" className="bento-card-action" onClick={() => setActiveView('tasks')}>
-              {t(messages, 'module.dashboard.view_tasks')}
-            </button>
           </div>
         </div>
         </div>
@@ -755,12 +699,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
         {/* Birthdays Card */}
         <div className="dashboard-module-shell" style={{ order: moduleOrder('birthdays') }} data-dashboard-module="birthdays">
         <div className="bento-card bento-birthdays bento-card-illustrated" role="region" aria-label={t(messages, 'upcoming_birthdays_4w')}>
-          <span className="bento-card-visual bento-card-visual-birthdays" aria-hidden="true">
-            <Cake size={30} />
-          </span>
-          <div className="bento-card-header">
-            <h2 className="bento-card-title">{t(messages, 'upcoming_birthdays_4w')}</h2>
-          </div>
+          <DashboardCardHeading icon={Cake} tone="purple" title={t(messages, 'upcoming_birthdays_4w')} action={t(messages, 'module.rewards.view_all')} onClick={() => setActiveView('contacts')} />
           <div className="birthday-list">
             {summary.upcoming_birthdays?.length === 0 && (
               <div className="bento-empty">{t(messages, 'module.dashboard.empty_birthdays')}</div>
@@ -773,24 +712,25 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
                 : { bg: 'rgba(120,130,180,0.08)', color: 'var(--text-muted)' };
               return (
                 <div key={i} className="birthday-item">
-                  <div className="birthday-avatar" style={{ background: c.bg }} aria-hidden="true"><Cake size={16} style={{ color: c.color }} /></div>
+                  <MemberAvatar member={{ display_name: b.person_name }} index={i} size={41} />
                   <div className="birthday-info">
+                    <div className="birthday-countdown">{new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(b.days_until, 'day')}</div>
                     <div className="birthday-name">{b.person_name}</div>
                     <div className="birthday-date">{b.occurs_on}</div>
                   </div>
-                  <div className="birthday-countdown" style={{ background: c.bg, color: c.color }}>
-                    {b.days_until} {t(messages, 'module.dashboard.days')}
-                  </div>
+
                 </div>
               );
             })}
           </div>
-          <div className="bento-card-footer">
-            <button type="button" className="bento-card-action" onClick={() => setActiveView('contacts')}>
-              {t(messages, 'module.dashboard.view_birthdays')}
-            </button>
-          </div>
         </div>
+        </div>
+
+        <div className="dashboard-module-shell" style={{ order: moduleOrder('meals') }} data-dashboard-module="meals">
+          <DashboardMealsCard meals={mealsToday} loading={mealsLoading} error={!demoMode && mealResult.error} messages={messages} setActiveView={setActiveView} />
+        </div>
+        <div className="dashboard-module-shell" style={{ order: moduleOrder('activity') }} data-dashboard-module="activity">
+          <HouseholdActivityFeed activity={activity} messages={messages} lang={lang} limit={3} dashboard />
         </div>
 
         {/* Rewards Widget */}
@@ -810,6 +750,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
           </div>
         )}
       </div>
+      <DashboardFooter messages={messages} />
     </div>
   );
 }

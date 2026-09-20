@@ -20,16 +20,16 @@ colors:
   dark-text: "#F3F0EC"
   dark-text-secondary: "#C9C1D1"
   dark-text-muted: "#9D95AA"
-  light-bg: "#F8F3EB"
-  light-bg-deep: "#F0E7DC"
-  light-surface: "#FFFDF8"
-  light-elevated: "#FBF5ED"
-  light-hover: "#F2E8DA"
-  light-border: "rgba(93, 74, 56, 0.13)"
-  light-glass: "rgba(255, 253, 248, 0.88)"
-  light-text: "#241D18"
-  light-text-secondary: "#5F554D"
-  light-text-muted: "#766B61"
+  light-bg: "#FAF8F4"
+  light-bg-deep: "#F5F2EE"
+  light-surface: "#FFFEFD"
+  light-elevated: "#FAF9F7"
+  light-hover: "#F3EDF9"
+  light-border: "rgba(88, 65, 80, 0.10)"
+  light-glass: "rgba(252, 250, 247, 0.96)"
+  light-text: "#151828"
+  light-text-secondary: "#42414C"
+  light-text-muted: "#756F79"
   text-on-primary: "#FFFFFF"
 typography:
   display:
@@ -146,7 +146,7 @@ The product has two major visual modes:
 
 Both modes should preserve the same product character. Light mode must not become a plain admin table. Dark mode must not become a neon glassmorphism demo.
 
-The default implementation source is `frontend/styles/globals.css`. This `DESIGN.md` describes the intended visual system so design changes stay coherent across the PWA, shared display, screenshots, and future clients.
+The shared implementation source is `frontend/styles/globals.css`; dashboard-specific layout lives in `frontend/styles/dashboard.css`. This `DESIGN.md` describes the intended visual system so design changes stay coherent across the PWA, shared display, screenshots, and future clients.
 
 ## Colors
 
@@ -159,7 +159,7 @@ Tribu uses a warm-neutral foundation with restrained jewel accents. Color is fun
 - **Rose (`#C9828F`)** is emotional and human. Use it for birthdays, gifts, family highlights, and gentle warmth.
 - **Danger (`#D16D72`)** is reserved for destructive or overdue states. Do not use it for normal urgency copy.
 - **Dark background (`#0C101C`, `#080B14`)** creates a quiet evening dashboard. It needs real contrast, not transparent-on-transparent layering.
-- **Light background (`#F8F3EB`, `#FFFDF8`)** should feel like warm paper, not pure white SaaS chrome.
+- **Light background (`#FAF8F4`, `#FFFEFD`)** should feel like warm paper, not pure white SaaS chrome.
 
 Use gradients sparingly. The existing gradient families are acceptable for brand moments, illustrated dashboard cards, and key CTAs. Do not apply gradients to long-form content, dense tables, or status labels where they reduce scannability.
 
@@ -167,7 +167,7 @@ Status colors must remain semantic. A module accent is not a health state. Do no
 
 ## Typography
 
-Tribu uses **Inter** for product UI and **JetBrains Mono** only for compact technical or numeric details. The tone is clear, humane, and slightly dense.
+The signed-in shell uses the native system UI stack (`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, Arial) from the supplied mockup. Landing and standalone surfaces retain **Inter**. Handwritten dashboard notes use italic Georgia; **JetBrains Mono** remains reserved for compact technical details.
 
 Typography should prioritize fast family scanning:
 
@@ -213,7 +213,7 @@ Hover effects may lift or brighten a card slightly. They should never shift layo
 Tribu is soft, not bubbly.
 
 - Small controls use `10px` to `14px` radii.
-- Cards and major surfaces use `20px` radii.
+- Dashboard cards use `15px` radii; other major surfaces use `20px` radii.
 - Large hero or display surfaces may use `28px` radii.
 - Pills are reserved for chips, badges, segmented actions, and compact CTAs.
 
@@ -240,6 +240,31 @@ Dashboard cards are bento modules. Each card should answer one household questio
 - What should I open?
 
 A good card has a clear title, one primary value or action, and a small number of secondary details. Avoid cards that are only summaries of database counts unless those counts drive an action.
+
+### Family overview
+
+The September 2026 mockup brings lighter paper surfaces, amethyst navigation,
+compact mixed-case headings, and a landscape illustration on the next-event card.
+At wide desktop sizes, the default dashboard places quick capture across the full
+width, events/tasks/today’s meals in three columns, then daily routines, birthdays,
+rewards, and household activity in four columns. Tablet views use two columns and
+mobile uses one, retaining accessible controls and opaque surfaces in both themes.
+Existing saved module orders are preserved; new meal and activity modules are
+inserted automatically, and resetting the layout applies the new default.
+
+The meal preview uses the existing meal-plan API (demo mode uses demo meal data).
+Loading and failed requests are distinct from empty days. Recurring tasks due today
+or earlier appear in the daily loop; their completion and ordinary task completion
+use the existing task endpoint. Meal and task details open their owning views.
+The sidebar lists the household’s existing members without inventing demo profiles.
+
+Playfulness is part of this dashboard: soft landscape silhouettes, handwritten
+notes, a slightly tilted calendar, pastel icon badges, meal thumbnails, routine
+progress rings and reward stars. The landscape SVGs and decorative meal photos
+in `frontend/public/illustrations` come from the supplied `Tribu.html`. Meal photos
+represent slots rather than the exact planned recipe. Completion and reward
+progress always reflect app data. Hover movement stays subtle and respects
+`prefers-reduced-motion`.
 
 ### Quick Capture
 

@@ -1,27 +1,17 @@
-import { Award, ChevronRight, Gift, Trophy } from 'lucide-react';
+import { Award, ChevronRight, Gift, Trophy, Star } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useRewards } from '../hooks/useRewards';
 import { CurrencyIcon } from '../lib/currency-icons';
 import { t } from '../lib/i18n';
 import MemberAvatar from './MemberAvatar';
+import { DashboardCardHeading } from './DashboardDetails';
 
 function RewardsCardShell({ messages, setActiveView, children, loading = false }) {
   return (
     <div className={`bento-card bento-rewards bento-card-illustrated rewards-widget-card${loading ? ' rewards-widget-loading' : ''}`}>
-      <span className="bento-card-visual bento-card-visual-rewards rewards-widget-visual" aria-hidden="true">
-        <Gift size={30} />
-      </span>
-      <div className="bento-card-header rewards-widget-header">
-        <div>
-          <h2 className="bento-card-title">{t(messages, 'module.rewards.name')}</h2>
-        </div>
-      </div>
+      <DashboardCardHeading icon={Star} tone="amber" title={t(messages, 'module.rewards.name')} action={t(messages, 'module.rewards.view_all')} onClick={() => setActiveView('rewards')} />
       {children}
-      <div className="bento-card-footer rewards-widget-footer">
-        <button type="button" className="bento-card-action" onClick={() => setActiveView('rewards')}>
-          {t(messages, 'module.rewards.view_all')}
-        </button>
-      </div>
+
     </div>
   );
 }
@@ -122,7 +112,12 @@ export default function RewardsDashboardWidget() {
             return (
               <div key={balance.user_id} className="rewards-child-row">
                 <MemberAvatar member={member || { display_name: balance.display_name }} index={index} size={26} />
-                <span className="rewards-child-name">{balance.display_name}</span>
+                <span className="rewards-child-copy"><span className="rewards-child-name">{balance.display_name}</span>
+                  {(() => {
+                    const goal = (rw.catalog || []).filter((reward) => reward.is_active && reward.cost > 0 && reward.cost > balance.balance).sort((a, b) => a.cost - b.cost)[0];
+                    return goal ? <span className="dashboard-progress" role="progressbar" aria-label={goal.name} aria-valuemin={0} aria-valuemax={goal.cost} aria-valuenow={Math.max(0, balance.balance)}><span style={{ width: `${Math.max(0, Math.min(100, balance.balance / goal.cost * 100))}%` }} /></span> : null;
+                  })()}
+                </span>
                 <span className="rewards-child-balance">
                   <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {balance.balance}
                 </span>

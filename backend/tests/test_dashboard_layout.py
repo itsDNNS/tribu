@@ -103,11 +103,13 @@ def test_dashboard_layout_persists_normalizes_and_resets_per_user():
     assert default_response.status_code == 200, default_response.json()
     assert default_response.json()["modules"] == [
         "quick_capture",
-        "daily_loop",
         "events",
         "tasks",
+        "meals",
+        "daily_loop",
         "birthdays",
         "rewards",
+        "activity",
     ]
 
     update_response = client.put(
@@ -120,9 +122,11 @@ def test_dashboard_layout_persists_normalizes_and_resets_per_user():
         "tasks",
         "events",
         "quick_capture",
+        "meals",
         "daily_loop",
         "birthdays",
         "rewards",
+        "activity",
     ]
 
     db = TestSession()
@@ -137,7 +141,7 @@ def test_dashboard_layout_persists_normalizes_and_resets_per_user():
 
     reset_response = client.delete("/nav/dashboard-layout", headers=_auth(token))
     assert reset_response.status_code == 200, reset_response.json()
-    assert reset_response.json()["modules"][0:2] == ["quick_capture", "daily_loop"]
+    assert reset_response.json()["modules"][0:2] == ["quick_capture", "events"]
 
 
 def test_ui_preferences_persist_validate_and_share_available_values():
@@ -202,11 +206,11 @@ def test_dashboard_layout_rejects_unknown_modules_and_enforces_scopes():
 
     invalid = client.put(
         "/nav/dashboard-layout",
-        json={"modules": ["tasks", "activity"]},
+        json={"modules": ["tasks", "unknown-module"]},
         headers=_auth(write_token),
     )
     assert invalid.status_code == 422
-    assert "activity" in str(invalid.json())
+    assert "unknown-module" in str(invalid.json())
 
     forbidden_preferences_read = client.get("/nav/ui-preferences", headers=_auth(write_token))
     assert forbidden_preferences_read.status_code == 403

@@ -149,7 +149,7 @@ describe('DashboardView hero', () => {
     expect(nextUp).toHaveTextContent('School run');
     expect(nextUp).toHaveTextContent('Main gate');
     expect(nextUp).toHaveTextContent('08:15');
-    expect(nextUp.querySelector('.next-up-time-chip')).toHaveTextContent('08:15');
+    expect(nextUp.querySelector('.dashboard-date-tile strong')).toHaveTextContent(`${new Date().getDate()}.`);
     expect(nextUp.querySelector('.next-up-visual')).toBeInTheDocument();
     const nextUpButton = within(nextUp).getByRole('button', { name: /School run/i });
     expect(nextUpButton).toHaveClass('next-up-content');
@@ -162,8 +162,8 @@ describe('DashboardView hero', () => {
     const statusGroup = within(commandCenter).getByRole('group', { name: 'Today status' });
     expect(statusGroup).toHaveClass('today-status-card');
     expect(within(statusGroup).getByText('Today status')).toBeVisible();
-    expect(statusGroup.querySelectorAll('.today-status-item')).toHaveLength(4);
-    expect(statusGroup.querySelectorAll('.today-status-icon')).toHaveLength(4);
+    expect(statusGroup.querySelectorAll('.today-status-item')).toHaveLength(5);
+    expect(statusGroup.querySelectorAll('.today-status-icon')).toHaveLength(5);
     expect(within(statusGroup).getByTestId('today-status-events')).toHaveTextContent('2');
     expect(within(statusGroup).getByTestId('today-status-tasks')).toHaveTextContent('2');
     expect(within(statusGroup).getByTestId('today-status-shopping')).toHaveTextContent('5');
@@ -203,7 +203,7 @@ describe('DashboardView hero', () => {
 
   it('promotes the date inside the next-up chip when the next event is not today', () => {
     const startsAt = daysFromTodayAt(2, 14, 5);
-    const expectedDate = new Date(startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const expectedDay = `${new Date(startsAt).getDate()}.`;
     mockAppState = baseApp({
       summary: {
         next_events: [{ id: 7, title: 'Dentist', starts_at: startsAt, location: 'Downtown' }],
@@ -215,9 +215,9 @@ describe('DashboardView hero', () => {
 
     const nextUp = screen.getByRole('region', { name: 'Next up' });
     const chip = nextUp.querySelector('.next-up-time-chip');
-    expect(chip).toHaveClass('is-stacked');
-    expect(chip.querySelector('.next-up-chip-date')).toHaveTextContent(expectedDate);
-    expect(chip.querySelector('.next-up-chip-time')).toHaveTextContent('14:05');
+    expect(chip.querySelector('strong')).toHaveTextContent(expectedDay);
+    expect(nextUp.querySelector('.next-up-meta')).toHaveTextContent('14:05');
+    expect(nextUp.querySelector('.next-up-day-label')).toHaveTextContent('in 2 days');
     expect(nextUp).toHaveTextContent('Dentist');
     expect(nextUp).toHaveTextContent('Downtown');
   });
@@ -233,8 +233,7 @@ describe('DashboardView hero', () => {
 
     render(<DashboardView />);
 
-    const chip = screen.getByRole('region', { name: 'Next up' }).querySelector('.next-up-time-chip');
-    expect(chip).not.toHaveClass('is-stacked');
+    const chip = screen.getByRole('region', { name: 'Next up' }).querySelector('.next-up-meta');
     expect(chip.textContent).toMatch(/^9:00\s?AM$/i);
     expect(chip.textContent).not.toMatch(/^09:00/);
   });
