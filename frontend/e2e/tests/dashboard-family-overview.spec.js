@@ -115,3 +115,24 @@ test('dashboard uses real meals and task completion at responsive widths in ligh
     await fs.writeFile(path.join(process.env.DASHBOARD_EVIDENCE_DIR, `${testInfo.project.name.replaceAll(' ', '-')}-metrics.json`), JSON.stringify(metrics, null, 2));
   }
 });
+
+test('dashboard labels a real all-day event on both event surfaces without clock times', async ({ authedPage: page, apiCtx }) => {
+  const familyId = await getFamilyId(apiCtx);
+  const event = await seedCalendarEvent(apiCtx, familyId, { title: 'All-day family outing', all_day: true });
+  try {
+    await page.reload();
+    const nextUp = page.getByRole('region', { name: 'Next up' });
+    const events = page.getByRole('region', { name: 'Next events', exact: true });
+    await expect(nextUp).toContainText(event.title);
+    await expect(events).toContainText(event.title);
+    await expect(nextUp.locator('.next-up-meta').first()).toHaveText('All day');
+    await expect(events.locator('.event-meta').first()).toHaveText('All day');
+    for (const surface of [nextUp, events]) {
+      await expect(surface).not.toContainText('module.calendar.all_day');
+      await expect(surface).not.toContainText(/\d{1,2}:\d{2}/);
+    }
+  } finally {
+    const deleted = await apiCtx.delete(`/api/calendar/events/${event.id}`);
+    expect(deleted.ok()).toBeTruthy();
+  }
+});

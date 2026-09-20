@@ -174,7 +174,7 @@ function NextUpCard({ event, locale, lang, timeFormat, messages, members, setAct
           <span className="next-up-time-chip"><DashboardDateTile value={event.starts_at} locale={locale} month /></span>
           <span className="next-up-details">
             <span className="next-up-title"><span className="event-dot" style={{ background: event.color || 'var(--amethyst)' }} />{event.title}</span>
-            <span className="next-up-meta"><Clock size={12} aria-hidden="true" />{event.all_day ? t(messages, 'module.calendar.all_day') : `${formatEventTime(event.starts_at, locale, timeFormat)}${event.ends_at ? ` – ${formatEventTime(event.ends_at, locale, timeFormat)}` : ''}`}</span>
+            <span className="next-up-meta"><Clock size={12} aria-hidden="true" />{event.all_day ? t(messages, 'all_day') : `${formatEventTime(event.starts_at, locale, timeFormat)}${event.ends_at ? ` – ${formatEventTime(event.ends_at, locale, timeFormat)}` : ''}`}</span>
             {(assigned.length > 0 || event.location) && <span className="next-up-meta">{assigned.length ? <UserRound size={12} aria-hidden="true" /> : <MapPin size={12} aria-hidden="true" />}{assigned.length ? assigned.map((member) => member.display_name).join(', ') : event.location}</span>}
           </span>
           <span className="next-up-arrow" aria-hidden="true"><ArrowRight size={15} /></span>
@@ -639,7 +639,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
                 <DashboardDateTile value={ev.starts_at} locale={locale} month />
                 <div className="event-info">
                   <div className="event-title"><span className="event-dot" style={{ background: ev.color || getMemberColor(null, i) }} aria-hidden="true" />{ev.title}</div>
-                  <div className="event-meta"><Clock size={11} aria-hidden="true" />{ev.all_day ? t(messages, 'module.calendar.all_day') : `${formatEventTime(ev.starts_at, locale, timeFormat)}${ev.ends_at ? ` – ${formatEventTime(ev.ends_at, locale, timeFormat)}` : ''}`}</div>
+                  <div className="event-meta"><Clock size={11} aria-hidden="true" />{ev.all_day ? t(messages, 'all_day') : `${formatEventTime(ev.starts_at, locale, timeFormat)}${ev.ends_at ? ` – ${formatEventTime(ev.ends_at, locale, timeFormat)}` : ''}`}</div>
                   {ev.location && <div className="event-meta"><MapPin size={11} aria-hidden="true" />{ev.location}</div>}
                 </div>
                 <AssignedBadges assignedTo={ev.assigned_to} members={members} />

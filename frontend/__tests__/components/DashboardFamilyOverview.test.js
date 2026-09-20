@@ -149,3 +149,22 @@ it('uses the selected language for the next event’s date and relative day', as
   await waitFor(() => expect(apiListMealPlans).toHaveBeenCalled());
   expect(screen.getByText('après-demain')).toBeVisible();
 });
+
+it.each([
+  ['en', true, 'All day'],
+  ['de', true, 'Ganztägig'],
+  ['en', false, '09:00 – 10:00'],
+  ['de', false, '09:00 – 10:00'],
+])('labels both event surfaces in %s (all-day: %s)', async (lang, allDay, expected) => {
+  mockApp.lang = lang;
+  mockApp.messages = buildMessages(lang);
+  mockApp.summary.next_events = [{
+    id: 1, title: 'Family outing', all_day: allDay,
+    starts_at: `${today()}T09:00:00`, ends_at: `${today()}T10:00:00`,
+  }];
+  const { container } = render(<DashboardView />);
+  await waitFor(() => expect(apiListMealPlans).toHaveBeenCalled());
+  const metadata = ['.next-up-meta', '.bento-events .event-meta']
+    .map((selector) => container.querySelector(selector).textContent);
+  expect(metadata).toEqual([expected, expected]);
+});
