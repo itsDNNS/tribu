@@ -10,6 +10,7 @@ Date selection, member filtering and form state live in their existing React own
 
 - `frontend/components/responsive/PlannerUI.js`: shared day strip, week presentation switch, day sections, compact month, event cards and empty states.
 - `frontend/components/responsive/ResponsiveUI.js`: shared mobile header, navigation, more/quick-create sheets, and connections to existing actions. Family switching, notifications, logout and dashboard customization remain accessible in More.
+  Shopping counts remain visible in the bottom navigation; task and shopping counts also appear in More. Unread counts appear on the header menu, More, and its Notifications action, including outside Dashboard, unless the notification badge preference is disabled. More identifies the active overflow view and both menu triggers announce their expanded dialog state. Visual counts cap at 99+ while accessible descriptions retain the full count and button names remain stable.
 - `frontend/hooks/useResponsiveUI.js`: content-width measurement with `ResizeObserver`, plus visual viewport measurements for mobile keyboards.
 - `frontend/styles/responsive.css`: supplied mockup planner rules and scoped adapters for Tribu's shell, themes and dialogs.
 - Existing `useCalendar`, `useMealPlans`, API clients and form handlers remain responsible for data and mutations. No backend schema or database migration is needed.

@@ -20,6 +20,20 @@ const shot = async (page, name) =>
     style: "nextjs-portal{display:none}",
     fullPage: false,
   });
+test('anonymous mobile menu shows task, shopping and unread badges', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  await expect(page.locator('.ui-mobile-header .ui-count-badge')).toHaveText('3');
+  await page.locator('.ui-bottom-nav').getByRole('button', { name: 'Mehr', exact: true }).click();
+  const menu = page.getByRole('dialog');
+  await expect(menu.getByRole('button', { name: 'Aufgaben', exact: true })).toHaveAccessibleDescription('Aufgaben: 1');
+  await expect(menu.getByRole('button', { name: 'Einkauf', exact: true })).toHaveAccessibleDescription('Einkauf: 2');
+  await shot(page, 'menu-badges-light.png');
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+  await menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).scrollIntoViewIfNeeded();
+  await expect(menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).locator('.ui-count-badge')).toHaveText('3');
+  await shot(page, 'menu-badges-dark.png');
+});
 for (const width of [320, 390, 680, 768, 820, 1024, 1448])
   test(`calendar layouts at ${width}px`, async ({ page }) => {
     const errors = [];

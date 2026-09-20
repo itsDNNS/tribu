@@ -131,7 +131,8 @@ async function mockResponsivePlanner(page, { child = false } = {}) {
       };
     else if (path === "/admin/settings/time-format")
       data = { time_format: "24h" };
-    else if (path === "/notifications/unread-count") data = { count: 0 };
+    else if (path === "/shopping/lists") data = [{ id: 1, family_id: 7, name: "Demo-Liste", item_count: 2, checked_count: 0 }];
+    else if (path === "/notifications/unread-count") data = { count: 3 };
     else if (path === "/notifications/stream")
       return route.fulfill({
         status: 200,

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Users,
   Search,
@@ -20,8 +19,17 @@ import { plannerText } from './PlannerUI';
 import CalendarDialog from '../calendar/CalendarDialog';
 import QuickCaptureCard from '../QuickCaptureCard';
 
-export function MobileHeader({ onSearch, onMore, onHome }) {
-  const { me, messages } = useApp();
+function MobileBadge({ count }) {
+  return count > 0 ? (
+    <span className="ui-count-badge" aria-hidden="true">
+      {count > 99 ? '99+' : count}
+    </span>
+  ) : null;
+}
+
+export function MobileHeader({ onSearch, onMore, onHome, moreOpen }) {
+  const { me, messages, unreadCount, showNotificationBadge = true } = useApp();
+  const notificationCount = showNotificationBadge ? unreadCount : 0;
   const now = useCurrentMinute();
   const greeting = t(
     messages,
@@ -53,8 +61,12 @@ export function MobileHeader({ onSearch, onMore, onHome }) {
         className="ui-shell-icon"
         onClick={onMore}
         aria-label={t(messages, 'aria.open_menu')}
+        aria-haspopup="dialog"
+        aria-expanded={moreOpen}
+        aria-description={notificationCount > 0 ? `${notificationCount} ${t(messages, 'notifications_unread')}` : undefined}
       >
         <Menu size={22} />
+        <MobileBadge count={notificationCount} />
       </button>
     </div>
   );
@@ -69,7 +81,10 @@ export default function ResponsiveUI({
   setSheet,
 }) {
   const app = useApp();
-  const { activeView, messages, isChild, theme, setTheme, demoMode } = app;
+  const { activeView, messages, isChild, theme, setTheme, demoMode, unreadCount, showNotificationBadge = true } = app;
+  const notificationCount = showNotificationBadge ? unreadCount : 0;
+  const unreadDescription = notificationCount > 0 ? `${notificationCount} ${t(messages, 'notifications_unread')}` : undefined;
+  const activeInMore = items.some(item => item.key === activeView && !['dashboard', 'calendar', 'shopping'].includes(item.key));
   useVisualViewport();
   const routes = [
     ['dashboard', LayoutGrid, 'home'],
@@ -85,23 +100,33 @@ export default function ResponsiveUI({
         className="bottom-nav ui-bottom-nav"
         aria-label={t(messages, 'aria.bottom_navigation')}
       >
-        {routes.map(([key, Icon, label]) => (
-          <button
-            type="button"
-            key={key}
-            disabled={key === 'new' && isChild}
-            className={`ui-nav-button ${activeView === key ? 'active' : ''} ${key === 'new' ? 'ui-nav-new' : ''}`}
-            aria-current={activeView === key ? 'page' : undefined}
-            onClick={() =>
-              key === 'more' || key === 'new' ? setSheet(key) : navigate(key)
-            }
-          >
-            <span className={key === 'new' ? 'ui-nav-plus' : ''}>
-              <Icon size={21} />
-            </span>
-            <span>{plannerText(messages, label)}</span>
-          </button>
-        ))}
+        {routes.map(([key, Icon, label]) => {
+          const current = activeView === key || (key === 'more' && activeInMore);
+          const count = key === 'more' ? notificationCount : items.find(item => item.key === key)?.badge;
+          const name = plannerText(messages, label);
+          const opensSheet = key === 'more' || key === 'new';
+          return (
+            <button
+              type="button"
+              key={key}
+              disabled={key === 'new' && isChild}
+              className={`ui-nav-button ${current || sheet === key ? 'active' : ''} ${key === 'new' ? 'ui-nav-new' : ''}`}
+              aria-current={current ? 'page' : undefined}
+              aria-haspopup={opensSheet ? 'dialog' : undefined}
+              aria-expanded={opensSheet ? sheet === key : undefined}
+              aria-description={key === 'more' ? unreadDescription : count > 0 ? `${name}: ${count}` : undefined}
+              onClick={() =>
+                key === 'more' || key === 'new' ? setSheet(key) : navigate(key)
+              }
+            >
+              <span className={key === 'new' ? 'ui-nav-plus' : 'ui-nav-icon'}>
+                <Icon size={21} />
+                <MobileBadge count={count} />
+              </span>
+              <span>{name}</span>
+            </button>
+          );
+        })}
       </nav>
       {sheet && (
         <CalendarDialog
@@ -115,10 +140,12 @@ export default function ResponsiveUI({
         >
           <div className="ui-menu-grid">
             {sheet === 'more'
-              ? Object.values(items).map((item) => (
+              // Notifications has a dedicated action in the sheet footer.
+              ? items.filter(item => item.key !== 'notifications').map((item) => (
                   <button
                     key={item.key}
                     aria-current={activeView === item.key ? 'page' : undefined}
+                    aria-description={item.badge > 0 ? `${item.label}: ${item.badge}` : undefined}
                     className="ui-menu-item"
                     onClick={() => {
                       setSheet(null);
@@ -127,6 +154,7 @@ export default function ResponsiveUI({
                   >
                     <item.icon size={22} />
                     <strong>{item.label}</strong>
+                    <MobileBadge count={item.badge} />
                   </button>
                 ))
               : !isChild &&
@@ -184,6 +212,7 @@ export default function ResponsiveUI({
               </button>
               <button
                 className="tc-btn"
+                aria-description={unreadDescription}
                 onClick={() => {
                   setSheet(null);
                   onNotifications();
@@ -191,6 +220,7 @@ export default function ResponsiveUI({
               >
                 <Bell size={18} />
                 {t(messages, 'notifications')}
+                <MobileBadge count={notificationCount} />
               </button>
               <button
                 className="tc-btn"

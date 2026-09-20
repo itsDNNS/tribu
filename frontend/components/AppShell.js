@@ -393,7 +393,7 @@ export default function AppShell() {
 
       {/* Main */}
       <main id="main-content" className="main-content" style={isMobile ? { marginLeft: 0, width: '100%' } : collapsed ? { marginLeft: 70, width: 'calc(100% - 70px)' } : undefined}>
-        {isMobile && <MobileHeader onSearch={()=>setSearchOpen(true)} onMore={()=>setMobileSheet('more')} onHome={()=>navigate('dashboard')}/>}
+        {isMobile && <MobileHeader onSearch={()=>setSearchOpen(true)} onMore={()=>setMobileSheet('more')} moreOpen={mobileSheet === 'more'} onHome={()=>navigate('dashboard')}/>}
 
         <div className="view-enter">
           {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (

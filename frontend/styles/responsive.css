@@ -145,6 +145,47 @@ button.ui-date-label:hover {
 .ui-menu-foot .btn {
   flex: 1;
 }
+.ui-count-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--amethyst);
+  color: var(--text-on-primary);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.ui-nav-icon,
+.ui-mobile-header .ui-shell-icon {
+  position: relative;
+}
+.ui-nav-icon > .ui-count-badge,
+.ui-mobile-header .ui-shell-icon > .ui-count-badge {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+}
+.ui-mobile-header .ui-shell-icon > .ui-count-badge {
+  top: 0;
+  right: -2px;
+}
+.ui-menu-item > svg {
+  flex: none;
+}
+.ui-menu-item > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ui-menu-item > .ui-count-badge {
+  margin-left: auto;
+  min-width: 18px;
+}
 .ui-sheet-copy {
   color: var(--muted);
   font-size: 13px;
