@@ -57,8 +57,16 @@ for (const width of [320, 390, 1024, 1440]) {
     await page.screenshot({path:test.info().outputPath(`settings-${width}-light.png`), fullPage:true, animations:'disabled'});
     await page.getByRole('button', {name:'Farbschema',exact:true}).click();
     await page.screenshot({path:test.info().outputPath(`settings-${width}-dark.png`), fullPage:true, animations:'disabled'});
-    if (width < 768) await page.locator('.mobile-hamburger').click();
-    await page.locator('.sidebar .nav-item').filter({hasText:'Dashboard'}).click();
+    if (width <= 768) {
+      await page.getByRole('button', { name: 'Menü öffnen', exact: true }).click();
+      const menu = page.getByRole('dialog');
+      await expect(menu).toBeVisible();
+      await menu.getByRole('button', { name: 'Dashboard', exact: true }).click();
+      await expect(menu).toBeHidden();
+      await expect(page.locator('.ui-bottom-nav').getByRole('button', { name: 'Start', exact: true })).toHaveAttribute('aria-current', 'page');
+    } else {
+      await page.locator('.sidebar .nav-item').filter({hasText:'Dashboard'}).click();
+    }
     await expect(page.locator('.bento-grid')).toHaveCSS('gap','12px');
     await expect(page.locator('.dashboard-action-badge')).toHaveCount(0);
   });

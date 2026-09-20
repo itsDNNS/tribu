@@ -1,4 +1,5 @@
 const { test, expect, request } = require('@playwright/test');
+test.use({viewport:{width:1448,height:1000},serviceWorkers:'block'});
 const { getFamilyId, seedShoppingList, seedMealPlan } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 const { selectShoppingList } = require('../helpers/shopping');

@@ -1,4 +1,5 @@
 const { test, expect } = require('../helpers/fixtures');
+test.use({viewport:{width:1448,height:1000},serviceWorkers:'block'});
 const { getFamilyId, seedCalendarEvent } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 

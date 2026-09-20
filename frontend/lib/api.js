@@ -214,10 +214,21 @@ export async function apiGetEvents(familyId, rangeStart, rangeEnd) {
   if (rangeStart) url += `&range_start=${encodeURIComponent(rangeStart)}`;
   if (rangeEnd) url += `&range_end=${encodeURIComponent(rangeEnd)}`;
   const res = await request(url);
-  if (res.ok && res.data?.items) {
-    return { ok: true, data: res.data.items };
+  if (!res.ok || !Array.isArray(res.data?.items)) return res;
+  const items = [...res.data.items];
+  // Range views (including an extended agenda) must not stop at the API's
+  // default 50-item page. Do not report a partial range as successfully loaded.
+  if (rangeStart && rangeEnd) {
+    let total = res.data.total;
+    while (items.length < total) {
+      const next = await request(`${url}&offset=${items.length}&limit=200`);
+      if (!next.ok) return next;
+      if (!Array.isArray(next.data?.items) || !next.data.items.length) return {ok:false,status:409,data:{detail:'Calendar changed while loading; try again.'}};
+      items.push(...next.data.items);
+      total = next.data.total;
+    }
   }
-  return res;
+  return { ...res, data: items };
 }
 
 export function apiCreateEvent(payload) {

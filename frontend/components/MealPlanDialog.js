@@ -112,7 +112,7 @@ export default function MealPlanDialog({
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <form className="meal-form" onSubmit={handleSubmit}>
+        <form className="meal-form" onSubmit={handleSubmit}><div className="ui-meal-form-body">
           {recipes.length > 0 && (
             <div className="meal-recipe-picker">
               <label className="meal-recipe-picker-label" htmlFor="meal-recipe-select">
@@ -284,7 +284,7 @@ export default function MealPlanDialog({
             </div>
           )}
 
-          <div className="meal-form-actions">
+          </div><div className="meal-form-actions">
             {isEditing && onDelete && (
               <button
                 type="button"

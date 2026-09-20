@@ -1,5 +1,5 @@
 const { test, expect } = require('../helpers/fixtures');
-const { getFamilyId, seedCalendarEvent, seedTask } = require('../helpers/api-setup');
+const { getFamilyId, seedCalendarEvent, seedTask, seedShoppingList, seedShoppingItem } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
 function parseRgb(value) {
@@ -166,8 +166,10 @@ test.describe('Dashboard', () => {
     expect(await dashboardSearch.isVisible()).toBe(false);
     expect(await notificationToggle.isVisible()).toBe(false);
     expect(await layoutToggle.isVisible()).toBe(false);
-    await expect(page.locator('.mobile-header-actions').getByRole('button')).toHaveCount(3);
-    await expect(page.locator('.mobile-dashboard-layout-btn')).toBeVisible();
+    await expect(page.locator('.ui-mobile-header').getByRole('button')).toHaveCount(3);
+    await page.getByRole('button',{name:'Open menu',exact:true}).click();
+    await expect(page.getByRole('dialog').locator('.mobile-dashboard-layout-btn')).toBeVisible();
+    await page.keyboard.press('Escape');
     expect(await statusCard.isVisible()).toBe(true);
     expect(nextUpBox.y - (dateBox.y + dateBox.height)).toBeLessThanOrEqual(40);
     expect(statusBox.y).toBeGreaterThan(nextUpBox.y + nextUpBox.height);
@@ -188,7 +190,8 @@ test.describe('Dashboard', () => {
 
     // Event → Calendar
     await quickCapture.getByRole('button', { name: 'Event' }).click();
-    await expect(page.locator('.tc-calendar-grid')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Month', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
     // Back to Dashboard
     await navigateTo(page, 'Home');
@@ -248,7 +251,8 @@ test.describe('Dashboard', () => {
     await expect(todayStatus).toBeVisible({ timeout: 10000 });
 
     await todayStatus.getByRole('button', { name: /Events/i }).click();
-    await expect(page.locator('.tc-calendar-grid')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Month', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
     await navigateTo(page, 'Home');
     await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });
@@ -310,6 +314,14 @@ test.describe('Dashboard', () => {
   });
 
   test('customizes dashboard module order and keeps it after reload', async ({ authedPage: page }) => {
+    const openCustomization = async () => {
+      if (page.viewportSize().width <= 768) {
+        await page.locator('.ui-bottom-nav').getByRole('button', { name: 'More', exact: true }).click();
+        await expect(page.getByRole('dialog')).toBeVisible();
+      }
+      await page.getByRole('button', { name: 'Customize layout', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    };
     const tasksModule = page.locator('[data-dashboard-module="tasks"]');
     const eventsModule = page.locator('[data-dashboard-module="events"]');
     const dailyLoopModule = page.locator('[data-dashboard-module="daily_loop"]');
@@ -318,7 +330,7 @@ test.describe('Dashboard', () => {
     await expect(eventsModule).toHaveCSS('order', '1');
     await expect(tasksModule).toHaveCSS('order', '2');
 
-    await page.getByRole('button', { name: 'Customize layout' }).click();
+    await openCustomization();
     const saved = page.waitForResponse((response) => response.url().includes('/dashboard-layout') && response.request().method() === 'PUT');
     await page.getByRole('button', { name: 'Move Open tasks up' }).click();
     expect((await saved).ok()).toBeTruthy();
@@ -331,7 +343,7 @@ test.describe('Dashboard', () => {
     await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '1');
     await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '2');
 
-    await page.getByRole('button', { name: 'Customize layout' }).click();
+    await openCustomization();
     const reset = page.waitForResponse((response) => response.url().includes('/dashboard-layout') && response.request().method() === 'DELETE');
     await page.getByRole('button', { name: 'Reset layout' }).click();
     expect((await reset).ok()).toBeTruthy();
@@ -392,8 +404,14 @@ test.describe('Dashboard', () => {
 
   test('keeps weekly plan print output light, readable, and free of app chrome', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
-    await seedCalendarEvent(apiCtx, familyId, { title: 'Weekly print event' });
-    await seedTask(apiCtx, familyId, { title: 'Weekly print task' });
+    const today = await page.evaluate(() => {
+      const date = new Date();
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    });
+    await seedCalendarEvent(apiCtx, familyId, { title: 'Weekly print event', starts_at: `${today}T10:00:00` });
+    await seedTask(apiCtx, familyId, { title: 'Weekly print task', due_date: today });
+    const shoppingList = await seedShoppingList(apiCtx, familyId, 'Weekly print groceries');
+    await seedShoppingItem(apiCtx, shoppingList.id, 'Weekly print apples');
 
     await page.evaluate(() => {
       window.localStorage.setItem('tribu_theme', 'midnight-glass');
@@ -404,6 +422,11 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Weekly plan' })).toBeVisible({ timeout: 10000 });
 
     await page.emulateMedia({ media: 'print' });
+    const shopping = page.getByRole('region', { name: 'Shopping reminders', exact: true });
+    await expect(shopping).toHaveCount(1);
+    await expect(shopping).toContainText('Weekly print groceries');
+    await expect(page.getByRole('region', { name: 'Events', exact: true })).toContainText('Weekly print event');
+    await expect(page.getByRole('region', { name: 'Tasks and routines', exact: true })).toContainText('Weekly print task');
     const printState = await page.evaluate(() => {
       const styleOf = (selector) => {
         const element = document.querySelector(selector);

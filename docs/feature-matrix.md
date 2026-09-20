@@ -7,12 +7,12 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Area | Capability | Notes |
 |---|---|---|
 | Dashboard | Daily household overview | Events, direct task completion, daily routine progress, today’s meal plan, birthdays, rewards, activity, and quick capture. Saved module orders are preserved; resetting uses the new default layout. |
-| Calendar | Shared calendar | Six-week month and week views with adjacent dates, multi-day events, member filters, profile-based family colors with manual overrides, native event dialogs, recurring events and occurrence/series deletion, event duplication, ICS import/export and manual feed refresh, and phone sync through CalDAV. |
+| Calendar | Shared calendar | Adaptive month/week/agenda views with complete week rows, mobile day dots and detailed day cards, vertical whole-week planning, agenda range loading, multi-day events, member filters, profile-based family colors with manual overrides, native event dialogs, recurring events and occurrence/series deletion, event duplication, ICS import/export and manual feed refresh, and phone sync through CalDAV. |
 | Tasks | Responsibilities and routines | Assignees, priorities, date-only or timed due dates, recurrence, templates, overdue tracking, and opt-in VTODO sync. |
 | Shopping | Shared visual lists | Illustrated product tiles, quantity-aware quick add, editable details/photos, per-list department order, favorites/catalog/recent products, Undo, completed-trip history, mobile shopping mode, recipe ingredient selection, templates, real-time updates, and family-configured store search links. |
 | Contacts | Family address book | Contact cards, CSV import and export, birthday extraction, and CardDAV sync. |
 | Birthdays | Birthday tracking | Lookahead, countdowns, and sync from contacts. |
-| Meal planning | Weekly meals | Meal slots, ingredients, and connection to recipes and shopping. |
+| Meal planning | Weekly meals | Shared compact day/week selection, meal slots, date-based moves, ingredients, and connection to recipes and shopping. |
 | Recipes | Household recipe library | Recipe cards, ingredient scaling, and push-to-shopping support. |
 | School timetables | School schedule planning | Timetable views for school routines. |
 | Templates | Repeatable household plans | Reusable task and routine templates. |
@@ -27,6 +27,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Self-hosting | Docker Compose and GHCR images | PostgreSQL, Valkey, frontend, backend, backups, reverse proxy, and update docs. |
 | Security model | Family boundaries | httpOnly cookies, scoped PATs, display tokens, a non-root frontend container, backend privilege drop when supported, and security policy. |
 | Internationalization | 24 UI languages | Bundled locale packs across the app. |
+| Mobile layout | Shared navigation and sheets | Home/calendar/new/shopping/more navigation, quick capture, content-width-based planning, and scrolling forms with reachable save actions. Shopping keeps its own dock. |
 
 ### Shopping in the store
 
@@ -64,3 +65,5 @@ These are product areas worth evaluating as focused follow-up issues. They shoul
 - A shared display that behaves like a normal signed-in user.
 - Broad enterprise project-management workflows that do not fit family life.
 - A feature race that makes core household planning harder to understand.
+
+See [Responsive UI](responsive-ui.md) for the shared planner components, layout boundaries and validation.

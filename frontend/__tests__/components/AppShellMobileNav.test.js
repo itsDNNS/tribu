@@ -39,11 +39,13 @@ jest.mock('../../components/SearchOverlay', () => function MockSearchOverlay({ o
 });
 
 const messages = {
+  'module.responsive.home':'Home','module.responsive.calendar':'Calendar','module.responsive.new':'New','module.responsive.shopping':'Shopping','module.responsive.more':'More',
   dashboard: 'Dashboard',
   calendar: 'Calendar',
   activity: 'Activity',
   contacts: 'Contacts',
   notifications: 'Notifications',
+  notifications_unread: 'unread',
   settings: 'Settings',
   admin: 'Admin',
   nav_more: 'More',
@@ -99,53 +101,101 @@ function baseState(overrides = {}) {
 }
 
 describe('AppShell mobile bottom navigation', () => {
-  it('keeps high-priority mobile items visible and pins settings/admin in overflow', async () => {
-    mockAppState = baseState();
-    render(<AppShell />);
-
-    const bottomNav = screen.getByRole('navigation', { name: 'Bottom navigation' });
-    expect(bottomNav).toBeInTheDocument();
-
-    const visibleBottomItems = bottomNav.querySelectorAll('.bottom-nav-inner > .bottom-nav-item');
-    expect(visibleBottomItems).toHaveLength(5);
-    expect([...visibleBottomItems].map((item) => item.textContent)).toEqual([
-      'Home',
-      'Plan',
-      'Tasks1',
-      'Shopping2',
-      'More',
-    ]);
-
-    expect(within(bottomNav).getByRole('button', { name: /home/i })).toHaveAttribute('aria-current', 'page');
-    const tasksItem = visibleBottomItems[2];
-    const shoppingItem = visibleBottomItems[3];
-    expect(tasksItem).toHaveTextContent('Tasks');
-    expect(tasksItem).toHaveTextContent('1');
-    expect(shoppingItem).toHaveTextContent('Shopping');
-    expect(shoppingItem).toHaveTextContent('2');
-
-    fireEvent.click(within(bottomNav).getByRole('button', { name: /more/i }));
-    expect(screen.getAllByRole('button', { name: /^settings$/i })
-      .some((button) => button.classList.contains('bottom-nav-overflow-item'))).toBe(true);
-    expect(screen.getAllByRole('button', { name: /^admin$/i })
-      .some((button) => button.classList.contains('bottom-nav-overflow-item'))).toBe(true);
+  beforeEach(()=>{
+    HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
+    HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
+  });
+  it('shows the mockup navigation and opens all areas in a sheet',()=>{
+    mockAppState=baseState();render(<AppShell/>);
+    const nav=screen.getByRole('navigation',{name:'Bottom navigation'});
+    const buttons=within(nav).getAllByRole('button');
+    expect(buttons).toHaveLength(5);
+    ['Home','Calendar','New','Shopping','More'].forEach((name, index) => expect(buttons[index]).toHaveAccessibleName(name));
+    expect(buttons[0]).toHaveAttribute('aria-current','page');
+    fireEvent.click(buttons[4]);
+    const dialog=screen.getByRole('dialog');
+    expect(within(dialog).getByRole('button',{name:'Settings',exact:true})).toBeVisible();
+    expect(within(dialog).getByRole('button',{name:'Admin',exact:true})).toBeVisible();
+  });
+  it('exposes the active area and closes the sheet when navigating',()=>{
+    const setActiveView=jest.fn();mockAppState=baseState({activeView:'settings',setActiveView});render(<AppShell/>);
+    fireEvent.click(within(screen.getByRole('navigation',{name:'Bottom navigation'})).getByRole('button',{name:'More'}));
+    const dialog=screen.getByRole('dialog');
+    expect(within(dialog).getByRole('button',{name:'Settings',exact:true})).toHaveAttribute('aria-current','page');
+    fireEvent.click(within(dialog).getByRole('button',{name:'Admin',exact:true}));
+    expect(setActiveView).toHaveBeenCalledWith('admin');expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('exposes active overflow destinations as the current page and closes after navigation', async () => {
-    const setActiveView = jest.fn();
-    mockAppState = baseState({ activeView: 'settings', setActiveView });
+  it('restores shopping and task counts without changing exact control names', () => {
+    mockAppState = baseState({ activeView: 'calendar' });
     render(<AppShell />);
+    const nav = screen.getByRole('navigation', { name: 'Bottom navigation' });
+    const shopping = within(nav).getByRole('button', { name: 'Shopping', exact: true });
+    expect(shopping).toHaveTextContent('2');
+    expect(shopping).toHaveAccessibleDescription('Shopping: 2');
+    fireEvent.click(within(nav).getByRole('button', { name: 'More', exact: true }));
+    const menu = screen.getByRole('dialog');
+    expect(within(menu).getByRole('button', { name: 'Tasks', exact: true })).toHaveAccessibleDescription('Tasks: 1');
+    expect(within(menu).getByRole('button', { name: 'Shopping', exact: true })).toHaveAccessibleDescription('Shopping: 2');
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: /more/i }));
-    const settingsItem = screen.getAllByRole('button', { name: /^settings$/i })
-      .find((button) => button.classList.contains('bottom-nav-overflow-item'));
-    expect(settingsItem).toHaveAttribute('aria-current', 'page');
+  it('shows unread activity outside the dashboard and respects the badge preference at runtime', () => {
+    mockAppState = baseState({ activeView: 'calendar' });
+    const { rerender } = render(<AppShell />);
+    const menuTrigger = screen.getByRole('button', { name: 'Open menu', exact: true });
+    expect(menuTrigger).toHaveTextContent('7');
+    expect(menuTrigger).toHaveAccessibleDescription('7 unread');
+    const more = within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'More', exact: true });
+    expect(more).toHaveAccessibleDescription('7 unread');
+    fireEvent.click(more);
+    const notifications = [within(screen.getByRole('dialog')).getByRole('button', { name: 'Notifications', exact: true })];
+    for (const button of notifications) expect(button).toHaveAccessibleDescription('7 unread');
+    mockAppState = { ...mockAppState, showNotificationBadge: false };
+    rerender(<AppShell />);
+    expect(menuTrigger).not.toHaveTextContent('7');
+    expect(menuTrigger).not.toHaveAccessibleDescription();
+    expect(more).not.toHaveAccessibleDescription();
+    for (const button of notifications) {
+      expect(button).not.toHaveTextContent('7');
+      expect(button).not.toHaveAccessibleDescription();
+    }
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Tasks', exact: true })).toHaveTextContent('1');
+    mockAppState = { ...mockAppState, showNotificationBadge: true, unreadCount: 3 };
+    rerender(<AppShell />);
+    expect(menuTrigger).toHaveAccessibleDescription('3 unread');
+    expect(more).toHaveAccessibleDescription('3 unread');
+  });
 
-    const adminItem = screen.getAllByRole('button', { name: /^admin$/i })
-      .find((button) => button.classList.contains('bottom-nav-overflow-item'));
-    fireEvent.click(adminItem);
-    expect(setActiveView).toHaveBeenCalledWith('admin');
-    expect(document.querySelector('.bottom-nav-overflow')).not.toBeInTheDocument();
+  it('caps large visible counters and removes badges when counts become zero', () => {
+    mockAppState = baseState({ unreadCount: 120, shoppingLists: [{ item_count: 150, checked_count: 1 }] });
+    const { rerender, container } = render(<AppShell />);
+    const shopping = within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'Shopping', exact: true });
+    expect(shopping).toHaveTextContent('99+');
+    expect(shopping).toHaveAccessibleDescription('Shopping: 149');
+    expect(screen.getByRole('button', { name: 'Open menu', exact: true })).toHaveAccessibleDescription('120 unread');
+    mockAppState = { ...mockAppState, unreadCount: 0, shoppingLists: [], tasks: [] };
+    rerender(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'More', exact: true }));
+    expect(container.querySelectorAll('.ui-count-badge')).toHaveLength(0);
+    expect(shopping).not.toHaveAccessibleDescription();
+  });
+
+  it('marks More active for overflow views and announces both menu triggers as expandable dialogs', () => {
+    mockAppState = baseState({ activeView: 'settings' });
+    render(<AppShell />);
+    const more = within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'More', exact: true });
+    const header = screen.getByRole('button', { name: 'Open menu', exact: true });
+    expect(more).toHaveClass('active');
+    expect(more).toHaveAttribute('aria-current', 'page');
+    for (const trigger of [more, header]) {
+      expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    }
+    fireEvent.click(header);
+    for (const trigger of [more, header]) expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Admin', exact: true }));
+    for (const trigger of [more, header]) expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(more).toHaveClass('active');
   });
 
   it('keeps the opened mobile sidebar on an opaque theme surface', () => {

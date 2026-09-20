@@ -33,9 +33,9 @@ beforeEach(() => {
 });
 
 describe('Mockup calendar and event overlays', () => {
-  it.each([['monday','Monday'],['sunday','Sunday']])('uses six weeks with the %s preference and clickable adjacent days', (weekStart, firstDay) => {
+  it.each([['monday','Monday'],['sunday','Sunday']])('uses complete week rows with the %s preference and clickable adjacent days', (weekStart, firstDay) => {
     const { container } = render(<Harness weekStart={weekStart} />);
-    expect(container.querySelectorAll('.tc-calendar-day')).toHaveLength(42);
+    expect(container.querySelectorAll('.tc-calendar-day')).toHaveLength(weekStart==='monday'?35:42);
     expect(container.querySelector('.tc-weekday')).toHaveTextContent(firstDay);
     fireEvent.click(container.querySelector('.tc-calendar-day.outside .tc-day-number'));
     expect(screen.getByRole('dialog')).toBeVisible();

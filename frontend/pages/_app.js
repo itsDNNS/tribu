@@ -9,6 +9,7 @@ import { PWABanners } from '../components/PWABanners';
 import '../styles/globals.css';
 import '../styles/dashboard.css';
 import '../styles/calendar.css';
+import '../styles/responsive.css';
 import '../styles/settings.css';
 import '../styles/shopping.css';
 

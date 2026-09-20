@@ -32,8 +32,8 @@ test.describe('Authentication', () => {
       if (await mobileHeaderLogout.isVisible()) {
         await mobileHeaderLogout.click();
       } else {
-        await page.locator('.mobile-hamburger').click();
-        await page.locator('.sidebar-user [aria-label="Log out"]').click();
+        await page.getByRole('button',{name:'Open menu',exact:true}).click();
+        await page.getByRole('dialog').getByRole('button',{name:'Log out',exact:true}).click();
       }
     } else {
       await page.locator('.sidebar-user [aria-label="Log out"]').click();

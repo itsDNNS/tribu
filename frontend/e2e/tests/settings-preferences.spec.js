@@ -22,7 +22,17 @@ test('settings preferences persist for a real account and all ten sections open'
   await expect(page.locator('.bento-grid')).toHaveCSS('gap', '12px');
   await expect(page.locator('.bento-card').first()).toHaveCSS('padding', '8px 12px');
   await navigateTo(page, 'Calendar');
-  await expect(page.locator('.tc-weekday').first()).toHaveText('Sunday');
+  await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible();
+  const compact = await page.locator('.calendar-page').getAttribute('data-density') === 'compact';
+  await expect(page.locator(compact ? '.ui-weekday' : '.tc-weekday').first()).toHaveText(compact ? 'Sun' : 'Sunday');
+  await expect(page.locator('[data-date]').first()).toHaveAttribute('aria-label', /^Sunday,/);
+  await page.getByRole('button', { name: 'Week', exact: true }).click();
+  if (compact) {
+    await expect(page.locator('.ui-day-strip button')).toHaveCount(7);
+    await expect(page.locator('.ui-day-strip button').first()).toHaveAttribute('aria-label', /^Sunday,/);
+  } else {
+    await expect(page.locator('.tc-week-heading').first()).toContainText(/^Sunday/);
+  }
   await navigateTo(page, 'Settings');
   await page.getByRole('button', { name: 'Account', exact: true }).click();
   const sections = page.getByRole('combobox', { name: 'Settings section' });

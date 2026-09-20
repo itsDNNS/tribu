@@ -73,7 +73,7 @@ test.describe('Recipes', () => {
     await expect(page.getByRole('checkbox', { name: 'Milk' })).toBeVisible();
 
     await navigateTo(page, 'Meal plan');
-    await page.getByRole('button', { name: 'Plan a meal' }).click();
+    await page.locator('.meal-header-actions').getByRole('button', { name: 'Plan a meal', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Plan a meal' })).toBeVisible();
     await page.getByLabel('Recipe').selectOption({ label: 'Playwright Pancakes' });
     await expect(page.getByPlaceholder('e.g. Spaghetti Bolognese')).toHaveValue('Playwright Pancakes');
@@ -81,7 +81,22 @@ test.describe('Recipes', () => {
     await expect(page.locator('.meal-ingredient-name').nth(1)).toHaveValue('Milk');
     await page.getByRole('button', { name: 'Save' }).click();
 
-    await expect(page.getByText('Playwright Pancakes')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.meal-cell-meta', { hasText: '2 ingredients' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Plan a meal' })).toBeHidden();
+    const savedMeal = page.locator('.meal-plans-page').getByRole('button', { name: /Playwright Pancakes/ });
+    // The wide grid also exposes a move button; target the actual meal title.
+    const mealCard = savedMeal.filter({ hasText: 'Playwright Pancakes' });
+    await expect(mealCard).toBeVisible({ timeout: 10000 });
+    if (await page.locator('.meal-plans-page').getAttribute('data-density') === 'wide') {
+      await expect(mealCard.locator('.meal-cell-meta')).toHaveText('2 ingredients');
+    }
+    await mealCard.click();
+    const mealDialog = page.getByRole('dialog', { name: 'Edit meal' });
+    await expect(mealDialog.locator('.meal-ingredient-name')).toHaveCount(2);
+    await expect(mealDialog.locator('.meal-ingredient-name').nth(0)).toHaveValue('Flour');
+    await expect(mealDialog.locator('.meal-ingredient-amount').nth(0)).toHaveValue('200');
+    await expect(mealDialog.locator('.meal-ingredient-unit').nth(0)).toHaveValue('g');
+    await expect(mealDialog.locator('.meal-ingredient-name').nth(1)).toHaveValue('Milk');
+    await expect(mealDialog.locator('.meal-ingredient-amount').nth(1)).toHaveValue('300');
+    await expect(mealDialog.locator('.meal-ingredient-unit').nth(1)).toHaveValue('ml');
   });
 });

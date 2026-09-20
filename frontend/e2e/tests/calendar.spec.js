@@ -1,4 +1,5 @@
 const { test, expect } = require('../helpers/fixtures');
+test.use({viewport:{width:1448,height:1000},serviceWorkers:'block'});
 const { getFamilyId, seedCalendarEvent } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
@@ -39,12 +40,13 @@ async function cleanup(request, ids) {
 }
 
 test.describe('Mockup calendar', () => {
-  test('shows six weeks and navigates months in both directions', async ({
+  test('shows complete week rows and navigates months in both directions', async ({
     authedPage: page,
   }) => {
     await calendar(page);
-    await expect(page.locator('.tc-calendar-day')).toHaveCount(42);
-    const label = page.locator('.tc-date-nav>strong');
+    const expected=await page.evaluate(()=>{const d=new Date(),first=new Date(d.getFullYear(),d.getMonth(),1),last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();return Math.ceil(((first.getDay()+6)%7+last)/7)*7;});
+    await expect(page.locator('.tc-calendar-day')).toHaveCount(expected);
+    const label = page.locator('.tc-date-nav>.ui-date-label');
     const current = await label.textContent();
     await page.getByRole('button', { name: 'Next month', exact: true }).click();
     await expect(label).not.toHaveText(current);

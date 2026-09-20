@@ -174,7 +174,7 @@ describe('WeeklyPlanView', () => {
 
     render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialMeals={[]} />);
 
-    await waitFor(() => expect(apiGetEvents).toHaveBeenCalledWith(7, expect.stringContaining('2026-05-04'), expect.stringContaining('2026-05-10')));
+    await waitFor(() => expect(apiGetEvents).toHaveBeenCalledWith(7, new Date(2026,4,4).toISOString(), new Date(2026,4,11).toISOString()));
     expect(await screen.findByText('Recurring training')).toBeVisible();
     expect(screen.queryByText('Cached later event')).not.toBeInTheDocument();
   });
