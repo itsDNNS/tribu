@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
+import { adminText } from './adminHelpers';
 
 // Render this inside the existing AdminView. Gated on demoMode so the
 // demo never shows the panel (admin endpoints refuse demo sessions
@@ -103,14 +104,14 @@ export default function SsoSection() {
   const redirectUri = cfg.effective_callback_url || '';
 
   return (
-    <form className="settings-section sso-section admin-subpage admin-subpage-sso" onSubmit={handleSave} data-testid="sso-admin-section">
+    <div className="admin-subpage admin-subpage-sso ad-sso-layout"><form className="settings-section sso-section" onSubmit={handleSave} data-testid="sso-admin-section">
       <div className="view-header adm-section-header admin-subpage-header">
         <div className="admin-subpage-title-block">
           <span className="admin-subpage-icon" aria-hidden="true">
             <KeyRound size={20} />
           </span>
           <div>
-            <h1 className="view-title">{t(messages, 'sso.title')}</h1>
+            <h2 className="view-title">{t(messages, 'sso.title')}</h2>
           </div>
         </div>
       </div>
@@ -278,6 +279,6 @@ export default function SsoSection() {
           <ShieldAlert size={14} /> {t(messages, 'sso.test_fail').replace('{error}', testState.result.error || 'unknown')}
         </div>
       )}
-    </form>
+    </form><aside className="ad-sso-aside"><section className="ad-panel ad-support-card ad-access-card"><h3><ShieldCheck size={18}/>{adminText(messages, 'sso_access')}</h3><p>{t(messages, 'sso.desc')}</p><p>{t(messages, 'sso.disable_password_login_hint')}</p></section><section className="ad-panel ad-login-preview"><span className="ad-badge"><KeyRound size={22}/></span><h3>Tribu</h3><p>{adminText(messages, 'login_preview')}</p><span className="ad-preview-login"><KeyRound size={15}/>{cfg.button_label || t(messages, 'sso.title')}</span></section></aside></div>
   );
 }

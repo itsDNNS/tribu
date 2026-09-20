@@ -6,7 +6,8 @@ test.describe('Admin', () => {
     await navigateTo(page, 'Admin');
 
     await expect(page.locator('.profile-name', { hasText: testUser.displayName })).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.profile-email', { hasText: testUser.email })).toBeVisible();
+    await page.getByRole('button', { name: `Edit profile for ${testUser.displayName}` }).click();
+    await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Email', exact: true })).toHaveValue(testUser.email);
   });
 
   test('admin sections switch through the submenu', async ({ authedPage: page }) => {
@@ -14,14 +15,14 @@ test.describe('Admin', () => {
 
     const adminSections = page.getByRole('navigation', { name: 'Admin sections' });
     await expect(adminSections.getByRole('button', { name: 'Members' })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('heading', { name: 'Invitations' })).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Invitations', exact: true })).toBeHidden();
 
     await adminSections.getByRole('button', { name: 'Invitations' }).click();
-    await expect(page.getByRole('heading', { name: 'Invitations' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Invitations', exact: true })).toBeVisible({ timeout: 10000 });
 
     await adminSections.getByRole('button', { name: 'Audit Log' }).click();
     await expect(page.getByRole('heading', { name: 'Audit Log' })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('heading', { name: 'Invitations' })).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Invitations', exact: true })).toBeHidden();
   });
 
   test('backup section explains backup readiness without exposing secrets', async ({ authedPage: page }) => {
@@ -61,4 +62,41 @@ test.describe('Admin', () => {
     await expect(page.getByRole('link', { name: 'Open backup docs' })).toHaveAttribute('href', 'https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore');
     await expect(page.getByText(/JWT_SECRET|DATABASE_URL|tribu_pat_|\/backups|docker-compose\.yml/)).toHaveCount(0);
   });
+});
+
+
+test('member dialog persists creation, role changes and removal through the API', async ({ authedPage: page }) => {
+  await navigateTo(page, 'Admin');
+  const name = 'Demo Member';
+  await page.getByRole('button', { name: 'Add member', exact: true }).first().click();
+  let dialog = page.getByRole('dialog');
+  await dialog.getByRole('textbox', { name: 'Display name', exact: true }).fill(name);
+  await dialog.getByRole('textbox', { name: 'Email', exact: true }).fill(`demo-admin-${Date.now()}@example.com`);
+  await dialog.getByRole('button', { name: 'Add member', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('button', { name: `Edit profile for ${name}` }).click();
+  dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('combobox', { name: 'Role', exact: true })).toBeDisabled();
+  await dialog.getByRole('combobox', { name: 'Family profile' }).selectOption('adult');
+  await dialog.getByRole('combobox', { name: 'Role', exact: true }).selectOption('admin');
+  await dialog.getByRole('checkbox').check();
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('button', { name: `Edit profile for ${name}` }).click();
+  dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('combobox', { name: 'Role', exact: true })).toHaveValue('admin');
+  await dialog.getByRole('combobox', { name: 'Family profile' }).selectOption('child');
+  await dialog.getByRole('checkbox').check();
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('button', { name: `Edit profile for ${name}` }).click();
+  dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('combobox', { name: 'Role', exact: true })).toHaveValue('member');
+  await dialog.getByRole('button', { name: 'Remove', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Confirm change', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.ad-member-name', { hasText: name })).toHaveCount(0);
 });

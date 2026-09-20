@@ -10,6 +10,8 @@ export default function CalendarDialog({
   onClose,
   busy = false,
   subtitle,
+  icon: Icon = CalendarDays,
+  className = '',
 }) {
   const ref = useRef(null);
   const closeRef = useRef(onClose);
@@ -30,7 +32,7 @@ export default function CalendarDialog({
   return (
     <dialog
       ref={ref}
-      className="tribu-calendar-dialog"
+      className={`tribu-calendar-dialog ${className}`}
       aria-labelledby="calendar-dialog-title"
       aria-busy={busy || undefined}
       onKeyDown={(e) => {
@@ -75,7 +77,7 @@ export default function CalendarDialog({
     >
       <header className="tc-modal-header">
         <span className="tc-modal-badge">
-          <CalendarDays size={23} strokeWidth={1.6} />
+          <Icon size={23} strokeWidth={1.6} />
         </span>
         <div>
           <h2 id="calendar-dialog-title">{title}</h2>

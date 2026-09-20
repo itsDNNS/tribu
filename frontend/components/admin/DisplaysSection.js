@@ -6,6 +6,7 @@ import { copyTextToClipboard, errorText, parseServerInstant } from '../../lib/he
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import ConfirmDialog from '../ConfirmDialog';
+import AdminDialog from './AdminDialog';
 
 /**
  * Admin tab for managing shared-home display devices (issue #172).
@@ -21,6 +22,7 @@ import ConfirmDialog from '../ConfirmDialog';
 export default function DisplaysSection() {
   const { familyId, messages, demoMode } = useApp();
   const { error: toastError } = useToast();
+  const [busy, setBusy] = useState(false);
   const [devices, setDevices] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
@@ -52,7 +54,9 @@ export default function DisplaysSection() {
 
   async function handleCreate(e) {
     e.preventDefault();
-    if (!newName.trim()) return;
+    if (!newName.trim() || busy) return;
+    setBusy(true);
+    try {
     const payload = {
       name: newName.trim(),
       display_mode: newMode,
@@ -74,6 +78,8 @@ export default function DisplaysSection() {
     resetCreateForm();
     setCopied(false);
     await load();
+    } catch { toastError(t(messages, 'toast.error')); }
+    finally { setBusy(false); }
   }
 
   function resetCreateForm() {
@@ -100,6 +106,9 @@ export default function DisplaysSection() {
   }
 
   async function handleSaveDevice(device) {
+    if (busy) return;
+    setBusy(true);
+    try {
     const draft = deviceDrafts[device.id] || deviceToDraft(device);
     const payload = {
       display_mode: draft.display_mode,
@@ -114,6 +123,8 @@ export default function DisplaysSection() {
     }
     setExpandedDeviceId(null);
     await load();
+    } catch { toastError(t(messages, 'toast.error')); }
+    finally { setBusy(false); }
   }
 
   function handleRevoke(device) {
@@ -165,7 +176,7 @@ export default function DisplaysSection() {
             <Monitor size={20} />
           </span>
           <div>
-            <h1 className="view-title">{t(messages, 'display_title')}</h1>
+            <h2 className="view-title">{t(messages, 'display_title')}</h2>
           </div>
         </div>
       </div>
@@ -242,12 +253,9 @@ export default function DisplaysSection() {
                         : t(messages, 'display_show_composer')}
                     </button>
                     {expandedDeviceId === device.id ? (
-                      <DisplayConfigControls
-                        draft={deviceDrafts[device.id] || deviceToDraft(device)}
-                        messages={messages}
-                        onChange={(patch) => updateDraft(device.id, patch, device)}
-                        onSave={() => handleSaveDevice(device)}
-                      />
+                      <AdminDialog title={device.name} messages={messages} busy={busy} onClose={() => setExpandedDeviceId(null)} actions={<><button className="ad-button" disabled={busy} onClick={() => setExpandedDeviceId(null)}>{t(messages, 'cancel')}</button><button className="ad-button primary" disabled={busy} onClick={() => handleSaveDevice(device)} data-testid="display-save-config">{t(messages, 'save')}</button></>}>
+                        <fieldset className="ad-display-fields" disabled={busy}><DisplayConfigControls draft={deviceDrafts[device.id] || deviceToDraft(device)} messages={messages} onChange={patch => updateDraft(device.id, patch, device)}/></fieldset>
+                      </AdminDialog>
                     ) : (
                       <div className="display-device-compact-preview">
                         <PresetMiniPreview
@@ -280,7 +288,8 @@ export default function DisplaysSection() {
       {!demoMode && (
         <div className="adm-section-gap">
           {showCreate ? (
-            <form onSubmit={handleCreate}>
+            <AdminDialog title={t(messages, 'display_create_section_title')} messages={messages} busy={busy} onClose={() => { setShowCreate(false); resetCreateForm(); }} actions={<><button className="ad-button" disabled={busy} onClick={() => { setShowCreate(false); resetCreateForm(); }}>{t(messages, 'cancel')}</button><button type="submit" form="admin-display-form" className="ad-button primary" disabled={busy} data-testid="display-create-submit">{t(messages, 'display_create')}</button></>}>
+            <form id="admin-display-form" onSubmit={handleCreate}><fieldset className="ad-display-fields" disabled={busy}>
               <div className="settings-section adm-form-grid">
                 <div className="display-create-form-heading">
                   <h2>{t(messages, 'display_create_section_title')}</h2>
@@ -326,20 +335,9 @@ export default function DisplaysSection() {
                     }
                   }}
                 />
-                <div className="set-btn-row">
-                  <button type="submit" className="btn-sm" data-testid="display-create-submit">
-                    <Monitor size={14} /> {t(messages, 'display_create')}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    onClick={() => { setShowCreate(false); resetCreateForm(); }}
-                  >
-                    {t(messages, 'cancel')}
-                  </button>
-                </div>
               </div>
-            </form>
+              </fieldset>
+            </form></AdminDialog>
           ) : (
             <button
               className="btn-ghost"
