@@ -180,7 +180,8 @@ test.describe('Settings', () => {
   test('shows push diagnostics when server push is not configured', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    await page.getByRole('button', { name: 'Notifications', exact: true }).click();
+    await page.getByRole('region', { name: 'Everything in its place.' })
+      .getByRole('button', { name: 'Notifications', exact: true }).click();
 
     await expect(page.getByText('Server push is not configured')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Ask an admin to add VAPID keys on the server and restart Tribu.')).toBeVisible();

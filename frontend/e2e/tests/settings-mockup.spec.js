@@ -38,6 +38,10 @@ for (const width of [320, 390, 1024, 1440]) {
     await page.reload();
     await expect(page.getByRole('switch', { name:'Compact view' })).toBeChecked();
     await expect(page.getByRole('switch', { name:'Notification badge' })).not.toBeChecked();
+    await page.getByRole('switch', { name:'Notification badge' }).click();
+    await expect(page.locator('.dashboard-action-badge')).toHaveText('3');
+    await page.getByRole('switch', { name:'Notification badge' }).click();
+    await expect(page.locator('.dashboard-action-badge')).toHaveCount(0);
     await expect(page.getByRole('combobox', { name:'Week starts on' })).toHaveValue('sunday');
     await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -29,7 +29,8 @@ test.describe('Navigation UI', () => {
     await expect(sidebar).toBeVisible();
 
     await sidebar.locator('.nav-item', { hasText: 'Settings' }).click();
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Just the way you like it.' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.ms-card')).toHaveCount(4);
     await expect(sidebar).toBeHidden();
   });
 });

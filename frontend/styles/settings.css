@@ -1,6 +1,6 @@
 /* Settings composition and proportions from Tribu.html. */
 .mockup-settings-page{display:block;width:100%;max-width:none;margin:0;min-width:0;font:13px/1.45 var(--font-ui);color:var(--text-secondary);--ms-line:rgba(88,65,80,.085)}
-.mockup-settings-page .today-command-header{height:78px;min-height:78px;margin:0}
+.mockup-settings-page .today-command-header{height:auto;min-height:78px;margin:0}
 .ms-header{margin:3px 0 24px}
 .ms-eyebrow{font-size:10px;font-weight:650;letter-spacing:1.4px;text-transform:uppercase;color:var(--dashboard-purple);margin-bottom:5px}
 .ms-header h1{font-size:30px;line-height:1.25;letter-spacing:-.8px;font-weight:680;color:var(--text-primary);margin:0}
@@ -33,7 +33,7 @@
 [data-theme="dark"] .mockup-settings-page,[data-theme="midnight-glass"] .mockup-settings-page{--ms-line:rgba(206,185,213,.12)}
 @media(max-width:1100px){.ms-grid,.mockup-settings-page .settings-grid{gap:14px}.ms-card,.mockup-settings-page .settings-section{padding:20px}.ms-row .ms-small{font-size:10px}}
 @media(max-width:900px){.ms-grid,.mockup-settings-page .settings-grid{grid-template-columns:1fr}}
-@media(max-width:600px){.mockup-settings-page .today-command-header{height:83px;min-height:83px;align-items:flex-start}.ms-header h1{font-size:25px}.ms-header{margin-bottom:20px}.ms-card h2{font-size:16px}.ms-row{gap:10px}.mockup-settings-page .ms-row select{max-width:125px}.ms-detail-navigation{flex-wrap:wrap}}
+@media(max-width:600px){.mockup-settings-page .today-command-header{height:auto;min-height:83px;align-items:flex-start}.ms-header h1{font-size:25px}.ms-header{margin-bottom:20px}.ms-card h2{font-size:16px}.ms-row{gap:10px}.mockup-settings-page .ms-row select{max-width:125px}.ms-detail-navigation{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.mockup-settings-page .ms-button{transition:none}.mockup-settings-page .ms-button:hover{transform:none}}
 .mockup-settings-page .ms-switch{width:38px;height:23px;padding:3px;flex:none;border:0;border-radius:20px;background:#d7d2dc;cursor:pointer;transition:background .18s}
 .ms-switch span{display:block;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0000000a;transition:transform .18s}

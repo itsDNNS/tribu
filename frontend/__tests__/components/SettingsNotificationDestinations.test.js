@@ -97,6 +97,45 @@ describe('Settings notification destinations visibility', () => {
 
 
 describe('Mockup settings overview', () => {
+  const common = ['account', 'navigation', 'about'];
+  const adult = ['notifications', 'phone_sync', 'data', 'tokens', 'webhooks', 'store_links'];
+  const all = [...common, ...adult, 'notification_destinations'];
+  const labels = {
+    account: 'Account', navigation: 'Navigation', about: 'About & Support',
+    notifications: 'Notifications', phone_sync: 'Phone sync', data: 'Data',
+    tokens: 'API Tokens', webhooks: 'Automation Webhooks', store_links: 'Store searches',
+    notification_destinations: 'Household notifications',
+  };
+
+  it.each([
+    ['admin', {}, all],
+    ['adult member', { isAdmin: false }, [...common, ...adult]],
+    ['child', { isAdmin: false, isChild: true }, [...common, 'notifications']],
+    ['demo', { demoMode: true }, common],
+  ])('keeps every permitted section reachable for %s in the overview and selector', (_role, overrides, allowed) => {
+    mockAppState = baseState(overrides);
+    render(<SettingsView />);
+    for (const key of all) {
+      if (allowed.includes(key)) expect(screen.getByRole('button', { name: labels[key], exact: true })).toBeInTheDocument();
+      else expect(screen.queryByRole('button', { name: labels[key], exact: true })).not.toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Account', exact: true }));
+    expect(screen.getAllByRole('option').map(option => option.value).sort()).toEqual([...allowed].sort());
+  });
+
+  it.each(['phone_sync', 'data', 'tokens', 'webhooks', 'notification_destinations', 'store_links'])(
+    'rejects a saved restricted %s section for children and demo users', key => {
+      for (const overrides of [{ isAdmin: false, isChild: true }, { demoMode: true }]) {
+        sessionStorage.setItem('tribu_settings_tab', key);
+        mockAppState = baseState(overrides);
+        const { unmount } = render(<SettingsView />);
+        expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+        expect(screen.queryByRole('combobox', { name: 'Settings section' })).not.toBeInTheDocument();
+        unmount();
+      }
+    },
+  );
+
   it('offers the same overview on mobile and supports returning from a detail', () => {
     mockAppState = baseState({ isMobile: true });
     render(<SettingsView />);
