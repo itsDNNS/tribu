@@ -166,8 +166,10 @@ test.describe('Dashboard', () => {
     expect(await dashboardSearch.isVisible()).toBe(false);
     expect(await notificationToggle.isVisible()).toBe(false);
     expect(await layoutToggle.isVisible()).toBe(false);
-    await expect(page.locator('.mobile-header-actions').getByRole('button')).toHaveCount(3);
-    await expect(page.locator('.mobile-dashboard-layout-btn')).toBeVisible();
+    await expect(page.locator('.ui-mobile-header').getByRole('button')).toHaveCount(3);
+    await page.getByRole('button',{name:'Open menu',exact:true}).click();
+    await expect(page.getByRole('dialog').locator('.mobile-dashboard-layout-btn')).toBeVisible();
+    await page.keyboard.press('Escape');
     expect(await statusCard.isVisible()).toBe(true);
     expect(nextUpBox.y - (dateBox.y + dateBox.height)).toBeLessThanOrEqual(40);
     expect(statusBox.y).toBeGreaterThan(nextUpBox.y + nextUpBox.height);

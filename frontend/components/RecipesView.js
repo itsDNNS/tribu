@@ -253,7 +253,7 @@ function RecipeDialog({
           </button>
         </div>
 
-        <form className="recipe-form" onSubmit={handleSubmit}>
+        <form className="recipe-form ui-sheet-form" onSubmit={handleSubmit}><div className="ui-sheet-body">
           <div className="recipe-form-grid">
             <input
               ref={firstFieldRef}
@@ -457,7 +457,7 @@ function RecipeDialog({
             </div>
           )}
 
-          <div className="recipe-form-actions">
+          </div><div className="recipe-form-actions ui-sheet-actions">
             {isEditing && onDelete && (
               <button type="button" className="btn btn-secondary recipe-dialog-delete" onClick={onDelete}>
                 <Trash2 size={14} aria-hidden="true" />

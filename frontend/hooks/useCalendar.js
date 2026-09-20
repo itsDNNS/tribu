@@ -31,6 +31,7 @@ export function useCalendar() {
   }, []);
 
   const [calendarView, setCalendarViewRaw] = useState('month');
+  const [agendaDays, setAgendaDays] = useState(14);
 
   // Read and consume focus date from dashboard click (single read, shared value)
   const _initialFocus = (() => {
@@ -46,6 +47,8 @@ export function useCalendar() {
   const [calendarMonth, setCalendarMonth] = useState(() => defaultFocusDate);
   const [selectedDate, setSelectedDate] = useState(() => defaultFocusDate);
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
+
+  useEffect(() => setAgendaDays(14), [selectedDate, familyId]);
 
   // Event form
   const [title, setTitle] = useState('');
@@ -120,7 +123,9 @@ export function useCalendar() {
     const m = calendarMonth.getMonth();
     const current = () => mounted.current && request === rangeRequest.current && String(activeFamily.current) === String(familyId);
     try {
-      const { ok, data } = await api.apiGetEvents(familyId, new Date(y, m, -7).toISOString(), new Date(y, m + 1, 15).toISOString());
+      const start = calendarView === 'agenda' ? new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate()) : new Date(y,m,-7);
+      const end = calendarView === 'agenda' ? new Date(start.getFullYear(),start.getMonth(),start.getDate()+agendaDays) : new Date(y,m+1,15);
+      const { ok, data } = await api.apiGetEvents(familyId,start.toISOString(),end.toISOString());
       if (!current()) return;
       if (ok) setEvents(data);
       else setRangeError(true);
@@ -129,7 +134,7 @@ export function useCalendar() {
     } finally {
       if (current()) setRangeLoading(false);
     }
-  }, [calendarMonth, familyId, demoMode, setEvents]);
+  }, [calendarMonth, familyId, demoMode, setEvents, calendarView, selectedDate, agendaDays]);
 
   useEffect(() => {
     if (!familyId || demoMode) return;
@@ -502,9 +507,9 @@ export function useCalendar() {
 
   return {
     rangeLoading, rangeError,
-    calendarView, setCalendarView,
+    calendarView, setCalendarView, agendaDays, setAgendaDays,
     calendarMonth, setCalendarMonth,
-    selectedDate, setSelectedDate,
+    selectedDate, setSelectedDate, setWeekAnchor,
     title, setTitle,
     description, setDescription,
     location, setLocation,

@@ -1,3 +1,15 @@
+import { usePlannerLayout } from '../../hooks/useResponsiveUI';
+import {
+  AgendaDay,
+  EventCard,
+  EmptyDay,
+  CompactMonth,
+  DayStrip,
+  WeekPresentation,
+  addDays,
+  plannerText,
+} from '../responsive/PlannerUI';
+import { calendarEventColors } from '../../lib/calendar-colors';
 import { useEffect, useRef, useState } from 'react';
 import {
   Cake,
@@ -44,6 +56,14 @@ export default function CalendarView(props) {
     me,
   } = useApp();
   const cal = useCalendar();
+  const { ref: plannerRef, compact } = usePlannerLayout();
+  const [weekPresentation, setWeekPresentation] = useState('day');
+  const selected = cal.selectedDate || new Date();
+  const selectDate = (date) => {
+    cal.setSelectedDate(date);
+    cal.setCalendarMonth(date);
+    cal.setWeekAnchor?.(date);
+  };
   const [modal, setModal] = useState(null);
   const [memberFilter, setMemberFilter] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -97,7 +117,7 @@ export default function CalendarView(props) {
         );
   const openDay = (date) => {
     cal.setSelectedDate(date);
-    setModal({ kind: 'day', date });
+    if (!compact) setModal({ kind: 'day', date });
   };
   const create = (date = cal.selectedDate || today) => {
     cal.cancelEdit();
@@ -115,6 +135,12 @@ export default function CalendarView(props) {
     );
     setModal({ kind: 'create' });
   };
+  useEffect(() => {
+    if (props.createRequest?.kind === 'event' && !isChild) {
+      create();
+      props.onCreateHandled?.();
+    }
+  }, [props.createRequest?.id]);
   const edit = (event) => {
     if (isChild || readonly(event)) return;
     cal.startEdit(event);
@@ -146,18 +172,70 @@ export default function CalendarView(props) {
   );
   const offset = (first.getDay() - (weekStart === 'sunday' ? 0 : 1) + 7) % 7;
   const days = Array.from(
-    { length: 42 },
+    {
+      length:
+        Math.ceil(
+          (offset +
+            new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate()) /
+            7,
+        ) * 7,
+    },
     (_, i) => new Date(first.getFullYear(), first.getMonth(), 1 - offset + i),
   );
   const weekdayDates = days.slice(0, 7);
   const monthMode = cal.calendarView === 'month';
   const navigate = (direction) => {
-    if (monthMode)
-      cal.setCalendarMonth(
-        new Date(first.getFullYear(), first.getMonth() + direction, 1),
+    if (cal.calendarView === 'agenda')
+      selectDate(addDays(selected, direction * 14));
+    else if (monthMode) {
+      const target = new Date(
+        first.getFullYear(),
+        first.getMonth() + direction,
+        1,
       );
-    else direction < 0 ? cal.prevWeek() : cal.nextWeek();
+      target.setDate(
+        Math.min(
+          selected.getDate(),
+          new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate(),
+        ),
+      );
+      selectDate(target);
+    } else {
+      cal.setSelectedDate(addDays(selected, direction * 7));
+      direction < 0 ? cal.prevWeek() : cal.nextWeek();
+    }
   };
+  const agendaDay = (date, condensed = false) => (
+    <AgendaDay
+      key={dateKey(date)}
+      date={date}
+      locale={locale}
+      messages={messages}
+      count={eventsOn(date).length}
+      onAdd={isChild ? null : create}
+      condensed={condensed}
+    >
+      {eventsOn(date).length ? (
+        eventsOn(date).map((event) => (
+          <EventCard
+            key={`${event.id}:${event.starts_at}`}
+            event={event}
+            members={members}
+            participants={participants}
+            time={time}
+            messages={messages}
+            onOpen={(event) => setModal({ kind: 'event', event })}
+          />
+        ))
+      ) : (
+        <EmptyDay
+          messages={messages}
+          condensed={condensed}
+          onAdd={isChild ? null : () => create(date)}
+        />
+      )}
+    </AgendaDay>
+  );
   const eventButton = (event) => {
     const category = getCalendarEventIcon(event.icon);
     return (
@@ -182,14 +260,19 @@ export default function CalendarView(props) {
     );
   };
   const selectedEvent = modal?.event;
-  const lastAllDayDate = selectedEvent?.all_day && selectedEvent.ends_at
-    ? new Date(new Date(selectedEvent.ends_at).getTime() - 1)
-    : null;
+  const lastAllDayDate =
+    selectedEvent?.all_day && selectedEvent.ends_at
+      ? new Date(new Date(selectedEvent.ends_at).getTime() - 1)
+      : null;
   const mapLinks = selectedEvent
     ? mapsLinksForLocation(selectedEvent.location)
     : null;
   return (
-    <div className="calendar-page dashboard-today-page tc-page">
+    <div
+      ref={plannerRef}
+      className="calendar-page dashboard-today-page tc-page ui-planner"
+      data-density={compact ? 'compact' : 'wide'}
+    >
       <CalendarTopbar {...props} />
       <header className="tc-view-header">
         <div>
@@ -198,7 +281,11 @@ export default function CalendarView(props) {
           <p>{copy('subtitle')}</p>
         </div>
         {!isChild && (
-          <button className="tc-btn primary" onClick={() => create()}>
+          <button
+            className="tc-btn primary"
+            aria-label={t(messages, 'create_event')}
+            onClick={() => create()}
+          >
             <Plus size={15} />
             {t(messages, 'create_event')}
           </button>
@@ -216,14 +303,25 @@ export default function CalendarView(props) {
           >
             <ChevronLeft size={16} />
           </button>
-          <strong aria-live="polite">
-            {monthMode
-              ? cal.calendarMonth.toLocaleDateString(locale, {
+          <button
+            type="button"
+            className="ui-date-label"
+            aria-live="polite"
+            aria-label={plannerText(messages, 'choose_date')}
+            onClick={() => setModal({ kind: 'date', date: dateKey(selected) })}
+          >
+            {cal.calendarView === 'agenda'
+              ? selected.toLocaleDateString(locale, {
+                  day: 'numeric',
                   month: 'long',
-                  year: 'numeric',
                 })
-              : `${cal.weekInfo.weekStart.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} – ${new Date(cal.weekInfo.weekEnd.getTime() - 1).toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`}
-          </strong>
+              : monthMode
+                ? cal.calendarMonth.toLocaleDateString(locale, {
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                : `${cal.weekInfo.weekStart.toLocaleDateString(locale, { day: 'numeric' })} – ${new Date(cal.weekInfo.weekEnd.getTime() - 1).toLocaleDateString(locale, { day: 'numeric', month: 'long' })}`}
+          </button>
           <button
             className="tc-icon"
             aria-label={t(
@@ -245,16 +343,33 @@ export default function CalendarView(props) {
             {t(messages, 'module.calendar.today')}
           </button>
         </div>
-        <div className="tc-segmented">
-          {['month', 'week'].map((mode) => (
-            <button
-              key={mode}
-              aria-pressed={cal.calendarView === mode}
-              onClick={() => cal.setCalendarView(mode)}
-            >
-              {t(messages, `module.calendar.${mode}`)}
-            </button>
-          ))}
+        <div className="ui-planner-controls">
+          <div className="tc-segmented">
+            {['month', 'week', 'agenda'].map((mode) => (
+              <button
+                key={mode}
+                aria-pressed={cal.calendarView === mode}
+                onClick={() => cal.setCalendarView(mode)}
+              >
+                {mode === 'agenda'
+                  ? plannerText(messages, 'agenda')
+                  : t(messages, `module.calendar.${mode}`)}
+              </button>
+            ))}
+          </div>
+          <select
+            className="ui-family-filter"
+            aria-label={plannerText(messages, 'family_filter')}
+            value={memberFilter ?? ''}
+            onChange={(e) => setMemberFilter(e.target.value || null)}
+          >
+            <option value="">{plannerText(messages, 'all_members')}</option>
+            {members.map((member) => (
+              <option key={member.user_id} value={member.user_id}>
+                {member.display_name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       {cal.rangeLoading && <p role="status">{copy('loading')}</p>}
@@ -267,7 +382,74 @@ export default function CalendarView(props) {
         </p>
       )}
       {!cal.rangeError &&
-        (monthMode ? (
+        (cal.calendarView === 'agenda' ? (
+          <div className="ui-agenda-list">
+            {Array.from({ length: cal.agendaDays || 14 }, (_, i) =>
+              addDays(selected, i),
+            )
+              .filter((date) => eventsOn(date).length)
+              .map((date) => agendaDay(date, true))}
+            {!Array.from(
+              { length: cal.agendaDays || 14 },
+              (_, i) => eventsOn(addDays(selected, i)).length,
+            ).some(Boolean) && (
+              <EmptyDay
+                messages={messages}
+                onAdd={isChild ? null : () => create(selected)}
+              />
+            )}
+            <button
+              className="tc-btn"
+              disabled={cal.rangeLoading}
+              onClick={() => cal.setAgendaDays((count) => count + 14)}
+            >
+              {plannerText(messages, 'load_more')}
+            </button>
+          </div>
+        ) : compact ? (
+          <>
+            {monthMode ? (
+              <>
+                <CompactMonth
+                  month={cal.calendarMonth}
+                  selected={selected}
+                  onSelect={selectDate}
+                  eventsOn={eventsOn}
+                  members={members}
+                  locale={locale}
+                  messages={messages}
+                  weekStart={weekStart}
+                />
+                <div className="ui-agenda">{agendaDay(selected)}</div>
+              </>
+            ) : (
+              <>
+                <DayStrip
+                  days={cal.weekInfo.days.map((day) => day.date)}
+                  selected={selected}
+                  onSelect={selectDate}
+                  locale={locale}
+                  messages={messages}
+                  colors={(date) =>
+                    eventsOn(date).flatMap((event) =>
+                      calendarEventColors(event, members),
+                    )
+                  }
+                />
+                <WeekPresentation
+                  value={weekPresentation}
+                  onChange={setWeekPresentation}
+                  messages={messages}
+                />
+                <div className="ui-agenda">
+                  {weekPresentation === 'all'
+                    ? cal.weekInfo.days.map((day) => agendaDay(day.date, true))
+                    : agendaDay(selected)}
+                </div>
+              </>
+            )}
+          </>
+        ) : monthMode ? (
           <section
             className="tc-calendar-shell"
             aria-label={t(messages, 'calendar')}
@@ -283,7 +465,7 @@ export default function CalendarView(props) {
                 return (
                   <div
                     key={dateKey(date)}
-                    className={`tc-calendar-day${date.getMonth() !== first.getMonth() ? ' outside' : ''}${dateKey(date) === dateKey(today) ? ' today' : ''}`}
+                    className={`tc-calendar-day${date.getMonth() !== first.getMonth() ? ' outside' : ''}${dateKey(date) === dateKey(today) ? ' today' : ''}${dateKey(date) === dateKey(selected) ? ' selected' : ''}`}
                   >
                     <button
                       type="button"
@@ -297,6 +479,24 @@ export default function CalendarView(props) {
                       aria-current={
                         dateKey(date) === dateKey(today) ? 'date' : undefined
                       }
+                      data-date={dateKey(date)}
+                      onKeyDown={(e) => {
+                        const delta = {
+                          ArrowLeft: -1,
+                          ArrowRight: 1,
+                          ArrowUp: -7,
+                          ArrowDown: 7,
+                        }[e.key];
+                        if (delta == null) return;
+                        e.preventDefault();
+                        const next = addDays(date, delta);
+                        selectDate(next);
+                        requestAnimationFrame(() =>
+                          plannerRef.current
+                            ?.querySelector(`[data-date="${dateKey(next)}"]`)
+                            ?.focus(),
+                        );
+                      }}
                       onClick={() => openDay(date)}
                     >
                       {date.getDate()}
@@ -314,6 +514,29 @@ export default function CalendarView(props) {
                 );
               })}
             </div>
+            <footer className="ui-month-caption">
+              <span>
+                ● &nbsp;
+                {plannerText(messages, 'month_count')
+                  .replace(
+                    '{count}',
+                    allEvents.filter(
+                      (event) =>
+                        matches(event) &&
+                        days.some(
+                          (date) =>
+                            date.getMonth() === first.getMonth() &&
+                            eventOccursOn(event, date),
+                        ),
+                    ).length,
+                  )
+                  .replace(
+                    '{month}',
+                    first.toLocaleDateString(locale, { month: 'long' }),
+                  )}
+              </span>
+              <span>{plannerText(messages, 'arrow_hint')}</span>
+            </footer>
           </section>
         ) : (
           <div className="tc-week-scroll">
@@ -394,6 +617,41 @@ export default function CalendarView(props) {
           </button>
         ))}
       </div>
+      {modal?.kind === 'date' && (
+        <CalendarDialog
+          title={plannerText(messages, 'choose_date')}
+          messages={messages}
+          onClose={close}
+          actions={
+            <button
+              type="submit"
+              form="planner-jump"
+              className="tc-btn primary"
+            >
+              {t(messages, 'save')}
+            </button>
+          }
+        >
+          <form
+            id="planner-jump"
+            onSubmit={(e) => {
+              e.preventDefault();
+              selectDate(new Date(modal.date + 'T12:00:00'));
+              close();
+            }}
+          >
+            <label className="tc-field">
+              {plannerText(messages, 'choose_date')}
+              <input
+                type="date"
+                required
+                value={modal.date}
+                onChange={(e) => setModal({ ...modal, date: e.target.value })}
+              />
+            </label>
+          </form>
+        </CalendarDialog>
+      )}
       {modal?.kind === 'day' && (
         <CalendarDialog
           title={modal.date.toLocaleDateString(locale, {
@@ -512,7 +770,9 @@ export default function CalendarView(props) {
                     year: 'numeric',
                   },
                 )}
-                {lastAllDayDate && dateKey(lastAllDayDate) !== dateKey(parseDate(selectedEvent.starts_at))
+                {lastAllDayDate &&
+                dateKey(lastAllDayDate) !==
+                  dateKey(parseDate(selectedEvent.starts_at))
                   ? ` – ${lastAllDayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}`
                   : ''}
               </strong>

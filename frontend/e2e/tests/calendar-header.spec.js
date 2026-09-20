@@ -19,7 +19,7 @@ test('calendar header contains wrapped content above month and week headings', a
         await page.getByRole('button', { name: view, exact: true }).click();
         await expect(
           page.locator(
-            view === 'Month' ? '.tc-calendar-grid' : '.tc-week-grid',
+            view === 'Month' ? '.tc-calendar-grid, .ui-month-grid' : '.tc-week-grid, .ui-day-strip',
           ),
         ).toBeVisible();
         await page.evaluate(async () => {
@@ -31,7 +31,7 @@ test('calendar header contains wrapped content above month and week headings', a
           );
         });
         const geometry = await page.evaluate(() => {
-          const header = document.querySelector('.tc-topbar');
+          const header = [...document.querySelectorAll('.tc-topbar, .ui-mobile-header')].find(el=>el.getBoundingClientRect().height>0);
           const visible = [...header.querySelectorAll('*')].filter((el) => {
             const style = getComputedStyle(el);
             const rect = el.getBoundingClientRect();

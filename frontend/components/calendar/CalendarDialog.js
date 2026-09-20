@@ -9,6 +9,7 @@ export default function CalendarDialog({
   actions,
   onClose,
   busy = false,
+  subtitle,
 }) {
   const ref = useRef(null);
   const closeRef = useRef(onClose);
@@ -32,6 +33,30 @@ export default function CalendarDialog({
       className="tribu-calendar-dialog"
       aria-labelledby="calendar-dialog-title"
       aria-busy={busy || undefined}
+      onKeyDown={(e) => {
+        if (e.key !== 'Tab') return;
+        const focusable = [
+          ...ref.current.querySelectorAll(
+            'button,input,select,textarea,a[href],[tabindex]',
+          ),
+        ].filter(
+          (el) =>
+            !el.disabled && el.tabIndex >= 0 && el.getClientRects().length,
+        );
+        const first = focusable[0],
+          last = focusable.at(-1);
+        if (!first) {
+          e.preventDefault();
+          return;
+        }
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }}
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) closeRef.current();
@@ -54,7 +79,11 @@ export default function CalendarDialog({
         </span>
         <div>
           <h2 id="calendar-dialog-title">{title}</h2>
-          <p>{t(messages, 'module.calendar.mockup.modal_subtitle')}</p>
+          {subtitle !== null && (
+            <p>
+              {subtitle ?? t(messages, 'module.calendar.mockup.modal_subtitle')}
+            </p>
+          )}
         </div>
         <button
           type="button"

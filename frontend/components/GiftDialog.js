@@ -76,7 +76,7 @@ export default function GiftDialog({
             </div>
           </div>
         )}
-        <form className="gift-form" onSubmit={onSubmit}>
+        <form className="gift-form ui-sheet-form" onSubmit={onSubmit}><div className="ui-sheet-body">
           <div className="gift-form-grid">
             <input
               ref={firstFieldRef}
@@ -162,7 +162,7 @@ export default function GiftDialog({
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
           </div>
-          <div className="gift-form-actions">
+          </div><div className="gift-form-actions ui-sheet-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               {t(messages, 'module.gifts.cancel')}
             </button>

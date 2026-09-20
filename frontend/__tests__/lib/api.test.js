@@ -508,3 +508,15 @@ describe('Recipes API', () => {
     expect(JSON.parse(opts.body)).toEqual({ shopping_list_id: 9, ingredient_names: ['Flour'] });
   });
 });
+
+describe('calendar range pagination',()=>{
+ it('loads subsequent pages for a range, keeping recurring occurrences',async()=>{
+  const first=Array.from({length:50},(_,i)=>({id:1,starts_at:`occurrence-${i}`}));
+  global.fetch.mockResolvedValueOnce({ok:true,json:async()=>({items:first,total:52})}).mockResolvedValueOnce({ok:true,json:async()=>({items:[{id:1,starts_at:'occurrence-50'},{id:2}],total:52})});
+  const result=await apiGetEvents(7,'2026-09-01','2026-11-01');expect(result.data).toHaveLength(52);expect(global.fetch.mock.calls[1][0]).toContain('&offset=50&limit=200');
+ });
+ it('reports a failed later page instead of silently truncating the agenda',async()=>{
+  global.fetch.mockResolvedValueOnce({ok:true,json:async()=>({items:[{id:1}],total:2})}).mockResolvedValueOnce({ok:false,status:503,json:async()=>({detail:'retry'})});
+  const result=await apiGetEvents(7,'2026-09-01','2026-11-01');expect(result.ok).toBe(false);
+ });
+});

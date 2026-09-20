@@ -102,9 +102,9 @@ function FormModal({ id, title, onClose, onSubmit, saveKey, deleteButton, messag
             <X size={18} />
           </button>
         </div>
-        <form onSubmit={onSubmit} className="modal-form">
+        <form onSubmit={onSubmit} className="modal-form ui-sheet-form"><div className="ui-sheet-body">
           {typeof children === 'function' ? children(firstInputRef) : children}
-          <div className="modal-actions">
+          </div><div className="modal-actions ui-sheet-actions">
             {deleteButton}
             <button type="button" className="btn-ghost" onClick={onClose}>{t(messages, 'cancel')}</button>
             <button type="submit" className="btn-primary">{t(messages, saveKey)}</button>

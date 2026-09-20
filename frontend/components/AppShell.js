@@ -1,10 +1,11 @@
+import ResponsiveUI, { MobileHeader } from './responsive/ResponsiveUI';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Bell, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Menu, MoreHorizontal, Search, Settings2 } from 'lucide-react';
+import { Bell, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Search } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
-import { isNavItemVisible, MOBILE_PRIMARY_NAV_KEYS, NAV_GROUPS, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
+import { isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
 import MemberAvatar from './MemberAvatar';
 import { DashboardMotto } from './DashboardDetails';
 import DashboardView from './DashboardView';
@@ -25,7 +26,6 @@ import WeeklyPlanView from './WeeklyPlanView';
 import NotificationCenter from './NotificationCenter';
 import ForcePasswordChange from './ForcePasswordChange';
 import OnboardingWizard from './OnboardingWizard';
-const MAX_BOTTOM_NAV = 5;
 
 const views = {
   dashboard: DashboardView,
@@ -71,6 +71,9 @@ function DashboardSkeleton() {
 
 export default function AppShell() {
   const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, switchFamily, tasks, shoppingLists, unreadCount, showNotificationBadge = true, logout, demoMode, loading, navOrder, profileImage } = useApp();
+  const [mobileSheet,setMobileSheet] = useState(null);
+  const [createRequest,setCreateRequest] = useState(null);
+  useEffect(()=>{setMobileSheet(null);setCreateRequest(null);},[familyId]);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -95,6 +98,14 @@ export default function AppShell() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  useEffect(()=>{
+    if(!createRequest || !['task','shopping'].includes(createRequest.kind))return;
+    const frame=requestAnimationFrame(()=>{
+      document.querySelector(createRequest.kind==='task'?'.quick-add-input':'#main-content .shop-add-form input, #main-content .shopping-item-suggest-field .quick-add-input')?.focus();
+      setCreateRequest(null);
+    });
+    return ()=>cancelAnimationFrame(frame);
+  },[activeView,createRequest]);
   const ActiveComponent = views[activeView] || DashboardView;
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
   const openTaskCount = tasks.filter((tk) => tk.status === 'open').length;
@@ -153,21 +164,6 @@ export default function AppShell() {
   }, [itemRegistry, messages, navIndex]);
   const dailyNavGroups = navGroups.filter((group) => group.key !== 'system');
   const systemNavGroup = navGroups.find((group) => group.key === 'system');
-
-  const mobilePrimaryItems = MOBILE_PRIMARY_NAV_KEYS
-    .map((key) => itemRegistry[key])
-    .filter(Boolean);
-  const mobilePrimaryKeys = new Set(mobilePrimaryItems.map((item) => item.key));
-  const remainingMobileItems = orderedItems.filter((item) => !mobilePrimaryKeys.has(item.key));
-  const hasOverflow = pinnedItems.length > 0 || remainingMobileItems.length > 0 || mobilePrimaryItems.length > MAX_BOTTOM_NAV;
-  const maxVisible = hasOverflow ? MAX_BOTTOM_NAV - 1 : MAX_BOTTOM_NAV;
-  const visibleItems = mobilePrimaryItems.slice(0, maxVisible);
-  const overflowItems = [
-    ...mobilePrimaryItems.slice(maxVisible),
-    ...remainingMobileItems,
-    ...pinnedItems,
-  ];
-  const activeInOverflow = overflowItems.some((item) => item.key === activeView);
 
   const navigate = useCallback((key) => {
     setActiveView(key);
@@ -397,58 +393,7 @@ export default function AppShell() {
 
       {/* Main */}
       <main id="main-content" className="main-content" style={isMobile ? { marginLeft: 0, width: '100%' } : collapsed ? { marginLeft: 70, width: 'calc(100% - 70px)' } : undefined}>
-        {isMobile && (
-          <div className="mobile-header" style={{ display: 'flex' }}>
-            <div className="mobile-header-user">
-              <button
-                className="mobile-hamburger"
-                onClick={() => setMobileOpen(true)}
-                aria-label={t(messages, 'aria.open_menu')}
-                aria-expanded={mobileOpen}
-              >
-                <Menu size={22} />
-              </button>
-              <div className="mobile-header-text">
-                <h3>Tribu</h3>
-                <span>{currentFamily?.family_name || ''}</span>
-              </div>
-            </div>
-            <div className="mobile-header-actions">
-              <button className="sidebar-action-btn" onClick={() => setSearchOpen(true)} aria-label={t(messages, 'search.title')}>
-                <Search size={18} />
-              </button>
-              <button
-                ref={bellBtnRef}
-                className="sidebar-action-btn"
-                onClick={() => { setNotifPanelOpen(prev => !prev); setOverflowOpen(false); }}
-                aria-label={t(messages, 'notifications')}
-                style={{ position: 'relative' }}
-              >
-                <Bell size={18} />
-                {showNotificationBadge && unreadCount > 0 && (
-                  <span className="sidebar-badge">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </button>
-              {activeView === 'dashboard' && dashboardLayoutAction ? (
-                <button
-                  className="sidebar-action-btn mobile-dashboard-layout-btn"
-                  onClick={dashboardLayoutAction.onClick}
-                  aria-label={dashboardLayoutAction.label}
-                  aria-pressed={dashboardLayoutAction.pressed}
-                  title={dashboardLayoutAction.label}
-                >
-                  <Settings2 size={18} />
-                </button>
-              ) : (
-                <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
-                  <LogOut size={18} />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+        {isMobile && <MobileHeader onSearch={()=>setSearchOpen(true)} onMore={()=>setMobileSheet('more')} onHome={()=>navigate('dashboard')}/>}
 
         <div className="view-enter">
           {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
@@ -458,58 +403,17 @@ export default function AppShell() {
               unreadCount={showNotificationBadge ? unreadCount : 0}
               notificationButtonRef={bellBtnRef}
               onDashboardLayoutActionChange={activeView === 'dashboard' ? handleDashboardLayoutActionChange : undefined}
+              createRequest={createRequest}
+              onCreateHandled={()=>setCreateRequest(null)}
             />
           )}
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
-      {isMobile && (
-        <nav className="bottom-nav" style={{ display: 'block' }} aria-label={t(messages, 'aria.bottom_navigation')}>
-          {/* Overflow popover */}
-          {overflowOpen && overflowItems.length > 0 && (
-            <div className="bottom-nav-overflow" ref={overflowRef}>
-              {overflowItems.map((item) => (
-                <button
-                  key={item.key}
-                  className={`bottom-nav-overflow-item${activeView === item.key ? ' active' : ''}`}
-                  onClick={() => navigate(item.key)}
-                  aria-current={activeView === item.key ? 'page' : undefined}
-                >
-                  <item.icon size={20} aria-hidden="true" />
-                  <span>{item.mobileLabel || item.label}</span>
-                  {item.badge && <span className="nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="bottom-nav-inner">
-            {visibleItems.map((item) => (
-              <button
-                key={item.key}
-                className={`bottom-nav-item${activeView === item.key ? ' active' : ''}`}
-                onClick={() => navigate(item.key)}
-                aria-current={activeView === item.key ? 'page' : undefined}
-              >
-                <item.icon size={22} aria-hidden="true" />
-                <span>{item.mobileLabel || item.label}</span>
-                {item.badge && <span className="bottom-nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>}
-              </button>
-            ))}
-            {hasOverflow && (
-              <button
-                className={`bottom-nav-item${activeInOverflow || overflowOpen ? ' active' : ''}`}
-                onClick={() => setOverflowOpen((o) => !o)}
-                aria-expanded={overflowOpen}
-                aria-haspopup="true"
-              >
-                <MoreHorizontal size={22} aria-hidden="true" />
-                <span>{t(messages, 'nav_more')}</span>
-              </button>
-            )}
-          </div>
-        </nav>
-      )}
+      {<ResponsiveUI onLayout={activeView==='dashboard'?dashboardLayoutAction:null} items={[...orderedItems,...pinnedItems]} navigate={navigate} sheet={mobileSheet} setSheet={setMobileSheet} onNotifications={()=>setNotifPanelOpen(true)} onCreate={kind=>{
+        const route={event:'calendar',task:'tasks',shopping:'shopping',meal:'meal_plans'}[kind];
+        navigate(route);setCreateRequest({kind,id:Date.now()});
+      }}/>}
 
       {/* Notification panel */}
       {notifPanelOpen && (

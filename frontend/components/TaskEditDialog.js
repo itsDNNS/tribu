@@ -42,7 +42,7 @@ export default function TaskEditDialog({
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <form className="gift-form" onSubmit={onSubmit}>
+        <form className="gift-form ui-sheet-form" onSubmit={onSubmit}><div className="ui-sheet-body">
           <div className="gift-form-grid">
             <input
               ref={firstFieldRef}
@@ -98,7 +98,7 @@ export default function TaskEditDialog({
               ))}
             </select>
           </div>
-          <div className="gift-form-actions">
+          </div><div className="gift-form-actions ui-sheet-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               {t(messages, 'module.tasks.cancel')}
             </button>
