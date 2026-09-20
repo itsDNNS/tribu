@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bell, CalendarClock, ListChecks, Cake, Calendar, CheckCircle, CheckSquare, UserPlus, Circle, ShoppingCart, Utensils, Sparkles, Settings2, ArrowUp, ArrowDown, RotateCcw, MapPin, Search, ArrowRight, Clock, UserRound, Check, UtensilsCrossed, Sun, Moon } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { prettyDate, parseDate } from '../lib/helpers';
+import { parseDate, parseServerInstant } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
-import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetDashboardLayout, apiGetSetupChecklist, apiListMealPlans, apiResetDashboardLayout, apiUpdateDashboardLayout, apiUpdateTask } from '../lib/api';
+import { apiCompleteSetupChecklistStep, apiDismissSetupChecklist, apiGetDashboardLayout, apiGetSetupChecklist, apiListMealPlans, apiResetDashboardLayout, apiUpdateDashboardLayout } from '../lib/api';
+import { useDashboardTasks } from '../hooks/useDashboardTasks';
 import { useCurrentMinute } from '../hooks/useCurrentMinute';
 import AssignedBadges from './AssignedBadges';
 import MemberAvatar from './MemberAvatar';
@@ -12,7 +13,7 @@ import RewardsDashboardWidget from './RewardsDashboardWidget';
 import QuickCaptureCard from './QuickCaptureCard';
 import DashboardMealsCard from './DashboardMealsCard';
 import HouseholdActivityFeed from './HouseholdActivityFeed';
-import { DashboardBadge, DashboardDateTile, DashboardCardHeading, DashboardWelcome, DashboardFooter } from './DashboardDetails';
+import { DashboardModules, DashboardBadge, DashboardDateTile, DashboardCardHeading, DashboardWelcome, DashboardFooter } from './DashboardDetails';
 
 const DEFAULT_DASHBOARD_LAYOUT = ['quick_capture', 'events', 'tasks', 'meals', 'daily_loop', 'birthdays', 'rewards', 'activity'];
 
@@ -128,7 +129,7 @@ function TodayStatusItem({ label, value, testId, icon: Icon, tone, onClick, deta
   );
 }
 
-function DailyLoopCard({ routines, messages, setActiveView, completeTask, pendingTasks }) {
+function DailyLoopCard({ routines, messages, setActiveView, completeTask, pendingTasks, canCompleteTask }) {
   const completed = routines.filter((task) => task.status === 'done').length;
   const percent = routines.length ? Math.round(completed / routines.length * 100) : 0;
   return (
@@ -142,7 +143,7 @@ function DailyLoopCard({ routines, messages, setActiveView, completeTask, pendin
       <div className="dashboard-routine-list">
         {routines.slice(0, 5).map((task) => (
           <div key={task.id} className={`dashboard-routine-row${task.status === 'done' ? ' is-done' : ''}`}>
-            <button type="button" role="checkbox" aria-checked={task.status === 'done'} className="task-checkbox" disabled={pendingTasks.has(task.id) || task.status === 'done'} aria-label={t(messages, 'aria.mark_task').replace('{title}', task.title)} onClick={() => completeTask(task.id)}>{task.status === 'done' && <Check size={12} aria-hidden="true" />}</button>
+            <button type="button" role="checkbox" aria-checked={task.status === 'done'} className="task-checkbox" disabled={!canCompleteTask(task) || pendingTasks.has(task.id) || task.status === 'done'} aria-label={t(messages, 'aria.mark_task').replace('{title}', task.title)} onClick={() => completeTask(task.id)}>{task.status === 'done' && <Check size={12} aria-hidden="true" />}</button>
             <button type="button" className="dashboard-row-link" onClick={() => setActiveView('tasks')}>{task.title}</button>
           </div>
         ))}
@@ -254,26 +255,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
   const todayIso = todayIsoDate();
   const [setupChecklist, setSetupChecklist] = useState(null);
   const [layoutEditing, setLayoutEditing] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState(new Set());
-  const [taskError, setTaskError] = useState(false);
-  async function completeTask(id) {
-    if (pendingTasks.has(id)) return;
-    setPendingTasks((pending) => new Set(pending).add(id));
-    setTaskError(false);
-    try {
-      if (demoMode) {
-        setTasks((current) => current.map((task) => task.id === id ? { ...task, status: 'done', updated_at: new Date().toISOString() } : task));
-      } else {
-        const result = await apiUpdateTask(id, { status: 'done' });
-        if (!result.ok) throw new Error('Task update failed');
-        await Promise.all([loadTasks(familyId), loadDashboard?.(familyId), loadActivity?.(familyId)]);
-      }
-    } catch {
-      setTaskError(true);
-    } finally {
-      setPendingTasks((pending) => { const next = new Set(pending); next.delete(id); return next; });
-    }
-  }
+  const { pendingTasks, taskError, completeTask, canCompleteTask } = useDashboardTasks({ familyId, demoMode, isChild, me, tasks, setTasks, loadTasks, loadDashboard, loadActivity });
   const [dashboardLayout, setDashboardLayout] = useState(DEFAULT_DASHBOARD_LAYOUT);
   const [mealResult, setMealResult] = useState({ familyId: null, date: null, meals: [], loading: true, error: false });
   const mealsToday = demoMode ? mealPlans.filter((meal) => meal.plan_date === todayIso)
@@ -291,7 +273,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
   const openTaskCount = useMemo(() => getOpenTaskCount(tasks), [tasks]);
   const birthdaySoonCount = getUpcomingBirthdayCount(summary);
   const nextUpEvent = Array.isArray(summary?.next_events) ? summary.next_events[0] : null;
-  const locale = lang === 'de' ? 'de-DE' : 'en-US';
+  const locale = lang || 'en';
   const todayStr = currentMinute.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const currentTimeStr = formatClockTime(currentMinute, locale, timeFormat);
   const currentFamily = Array.isArray(families) ? families.find((family) => String(family.family_id) === String(familyId)) : null;
@@ -615,7 +597,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
         </section>
       )}
       {taskError && <p role="alert" className="quick-capture-error">{t(messages, 'toast.error')}</p>}
-      <div className="bento-grid">
+      <DashboardModules>
         {!isChild && (
           <div className="dashboard-module-shell" style={{ order: moduleOrder('quick_capture') }} data-dashboard-module="quick_capture">
             <QuickCaptureCard
@@ -633,9 +615,10 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
 
         <div className="dashboard-module-shell" style={{ order: moduleOrder('daily_loop') }} data-dashboard-module="daily_loop">
           <DailyLoopCard
-            routines={tasks.filter((task) => task.recurrence && (task.status === 'done' ? normalizeDateOnly(task.completed_at || task.updated_at) === todayIso : task.status === 'open' && normalizeDateOnly(task.due_date) && normalizeDateOnly(task.due_date) <= todayIso))}
+            routines={tasks.filter((task) => task.recurrence && (task.status === 'done' ? normalizeDateOnly(parseServerInstant(task.completed_at)) === todayIso : task.status === 'open' && normalizeDateOnly(task.due_date) && normalizeDateOnly(task.due_date) <= todayIso))}
             completeTask={completeTask}
             pendingTasks={pendingTasks}
+            canCompleteTask={canCompleteTask}
             messages={messages}
             setActiveView={setActiveView}
           />
@@ -681,7 +664,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
               const assignee = members.find((m) => m.user_id === task.assigned_to_user_id);
               return (
                 <div key={task.id} className="task-preview-item">
-                  <button type="button" role="checkbox" aria-checked={false} className="task-checkbox" disabled={pendingTasks.has(task.id)} aria-label={t(messages, 'aria.mark_task').replace('{title}', task.title)} onClick={() => completeTask(task.id)} />
+                  <button type="button" role="checkbox" aria-checked={false} className="task-checkbox" disabled={!canCompleteTask(task) || pendingTasks.has(task.id)} aria-label={t(messages, 'aria.mark_task').replace('{title}', task.title)} onClick={() => completeTask(task.id)} />
                   <div className="task-preview-info">
                     <button type="button" className="task-preview-title dashboard-row-link" onClick={() => setActiveView('tasks')}>{task.title}</button>
 
@@ -749,7 +732,7 @@ export default function DashboardView({ onOpenSearch, onOpenNotifications, unrea
             />
           </div>
         )}
-      </div>
+      </DashboardModules>
       <DashboardFooter messages={messages} />
     </div>
   );

@@ -1,3 +1,4 @@
+import { Children } from 'react';
 import { ArrowRight, CalendarDays, Sun, Heart, Sprout } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { parseDate } from '../lib/helpers';
@@ -40,4 +41,11 @@ export function DashboardMotto({ messages, sidebar = false }) {
   return <div className={sidebar ? 'sidebar-family-note' : 'dashboard-handwritten quick-capture-motto'}>
     {t(messages, sidebar ? 'module.dashboard.family_note' : 'module.dashboard.day_note')} <Heart size={10} fill="currentColor" aria-hidden="true" />
   </div>;
+}
+
+// Keep keyboard and screen-reader navigation aligned with the saved visual order.
+export function DashboardModules({ children }) {
+  const modules = Children.toArray(children).sort((a, b) =>
+    (a.props.style?.order ?? Infinity) - (b.props.style?.order ?? Infinity));
+  return <div className="bento-grid">{modules}</div>;
 }

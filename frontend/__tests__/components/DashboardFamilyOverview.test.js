@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardView from '../../components/DashboardView';
 import { buildMessages } from '../../lib/i18n';
@@ -95,8 +95,7 @@ it('uses the mockup order by default and includes meals and activity in customiz
   const { container } = render(<DashboardView />);
   await waitFor(() => expect(apiListMealPlans).toHaveBeenCalled());
   const modules = [...container.querySelectorAll('[data-dashboard-module]')]
-    .filter((node) => node.dataset.dashboardModule !== 'setup_checklist')
-    .sort((a, b) => Number(a.style.order) - Number(b.style.order));
+    .filter((node) => node.dataset.dashboardModule !== 'setup_checklist');
   expect(modules.map((node) => node.dataset.dashboardModule)).toEqual([
     'quick_capture', 'events', 'tasks', 'meals', 'daily_loop', 'birthdays', 'rewards', 'activity',
   ]);
@@ -104,4 +103,49 @@ it('uses the mockup order by default and includes meals and activity in customiz
   const panel = screen.getByRole('region', { name: 'Customize layout' });
   expect(within(panel).getByText(mockApp.messages['module.meal_plans.name'])).toBeInTheDocument();
   expect(within(panel).getByText(mockApp.messages['module.dashboard.module_activity'])).toBeInTheDocument();
+});
+
+it('only lets children complete their own assigned tasks and routines', async () => {
+  mockApp.isChild = true;
+  mockApp.me.user_id = 7;
+  mockApp.tasks = [
+    { id: 1, title: 'My task', status: 'open', assigned_to_user_id: 7 },
+    { id: 2, title: 'Other task', status: 'open', assigned_to_user_id: 8 },
+    { id: 3, title: 'Unassigned routine', status: 'open', recurrence: 'daily', due_date: today() },
+  ];
+  render(<DashboardView />);
+  await waitFor(() => expect(apiListMealPlans).toHaveBeenCalled());
+  expect(screen.getByRole('checkbox', { name: /My task/ })).toBeEnabled();
+  expect(screen.getByRole('checkbox', { name: /Other task/ })).toBeDisabled();
+  for (const checkbox of screen.getAllByRole('checkbox', { name: /Unassigned routine/ })) {
+    expect(checkbox).toBeDisabled();
+    fireEvent.click(checkbox);
+  }
+  expect(apiUpdateTask).not.toHaveBeenCalled();
+});
+
+it('does not refresh the old household after completing a task across a family switch', async () => {
+  let finish;
+  apiUpdateTask.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  mockApp.tasks = [{ id: 12, title: 'Old task', status: 'open' }];
+  const { rerender } = render(<DashboardView />);
+  fireEvent.click(screen.getByRole('checkbox', { name: /Old task/ }));
+  mockApp = { ...mockApp, familyId: 2, tasks: [] };
+  rerender(<DashboardView />);
+  await waitFor(() => expect(apiListMealPlans).toHaveBeenCalledWith(2, today(), today()));
+  await act(async () => finish({ ok: true }));
+  expect(mockApp.loadTasks).not.toHaveBeenCalled();
+  expect(mockApp.loadDashboard).not.toHaveBeenCalled();
+  expect(mockApp.loadActivity).not.toHaveBeenCalled();
+});
+
+it('uses the selected language for the next event’s date and relative day', async () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 2);
+  mockApp.lang = 'fr';
+  mockApp.messages = buildMessages('fr');
+  mockApp.summary.next_events = [{ id: 1, title: 'Sortie', starts_at: date.toISOString() }];
+  render(<DashboardView />);
+  await waitFor(() => expect(apiListMealPlans).toHaveBeenCalled());
+  expect(screen.getByText('après-demain')).toBeVisible();
 });

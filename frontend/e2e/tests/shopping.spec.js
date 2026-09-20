@@ -121,9 +121,7 @@ test.describe('Shopping', () => {
 
     await selectShoppingList(page, 'StoreA');
     const renameForm = page.locator('.shopping-list-rename-form');
-    if ((await renameForm.count()) === 0) {
-      await shoppingListCard(page, 'StoreA').locator('button[aria-label="Rename list: StoreA"]').click({ force: true });
-    }
+    await shoppingListCard(page, 'StoreA').getByRole('button', { name: 'Rename list: StoreA' }).click();
     await expect(renameForm).toBeVisible({ timeout: 10000 });
     await page.getByLabel('List name').fill('Store A market');
     await renameForm.getByRole('button', { name: 'Save' }).click();
@@ -164,6 +162,8 @@ test.describe('Shopping', () => {
     await page.locator('[aria-label="Add item"]').click();
     await expect(page.locator('[role="checkbox"][aria-label="Milch"]')).toHaveAttribute('aria-checked', 'false', { timeout: 10000 });
 
+    // The row can arrive over WebSocket before the previous form submission finishes.
+    await expect(page.getByPlaceholder('Add an item...')).toHaveValue('');
     await page.locator('input[placeholder="Add an item..."]').fill('milk');
     await page.locator('[aria-label="Add item"]').click();
     const milkRows = page.locator('[role="checkbox"][aria-label="Milk"]');

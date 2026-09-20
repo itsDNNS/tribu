@@ -24,6 +24,8 @@ export function AppProvider({ children }) {
 
   // Family state
   const [familyId, setFamilyId] = useState('1');
+  const activeFamilyRef = useRef(familyId);
+  activeFamilyRef.current = familyId;
   const [families, setFamilies] = useState([]);
   const [myFamilyRole, setMyFamilyRole] = useState('member');
   const [myFamilyIsAdult, setMyFamilyIsAdult] = useState(true);
@@ -79,7 +81,7 @@ export function AppProvider({ children }) {
 
   const loadDashboard = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetDashboard(fid);
-    if (ok) setSummary(data);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setSummary(data);
   }, []);
 
   const loadEvents = useCallback(async (fid) => {
@@ -104,7 +106,7 @@ export function AppProvider({ children }) {
 
   const loadTasks = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetTasks(fid);
-    if (ok) setTasks(data);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setTasks(data);
   }, []);
 
   const loadShoppingLists = useCallback(async (fid) => {
@@ -114,7 +116,7 @@ export function AppProvider({ children }) {
 
   const loadActivity = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetActivity(fid, 10, 0);
-    if (ok) setActivity(Array.isArray(data?.items) ? data.items : []);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setActivity(Array.isArray(data?.items) ? data.items : []);
   }, []);
 
   const loadQuickCaptureInbox = useCallback(async (fid) => {
@@ -210,6 +212,7 @@ export function AppProvider({ children }) {
 
   const switchFamily = useCallback(async (fid) => {
     setLoading(true);
+    activeFamilyRef.current = fid;
     setFamilyId(fid);
     const selected = families.find((f) => String(f.family_id) === String(fid));
     if (selected) {
@@ -370,6 +373,7 @@ export function AppProvider({ children }) {
         if (famOk && famData.length > 0) {
           setFamilies(famData);
           const fid = String(famData[0].family_id);
+          activeFamilyRef.current = fid;
           setFamilyId(fid);
           setMyFamilyRole(famData[0].role);
           setMyFamilyIsAdult(famData[0].is_adult);

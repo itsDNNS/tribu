@@ -87,6 +87,7 @@ describe('DashboardView daily routines', () => {
       { id: 2, title: 'Finished today', status: 'done', recurrence: 'daily', completed_at: `${todayIso()}T08:00:00` },
       { id: 3, title: 'Future routine', status: 'open', recurrence: 'weekly', due_date: '2999-01-01' },
       { id: 4, title: 'Non-recurring task', status: 'open', due_date: todayIso() },
+      { id: 6, title: 'Missing completion time', status: 'done', recurrence: 'daily', updated_at: `${todayIso()}T09:00:00` },
       { id: 5, title: 'Finished yesterday, edited today', status: 'done', recurrence: 'daily', completed_at: '2000-01-01T08:00:00', updated_at: `${todayIso()}T09:00:00` },
     ] });
     const loop = screen.getByRole('region', { name: 'Daily routines' });
@@ -98,6 +99,15 @@ describe('DashboardView daily routines', () => {
     expect(loop).not.toHaveTextContent('Future routine');
     expect(loop).not.toHaveTextContent('Non-recurring task');
     expect(loop).not.toHaveTextContent('Finished yesterday');
+    expect(loop).not.toHaveTextContent('Missing completion time');
+  });
+
+  it('counts completion instants on the local day, including just after midnight', () => {
+    const completedAt = new Date(`${todayIso()}T00:30:00`).toISOString();
+    renderDashboard({ familyId: null, tasks: [
+      { id: 1, title: 'Late routine', status: 'done', recurrence: 'daily', completed_at: completedAt },
+    ] });
+    expect(screen.getByRole('region', { name: 'Daily routines' })).toHaveTextContent('1 of 1 completed');
   });
 
   it('opens tasks from the progress ring and routine title', () => {

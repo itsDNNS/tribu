@@ -114,27 +114,21 @@ describe('DashboardView desktop bento layout', () => {
     sessionStorage.clear();
   });
 
-  it('keeps the current desktop module order', async () => {
+  it('preserves legacy saved order and aligns keyboard order with the inserted modules', async () => {
     const { container } = render(<DashboardView />);
 
     await waitFor(() => expect(mockApiGetDashboardLayout).toHaveBeenCalledTimes(1));
     const modules = Array.from(container.querySelectorAll('.bento-grid > [data-dashboard-module]'));
     expect(modules.map((module) => module.getAttribute('data-dashboard-module'))).toEqual([
-      'quick_capture',
-      'daily_loop',
-      'events',
-      'tasks',
-      'birthdays',
-      'meals',
-      'activity',
-      'rewards',
+      'quick_capture', 'meals', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards', 'activity',
     ]);
-    expect(modules[1].querySelector('.bento-card')).toHaveAccessibleName('Daily routines');
-    expect(modules[1].querySelector('.bento-card')).not.toHaveClass('bento-card-illustrated');
-    expect(modules[1].querySelector('.bento-card-visual')).not.toBeInTheDocument();
-    expect(modules[2].querySelector('.bento-card')).toHaveAccessibleName('Next events');
-    expect(modules[3].querySelector('.bento-card')).toHaveAccessibleName('Open tasks');
-    expect(modules[4].querySelector('.bento-card')).toHaveAccessibleName('Birthdays');
+    expect(modules.map((module) => Number(module.style.order))).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(modules[2].querySelector('.bento-card')).toHaveAccessibleName('Daily routines');
+    expect(modules[2].querySelector('.bento-card')).not.toHaveClass('bento-card-illustrated');
+    expect(modules[2].querySelector('.bento-card-visual')).not.toBeInTheDocument();
+    expect(modules[3].querySelector('.bento-card')).toHaveAccessibleName('Next events');
+    expect(modules[4].querySelector('.bento-card')).toHaveAccessibleName('Open tasks');
+    expect(modules[5].querySelector('.bento-card')).toHaveAccessibleName('Birthdays');
   });
 
   it('keeps dashboard layout customization as an accessible icon button', async () => {

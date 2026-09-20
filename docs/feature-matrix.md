@@ -6,7 +6,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 
 | Area | Capability | Notes |
 |---|---|---|
-| Dashboard | Daily household overview | Events, open tasks, birthdays, activity, quick actions, and family context. |
+| Dashboard | Daily household overview | Events, direct task completion, daily routine progress, today’s meal plan, birthdays, rewards, activity, and quick capture. Saved module orders are preserved; resetting uses the new default layout. |
 | Calendar | Shared calendar | Month and week views, recurring events, event duplication, ICS import and export, external ICS feed import with manual refresh, day detail panels, and phone sync through CalDAV. |
 | Tasks | Responsibilities and routines | Assignees, priorities, date-only or timed due dates, recurrence, templates, overdue tracking, and opt-in VTODO sync. |
 | Shopping | Shared lists | Multiple lists, compact open-category overview, category suggestions, explicit check controls with Undo, most recently checked items first, quick add, real-time updates, and optional family-configured store search links. |

@@ -1,5 +1,5 @@
 import { ListChecks, CalendarDays, ShoppingCart, Utensils, StickyNote, X, Zap, Plus, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { apiCreateQuickCapture, apiConvertQuickCapture, apiDismissQuickCapture } from '../lib/api';
 import { t } from '../lib/i18n';
 import { DashboardBadge, DashboardMotto } from './DashboardDetails';
@@ -15,6 +15,25 @@ export default function QuickCaptureCard({
   loadActivity,
 }) {
   const [text, setText] = useState('');
+  const inputRef = useRef(null);
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input) return undefined;
+    const fitText = () => {
+      input.style.height = 'auto';
+      input.style.height = `${input.scrollHeight}px`;
+    };
+    fitText();
+    // Refit the placeholder or text when the responsive input width changes.
+    let width = input.getBoundingClientRect().width;
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width === width) return;
+      width = entry.contentRect.width;
+      fitText();
+    });
+    observer?.observe(input);
+    return () => observer?.disconnect();
+  }, [text, messages]);
   const [busy, setBusy] = useState(false);
   const [triagingId, setTriagingId] = useState(null);
 
@@ -86,6 +105,7 @@ export default function QuickCaptureCard({
 
       <div className="quick-capture-form quick-capture-form--command">
         <div className="quick-capture-input-wrap"><Search size={14} aria-hidden="true" /><textarea
+          ref={inputRef}
           value={text}
           onChange={(event) => setText(event.target.value)}
           aria-label={t(messages, 'module.dashboard.quick_capture_placeholder')}

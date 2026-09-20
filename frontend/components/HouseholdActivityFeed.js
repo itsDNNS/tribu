@@ -32,7 +32,7 @@ export default function HouseholdActivityFeed({ activity = [], messages = {}, la
             const actor = entry.actor_display_name || unknownActor;
             const instant = parseServerInstant(entry.created_at);
             const minutesAgo = instant ? Math.max(0, Math.floor((Date.now() - instant.getTime()) / 60000)) : 0;
-            const when = dashboard && instant ? new Intl.RelativeTimeFormat(lang === 'de' ? 'de' : 'en', { numeric: 'auto' }).format(minutesAgo < 60 ? -minutesAgo : minutesAgo < 1440 ? -Math.floor(minutesAgo / 60) : -Math.floor(minutesAgo / 1440), minutesAgo < 60 ? 'minute' : minutesAgo < 1440 ? 'hour' : 'day') : formatActivityTime(entry.created_at, lang);
+            const when = dashboard && instant ? new Intl.RelativeTimeFormat(lang || 'en', { numeric: 'auto' }).format(minutesAgo < 60 ? -minutesAgo : minutesAgo < 1440 ? -Math.floor(minutesAgo / 60) : -Math.floor(minutesAgo / 1440), minutesAgo < 60 ? 'minute' : minutesAgo < 1440 ? 'hour' : 'day') : formatActivityTime(entry.created_at, lang);
             const completed = entry.action === 'completed' || entry.action === 'checked';
             const feedIcon = completed ? CheckCircle : entry.object_type === 'event' ? CalendarDays : entry.object_type === 'shopping_item' ? ShoppingCart : ClipboardCheck;
             return (

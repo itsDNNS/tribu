@@ -13,7 +13,7 @@ function shoppingListCard(page, name) {
 async function selectShoppingList(page, name) {
   const card = shoppingListCard(page, name);
   await expect(card).toBeVisible({ timeout: 10000 });
-  await card.click();
+  await card.locator('.shopping-list-name').click();
 }
 
 module.exports = { shoppingListCard, selectShoppingList };
