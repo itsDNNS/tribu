@@ -331,8 +331,26 @@ describe('DisplaysSection stage editor', () => {
     expect(screen.queryByTestId('display-zone-interval-a')).not.toBeInTheDocument();
     expect(screen.queryByTestId('display-toggle-stagger')).not.toBeInTheDocument();
     expect(screen.getByText('On e-ink every area turns one card per refresh.')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('display-eink-format-select'), { target: { value: 'large' } });
     await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
     expect(api.apiUpdateDisplayDevice.mock.calls[0][2]).toMatchObject({ display_mode: 'eink', refresh_interval_seconds: 600 });
+    expect(api.apiUpdateDisplayDevice.mock.calls[0][2].layout_config.eink_format).toBe('large');
+  });
+
+  test('the e-ink size is only offered in e-ink mode', async () => {
+    await openEditor();
+    expect(screen.queryByTestId('display-eink-format-select')).not.toBeInTheDocument();
+  });
+
+  test('a new e-ink display also shows the picture address for frames', async () => {
+    api.apiCreateDisplayDevice.mockResolvedValue({ ok: true, data: { token: 'tribu_display_ink', device: { ...DEVICE, id: 8, display_mode: 'eink' } } });
+    await act(async () => { render(<DisplaysSection />); });
+    await flushAsync();
+    fireEvent.click(screen.getByTestId('display-create-toggle'));
+    fireEvent.change(screen.getByTestId('display-create-name'), { target: { value: 'Frame' } });
+    fireEvent.change(screen.getByTestId('display-mode-select'), { target: { value: 'eink' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-create-submit')); });
+    expect(await screen.findByTestId('display-created-image-url')).toHaveTextContent('/display/image.png?token=tribu_display_ink');
   });
 });
 

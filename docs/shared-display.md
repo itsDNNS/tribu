@@ -62,8 +62,8 @@ GET /display/image.png
 Authorization: Bearer tribu_display_…
 ```
 
-- **Token:** use the display token from the pairing link (the part after `?token=`). Prefer the `Authorization` header; devices that cannot send headers may use `/display/image.png?token=…`, but query strings can end up in proxy logs.
-- **Size:** `compact` is 800×480 (7.5″), `large` is 1200×825 (10″). The display's e-ink format is used unless `?format=compact` or `?format=large` is given.
+- **Token:** when an e-ink display is created, the pairing message also shows the ready-made picture address. Otherwise use the display token from the pairing link (the part after `?token=`). Prefer the `Authorization` header; devices that cannot send headers may use `/display/image.png?token=…`, but query strings can end up in proxy logs.
+- **Size:** `compact` is 800×480 (7.5″), `large` is 1200×825 (10″). The e-ink size chosen in the display editor is used unless `?format=compact` or `?format=large` is given.
 - **Language:** the display language, otherwise `?lang=` or the request's `Accept-Language`, otherwise English.
 - **Rhythm:** each request shows the page for the current refresh period, so let the frame fetch once per refresh interval (the response carries it in `X-Tribu-Refresh-Seconds`).
 - **Status:** `200` with a picture; a removed or unknown display gets a picture explaining it (`X-Tribu-Display-State: revoked` or `invalid`); a missing token returns `401`; if Tribu cannot reach its backend it returns `502` so the frame keeps its last picture.

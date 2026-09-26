@@ -46,6 +46,12 @@ export default function DisplaysSection() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Picture address for e-ink frames that cannot run a browser.
+  function buildImageUrl(token) {
+    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+    return `${origin}/display/image.png?token=${encodeURIComponent(token)}`;
+  }
+
   function buildDisplayUrl(token) {
     if (typeof window === 'undefined') return `/display?token=${encodeURIComponent(token)}`;
     return `${window.location.origin}/display?token=${encodeURIComponent(token)}`;
@@ -66,6 +72,7 @@ export default function DisplaysSection() {
       token: data.token,
       device: data.device,
       displayUrl: buildDisplayUrl(data.token),
+      imageUrl: data.device?.display_mode === 'eink' ? buildImageUrl(data.token) : null,
     });
     setShowCreate(false);
     resetCreateForm();
@@ -178,6 +185,14 @@ export default function DisplaysSection() {
                 : <><Copy size={14} /> {t(messages, 'token_copy')}</>}
             </button>
           </div>
+          {created.imageUrl && (
+            <>
+              <p className="adm-banner-warning">{t(messages, 'display_image_url_hint')}</p>
+              <div className="adm-banner-row">
+                <code className="token-display" data-testid="display-created-image-url">{created.imageUrl}</code>
+              </div>
+            </>
+          )}
           <button
             className="adm-banner-dismiss"
             onClick={() => { setCreated(null); setCopied(false); }}
