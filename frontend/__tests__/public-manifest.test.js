@@ -55,3 +55,18 @@ describe('PWA manifest', () => {
     }
   });
 });
+
+describe('Display manifest', () => {
+  it('installs the wall display as its own full-screen app scoped to /display', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/display-manifest.json'), 'utf8'));
+    expect(manifest).toEqual(expect.objectContaining({
+      id: '/display',
+      start_url: '/display',
+      scope: '/display',
+      display: 'fullscreen',
+    }));
+    for (const icon of manifest.icons) {
+      expect(fs.existsSync(path.join(__dirname, '../public', icon.src))).toBe(true);
+    }
+  });
+});

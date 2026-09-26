@@ -38,7 +38,7 @@
 </p>
 
 <p align="center">
-  <em>A read-only shared display for the day, agenda, and household context.</em>
+  <em>The shared family display: next up, everyone's day on one timeline, and rotating cards for meals, school, stars and the week.</em>
 </p>
 
 ## Why Tribu?

@@ -224,7 +224,7 @@ def test_shopping_visual_migration_upgrades_populated_rows_and_persists_details(
         conn.execute("INSERT INTO families (id, name) VALUES (1, 'Family')")
         conn.execute("INSERT INTO shopping_lists (id, family_id, name) VALUES (1, 1, 'Weekly')")
         conn.execute("INSERT INTO shopping_items (id, list_id, name, spec, category, checked, checked_at) VALUES (1, 1, 'Milk', '2 l', 'Dairy', 1, '2026-09-20 12:00:00')")
-    command.upgrade(config, "head")
+    command.upgrade(config, "0057_shopping_visual_details")
     with sqlite3.connect(db_path) as conn:
         assert conn.execute("SELECT icon, category_order FROM shopping_lists").fetchone() == ("cart", None)
         assert conn.execute("SELECT priority, archived, notes, photo, checked, spec, category FROM shopping_items").fetchone() == ("normal", 0, None, None, 1, "2 l", "Dairy")
@@ -245,6 +245,39 @@ def test_shopping_visual_migration_upgrades_populated_rows_and_persists_details(
         assert conn.execute("SELECT name, spec, checked FROM shopping_items WHERE id=1").fetchone() == ("Milk", "2 l", 1)
         columns = {row[1] for row in conn.execute("PRAGMA table_info(shopping_items)")}
         assert {"notes", "photo", "archived", "priority"}.isdisjoint(columns)
+
+
+def test_display_stage_migration_moves_devices_to_stage_layout(tmp_path, monkeypatch):
+    import json
+    db_path = tmp_path / "display-0058.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    command.upgrade(config, "0057_shopping_visual_details")
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'Family')")
+        conn.execute(
+            "INSERT INTO display_devices (id, family_id, name, token_lookup, token_hash, display_mode, refresh_interval_seconds, layout_preset, layout_config) "
+            "VALUES (1, 1, 'Kitchen', 'l1', 'h1', 'tablet', 60, 'family_board', ?), (2, 1, 'Ink', 'l2', 'h2', 'eink', 900, 'eink_compact', NULL)",
+            (json.dumps({"columns": 3, "rows": 3, "widgets": []}),),
+        )
+    command.upgrade(config, "0058_display_stage_weather")
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute("SELECT name, display_mode, refresh_interval_seconds, layout_preset, layout_config FROM display_devices ORDER BY id").fetchall()
+        for name, mode, refresh, preset, layout in rows:
+            assert preset == "stage"
+            assert json.loads(layout)["zones"]["d"]["cards"] == ["people", "week"]
+        assert [(row[0], row[1], row[2]) for row in rows] == [("Kitchen", "tablet", 60), ("Ink", "eink", 900)]
+        family_columns = {row[1] for row in conn.execute("PRAGMA table_info(families)")}
+        assert {"weather_location_name", "weather_latitude", "weather_longitude"} <= family_columns
+        conn.execute("INSERT INTO display_devices (id, family_id, name, token_lookup, token_hash) VALUES (3, 1, 'New', 'l3', 'h3')")
+        assert conn.execute("SELECT layout_preset FROM display_devices WHERE id=3").fetchone() == ("stage",)
+    command.downgrade(config, "0057_shopping_visual_details")
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("SELECT name, layout_preset, layout_config FROM display_devices ORDER BY id").fetchall() == [
+            ("Kitchen", "hearth", None), ("Ink", "eink_compact", None), ("New", "hearth", None),
+        ]
+        assert not any(row[1].startswith("weather_") for row in conn.execute("PRAGMA table_info(families)"))
 
 
 def test_shopping_model_defaults_match_migration_for_legacy_inserts():

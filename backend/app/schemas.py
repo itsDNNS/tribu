@@ -1963,8 +1963,8 @@ class DisplayDeviceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120, description="Human-readable device label (e.g. 'Kitchen Tablet')")
     display_mode: Optional[str] = Field(None, description="Render mode: tablet or eink")
     refresh_interval_seconds: Optional[int] = Field(None, description="Refresh cadence in seconds")
-    layout_preset: Optional[str] = Field(None, description="Layout preset key")
-    layout_config: Optional[dict] = Field(None, description="Bounded widget grid config")
+    layout_preset: Optional[str] = Field(None, description="Deprecated; every display uses the `stage` layout")
+    layout_config: Optional[dict] = Field(None, description="Stage layout: rotating zones, intervals, behaviour and day parts")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"name": "Kitchen Tablet"}]
@@ -1983,9 +1983,9 @@ class DisplayDeviceUpdate(BaseModel):
 class DisplayDeviceConfig(BaseModel):
     """Normalized display rendering config."""
     display_mode: str = Field(..., description="Render mode: tablet or eink")
-    refresh_interval_seconds: int = Field(..., description="Refresh cadence in seconds")
-    layout_preset: str = Field(..., description="Layout preset key")
-    layout_config: dict = Field(..., description="Resolved bounded widget grid")
+    refresh_interval_seconds: int = Field(..., description="Data refresh cadence in seconds; e-ink devices also turn one card page per zone")
+    layout_preset: str = Field(..., description="Layout key (always `stage`)")
+    layout_config: dict = Field(..., description="Resolved stage layout")
 
 
 class DisplayDeviceResponse(BaseModel):
@@ -2000,8 +2000,8 @@ class DisplayDeviceResponse(BaseModel):
     revoked_at: Optional[datetime] = Field(None, description="When the device was revoked (null = active)")
     display_mode: str = Field("tablet", description="Render mode")
     refresh_interval_seconds: int = Field(60, description="Refresh cadence in seconds")
-    layout_preset: str = Field("hearth", description="Layout preset key")
-    layout_config: Optional[dict] = Field(None, description="Resolved bounded widget grid")
+    layout_preset: str = Field("stage", description="Layout key (always `stage`)")
+    layout_config: Optional[dict] = Field(None, description="Stage layout configuration")
 
 
 class DisplayDeviceCreatedResponse(BaseModel):
@@ -2051,6 +2051,8 @@ class DisplayDashboardEvent(BaseModel):
     category: Optional[str] = Field(None, description="Event category label")
     icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
     participant_colors: list[str] = Field(default_factory=list, description="Display-safe participant member colors")
+    member_refs: list[int] = Field(default_factory=list, description="Positions of the assigned members in `members`")
+    location: Optional[str] = Field(None, description="Event location, if set")
 
 
 class DisplayDashboardBirthday(BaseModel):
@@ -2066,6 +2068,99 @@ class DisplayDashboardTask(BaseModel):
     priority: str = Field(..., description="Task priority")
     due_date: Optional[datetime] = Field(None, description="Task due date, if set")
     participant_colors: list[str] = Field(default_factory=list, description="Display-safe assignee colors")
+    member_ref: Optional[int] = Field(None, description="Position of the assignee in `members`")
+    due_state: Optional[str] = Field(None, description="overdue, today or tomorrow for due tasks")
+
+
+class DisplayMeal(BaseModel):
+    """Planned meal for today or tomorrow."""
+    plan_date: date = Field(..., description="Meal date")
+    slot: str = Field(..., description="morning, noon or evening")
+    meal_name: str = Field(..., description="Meal name")
+
+
+class DisplayShoppingList(BaseModel):
+    name: str = Field(..., description="List name")
+    open_count: int = Field(..., description="Unchecked items on the list")
+    items: list[str] = Field(default_factory=list, description="Names of the first unchecked items")
+
+
+class DisplayShopping(BaseModel):
+    open_count: int = Field(..., description="Unchecked items across all lists")
+    lists: list[DisplayShoppingList] = Field(default_factory=list, description="Lists with unchecked items")
+
+
+class DisplayRoutine(BaseModel):
+    """Recurring task that belongs to today's routine."""
+    title: str = Field(..., description="Routine title")
+    done: bool = Field(..., description="Completed today")
+    member_ref: Optional[int] = Field(None, description="Position of the assignee in `members`")
+
+
+class DisplayRewardMember(BaseModel):
+    member_ref: int = Field(..., description="Position of the member in `members`")
+    balance: int = Field(..., description="Confirmed balance")
+    next_reward_name: Optional[str] = Field(None, description="Cheapest active reward the member cannot afford yet")
+    next_reward_cost: Optional[int] = Field(None, description="Cost of that reward")
+
+
+class DisplayRewards(BaseModel):
+    currency_name: str = Field(..., description="Reward currency name")
+    currency_icon: str = Field(..., description="Reward currency icon key")
+    members: list[DisplayRewardMember] = Field(default_factory=list)
+
+
+class DisplayCountdown(BaseModel):
+    """Upcoming all-day event (holidays, trips) for the countdown card."""
+    title: str = Field(..., description="Event title")
+    starts_on: str = Field(..., description="Start date (YYYY-MM-DD)")
+    days_until: int = Field(..., description="Days until the event starts")
+
+
+class DisplayWeatherDay(BaseModel):
+    date: str
+    code: Optional[int] = Field(None, description="WMO weather code")
+    min: Optional[int] = None
+    max: Optional[int] = None
+    precipitation_probability: Optional[int] = None
+
+
+class DisplayWeatherHour(BaseModel):
+    time: str = Field(..., description="Local time at the place (ISO, no offset)")
+    temperature: Optional[int] = None
+    code: Optional[int] = Field(None, description="WMO weather code")
+    precipitation_probability: Optional[int] = None
+
+
+class DisplayWeather(BaseModel):
+    location_name: str = Field(..., description="Place chosen by the family admin")
+    current_temperature: int = Field(..., description="Current temperature in °C")
+    current_code: Optional[int] = Field(None, description="Current WMO weather code")
+    current_is_day: bool = Field(True, description="Whether it is daytime at the place")
+    today: Optional[DisplayWeatherDay] = None
+    tomorrow: Optional[DisplayWeatherDay] = None
+    hourly: list[DisplayWeatherHour] = Field(default_factory=list, description="Next hours from now")
+    rain_from: Optional[str] = Field(None, description="First hour today (HH:MM) with a likely rain chance")
+
+
+class FamilyWeatherLocation(BaseModel):
+    name: Optional[str] = Field(None, description="Place name, or null when weather is off")
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class FamilyWeatherLocationUpdate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+
+
+class WeatherPlace(BaseModel):
+    name: str
+    region: Optional[str] = None
+    country: Optional[str] = None
+    latitude: float
+    longitude: float
 
 
 class DisplayDashboardResponse(BaseModel):
@@ -2084,6 +2179,19 @@ class DisplayDashboardResponse(BaseModel):
     upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
     open_tasks: list[DisplayDashboardTask] = Field(default_factory=list, description="Open tasks with display-safe fields only")
     today_school_timetables: list[DisplaySchoolTimetableGroup] = Field(default_factory=list, description="Display-safe school timetable groups for today")
+    tomorrow_school_timetables: list[DisplaySchoolTimetableGroup] = Field(default_factory=list, description="School timetable groups for tomorrow (evening preview)")
+    generated_at: Optional[datetime] = Field(None, description="Local wall time the payload was built")
+    time_format: str = Field("24h", description="Instance clock format: 24h or 12h")
+    today_events: list[DisplayDashboardEvent] = Field(default_factory=list, description="Events overlapping today")
+    tomorrow_events: list[DisplayDashboardEvent] = Field(default_factory=list, description="Events overlapping tomorrow")
+    week_events: list[DisplayDashboardEvent] = Field(default_factory=list, description="Events of the current Monday-based week")
+    meals: list[DisplayMeal] = Field(default_factory=list, description="Planned meals for today and tomorrow")
+    shopping: Optional[DisplayShopping] = Field(None, description="Unchecked shopping items")
+    routines: list[DisplayRoutine] = Field(default_factory=list, description="Today's recurring routines and their state")
+    due_tasks: list[DisplayDashboardTask] = Field(default_factory=list, description="Open one-off tasks overdue or due by tomorrow")
+    rewards: Optional[DisplayRewards] = Field(None, description="Reward balances and next goals")
+    countdowns: list[DisplayCountdown] = Field(default_factory=list, description="Upcoming all-day events within 60 days")
+    weather: Optional[DisplayWeather] = Field(None, description="Forecast for the family place, when configured and available")
     config: DisplayDeviceConfig = Field(..., description="Resolved display render config")
 
 
