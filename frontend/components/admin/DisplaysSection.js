@@ -7,6 +7,8 @@ import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import ConfirmDialog from '../ConfirmDialog';
 import AdminDialog from './AdminDialog';
+import DisplayStageEditor, { StageSchematic, draftFromDevice, draftToPayload, everyLabel } from './DisplayStageEditor';
+import DisplayWeatherPanel from './DisplayWeatherPanel';
 
 /**
  * Admin tab for managing shared-home display devices (issue #172).
@@ -20,16 +22,13 @@ import AdminDialog from './AdminDialog';
  * when it was last used, and who took it out of service.
  */
 export default function DisplaysSection() {
-  const { familyId, messages, demoMode } = useApp();
+  const { familyId, messages, demoMode, lang } = useApp();
   const { error: toastError } = useToast();
   const [busy, setBusy] = useState(false);
   const [devices, setDevices] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newMode, setNewMode] = useState('tablet');
-  const [newPreset, setNewPreset] = useState('hearth');
-  const [newRefresh, setNewRefresh] = useState(60);
-  const [newLayout, setNewLayout] = useState(null);
+  const [newDraft, setNewDraft] = useState(() => draftFromDevice(null));
   const [deviceDrafts, setDeviceDrafts] = useState({});
   const [created, setCreated] = useState(null); // { token, device, displayUrl }
   const [copied, setCopied] = useState(false);
@@ -41,7 +40,7 @@ export default function DisplaysSection() {
     const { ok, data } = await api.apiListDisplayDevices(familyId);
     if (ok) {
       setDevices(data);
-      setDeviceDrafts(Object.fromEntries((data || []).map((device) => [device.id, deviceToDraft(device)])));
+      setDeviceDrafts(Object.fromEntries((data || []).map((device) => [device.id, draftFromDevice(device)])));
     }
   }, [familyId, demoMode]);
 
@@ -57,13 +56,7 @@ export default function DisplaysSection() {
     if (!newName.trim() || busy) return;
     setBusy(true);
     try {
-    const payload = {
-      name: newName.trim(),
-      display_mode: newMode,
-      layout_preset: newPreset,
-      refresh_interval_seconds: Number(newRefresh),
-    };
-    if (newLayout) payload.layout_config = newLayout;
+    const payload = { name: newName.trim(), ...draftToPayload(newDraft) };
     const { ok, data } = await api.apiCreateDisplayDevice(familyId, payload);
     if (!ok) {
       toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
@@ -84,39 +77,15 @@ export default function DisplaysSection() {
 
   function resetCreateForm() {
     setNewName('');
-    setNewMode('tablet');
-    setNewPreset('hearth');
-    setNewRefresh(60);
-    setNewLayout(null);
-  }
-
-  function updateDraft(deviceId, patch, device = null) {
-    setDeviceDrafts((current) => {
-      const previous = current[deviceId] || (device ? deviceToDraft(device) : {});
-      const next = { ...previous, ...patch };
-      // Picking a different preset or mode must also drop stale layout_config so
-      // the slot editor reflects the freshly chosen preset/mode grid.
-      const presetChanged = patch.layout_preset && patch.layout_preset !== previous.layout_preset;
-      const modeChanged = patch.display_mode && patch.display_mode !== previous.display_mode;
-      if ((presetChanged || modeChanged) && !Object.prototype.hasOwnProperty.call(patch, 'layout_config')) {
-        next.layout_config = null;
-      }
-      return { ...current, [deviceId]: next };
-    });
+    setNewDraft(draftFromDevice(null));
   }
 
   async function handleSaveDevice(device) {
     if (busy) return;
     setBusy(true);
     try {
-    const draft = deviceDrafts[device.id] || deviceToDraft(device);
-    const payload = {
-      display_mode: draft.display_mode,
-      layout_preset: draft.layout_preset,
-      refresh_interval_seconds: Number(draft.refresh_interval_seconds),
-    };
-    if (Object.prototype.hasOwnProperty.call(draft, 'layout_config')) payload.layout_config = draft.layout_config;
-    const { ok, data } = await api.apiUpdateDisplayDevice(familyId, device.id, payload);
+    const draft = deviceDrafts[device.id] || draftFromDevice(device);
+    const { ok, data } = await api.apiUpdateDisplayDevice(familyId, device.id, draftToPayload(draft));
     if (!ok) {
       toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       return;
@@ -185,6 +154,8 @@ export default function DisplaysSection() {
         <strong>{t(messages, 'display_not_a_person')}</strong>
       </p>
 
+      {!demoMode && <DisplayWeatherPanel familyId={familyId} messages={messages} lang={lang} />}
+
       {created && (
         <div className="adm-success-banner" data-testid="display-created-banner">
           <div className="adm-banner-header">
@@ -237,7 +208,7 @@ export default function DisplaysSection() {
                     ? t(messages, 'display_last_used').replace('{when}', parseServerInstant(device.last_used_at)?.toLocaleString())
                     : t(messages, 'display_never_used')}
                   {' · '}{t(messages, 'display_created').replace('{when}', parseServerInstant(device.created_at)?.toLocaleDateString())}
-                  {' · '}{displayModeLabel(device.display_mode, messages)} · {layoutPresetLabel(device.layout_preset, messages)} · {device.refresh_interval_seconds || 60}s
+                  {' · '}{t(messages, device.display_mode === 'eink' ? 'display_mode_eink' : 'display_mode_tablet')} · {everyLabel(device.refresh_interval_seconds || 60, messages)}
                 </div>
                 {!device.revoked_at && (
                   <div className="display-device-composer-shell">
@@ -249,23 +220,16 @@ export default function DisplaysSection() {
                       aria-expanded={expandedDeviceId === device.id ? 'true' : 'false'}
                     >
                       {expandedDeviceId === device.id
-                        ? t(messages, 'display_hide_composer')
+                        ? t(messages, 'close')
                         : t(messages, 'display_show_composer')}
                     </button>
                     {expandedDeviceId === device.id ? (
                       <AdminDialog title={device.name} messages={messages} busy={busy} onClose={() => setExpandedDeviceId(null)} actions={<><button className="ad-button" disabled={busy} onClick={() => setExpandedDeviceId(null)}>{t(messages, 'cancel')}</button><button className="ad-button primary" disabled={busy} onClick={() => handleSaveDevice(device)} data-testid="display-save-config">{t(messages, 'save')}</button></>}>
-                        <fieldset className="ad-display-fields" disabled={busy}><DisplayConfigControls draft={deviceDrafts[device.id] || deviceToDraft(device)} messages={messages} onChange={patch => updateDraft(device.id, patch, device)}/></fieldset>
+                        <fieldset className="ad-display-fields" disabled={busy}><DisplayStageEditor draft={deviceDrafts[device.id] || draftFromDevice(device)} messages={messages} onChange={(next) => setDeviceDrafts((current) => ({ ...current, [device.id]: next }))} /></fieldset>
                       </AdminDialog>
                     ) : (
                       <div className="display-device-compact-preview">
-                        <PresetMiniPreview
-                          preset={`row-${device.id}-${device.layout_preset || 'hearth'}`}
-                          layout={effectiveLayout(deviceToDraft(device))}
-                          messages={messages}
-                        />
-                        <span>
-                          {t(messages, 'display_compact_preview_hint').replace('{preset}', layoutPresetLabel(device.layout_preset, messages))}
-                        </span>
+                        <StageSchematic layout={draftFromDevice(device).layout} messages={messages} />
                       </div>
                     )}
                   </div>
@@ -293,7 +257,7 @@ export default function DisplaysSection() {
               <div className="settings-section adm-form-grid">
                 <div className="display-create-form-heading">
                   <h2>{t(messages, 'display_create_section_title')}</h2>
-                  <p>{t(messages, 'display_create_section_hint')}</p>
+                  <p>{t(messages, 'display_create_hint')}</p>
                 </div>
                 <div className="form-field">
                   <label>{t(messages, 'display_name_label')}</label>
@@ -310,31 +274,7 @@ export default function DisplaysSection() {
                   />
                   <small className="invite-helper-text">{t(messages, 'display_name_helper')}</small>
                 </div>
-                <DisplayConfigControls
-                  draft={{
-                    display_mode: newMode,
-                    layout_preset: newPreset,
-                    refresh_interval_seconds: newRefresh,
-                    layout_config: newLayout,
-                  }}
-                  messages={messages}
-                  onChange={(patch) => {
-                    if (patch.display_mode) {
-                      setNewMode(patch.display_mode);
-                      if (patch.display_mode === 'eink' && newPreset === 'hearth') setNewPreset('eink_compact');
-                      setNewLayout(null);
-                    }
-                    if (patch.layout_preset) {
-                      setNewPreset(patch.layout_preset);
-                      // Resetting layout_config keeps the slot editor in sync with the freshly chosen preset.
-                      setNewLayout(null);
-                    }
-                    if (patch.refresh_interval_seconds) setNewRefresh(Number(patch.refresh_interval_seconds));
-                    if (Object.prototype.hasOwnProperty.call(patch, 'layout_config')) {
-                      setNewLayout(patch.layout_config);
-                    }
-                  }}
-                />
+                <DisplayStageEditor draft={newDraft} messages={messages} onChange={setNewDraft} />
               </div>
               </fieldset>
             </form></AdminDialog>
@@ -351,469 +291,4 @@ export default function DisplaysSection() {
       )}
     </div>
   );
-}
-
-const DISPLAY_MODES = ['tablet', 'eink'];
-const LAYOUT_PRESETS = ['hearth', 'agenda_first', 'family_board', 'eink_compact', 'eink_agenda'];
-
-// Mirrors the canonical preset definitions in backend/app/core/display_layouts.py
-// so the composer can render mini-previews and seed the slot editor without an
-// extra API round-trip. The backend remains the source of truth and re-validates
-// every saved layout, so any drift here is corrected server-side.
-const PRESET_LAYOUTS = {
-  hearth: {
-    columns: 3, rows: 3,
-    widgets: [
-      { type: 'home_header', x: 0, y: 0, w: 1, h: 2 },
-      { type: 'focus', x: 0, y: 2, w: 1, h: 1 },
-      { type: 'agenda', x: 1, y: 0, w: 1, h: 3 },
-      { type: 'birthdays', x: 2, y: 0, w: 1, h: 1 },
-      { type: 'members', x: 2, y: 1, w: 1, h: 2 },
-    ],
-  },
-  agenda_first: {
-    columns: 3, rows: 3,
-    widgets: [
-      { type: 'agenda', x: 0, y: 0, w: 2, h: 3 },
-      { type: 'home_header', x: 2, y: 0, w: 1, h: 2 },
-      { type: 'birthdays', x: 2, y: 2, w: 1, h: 1 },
-    ],
-  },
-  family_board: {
-    columns: 3, rows: 3,
-    widgets: [
-      { type: 'home_header', x: 0, y: 0, w: 1, h: 2 },
-      { type: 'members', x: 1, y: 0, w: 2, h: 2 },
-      { type: 'agenda', x: 0, y: 2, w: 2, h: 1 },
-      { type: 'birthdays', x: 2, y: 2, w: 1, h: 1 },
-    ],
-  },
-  eink_compact: {
-    columns: 2, rows: 3,
-    widgets: [
-      { type: 'home_header', x: 0, y: 0, w: 2, h: 1 },
-      { type: 'agenda', x: 0, y: 1, w: 2, h: 1 },
-      { type: 'birthdays', x: 0, y: 2, w: 1, h: 1 },
-      { type: 'members', x: 1, y: 2, w: 1, h: 1 },
-    ],
-  },
-  eink_agenda: {
-    columns: 1, rows: 3,
-    widgets: [
-      { type: 'home_header', x: 0, y: 0, w: 1, h: 1 },
-      { type: 'agenda', x: 0, y: 1, w: 1, h: 1 },
-      { type: 'birthdays', x: 0, y: 2, w: 1, h: 1 },
-    ],
-  },
-};
-
-const ALLOWED_WIDGETS = ['home_header', 'identity', 'clock', 'focus', 'agenda', 'birthdays', 'members'];
-
-function deviceToDraft(device) {
-  return {
-    display_mode: device.display_mode || 'tablet',
-    layout_preset: device.layout_preset || 'hearth',
-    refresh_interval_seconds: device.refresh_interval_seconds || (device.display_mode === 'eink' ? 900 : 60),
-    layout_config: device.layout_config || null,
-  };
-}
-
-function displayModeLabel(mode, messages) {
-  return mode === 'eink' ? t(messages, 'display_mode_eink') : t(messages, 'display_mode_tablet');
-}
-
-function layoutPresetLabel(preset, messages) {
-  return t(messages, `display_layout_${preset || 'hearth'}`);
-}
-
-function widgetLabel(widget, messages) {
-  return t(messages, `display_widget_${widget}`);
-}
-
-function effectiveLayout(draft) {
-  if (draft.layout_config && Array.isArray(draft.layout_config.widgets)) return draft.layout_config;
-  return PRESET_LAYOUTS[draft.layout_preset] || PRESET_LAYOUTS.hearth;
-}
-
-const WIDGET_GLYPHS = {
-  home_header: '⌂',
-  identity: 'A',
-  clock: '◷',
-  focus: '★',
-  agenda: '☰',
-  birthdays: '✦',
-  members: '☺',
-};
-
-function PresetMiniPreview({ preset, layout, withLabels = false, messages = null }) {
-  return (
-    <div
-      className={`display-layout-preview${withLabels ? ' display-layout-preview--labeled' : ''}`}
-      data-testid={`display-layout-preview-${preset}`}
-      style={{
-        gridTemplateColumns: `repeat(${layout.columns}, 1fr)`,
-        gridTemplateRows: `repeat(${layout.rows}, 1fr)`,
-      }}
-      aria-hidden={withLabels ? undefined : 'true'}
-    >
-      {layout.widgets.map((widget, idx) => (
-        <span
-          key={`${widget.type}-${idx}`}
-          className="display-layout-preview-cell"
-          data-widget-type={widget.type}
-          style={{
-            gridColumn: `${widget.x + 1} / span ${widget.w}`,
-            gridRow: `${widget.y + 1} / span ${widget.h}`,
-          }}
-        >
-          {withLabels && (
-            <>
-              <span className="display-layout-preview-cell-glyph" aria-hidden="true">
-                {WIDGET_GLYPHS[widget.type] || '·'}
-              </span>
-              <span className="display-layout-preview-cell-label">
-                {messages ? widgetLabel(widget.type, messages) : widget.type}
-              </span>
-            </>
-          )}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function DisplayConfigControls({ draft, messages, onChange, onSave = null }) {
-  const layout = effectiveLayout(draft);
-
-  function updateSlot(index, patch) {
-    const nextWidgets = layout.widgets.map((widget, i) => {
-      if (i !== index) return widget;
-      return normalizeSlot({ ...widget, ...patch }, layout);
-    });
-    onChange({ layout_config: { columns: layout.columns, rows: layout.rows, widgets: nextWidgets } });
-  }
-
-  function moveSlot(index, dx, dy) {
-    const widget = layout.widgets[index];
-    updateSlot(index, { x: widget.x + dx, y: widget.y + dy });
-  }
-
-  function resizeSlot(index, dw, dh) {
-    const widget = layout.widgets[index];
-    updateSlot(index, { w: widget.w + dw, h: widget.h + dh });
-  }
-
-  return (
-    <div className="adm-form-grid" data-testid="display-config-controls">
-      <div className="form-field">
-        <label>{t(messages, 'display_mode_label')}</label>
-        <select
-          className="form-input"
-          value={draft.display_mode}
-          onChange={(e) => onChange({ display_mode: e.target.value })}
-          data-testid="display-mode-select"
-        >
-          {DISPLAY_MODES.map((mode) => (
-            <option key={mode} value={mode}>{displayModeLabel(mode, messages)}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="form-field">
-        <label>{t(messages, 'display_layout_label')}</label>
-        <div
-          className="display-layout-card-grid"
-          role="radiogroup"
-          aria-label={t(messages, 'display_layout_label')}
-        >
-          {LAYOUT_PRESETS.map((preset) => {
-            const presetLayout = PRESET_LAYOUTS[preset];
-            const selected = draft.layout_preset === preset;
-            return (
-              <button
-                key={preset}
-                type="button"
-                className={`display-layout-card${selected ? ' display-layout-card--selected' : ''}`}
-                aria-pressed={selected ? 'true' : 'false'}
-                data-testid={`display-layout-card-${preset}`}
-                onClick={() => onChange({ layout_preset: preset })}
-              >
-                <PresetMiniPreview preset={preset} layout={presetLayout} />
-                <span className="display-layout-card-label">{layoutPresetLabel(preset, messages)}</span>
-              </button>
-            );
-          })}
-        </div>
-        {/* Backward-compatible select for screen readers and keyboard-only flows.
-            The card grid above mirrors its state. */}
-        <select
-          className="form-input display-layout-select-fallback"
-          value={draft.layout_preset}
-          onChange={(e) => onChange({ layout_preset: e.target.value })}
-          data-testid="display-layout-select"
-          aria-label={t(messages, 'display_layout_label')}
-        >
-          {LAYOUT_PRESETS.map((preset) => (
-            <option key={preset} value={preset}>{layoutPresetLabel(preset, messages)}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="form-field">
-        <label>{t(messages, 'display_refresh_label')}</label>
-        <input
-          className="form-input"
-          type="number"
-          min={draft.display_mode === 'eink' ? 300 : 30}
-          max={draft.display_mode === 'eink' ? 86400 : 3600}
-          value={draft.refresh_interval_seconds}
-          onChange={(e) => onChange({ refresh_interval_seconds: e.target.value })}
-          data-testid="display-refresh-input"
-        />
-        <small className="invite-helper-text">{t(messages, 'display_refresh_helper')}</small>
-      </div>
-
-      <div className="form-field" data-testid="display-live-preview">
-        <label>{t(messages, 'display_live_preview_label')}</label>
-        <div className="display-live-preview-body">
-          <div
-            className={`display-live-preview-frame display-live-preview-frame--${draft.display_mode}`}
-            aria-hidden="true"
-          >
-            <div className="display-live-preview-frame-bezel">
-              <PresetMiniPreview
-                preset={`live-${draft.layout_preset}`}
-                layout={layout}
-                withLabels
-                messages={messages}
-              />
-            </div>
-          </div>
-          <div className="display-live-preview-meta">
-            <strong className="display-live-preview-title">{layoutPresetLabel(draft.layout_preset, messages)}</strong>
-            <span className="display-live-preview-grid-summary">
-              {layout.columns}×{layout.rows} · {layout.widgets.length} {layout.widgets.length === 1 ? 'slot' : 'slots'}
-            </span>
-            <ul className="display-live-preview-slots">
-              {layout.widgets.map((widget, idx) => (
-                <li key={`${widget.type}-${idx}`}>
-                  <span
-                    className="display-live-preview-slot-glyph"
-                    data-widget-type={widget.type}
-                    aria-hidden="true"
-                  >
-                    {WIDGET_GLYPHS[widget.type] || '·'}
-                  </span>
-                  <span className="display-live-preview-slot-name">{widgetLabel(widget.type, messages)}</span>
-                  <span className="display-live-preview-slot-coords">
-                    {widget.w}×{widget.h} @ ({widget.x},{widget.y})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div className="form-field">
-        <label>{t(messages, 'display_slot_editor_label')}</label>
-        <div className="display-slot-editor">
-          <div className="display-slot-editor-head" aria-hidden="true">
-            <span className="display-slot-editor-head-cell display-slot-editor-head-cell--type">
-              {t(messages, 'display_slot_widget_label')}
-            </span>
-            <span className="display-slot-editor-head-cell">
-              {t(messages, 'display_slot_x_label')}
-            </span>
-            <span className="display-slot-editor-head-cell">
-              {t(messages, 'display_slot_y_label')}
-            </span>
-            <span className="display-slot-editor-head-cell">
-              {t(messages, 'display_slot_w_label')}
-            </span>
-            <span className="display-slot-editor-head-cell">
-              {t(messages, 'display_slot_h_label')}
-            </span>
-          </div>
-          {layout.widgets.map((widget, idx) => (
-            <div
-              key={idx}
-              className="display-slot-editor-row"
-              data-testid={`display-slot-editor-row-${idx}`}
-              data-widget-type={widget.type}
-            >
-              <span
-                className="display-slot-editor-marker"
-                data-widget-type={widget.type}
-                aria-hidden="true"
-              >
-                {WIDGET_GLYPHS[widget.type] || '·'}
-              </span>
-              <select
-                className="form-input display-slot-editor-type"
-                value={ALLOWED_WIDGETS.includes(widget.type) ? widget.type : ALLOWED_WIDGETS[0]}
-                onChange={(e) => updateSlot(idx, { type: e.target.value })}
-                data-testid={`display-slot-editor-row-${idx}-type`}
-                aria-label={t(messages, 'display_slot_widget_label')}
-              >
-                {ALLOWED_WIDGETS.map((kind) => (
-                  <option key={kind} value={kind}>{widgetLabel(kind, messages)}</option>
-                ))}
-              </select>
-              <input
-                type="number"
-                className="form-input display-slot-editor-num"
-                min={0}
-                max={Math.max(0, layout.columns - 1)}
-                value={widget.x}
-                onChange={(e) => updateSlot(idx, { x: clampNum(e.target.value, 0, layout.columns - 1, widget.x) })}
-                data-testid={`display-slot-editor-row-${idx}-x`}
-                aria-label={`${t(messages, 'display_slot_x_label')} ${idx + 1}`}
-              />
-              <input
-                type="number"
-                className="form-input display-slot-editor-num"
-                min={0}
-                max={Math.max(0, layout.rows - 1)}
-                value={widget.y}
-                onChange={(e) => updateSlot(idx, { y: clampNum(e.target.value, 0, layout.rows - 1, widget.y) })}
-                data-testid={`display-slot-editor-row-${idx}-y`}
-                aria-label={`${t(messages, 'display_slot_y_label')} ${idx + 1}`}
-              />
-              <input
-                type="number"
-                className="form-input display-slot-editor-num"
-                min={1}
-                max={Math.max(1, layout.columns - widget.x)}
-                value={widget.w}
-                onChange={(e) => updateSlot(idx, { w: clampNum(e.target.value, 1, Math.max(1, layout.columns - widget.x), widget.w) })}
-                data-testid={`display-slot-editor-row-${idx}-w`}
-                aria-label={`${t(messages, 'display_slot_w_label')} ${idx + 1}`}
-              />
-              <input
-                type="number"
-                className="form-input display-slot-editor-num"
-                min={1}
-                max={Math.max(1, layout.rows - widget.y)}
-                value={widget.h}
-                onChange={(e) => updateSlot(idx, { h: clampNum(e.target.value, 1, Math.max(1, layout.rows - widget.y), widget.h) })}
-                data-testid={`display-slot-editor-row-${idx}-h`}
-                aria-label={`${t(messages, 'display_slot_h_label')} ${idx + 1}`}
-              />
-              <div className="display-slot-visual-controls" aria-label={`${widgetLabel(widget.type, messages)} ${idx + 1}`}>
-                <button
-                  type="button"
-                  className="display-slot-control-btn"
-                  onClick={() => moveSlot(idx, 0, -1)}
-                  disabled={widget.y <= 0}
-                  data-testid={`display-slot-editor-row-${idx}-move-up`}
-                  aria-label={`${t(messages, 'display_slot_move_up')} ${idx + 1}`}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="display-slot-control-btn"
-                  onClick={() => moveSlot(idx, -1, 0)}
-                  disabled={widget.x <= 0}
-                  data-testid={`display-slot-editor-row-${idx}-move-left`}
-                  aria-label={`${t(messages, 'display_slot_move_left')} ${idx + 1}`}
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  className="display-slot-control-btn"
-                  onClick={() => moveSlot(idx, 1, 0)}
-                  disabled={widget.x >= layout.columns - widget.w}
-                  data-testid={`display-slot-editor-row-${idx}-move-right`}
-                  aria-label={`${t(messages, 'display_slot_move_right')} ${idx + 1}`}
-                >
-                  →
-                </button>
-                <button
-                  type="button"
-                  className="display-slot-control-btn"
-                  onClick={() => moveSlot(idx, 0, 1)}
-                  disabled={widget.y >= layout.rows - widget.h}
-                  data-testid={`display-slot-editor-row-${idx}-move-down`}
-                  aria-label={`${t(messages, 'display_slot_move_down')} ${idx + 1}`}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  className="display-slot-control-btn display-slot-control-btn--wide"
-                  onClick={() => resizeSlot(idx, 1, 0)}
-                  disabled={widget.w >= layout.columns - widget.x}
-                  data-testid={`display-slot-editor-row-${idx}-widen`}
-                  aria-label={`${t(messages, 'display_slot_widen')} ${idx + 1}`}
-                >
-                  +W
-                </button>
-                <button
-                  type="button"
-                  className="display-slot-control-btn display-slot-control-btn--wide"
-                  onClick={() => resizeSlot(idx, -1, 0)}
-                  disabled={widget.w <= 1}
-                  data-testid={`display-slot-editor-row-${idx}-narrow`}
-                  aria-label={`${t(messages, 'display_slot_narrow')} ${idx + 1}`}
-                >
-                  -W
-                </button>
-                <button
-                  type="button"
-                  className="display-slot-control-btn display-slot-control-btn--wide"
-                  onClick={() => resizeSlot(idx, 0, 1)}
-                  disabled={widget.h >= layout.rows - widget.y}
-                  data-testid={`display-slot-editor-row-${idx}-taller`}
-                  aria-label={`${t(messages, 'display_slot_taller')} ${idx + 1}`}
-                >
-                  +H
-                </button>
-                <button
-                  type="button"
-                  className="display-slot-control-btn display-slot-control-btn--wide"
-                  onClick={() => resizeSlot(idx, 0, -1)}
-                  disabled={widget.h <= 1}
-                  data-testid={`display-slot-editor-row-${idx}-shorter`}
-                  aria-label={`${t(messages, 'display_slot_shorter')} ${idx + 1}`}
-                >
-                  -H
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {onSave && (
-        <div className="set-btn-row">
-          <button type="button" className="btn-sm" onClick={onSave} data-testid="display-save-config">
-            {t(messages, 'save')}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function normalizeSlot(widget, layout) {
-  const x = clampNum(widget.x, 0, Math.max(0, layout.columns - 1), 0);
-  const y = clampNum(widget.y, 0, Math.max(0, layout.rows - 1), 0);
-  const w = clampNum(widget.w, 1, Math.max(1, layout.columns - x), 1);
-  const h = clampNum(widget.h, 1, Math.max(1, layout.rows - y), 1);
-  return {
-    type: ALLOWED_WIDGETS.includes(widget.type) ? widget.type : ALLOWED_WIDGETS[0],
-    x,
-    y,
-    w,
-    h,
-  };
-}
-
-function clampNum(raw, lo, hi, fallback) {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(hi, Math.max(lo, Math.trunc(n)));
 }

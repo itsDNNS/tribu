@@ -3,6 +3,7 @@ const { mockResponsivePlanner } = require("./responsive-planner");
 // Synthetic fixtures only. The fallback also mocks every API route, so these
 // screenshots never use a signed-in person's data or a live backend.
 async function mockAdmin(page, { failSave = false, child = false } = {}) {
+  let weatherPlace = null;
   await mockResponsivePlanner(page, { child });
   let members = ["Demo A", "Demo B", "Demo C", "Demo D"].map(
     (display_name, i) => ({
@@ -116,6 +117,14 @@ async function mockAdmin(page, { failSave = false, child = false } = {}) {
         method === "DELETE" ? { revoked_at: "2026-09-19T10:00:00Z" } : body,
       );
       data = devices[0];
+    } else if (path === "/families/7/weather-location/search") {
+      data = [
+        { name: "Hamburg", region: "Hamburg", country: "Deutschland", latitude: 53.55, longitude: 9.99 },
+      ];
+    } else if (path === "/families/7/weather-location") {
+      if (method === "PUT") weatherPlace = body;
+      if (method === "DELETE") weatherPlace = null;
+      data = weatherPlace || { name: null, latitude: null, longitude: null };
     } else if (path === "/families/7/audit-log")
       data = { items: audit, total: audit.length };
     else if (path === "/admin/settings/time-format") {

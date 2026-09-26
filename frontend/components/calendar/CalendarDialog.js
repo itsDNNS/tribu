@@ -22,7 +22,10 @@ export default function CalendarDialog({
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     dialog.showModal();
-    dialog.querySelector('input:not([type=hidden]),textarea')?.focus();
+    // Skip regions marked data-no-autofocus (e.g. long settings forms) so the dialog opens at the top.
+    [...dialog.querySelectorAll('input:not([type=hidden]),textarea')]
+      .find((field) => !field.closest('[data-no-autofocus]'))
+      ?.focus();
     return () => {
       dialog.close();
       document.body.style.overflow = overflow;

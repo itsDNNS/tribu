@@ -196,6 +196,31 @@ test("display editor uses a mobile sheet and saves server configuration", async 
   ).toBe("eink");
 });
 
+test("display editor configures rotating areas and the weather place", async ({
+  page,
+}) => {
+  const api = await open(page);
+  await page
+    .getByRole("navigation", { name: "Admin-Bereiche" })
+    .getByRole("button", { name: "Displays", exact: true })
+    .click();
+  await page.getByTestId("display-weather-choose").click();
+  await page.getByTestId("display-weather-query").fill("Hamb");
+  await page.getByTestId("display-weather-search").click();
+  await page.getByRole("button", { name: /Hamburg/ }).first().click();
+  await expect(page.getByTestId("display-weather-place")).toContainText("Hamburg");
+
+  await page.getByTestId("display-config-toggle-1").click();
+  const zoneB = page.getByTestId("display-zone-editor-b");
+  await zoneB.getByRole("combobox", { name: /Karte hinzufügen/ }).selectOption("stars");
+  await page.getByTestId("display-zone-interval-b").selectOption("120");
+  await page.getByTestId("display-save-config").click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const patch = api.writes.find((r) => r.method === "PATCH" && r.path.includes("display-devices")).body;
+  expect(patch.layout_config.zones.b).toEqual({ cards: ["reminders", "school", "stars"], interval_seconds: 120 });
+  expect(api.writes.find((r) => r.method === "PUT" && r.path.includes("weather-location")).body).toMatchObject({ name: "Hamburg", latitude: 53.55 });
+});
+
 test("dark admin sheets preserve focus, draft and reachable actions", async ({
   page,
 }) => {

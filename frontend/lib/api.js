@@ -881,6 +881,28 @@ export function apiRevokeDisplayDevice(familyId, deviceId) {
   return del(`/families/${familyId}/display-devices/${deviceId}`);
 }
 
+// Family place for the display weather card (Open-Meteo). Unset = no weather.
+export function apiGetWeatherLocation(familyId) {
+  return request(`/families/${familyId}/weather-location`);
+}
+
+export function apiSetWeatherLocation(familyId, place) {
+  return request(`/families/${familyId}/weather-location`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(place),
+  });
+}
+
+export function apiClearWeatherLocation(familyId) {
+  return del(`/families/${familyId}/weather-location`);
+}
+
+export function apiSearchWeatherLocation(familyId, query, lang) {
+  const params = new URLSearchParams({ q: query, lang });
+  return request(`/families/${familyId}/weather-location/search?${params.toString()}`);
+}
+
 async function displayRequest(path, token) {
   let res;
   try {
