@@ -138,6 +138,31 @@ test.describe('Display mode', () => {
     await expect(page.locator('.stage-progress')).toHaveCount(0);
   });
 
+  test('serves an e-ink picture for frames without a browser', async ({ apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    await seedCalendarEvent(apiCtx, familyId, { title: 'Frame Agenda', starts_at: localDateTimeInputValue(soonToday()) });
+    const created = await createDisplayDevice(apiCtx, familyId, 'Hallway Frame', {
+      display_mode: 'eink',
+      layout_config: { version: 2, eink_format: 'large' },
+    });
+    const size = (buffer) => [buffer.readUInt32BE(16), buffer.readUInt32BE(20)];
+
+    const picture = await apiCtx.get('/display/image.png', { headers: { Authorization: `Bearer ${created.token}` } });
+    expect(picture.status()).toBe(200);
+    expect(picture.headers()['content-type']).toBe('image/png');
+    const body = await picture.body();
+    expect(body.subarray(1, 4).toString()).toBe('PNG');
+    expect(size(body)).toEqual([1200, 825]);
+
+    const compact = await apiCtx.get(`/display/image.png?token=${encodeURIComponent(created.token)}&format=compact`);
+    expect(size(await compact.body())).toEqual([800, 480]);
+
+    expect((await apiCtx.get('/display/image.png')).status()).toBe(401);
+    await revokeDisplayDevice(apiCtx, familyId, created.device.id);
+    const revoked = await apiCtx.get('/display/image.png', { headers: { Authorization: `Bearer ${created.token}` } });
+    expect(revoked.headers()['x-tribu-display-state']).toBe('revoked');
+  });
+
   test('shows a revoked-device state instead of falling back to a user session', async ({ page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
     const created = await createDisplayDevice(apiCtx, familyId, 'Hallway Display');

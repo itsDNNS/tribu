@@ -160,6 +160,20 @@ export default function DisplayStageEditor({ draft, messages, onChange }) {
               ))}
             </select>
           </label>
+          {eink && (
+            <label className="form-field">
+              <span>{t(messages, 'display_eink_format_label')}</span>
+              <select
+                className="form-input"
+                value={draft.layout.eink_format}
+                data-testid="display-eink-format-select"
+                onChange={(event) => setLayout({ eink_format: event.target.value })}
+              >
+                <option value="compact">{t(messages, 'display_eink_format_compact')}</option>
+                <option value="large">{t(messages, 'display_eink_format_large')}</option>
+              </select>
+            </label>
+          )}
           <label className="form-field">
             <span>{t(messages, 'display_language_label')}</span>
             <select
