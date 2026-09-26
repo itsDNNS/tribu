@@ -835,9 +835,24 @@ class TestSchoolTimetables:
         )
         assert create.status_code == 200, create.text
         token = _mint_display_token(family_id, "Kitchen School")
+        statements: list[str] = []
 
-        resp = client.get("/display/dashboard", headers=_auth(token))
+        def record(conn, cursor, statement, parameters, context, executemany):
+            statements.append(statement)
+
+        event.listen(engine, "before_cursor_execute", record)
+        try:
+            resp = client.get("/display/dashboard", headers=_auth(token))
+        finally:
+            event.remove(engine, "before_cursor_execute", record)
         assert resp.status_code == 200, resp.text
+        # Periods, lessons and assignments load separately; joined together they
+        # multiply into periods x lessons x assignments rows that each repeat
+        # the child's profile image.
+        assert not [
+            statement for statement in statements
+            if "school_timetable_lessons" in statement and "school_timetable_assignments" in statement
+        ]
         body = resp.json()
         assert "today_school_timetables" in body
         rendered = json_module.dumps(body["today_school_timetables"])

@@ -24,7 +24,7 @@ import re
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.clock import local_today, local_wall_now, to_local_wall_naive, utcnow
 from app.core.deps import current_display_device, current_user, ensure_family_admin, next_birthday_date
@@ -45,7 +45,6 @@ from app.models import (
     RewardCurrency,
     SchoolTimetable,
     SchoolTimetableAssignment,
-    SchoolTimetableLesson,
     ShoppingItem,
     ShoppingList,
     Task,
@@ -484,10 +483,13 @@ def _school_timetables_for(db: Session, family_id: int, day: date, membership_by
         return []
     timetables = (
         db.query(SchoolTimetable)
+        # One query per collection: joining periods, lessons and assignments at
+        # once returns their cross product, each row repeating the child's
+        # profile image, which can exhaust the backend's memory.
         .options(
-            joinedload(SchoolTimetable.periods),
-            joinedload(SchoolTimetable.lessons).joinedload(SchoolTimetableLesson.period),
-            joinedload(SchoolTimetable.assignments).joinedload(SchoolTimetableAssignment.member),
+            selectinload(SchoolTimetable.periods),
+            selectinload(SchoolTimetable.lessons),
+            selectinload(SchoolTimetable.assignments).joinedload(SchoolTimetableAssignment.member),
         )
         .filter(SchoolTimetable.family_id == family_id)
         .order_by(SchoolTimetable.name.asc())
