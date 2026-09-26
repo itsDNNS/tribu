@@ -1744,6 +1744,7 @@
   "module.responsive.meal_today": "Vandaag: {meal}",
   "module.responsive.dark_mode": "Donker",
   "module.responsive.capture_title": "What would you like to add?",
+  "module.responsive.save_as": "Opslaan als",
   "module.responsive.choose_date": "Choose date",
   "module.responsive.arrow_hint": "Use arrow keys to change day",
   "admin_layout_title": "Beheer je gezin",

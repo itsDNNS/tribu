@@ -1744,6 +1744,7 @@
   "module.responsive.meal_today": "Aujourd’hui : {meal}",
   "module.responsive.dark_mode": "Sombre",
   "module.responsive.capture_title": "What would you like to add?",
+  "module.responsive.save_as": "Enregistrer comme",
   "module.responsive.choose_date": "Choose date",
   "module.responsive.arrow_hint": "Use arrow keys to change day",
   "admin_layout_title": "Gérer votre famille",

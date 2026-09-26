@@ -1744,6 +1744,7 @@
   "module.responsive.meal_today": "Idag: {meal}",
   "module.responsive.dark_mode": "Mörkt",
   "module.responsive.capture_title": "What would you like to add?",
+  "module.responsive.save_as": "Spara som",
   "module.responsive.choose_date": "Choose date",
   "module.responsive.arrow_hint": "Use arrow keys to change day",
   "admin_layout_title": "Hantera din familj",

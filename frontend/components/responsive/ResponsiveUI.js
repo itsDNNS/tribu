@@ -6,17 +6,14 @@ import {
   LayoutGrid,
   CalendarDays,
   ShoppingCart,
-  ListChecks,
-  Utensils,
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useCurrentMinute } from '../../hooks/useCurrentMinute';
 import { useVisualViewport } from '../../hooks/useResponsiveUI';
 import { t } from '../../lib/i18n';
 import { plannerText } from './PlannerUI';
-import CalendarDialog from '../calendar/CalendarDialog';
-import QuickCaptureCard from '../QuickCaptureCard';
 import MoreSheet from './MoreSheet';
+import NewSheet from './NewSheet';
 
 function MobileBadge({ count }) {
   return count > 0 ? (
@@ -81,7 +78,7 @@ export default function ResponsiveUI({
   setSheet,
 }) {
   const app = useApp();
-  const { activeView, messages, isChild, demoMode, unreadCount, showNotificationBadge = true } = app;
+  const { activeView, messages, isChild, unreadCount, showNotificationBadge = true } = app;
   const notificationCount = showNotificationBadge ? unreadCount : 0;
   const unreadDescription = notificationCount > 0 ? `${notificationCount} ${t(messages, 'notifications_unread')}` : undefined;
   const activeInMore = items.some(item => item.key === activeView && !['dashboard', 'calendar', 'shopping'].includes(item.key));
@@ -142,45 +139,8 @@ export default function ResponsiveUI({
           }}
         />
       )}
-      {sheet === 'new' && (
-        <CalendarDialog
-          title={plannerText(messages, 'capture_title')}
-          messages={messages}
-          subtitle={null}
-          onClose={() => setSheet(null)}
-        >
-          <div className="ui-menu-grid">
-            {!isChild &&
-              [
-                ['event', CalendarDays, 'calendar'],
-                ['task', ListChecks, 'module.tasks.name'],
-                ['shopping', ShoppingCart, 'module.shopping.name'],
-                ['meal', Utensils, 'module.meal_plans.name'],
-              ].map(([kind, Icon, label]) => (
-                <button
-                  key={kind}
-                  className="ui-menu-item"
-                  onClick={() => {
-                    setSheet(null);
-                    onCreate(kind);
-                  }}
-                >
-                  <Icon size={22} />
-                  <strong>{t(messages, label)}</strong>
-                </button>
-              ))}
-          </div>
-          {!isChild && !demoMode && (
-            <QuickCaptureCard
-              {...app}
-              inbox={[]}
-              setActiveView={(view) => {
-                setSheet(null);
-                navigate(view);
-              }}
-            />
-          )}
-        </CalendarDialog>
+      {sheet === 'new' && !isChild && (
+        <NewSheet onClose={() => setSheet(null)} onCreate={onCreate} />
       )}
     </>
   );

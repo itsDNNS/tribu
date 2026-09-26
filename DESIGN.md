@@ -241,6 +241,13 @@ dark-design switch and dashboard layout follow as compact rows, with the
 account, family switcher and logout last. The sheet keeps its opening height
 while filtering and can be closed by swiping the header down.
 
+The “New” sheet uses the same bottom-sheet frame (`BottomSheet`). Four tiles
+open the existing create forms for an event, task, shopping item or meal.
+Below them, a compact quick capture field saves text straight to a task, the
+shopping list or the quick-note inbox; destinations stay disabled until there
+is text, and the sheet stays open after saving so several items can be added in
+a row. Demo mode keeps the tiles but hides quick capture.
+
 ### Dashboard cards
 
 Dashboard cards are bento modules. Each card should answer one household question:

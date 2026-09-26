@@ -30,6 +30,7 @@
   "module.responsive.meal_today": "Heute: {meal}",
   "module.responsive.dark_mode": "Dunkel",
   "module.responsive.capture_title": "Was möchtet ihr festhalten?",
+  "module.responsive.save_as": "Speichern als",
   "module.responsive.choose_date": "Datum auswählen",
   "module.responsive.arrow_hint": "Pfeiltasten zum Wechseln des Tages",
   "tagline": "Familien Chaos in planbare Tage verwandeln.",
