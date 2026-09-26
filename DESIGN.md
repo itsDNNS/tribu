@@ -341,6 +341,17 @@ current browser, alongside theme, language and calendar week start.
 
 The display route is a calm glance surface for a shared room. It should show the day, upcoming family context, and safe household information. It must not look like a logged-in admin view and must not expose profile, session, token, or email details.
 
+The display uses one "stage" layout (see `docs/shared-display.md`): fixed anchors
+for orientation — clock, greeting by time of day, weather, Next up and a timeline
+with one lane per person — and four zones whose cards rotate on a per-zone rhythm
+(default 60 seconds, staggered so only one zone changes at a time, with a thin
+progress line and dots). Empty cards are skipped; touch holds a zone and a swipe
+turns it. Evening and night switch to a dark palette and look at tomorrow; night
+can additionally dim the screen. Sizes are em-based on the viewport so 16:10, 7:5,
+4:3 and 16:9 screens share one layout, portrait stacks vertically, and e-ink is
+monochrome without motion and turns one card per refresh. Presentation lives in
+`frontend/components/display/` and `frontend/styles/display.css`.
+
 ## Do's and Don'ts
 
 ### Do
