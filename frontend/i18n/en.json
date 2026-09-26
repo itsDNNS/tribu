@@ -30,6 +30,7 @@
   "module.responsive.meal_today": "Today: {meal}",
   "module.responsive.dark_mode": "Dark",
   "module.responsive.capture_title": "What would you like to add?",
+  "module.responsive.save_as": "Save as",
   "module.responsive.choose_date": "Choose date",
   "module.responsive.arrow_hint": "Use arrow keys to change day",
   "tagline": "Turn family chaos into plannable days.",

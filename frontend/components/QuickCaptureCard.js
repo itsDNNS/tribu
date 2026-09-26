@@ -1,6 +1,7 @@
 import { ListChecks, CalendarDays, ShoppingCart, Utensils, StickyNote, X, Zap, Plus, Search } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { apiCreateQuickCapture, apiConvertQuickCapture, apiDismissQuickCapture } from '../lib/api';
+import { apiConvertQuickCapture, apiDismissQuickCapture } from '../lib/api';
+import { useQuickCapture } from '../hooks/useQuickCapture';
 import { t } from '../lib/i18n';
 import { DashboardBadge, DashboardMotto } from './DashboardDetails';
 
@@ -34,33 +35,14 @@ export default function QuickCaptureCard({
     observer?.observe(input);
     return () => observer?.disconnect();
   }, [text, messages]);
-  const [busy, setBusy] = useState(false);
+  const { busy, capture: saveCapture, refresh } = useQuickCapture({ familyId, loadQuickCaptureInbox, loadTasks, loadShoppingLists, loadActivity });
   const [triagingId, setTriagingId] = useState(null);
 
   const canSubmit = text.trim().length > 0 && !busy && familyId;
 
-  async function refresh(destination) {
-    await Promise.allSettled([
-      loadQuickCaptureInbox?.(familyId),
-      destination === 'task' ? loadTasks?.(familyId) : Promise.resolve(),
-      destination === 'shopping' ? loadShoppingLists?.(familyId) : Promise.resolve(),
-      destination !== 'inbox' ? loadActivity?.(familyId) : Promise.resolve(),
-    ]);
-  }
-
   async function capture(destination) {
     if (!canSubmit) return;
-    const captured = text.trim();
-    setBusy(true);
-    try {
-      const result = await apiCreateQuickCapture({ family_id: familyId, text: captured, destination });
-      if (result.ok) {
-        setText('');
-        await refresh(destination);
-      }
-    } finally {
-      setBusy(false);
-    }
+    await saveCapture(text.trim(), destination, () => setText(''));
   }
 
   function openView(view) {

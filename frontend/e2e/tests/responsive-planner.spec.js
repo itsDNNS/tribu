@@ -36,6 +36,22 @@ test('anonymous mobile menu shows task, shopping and unread badges', async ({ pa
   await expect(menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).locator('.ui-count-badge')).toHaveText('3');
   await shot(page, 'menu-badges-dark.png');
 });
+test('New sheet saves quick capture to the chosen destination', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const api = await open(page);
+  await page.locator('.ui-bottom-nav').getByRole('button', { name: 'Neu', exact: true }).click();
+  const sheet = page.getByRole('dialog', { name: 'Was möchtet ihr festhalten?' });
+  await expect(sheet.getByRole('button', { name: 'Schließen', exact: true })).toBeFocused();
+  const destinations = sheet.getByRole('group', { name: 'Speichern als' });
+  await expect(destinations.getByRole('button', { name: 'Einkauf' })).toBeDisabled();
+  await sheet.getByRole('textbox').fill('Milch');
+  await destinations.getByRole('button', { name: 'Einkauf' }).click();
+  await expect(sheet.getByRole('status')).toHaveText('Gespeichert');
+  expect(api.requests.find((r) => r.path === '/quick-capture' && r.method === 'POST')?.body).toMatchObject({ text: 'Milch', destination: 'shopping' });
+  await expect(sheet.getByRole('textbox')).toHaveValue('');
+  expect(await sheet.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await shot(page, 'new-sheet-capture.png');
+});
 for (const width of [320, 390, 680, 768, 820, 1024, 1448])
   test(`calendar layouts at ${width}px`, async ({ page }) => {
     const errors = [];
@@ -154,7 +170,7 @@ test("agenda requests more dates; mobile shell exposes quick capture and navigat
     .click();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Kalender", exact: true })
+    .getByRole("button", { name: "Termin", exact: true })
     .click();
   await expect(
     page.getByRole("dialog").locator("input[type=date]").first(),

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, LayoutGrid, LogOut, Moon, Search, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Bell, LayoutGrid, LogOut, Moon, Search } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import { localeForLang } from '../../lib/dates';
@@ -12,6 +12,7 @@ import {
 } from '../../lib/navigation';
 import MemberAvatar from '../MemberAvatar';
 import { plannerText } from './PlannerUI';
+import BottomSheet from './BottomSheet';
 
 const TONES = {
   weekly_plan: 'blue',
@@ -25,7 +26,6 @@ const TONES = {
   gifts: 'rose',
   activity: 'purple',
 };
-const SWIPE_CLOSE_DISTANCE = 90;
 
 function Badge({ count }) {
   return count > 0 ? (
@@ -104,31 +104,9 @@ function useAreaHints() {
 export default function MoreSheet({ items, activeView, navigate, onClose, onNotifications, onLayout, onSearchAll }) {
   const app = useApp();
   const { messages, theme, setTheme, me, members = [], profileImage, families = [], familyId, unreadCount, showNotificationBadge = true } = app;
-  const ref = useRef(null);
-  const dragRef = useRef(null);
   const [query, setQuery] = useState('');
-  const [dragOffset, setDragOffset] = useState(0);
   const hints = useAreaHints();
   const notificationCount = showNotificationBadge ? unreadCount : 0;
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
-
-  useEffect(() => {
-    const dialog = ref.current;
-    const previous = document.activeElement;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    dialog.showModal();
-    // Keep the opening height while filtering so the sheet does not jump under the keyboard.
-    if (dialog.offsetHeight) dialog.style.minHeight = `${dialog.offsetHeight}px`;
-    // Focus the close button instead of the search field so the keyboard stays closed.
-    dialog.querySelector('.ui-more-close')?.focus();
-    return () => {
-      dialog.close();
-      document.body.style.overflow = overflow;
-      if (previous?.isConnected) previous.focus({ preventScroll: true });
-    };
-  }, []);
 
   const go = (key) => {
     onClose();
@@ -173,12 +151,12 @@ export default function MoreSheet({ items, activeView, navigate, onClose, onNoti
       <button
         type="button"
         key={item.key}
-        className={`ui-more-tile${activeView === item.key ? ' current' : ''}`}
+        className={`ui-bottom-sheet-tile${activeView === item.key ? ' current' : ''}`}
         aria-current={activeView === item.key ? 'page' : undefined}
         aria-description={description || undefined}
         onClick={() => go(item.key)}
       >
-        <span className={`ui-more-icon tone-${TONES[item.key] || 'purple'}`}>
+        <span className={`ui-bottom-sheet-icon tone-${TONES[item.key] || 'purple'}`}>
           <item.icon size={22} aria-hidden="true" />
           <Badge count={item.badge} />
         </span>
@@ -188,165 +166,125 @@ export default function MoreSheet({ items, activeView, navigate, onClose, onNoti
     );
   };
 
-  const dragStart = (e) => {
-    if (e.pointerType === 'mouse' || e.target.closest('button')) return;
-    dragRef.current = { y: e.clientY, id: e.pointerId };
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-  };
-  const dragMove = (e) => {
-    if (dragRef.current?.id !== e.pointerId) return;
-    setDragOffset(Math.max(0, e.clientY - dragRef.current.y));
-  };
-  const dragEnd = (e) => {
-    if (dragRef.current?.id !== e.pointerId) return;
-    dragRef.current = null;
-    if (dragOffset > SWIPE_CLOSE_DISTANCE) onClose();
-    else setDragOffset(0);
-  };
-
   return (
-    <dialog
-      ref={ref}
-      className="ui-more-sheet"
-      aria-labelledby="ui-more-title"
-      style={dragOffset ? { transform: `translateY(${dragOffset}px)`, transition: 'none' } : undefined}
-      onCancel={(e) => {
-        e.preventDefault();
-        closeRef.current();
-      }}
-      onClick={(e) => {
-        if (e.target !== e.currentTarget) return;
-        const r = e.currentTarget.getBoundingClientRect();
-        if (e.clientY < r.top || e.clientX < r.left || e.clientX > r.right) closeRef.current();
-      }}
-    >
-      <header className="ui-more-head" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
-        <span className="ui-more-grab" aria-hidden="true" />
-        <h2 id="ui-more-title">{plannerText(messages, 'more')}</h2>
-        <button type="button" className="ui-more-close" aria-label={t(messages, 'close')} onClick={onClose}>
-          <X size={18} aria-hidden="true" />
-        </button>
-      </header>
+    <BottomSheet title={plannerText(messages, 'more')} messages={messages} onClose={onClose} className="ui-more-sheet" keepHeight>
+      <label className="ui-more-search">
+        <Search size={17} aria-hidden="true" />
+        <input
+          type="search"
+          enterKeyHint="search"
+          value={query}
+          placeholder={plannerText(messages, 'find_area')}
+          aria-label={plannerText(messages, 'find_area')}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            if (foundAreas.length === 1) go(foundAreas[0].key);
+            else if (query.trim()) onSearchAll(query.trim());
+          }}
+        />
+      </label>
 
-      <div className="ui-more-body">
-        <label className="ui-more-search">
-          <Search size={17} aria-hidden="true" />
-          <input
-            type="search"
-            enterKeyHint="search"
-            value={query}
-            placeholder={plannerText(messages, 'find_area')}
-            aria-label={plannerText(messages, 'find_area')}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter') return;
-              e.preventDefault();
-              if (foundAreas.length === 1) go(foundAreas[0].key);
-              else if (query.trim()) onSearchAll(query.trim());
-            }}
-          />
-        </label>
+      {searching ? (
+        foundAreas.length > 0 && <div className="ui-bottom-sheet-grid">{foundAreas.map(tile)}</div>
+      ) : (
+        groups.map((group) => (
+          <section key={group.key} className="ui-more-group" aria-labelledby={`ui-more-${group.key}`}>
+            <h3 id={`ui-more-${group.key}`}>{group.label}</h3>
+            <div className="ui-bottom-sheet-grid">{group.items.map(tile)}</div>
+          </section>
+        ))
+      )}
 
-        {searching ? (
-          foundAreas.length > 0 && <div className="ui-more-grid">{foundAreas.map(tile)}</div>
-        ) : (
-          groups.map((group) => (
-            <section key={group.key} className="ui-more-group" aria-labelledby={`ui-more-${group.key}`}>
-              <h3 id={`ui-more-${group.key}`}>{group.label}</h3>
-              <div className="ui-more-grid">{group.items.map(tile)}</div>
-            </section>
-          ))
-        )}
+      {nothingFound && <p className="ui-more-empty">{plannerText(messages, 'no_area')}</p>}
 
-        {nothingFound && <p className="ui-more-empty">{plannerText(messages, 'no_area')}</p>}
-
-        {(visibleSystemItems.length > 0 || layoutVisible || themeVisible) && (
-          <div className="ui-more-system">
-            {visibleSystemItems.map((item) => {
-              const isNotifications = item.key === 'notifications';
-              const count = isNotifications ? notificationCount : item.badge;
-              return (
-                <button
-                  type="button"
-                  key={item.key}
-                  className={`ui-more-row${isNotifications ? ' wide' : ''}${activeView === item.key ? ' current' : ''}`}
-                  aria-current={activeView === item.key ? 'page' : undefined}
-                  aria-description={count > 0 ? (isNotifications ? `${count} ${t(messages, 'notifications_unread')}` : `${item.label}: ${count}`) : undefined}
-                  onClick={() => {
-                    if (!isNotifications) return go(item.key);
-                    onClose();
-                    onNotifications();
-                  }}
-                >
-                  <item.icon size={19} aria-hidden="true" />
-                  <span>{item.label}</span>
-                  <Badge count={count} />
-                </button>
-              );
-            })}
-            {themeVisible && (
+      {(visibleSystemItems.length > 0 || layoutVisible || themeVisible) && (
+        <div className="ui-more-system">
+          {visibleSystemItems.map((item) => {
+            const isNotifications = item.key === 'notifications';
+            const count = isNotifications ? notificationCount : item.badge;
+            return (
               <button
                 type="button"
-                role="switch"
-                aria-checked={isDark}
-                className="ui-more-row"
-                onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              >
-                <Moon size={19} aria-hidden="true" />
-                <span>{themeLabel}</span>
-                <span className={`ui-more-switch${isDark ? ' on' : ''}`} aria-hidden="true" />
-              </button>
-            )}
-            {layoutVisible && (
-              <button
-                type="button"
-                className="ui-more-row mobile-dashboard-layout-btn"
+                key={item.key}
+                className={`ui-more-row${isNotifications ? ' wide' : ''}${activeView === item.key ? ' current' : ''}`}
+                aria-current={activeView === item.key ? 'page' : undefined}
+                aria-description={count > 0 ? (isNotifications ? `${count} ${t(messages, 'notifications_unread')}` : `${item.label}: ${count}`) : undefined}
                 onClick={() => {
+                  if (!isNotifications) return go(item.key);
                   onClose();
-                  onLayout.onClick();
+                  onNotifications();
                 }}
               >
-                <LayoutGrid size={19} aria-hidden="true" />
-                <span>{onLayout.label}</span>
+                <item.icon size={19} aria-hidden="true" />
+                <span>{item.label}</span>
+                <Badge count={count} />
               </button>
+            );
+          })}
+          {themeVisible && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isDark}
+              className="ui-more-row"
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            >
+              <Moon size={19} aria-hidden="true" />
+              <span>{themeLabel}</span>
+              <span className={`ui-more-switch${isDark ? ' on' : ''}`} aria-hidden="true" />
+            </button>
+          )}
+          {layoutVisible && (
+            <button
+              type="button"
+              className="ui-more-row mobile-dashboard-layout-btn"
+              onClick={() => {
+                onClose();
+                onLayout.onClick();
+              }}
+            >
+              <LayoutGrid size={19} aria-hidden="true" />
+              <span>{onLayout.label}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {searching && (
+        <button type="button" className="ui-more-search-all" onClick={() => onSearchAll(query.trim())}>
+          <Search size={16} aria-hidden="true" />
+          <span>{plannerText(messages, 'search_everything').replace('{query}', query.trim())}</span>
+        </button>
+      )}
+
+      {!searching && (
+        <div className="ui-more-account">
+          <MemberAvatar member={ownMember} size={36} />
+          <div className="ui-more-account-text">
+            <strong>{me?.display_name}</strong>
+            {families.length > 1 ? (
+              <select
+                aria-label={plannerText(messages, 'family_filter')}
+                value={familyId}
+                onChange={(e) => app.switchFamily(e.target.value)}
+              >
+                {families.map((f) => (
+                  <option key={f.family_id} value={f.family_id}>
+                    {f.family_name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              currentFamily && <small>{currentFamily.family_name}</small>
             )}
           </div>
-        )}
-
-        {searching && (
-          <button type="button" className="ui-more-search-all" onClick={() => onSearchAll(query.trim())}>
-            <Search size={16} aria-hidden="true" />
-            <span>{plannerText(messages, 'search_everything').replace('{query}', query.trim())}</span>
+          <button type="button" className="ui-more-logout" onClick={app.logout} aria-label={t(messages, 'aria.logout')}>
+            <LogOut size={19} aria-hidden="true" />
           </button>
-        )}
-
-        {!searching && (
-          <div className="ui-more-account">
-            <MemberAvatar member={ownMember} size={36} />
-            <div className="ui-more-account-text">
-              <strong>{me?.display_name}</strong>
-              {families.length > 1 ? (
-                <select
-                  aria-label={plannerText(messages, 'family_filter')}
-                  value={familyId}
-                  onChange={(e) => app.switchFamily(e.target.value)}
-                >
-                  {families.map((f) => (
-                    <option key={f.family_id} value={f.family_id}>
-                      {f.family_name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                currentFamily && <small>{currentFamily.family_name}</small>
-              )}
-            </div>
-            <button type="button" className="ui-more-logout" onClick={app.logout} aria-label={t(messages, 'aria.logout')}>
-              <LogOut size={19} aria-hidden="true" />
-            </button>
-          </div>
-        )}
-      </div>
-    </dialog>
+        </div>
+      )}
+    </BottomSheet>
   );
 }

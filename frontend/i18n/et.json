@@ -1744,6 +1744,7 @@
   "module.responsive.meal_today": "Täna: {meal}",
   "module.responsive.dark_mode": "Tume",
   "module.responsive.capture_title": "What would you like to add?",
+  "module.responsive.save_as": "Salvesta kui",
   "module.responsive.choose_date": "Choose date",
   "module.responsive.arrow_hint": "Use arrow keys to change day",
   "admin_layout_title": "Halda oma peret",

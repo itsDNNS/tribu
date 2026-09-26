@@ -14,9 +14,11 @@ jest.mock('../../contexts/AppContext', () => ({
 
 jest.mock('../../lib/announce', () => ({ announce: jest.fn() }));
 const mockListMealPlans = jest.fn(() => Promise.resolve({ ok: true, data: [] }));
+const mockCreateQuickCapture = jest.fn(() => Promise.resolve({ ok: true, data: {} }));
 jest.mock('../../lib/api', () => ({
   ...jest.requireActual('../../lib/api'),
   apiListMealPlans: (...args) => mockListMealPlans(...args),
+  apiCreateQuickCapture: (...args) => mockCreateQuickCapture(...args),
 }));
 
 jest.mock('../../components/DashboardView', () => function MockDashboard({ onOpenSearch }) {
@@ -55,6 +57,17 @@ const messages = {
   'module.responsive.meal_today': 'Today: {meal}',
   'module.responsive.dark_mode': 'Dark',
   close: 'Close',
+  'module.responsive.capture_title': 'What would you like to add?',
+  'module.responsive.save_as': 'Save as',
+  'module.dashboard.quick_event': 'Event',
+  'module.dashboard.quick_capture_add_task': 'Task',
+  'module.dashboard.quick_capture_add_shopping': 'Shopping',
+  'module.dashboard.quick_meal': 'Meal',
+  'module.dashboard.quick_note': 'Note',
+  'module.dashboard.quick_capture_title': 'Quick capture',
+  'module.dashboard.quick_capture_placeholder': 'Note something',
+  'toast.saved': 'Saved',
+  'toast.error': 'Something went wrong',
   dashboard: 'Dashboard',
   calendar: 'Calendar',
   activity: 'Activity',
@@ -206,6 +219,58 @@ describe('AppShell mobile bottom navigation', () => {
     expect(within(menu).getByRole('button', { name: 'Contacts', exact: true })).toHaveAccessibleDescription('Mia · tomorrow');
     expect(await within(menu).findByText('Today: Lasagne')).toBeInTheDocument();
     expect(mockListMealPlans).toHaveBeenCalledWith(1, expect.any(String), expect.any(String));
+  });
+
+  it('opens create forms from the New sheet tiles', () => {
+    const setActiveView = jest.fn();
+    mockAppState = baseState({ setActiveView });
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'New', exact: true }));
+    const sheet = screen.getByRole('dialog', { name: 'What would you like to add?' });
+    expect(within(sheet).getByRole('button', { name: 'Close' })).toHaveFocus();
+    ['Event', 'Task', 'Shopping', 'Meal'].forEach((name) => expect(within(sheet).getAllByRole('button', { name, exact: true })[0]).toBeInTheDocument());
+    fireEvent.click(within(sheet).getAllByRole('button', { name: 'Event', exact: true })[0]);
+    expect(setActiveView).toHaveBeenCalledWith('calendar');
+    expect(screen.queryByRole('dialog', { name: 'What would you like to add?' })).not.toBeInTheDocument();
+  });
+
+  it('saves quick capture text to the chosen destination and keeps the sheet open', async () => {
+    const loadShoppingLists = jest.fn();
+    mockCreateQuickCapture.mockClear();
+    mockAppState = baseState({ loadShoppingLists, loadQuickCaptureInbox: jest.fn(), loadActivity: jest.fn() });
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'New', exact: true }));
+    const sheet = screen.getByRole('dialog', { name: 'What would you like to add?' });
+    const destinations = within(sheet).getByRole('group', { name: 'Save as' });
+    expect(within(destinations).getByRole('button', { name: 'Shopping' })).toBeDisabled();
+    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Note something' }), { target: { value: '  Milk ' } });
+    fireEvent.click(within(destinations).getByRole('button', { name: 'Shopping' }));
+    expect(await within(sheet).findByRole('status')).toHaveTextContent('Saved');
+    expect(mockCreateQuickCapture).toHaveBeenCalledWith({ family_id: 1, text: 'Milk', destination: 'shopping' });
+    expect(loadShoppingLists).toHaveBeenCalledWith(1);
+    expect(within(sheet).getByRole('textbox', { name: 'Note something' })).toHaveValue('');
+    expect(screen.getByRole('dialog', { name: 'What would you like to add?' })).toBeInTheDocument();
+  });
+
+  it('keeps quick capture text and reports failures', async () => {
+    mockCreateQuickCapture.mockResolvedValueOnce({ ok: false });
+    mockAppState = baseState();
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'New', exact: true }));
+    const sheet = screen.getByRole('dialog', { name: 'What would you like to add?' });
+    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Note something' }), { target: { value: 'Call grandma' } });
+    fireEvent.click(within(within(sheet).getByRole('group', { name: 'Save as' })).getByRole('button', { name: 'Note' }));
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent('Something went wrong');
+    expect(within(sheet).getByRole('textbox', { name: 'Note something' })).toHaveValue('Call grandma');
+  });
+
+  it('hides quick capture in demo mode', () => {
+    mockAppState = baseState({ demoMode: true });
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'New', exact: true }));
+    const sheet = screen.getByRole('dialog', { name: 'What would you like to add?' });
+    expect(within(sheet).queryByRole('textbox')).not.toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: 'Meal', exact: true })).toBeInTheDocument();
   });
 
   it('switches between light and dark design from the More sheet', () => {
