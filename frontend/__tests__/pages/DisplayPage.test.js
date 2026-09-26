@@ -19,6 +19,7 @@ jest.mock('../../lib/api', () => ({
 
 const api = require('../../lib/api');
 const DisplayPage = require('../../pages/display').default;
+const { buildStagePayload } = require('../test-utils/stageFixture');
 
 const sampleMe = { device_id: 1, family_id: 7, family_name: 'Mueller', name: 'Kitchen Tablet' };
 const sampleDashboard = {
@@ -66,8 +67,8 @@ describe('DisplayPage', () => {
 
     const missing = screen.getByTestId('display-state-missing');
     expect(missing).toBeInTheDocument();
-    expect(missing).toHaveClass('display-state--warm');
-    expect(screen.getByTestId('display-root')).toHaveClass('display-root--hearth');
+    expect(missing).toHaveTextContent('Pair this device by opening the link an admin generated under Admin → Displays.');
+    expect(screen.getByTestId('display-root')).toHaveClass('display-root--stage');
     expect(api.apiDisplayMe).not.toHaveBeenCalled();
     expect(api.apiDisplayDashboard).not.toHaveBeenCalled();
   });
@@ -88,25 +89,20 @@ describe('DisplayPage', () => {
     expect(api.apiDisplayDashboard).toHaveBeenCalledWith('tribu_display_xyz');
   });
 
-  test('renders the read-only dashboard with safe fields only', async () => {
+  test('renders the read-only stage with safe fields only', async () => {
     mockRouter.isReady = true;
     window.localStorage.setItem('tribu_display_token', 'tribu_display_stored');
     api.apiDisplayMe.mockResolvedValue({ ok: true, status: 200, data: sampleMe });
-    api.apiDisplayDashboard.mockResolvedValue({ ok: true, status: 200, data: sampleDashboard });
+    api.apiDisplayDashboard.mockResolvedValue({ ok: true, status: 200, data: buildStagePayload() });
 
     await act(async () => { render(<DisplayPage />); });
     await flushAsync();
     await flushAsync();
 
-    const root = await screen.findByTestId('display-root');
-    expect(within(root).getByText(/Kitchen Tablet/)).toBeInTheDocument();
-
-    expect(await screen.findByTestId('display-family-name')).toHaveTextContent('Mueller');
-    expect(screen.getByTestId('display-device-name')).toHaveTextContent('Kitchen Tablet');
-    expect(screen.getByTestId('display-events')).toHaveTextContent('Soccer practice');
-    expect(screen.getByTestId('display-birthdays')).toHaveTextContent('Grandma Ilse');
-    expect(screen.getByTestId('display-members')).toHaveTextContent('Anna');
-    expect(screen.getByTestId('display-members')).toHaveTextContent('Mia');
+    expect(await screen.findByTestId('display-family-name')).toHaveTextContent('Familie Berger');
+    expect(screen.getByTestId('display-dashboard')).toHaveAttribute('data-layout-preset', 'stage');
+    for (const zone of ['a', 'b', 'c', 'd']) expect(screen.getByTestId(`display-zone-${zone}`)).toBeInTheDocument();
+    expect(screen.getByTestId('display-root').textContent).not.toMatch(/@/);
 
     // No admin/settings/sidebar/search/quick-add controls.
     expect(screen.queryByText(/^Settings$/i)).not.toBeInTheDocument();
@@ -114,6 +110,71 @@ describe('DisplayPage', () => {
     expect(screen.queryByLabelText(/sidebar/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/search/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /quick.*add/i })).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('tribu_display_cache')).dashboard.family_name).toBe('Familie Berger');
+  });
+
+  test('uses the configured display language', async () => {
+    mockRouter.isReady = true;
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_lang');
+    const payload = buildStagePayload({
+      config: { display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage', layout_config: { version: 2, language: 'de' } },
+    });
+    api.apiDisplayMe.mockResolvedValue({ ok: true, status: 200, data: sampleMe });
+    api.apiDisplayDashboard.mockResolvedValue({ ok: true, status: 200, data: payload });
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+
+    await waitFor(() => expect(screen.getByTestId('display-root')).toHaveAttribute('lang', 'de'));
+    expect(screen.getByTestId('display-events').textContent).toMatch(/bei euch/);
+  });
+
+  test('keeps the last good data on the wall when the network drops', async () => {
+    jest.useFakeTimers();
+    mockRouter.isReady = true;
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_offline');
+    api.apiDisplayMe.mockResolvedValue({ ok: true, status: 200, data: sampleMe });
+    api.apiDisplayDashboard.mockResolvedValue({ ok: true, status: 200, data: buildStagePayload() });
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+    await flushAsync();
+    expect(screen.getByTestId('display-dashboard')).toBeInTheDocument();
+
+    api.apiDisplayMe.mockResolvedValue({ ok: false, status: 0, data: null });
+    await act(async () => { jest.advanceTimersByTime(61 * 1000); });
+    await flushAsync();
+
+    expect(screen.getByTestId('display-dashboard')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/Offline/);
+    expect(window.localStorage.getItem('tribu_display_token')).toBe('tribu_display_offline');
+    jest.useRealTimers();
+  });
+
+  test('starts from the cached copy while offline and never mistakes a server error for an unpaired device', async () => {
+    mockRouter.isReady = true;
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_cached');
+    window.localStorage.setItem('tribu_display_cache', JSON.stringify({ me: sampleMe, dashboard: buildStagePayload(), at: Date.now() - 60000 }));
+    api.apiDisplayMe.mockResolvedValue({ ok: false, status: 503, data: null });
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+
+    expect(screen.getByTestId('display-family-name')).toHaveTextContent('Familie Berger');
+    expect(screen.getByRole('status')).toHaveTextContent(/Offline/);
+    expect(screen.queryByTestId('display-state-invalid')).not.toBeInTheDocument();
+  });
+
+  test('a server error without cached data keeps loading instead of unpairing', async () => {
+    mockRouter.isReady = true;
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_down');
+    api.apiDisplayMe.mockResolvedValue({ ok: false, status: 502, data: null });
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+
+    expect(screen.getByTestId('display-state-loading')).toBeInTheDocument();
+    expect(window.localStorage.getItem('tribu_display_token')).toBe('tribu_display_down');
   });
 
   test('a revoked token shows the revoked-state message and keeps the token (so the message persists)', async () => {
@@ -167,9 +228,6 @@ describe('DisplayPage', () => {
 
     expect(await screen.findByTestId('display-state-invalid')).toBeInTheDocument();
     expect(window.localStorage.getItem('tribu_display_token')).toBeNull();
+    expect(window.localStorage.getItem('tribu_display_cache')).toBeNull();
   });
 });
-
-// `within` is imported lazily here to keep the original assertions
-// readable. testing-library exposes it from the same module.
-const { within } = require('@testing-library/react');

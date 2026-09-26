@@ -882,10 +882,16 @@ export function apiRevokeDisplayDevice(familyId, deviceId) {
 }
 
 async function displayRequest(path, token) {
-  const res = await fetch(`${API}${path}`, {
-    credentials: 'omit',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, {
+      credentials: 'omit',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    // Network failure: status 0 lets the wall display keep its last data.
+    return { ok: false, status: 0, data: null };
+  }
   let data;
   try { data = await res.json(); } catch { data = null; }
   return { ok: res.ok, status: res.status, data };
