@@ -8,8 +8,6 @@ import {
   ShoppingCart,
   ListChecks,
   Utensils,
-  Sun,
-  Bell,
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useCurrentMinute } from '../../hooks/useCurrentMinute';
@@ -18,6 +16,7 @@ import { t } from '../../lib/i18n';
 import { plannerText } from './PlannerUI';
 import CalendarDialog from '../calendar/CalendarDialog';
 import QuickCaptureCard from '../QuickCaptureCard';
+import MoreSheet from './MoreSheet';
 
 function MobileBadge({ count }) {
   return count > 0 ? (
@@ -77,11 +76,12 @@ export default function ResponsiveUI({
   onCreate,
   onNotifications,
   onLayout,
+  onSearchAll,
   sheet,
   setSheet,
 }) {
   const app = useApp();
-  const { activeView, messages, isChild, theme, setTheme, demoMode, unreadCount, showNotificationBadge = true } = app;
+  const { activeView, messages, isChild, demoMode, unreadCount, showNotificationBadge = true } = app;
   const notificationCount = showNotificationBadge ? unreadCount : 0;
   const unreadDescription = notificationCount > 0 ? `${notificationCount} ${t(messages, 'notifications_unread')}` : undefined;
   const activeInMore = items.some(item => item.key === activeView && !['dashboard', 'calendar', 'shopping'].includes(item.key));
@@ -128,120 +128,57 @@ export default function ResponsiveUI({
           );
         })}
       </nav>
-      {sheet && (
+      {sheet === 'more' && (
+        <MoreSheet
+          items={items}
+          activeView={activeView}
+          navigate={navigate}
+          onClose={() => setSheet(null)}
+          onNotifications={onNotifications}
+          onLayout={onLayout}
+          onSearchAll={(query) => {
+            setSheet(null);
+            onSearchAll(query);
+          }}
+        />
+      )}
+      {sheet === 'new' && (
         <CalendarDialog
-          title={plannerText(
-            messages,
-            sheet === 'more' ? 'all_areas' : 'capture_title',
-          )}
+          title={plannerText(messages, 'capture_title')}
           messages={messages}
           subtitle={null}
           onClose={() => setSheet(null)}
         >
           <div className="ui-menu-grid">
-            {sheet === 'more'
-              // Notifications has a dedicated action in the sheet footer.
-              ? items.filter(item => item.key !== 'notifications').map((item) => (
-                  <button
-                    key={item.key}
-                    aria-current={activeView === item.key ? 'page' : undefined}
-                    aria-description={item.badge > 0 ? `${item.label}: ${item.badge}` : undefined}
-                    className="ui-menu-item"
-                    onClick={() => {
-                      setSheet(null);
-                      navigate(item.key);
-                    }}
-                  >
-                    <item.icon size={22} />
-                    <strong>{item.label}</strong>
-                    <MobileBadge count={item.badge} />
-                  </button>
-                ))
-              : !isChild &&
-                [
-                  ['event', CalendarDays, 'calendar'],
-                  ['task', ListChecks, 'module.tasks.name'],
-                  ['shopping', ShoppingCart, 'module.shopping.name'],
-                  ['meal', Utensils, 'module.meal_plans.name'],
-                ].map(([kind, Icon, label]) => (
-                  <button
-                    key={kind}
-                    className="ui-menu-item"
-                    onClick={() => {
-                      setSheet(null);
-                      onCreate(kind);
-                    }}
-                  >
-                    <Icon size={22} />
-                    <strong>{t(messages, label)}</strong>
-                  </button>
-                ))}
-          </div>
-          {sheet === 'more' ? (
-            <div className="ui-menu-foot">
-              {onLayout && (
+            {!isChild &&
+              [
+                ['event', CalendarDays, 'calendar'],
+                ['task', ListChecks, 'module.tasks.name'],
+                ['shopping', ShoppingCart, 'module.shopping.name'],
+                ['meal', Utensils, 'module.meal_plans.name'],
+              ].map(([kind, Icon, label]) => (
                 <button
-                  className="tc-btn mobile-dashboard-layout-btn"
+                  key={kind}
+                  className="ui-menu-item"
                   onClick={() => {
                     setSheet(null);
-                    onLayout.onClick();
+                    onCreate(kind);
                   }}
                 >
-                  {onLayout.label}
+                  <Icon size={22} />
+                  <strong>{t(messages, label)}</strong>
                 </button>
-              )}
-              {app.families?.length > 1 && (
-                <select
-                  aria-label={plannerText(messages, 'family_filter')}
-                  value={app.familyId}
-                  onChange={(e) => app.switchFamily(e.target.value)}
-                >
-                  {app.families.map((f) => (
-                    <option key={f.family_id} value={f.family_id}>
-                      {f.family_name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <button
-                className="tc-btn"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              >
-                <Sun size={18} />
-                {plannerText(messages, 'theme')}
-              </button>
-              <button
-                className="tc-btn"
-                aria-description={unreadDescription}
-                onClick={() => {
-                  setSheet(null);
-                  onNotifications();
-                }}
-              >
-                <Bell size={18} />
-                {t(messages, 'notifications')}
-                <MobileBadge count={notificationCount} />
-              </button>
-              <button
-                className="tc-btn"
-                onClick={app.logout}
-                aria-label={t(messages, 'aria.logout')}
-              >
-                {t(messages, 'aria.logout')}
-              </button>
-            </div>
-          ) : (
-            !isChild &&
-            !demoMode && (
-              <QuickCaptureCard
-                {...app}
-                inbox={[]}
-                setActiveView={(view) => {
-                  setSheet(null);
-                  navigate(view);
-                }}
-              />
-            )
+              ))}
+          </div>
+          {!isChild && !demoMode && (
+            <QuickCaptureCard
+              {...app}
+              inbox={[]}
+              setActiveView={(view) => {
+                setSheet(null);
+                navigate(view);
+              }}
+            />
           )}
         </CalendarDialog>
       )}

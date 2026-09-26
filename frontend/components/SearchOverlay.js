@@ -12,7 +12,7 @@ const MODULE_META = {
   birthdays: { icon: Cake, label: 'module.birthdays.name', view: 'calendar' },
 };
 
-export default function SearchOverlay({ open, onClose }) {
+export default function SearchOverlay({ open, onClose, initialQuery = '' }) {
   const { familyId, messages, setActiveView } = useApp();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
@@ -45,6 +45,13 @@ export default function SearchOverlay({ open, onClose }) {
     if (ok) setResults(data);
     setLoading(false);
   }, [familyId]);
+
+  // Continue a search started elsewhere, e.g. from the mobile "More" sheet.
+  useEffect(() => {
+    if (!open || !initialQuery) return;
+    setQuery(initialQuery);
+    doSearch(initialQuery);
+  }, [open, initialQuery, doSearch]);
 
   const handleInput = (e) => {
     const val = e.target.value;

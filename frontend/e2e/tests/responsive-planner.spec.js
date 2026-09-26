@@ -27,7 +27,9 @@ test('anonymous mobile menu shows task, shopping and unread badges', async ({ pa
   await page.locator('.ui-bottom-nav').getByRole('button', { name: 'Mehr', exact: true }).click();
   const menu = page.getByRole('dialog');
   await expect(menu.getByRole('button', { name: 'Aufgaben', exact: true })).toHaveAccessibleDescription('Aufgaben: 1');
-  await expect(menu.getByRole('button', { name: 'Einkauf', exact: true })).toHaveAccessibleDescription('Einkauf: 2');
+  // Shopping keeps its counter in the bottom navigation and is not repeated in the sheet.
+  await expect(menu.getByRole('button', { name: 'Einkauf', exact: true })).toHaveCount(0);
+  await expect(page.locator('.ui-bottom-nav').getByRole('button', { name: 'Einkauf', exact: true })).toHaveAccessibleDescription('Einkauf: 2');
   await shot(page, 'menu-badges-light.png');
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   await menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).scrollIntoViewIfNeeded();

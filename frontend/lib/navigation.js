@@ -20,6 +20,15 @@ import {
 export const PINNED_NAV_KEYS = new Set(['settings', 'admin']);
 export const MOBILE_PRIMARY_NAV_KEYS = ['dashboard', 'calendar', 'tasks', 'shopping'];
 
+// Areas reachable from the mobile bottom navigation are not repeated in the "More" sheet.
+export const MOBILE_BOTTOM_NAV_KEYS = new Set(['dashboard', 'calendar', 'shopping']);
+export const MOBILE_SYSTEM_NAV_KEYS = new Set(['notifications', 'settings', 'admin']);
+export const MOBILE_MORE_GROUPS = [
+  { key: 'plan', labelKey: 'nav.group.plan', itemKeys: ['weekly_plan', 'templates', 'school_timetables'] },
+  { key: 'lists', labelKey: 'module.responsive.group_lists', itemKeys: ['tasks', 'meal_plans', 'recipes'] },
+  { key: 'family', labelKey: 'module.responsive.group_family', itemKeys: ['contacts', 'rewards', 'gifts', 'activity'] },
+];
+
 export const NAV_GROUPS = [
   { key: 'today', labelKey: 'nav.group.today', fallback: 'Today', itemKeys: ['dashboard'] },
   { key: 'plan', labelKey: 'nav.group.plan', fallback: 'Plan', itemKeys: ['calendar', 'weekly_plan', 'templates'] },
