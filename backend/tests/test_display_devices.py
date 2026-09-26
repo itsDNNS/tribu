@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, SchoolTimetable, SchoolTimetableAssignment, SchoolTimetableLesson, SchoolTimetablePeriod, User
+from app.models import Family, FamilyBirthday, Membership, PersonalAccessToken, SchoolTimetable, SchoolTimetableAssignment, SchoolTimetableLesson, SchoolTimetablePeriod, User
 from app.security import PAT_PREFIX, hash_password
 
 
@@ -818,6 +818,27 @@ class TestSchoolTimetables:
         resp = client.post("/school-timetables", json=payload, headers=_auth(admin_token))
         assert resp.status_code == 400
         assert "Saturday" in resp.text
+
+    def test_display_dashboard_handles_leap_day_birthdays_in_common_years(self, monkeypatch):
+        from datetime import date
+
+        import app.modules.display_router as display_router
+
+        admin_token, _, family_id = _seed_member_with_pat("leapAdmin", role="admin", is_adult=True)
+        monkeypatch.setattr(display_router, "local_today", lambda: date(2026, 2, 10))
+        db = TestSession()
+        db.add(FamilyBirthday(family_id=family_id, person_name="Leap Kid", month=2, day=29))
+        db.commit()
+        db.close()
+        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Hall"}, headers=_auth(admin_token))
+        display_token = resp.json()["token"]
+
+        dash = client.get("/display/dashboard", headers=_auth(display_token))
+
+        assert dash.status_code == 200, dash.text
+        assert dash.json()["upcoming_birthdays"] == [
+            {"person_name": "Leap Kid", "occurs_on": "2026-02-28", "days_until": 18},
+        ]
 
     def test_display_dashboard_includes_today_school_timetable_without_ids(self, monkeypatch):
         import app.modules.display_router as display_router

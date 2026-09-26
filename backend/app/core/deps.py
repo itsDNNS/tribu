@@ -1,3 +1,4 @@
+from calendar import monthrange
 from datetime import UTC, date, datetime
 import jwt
 
@@ -228,8 +229,14 @@ def ensure_family_admin(db: Session, user_id: int, family_id: int):
 
 
 def next_birthday_date(month: int, day: int, today: date) -> date:
-    year = today.year
-    candidate = date(year, month, day)
+    """Next occurrence of a birthday on or after ``today``.
+
+    Birthdays on 29 February are celebrated on 28 February in common years.
+    """
+    def on(year: int) -> date:
+        return date(year, month, min(day, monthrange(year, month)[1]))
+
+    candidate = on(today.year)
     if candidate < today:
-        candidate = date(year + 1, month, day)
+        candidate = on(today.year + 1)
     return candidate
