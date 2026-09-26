@@ -90,7 +90,7 @@ wait_for_url "$BACKEND_URL/health" "backend"
 
 (
   cd "$FRONTEND_DIR"
-  BACKEND_URL="$BACKEND_URL" NEXT_DIST_DIR=.next-e2e npx next dev -p "$FRONTEND_PORT"
+  BACKEND_URL="$BACKEND_URL" NEXT_DIST_DIR=.next-e2e TRIBU_E2E=1 npx next dev -p "$FRONTEND_PORT"
 ) &
 FRONTEND_PID="$!"
 

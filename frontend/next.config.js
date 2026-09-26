@@ -10,6 +10,9 @@ const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
   skipTrailingSlashRedirect: true,
+  // Local e2e runs use `next dev`; its indicator covers the mobile bottom
+  // navigation and intercepts clicks. Errors are still reported.
+  ...(process.env.TRIBU_E2E === '1' ? { devIndicators: false } : {}),
   async rewrites() {
     return [
       {
