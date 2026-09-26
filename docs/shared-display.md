@@ -51,7 +51,24 @@ Each zone has its own list of cards and interval (15 seconds to 10 minutes, defa
 
 In e-ink mode the display is black and white, without animation or photos. Instead of rotating on a timer, every zone turns one card per data refresh (default every 10 minutes, at least 5). Small panels (up to 900 px wide, e.g. 7.5″ 800×480) show the clock, Next up, the timeline and zones A and B; larger panels (e.g. 10″ 1200×825) show the full stage. The "Updated" time in the corner shows how fresh the data is.
 
-This mode runs in any browser on the device (Kindle, Boox and similar). Frames without a browser (TRMNL, ESPHome devices, Inkplate) need a server-rendered image, which is not available yet.
+This mode runs in any browser on the device (Kindle, Boox and similar).
+
+### E-ink frames without a browser
+
+Frames that download a picture (TRMNL, ESPHome devices such as the Seeed reTerminal, Inkplate) can fetch the same stage as a black-and-white PNG:
+
+```
+GET /display/image.png
+Authorization: Bearer tribu_display_…
+```
+
+- **Token:** use the display token from the pairing link (the part after `?token=`). Prefer the `Authorization` header; devices that cannot send headers may use `/display/image.png?token=…`, but query strings can end up in proxy logs.
+- **Size:** `compact` is 800×480 (7.5″), `large` is 1200×825 (10″). The display's e-ink format is used unless `?format=compact` or `?format=large` is given.
+- **Language:** the display language, otherwise `?lang=` or the request's `Accept-Language`, otherwise English.
+- **Rhythm:** each request shows the page for the current refresh period, so let the frame fetch once per refresh interval (the response carries it in `X-Tribu-Refresh-Seconds`).
+- **Status:** `200` with a picture; a removed or unknown display gets a picture explaining it (`X-Tribu-Display-State: revoked` or `invalid`); a missing token returns `401`; if Tribu cannot reach its backend it returns `502` so the frame keeps its last picture.
+
+The picture is rendered by the frontend container (`next/og`), needs no extra services and loads nothing from the internet.
 
 ## Devices
 

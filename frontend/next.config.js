@@ -14,7 +14,12 @@ const nextConfig = {
   // navigation and intercepts clicks. Errors are still reported.
   ...(process.env.TRIBU_E2E === '1' ? { devIndicators: false } : {}),
   async rewrites() {
-    return [
+    // The e-ink picture lives outside /api so reverse proxies that send /api to the
+    // backend still reach it; beforeFiles lets it win over the backend proxy below.
+    const beforeFiles = [
+      { source: '/display/image.png', destination: '/api/display-image' },
+    ];
+    const afterFiles = [
       {
         source: '/api/:path*',
         destination: `${backendUrl}/:path*`,
@@ -49,6 +54,7 @@ const nextConfig = {
         destination: `${backendUrl}/auth/oidc/:path*`,
       },
     ];
+    return { beforeFiles, afterFiles };
   },
 };
 
