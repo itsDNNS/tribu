@@ -624,6 +624,7 @@
   "display_link_created": "Pairing-Link für {name}",
   "display_link_hint": "Öffne diesen Link einmal auf dem Gerät, um es zu koppeln. Der Link wird nur dieses eine Mal angezeigt.",
   "display_link_share_hint": "Jeder mit diesem Link kann deine Familienübersicht sehen, bis du das Display entfernst.",
+  "display_qr_hint": "Installiere auf dem Tablet die Tribu-App, wähle „Familien-Display“ und scanne diesen Code.",
   "display_status_active": "Aktiv",
   "display_status_revoked": "Entfernt",
   "display_revoke": "Entfernen",

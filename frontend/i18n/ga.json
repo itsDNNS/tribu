@@ -591,6 +591,7 @@
   "display_link_created": "Nasc péireála le haghaidh {name}",
   "display_link_hint": "Oscail an nasc seo ar an ngléas uair amháin chun é a phéireáil. Taispeántar an nasc an uair seo amháin.",
   "display_link_share_hint": "Is féidir le haon duine a bhfuil an nasc seo aige do phainéal teaghlaigh a thaispeáint go dtí go ndéanfaidh tú é a chúlghairm.",
+  "display_qr_hint": "Ar an táibléad, suiteáil an aip Tribu, roghnaigh “Family display” agus scan an cód seo.",
   "display_status_active": "Gníomhach",
   "display_status_revoked": "Cúlghairthe",
   "display_revoke": "Bain",

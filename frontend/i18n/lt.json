@@ -591,6 +591,7 @@
   "display_link_created": "{name} susiejimo nuoroda",
   "display_link_hint": "Vieną kartą atidarykite šią nuorodą įrenginyje, kad jį susietumėte. Nuoroda rodoma tik šį kartą.",
   "display_link_share_hint": "Visi, turintys šią nuorodą, gali rodyti jūsų šeimos informacijos suvestinę, kol ją atšauksite.",
+  "display_qr_hint": "Planšetėje įdiekite programėlę Tribu, pasirinkite „Family display“ ir nuskenuokite šį kodą.",
   "display_status_active": "Aktyvus",
   "display_status_revoked": "Atšauktas",
   "display_revoke": "Pašalinti",

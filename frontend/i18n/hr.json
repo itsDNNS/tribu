@@ -591,6 +591,7 @@
   "display_link_created": "Veza za uparivanje za {name}",
   "display_link_hint": "Otvorite ovu vezu na uređaju jednom da biste ga uparili. Veza se prikazuje samo ovaj put.",
   "display_link_share_hint": "Svatko s ovom vezom može prikazati nadzornu ploču vaše obitelji dok je ne opozovete.",
+  "display_qr_hint": "Na tablet instaliraj aplikaciju Tribu, odaberi „Family display” i skeniraj ovaj kod.",
   "display_status_active": "Aktivno",
   "display_status_revoked": "Opozvano",
   "display_revoke": "Ukloniti",

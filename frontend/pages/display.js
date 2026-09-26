@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import StageDisplay from '../components/display/StageDisplay';
@@ -46,32 +46,41 @@ export default function DisplayPage() {
   // Token bootstrap: prefer ?token=, fall back to localStorage. Once
   // captured from the URL, immediately persist + scrub the URL so the
   // wall tablet never displays the token in a visible address bar.
+  const shownCachedCopy = useRef(false);
   useEffect(() => {
     if (!router.isReady) return;
     if (typeof window === 'undefined') return;
     const queryToken = typeof router.query.token === 'string' ? router.query.token : null;
     if (queryToken) {
       try {
+        // The Tribu app reopens the page with the same token on every start;
+        // only a new pairing drops the offline copy of the previous display.
+        if (window.localStorage.getItem(TOKEN_STORAGE_KEY) !== queryToken) {
+          window.localStorage.removeItem(CACHE_STORAGE_KEY);
+        }
         window.localStorage.setItem(TOKEN_STORAGE_KEY, queryToken);
-        window.localStorage.removeItem(CACHE_STORAGE_KEY);
       } catch {}
-      setToken(queryToken);
       router.replace('/display', undefined, { shallow: true });
+    }
+    let stored = queryToken;
+    if (!stored) {
+      try { stored = window.localStorage.getItem(TOKEN_STORAGE_KEY); } catch {}
+    }
+    if (!stored) {
+      setState('missing');
       return;
     }
-    let stored = null;
-    try { stored = window.localStorage.getItem(TOKEN_STORAGE_KEY); } catch {}
-    if (stored) {
-      setToken(stored);
-      const cached = readCache();
-      if (cached) {
-        setMe(cached.me);
-        setDashboard(cached.dashboard);
-        setOfflineSince(new Date(cached.at));
-        setState('ready');
-      }
-    } else {
-      setState('missing');
+    setToken(stored);
+    // Show the last known day right away, but only once: the URL cleanup
+    // above runs this effect again and must not cover fresh data.
+    if (shownCachedCopy.current) return;
+    shownCachedCopy.current = true;
+    const cached = readCache();
+    if (cached) {
+      setMe(cached.me);
+      setDashboard(cached.dashboard);
+      setOfflineSince(new Date(cached.at));
+      setState('ready');
     }
   }, [router.isReady, router.query.token, router]);
 

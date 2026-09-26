@@ -1024,6 +1024,9 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .adm-banner-warning { color: var(--warning); font-size: 0.82rem; margin-bottom: var(--space-sm); }
 .adm-banner-row { display: flex; gap: var(--space-sm); align-items: center; }
 .adm-banner-no-shrink { flex-shrink: 0; }
+.display-pairing { display: flex; gap: var(--space-md); align-items: center; margin-top: var(--space-sm); }
+.display-pairing-qr { width: 148px; height: 148px; flex-shrink: 0; border-radius: 8px; }
+.display-pairing-hint { margin: 0; font-size: 0.85rem; color: var(--text-secondary); }
 .adm-banner-dismiss { background: none; border: none; color: var(--text-muted); cursor: pointer; margin-top: var(--space-sm); font-size: 0.78rem; }
 .adm-icon-success { color: var(--success); }
 .adm-icon-middle { vertical-align: middle; }

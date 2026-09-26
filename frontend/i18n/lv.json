@@ -591,6 +591,7 @@
   "display_link_created": "{name} savienošanas saite",
   "display_link_hint": "Vienreiz atveriet šo saiti ierīcē, lai to savienotu pārī. Saite tiek rādīta tikai šo reizi.",
   "display_link_share_hint": "Ikviens, kam ir šī saite, var rādīt jūsu ģimenes informācijas paneli, līdz to atsaucat.",
+  "display_qr_hint": "Planšetdatorā instalē lietotni Tribu, izvēlies “Family display” un noskenē šo kodu.",
   "display_status_active": "Aktīvs",
   "display_status_revoked": "Atsaukts",
   "display_revoke": "Noņemt",

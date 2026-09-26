@@ -591,6 +591,7 @@
   "display_link_created": "Parringslink til {name}",
   "display_link_hint": "Åbn dette link på enheden én gang for at parre det. Linket vises kun denne ene gang.",
   "display_link_share_hint": "Alle med dette link kan vise dit familiedashboard, indtil du tilbagekalder det.",
+  "display_qr_hint": "Installer Tribu-appen på tabletten, vælg »Family display« og scan denne kode.",
   "display_status_active": "Aktiv",
   "display_status_revoked": "Tilbagekaldt",
   "display_revoke": "Fjern",

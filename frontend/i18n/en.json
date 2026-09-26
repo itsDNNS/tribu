@@ -624,6 +624,7 @@
   "display_link_created": "Pairing link for {name}",
   "display_link_hint": "Open this link on the device once to pair it. The link is shown only this one time.",
   "display_link_share_hint": "Anyone with this link can show your family dashboard until you revoke it.",
+  "display_qr_hint": "On the tablet, install the Tribu app, choose “Family display” and scan this code.",
   "display_status_active": "Active",
   "display_status_revoked": "Revoked",
   "display_revoke": "Remove",

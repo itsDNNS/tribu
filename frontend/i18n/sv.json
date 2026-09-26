@@ -591,6 +591,7 @@
   "display_link_created": "Parningslänk för {name}",
   "display_link_hint": "Öppna den här länken på enheten en gång för att para ihop den. Länken visas endast denna ena gång.",
   "display_link_share_hint": "Alla med den här länken kan visa din familjs instrumentpanel tills du återkallar den.",
+  "display_qr_hint": "Installera Tribu-appen på surfplattan, välj ”Family display” och skanna den här koden.",
   "display_status_active": "Aktiv",
   "display_status_revoked": "Återkallad",
   "display_revoke": "Ta bort",

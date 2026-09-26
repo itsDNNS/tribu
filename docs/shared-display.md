@@ -72,13 +72,23 @@ The picture is rendered by the frontend container (`next/og`), needs no extra se
 
 ## Devices
 
-1. In Tribu, go to **Admin → Displays**, create a display and open its pairing link on the device. **Configure display** opens the editor for mode, refresh, language, the cards and interval of each area, behaviour and times of day.
+1. In Tribu, go to **Admin → Displays**, create a display and open its pairing link on the device. For tablet displays the confirmation also shows the link as a QR code. **Configure display** opens the editor for mode, refresh, language, the cards and interval of each area, behaviour and times of day.
 2. The link stores the token on the device and removes it from the address bar.
 3. Install the page as an app (browser menu → *Install app* / *Add to home screen*). It opens full screen straight into `/display`.
 
+### Android tablets: the Tribu app
+
+On Android, the Tribu app has a display mode made for tablets on the wall (for example the OnePlus Pad 3 with its 7:5 screen):
+
+1. Install the Tribu app on the tablet. On first start, choose **Family display** (the choice can be changed later; signed-in users find **Use as family display** in the app settings, which signs them out on that device).
+2. Scan the QR code from **Admin → Displays** or paste the display link. The app checks the link with Tribu and shows which family and display it belongs to. Scanning runs in Google Play services, so the app needs no camera permission.
+3. Optionally keep **Pin the screen** on (Android app pinning; Android asks once) and choose Tribu as the **home app** so the display comes back by itself after a restart or power cut.
+
+The app keeps the screen on, hides the system bars, stays on the display page and lowers the backlight while the display dims for the night. If Tribu is unreachable at start, it shows a waiting screen and retries every 30 seconds. Holding the top left corner for two seconds opens the display settings: reload, pin or unpin, connect another display, or switch back to the personal app.
+
 Tips:
 
-- **Android tablets** (for example the OnePlus Pad 3 with its 7:5 screen): install the app from Chrome and keep the tablet on its charger. The display asks the browser to keep the screen on while it is visible (Screen Wake Lock). For unattended wall mounting, a kiosk browser such as Fully Kiosk Browser can additionally lock the device to the display.
+- **Android tablets in a browser**: install the page from Chrome and keep the tablet on its charger. The display asks the browser to keep the screen on while it is visible (Screen Wake Lock).
 - **Portrait screens** stack the stage vertically.
 - **Language** follows the device unless a display language is set.
 - The clock format follows the instance setting (24 h or 12 h).

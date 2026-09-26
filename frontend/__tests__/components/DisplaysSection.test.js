@@ -46,6 +46,7 @@ const messages = {
   display_link_created: 'Pairing link for {name}',
   display_link_hint: 'Open once.',
   display_link_share_hint: 'Anyone with the link can show the dashboard.',
+  display_qr_hint: 'Scan this code with the Tribu app.',
   display_status_active: 'Active',
   display_status_revoked: 'Revoked',
   display_revoke: 'Remove',
@@ -193,6 +194,10 @@ describe('DisplaysSection', () => {
     const url = within(banner).getByTestId('display-created-url');
     expect(url).toHaveTextContent('/display?token=tribu_display_abc');
     expect(within(banner).getByText(/Pairing link for Kitchen Tablet/)).toBeInTheDocument();
+    // Tablets pair by scanning the same link in the Tribu app.
+    const qr = within(banner).getByTestId('display-pairing-qr');
+    expect(qr).toHaveAttribute('aria-label', 'Scan this code with the Tribu app.');
+    expect(qr.querySelector('path').getAttribute('d')).toMatch(/^M\d+ \d+h1v1h-1z/);
 
     await act(async () => {
       fireEvent.click(within(banner).getByTestId('display-copy-url'));
@@ -351,6 +356,8 @@ describe('DisplaysSection stage editor', () => {
     fireEvent.change(screen.getByTestId('display-mode-select'), { target: { value: 'eink' } });
     await act(async () => { fireEvent.click(screen.getByTestId('display-create-submit')); });
     expect(await screen.findByTestId('display-created-image-url')).toHaveTextContent('/display/image.png?token=tribu_display_ink');
+    // Frames cannot scan, so e-ink displays get no pairing code.
+    expect(screen.queryByTestId('display-pairing-qr')).not.toBeInTheDocument();
   });
 });
 

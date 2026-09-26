@@ -89,6 +89,34 @@ describe('DisplayPage', () => {
     expect(api.apiDisplayDashboard).toHaveBeenCalledWith('tribu_display_xyz');
   });
 
+  test('keeps the offline copy when the same token is opened again', async () => {
+    mockRouter.isReady = true;
+    mockRouter.query = { token: 'tribu_display_same' };
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_same');
+    window.localStorage.setItem('tribu_display_cache', JSON.stringify({ me: sampleMe, dashboard: buildStagePayload(), at: Date.now() - 60000 }));
+    api.apiDisplayMe.mockResolvedValue({ ok: false, status: 0, data: null });
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+
+    expect(screen.getByTestId('display-family-name')).toHaveTextContent('Familie Berger');
+    expect(window.localStorage.getItem('tribu_display_cache')).not.toBeNull();
+  });
+
+  test('drops the offline copy when a different display is paired', async () => {
+    mockRouter.isReady = true;
+    mockRouter.query = { token: 'tribu_display_new' };
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_old');
+    window.localStorage.setItem('tribu_display_cache', JSON.stringify({ me: sampleMe, dashboard: buildStagePayload(), at: Date.now() - 60000 }));
+    api.apiDisplayMe.mockResolvedValue({ ok: false, status: 0, data: null });
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+
+    expect(window.localStorage.getItem('tribu_display_token')).toBe('tribu_display_new');
+    expect(window.localStorage.getItem('tribu_display_cache')).toBeNull();
+  });
+
   test('renders the read-only stage with safe fields only', async () => {
     mockRouter.isReady = true;
     window.localStorage.setItem('tribu_display_token', 'tribu_display_stored');

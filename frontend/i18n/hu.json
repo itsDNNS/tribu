@@ -591,6 +591,7 @@
   "display_link_created": "A {name} párosítási linkje",
   "display_link_hint": "Nyissa meg ezt a hivatkozást egyszer az eszközön a párosításhoz. A link csak most jelenik meg.",
   "display_link_share_hint": "A link birtokában bárki megjelenítheti családi irányítópultját, amíg nem vonja vissza.",
+  "display_qr_hint": "A táblagépen telepítsd a Tribu alkalmazást, válaszd a „Family display” lehetőséget, és olvasd be ezt a kódot.",
   "display_status_active": "Aktív",
   "display_status_revoked": "Visszavonva",
   "display_revoke": "Távolítsa el",

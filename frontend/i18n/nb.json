@@ -591,6 +591,7 @@
   "display_link_created": "Paringslenke for {name}",
   "display_link_hint": "Åpne denne koblingen på enheten én gang for å pare den. Linken vises kun denne ene gangen.",
   "display_link_share_hint": "Alle som har denne koblingen kan vise familieoversikten din til du tilbakekaller den.",
+  "display_qr_hint": "Installer Tribu-appen på nettbrettet, velg «Family display» og skann denne koden.",
   "display_status_active": "Aktiv",
   "display_status_revoked": "Opphevet",
   "display_revoke": "Fjern",

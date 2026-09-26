@@ -591,6 +591,7 @@
   "display_link_created": "Koppelingslink voor {name}",
   "display_link_hint": "Open deze link één keer op het apparaat om het te koppelen. De link wordt slechts één keer getoond.",
   "display_link_share_hint": "Iedereen met deze link kan uw gezinsdashboard weergeven totdat u dit intrekt.",
+  "display_qr_hint": "Installeer op de tablet de Tribu-app, kies ‘Family display’ en scan deze code.",
   "display_status_active": "Actief",
   "display_status_revoked": "Ingetrokken",
   "display_revoke": "Verwijderen",
