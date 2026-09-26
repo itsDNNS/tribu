@@ -61,8 +61,10 @@ for (const width of [320, 390, 1024, 1440]) {
       await page.getByRole('button', { name: 'Menü öffnen', exact: true }).click();
       const menu = page.getByRole('dialog');
       await expect(menu).toBeVisible();
-      await menu.getByRole('button', { name: 'Dashboard', exact: true }).click();
+      // The sheet no longer repeats Home; return through the header logo instead.
+      await menu.getByRole('button', { name: 'Schließen', exact: true }).click();
       await expect(menu).toBeHidden();
+      await page.locator('.ui-mobile-header').getByRole('button', { name: 'Dashboard', exact: true }).click();
       await expect(page.locator('.ui-bottom-nav').getByRole('button', { name: 'Start', exact: true })).toHaveAttribute('aria-current', 'page');
     } else {
       await page.locator('.sidebar .nav-item').filter({hasText:'Dashboard'}).click();
