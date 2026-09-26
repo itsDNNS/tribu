@@ -1,7 +1,7 @@
 
 from app.core.clock import utcnow, utcnow_aware
 
-from sqlalchemy import CheckConstraint, Column, Date, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
+from sqlalchemy import CheckConstraint, Column, Date, Float, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -49,6 +49,10 @@ class Family(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    # Optional place for the shared-display weather card (Open-Meteo); unset hides weather.
+    weather_location_name = Column(String(120), nullable=True)
+    weather_latitude = Column(Float, nullable=True)
+    weather_longitude = Column(Float, nullable=True)
 
     memberships = relationship("Membership", back_populates="family", cascade="all, delete-orphan")
     calendar_events = relationship("CalendarEvent", back_populates="family", cascade="all, delete-orphan")
@@ -464,7 +468,7 @@ class DisplayDevice(Base):
     revoked_at = Column(DateTime, nullable=True)
     display_mode = Column(String(16), nullable=False, server_default="tablet", default="tablet")
     refresh_interval_seconds = Column(Integer, nullable=False, server_default="60", default=60)
-    layout_preset = Column(String(64), nullable=False, server_default="hearth", default="hearth")
+    layout_preset = Column(String(64), nullable=False, server_default="stage", default="stage")
     layout_config = Column(JSON, nullable=True)
 
     family = relationship("Family", back_populates="display_devices")

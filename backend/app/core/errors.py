@@ -119,6 +119,7 @@ RECIPE_INGREDIENT_NOT_IN_RECIPE = "RECIPE_INGREDIENT_NOT_IN_RECIPE"
 # ── Display Devices (issue #172) ─────────────────────────────
 DISPLAY_DEVICE_NOT_FOUND = "DISPLAY_DEVICE_NOT_FOUND"
 DISPLAY_TOKEN_REVOKED = "DISPLAY_TOKEN_REVOKED"
+WEATHER_SEARCH_UNAVAILABLE = "WEATHER_SEARCH_UNAVAILABLE"
 
 # ── OIDC / SSO ───────────────────────────────────────────────
 OIDC_NOT_CONFIGURED = "OIDC_NOT_CONFIGURED"
@@ -232,6 +233,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     RECIPE_NOT_FOUND: "Recipe not found",
     RECIPE_INGREDIENT_NOT_IN_RECIPE: "Ingredient '{name}' is not part of this recipe",
     DISPLAY_DEVICE_NOT_FOUND: "Display device not found",
+    WEATHER_SEARCH_UNAVAILABLE: "The weather place search is unavailable right now",
     DISPLAY_TOKEN_REVOKED: "Display token has been revoked",
     OIDC_NOT_CONFIGURED: "Single sign-on is not configured on this instance",
     OIDC_DISCOVERY_FAILED: "Could not reach the identity provider: {reason}",

@@ -340,6 +340,7 @@ class TestDisplayRuntime:
         assert set(evt.keys()) == {
             "title", "starts_at", "ends_at", "all_day",
             "occurrence_date", "color", "category", "icon", "participant_colors",
+            "member_refs", "location",
         }, evt
         assert evt["icon"] == "soccer"
         # Defensive: forbidden fields must not appear in the event JSON.
@@ -537,23 +538,47 @@ class TestRevocation:
         assert cross.status_code == 404
 
 
-class TestDisplayRenderConfig:
-    def test_admin_can_create_eink_device_with_normalized_layout(self):
-        admin_token, _, family_id = _seed_member_with_pat("cfgCreate", role="admin", is_adult=True)
+class TestStageLayoutConfig:
+    """Every display uses the rotating stage layout; configs are normalized server-side."""
+
+    def test_new_device_gets_the_default_stage_layout(self):
+        admin_token, _, family_id = _seed_member_with_pat("stageDefault", role="admin", is_adult=True)
+        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Kitchen"}, headers=_auth(admin_token))
+        assert resp.status_code == 200, resp.text
+        device = resp.json()["device"]
+        assert device["layout_preset"] == "stage"
+        assert device["refresh_interval_seconds"] == 60
+        layout = device["layout_config"]
+        assert layout["version"] == 2
+        assert layout["zones"]["a"] == {"cards": ["dinner", "shopping", "weather"], "interval_seconds": 60}
+        assert layout["zones"]["d"]["cards"] == ["people", "week"]
+        assert layout["stagger"] is True and layout["skip_empty"] is True
+        assert layout["day_parts"]["evening_start"] == "18:00"
+        assert layout["language"] == "auto"
+
+    def test_admin_config_is_bounded_and_whitelisted(self):
+        admin_token, _, family_id = _seed_member_with_pat("stageBounds", role="admin", is_adult=True)
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={
-                "name": "Kitchen E-Ink",
+                "name": "Hall",
                 "display_mode": "eink",
                 "refresh_interval_seconds": 60,
-                "layout_preset": "eink_agenda",
+                "layout_preset": "hearth",
                 "layout_config": {
-                    "columns": 4,
-                    "rows": 3,
-                    "widgets": [
-                        {"id": "agenda-big", "type": "agenda", "x": 0, "y": 0, "w": 4, "h": 2},
-                        {"id": "bad", "type": "admin", "x": 0, "y": 0, "w": 9, "h": 9},
-                    ],
+                    "version": 2,
+                    "zones": {
+                        # Unknown, duplicate and wide-only cards are dropped from side zones.
+                        "a": {"cards": ["weather", "weather", "iframe", "people", "stars"], "interval_seconds": 5},
+                        # Side cards cannot move into the wide bottom zone.
+                        "d": {"cards": ["dinner"], "interval_seconds": 9999},
+                        "b": "not-a-zone",
+                    },
+                    "stagger": False,
+                    "skip_empty": "yes",
+                    "day_parts": {"morning_start": "06:15", "evening_start": "25:00"},
+                    "eink_format": "large",
+                    "language": "<script>",
                 },
             },
             headers=_auth(admin_token),
@@ -562,57 +587,69 @@ class TestDisplayRenderConfig:
         device = resp.json()["device"]
         assert device["display_mode"] == "eink"
         assert device["refresh_interval_seconds"] == 300
-        assert device["layout_preset"] == "eink_agenda"
-        widgets = device["layout_config"]["widgets"]
-        assert [w["type"] for w in widgets] == ["agenda"]
-        assert widgets[0]["w"] == 4
-        assert widgets[0]["h"] == 2
+        assert device["layout_preset"] == "stage"
+        layout = device["layout_config"]
+        assert layout["zones"]["a"] == {"cards": ["weather", "stars"], "interval_seconds": 15}
+        assert layout["zones"]["b"]["cards"] == ["reminders", "school"]
+        assert layout["zones"]["d"] == {"cards": ["people", "week"], "interval_seconds": 600}
+        assert layout["stagger"] is False
+        assert layout["skip_empty"] is True
+        assert layout["day_parts"]["morning_start"] == "06:15"
+        assert layout["day_parts"]["evening_start"] == "18:00"
+        assert layout["eink_format"] == "large"
+        assert layout["language"] == "auto"
+
+    def test_retired_grid_layouts_reset_to_the_stage_default(self):
+        admin_token, _, family_id = _seed_member_with_pat("stageLegacy", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={
+                "name": "Legacy",
+                "layout_preset": "family_board",
+                "layout_config": {"columns": 3, "rows": 3, "widgets": [{"type": "agenda", "x": 0, "y": 0, "w": 3, "h": 3}]},
+            },
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        layout = resp.json()["device"]["layout_config"]
+        assert "widgets" not in layout
+        assert layout["zones"]["c"]["cards"] == ["soon", "stars"]
 
     def test_admin_can_update_display_config_without_reminting_token(self):
         admin_token, _, family_id = _seed_member_with_pat("cfgUpdate", role="admin", is_adult=True)
-        create = client.post(
-            f"/families/{family_id}/display-devices",
-            json={"name": "Wall"},
-            headers=_auth(admin_token),
-        )
+        create = client.post(f"/families/{family_id}/display-devices", json={"name": "Wall"}, headers=_auth(admin_token))
         body = create.json()
         token = body["token"]
         device_id = body["device"]["id"]
 
         update = client.patch(
             f"/families/{family_id}/display-devices/{device_id}",
-            json={"display_mode": "eink", "layout_preset": "eink_compact", "refresh_interval_seconds": 900},
+            json={"layout_config": {"version": 2, "zones": {"c": {"cards": ["birthdays"], "interval_seconds": 120}}}},
             headers=_auth(admin_token),
         )
         assert update.status_code == 200, update.text
         assert "token" not in update.json()
-        assert update.json()["display_mode"] == "eink"
 
-        me = client.get("/display/me", headers=_auth(token))
-        assert me.status_code == 200
-        assert me.json()["config"]["display_mode"] == "eink"
+        # Switching the mode keeps the stored rotation.
+        mode = client.patch(
+            f"/families/{family_id}/display-devices/{device_id}",
+            json={"display_mode": "eink", "refresh_interval_seconds": 900},
+            headers=_auth(admin_token),
+        )
+        assert mode.status_code == 200, mode.text
+
         dash = client.get("/display/dashboard", headers=_auth(token))
         assert dash.status_code == 200
         config = dash.json()["config"]
+        assert config["display_mode"] == "eink"
         assert config["refresh_interval_seconds"] == 900
-        assert config["layout_preset"] == "eink_compact"
-        assert config["layout_config"]["columns"] == 2
-        assert [widget["type"] for widget in config["layout_config"]["widgets"]] == [
-            "home_header",
-            "agenda",
-            "birthdays",
-            "members",
-        ]
+        assert config["layout_config"]["zones"]["c"] == {"cards": ["birthdays"], "interval_seconds": 120}
         assert "email" not in dash.text
 
     def test_non_admin_cannot_update_display_config(self):
         admin_token, _, family_id = _seed_member_with_pat("cfgAdmin", role="admin", is_adult=True)
         member_token, _, _ = _seed_member_with_pat("cfgMember", role="member", is_adult=True, family_id=family_id)
-        create = client.post(
-            f"/families/{family_id}/display-devices",
-            json={"name": "Wall"},
-            headers=_auth(admin_token),
-        )
+        create = client.post(f"/families/{family_id}/display-devices", json={"name": "Wall"}, headers=_auth(admin_token))
         device_id = create.json()["device"]["id"]
         update = client.patch(
             f"/families/{family_id}/display-devices/{device_id}",
@@ -620,131 +657,6 @@ class TestDisplayRenderConfig:
             headers=_auth(member_token),
         )
         assert update.status_code == 403
-
-
-class TestHomeHeaderWidget:
-    """`home_header` is a combined identity+clock widget that adapts to slot size.
-
-    Whitelisting it server-side is the boundary that keeps invalid layout
-    payloads from reaching the wall display. Existing devices configured with
-    the legacy ``clock`` widget must keep rendering — backward compatibility
-    is preserved through normalization, not silent stripping.
-    """
-
-    def test_home_header_is_an_allowed_widget_type(self):
-        """A custom layout posted by an admin must keep `home_header` widgets."""
-        admin_token, _, family_id = _seed_member_with_pat("hhAllow", role="admin", is_adult=True)
-        resp = client.post(
-            f"/families/{family_id}/display-devices",
-            json={
-                "name": "Hero",
-                "display_mode": "tablet",
-                "layout_preset": "hearth",
-                "layout_config": {
-                    "columns": 3,
-                    "rows": 3,
-                    "widgets": [
-                        {"id": "hdr", "type": "home_header", "x": 0, "y": 0, "w": 2, "h": 1},
-                        {"id": "agenda", "type": "agenda", "x": 0, "y": 1, "w": 3, "h": 2},
-                    ],
-                },
-            },
-            headers=_auth(admin_token),
-        )
-        assert resp.status_code == 200, resp.text
-        widgets = resp.json()["device"]["layout_config"]["widgets"]
-        assert {w["type"] for w in widgets} == {"home_header", "agenda"}
-        header = next(w for w in widgets if w["type"] == "home_header")
-        assert (header["w"], header["h"]) == (2, 1)
-
-    def test_home_header_replaces_identity_and_clock_in_default_presets(self):
-        """The default tablet preset (hearth) merges identity+clock into one home_header."""
-        admin_token, _, family_id = _seed_member_with_pat("hhPreset", role="admin", is_adult=True)
-        create = client.post(
-            f"/families/{family_id}/display-devices",
-            json={"name": "Wall", "layout_preset": "hearth"},
-            headers=_auth(admin_token),
-        )
-        assert create.status_code == 200, create.text
-        widgets = create.json()["device"]["layout_config"]["widgets"]
-        widget_types = [w["type"] for w in widgets]
-        assert "home_header" in widget_types, widget_types
-        # identity/clock are no longer separate widgets in the default tablet preset.
-        assert "identity" not in widget_types
-        assert "clock" not in widget_types
-
-    def test_legacy_clock_and_identity_widgets_are_still_accepted(self):
-        """Devices configured before home_header (with clock/identity) keep rendering."""
-        admin_token, _, family_id = _seed_member_with_pat("hhLegacy", role="admin", is_adult=True)
-        resp = client.post(
-            f"/families/{family_id}/display-devices",
-            json={
-                "name": "Legacy",
-                "layout_preset": "hearth",
-                "layout_config": {
-                    "columns": 2,
-                    "rows": 2,
-                    "widgets": [
-                        {"id": "id", "type": "identity", "x": 0, "y": 0, "w": 1, "h": 1},
-                        {"id": "ck", "type": "clock", "x": 1, "y": 0, "w": 1, "h": 1},
-                        {"id": "ag", "type": "agenda", "x": 0, "y": 1, "w": 2, "h": 1},
-                    ],
-                },
-            },
-            headers=_auth(admin_token),
-        )
-        assert resp.status_code == 200, resp.text
-        widgets = resp.json()["device"]["layout_config"]["widgets"]
-        widget_types = {w["type"] for w in widgets}
-        # All three legacy types pass normalization unchanged.
-        assert widget_types == {"identity", "clock", "agenda"}
-
-    def test_unknown_widget_types_are_still_dropped(self):
-        """Adding home_header must not loosen the widget whitelist."""
-        admin_token, _, family_id = _seed_member_with_pat("hhStrict", role="admin", is_adult=True)
-        resp = client.post(
-            f"/families/{family_id}/display-devices",
-            json={
-                "name": "Strict",
-                "layout_preset": "hearth",
-                "layout_config": {
-                    "columns": 2,
-                    "rows": 2,
-                    "widgets": [
-                        {"id": "ok", "type": "home_header", "x": 0, "y": 0, "w": 2, "h": 1},
-                        {"id": "bad", "type": "iframe", "x": 0, "y": 1, "w": 1, "h": 1},
-                        {"id": "evil", "type": "<script>", "x": 1, "y": 1, "w": 1, "h": 1},
-                    ],
-                },
-            },
-            headers=_auth(admin_token),
-        )
-        assert resp.status_code == 200, resp.text
-        types = [w["type"] for w in resp.json()["device"]["layout_config"]["widgets"]]
-        assert types == ["home_header"]
-
-    def test_home_header_out_of_bounds_widget_is_dropped(self):
-        """home_header with a span exceeding the grid is dropped, not clamped."""
-        admin_token, _, family_id = _seed_member_with_pat("hhBounds", role="admin", is_adult=True)
-        resp = client.post(
-            f"/families/{family_id}/display-devices",
-            json={
-                "name": "OOB",
-                "layout_preset": "hearth",
-                "layout_config": {
-                    "columns": 2,
-                    "rows": 2,
-                    "widgets": [
-                        {"id": "oob", "type": "home_header", "x": 0, "y": 0, "w": 99, "h": 99},
-                        {"id": "ag", "type": "agenda", "x": 0, "y": 0, "w": 2, "h": 2},
-                    ],
-                },
-            },
-            headers=_auth(admin_token),
-        )
-        assert resp.status_code == 200, resp.text
-        types = [w["type"] for w in resp.json()["device"]["layout_config"]["widgets"]]
-        assert types == ["agenda"]
 
 
 # ---------------------------------------------------------------------------
@@ -936,3 +848,230 @@ class TestSchoolTimetables:
         assert "A1" not in rendered
         assert str(child_a) not in rendered
         assert "@example.com" not in rendered
+
+
+# ---------------------------------------------------------------------------
+# Stage dashboard data (Home Family Display 2.0)
+# ---------------------------------------------------------------------------
+
+
+def _seed_stage_family(suffix: str):
+    """A family with events, meals, shopping, routines, tasks and rewards around today."""
+    from datetime import datetime, time as dtime, timedelta, timezone
+    from app.core.clock import local_today
+    from app.models import (
+        CalendarEvent, MealPlan, Reward, RewardCurrency, ShoppingItem, ShoppingList, Task, TokenTransaction,
+    )
+
+    admin_token, admin_id, family_id = _seed_member_with_pat(f"stage{suffix}", role="admin", is_adult=True)
+    child_id = _seed_child(family_id, f"Stage{suffix}", color="#c26f80")
+    today = local_today()
+    at = lambda day, hour, minute=0: datetime.combine(day, dtime(hour, minute))
+    tomorrow = today + timedelta(days=1)
+
+    db = TestSession()
+    db.add_all([
+        CalendarEvent(family_id=family_id, title="Swimming", starts_at=at(today, 15), ends_at=at(today, 16),
+                      assigned_to=[child_id], location="Pool", created_by_user_id=admin_id),
+        CalendarEvent(family_id=family_id, title="Zoo trip", starts_at=at(tomorrow, 7, 15), ends_at=at(tomorrow, 14),
+                      assigned_to="all", created_by_user_id=admin_id),
+        CalendarEvent(family_id=family_id, title="Autumn break", starts_at=at(today + timedelta(days=10), 0),
+                      ends_at=at(today + timedelta(days=15), 0), all_day=True, created_by_user_id=admin_id),
+        CalendarEvent(family_id=family_id, title="Far away", starts_at=at(today + timedelta(days=90), 0),
+                      all_day=True, created_by_user_id=admin_id),
+        MealPlan(family_id=family_id, plan_date=today, slot="evening", meal_name="Pumpkin soup"),
+        MealPlan(family_id=family_id, plan_date=today, slot="morning", meal_name="Porridge"),
+        MealPlan(family_id=family_id, plan_date=tomorrow, slot="noon", meal_name="Pasta"),
+        MealPlan(family_id=family_id, plan_date=today + timedelta(days=2), slot="noon", meal_name="Too late"),
+    ])
+    shopping = ShoppingList(family_id=family_id, name="Groceries")
+    db.add(shopping)
+    db.flush()
+    db.add_all([
+        ShoppingItem(list_id=shopping.id, name="Bread", position=2),
+        ShoppingItem(list_id=shopping.id, name="Milk", position=1),
+        ShoppingItem(list_id=shopping.id, name="Eggs", position=3, checked=True),
+        ShoppingItem(list_id=shopping.id, name="Old", position=4, archived=True),
+    ])
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.add_all([
+        Task(family_id=family_id, title="Brush teeth", recurrence="daily", due_date=at(today, 7),
+             assigned_to_user_id=child_id, created_by_user_id=admin_id),
+        Task(family_id=family_id, title="Pack bag", recurrence="daily", status="done", due_date=at(today, 7),
+             completed_at=now_utc, assigned_to_user_id=child_id, created_by_user_id=admin_id),
+        Task(family_id=family_id, title="Old routine", recurrence="daily", status="done", due_date=at(today, 7),
+             completed_at=now_utc - timedelta(days=2), created_by_user_id=admin_id),
+        Task(family_id=family_id, title="Bins out", due_date=at(today, 20), created_by_user_id=admin_id),
+        Task(family_id=family_id, title="Sign letter", due_date=at(today - timedelta(days=1), 9), created_by_user_id=admin_id),
+        Task(family_id=family_id, title="Call plumber", due_date=at(tomorrow, 9), created_by_user_id=admin_id),
+        Task(family_id=family_id, title="Later", due_date=at(today + timedelta(days=3), 9), created_by_user_id=admin_id),
+    ])
+    currency = RewardCurrency(family_id=family_id, name="Stars", icon="star")
+    db.add(currency)
+    db.flush()
+    db.add_all([
+        Reward(family_id=family_id, currency_id=currency.id, name="Ice cream", cost=10),
+        Reward(family_id=family_id, currency_id=currency.id, name="Cinema", cost=50),
+        TokenTransaction(family_id=family_id, currency_id=currency.id, user_id=child_id, kind="earn", amount=12),
+    ])
+    db.commit()
+    db.close()
+    return admin_token, family_id, child_id
+
+
+class TestStageDashboardData:
+    def test_dashboard_contains_the_stage_cards_without_identifiers(self):
+        _, family_id, child_id = _seed_stage_family("Data")
+        token = _mint_display_token(family_id, "Stage Data")
+        resp = client.get("/display/dashboard", headers=_auth(token))
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        names = [member["display_name"] for member in body["members"]]
+        child_ref = names.index("Child StageData")
+
+        assert body["generated_at"]
+        assert body["time_format"] == "24h"
+        swim = next(event for event in body["today_events"] if event["title"] == "Swimming")
+        assert swim["member_refs"] == [child_ref]
+        assert swim["location"] == "Pool"
+        zoo = next(event for event in body["tomorrow_events"] if event["title"] == "Zoo trip")
+        assert zoo["member_refs"] == list(range(len(names)))
+        assert any(event["title"] == "Swimming" for event in body["week_events"])
+
+        assert [(meal["slot"], meal["meal_name"]) for meal in body["meals"]] == [
+            ("morning", "Porridge"), ("evening", "Pumpkin soup"), ("noon", "Pasta"),
+        ]
+        assert body["shopping"] == {"open_count": 2, "lists": [{"name": "Groceries", "open_count": 2, "items": ["Milk", "Bread"]}]}
+
+        routines = {routine["title"]: routine for routine in body["routines"]}
+        assert set(routines) == {"Brush teeth", "Pack bag"}
+        assert routines["Brush teeth"] == {"title": "Brush teeth", "done": False, "member_ref": child_ref}
+        assert routines["Pack bag"]["done"] is True
+
+        due = {task["title"]: task["due_state"] for task in body["due_tasks"]}
+        assert due == {"Sign letter": "overdue", "Bins out": "today", "Call plumber": "tomorrow"}
+
+        rewards = body["rewards"]
+        assert rewards["currency_name"] == "Stars"
+        assert rewards["members"] == [
+            {"member_ref": child_ref, "balance": 12, "next_reward_name": "Cinema", "next_reward_cost": 50},
+        ]
+        assert body["countdowns"] == [
+            {"title": "Autumn break", "starts_on": body["countdowns"][0]["starts_on"], "days_until": 10},
+        ]
+        assert body["weather"] is None
+
+        rendered = resp.text
+        assert "@example.com" not in rendered
+        assert f'"user_id"' not in rendered
+        assert str(child_id) not in json_module.dumps(body["routines"])
+
+
+def _forecast_payload():
+    hours = [f"2026-09-29T{hour:02d}:00" for hour in range(24)] + [f"2026-09-30T{hour:02d}:00" for hour in range(24)]
+    return {
+        "current": {"time": "2026-09-29T07:15", "temperature_2m": 11.6, "weather_code": 2, "is_day": 0},
+        "hourly": {
+            "time": hours,
+            "temperature_2m": [12.0] * 48,
+            "weather_code": [2] * 48,
+            "precipitation_probability": [10] * 16 + [70] * 32,
+        },
+        "daily": {
+            "time": ["2026-09-29", "2026-09-30"],
+            "weather_code": [61, 3],
+            "temperature_2m_max": [19.4, 15.2],
+            "temperature_2m_min": [8.6, 7.9],
+            "precipitation_probability_max": [70, 20],
+        },
+    }
+
+
+class TestDisplayWeather:
+    @pytest.fixture(autouse=True)
+    def _fresh_cache(self):
+        from app.core import weather
+        weather.clear_cache()
+        yield
+        weather.clear_cache()
+
+    def test_admin_sets_place_and_display_shows_forecast(self, monkeypatch):
+        from app.core import weather
+        calls = []
+
+        def fake_fetch(url, params):
+            calls.append((url, params))
+            return _forecast_payload()
+
+        monkeypatch.setattr(weather, "_fetch_json", fake_fetch)
+        admin_token, _, family_id = _seed_member_with_pat("wxSet", role="admin", is_adult=True)
+        put = client.put(
+            f"/families/{family_id}/weather-location",
+            json={"name": "Hamburg", "latitude": 53.55, "longitude": 9.99},
+            headers=_auth(admin_token),
+        )
+        assert put.status_code == 200, put.text
+        assert client.get(f"/families/{family_id}/weather-location", headers=_auth(admin_token)).json()["name"] == "Hamburg"
+
+        token = _mint_display_token(family_id, "Weather Wall")
+        first = client.get("/display/dashboard", headers=_auth(token)).json()["weather"]
+        second = client.get("/display/dashboard", headers=_auth(token)).json()["weather"]
+        assert first == second
+        assert len(calls) == 1, "forecast must be cached between display refreshes"
+        assert calls[0][1]["latitude"] == "53.5500"
+        assert first["location_name"] == "Hamburg"
+        assert first["current_temperature"] == 12
+        assert first["current_is_day"] is False
+        assert first["today"] == {"date": "2026-09-29", "code": 61, "min": 9, "max": 19, "precipitation_probability": 70}
+        assert first["rain_from"] == "16:00"
+        assert first["hourly"][0]["time"] == "2026-09-29T07:00"
+        assert len(first["hourly"]) == 16
+
+        cleared = client.delete(f"/families/{family_id}/weather-location", headers=_auth(admin_token))
+        assert cleared.json() == {"name": None, "latitude": None, "longitude": None}
+        assert client.get("/display/dashboard", headers=_auth(token)).json()["weather"] is None
+
+    def test_forecast_failure_keeps_the_display_working(self, monkeypatch):
+        from app.core import weather
+
+        def broken(url, params):
+            raise OSError("offline")
+
+        monkeypatch.setattr(weather, "_fetch_json", broken)
+        admin_token, _, family_id = _seed_member_with_pat("wxFail", role="admin", is_adult=True)
+        client.put(
+            f"/families/{family_id}/weather-location",
+            json={"name": "Nowhere", "latitude": 1, "longitude": 2},
+            headers=_auth(admin_token),
+        )
+        token = _mint_display_token(family_id, "Offline Wall")
+        resp = client.get("/display/dashboard", headers=_auth(token))
+        assert resp.status_code == 200
+        assert resp.json()["weather"] is None
+
+    def test_place_search_is_admin_only_and_reports_geocoder_errors(self, monkeypatch):
+        from app.core import weather
+
+        monkeypatch.setattr(weather, "_fetch_json", lambda url, params: {"results": [
+            {"name": "Hamburg", "admin1": "Hamburg", "country": "Germany", "latitude": 53.55, "longitude": 9.99},
+            {"name": "Broken", "latitude": None, "longitude": 1},
+        ]})
+        admin_token, _, family_id = _seed_member_with_pat("wxSearch", role="admin", is_adult=True)
+        member_token, _, _ = _seed_member_with_pat("wxSearchMember", role="member", is_adult=True, family_id=family_id)
+        found = client.get(f"/families/{family_id}/weather-location/search?q=Hamb&lang=de", headers=_auth(admin_token))
+        assert found.status_code == 200, found.text
+        assert found.json() == [{"name": "Hamburg", "region": "Hamburg", "country": "Germany", "latitude": 53.55, "longitude": 9.99}]
+        assert client.get(f"/families/{family_id}/weather-location/search?q=Hamb", headers=_auth(member_token)).status_code == 403
+        assert client.put(
+            f"/families/{family_id}/weather-location",
+            json={"name": "X", "latitude": 99, "longitude": 0},
+            headers=_auth(admin_token),
+        ).status_code == 422
+
+        def broken(url, params):
+            raise OSError("down")
+
+        monkeypatch.setattr(weather, "_fetch_json", broken)
+        failed = client.get(f"/families/{family_id}/weather-location/search?q=Hamb", headers=_auth(admin_token))
+        assert failed.status_code == 502
+        assert failed.json()["detail"]["code"] == "WEATHER_SEARCH_UNAVAILABLE"
