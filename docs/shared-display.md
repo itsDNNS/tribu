@@ -55,7 +55,7 @@ This mode runs in any browser on the device (Kindle, Boox and similar). Frames w
 
 ## Devices
 
-1. In Tribu, go to **Admin → Displays**, create a display and open its pairing link on the device.
+1. In Tribu, go to **Admin → Displays**, create a display and open its pairing link on the device. **Configure display** opens the editor for mode, refresh, language, the cards and interval of each area, behaviour and times of day.
 2. The link stores the token on the device and removes it from the address bar.
 3. Install the page as an app (browser menu → *Install app* / *Add to home screen*). It opens full screen straight into `/display`.
 
@@ -72,7 +72,7 @@ The last successful data is kept on the device. If the network or the server is 
 
 ## Weather and privacy
 
-Weather is optional and off until a family admin chooses a place. Tribu then asks [Open-Meteo](https://open-meteo.com/) for the forecast of that place's coordinates (the place search sends the typed text to Open-Meteo's geocoder). Forecasts are cached for 15 minutes; failures simply hide the weather.
+Weather is optional and off until a family admin chooses a place under **Admin → Displays → Weather on displays**. Tribu then asks [Open-Meteo](https://open-meteo.com/) for the forecast of that place's coordinates (the place search sends the typed text to Open-Meteo's geocoder). Forecasts are cached for 15 minutes; failures simply hide the weather.
 
 The display payload contains no e-mail addresses, user IDs or account metadata. People are referenced by their position in the member list.
 

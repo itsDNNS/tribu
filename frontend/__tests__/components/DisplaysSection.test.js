@@ -26,6 +26,10 @@ jest.mock('../../lib/api', () => ({
   apiCreateDisplayDevice: jest.fn(),
   apiUpdateDisplayDevice: jest.fn(),
   apiRevokeDisplayDevice: jest.fn(),
+  apiGetWeatherLocation: jest.fn(),
+  apiSetWeatherLocation: jest.fn(),
+  apiClearWeatherLocation: jest.fn(),
+  apiSearchWeatherLocation: jest.fn(),
 }));
 
 const api = require('../../lib/api');
@@ -52,36 +56,64 @@ const messages = {
   display_mode_label: 'Display mode',
   display_mode_tablet: 'Tablet',
   display_mode_eink: 'E-Ink',
-  display_layout_label: 'Layout preset',
-  display_layout_hearth: 'Hearth',
-  display_layout_agenda_first: 'Agenda first',
-  display_layout_family_board: 'Family board',
-  display_layout_eink_compact: 'E-Ink compact',
-  display_layout_eink_agenda: 'E-Ink agenda',
   display_refresh_label: 'Refresh interval',
-  display_refresh_helper: 'Seconds. E-Ink mode is clamped to slower, panel-friendly refreshes.',
-  display_live_preview_label: 'Live preview',
-  display_slot_editor_label: 'Slot editor',
-  display_slot_widget_label: 'Widget',
-  display_slot_x_label: 'Column',
-  display_slot_y_label: 'Row',
-  display_slot_w_label: 'Width',
-  display_slot_h_label: 'Height',
-  display_slot_move_up: 'Move up',
-  display_slot_move_down: 'Move down',
-  display_slot_move_left: 'Move left',
-  display_slot_move_right: 'Move right',
-  display_slot_widen: 'Widen',
-  display_slot_narrow: 'Narrow',
-  display_slot_taller: 'Make taller',
-  display_slot_shorter: 'Make shorter',
-  display_widget_home_header: 'Home header',
-  display_widget_identity: 'Home title',
-  display_widget_clock: 'Clock',
-  display_widget_focus: 'Focus',
-  display_widget_agenda: 'Agenda',
-  display_widget_birthdays: 'Birthdays',
-  display_widget_members: 'Family members',
+  display_refresh_eink_label: 'Turn page and refresh',
+  display_show_composer: 'Configure display',
+  display_create_section_title: 'New display',
+  display_create_hint: 'Name it and choose what it shows.',
+  display_language_label: 'Language',
+  display_language_auto: 'Device language',
+  display_editor_device: 'Device',
+  display_editor_zones: 'Rotating areas',
+  display_editor_zones_hint: 'Each area shows its cards one after another.',
+  display_eink_rotation_hint: 'On e-ink every area turns one card per refresh.',
+  display_zone_a: 'Right, top',
+  display_zone_b: 'Right, middle',
+  display_zone_c: 'Right, bottom',
+  display_zone_d: 'Bottom, wide',
+  display_card_dinner: 'Meals',
+  display_card_shopping: 'Shopping list',
+  display_card_weather: 'Weather today',
+  display_card_reminders: "Don't forget",
+  display_card_school: 'School timetable',
+  display_card_soon: 'Coming up',
+  display_card_stars: 'Stars',
+  display_card_birthdays: 'Birthdays',
+  display_card_people: 'People',
+  display_card_week: 'This week',
+  display_add_card: 'Add card',
+  display_card_move_up: 'Move {card} up',
+  display_card_move_down: 'Move {card} down',
+  display_card_remove: 'Remove {card}',
+  display_zone_interval: 'Change',
+  display_every_seconds: 'every {count} s',
+  display_every_minutes: 'every {count} min',
+  display_editor_behaviour: 'Behaviour',
+  display_stagger: 'Change one area at a time',
+  display_stagger_hint: 'Areas take turns.',
+  display_skip_empty: 'Skip empty cards',
+  display_skip_empty_hint: 'Empty cards are left out.',
+  display_pause_on_touch: 'Hold on touch',
+  display_pause_on_touch_hint: 'Tapping holds an area.',
+  display_night_dim: 'Dim at night',
+  display_night_dim_hint: 'Darkens the screen at night.',
+  display_editor_day_parts: 'Times of day',
+  display_morning_start: 'Morning from',
+  display_morning_end: 'Morning until',
+  display_evening_start: 'Evening from',
+  display_night_start: 'Night from',
+  display_weather_title: 'Weather on displays',
+  display_weather_off: 'Off',
+  display_weather_choose: 'Choose place',
+  display_weather_change: 'Change place',
+  display_weather_remove: 'Turn off weather',
+  display_weather_search_label: 'Town or city',
+  display_weather_search: 'Search',
+  display_weather_no_results: 'No places found.',
+  display_weather_unavailable: 'The place search is not reachable right now.',
+  display_weather_privacy: 'Forecasts come from Open-Meteo.',
+  close: 'Close',
+  save: 'Save',
   cancel: 'Cancel',
   dismiss: 'Dismiss',
   token_copied: 'Copied',
@@ -100,8 +132,10 @@ beforeEach(() => {
     familyId: 7,
     messages,
     demoMode: false,
+    lang: 'de',
   };
   api.apiListDisplayDevices.mockResolvedValue({ ok: true, data: [] });
+  api.apiGetWeatherLocation.mockResolvedValue({ ok: true, data: { name: null, latitude: null, longitude: null } });
 });
 
 function flushAsync() {
@@ -217,260 +251,146 @@ describe('DisplaysSection', () => {
   });
 });
 
-describe('DisplaysSection layout composer', () => {
-  const PRESETS = ['hearth', 'agenda_first', 'family_board', 'eink_compact', 'eink_agenda'];
-  const WHITELIST = ['home_header', 'identity', 'clock', 'focus', 'agenda', 'birthdays', 'members'];
+const DEVICE = {
+  id: 5, family_id: 7, name: 'Kitchen', created_at: '2026-09-01T08:00:00', last_used_at: null, revoked_at: null,
+  display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage',
+  layout_config: {
+    version: 2,
+    zones: {
+      a: { cards: ['dinner', 'shopping', 'weather'], interval_seconds: 60 },
+      b: { cards: ['reminders', 'school'], interval_seconds: 60 },
+      c: { cards: ['soon', 'stars'], interval_seconds: 60 },
+      d: { cards: ['people', 'week'], interval_seconds: 60 },
+    },
+    stagger: true, skip_empty: true, pause_on_touch: true, night_dim: true,
+    day_parts: { morning_start: '05:30', morning_end: '09:00', evening_start: '18:00', night_start: '22:00' },
+    eink_format: 'compact', language: 'auto',
+  },
+};
 
-  async function openCreateForm() {
+async function openEditor() {
+  api.apiListDisplayDevices.mockResolvedValue({ ok: true, data: [DEVICE] });
+  api.apiUpdateDisplayDevice.mockResolvedValue({ ok: true, data: DEVICE });
+  await act(async () => { render(<DisplaysSection />); });
+  await flushAsync();
+  fireEvent.click(await screen.findByTestId('display-config-toggle-5'));
+}
+
+describe('DisplaysSection stage editor', () => {
+  test('a new display is created with the default stage rotation', async () => {
+    api.apiCreateDisplayDevice.mockResolvedValue({ ok: true, data: { token: 'tribu_display_x', device: { ...DEVICE, id: 6 } } });
     await act(async () => { render(<DisplaysSection />); });
     await flushAsync();
     fireEvent.click(screen.getByTestId('display-create-toggle'));
-  }
+    fireEvent.change(screen.getByTestId('display-create-name'), { target: { value: 'Hall' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-create-submit')); });
 
-  test('renders a card and mini preview for every layout preset inside the controls', async () => {
-    await openCreateForm();
-
-    const controls = screen.getByTestId('display-config-controls');
-    for (const preset of PRESETS) {
-      const card = within(controls).getByTestId(`display-layout-card-${preset}`);
-      expect(card).toBeInTheDocument();
-      expect(within(card).getByTestId(`display-layout-preview-${preset}`)).toBeInTheDocument();
-    }
-    // The default mode is `tablet`, so the default preset is `hearth`.
-    expect(screen.getByTestId('display-layout-card-hearth')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTestId('display-layout-card-agenda_first')).toHaveAttribute('aria-pressed', 'false');
+    const payload = api.apiCreateDisplayDevice.mock.calls[0][1];
+    expect(payload).toMatchObject({ name: 'Hall', display_mode: 'tablet', refresh_interval_seconds: 60 });
+    expect(payload.layout_config.version).toBe(2);
+    expect(payload.layout_config.zones.a).toEqual({ cards: ['dinner', 'shopping', 'weather'], interval_seconds: 60 });
+    expect(payload).not.toHaveProperty('layout_preset');
   });
 
-  test('clicking a preset card switches the selection and updates the live preview', async () => {
-    await openCreateForm();
+  test('admins choose, order and time the cards of each area', async () => {
+    await openEditor();
+    const zoneA = screen.getByTestId('display-zone-editor-a');
+    fireEvent.click(within(zoneA).getByRole('button', { name: 'Move Weather today up' }));
+    fireEvent.click(within(zoneA).getByRole('button', { name: 'Remove Meals' }));
+    fireEvent.change(within(zoneA).getByTestId('display-zone-interval-a'), { target: { value: '120' } });
 
-    const livePreview = screen.getByTestId('display-live-preview');
-    expect(livePreview).toHaveTextContent(/hearth/i);
+    const zoneB = screen.getByTestId('display-zone-editor-b');
+    fireEvent.change(within(zoneB).getByRole('combobox', { name: 'Add card · B' }), { target: { value: 'stars' } });
+    // Wide-only cards are not offered in the side areas.
+    expect(within(zoneB).queryByRole('option', { name: 'People' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('display-layout-card-agenda_first'));
+    fireEvent.click(screen.getByTestId('display-toggle-stagger'));
+    fireEvent.change(screen.getByTestId('display-daypart-evening_start'), { target: { value: '19:30' } });
+    fireEvent.change(screen.getByTestId('display-language-select'), { target: { value: 'de' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
 
-    expect(screen.getByTestId('display-layout-card-agenda_first')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTestId('display-layout-card-hearth')).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByTestId('display-live-preview')).toHaveTextContent(/Agenda first/i);
+    const payload = api.apiUpdateDisplayDevice.mock.calls[0][2];
+    expect(payload.layout_config.zones.a).toEqual({ cards: ['weather', 'shopping'], interval_seconds: 120 });
+    expect(payload.layout_config.zones.b.cards).toEqual(['reminders', 'school', 'stars']);
+    expect(payload.layout_config.stagger).toBe(false);
+    expect(payload.layout_config.day_parts.evening_start).toBe('19:30');
+    expect(payload.layout_config.language).toBe('de');
   });
 
-  test('slot editor lists draft slots and constrains widget type to whitelisted values', async () => {
-    await openCreateForm();
-
-    // Hearth has 5 widgets on a 3x3 grid.
-    const row0 = screen.getByTestId('display-slot-editor-row-0');
-    expect(row0).toBeInTheDocument();
-    expect(screen.getByTestId('display-slot-editor-row-4')).toBeInTheDocument();
-
-    const typeSelect = within(row0).getByTestId('display-slot-editor-row-0-type');
-    const optionValues = Array.from(typeSelect.querySelectorAll('option')).map((o) => o.value);
-    expect(new Set(optionValues)).toEqual(new Set(WHITELIST));
-
-    const xInput = within(row0).getByTestId('display-slot-editor-row-0-x');
-    expect(xInput).toHaveAttribute('type', 'number');
-    expect(xInput).toHaveAttribute('min', '0');
-    expect(xInput).toHaveAttribute('max', '2'); // hearth has 3 columns → max x is 2
-
-    const yInput = within(row0).getByTestId('display-slot-editor-row-0-y');
-    expect(yInput).toHaveAttribute('max', '2');
+  test('the last card of an area cannot be removed', async () => {
+    await openEditor();
+    const zoneD = screen.getByTestId('display-zone-editor-d');
+    fireEvent.click(within(zoneD).getByRole('button', { name: 'Remove People' }));
+    expect(within(zoneD).getByRole('button', { name: 'Remove This week' })).toBeDisabled();
   });
 
-  test('editing a slot type updates the live preview before save', async () => {
-    await openCreateForm();
-
-    const row0 = screen.getByTestId('display-slot-editor-row-0');
-    fireEvent.change(within(row0).getByTestId('display-slot-editor-row-0-type'), {
-      target: { value: 'members' },
-    });
-
-    const livePreview = screen.getByTestId('display-live-preview');
-    expect(livePreview).toHaveTextContent(/members/);
+  test('switching to e-ink uses page refreshes instead of per-area timers', async () => {
+    await openEditor();
+    fireEvent.change(screen.getByTestId('display-mode-select'), { target: { value: 'eink' } });
+    expect(screen.getByTestId('display-refresh-select')).toHaveValue('600');
+    expect(screen.queryByTestId('display-zone-interval-a')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('display-toggle-stagger')).not.toBeInTheDocument();
+    expect(screen.getByText('On e-ink every area turns one card per refresh.')).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
+    expect(api.apiUpdateDisplayDevice.mock.calls[0][2]).toMatchObject({ display_mode: 'eink', refresh_interval_seconds: 600 });
   });
+});
 
-  test('visual slot controls move and resize slots without editing coordinates manually', async () => {
-    await openCreateForm();
-
-    const row0 = screen.getByTestId('display-slot-editor-row-0');
-    fireEvent.click(within(row0).getByTestId('display-slot-editor-row-0-move-right'));
-    fireEvent.click(within(row0).getByTestId('display-slot-editor-row-0-widen'));
-    fireEvent.click(within(row0).getByTestId('display-slot-editor-row-0-move-down'));
-    fireEvent.click(within(row0).getByTestId('display-slot-editor-row-0-shorter'));
-
-    expect(within(row0).getByTestId('display-slot-editor-row-0-x')).toHaveValue(1);
-    expect(within(row0).getByTestId('display-slot-editor-row-0-y')).toHaveValue(1);
-    expect(within(row0).getByTestId('display-slot-editor-row-0-w')).toHaveValue(2);
-    expect(within(row0).getByTestId('display-slot-editor-row-0-h')).toHaveValue(1);
-    expect(screen.getByTestId('display-live-preview')).toHaveTextContent(/2×1 @ \(1,1\)/);
-  });
-
-  test('visual slot controls disable moves and sizes that would leave the grid', async () => {
-    await openCreateForm();
-
-    const row0 = screen.getByTestId('display-slot-editor-row-0');
-    expect(within(row0).getByTestId('display-slot-editor-row-0-move-left')).toBeDisabled();
-    expect(within(row0).getByTestId('display-slot-editor-row-0-move-up')).toBeDisabled();
-
-    fireEvent.change(within(row0).getByTestId('display-slot-editor-row-0-x'), {
-      target: { value: '2' },
-    });
-    expect(within(row0).getByTestId('display-slot-editor-row-0-move-right')).toBeDisabled();
-    expect(within(row0).getByTestId('display-slot-editor-row-0-widen')).toBeDisabled();
-  });
-
-  test('create payload includes layout_config when the slot editor was touched', async () => {
-    api.apiCreateDisplayDevice.mockResolvedValueOnce({
-      ok: true,
-      data: {
-        token: 'tribu_display_xyz',
-        device: {
-          id: 1, family_id: 7, name: 'Wall',
-          created_at: '2026-04-27T08:00:00', last_used_at: null, revoked_at: null,
-        },
-      },
-    });
-
-    await openCreateForm();
-    fireEvent.change(screen.getByTestId('display-create-name'), { target: { value: 'Wall' } });
-
-    const row0 = screen.getByTestId('display-slot-editor-row-0');
-    fireEvent.change(within(row0).getByTestId('display-slot-editor-row-0-type'), {
-      target: { value: 'members' },
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('display-create-submit'));
-    });
-    await flushAsync();
-
-    expect(api.apiCreateDisplayDevice).toHaveBeenCalledTimes(1);
-    const [familyArg, payload] = api.apiCreateDisplayDevice.mock.calls[0];
-    expect(familyArg).toBe(7);
-    expect(payload).toMatchObject({
-      name: 'Wall',
-      display_mode: 'tablet',
-      layout_preset: 'hearth',
-      refresh_interval_seconds: 60,
-    });
-    expect(payload.layout_config).toBeDefined();
-    expect(payload.layout_config.columns).toBe(3);
-    expect(payload.layout_config.rows).toBe(3);
-    expect(payload.layout_config.widgets[0].type).toBe('members');
-  });
-
-  test('save payload for an existing device includes the modified layout_config', async () => {
-    api.apiListDisplayDevices.mockResolvedValue({
-      ok: true,
-      data: [{
-        id: 11, family_id: 7, name: 'Hallway',
-        display_mode: 'tablet', layout_preset: 'hearth',
-        refresh_interval_seconds: 60,
-        created_at: '2026-04-20T08:00:00', last_used_at: null, revoked_at: null,
-      }],
-    });
-    api.apiUpdateDisplayDevice.mockResolvedValue({ ok: true, data: {} });
+describe('DisplaysSection weather place', () => {
+  test('admins search, choose and remove the family weather place', async () => {
+    api.apiSearchWeatherLocation.mockResolvedValue({ ok: true, data: [
+      { name: 'Hamburg', region: 'Hamburg', country: 'Germany', latitude: 53.55, longitude: 9.99 },
+      { name: 'Hamburg', region: 'New York', country: 'United States', latitude: 42.7, longitude: -78.8 },
+    ] });
+    api.apiSetWeatherLocation.mockResolvedValue({ ok: true, data: { name: 'Hamburg', latitude: 53.55, longitude: 9.99 } });
+    api.apiClearWeatherLocation.mockResolvedValue({ ok: true, data: {} });
 
     await act(async () => { render(<DisplaysSection />); });
     await flushAsync();
+    expect(screen.getByTestId('display-weather-place')).toHaveTextContent('Off');
 
-    const row = await screen.findByTestId('display-row-11');
-    fireEvent.click(within(row).getByTestId('display-config-toggle-11'));
-    const slotRow = within(row).getByTestId('display-slot-editor-row-0');
-    // Hearth's home_header starts with w=1; bumping to 2 forces a real onChange.
-    fireEvent.change(within(slotRow).getByTestId('display-slot-editor-row-0-w'), {
-      target: { value: '2' },
-    });
+    fireEvent.click(screen.getByTestId('display-weather-choose'));
+    fireEvent.change(screen.getByTestId('display-weather-query'), { target: { value: 'Hamb' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-weather-search')); });
+    expect(api.apiSearchWeatherLocation).toHaveBeenCalledWith(7, 'Hamb', 'de');
 
-    await act(async () => {
-      fireEvent.click(within(row).getByTestId('display-save-config'));
-    });
-    await flushAsync();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Hamburg Hamburg, Germany/ })); });
+    expect(api.apiSetWeatherLocation).toHaveBeenCalledWith(7, { name: 'Hamburg', latitude: 53.55, longitude: 9.99 });
+    expect(screen.getByTestId('display-weather-place')).toHaveTextContent('Hamburg');
 
-    expect(api.apiUpdateDisplayDevice).toHaveBeenCalledTimes(1);
-    const [familyArg, deviceArg, payload] = api.apiUpdateDisplayDevice.mock.calls[0];
-    expect(familyArg).toBe(7);
-    expect(deviceArg).toBe(11);
-    expect(payload).toMatchObject({
-      display_mode: 'tablet',
-      layout_preset: 'hearth',
-      refresh_interval_seconds: 60,
-    });
-    expect(payload.layout_config).toBeDefined();
-    expect(payload.layout_config.widgets[0].w).toBe(2);
+    await act(async () => { fireEvent.click(screen.getByTestId('display-weather-remove')); });
+    expect(api.apiClearWeatherLocation).toHaveBeenCalledWith(7);
+    expect(screen.getByTestId('display-weather-place')).toHaveTextContent('Off');
   });
 
-
-
-  test('changing display mode on an existing device clears stale custom layout_config before save', async () => {
-    api.apiListDisplayDevices.mockResolvedValue({
-      ok: true,
-      data: [{
-        id: 12, family_id: 7, name: 'Kitchen',
-        display_mode: 'tablet', layout_preset: 'hearth',
-        refresh_interval_seconds: 60,
-        layout_config: {
-          columns: 3,
-          rows: 3,
-          widgets: [{ type: 'home_header', x: 0, y: 0, w: 3, h: 1 }],
-        },
-        created_at: '2026-04-20T08:00:00', last_used_at: null, revoked_at: null,
-      }],
-    });
-    api.apiUpdateDisplayDevice.mockResolvedValue({ ok: true, data: {} });
-
+  test('a place from another region keeps its region in the name', async () => {
+    api.apiSearchWeatherLocation.mockResolvedValue({ ok: true, data: [
+      { name: 'Hamburg', region: 'New York', country: 'United States', latitude: 42.7, longitude: -78.8 },
+    ] });
+    api.apiSetWeatherLocation.mockResolvedValue({ ok: true, data: { name: 'Hamburg, New York', latitude: 42.7, longitude: -78.8 } });
     await act(async () => { render(<DisplaysSection />); });
     await flushAsync();
+    fireEvent.click(screen.getByTestId('display-weather-choose'));
+    fireEvent.change(screen.getByTestId('display-weather-query'), { target: { value: 'Hamburg' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-weather-search')); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /New York, United States/ })); });
+    expect(api.apiSetWeatherLocation).toHaveBeenCalledWith(7, { name: 'Hamburg, New York', latitude: 42.7, longitude: -78.8 });
+  });
 
-    const row = await screen.findByTestId('display-row-12');
-    fireEvent.click(within(row).getByTestId('display-config-toggle-12'));
-    fireEvent.change(within(row).getByTestId('display-mode-select'), {
-      target: { value: 'eink' },
-    });
-
-    await act(async () => {
-      fireEvent.click(within(row).getByTestId('display-save-config'));
-    });
+  test('an unreachable place search shows a clear message', async () => {
+    api.apiSearchWeatherLocation.mockResolvedValue({ ok: false, status: 502, data: null });
+    await act(async () => { render(<DisplaysSection />); });
     await flushAsync();
-
-    const [, , payload] = api.apiUpdateDisplayDevice.mock.calls[0];
-    expect(payload).toMatchObject({
-      display_mode: 'eink',
-      layout_preset: 'hearth',
-      refresh_interval_seconds: 60,
-      layout_config: null,
-    });
+    fireEvent.click(screen.getByTestId('display-weather-choose'));
+    fireEvent.change(screen.getByTestId('display-weather-query'), { target: { value: 'Hamb' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-weather-search')); });
+    expect(screen.getByRole('alert')).toHaveTextContent('The place search is not reachable right now.');
   });
 
-  test('slot size controls are bounded by the current slot origin so slots stay inside the grid', async () => {
-    await openCreateForm();
-
-    const row0 = screen.getByTestId('display-slot-editor-row-0');
-    fireEvent.change(within(row0).getByTestId('display-slot-editor-row-0-x'), {
-      target: { value: '2' },
-    });
-
-    const wInput = within(row0).getByTestId('display-slot-editor-row-0-w');
-    expect(wInput).toHaveAttribute('max', '1');
-
-    fireEvent.change(wInput, { target: { value: '3' } });
-    expect(screen.getByTestId('display-live-preview')).toHaveTextContent(/1×2 @ \(2,0\)/);
-  });
-
-  test('layout composer labels use localized display messages instead of raw keys', async () => {
-    await openCreateForm();
-
-    expect(screen.getByText('Live preview')).toBeInTheDocument();
-    expect(screen.getByText('Slot editor')).toBeInTheDocument();
-    expect(screen.getAllByText('Home header').length).toBeGreaterThan(0);
-    expect(screen.queryByText('display_live_preview_label')).not.toBeInTheDocument();
-  });
-
-  test('does not allow arbitrary widget strings: invalid types are rejected from the select options', async () => {
-    await openCreateForm();
-    const typeSelect = within(screen.getByTestId('display-slot-editor-row-0'))
-      .getByTestId('display-slot-editor-row-0-type');
-    const optionValues = Array.from(typeSelect.querySelectorAll('option')).map((o) => o.value);
-    expect(optionValues).not.toContain('arbitrary_widget');
-    expect(optionValues).not.toContain('script');
-    expect(optionValues.every((v) => WHITELIST.includes(v))).toBe(true);
+  test('demo mode hides the weather place', async () => {
+    mockAppState = { ...mockAppState, demoMode: true };
+    await act(async () => { render(<DisplaysSection />); });
+    expect(screen.queryByTestId('display-weather-panel')).not.toBeInTheDocument();
+    expect(api.apiGetWeatherLocation).not.toHaveBeenCalled();
   });
 });
