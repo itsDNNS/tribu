@@ -13,6 +13,11 @@ jest.mock('../../contexts/AppContext', () => ({
 }));
 
 jest.mock('../../lib/announce', () => ({ announce: jest.fn() }));
+const mockListMealPlans = jest.fn(() => Promise.resolve({ ok: true, data: [] }));
+jest.mock('../../lib/api', () => ({
+  ...jest.requireActual('../../lib/api'),
+  apiListMealPlans: (...args) => mockListMealPlans(...args),
+}));
 
 jest.mock('../../components/DashboardView', () => function MockDashboard({ onOpenSearch }) {
   return <button type="button" onClick={onOpenSearch}>Dashboard search trigger</button>;
@@ -34,12 +39,22 @@ jest.mock('../../components/NotificationCenter', () => function MockNotification
 jest.mock('../../components/ForcePasswordChange', () => function MockForcePasswordChange() { return <div>Force password change</div>; });
 jest.mock('../../components/OnboardingWizard', () => function MockOnboarding() { return <div>Onboarding</div>; });
 jest.mock('../../components/MemberAvatar', () => function MockMemberAvatar() { return <div data-testid="member-avatar" />; });
-jest.mock('../../components/SearchOverlay', () => function MockSearchOverlay({ open }) {
-  return open ? <div role="dialog" aria-label="Search">Search overlay</div> : null;
+jest.mock('../../components/SearchOverlay', () => function MockSearchOverlay({ open, initialQuery }) {
+  return open ? <div role="dialog" aria-label="Search">Search overlay{initialQuery ? `: ${initialQuery}` : ''}</div> : null;
 });
 
 const messages = {
   'module.responsive.home':'Home','module.responsive.calendar':'Calendar','module.responsive.new':'New','module.responsive.shopping':'Shopping','module.responsive.more':'More',
+  'module.responsive.group_lists': 'Lists & meals',
+  'module.responsive.group_family': 'Family',
+  'module.responsive.find_area': 'Find an area',
+  'module.responsive.no_area': 'No matching area.',
+  'module.responsive.search_everything': 'Search Tribu for "{query}"',
+  'module.responsive.overdue': '{count} overdue',
+  'module.responsive.due_today': '{count} due today',
+  'module.responsive.meal_today': 'Today: {meal}',
+  'module.responsive.dark_mode': 'Dark',
+  close: 'Close',
   dashboard: 'Dashboard',
   calendar: 'Calendar',
   activity: 'Activity',
@@ -136,7 +151,72 @@ describe('AppShell mobile bottom navigation', () => {
     fireEvent.click(within(nav).getByRole('button', { name: 'More', exact: true }));
     const menu = screen.getByRole('dialog');
     expect(within(menu).getByRole('button', { name: 'Tasks', exact: true })).toHaveAccessibleDescription('Tasks: 1');
-    expect(within(menu).getByRole('button', { name: 'Shopping', exact: true })).toHaveAccessibleDescription('Shopping: 2');
+    // Shopping already has its own bottom-navigation slot.
+    expect(within(menu).queryByRole('button', { name: 'Shopping', exact: true })).not.toBeInTheDocument();
+  });
+
+  it('groups the More sheet by household job without repeating bottom navigation areas', () => {
+    mockAppState = baseState();
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'More', exact: true }));
+    const menu = screen.getByRole('dialog', { name: 'More' });
+    expect(within(menu).getByRole('region', { name: 'Plan' })).toHaveTextContent('Weekly plan');
+    expect(within(menu).getByRole('region', { name: 'Lists & meals' })).toHaveTextContent('Tasks');
+    expect(within(menu).getByRole('region', { name: 'Family' })).toHaveTextContent('Contacts');
+    for (const name of ['Dashboard', 'Calendar', 'Shopping']) {
+      expect(within(menu).queryByRole('button', { name, exact: true })).not.toBeInTheDocument();
+    }
+    expect(within(menu).getByRole('button', { name: 'Close' })).toHaveFocus();
+  });
+
+  it('filters areas from the More search and hands other queries to the global search', () => {
+    const setActiveView = jest.fn();
+    mockAppState = baseState({ setActiveView });
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'More', exact: true }));
+    const menu = screen.getByRole('dialog', { name: 'More' });
+    const search = within(menu).getByRole('searchbox', { name: 'Find an area' });
+    fireEvent.change(search, { target: { value: 'rewa' } });
+    expect(within(menu).getByRole('button', { name: 'Rewards', exact: true })).toBeInTheDocument();
+    expect(within(menu).queryByRole('button', { name: 'Tasks', exact: true })).not.toBeInTheDocument();
+    fireEvent.keyDown(search, { key: 'Enter' });
+    expect(setActiveView).toHaveBeenCalledWith('rewards');
+
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'More', exact: true }));
+    const again = screen.getByRole('dialog', { name: 'More' });
+    fireEvent.change(within(again).getByRole('searchbox'), { target: { value: 'dentist' } });
+    expect(again).toHaveTextContent('No matching area.');
+    fireEvent.click(within(again).getByRole('button', { name: 'Search Tribu for "dentist"' }));
+    expect(screen.queryByRole('dialog', { name: 'More' })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Search' })).toHaveTextContent('Search overlay: dentist');
+  });
+
+  it('shows short hints for overdue tasks, today\'s meal and the next birthday', async () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString();
+    mockListMealPlans.mockResolvedValueOnce({ ok: true, data: [{ id: 1, slot: 'evening', meal_name: 'Lasagne' }] });
+    mockAppState = baseState({
+      lang: 'en',
+      tasks: [{ status: 'open', due_date: yesterday }, { status: 'open', due_date: yesterday }],
+      summary: { upcoming_birthdays: [{ person_name: 'Mia', days_until: 1 }] },
+    });
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'More', exact: true }));
+    const menu = screen.getByRole('dialog', { name: 'More' });
+    expect(within(menu).getByRole('button', { name: 'Tasks', exact: true })).toHaveAccessibleDescription('Tasks: 2, 2 overdue');
+    expect(within(menu).getByRole('button', { name: 'Contacts', exact: true })).toHaveAccessibleDescription('Mia · tomorrow');
+    expect(await within(menu).findByText('Today: Lasagne')).toBeInTheDocument();
+    expect(mockListMealPlans).toHaveBeenCalledWith(1, expect.any(String), expect.any(String));
+  });
+
+  it('switches between light and dark design from the More sheet', () => {
+    const setTheme = jest.fn();
+    mockAppState = baseState({ theme: 'light', setTheme });
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'More', exact: true }));
+    const toggle = within(screen.getByRole('dialog', { name: 'More' })).getByRole('switch', { name: 'Dark' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(toggle);
+    expect(setTheme).toHaveBeenCalledWith('dark');
   });
 
   it('shows unread activity outside the dashboard and respects the badge preference at runtime', () => {

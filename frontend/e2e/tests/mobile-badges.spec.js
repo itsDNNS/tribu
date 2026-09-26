@@ -38,8 +38,10 @@ for (const width of [320, 390]) {
     const menu = page.getByRole('dialog');
     await expect(header).toHaveAttribute('aria-expanded', 'true');
     await expect(more).toHaveAttribute('aria-expanded', 'true');
-    await expect(menu.getByRole('button', { name: 'Tasks', exact: true })).toHaveAccessibleDescription(`Tasks: ${taskCount}`);
-    await expect(menu.getByRole('button', { name: 'Shopping', exact: true })).toHaveAccessibleDescription(`Shopping: ${shoppingCount}`);
+    // Task tiles may append a due-date hint after the count.
+    await expect(menu.getByRole('button', { name: 'Tasks', exact: true })).toHaveAccessibleDescription(new RegExp(`^Tasks: ${taskCount}\\b`));
+    // Shopping has its own bottom-navigation slot and is not repeated in the sheet.
+    await expect(menu.getByRole('button', { name: 'Shopping', exact: true })).toHaveCount(0);
     await expect(menu.getByRole('button', { name: 'Notifications', exact: true })).toHaveAccessibleDescription('7 unread');
     await menu.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(more).toHaveAttribute('aria-current', 'page');
@@ -55,7 +57,7 @@ for (const width of [320, 390]) {
     await expect(page.getByRole('switch', { name: 'Notification badge', exact: true })).not.toBeChecked();
     await more.click();
     await expect(menu.getByRole('button', { name: 'Notifications', exact: true }).locator('.ui-count-badge')).toHaveCount(0);
-    await expect(menu.getByRole('button', { name: 'Tasks', exact: true })).toHaveAccessibleDescription(`Tasks: ${taskCount}`);
+    await expect(menu.getByRole('button', { name: 'Tasks', exact: true })).toHaveAccessibleDescription(new RegExp(`^Tasks: ${taskCount}\\b`));
     await page.keyboard.press('Escape');
     await expect(more).toBeFocused();
     await page.getByRole('switch', { name: 'Notification badge', exact: true }).click();

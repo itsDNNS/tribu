@@ -78,6 +78,7 @@ export default function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [familyMenuOpen, setFamilyMenuOpen] = useState(false);
   const [dashboardLayoutAction, setDashboardLayoutAction] = useState(null);
@@ -91,6 +92,7 @@ export default function AppShell() {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
+        setSearchQuery('');
         setSearchOpen((prev) => !prev);
       }
     };
@@ -411,7 +413,7 @@ export default function AppShell() {
         </div>
       </main>
 
-      {<ResponsiveUI onLayout={activeView==='dashboard'?dashboardLayoutAction:null} items={[...orderedItems,...pinnedItems]} navigate={navigate} sheet={mobileSheet} setSheet={setMobileSheet} onNotifications={()=>setNotifPanelOpen(true)} onCreate={kind=>{
+      {<ResponsiveUI onLayout={activeView==='dashboard'?dashboardLayoutAction:null} items={[...orderedItems,...pinnedItems]} navigate={navigate} sheet={mobileSheet} setSheet={setMobileSheet} onNotifications={()=>setNotifPanelOpen(true)} onSearchAll={query=>{setSearchQuery(query);setSearchOpen(true);}} onCreate={kind=>{
         const route={event:'calendar',task:'tasks',shopping:'shopping',meal:'meal_plans'}[kind];
         navigate(route);setCreateRequest({kind,id:Date.now()});
       }}/>}
@@ -438,7 +440,7 @@ export default function AppShell() {
 
       {/* Live region for screen reader announcements */}
       <div id="a11y-announcer" className="sr-only" aria-live="polite" aria-atomic="true" />
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SearchOverlay open={searchOpen} initialQuery={searchQuery} onClose={() => { setSearchOpen(false); setSearchQuery(''); }} />
     </div>
   );
 }

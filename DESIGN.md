@@ -229,6 +229,18 @@ The app shell is a persistent household map. Desktop navigation should be struct
 
 Navigation labels should describe the family workflow, not the underlying module architecture. Active state needs visible color and shape, not color alone.
 
+The mobile “More” sheet is a bottom sheet with a grab handle, a short title and a
+thumb-reachable close button. It does not repeat Home, Calendar or Shopping from
+the bottom navigation. Remaining areas appear as four-column icon tiles grouped
+into Plan, Lists & meals and Family, using pastel tones per area and the
+existing counters. Tiles may show one short, data-backed hint (overdue or due
+tasks, today’s next meal, the next birthday within two weeks); hints never
+replace the label. A field at the top filters areas and settings while typing
+and offers a hand-off to the global search. Notifications, settings, admin, the
+dark-design switch and dashboard layout follow as compact rows, with the
+account, family switcher and logout last. The sheet keeps its opening height
+while filtering and can be closed by swiping the header down.
+
 ### Dashboard cards
 
 Dashboard cards are bento modules. Each card should answer one household question:
