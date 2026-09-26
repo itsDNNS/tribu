@@ -591,6 +591,7 @@
   "display_link_created": "Pariliitoslinkki mallille {name}",
   "display_link_hint": "Avaa tämä linkki laitteella kerran muodostaaksesi laiteparin. Linkki näkyy vain tämän kerran.",
   "display_link_share_hint": "Kaikki tämän linkin saaneet voivat näyttää perheesi hallintapaneelin, kunnes peruutat sen.",
+  "display_qr_hint": "Asenna tablettiin Tribu-sovellus, valitse ”Family display” ja skannaa tämä koodi.",
   "display_status_active": "Aktiivinen",
   "display_status_revoked": "Peruutettu",
   "display_revoke": "Poista",

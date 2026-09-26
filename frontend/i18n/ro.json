@@ -591,6 +591,7 @@
   "display_link_created": "Link de asociere pentru {name}",
   "display_link_hint": "Deschideți această legătură pe dispozitiv o dată pentru a-l asocia. Linkul este afișat doar de această dată.",
   "display_link_share_hint": "Oricine are acest link poate afișa tabloul de bord al familiei până când îl revocați.",
+  "display_qr_hint": "Pe tabletă, instalează aplicația Tribu, alege „Family display” și scanează acest cod.",
   "display_status_active": "Activ",
   "display_status_revoked": "Revocat",
   "display_revoke": "Eliminați",

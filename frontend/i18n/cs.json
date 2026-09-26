@@ -591,6 +591,7 @@
   "display_link_created": "Párovací odkaz pro {name}",
   "display_link_hint": "Chcete-li zařízení spárovat, otevřete tento odkaz jednou. Odkaz se zobrazí pouze jednou.",
   "display_link_share_hint": "Kdokoli s tímto odkazem může zobrazovat váš rodinný panel, dokud jej neodvoláte.",
+  "display_qr_hint": "Na tabletu nainstalujte aplikaci Tribu, zvolte „Family display“ a naskenujte tento kód.",
   "display_status_active": "Aktivní",
   "display_status_revoked": "Odvoláno",
   "display_revoke": "Odebrat",

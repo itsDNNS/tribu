@@ -22,7 +22,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Activity | Household timeline | Recent changes and quick context. |
 | Search | Global search | Fast lookup across core household data. |
 | Family administration | Responsive family management | Member search and adult/child groups, permission dialogs, invitations, displays, SSO, backups and audit activity. See [admin layout](admin-layout.md). |
-| Shared Home Display | Read-only household screen | Pairable device tokens for kitchen tablets, hallway screens, wall and e-ink displays. Fixed Next up and timeline plus rotating cards for meals, shopping, weather, reminders, school, countdowns, stars, birthdays, people and the week; time-of-day modes and offline copy. See [shared display](shared-display.md). |
+| Shared Home Display | Read-only household screen | Pairable device tokens for kitchen tablets, hallway screens, wall and e-ink displays. Fixed Next up and timeline plus rotating cards for meals, shopping, weather, reminders, school, countdowns, stars, birthdays, people and the week; time-of-day modes and offline copy. QR pairing for the display mode of the Tribu Android app. See [shared display](shared-display.md). |
 | Phone sync | CalDAV, CardDAV, and VTODO | Calendar/contact sync plus a separately scoped task collection for Apple Reminders or DAVx5 with Tasks.org/OpenTasks. |
 | Integrations | Home Assistant, webhooks, API tokens | Automation hooks for self-hosted homes. |
 | Self-hosting | Docker Compose and GHCR images | PostgreSQL, Valkey, frontend, backend, backups, reverse proxy, and update docs. |

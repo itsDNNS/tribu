@@ -591,6 +591,7 @@
   "display_link_created": "Link de emparelhamento para {name}",
   "display_link_hint": "Abra este link no dispositivo uma vez para emparelhá-lo. O link é mostrado apenas uma vez.",
   "display_link_share_hint": "Qualquer pessoa com este link pode mostrar o painel da sua família até que você o revogue.",
+  "display_qr_hint": "No tablet, instala a app Tribu, escolhe “Family display” e digitaliza este código.",
   "display_status_active": "Ativo",
   "display_status_revoked": "Revogado",
   "display_revoke": "Remover",

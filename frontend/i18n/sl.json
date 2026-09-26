@@ -591,6 +591,7 @@
   "display_link_created": "Povezava za seznanjanje za {name}",
   "display_link_hint": "Enkrat odprite to povezavo v napravi, da jo seznanite. Povezava je prikazana samo enkrat.",
   "display_link_share_hint": "Vsakdo s to povezavo lahko prikaže vašo družinsko nadzorno ploščo, dokler je ne prekličete.",
+  "display_qr_hint": "Na tablico namesti aplikacijo Tribu, izberi »Family display« in skeniraj to kodo.",
   "display_status_active": "Aktiven",
   "display_status_revoked": "Preklicano",
   "display_revoke": "Odstrani",

@@ -591,6 +591,7 @@
   "display_link_created": "Link parowania dla {name}",
   "display_link_hint": "Otwórz ten link na urządzeniu raz, aby je sparować. Link jest pokazany tylko ten jeden raz.",
   "display_link_share_hint": "Każdy z tym linkiem może wyświetlać rodzinny pulpit, dopóki go nie unieważnisz.",
+  "display_qr_hint": "Na tablecie zainstaluj aplikację Tribu, wybierz „Family display” i zeskanuj ten kod.",
   "display_status_active": "Aktywny",
   "display_status_revoked": "Unieważniony",
   "display_revoke": "Usuń",

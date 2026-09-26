@@ -591,6 +591,7 @@
   "display_link_created": "Sidumislink {name} jaoks",
   "display_link_hint": "Sidumiseks avage see link seadmes üks kord. Link kuvatakse ainult see kord.",
   "display_link_share_hint": "Igaüks, kellel on see link, saab teie pere juhtpaneeli kuvada, kuni selle tühistate.",
+  "display_qr_hint": "Paigalda tahvelarvutisse Tribu rakendus, vali „Family display“ ja skanni see kood.",
   "display_status_active": "Aktiivne",
   "display_status_revoked": "Tühistatud",
   "display_revoke": "Eemalda",

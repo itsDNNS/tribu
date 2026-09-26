@@ -591,6 +591,7 @@
   "display_link_created": "Lien d’association pour {name}",
   "display_link_hint": "Ouvrir this link on the device once to pair it. The link is shown only this one time.",
   "display_link_share_hint": "Anyone with this link can show your famille dashboard until you revoke it.",
+  "display_qr_hint": "Sur la tablette, installez l’app Tribu, choisissez « Family display » et scannez ce code.",
   "display_status_active": "Actif",
   "display_status_revoked": "Révoqué",
   "display_revoke": "Retirer",

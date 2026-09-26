@@ -591,6 +591,7 @@
   "display_link_created": "Enlace de emparejamiento para {name}",
   "display_link_hint": "Abra este enlace en el dispositivo una vez para emparejarlo. El enlace se muestra sólo esta vez.",
   "display_link_share_hint": "Cualquier persona que tenga este enlace puede mostrar su panel familiar hasta que lo revoque.",
+  "display_qr_hint": "En la tableta, instala la app Tribu, elige «Family display» y escanea este código.",
   "display_status_active": "Activo",
   "display_status_revoked": "Revocado",
   "display_revoke": "Eliminar",

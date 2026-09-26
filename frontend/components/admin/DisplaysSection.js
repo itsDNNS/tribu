@@ -9,6 +9,7 @@ import ConfirmDialog from '../ConfirmDialog';
 import AdminDialog from './AdminDialog';
 import DisplayStageEditor, { StageSchematic, draftFromDevice, draftToPayload, everyLabel } from './DisplayStageEditor';
 import DisplayWeatherPanel from './DisplayWeatherPanel';
+import DisplayPairingQr from './DisplayPairingQr';
 
 /**
  * Admin tab for managing shared-home display devices (issue #172).
@@ -185,6 +186,12 @@ export default function DisplaysSection() {
                 : <><Copy size={14} /> {t(messages, 'token_copy')}</>}
             </button>
           </div>
+          {created.device?.display_mode !== 'eink' && (
+            <div className="display-pairing" data-testid="display-pairing">
+              <DisplayPairingQr value={created.displayUrl} label={t(messages, 'display_qr_hint')} />
+              <p className="display-pairing-hint">{t(messages, 'display_qr_hint')}</p>
+            </div>
+          )}
           {created.imageUrl && (
             <>
               <p className="adm-banner-warning">{t(messages, 'display_image_url_hint')}</p>
