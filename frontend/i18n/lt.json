@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Negalite pašalinti savęs",
   "error.CANNOT_RESET_OWN_PASSWORD": "Čia negalima iš naujo nustatyti savo slaptažodžio",
   "error.COLOR_NOT_ALLOWED": "Spalva neleistinoje paletėje",
+  "error.PROFILE_IMAGE_UNREADABLE": "Šio paveikslėlio nepavyko nuskaityti. Pasirinkite JPEG, PNG, WebP arba GIF paveikslėlį.",
   "error.COLOR_ALREADY_TAKEN": "Spalvą jau paėmė kitas narys",
   "error.TASK_NOT_FOUND": "Užduotis nerasta",
   "error.INVALID_STATUS": "Netinkama būsena: {status}",

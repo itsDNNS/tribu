@@ -18,3 +18,4 @@ radicale==3.8.0
 a2wsgi==1.10.10
 apprise==1.13.1
 cryptography==50.0.1
+pillow==12.3.0

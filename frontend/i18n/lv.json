@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Nevar noņemt sevi",
   "error.CANNOT_RESET_OWN_PASSWORD": "Šeit nevar atiestatīt savu paroli",
   "error.COLOR_NOT_ALLOWED": "Krāsa nav atļautajā paletē",
+  "error.PROFILE_IMAGE_UNREADABLE": "Šo attēlu nevarēja nolasīt. Lūdzu, izvēlies JPEG, PNG, WebP vai GIF attēlu.",
   "error.COLOR_ALREADY_TAKEN": "Krāsu jau ir paņēmis cits dalībnieks",
   "error.TASK_NOT_FOUND": "Uzdevums nav atrasts",
   "error.INVALID_STATUS": "Nederīgs statuss: {status}",

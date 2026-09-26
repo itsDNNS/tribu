@@ -516,6 +516,7 @@
   "error.CANNOT_REMOVE_SELF": "Du kannst dich nicht selbst entfernen",
   "error.CANNOT_RESET_OWN_PASSWORD": "Eigenes Passwort kann hier nicht zurückgesetzt werden",
   "error.COLOR_NOT_ALLOWED": "Farbe nicht in der erlaubten Palette",
+  "error.PROFILE_IMAGE_UNREADABLE": "Dieses Bild konnte nicht gelesen werden. Bitte wähle ein JPEG-, PNG-, WebP- oder GIF-Bild.",
   "error.COLOR_ALREADY_TAKEN": "Farbe bereits von einem anderen Mitglied belegt",
   "error.TASK_NOT_FOUND": "Aufgabe nicht gefunden",
   "error.INVALID_STATUS": "Ungültiger Status: {status}",

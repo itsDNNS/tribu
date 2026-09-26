@@ -201,3 +201,40 @@ describe('AccountTab birthdate input', () => {
     expect(input).toHaveValue('1985-07-15');
   });
 });
+
+describe('AccountTab profile image', () => {
+  async function upload(container) {
+    const file = new File(['not really an image'], 'me.png', { type: 'image/png' });
+    fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } });
+    await waitFor(() => expect(api.apiUpdateProfileImage).toHaveBeenCalled());
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('keeps the old image and explains when the server cannot read the upload', async () => {
+    mockAppState = baseState({
+      messages: { ...messages, 'error.PROFILE_IMAGE_UNREADABLE': 'This image could not be read.' },
+    });
+    api.apiUpdateProfileImage.mockResolvedValue({ ok: false, status: 422, data: { detail: { code: 'PROFILE_IMAGE_UNREADABLE' } } });
+    const { container } = render(<AccountTab />);
+
+    await upload(container);
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('This image could not be read.'));
+    expect(mockAppState.setProfileImage).not.toHaveBeenCalled();
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  test('shows the new image once it is saved', async () => {
+    mockAppState = baseState();
+    api.apiUpdateProfileImage.mockResolvedValue({ ok: true, status: 200, data: { status: 'ok' } });
+    const { container } = render(<AccountTab />);
+
+    await upload(container);
+
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Profile updated'));
+    expect(mockAppState.setProfileImage).toHaveBeenCalledWith(expect.stringMatching(/^data:image\/png;base64,/));
+  });
+});

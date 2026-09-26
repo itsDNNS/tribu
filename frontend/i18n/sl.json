@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Ne morete se odstraniti",
   "error.CANNOT_RESET_OWN_PASSWORD": "Tu ne morete ponastaviti lastnega gesla",
   "error.COLOR_NOT_ALLOWED": "Barva ni v dovoljeni paleti",
+  "error.PROFILE_IMAGE_UNREADABLE": "Te slike ni bilo mogoče prebrati. Izberi sliko JPEG, PNG, WebP ali GIF.",
   "error.COLOR_ALREADY_TAKEN": "Barvo je že prevzel drug član",
   "error.TASK_NOT_FOUND": "Naloga ni najdena",
   "error.INVALID_STATUS": "Neveljavno stanje: {status}",

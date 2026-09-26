@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Не можете да се премахнете",
   "error.CANNOT_RESET_OWN_PASSWORD": "Не можете да нулирате собствената си парола тук",
   "error.COLOR_NOT_ALLOWED": "Цветът не е в разрешената палитра",
+  "error.PROFILE_IMAGE_UNREADABLE": "Това изображение не може да бъде прочетено. Изберете JPEG, PNG, WebP или GIF изображение.",
   "error.COLOR_ALREADY_TAKEN": "Цветът вече е взет от друг член",
   "error.TASK_NOT_FOUND": "Задачата не е намерена",
   "error.INVALID_STATUS": "Невалиден статус: {status}",

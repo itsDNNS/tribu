@@ -483,6 +483,7 @@
   "error.CANNOT_REMOVE_SELF": "Nie możesz usunąć siebie",
   "error.CANNOT_RESET_OWN_PASSWORD": "Nie możesz tutaj zresetować własnego hasła",
   "error.COLOR_NOT_ALLOWED": "Kolor spoza dozwolonej palety",
+  "error.PROFILE_IMAGE_UNREADABLE": "Nie udało się odczytać tego obrazu. Wybierz obraz JPEG, PNG, WebP lub GIF.",
   "error.COLOR_ALREADY_TAKEN": "Kolor jest już zajęty przez innego członka",
   "error.TASK_NOT_FOUND": "Nie znaleziono zadania",
   "error.INVALID_STATUS": "Nieprawidłowy status: {status}",

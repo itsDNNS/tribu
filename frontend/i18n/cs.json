@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Nemůžete se odstranit",
   "error.CANNOT_RESET_OWN_PASSWORD": "Zde nelze obnovit své vlastní heslo",
   "error.COLOR_NOT_ALLOWED": "Barva není v povolené paletě",
+  "error.PROFILE_IMAGE_UNREADABLE": "Tento obrázek nelze načíst. Vyberte prosím obrázek JPEG, PNG, WebP nebo GIF.",
   "error.COLOR_ALREADY_TAKEN": "Barva již převzata jiným členem",
   "error.TASK_NOT_FOUND": "Úkol nenalezen",
   "error.INVALID_STATUS": "Neplatný stav: {status}",

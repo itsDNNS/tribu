@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Ne možete se ukloniti",
   "error.CANNOT_RESET_OWN_PASSWORD": "Ovdje ne možete ponovno postaviti vlastitu lozinku",
   "error.COLOR_NOT_ALLOWED": "Boja nije u dopuštenoj paleti",
+  "error.PROFILE_IMAGE_UNREADABLE": "Ova slika nije mogla biti pročitana. Odaberi JPEG, PNG, WebP ili GIF sliku.",
   "error.COLOR_ALREADY_TAKEN": "Boju je već preuzeo drugi član",
   "error.TASK_NOT_FOUND": "Zadatak nije pronađen",
   "error.INVALID_STATUS": "Nevažeći status: {status}",

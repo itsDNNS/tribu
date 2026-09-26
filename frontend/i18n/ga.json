@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Ní féidir tú féin a bhaint",
   "error.CANNOT_RESET_OWN_PASSWORD": "Ní féidir do phasfhocal féin a athshocrú anseo",
   "error.COLOR_NOT_ALLOWED": "Níl an dath sa phailéad ceadaithe",
+  "error.PROFILE_IMAGE_UNREADABLE": "Níorbh fhéidir an íomhá seo a léamh. Roghnaigh íomhá JPEG, PNG, WebP nó GIF.",
   "error.COLOR_ALREADY_TAKEN": "Dath glactha cheana féin ag ball eile",
   "error.TASK_NOT_FOUND": "Níor aimsíodh an tasc",
   "error.INVALID_STATUS": "Stádas neamhbhailí: {status}",

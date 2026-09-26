@@ -87,6 +87,8 @@ def _seed_member_with_pat(
         password_hash=hash_password("password"),
         display_name=f"User {suffix}",
         profile_image=profile_image,
+        # The display serves the derived small size; seed it as that.
+        profile_image_small=profile_image,
     )
     db.add(user)
     db.flush()
@@ -732,7 +734,7 @@ class TestSchoolTimetables:
         avatar = "data:image/png;base64,iVBORw0KGgo="
         db = TestSession()
         try:
-            db.query(User).filter(User.id == child_a).update({User.profile_image: avatar})
+            db.query(User).filter(User.id == child_a).update({User.profile_image: avatar, User.profile_image_small: avatar})
             db.commit()
         finally:
             db.close()

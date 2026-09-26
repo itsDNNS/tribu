@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Ei saa ennast eemaldada",
   "error.CANNOT_RESET_OWN_PASSWORD": "Siin ei saa oma parooli lähtestada",
   "error.COLOR_NOT_ALLOWED": "Värv ei ole lubatud paletis",
+  "error.PROFILE_IMAGE_UNREADABLE": "Seda pilti ei õnnestunud lugeda. Vali JPEG-, PNG-, WebP- või GIF-pilt.",
   "error.COLOR_ALREADY_TAKEN": "Värvi on juba võtnud teine liige",
   "error.TASK_NOT_FOUND": "Ülesannet ei leitud",
   "error.INVALID_STATUS": "Kehtetu olek: {status}",

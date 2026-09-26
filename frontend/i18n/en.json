@@ -516,6 +516,7 @@
   "error.CANNOT_REMOVE_SELF": "Cannot remove yourself",
   "error.CANNOT_RESET_OWN_PASSWORD": "Cannot reset your own password here",
   "error.COLOR_NOT_ALLOWED": "Color not in allowed palette",
+  "error.PROFILE_IMAGE_UNREADABLE": "This image could not be read. Please choose a JPEG, PNG, WebP or GIF picture.",
   "error.COLOR_ALREADY_TAKEN": "Color already taken by another member",
   "error.TASK_NOT_FOUND": "Task not found",
   "error.INVALID_STATUS": "Invalid status: {status}",

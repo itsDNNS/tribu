@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Kan inte ta bort dig själv",
   "error.CANNOT_RESET_OWN_PASSWORD": "Det går inte att återställa ditt eget lösenord här",
   "error.COLOR_NOT_ALLOWED": "Färg ej i tillåten palett",
+  "error.PROFILE_IMAGE_UNREADABLE": "Bilden kunde inte läsas. Välj en JPEG-, PNG-, WebP- eller GIF-bild.",
   "error.COLOR_ALREADY_TAKEN": "Färg har redan tagits av en annan medlem",
   "error.TASK_NOT_FOUND": "Uppgiften hittades inte",
   "error.INVALID_STATUS": "Ogiltig status: {status}",

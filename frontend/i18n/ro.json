@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Nu te poți îndepărta",
   "error.CANNOT_RESET_OWN_PASSWORD": "Nu vă puteți reseta propria parolă aici",
   "error.COLOR_NOT_ALLOWED": "Culoarea nu este în paleta permisă",
+  "error.PROFILE_IMAGE_UNREADABLE": "Această imagine nu a putut fi citită. Alege o imagine JPEG, PNG, WebP sau GIF.",
   "error.COLOR_ALREADY_TAKEN": "Culoarea deja luată de un alt membru",
   "error.TASK_NOT_FOUND": "Sarcina nu a fost găsită",
   "error.INVALID_STATUS": "Stare nevalidă: {status}",

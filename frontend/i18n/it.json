@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Non puoi rimuovere te stesso",
   "error.CANNOT_RESET_OWN_PASSWORD": "Non puoi reimpostare la tua password qui",
   "error.COLOR_NOT_ALLOWED": "Colore non nella tavolozza consentita",
+  "error.PROFILE_IMAGE_UNREADABLE": "Impossibile leggere questa immagine. Scegli un’immagine JPEG, PNG, WebP o GIF.",
   "error.COLOR_ALREADY_TAKEN": "Colore già preso da un altro membro",
   "error.TASK_NOT_FOUND": "Attività non trovata",
   "error.INVALID_STATUS": "Stato non valido: {status}",

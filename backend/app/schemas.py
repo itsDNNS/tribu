@@ -106,7 +106,7 @@ class MeResponse(BaseModel):
     user_id: int = Field(..., description="User ID")
     email: str = Field(..., description="Email address")
     display_name: str = Field(..., description="Display name")
-    profile_image: Optional[str] = Field(None, description="Base64-encoded profile image or null")
+    profile_image: Optional[str] = Field(None, description="Profile image as a 512 px square WebP data URL, or null")
     must_change_password: bool = Field(False, description="True if user must change their temporary password")
     has_completed_onboarding: bool = Field(True, description="True if user has completed the onboarding wizard")
 
@@ -214,7 +214,7 @@ class FamilyMemberResponse(BaseModel):
     is_adult: bool = Field(..., description="Whether this member is an adult")
     color: Optional[str] = Field(None, description="Personal color hex code")
     date_of_birth: Optional[date] = Field(None, description="Date of birth")
-    profile_image: Optional[str] = Field(None, description="Profile image (base64 data URL)")
+    profile_image: Optional[str] = Field(None, description="Profile image as a 192 px square WebP data URL, or null")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"user_id": 2, "display_name": "Max", "email": "max@example.com", "role": "member", "is_adult": True, "color": "#7c3aed"}]
@@ -2030,7 +2030,7 @@ class DisplayDashboardMember(BaseModel):
     """
     display_name: str = Field(..., description="Display name (rendered on the wall display)")
     color: Optional[str] = Field(None, description="Personal color hex code, if set")
-    profile_image: Optional[str] = Field(None, description="Avatar image data URL, if set")
+    profile_image: Optional[str] = Field(None, description="Avatar as a 192 px square WebP data URL, if set")
 
 
 class DisplayDashboardEvent(BaseModel):

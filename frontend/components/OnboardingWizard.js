@@ -90,8 +90,8 @@ export default function OnboardingWizard() {
     const reader = new FileReader();
     reader.onload = async () => {
       const value = String(reader.result || '');
-      setProfileImage(value);
-      await api.apiUpdateProfileImage(value);
+      const { ok } = await api.apiUpdateProfileImage(value);
+      if (ok) setProfileImage(value);
     };
     reader.readAsDataURL(file);
   }, [setProfileImage]);

@@ -280,6 +280,40 @@ def test_display_stage_migration_moves_devices_to_stage_layout(tmp_path, monkeyp
         assert not any(row[1].startswith("weather_") for row in conn.execute("PRAGMA table_info(families)"))
 
 
+def test_profile_image_sizes_migration_derives_sizes_from_uploads(tmp_path, monkeypatch):
+    import base64
+    import io
+    from PIL import Image
+    db_path = tmp_path / "avatars-0059.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    command.upgrade(config, "0058_display_stage_weather")
+    buffer = io.BytesIO()
+    Image.new("RGB", (640, 480), "#3b82f6").save(buffer, format="PNG")
+    upload = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()
+    broken = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 50).decode()
+    with sqlite3.connect(db_path) as conn:
+        conn.executemany(
+            "INSERT INTO users (id, email, display_name, profile_image) VALUES (?, ?, ?, ?)",
+            [(1, "a@example.com", "A", upload), (2, "b@example.com", "B", broken), (3, "c@example.com", "C", None)],
+        )
+    command.upgrade(config, "0059_profile_image_sizes")
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute("SELECT id, profile_image, profile_image_small, profile_image_large FROM users ORDER BY id").fetchall()
+    assert rows[0][1] == upload
+    assert rows[0][2].startswith("data:image/webp;base64,") and rows[0][3].startswith("data:image/webp;base64,")
+    small = Image.open(io.BytesIO(base64.b64decode(rows[0][2].split(",", 1)[1])))
+    assert small.size == (192, 192)
+    assert rows[1][1:] == (broken, None, None)
+    assert rows[2][1:] == (None, None, None)
+    command.downgrade(config, "0058_display_stage_weather")
+    with sqlite3.connect(db_path) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
+        assert {"profile_image_small", "profile_image_large"}.isdisjoint(columns)
+        assert conn.execute("SELECT profile_image FROM users WHERE id=1").fetchone() == (upload,)
+
+
 def test_shopping_model_defaults_match_migration_for_legacy_inserts():
     from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session

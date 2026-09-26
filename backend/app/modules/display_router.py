@@ -524,7 +524,7 @@ def _school_timetables_for(db: Session, family_id: int, day: date, membership_by
             children.append(SchoolTimetableMemberResponse(
                 display_name=member.display_name,
                 color=membership.color,
-                profile_image=sanitize_profile_image_data_url(member.profile_image),
+                profile_image=sanitize_profile_image_data_url(member.profile_image_small),
             ))
         groups.append(DisplaySchoolTimetableGroup(
             name=timetable.name,
@@ -727,7 +727,7 @@ def display_dashboard(
         DisplayDashboardMember(
             display_name=m.user.display_name,
             color=m.color,
-            profile_image=sanitize_profile_image_data_url(m.user.profile_image),
+            profile_image=sanitize_profile_image_data_url(m.user.profile_image_small),
         )
         for m in memberships
     ]

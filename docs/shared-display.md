@@ -101,7 +101,7 @@ The last successful data is kept on the device. If the network or the server is 
 
 Weather is optional and off until a family admin chooses a place under **Admin → Displays → Weather on displays**. Tribu then asks [Open-Meteo](https://open-meteo.com/) for the forecast of that place's coordinates (the place search sends the typed text to Open-Meteo's geocoder). Forecasts are cached for 15 minutes; failures simply hide the weather.
 
-The display payload contains no e-mail addresses, user IDs or account metadata. People are referenced by their position in the member list.
+The display payload contains no e-mail addresses, user IDs or account metadata. People are referenced by their position in the member list. Profile pictures are sent as small 192 px WebP images that Tribu derives from each upload, without camera metadata.
 
 ## Configuration reference
 

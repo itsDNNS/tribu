@@ -34,8 +34,9 @@ from app.core.errors import (
     error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT,
     LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED,
     OPEN_REGISTRATION_DISABLED, SETUP_RESTORE_TOKEN_REQUIRED,
-    SETUP_RESTORE_TOKEN_INVALID, SETUP_RESTORE_UPLOAD_TOO_LARGE,
+    SETUP_RESTORE_TOKEN_INVALID, SETUP_RESTORE_UPLOAD_TOO_LARGE, PROFILE_IMAGE_UNREADABLE,
 )
+from app.core.avatars import AvatarError, set_profile_image
 from app.core import oidc as oidc_core
 from app.database import get_db, SessionLocal
 from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User, UserSession
@@ -597,7 +598,7 @@ def refresh_session(request: Request, db: Session = Depends(get_db)):
     response_description="User profile",
 )
 def me(user: User = Depends(current_user), _scope=require_scope("profile:read")):
-    return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image, must_change_password=user.must_change_password, has_completed_onboarding=user.has_completed_onboarding)
+    return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image_large, must_change_password=user.must_change_password, has_completed_onboarding=user.has_completed_onboarding)
 
 
 @app.patch(
@@ -644,7 +645,10 @@ def update_profile_image(
     db: Session = Depends(get_db),
     _scope=require_scope("profile:write"),
 ):
-    user.profile_image = payload.profile_image
+    try:
+        set_profile_image(user, payload.profile_image)
+    except AvatarError:
+        raise HTTPException(status_code=422, detail=error_detail(PROFILE_IMAGE_UNREADABLE))
     db.commit()
     # Invalidate members cache so other family members see the new image
     family_ids = [m.family_id for m in db.query(Membership).filter(Membership.user_id == user.id).all()]

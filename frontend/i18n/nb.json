@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Kan ikke fjerne deg selv",
   "error.CANNOT_RESET_OWN_PASSWORD": "Kan ikke tilbakestille ditt eget passord her",
   "error.COLOR_NOT_ALLOWED": "Farge ikke i tillatt palett",
+  "error.PROFILE_IMAGE_UNREADABLE": "Bildet kunne ikke leses. Velg et JPEG-, PNG-, WebP- eller GIF-bilde.",
   "error.COLOR_ALREADY_TAKEN": "Fargen er allerede tatt av et annet medlem",
   "error.TASK_NOT_FOUND": "Oppgaven ble ikke funnet",
   "error.INVALID_STATUS": "Ugyldig status: {status}",

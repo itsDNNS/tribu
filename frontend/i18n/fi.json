@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Et voi poistaa itseäsi",
   "error.CANNOT_RESET_OWN_PASSWORD": "Omaa salasanaasi ei voi nollata täällä",
   "error.COLOR_NOT_ALLOWED": "Väri ei sallitussa paletissa",
+  "error.PROFILE_IMAGE_UNREADABLE": "Kuvaa ei voitu lukea. Valitse JPEG-, PNG-, WebP- tai GIF-kuva.",
   "error.COLOR_ALREADY_TAKEN": "Toinen jäsen on jo ottanut värin",
   "error.TASK_NOT_FOUND": "Tehtävää ei löydy",
   "error.INVALID_STATUS": "Virheellinen tila: {status}",

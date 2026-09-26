@@ -484,6 +484,7 @@
   "error.CANNOT_REMOVE_SELF": "Kan jezelf niet verwijderen",
   "error.CANNOT_RESET_OWN_PASSWORD": "U kunt hier uw eigen wachtwoord niet opnieuw instellen",
   "error.COLOR_NOT_ALLOWED": "Kleur niet in toegestaan palet",
+  "error.PROFILE_IMAGE_UNREADABLE": "Deze afbeelding kon niet worden gelezen. Kies een JPEG-, PNG-, WebP- of GIF-afbeelding.",
   "error.COLOR_ALREADY_TAKEN": "Kleur al overgenomen door een ander lid",
   "error.TASK_NOT_FOUND": "Taak niet gevonden",
   "error.INVALID_STATUS": "Ongeldige status: {status}",

@@ -10,7 +10,8 @@ from app.database import get_db
 from app.models import AuditLog, Membership, User
 from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
-from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN
+from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN, PROFILE_IMAGE_UNREADABLE
+from app.core.avatars import AvatarError, set_profile_image
 
 router = APIRouter(prefix="/families", tags=["families"], responses={**AUTH_RESPONSES})
 
@@ -77,7 +78,7 @@ def family_members(
                 is_adult=m.is_adult,
                 color=m.color,
                 date_of_birth=m.date_of_birth,
-                profile_image=m.user.profile_image,
+                profile_image=m.user.profile_image_small,
             ).model_dump()
             for m in memberships
             if m.user
@@ -286,7 +287,10 @@ def update_member_avatar(
     target_user = db.query(User).filter(User.id == target_user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail=error_detail(USER_NOT_FOUND))
-    target_user.profile_image = payload.profile_image
+    try:
+        set_profile_image(target_user, payload.profile_image)
+    except AvatarError:
+        raise HTTPException(status_code=422, detail=error_detail(PROFILE_IMAGE_UNREADABLE))
     db.commit()
     # Invalidate cache for all families this user belongs to
     family_ids = [m.family_id for m in db.query(Membership).filter(Membership.user_id == target_user_id).all()]

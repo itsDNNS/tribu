@@ -87,10 +87,11 @@ export default function AccountTab() {
     const reader = new FileReader();
     reader.onload = async () => {
       const value = String(reader.result || '');
-      setProfileImage(value);
       if (loggedIn) {
-        await api.apiUpdateProfileImage(value);
+        const { ok, data } = await api.apiUpdateProfileImage(value);
+        if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
       }
+      setProfileImage(value);
       toastSuccess(t(messages, 'toast.profile_updated'));
     };
     reader.readAsDataURL(file);

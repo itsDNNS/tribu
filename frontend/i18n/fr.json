@@ -483,6 +483,7 @@
   "error.CANNOT_REMOVE_SELF": "Cannot retirer yourself",
   "error.CANNOT_RESET_OWN_PASSWORD": "Cannot reset your own mot de passe here",
   "error.COLOR_NOT_ALLOWED": "Color not in allowed palette",
+  "error.PROFILE_IMAGE_UNREADABLE": "Cette image n’a pas pu être lue. Choisissez une image JPEG, PNG, WebP ou GIF.",
   "error.COLOR_ALREADY_TAKEN": "Color already taken by another membre",
   "error.TASK_NOT_FOUND": "Task not found",
   "error.INVALID_STATUS": "Statut invalide : {status}",

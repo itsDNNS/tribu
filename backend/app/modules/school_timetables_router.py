@@ -127,7 +127,7 @@ def _member_response(member: User, membership_by_user_id: dict[int, Membership])
     return SchoolTimetableMemberResponse(
         display_name=member.display_name,
         color=membership.color if membership else None,
-        profile_image=sanitize_profile_image_data_url(member.profile_image),
+        profile_image=sanitize_profile_image_data_url(member.profile_image_small),
     )
 
 
