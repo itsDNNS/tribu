@@ -97,6 +97,8 @@ See [Self-Hosting: Updating](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#
 
 **Admin → System** (instance admin only) shows the running version, the backend's memory use against the container limit, and backend processes that stopped without shutting down in the last 7 days, for example after running out of memory. Each process records a heartbeat every minute; a process that stops sending it is counted as a crash within about three minutes. After three crashes within an hour, the instance admin gets a notification (and a push message if push is enabled), at most every six hours. `docker logs tribu-backend` shows the cause.
 
+With Valkey configured (`REDIS_URL`, as in the reference compose file) the backend runs two worker processes, so Tribu keeps answering while a crashed worker is restarted. Live shopping updates and rate limits are shared through Valkey, and only one worker runs scheduled jobs such as reminders and backups; if it dies, another takes over within seconds. Without Valkey one worker runs. Set `TRIBU_WORKERS` to choose the number yourself; each worker needs roughly 150–200 MB of memory.
+
 ## Troubleshooting
 
 See [Self-Hosting: Troubleshooting](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#troubleshooting).

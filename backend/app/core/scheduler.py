@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 BACKUP_JOB_ID = "scheduled_backup"
 NOTIFICATION_JOB_ID = "check_notifications"
 CALENDAR_SUBSCRIPTION_REFRESH_JOB_ID = "refresh_calendar_subscriptions"
+BACKUP_SCHEDULE_SYNC_JOB_ID = "sync_backup_schedule"
 DST_TRANSITION_BUFFER = timedelta(hours=3)
 
 _scheduler: BackgroundScheduler | None = None
@@ -585,6 +586,44 @@ def start_calendar_subscription_refresh_job():
         coalesce=True,
     )
     logger.info("Calendar subscription refresh job started (every 6 hours).")
+
+
+_applied_backup_schedule: tuple[str, int] | None = None
+
+
+def sync_backup_schedule(db_url: str, backup_dir: str) -> bool:
+    """Apply the stored backup schedule if it changed.
+
+    Only the process that runs the scheduler applies it, so a change saved
+    through another worker reaches it through the database. Returns True when
+    the schedule was (re)configured.
+    """
+    global _applied_backup_schedule
+    from app.core.utils import get_setting
+
+    db = SessionLocal()
+    try:
+        wanted = (get_setting(db, "backup_schedule", "off"), int(get_setting(db, "backup_retention", "7")))
+    finally:
+        db.close()
+    if wanted == _applied_backup_schedule:
+        return False
+    configure_backup_schedule(wanted[0], db_url, backup_dir, wanted[1])
+    _applied_backup_schedule = wanted
+    return True
+
+
+def start_backup_schedule_sync_job(db_url: str, backup_dir: str):
+    sync_backup_schedule(db_url, backup_dir)
+    get_scheduler().add_job(
+        sync_backup_schedule,
+        trigger=IntervalTrigger(minutes=1),
+        id=BACKUP_SCHEDULE_SYNC_JOB_ID,
+        args=[db_url, backup_dir],
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
 
 
 def start_scheduler():

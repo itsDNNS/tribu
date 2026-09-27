@@ -71,13 +71,15 @@ from app.modules.display_router import admin_router as display_admin_router, dis
 from app.modules.mobile_router import router as mobile_router
 from app.modules.webhooks_router import router as webhooks_router
 from app.modules.notification_destinations_router import router as notification_destinations_router
-from app.core.scheduler import configure_backup_schedule, start_calendar_subscription_refresh_job, start_notification_job, start_scheduler, shutdown_scheduler
+from app.core.scheduler import start_backup_schedule_sync_job, start_calendar_subscription_refresh_job, start_notification_job, start_scheduler, shutdown_scheduler
+from app.core import scheduler_leader
 from app.core import ws_broadcast
 from app.schemas import (
     AUTH_RESPONSES, CONFLICT_RESPONSE, ErrorResponse,
     ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, MobileLoginResponse, MobileRefreshRequest, ProfileImageUpdate, RegisterRequest,
 )
 from app.core import cache, process_health
+from app.core.rate_limits import limiter_storage_options
 from app.core.utils import get_setting, utcnow
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION
@@ -215,6 +217,7 @@ TAG_METADATA = [
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ws_broadcast.set_event_loop(asyncio.get_running_loop())
+    relay = asyncio.create_task(ws_broadcast.relay_events())
     process_health.start_heartbeat(SessionLocal)
 
     if cache.ping():
@@ -222,22 +225,20 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("Valkey not available - caching disabled, falling back to DB")
 
-    db = SessionLocal()
-    try:
-        schedule = get_setting(db, "backup_schedule", "off")
-        retention = int(get_setting(db, "backup_retention", "7"))
+    def run_scheduler():
         start_scheduler()
         start_notification_job()
         start_calendar_subscription_refresh_job()
-        if schedule != "off":
-            configure_backup_schedule(schedule, BACKUP_DB_URL, BACKUP_DIR, retention)
-    finally:
-        db.close()
+        start_backup_schedule_sync_job(BACKUP_DB_URL, BACKUP_DIR)
+
+    # With several workers only one process runs the scheduler (issue #494).
+    scheduler_leader.start(run_scheduler, shutdown_scheduler)
 
     yield
 
-    shutdown_scheduler()
+    scheduler_leader.stop()
     process_health.stop_heartbeat()
+    relay.cancel()
 
 
 # ---------------------------------------------------------------------------
@@ -311,7 +312,7 @@ def rate_limit_key(request: Request) -> str:
     return client_host or "unknown"
 
 
-limiter = Limiter(key_func=rate_limit_key)
+limiter = Limiter(key_func=rate_limit_key, **limiter_storage_options())
 
 app = FastAPI(
     title="Tribu API",

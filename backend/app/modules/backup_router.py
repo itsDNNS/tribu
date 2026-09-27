@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from app.core.backup import build_backup_status, create_backup, delete_backup, enforce_retention, get_backup_path, list_backups
 from app.core.deps import current_user
 from app.core.scopes import require_scope
-from app.core.scheduler import configure_backup_schedule
+from app.core import scheduler_leader
+from app.core.scheduler import sync_backup_schedule
 from app.database import get_db
 from app.models import User
 from app.schemas import ADMIN_RESPONSES, NOT_FOUND_RESPONSE, BackupConfigResponse, BackupConfigUpdate, BackupEntry, BackupStatusResponse
@@ -72,7 +73,10 @@ def update_config(
     set_setting(db, "backup_retention", str(payload.retention))
     db.commit()
 
-    configure_backup_schedule(payload.schedule.value, DATABASE_URL, BACKUP_DIR, payload.retention)
+    # The process that runs the scheduler applies it now; with several workers
+    # the others leave it to that process, which picks it up within a minute.
+    if scheduler_leader.is_leader():
+        sync_backup_schedule(DATABASE_URL, BACKUP_DIR)
 
     return get_config(user, db)
 

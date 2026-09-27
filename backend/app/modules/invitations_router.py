@@ -7,6 +7,7 @@ from app.core.utils import utcnow, audit_log as _audit, ensure_any_admin, ensure
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from app.core.rate_limits import limiter_storage_options
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -27,7 +28,7 @@ from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVIT
 
 from fastapi.responses import JSONResponse
 
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, **limiter_storage_options())
 
 # ---------------------------------------------------------------------------
 # Admin endpoints (authenticated, family-scoped)
