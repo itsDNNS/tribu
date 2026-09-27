@@ -661,6 +661,8 @@
   "display_evening_start": "Kväll från (tittar på i morgon)",
   "display_night_start": "Natt från",
   "display_weather_title": "Väder på skärmarna",
+  "display_weather_missing_hint": "Väderkortet behöver en plats. Välj den här; den gäller för alla skärmar.",
+  "display_weather_missing_badge": "Väderkort utan plats",
   "display_weather_off": "Av",
   "display_weather_choose": "Välj plats",
   "display_weather_change": "Byt plats",

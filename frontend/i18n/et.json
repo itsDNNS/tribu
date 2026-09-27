@@ -661,6 +661,8 @@
   "display_evening_start": "Õhtu alates (pilk homsele)",
   "display_night_start": "Öö alates",
   "display_weather_title": "Ilm ekraanidel",
+  "display_weather_missing_hint": "Ilmakaart vajab asukohta. Vali see siin; see kehtib kõigile ekraanidele.",
+  "display_weather_missing_badge": "Ilmakaart ilma asukohata",
   "display_weather_off": "Väljas",
   "display_weather_choose": "Vali koht",
   "display_weather_change": "Muuda kohta",

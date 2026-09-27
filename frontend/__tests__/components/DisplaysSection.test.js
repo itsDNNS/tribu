@@ -103,6 +103,8 @@ const messages = {
   display_morning_end: 'Morning until',
   display_evening_start: 'Evening from',
   display_night_start: 'Night from',
+  display_weather_missing_hint: 'The weather card needs a place. Choose it here; it applies to all displays.',
+  display_weather_missing_badge: 'Weather card without a place',
   display_weather_title: 'Weather on displays',
   display_weather_off: 'Off',
   display_weather_choose: 'Choose place',
@@ -386,6 +388,35 @@ describe('DisplaysSection weather place', () => {
     await act(async () => { fireEvent.click(screen.getByTestId('display-weather-remove')); });
     expect(api.apiClearWeatherLocation).toHaveBeenCalledWith(7);
     expect(screen.getByTestId('display-weather-place')).toHaveTextContent('Off');
+  });
+
+  test('the editor offers the place right where a weather card has none', async () => {
+    api.apiGetWeatherLocation.mockResolvedValue({ ok: true, data: { name: null } });
+    api.apiSearchWeatherLocation.mockResolvedValue({ ok: true, data: [
+      { name: 'Kiel', region: 'Schleswig-Holstein', country: 'Germany', latitude: 54.3, longitude: 10.1 },
+    ] });
+    api.apiSetWeatherLocation.mockResolvedValue({ ok: true, data: { name: 'Kiel, Schleswig-Holstein', latitude: 54.3, longitude: 10.1 } });
+    api.apiListDisplayDevices.mockResolvedValue({ ok: true, data: [DEVICE] });
+    await act(async () => { render(<DisplaysSection />); });
+    await flushAsync();
+    expect(screen.getByTestId('display-weather-missing-5')).toHaveTextContent('Weather card without a place');
+    fireEvent.click(screen.getByTestId('display-config-toggle-5'));
+
+    expect(screen.getByTestId('display-weather-missing')).toHaveTextContent('The weather card needs a place.');
+    fireEvent.change(screen.getByTestId('display-editor-weather-query'), { target: { value: 'Kiel' } });
+    await act(async () => { fireEvent.keyDown(screen.getByTestId('display-editor-weather-query'), { key: 'Enter' }); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Kiel Schleswig-Holstein, Germany/ })); });
+
+    expect(api.apiSetWeatherLocation).toHaveBeenCalledWith(7, { name: 'Kiel, Schleswig-Holstein', latitude: 54.3, longitude: 10.1 });
+    expect(screen.queryByTestId('display-weather-missing')).not.toBeInTheDocument();
+    expect(screen.getByTestId('display-weather-place')).toHaveTextContent('Kiel, Schleswig-Holstein');
+  });
+
+  test('no hint when the place is set or no zone shows the weather', async () => {
+    api.apiGetWeatherLocation.mockResolvedValue({ ok: true, data: { name: 'Hamburg', latitude: 53.55, longitude: 9.99 } });
+    await openEditor();
+    expect(screen.queryByTestId('display-weather-missing')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('display-weather-missing-5')).not.toBeInTheDocument();
   });
 
   test('a place from another region keeps its region in the name', async () => {

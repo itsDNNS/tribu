@@ -661,6 +661,8 @@
   "display_evening_start": "Tráthnóna ó (súil ar amárach)",
   "display_night_start": "Oíche ó",
   "display_weather_title": "Aimsir ar na scáileáin",
+  "display_weather_missing_hint": "Tá áit ag teastáil ón gcárta aimsire. Roghnaigh anseo í; baineann sí le gach taispeántas.",
+  "display_weather_missing_badge": "Cárta aimsire gan áit",
   "display_weather_off": "Múchta",
   "display_weather_choose": "Roghnaigh áit",
   "display_weather_change": "Athraigh an áit",

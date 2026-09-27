@@ -661,6 +661,8 @@
   "display_evening_start": "Wieczór od (spojrzenie na jutro)",
   "display_night_start": "Noc od",
   "display_weather_title": "Pogoda na ekranach",
+  "display_weather_missing_hint": "Karta pogody potrzebuje miejsca. Wybierz je tutaj; dotyczy wszystkich wyświetlaczy.",
+  "display_weather_missing_badge": "Karta pogody bez miejsca",
   "display_weather_off": "Wyłączona",
   "display_weather_choose": "Wybierz miejsce",
   "display_weather_change": "Zmień miejsce",

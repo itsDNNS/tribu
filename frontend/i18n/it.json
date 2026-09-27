@@ -661,6 +661,8 @@
   "display_evening_start": "Sera dalle (sguardo a domani)",
   "display_night_start": "Notte dalle",
   "display_weather_title": "Meteo sui display",
+  "display_weather_missing_hint": "La scheda meteo ha bisogno di un luogo. Sceglilo qui; vale per tutti i display.",
+  "display_weather_missing_badge": "Scheda meteo senza luogo",
   "display_weather_off": "Spento",
   "display_weather_choose": "Scegli luogo",
   "display_weather_change": "Cambia luogo",

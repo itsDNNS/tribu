@@ -661,6 +661,8 @@
   "display_evening_start": "Večer od (výhled na zítřek)",
   "display_night_start": "Noc od",
   "display_weather_title": "Počasí na displejích",
+  "display_weather_missing_hint": "Karta počasí potřebuje místo. Vyberte ho zde; platí pro všechny displeje.",
+  "display_weather_missing_badge": "Karta počasí bez místa",
   "display_weather_off": "Vypnuto",
   "display_weather_choose": "Vybrat místo",
   "display_weather_change": "Změnit místo",

@@ -661,6 +661,8 @@
   "display_evening_start": "Вечер от (поглед към утре)",
   "display_night_start": "Нощ от",
   "display_weather_title": "Време на екраните",
+  "display_weather_missing_hint": "Картата за времето има нужда от място. Изберете го тук; то важи за всички дисплеи.",
+  "display_weather_missing_badge": "Карта за времето без място",
   "display_weather_off": "Изключено",
   "display_weather_choose": "Избери място",
   "display_weather_change": "Смени мястото",

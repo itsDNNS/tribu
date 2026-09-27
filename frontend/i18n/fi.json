@@ -661,6 +661,8 @@
   "display_evening_start": "Ilta alkaen (katse huomiseen)",
   "display_night_start": "Yö alkaen",
   "display_weather_title": "Sää näytöillä",
+  "display_weather_missing_hint": "Sääkortti tarvitsee paikan. Valitse se tästä; se koskee kaikkia näyttöjä.",
+  "display_weather_missing_badge": "Sääkortti ilman paikkaa",
   "display_weather_off": "Pois",
   "display_weather_choose": "Valitse paikka",
   "display_weather_change": "Vaihda paikka",

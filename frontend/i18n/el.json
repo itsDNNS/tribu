@@ -661,6 +661,8 @@
   "display_evening_start": "Βράδυ από (ματιά στο αύριο)",
   "display_night_start": "Νύχτα από",
   "display_weather_title": "Καιρός στις οθόνες",
+  "display_weather_missing_hint": "Η κάρτα καιρού χρειάζεται τοποθεσία. Επιλέξτε την εδώ· ισχύει για όλες τις οθόνες.",
+  "display_weather_missing_badge": "Κάρτα καιρού χωρίς τοποθεσία",
   "display_weather_off": "Ανενεργός",
   "display_weather_choose": "Επιλογή τοποθεσίας",
   "display_weather_change": "Αλλαγή τοποθεσίας",

@@ -661,6 +661,8 @@
   "display_evening_start": "Tarde desde (mira a mañana)",
   "display_night_start": "Noche desde",
   "display_weather_title": "Tiempo en las pantallas",
+  "display_weather_missing_hint": "La tarjeta del tiempo necesita un lugar. Elígelo aquí; se aplica a todas las pantallas.",
+  "display_weather_missing_badge": "Tarjeta del tiempo sin lugar",
   "display_weather_off": "Desactivado",
   "display_weather_choose": "Elegir lugar",
   "display_weather_change": "Cambiar lugar",

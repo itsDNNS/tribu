@@ -661,6 +661,8 @@
   "display_evening_start": "Večer od (pogled na sutra)",
   "display_night_start": "Noć od",
   "display_weather_title": "Vrijeme na zaslonima",
+  "display_weather_missing_hint": "Kartica vremena treba mjesto. Odaberi ga ovdje; vrijedi za sve zaslone.",
+  "display_weather_missing_badge": "Kartica vremena bez mjesta",
   "display_weather_off": "Isključeno",
   "display_weather_choose": "Odaberi mjesto",
   "display_weather_change": "Promijeni mjesto",

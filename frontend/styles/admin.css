@@ -1358,6 +1358,17 @@
   border-radius: 14px;
   background: var(--surface-paper);
 }
+.ad-weather-missing {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border-subtle));
+  background: color-mix(in srgb, var(--warning) 9%, var(--surface-paper));
+  display: grid;
+  gap: var(--space-sm);
+}
+.ad-weather-missing > p { margin: 0; font-weight: 600; }
+.ad-weather-missing-badge { margin: 6px 0 0; font-size: 0.8rem; color: color-mix(in srgb, var(--warning) 70%, var(--text-primary)); }
 .ad-weather-head {
   display: flex;
   align-items: center;

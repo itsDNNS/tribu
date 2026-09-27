@@ -694,6 +694,8 @@
   "display_evening_start": "Abends ab (Blick auf morgen)",
   "display_night_start": "Nachts ab",
   "display_weather_title": "Wetter auf den Displays",
+  "display_weather_missing_hint": "Die Wetterkarte braucht einen Ort. Wähle ihn hier; er gilt für alle Displays.",
+  "display_weather_missing_badge": "Wetterkarte ohne Ort",
   "display_weather_off": "Aus",
   "display_weather_choose": "Ort wählen",
   "display_weather_change": "Ort ändern",

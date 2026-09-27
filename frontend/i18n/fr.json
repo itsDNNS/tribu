@@ -661,6 +661,8 @@
   "display_evening_start": "Soir à partir de (regard sur demain)",
   "display_night_start": "Nuit à partir de",
   "display_weather_title": "Météo sur les écrans",
+  "display_weather_missing_hint": "La carte météo a besoin d’un lieu. Choisissez-le ici ; il vaut pour tous les écrans.",
+  "display_weather_missing_badge": "Carte météo sans lieu",
   "display_weather_off": "Désactivée",
   "display_weather_choose": "Choisir un lieu",
   "display_weather_change": "Changer de lieu",

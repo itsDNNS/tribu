@@ -694,6 +694,8 @@
   "display_evening_start": "Evening from (looks at tomorrow)",
   "display_night_start": "Night from",
   "display_weather_title": "Weather on displays",
+  "display_weather_missing_hint": "The weather card needs a place. Choose it here; it applies to all displays.",
+  "display_weather_missing_badge": "Weather card without a place",
   "display_weather_off": "Off",
   "display_weather_choose": "Choose place",
   "display_weather_change": "Change place",

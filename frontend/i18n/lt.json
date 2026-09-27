@@ -661,6 +661,8 @@
   "display_evening_start": "Vakaras nuo (žvilgsnis į rytojų)",
   "display_night_start": "Naktis nuo",
   "display_weather_title": "Orai ekranuose",
+  "display_weather_missing_hint": "Orų kortelei reikia vietos. Pasirinkite ją čia; ji taikoma visiems ekranams.",
+  "display_weather_missing_badge": "Orų kortelė be vietos",
   "display_weather_off": "Išjungta",
   "display_weather_choose": "Pasirinkti vietą",
   "display_weather_change": "Keisti vietą",

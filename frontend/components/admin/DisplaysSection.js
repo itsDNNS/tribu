@@ -7,7 +7,7 @@ import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import ConfirmDialog from '../ConfirmDialog';
 import AdminDialog from './AdminDialog';
-import DisplayStageEditor, { StageSchematic, draftFromDevice, draftToPayload, everyLabel } from './DisplayStageEditor';
+import DisplayStageEditor, { StageSchematic, draftFromDevice, draftToPayload, everyLabel, usesWeatherCard } from './DisplayStageEditor';
 import DisplayWeatherPanel from './DisplayWeatherPanel';
 import DisplayPairingQr from './DisplayPairingQr';
 
@@ -35,6 +35,31 @@ export default function DisplaysSection() {
   const [copied, setCopied] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [expandedDeviceId, setExpandedDeviceId] = useState(null);
+  // Family weather place: undefined while loading, null when none is set.
+  const [weatherPlace, setWeatherPlace] = useState(undefined);
+
+  useEffect(() => {
+    if (demoMode) return undefined;
+    let active = true;
+    api.apiGetWeatherLocation(familyId).then(({ ok, data }) => {
+      if (active && ok) setWeatherPlace(data?.name ? data : null);
+    });
+    return () => { active = false; };
+  }, [familyId, demoMode]);
+
+  // Shown inside the editor when a weather card has no place yet.
+  const weatherMissing = weatherPlace === null;
+  const editorWeatherPanel = weatherMissing ? (
+    <DisplayWeatherPanel
+      familyId={familyId}
+      messages={messages}
+      lang={lang}
+      place={weatherPlace}
+      onPlaceChange={setWeatherPlace}
+      startSearching
+      testIdPrefix="display-editor-weather"
+    />
+  ) : null;
 
   const load = useCallback(async () => {
     if (demoMode) return;
@@ -162,7 +187,7 @@ export default function DisplaysSection() {
         <strong>{t(messages, 'display_not_a_person')}</strong>
       </p>
 
-      {!demoMode && <DisplayWeatherPanel familyId={familyId} messages={messages} lang={lang} />}
+      {!demoMode && <DisplayWeatherPanel familyId={familyId} messages={messages} lang={lang} place={weatherPlace ?? null} onPlaceChange={setWeatherPlace} />}
 
       {created && (
         <div className="adm-success-banner" data-testid="display-created-banner">
@@ -247,11 +272,16 @@ export default function DisplaysSection() {
                     </button>
                     {expandedDeviceId === device.id ? (
                       <AdminDialog title={device.name} messages={messages} busy={busy} onClose={() => setExpandedDeviceId(null)} actions={<><button className="ad-button" disabled={busy} onClick={() => setExpandedDeviceId(null)}>{t(messages, 'cancel')}</button><button className="ad-button primary" disabled={busy} onClick={() => handleSaveDevice(device)} data-testid="display-save-config">{t(messages, 'save')}</button></>}>
-                        <fieldset className="ad-display-fields" disabled={busy}><DisplayStageEditor draft={deviceDrafts[device.id] || draftFromDevice(device)} messages={messages} onChange={(next) => setDeviceDrafts((current) => ({ ...current, [device.id]: next }))} /></fieldset>
+                        <fieldset className="ad-display-fields" disabled={busy}><DisplayStageEditor draft={deviceDrafts[device.id] || draftFromDevice(device)} messages={messages} onChange={(next) => setDeviceDrafts((current) => ({ ...current, [device.id]: next }))} weatherPanel={editorWeatherPanel} /></fieldset>
                       </AdminDialog>
                     ) : (
                       <div className="display-device-compact-preview">
                         <StageSchematic layout={draftFromDevice(device).layout} messages={messages} />
+                        {weatherMissing && usesWeatherCard(draftFromDevice(device).layout) && (
+                          <p className="ad-weather-missing-badge" data-testid={`display-weather-missing-${device.id}`}>
+                            {t(messages, 'display_weather_missing_badge')}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -296,7 +326,7 @@ export default function DisplaysSection() {
                   />
                   <small className="invite-helper-text">{t(messages, 'display_name_helper')}</small>
                 </div>
-                <DisplayStageEditor draft={newDraft} messages={messages} onChange={setNewDraft} />
+                <DisplayStageEditor draft={newDraft} messages={messages} onChange={setNewDraft} weatherPanel={editorWeatherPanel} />
               </div>
               </fieldset>
             </form></AdminDialog>

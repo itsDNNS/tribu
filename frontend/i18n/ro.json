@@ -661,6 +661,8 @@
   "display_evening_start": "Seara de la (privire spre mâine)",
   "display_night_start": "Noaptea de la",
   "display_weather_title": "Vremea pe ecrane",
+  "display_weather_missing_hint": "Cardul meteo are nevoie de un loc. Alege-l aici; se aplică tuturor afișajelor.",
+  "display_weather_missing_badge": "Card meteo fără loc",
   "display_weather_off": "Oprită",
   "display_weather_choose": "Alege locul",
   "display_weather_change": "Schimbă locul",

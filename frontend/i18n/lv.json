@@ -661,6 +661,8 @@
   "display_evening_start": "Vakars no (skats uz rītdienu)",
   "display_night_start": "Nakts no",
   "display_weather_title": "Laikapstākļi ekrānos",
+  "display_weather_missing_hint": "Laikapstākļu kartītei vajadzīga vieta. Izvēlies to šeit; tā attiecas uz visiem displejiem.",
+  "display_weather_missing_badge": "Laikapstākļu kartīte bez vietas",
   "display_weather_off": "Izslēgts",
   "display_weather_choose": "Izvēlēties vietu",
   "display_weather_change": "Mainīt vietu",

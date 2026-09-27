@@ -661,6 +661,8 @@
   "display_evening_start": "Este ettől (kitekintés holnapra)",
   "display_night_start": "Éjjel ettől",
   "display_weather_title": "Időjárás a kijelzőkön",
+  "display_weather_missing_hint": "Az időjárás-kártyához hely kell. Itt választhatod ki; minden kijelzőre érvényes.",
+  "display_weather_missing_badge": "Időjárás-kártya hely nélkül",
   "display_weather_off": "Ki",
   "display_weather_choose": "Hely kiválasztása",
   "display_weather_change": "Hely módosítása",

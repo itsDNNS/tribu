@@ -120,7 +120,11 @@ function ZoneEditor({ zone, value, eink, messages, onChange }) {
   );
 }
 
-export default function DisplayStageEditor({ draft, messages, onChange }) {
+export function usesWeatherCard(layout) {
+  return Object.values(layout?.zones || {}).some((zone) => (zone?.cards || []).includes('weather'));
+}
+
+export default function DisplayStageEditor({ draft, messages, onChange, weatherPanel = null }) {
   const eink = draft.display_mode === 'eink';
   const refreshOptions = [...new Set([...REFRESH_OPTIONS[draft.display_mode], Number(draft.refresh_interval_seconds)])].sort((a, b) => a - b);
   const setLayout = (patch) => onChange({ ...draft, layout: { ...draft.layout, ...patch } });
@@ -200,6 +204,12 @@ export default function DisplayStageEditor({ draft, messages, onChange }) {
             <ZoneEditor key={zone} zone={zone} value={draft.layout.zones[zone]} eink={eink} messages={messages} onChange={(patch) => setZone(zone, patch)} />
           ))}
         </div>
+        {weatherPanel && usesWeatherCard(draft.layout) && (
+          <div className="ad-weather-missing" data-testid="display-weather-missing">
+            <p>{t(messages, 'display_weather_missing_hint')}</p>
+            {weatherPanel}
+          </div>
+        )}
       </section>
 
       <section className="ad-stage-group">

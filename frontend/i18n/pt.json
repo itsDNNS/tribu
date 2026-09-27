@@ -661,6 +661,8 @@
   "display_evening_start": "Noite a partir das (olha para amanhã)",
   "display_night_start": "Madrugada a partir das",
   "display_weather_title": "Tempo nos ecrãs",
+  "display_weather_missing_hint": "O cartão do tempo precisa de um local. Escolhe-o aqui; aplica-se a todos os ecrãs.",
+  "display_weather_missing_badge": "Cartão do tempo sem local",
   "display_weather_off": "Desligado",
   "display_weather_choose": "Escolher local",
   "display_weather_change": "Mudar local",

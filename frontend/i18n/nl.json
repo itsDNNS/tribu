@@ -661,6 +661,8 @@
   "display_evening_start": "Avond vanaf (kijkt naar morgen)",
   "display_night_start": "Nacht vanaf",
   "display_weather_title": "Weer op schermen",
+  "display_weather_missing_hint": "De weerkaart heeft een plaats nodig. Kies die hier; ze geldt voor alle displays.",
+  "display_weather_missing_badge": "Weerkaart zonder plaats",
   "display_weather_off": "Uit",
   "display_weather_choose": "Plaats kiezen",
   "display_weather_change": "Plaats wijzigen",

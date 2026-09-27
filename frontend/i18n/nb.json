@@ -661,6 +661,8 @@
   "display_evening_start": "Kveld fra (ser på i morgen)",
   "display_night_start": "Natt fra",
   "display_weather_title": "Vær på skjermene",
+  "display_weather_missing_hint": "Værkortet trenger et sted. Velg det her; det gjelder for alle skjermer.",
+  "display_weather_missing_badge": "Værkort uten sted",
   "display_weather_off": "Av",
   "display_weather_choose": "Velg sted",
   "display_weather_change": "Bytt sted",
