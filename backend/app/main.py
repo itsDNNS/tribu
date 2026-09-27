@@ -80,7 +80,7 @@ from app.schemas import (
 )
 from app.core import cache, process_health
 from app.core.rate_limits import limiter_storage_options
-from app.core.utils import get_setting, utcnow
+from app.core.utils import utcnow
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION
 
