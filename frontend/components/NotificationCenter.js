@@ -13,8 +13,23 @@ const TYPE_ICONS = {
   system: Bell,
 };
 
-function renderNotificationBody(notif, messages) {
+// Server-generated system notifications arrive in English; show them in the UI language.
+export function renderNotificationTitle(notif, messages) {
+  if (notif?.type === 'system' && notif.title === 'Tribu restarted unexpectedly') {
+    return t(messages, 'notification_title_backend_crashes');
+  }
+  return notif?.title;
+}
+
+export function renderNotificationBody(notif, messages) {
   if (!notif?.body) return null;
+
+  if (notif.type === 'system') {
+    const match = notif.body.match(/^The server stopped unexpectedly (\d+) times in the last hour\.$/);
+    if (match) {
+      return t(messages, 'notification_body_backend_crashes').replace('{count}', match[1]);
+    }
+  }
 
   if (notif.type === 'event_reminder') {
     const match = notif.body.match(/^Starts in (\d+) minutes$/);
@@ -193,7 +208,7 @@ export default function NotificationCenter({ onClose } = {}) {
                   <div className="notif-content">
                     <div className="notif-header">
                       <div className={`notif-title${!notif.read ? ' notif-title-unread' : ''}`}>
-                        {notif.title}
+                        {renderNotificationTitle(notif, messages)}
                       </div>
                       <span className="notif-time">
                         {serverTimeAgo(notif.created_at, lang)}

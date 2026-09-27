@@ -6,6 +6,7 @@ import {
   Check,
   Clock,
   Copy,
+  HeartPulse,
   KeyRound,
   Link,
   Monitor,
@@ -32,6 +33,7 @@ import InviteSection from "./InviteSection";
 import DisplaysSection from "./DisplaysSection";
 import SsoSection from "./SsoSection";
 import BackupSection from "./BackupSection";
+import SystemSection from "./SystemSection";
 import AuditLogSection from "./AuditLogSection";
 import { adminText, invitationState, auditAction } from "./adminHelpers";
 
@@ -41,6 +43,7 @@ const TABS = [
   ["displays", "display_title", Monitor],
   ["sso", "sso.title", KeyRound],
   ["backups", "backup_title", Archive],
+  ["system", "system_title", HeartPulse],
   ["audit", "audit_log_title", Activity],
 ];
 
@@ -495,6 +498,7 @@ function AdminPage(props) {
           {activeTab === "displays" && <DisplaysSection />}
           {activeTab === "sso" && <SsoSection />}
           {activeTab === "backups" && <BackupSection />}
+          {activeTab === "system" && <SystemSection />}
           {activeTab === "audit" && <AuditLogSection />}
         </div>
         <footer className="ad-footnote">

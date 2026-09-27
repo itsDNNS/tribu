@@ -1081,6 +1081,11 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .backup-docs-link { white-space: nowrap; }
 .backup-confidence-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
 .backup-confidence-card { border: 1px solid var(--border-subtle); border-radius: 12px; padding: 12px; background: color-mix(in srgb, var(--surface-soft) 56%, var(--surface-paper)); display: grid; gap: 0.35rem; min-width: 0; }
+.system-card-alert { border-color: color-mix(in srgb, var(--danger) 45%, var(--border-subtle)); background: color-mix(in srgb, var(--danger) 8%, var(--surface-paper)); }
+.system-meter { display: block; height: 6px; border-radius: 999px; background: var(--border-subtle); overflow: hidden; }
+.system-meter span { display: block; height: 100%; background: var(--success); }
+.system-meter span.high { background: var(--danger); }
+.system-crash-list { margin: var(--space-sm) 0 0; padding-left: 1.2rem; color: var(--text-secondary); font-size: 0.85rem; display: grid; gap: 0.2rem; }
 .backup-confidence-card span { color: var(--text-secondary); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .backup-confidence-card strong { color: var(--text-primary); font-size: 0.95rem; overflow-wrap: anywhere; }
 .backup-confidence-card small { color: var(--text-muted); overflow-wrap: anywhere; }

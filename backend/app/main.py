@@ -54,6 +54,7 @@ from app.modules.shopping_router import router as shopping_router
 from app.modules.shopping_ws import router as shopping_ws_router
 from app.modules.tokens_router import router as tokens_router
 from app.modules.backup_router import router as backup_router, BACKUP_DIR, DATABASE_URL as BACKUP_DB_URL
+from app.modules.system_router import router as system_router
 from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.modules.invitations_router import router as invitations_router, public_router as invitations_public_router, settings_router as invitations_settings_router
@@ -76,7 +77,7 @@ from app.schemas import (
     AUTH_RESPONSES, CONFLICT_RESPONSE, ErrorResponse,
     ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, MobileLoginResponse, MobileRefreshRequest, ProfileImageUpdate, RegisterRequest,
 )
-from app.core import cache
+from app.core import cache, process_health
 from app.core.utils import get_setting, utcnow
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION
@@ -214,6 +215,7 @@ TAG_METADATA = [
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ws_broadcast.set_event_loop(asyncio.get_running_loop())
+    process_health.start_heartbeat(SessionLocal)
 
     if cache.ping():
         logger.info("Valkey connected")
@@ -235,6 +237,7 @@ async def lifespan(app: FastAPI):
     yield
 
     shutdown_scheduler()
+    process_health.stop_heartbeat()
 
 
 # ---------------------------------------------------------------------------
@@ -824,6 +827,7 @@ app.include_router(shopping_router)
 app.include_router(shopping_ws_router)
 app.include_router(tokens_router)
 app.include_router(backup_router)
+app.include_router(system_router)
 app.include_router(notifications_router)
 app.include_router(nav_router)
 app.include_router(invitations_router)

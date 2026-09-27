@@ -1169,6 +1169,23 @@ class BackupStatusLatestExport(BaseModel):
     created_at: datetime = Field(..., description="Backup creation timestamp")
 
 
+class SystemCrash(BaseModel):
+    started_at: datetime = Field(..., description="When the process started (UTC)")
+    stopped_at: datetime = Field(..., description="Last sign of life before it died (UTC)")
+    version: Optional[str] = Field(None, description="Backend version the process ran")
+
+
+class SystemStatusResponse(BaseModel):
+    """Health of the backend processes, for the instance admin."""
+    version: str = Field(..., description="Running backend version")
+    started_at: Optional[datetime] = Field(None, description="When the answering process started (UTC)")
+    crashes_last_day: int = Field(..., description="Processes that stopped without shutting down in the last 24 hours")
+    crashes_last_week: int = Field(..., description="Processes that stopped without shutting down in the last 7 days")
+    recent_crashes: list[SystemCrash] = Field(default_factory=list, description="Latest unexpected stops, newest first")
+    rss_bytes: Optional[int] = Field(None, description="Resident memory of the answering process, if known")
+    limit_bytes: Optional[int] = Field(None, description="Container memory limit, if one is set")
+
+
 class BackupStatusResponse(BaseModel):
     """Public-safe backup confidence metadata for admins."""
     database_backend: str = Field(..., description="Stable detected database backend code")

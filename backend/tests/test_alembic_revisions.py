@@ -314,6 +314,20 @@ def test_profile_image_sizes_migration_derives_sizes_from_uploads(tmp_path, monk
         assert conn.execute("SELECT profile_image FROM users WHERE id=1").fetchone() == (upload,)
 
 
+def test_process_runs_migration_creates_and_drops_the_table(tmp_path, monkeypatch):
+    db_path = tmp_path / "process-runs-0060.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    command.upgrade(config, "0060_process_runs")
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO process_runs (host, pid, started_at, last_seen_at) VALUES ('h', 1, '2026-09-27 10:00:00', '2026-09-27 10:01:00')")
+        assert conn.execute("SELECT crashed, stopped_at FROM process_runs").fetchone() == (0, None)
+    command.downgrade(config, "0059_profile_image_sizes")
+    with sqlite3.connect(db_path) as conn:
+        assert not conn.execute("SELECT name FROM sqlite_master WHERE name = 'process_runs'").fetchall()
+
+
 def test_shopping_model_defaults_match_migration_for_legacy_inserts():
     from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session

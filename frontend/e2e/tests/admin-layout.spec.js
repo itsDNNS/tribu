@@ -42,6 +42,7 @@ for (const width of [320, 390, 768, 1024, 1448])
       "Displays",
       "Single Sign-On",
       "Backups",
+      "System",
       "Audit Log",
     ]) {
       await tabs.getByRole("button", { name, exact: true }).click();

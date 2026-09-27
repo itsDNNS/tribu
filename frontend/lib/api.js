@@ -464,6 +464,10 @@ export function apiGetBackupStatus() {
   return request('/admin/backup/status');
 }
 
+export function apiGetSystemStatus() {
+  return request('/admin/system/status');
+}
+
 export function apiGetBackupConfig() {
   return request('/admin/backup/config');
 }

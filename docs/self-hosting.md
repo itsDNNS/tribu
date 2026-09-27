@@ -93,6 +93,10 @@ See [Backup & Restore](https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore).
 
 See [Self-Hosting: Updating](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#updating).
 
+## Server Health
+
+**Admin → System** (instance admin only) shows the running version, the backend's memory use against the container limit, and backend processes that stopped without shutting down in the last 7 days, for example after running out of memory. Each process records a heartbeat every minute; a process that stops sending it is counted as a crash within about three minutes. After three crashes within an hour, the instance admin gets a notification (and a push message if push is enabled), at most every six hours. `docker logs tribu-backend` shows the cause.
+
 ## Troubleshooting
 
 See [Self-Hosting: Troubleshooting](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#troubleshooting).

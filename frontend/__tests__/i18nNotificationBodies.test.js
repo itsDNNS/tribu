@@ -6,6 +6,8 @@ const REQUIRED_KEYS = {
   notification_body_event_starts_in: ['{count}'],
   notification_body_task_overdue: [],
   notification_body_birthday_tomorrow: ['{date}'],
+  notification_title_backend_crashes: [],
+  notification_body_backend_crashes: ['{count}'],
 };
 
 describe('notification body i18n', () => {

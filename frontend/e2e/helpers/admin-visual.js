@@ -161,6 +161,16 @@ async function mockAdmin(page, { failSave = false, child = false } = {}) {
         restore_supported: "setup_wizard",
         restore_runbook: "self_hosting_backup_restore",
       };
+    else if (path === "/admin/system/status")
+      data = {
+        version: "v2026.09.27",
+        started_at: "2026-09-27T06:00:00",
+        crashes_last_day: 0,
+        crashes_last_week: 0,
+        recent_crashes: [],
+        rss_bytes: 180 * 1024 * 1024,
+        limit_bytes: 1024 * 1024 * 1024,
+      };
     else return route.fallback();
     return route.fulfill({ status: 200, json: data });
   });

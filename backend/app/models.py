@@ -1042,3 +1042,20 @@ class Recipe(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
     family = relationship("Family", back_populates="recipes")
+
+
+class ProcessRun(Base):
+    """One backend process lifetime, used to spot unexpected restarts."""
+
+    __tablename__ = "process_runs"
+    __table_args__ = (Index("ix_process_runs_open", "stopped_at", "last_seen_at"),)
+
+    id = Column(Integer, primary_key=True)
+    host = Column(String(120), nullable=False)
+    pid = Column(Integer, nullable=False)
+    version = Column(String(60), nullable=True)
+    started_at = Column(DateTime, nullable=False, default=utcnow)
+    last_seen_at = Column(DateTime, nullable=False, default=utcnow)
+    # Set on a clean shutdown, or to last_seen_at once a run is found dead.
+    stopped_at = Column(DateTime, nullable=True)
+    crashed = Column(Boolean, nullable=False, default=False, server_default=text("false"))
