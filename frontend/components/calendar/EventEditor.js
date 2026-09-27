@@ -6,6 +6,13 @@ import { RECURRENCE_OPTIONS } from './CalendarHelpers';
 import { CALENDAR_EVENT_ICON_OPTIONS } from '../../lib/calendar-icons';
 import { t } from '../../lib/i18n';
 import { retargetCreateDraft } from './draftDates';
+import {
+  WEEKDAYS,
+  WEEKLY_RECURRENCES,
+  selectedWeekdays,
+  toggleWeekday,
+  weekdayLabel,
+} from '../../lib/calendar-recurrence';
 import { calendarEventStyle } from '../../lib/calendar-colors';
 
 export const CALENDAR_COLORS = [
@@ -22,6 +29,7 @@ export default function EventEditor({
   editing,
   members,
   messages,
+  locale,
   onClose,
   onDelete,
 }) {
@@ -42,6 +50,7 @@ export default function EventEditor({
   const [color, setColor] = field('color');
   const [recurrence, setRecurrence] = field('recurrence');
   const [recurrenceEnd, setRecurrenceEnd] = field('recurrenceEnd');
+  const [recurrenceWeekdays, setRecurrenceWeekdays] = field('recurrenceWeekdays');
   const [icon, setIcon] = field('icon');
   const [allDay, setAllDay] = field('allDay');
   const date = startsAt?.slice(0, 10) || '';
@@ -317,6 +326,29 @@ export default function EventEditor({
                   ))}
                 </select>
               </label>
+              {WEEKLY_RECURRENCES.includes(recurrence) && (
+                <div
+                  className="tc-field full"
+                  role="group"
+                  aria-label={t(messages, 'module.calendar.repeat_on')}
+                >
+                  <span>{t(messages, 'module.calendar.repeat_on')}</span>
+                  <div className="tc-people">
+                    {WEEKDAYS.map((weekday) => (
+                      <label key={weekday}>
+                        <input
+                          type="checkbox"
+                          checked={selectedWeekdays(recurrenceWeekdays, startsAt).includes(weekday)}
+                          onChange={() =>
+                            setRecurrenceWeekdays(toggleWeekday(recurrenceWeekdays, startsAt, weekday))
+                          }
+                        />
+                        <span>{weekdayLabel(weekday, locale)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               {recurrence && (
                 <label className="tc-field full">
                   {t(messages, 'module.calendar.repeat_until')}

@@ -6,6 +6,7 @@ import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import { weekStartIndex, localeForLang } from '../lib/dates';
 import { eventOccursOn } from '../lib/calendar-dates';
+import { weekdaysPayload } from '../lib/calendar-recurrence';
 import * as api from '../lib/api';
 
 function formatLocalDateTimeInput(date, hour = date.getHours(), minute = date.getMinutes()) {
@@ -59,6 +60,7 @@ export function useCalendar() {
   const [allDay, setAllDay] = useState(false);
   const [recurrence, setRecurrence] = useState('');
   const [recurrenceEnd, setRecurrenceEnd] = useState('');
+  const [recurrenceWeekdays, setRecurrenceWeekdays] = useState([]);
 
   // Assigned members
   const [assignedTo, setAssignedTo] = useState([]);
@@ -86,6 +88,7 @@ export function useCalendar() {
   const [editAllDay, setEditAllDay] = useState(false);
   const [editRecurrence, setEditRecurrence] = useState('');
   const [editRecurrenceEnd, setEditRecurrenceEnd] = useState('');
+  const [editRecurrenceWeekdays, setEditRecurrenceWeekdays] = useState([]);
   const [editAssignedTo, setEditAssignedTo] = useState([]);
   const [editColor, setEditColor] = useState('');
   const [editCategory, setEditCategory] = useState('');
@@ -264,7 +267,7 @@ export function useCalendar() {
 
   function resetCreateFields(nextStartsAt = '') {
     setTitle(''); setDescription(''); setLocation(''); setStartsAt(nextStartsAt); setEndsAt(''); setAllDay(false);
-    setRecurrence(''); setRecurrenceEnd(''); setAssignedTo([]); setColor(''); setCategory(''); setIcon('');
+    setRecurrence(''); setRecurrenceEnd(''); setRecurrenceWeekdays([]); setAssignedTo([]); setColor(''); setCategory(''); setIcon('');
   }
 
   function startDuplicate(ev) {
@@ -282,6 +285,7 @@ export function useCalendar() {
     setAllDay(ev.all_day || false);
     setRecurrence('');
     setRecurrenceEnd('');
+    setRecurrenceWeekdays([]);
     const assigned = ev.assigned_to;
     if (assigned === 'all') setAssignedTo(['all']);
     else if (Array.isArray(assigned)) setAssignedTo(assigned.map(Number));
@@ -332,6 +336,7 @@ export function useCalendar() {
         starts_at: toIsoOrNull(startsAt), ends_at: toIsoOrNull(endsAt), all_day: allDay,
         recurrence: recurrence || null,
         recurrence_end: recurrenceEnd ? `${recurrenceEnd}T00:00:00` : null,
+        recurrence_weekdays: weekdaysPayload(recurrence, recurrenceWeekdays),
         assigned_to: assignedPayload,
         color: color || null,
         category: category || null,
@@ -386,6 +391,7 @@ export function useCalendar() {
     setEditAllDay(ev.all_day || false);
     setEditRecurrence(ev.recurrence || '');
     setEditRecurrenceEnd(ev.recurrence_end ? String(ev.recurrence_end).slice(0, 10) : '');
+    setEditRecurrenceWeekdays(Array.isArray(ev.recurrence_weekdays) ? ev.recurrence_weekdays : []);
     const assigned = ev.assigned_to;
     if (assigned === 'all') setEditAssignedTo(['all']);
     else if (Array.isArray(assigned)) setEditAssignedTo(assigned.map(Number));
@@ -419,6 +425,7 @@ export function useCalendar() {
       location: editLocation || null,
       recurrence: editRecurrence || '',
       recurrence_end: editRecurrence && editRecurrenceEnd ? `${editRecurrenceEnd}T00:00:00` : null,
+      recurrence_weekdays: weekdaysPayload(editRecurrence, editRecurrenceWeekdays),
       assigned_to: assignedPayload ?? [],
       color: editColor,
       icon: editIcon || null,
@@ -518,6 +525,7 @@ export function useCalendar() {
     allDay, setAllDay,
     recurrence, setRecurrence,
     recurrenceEnd, setRecurrenceEnd,
+    recurrenceWeekdays, setRecurrenceWeekdays,
     assignedTo, setAssignedTo,
     color, setColor,
     category, setCategory,
@@ -538,6 +546,7 @@ export function useCalendar() {
     editAllDay, setEditAllDay,
     editRecurrence, setEditRecurrence,
     editRecurrenceEnd, setEditRecurrenceEnd,
+    editRecurrenceWeekdays, setEditRecurrenceWeekdays,
     editAssignedTo, setEditAssignedTo,
     editColor, setEditColor,
     editCategory, setEditCategory,

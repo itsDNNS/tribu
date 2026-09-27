@@ -108,6 +108,9 @@ class CalendarEvent(Base):
     all_day = Column(Boolean, nullable=False, default=False)
     recurrence = Column(String, nullable=True)
     recurrence_end = Column(DateTime, nullable=True)
+    # Weekdays (0 = Monday) a weekly or biweekly series repeats on. NULL
+    # means only the weekday of starts_at.
+    recurrence_weekdays = Column(JSON, nullable=True)
     excluded_dates = Column(JSON, nullable=True)
     assigned_to = Column(JSON, nullable=True)
     color = Column(String, nullable=True)
@@ -134,6 +137,9 @@ class CalendarEvent(Base):
     # RFC 5545 RECURRENCE-ID: set on a row that replaces one occurrence
     # of the recurring series with the same ical_uid, holding that
     # occurrence's original start (local wall time, like starts_at).
+    # A row that also has a recurrence changes this and all following
+    # occurrences (RANGE=THISANDFUTURE): it continues the series from
+    # there, and earlier series rows end before it.
     # The series row itself keeps it NULL, so (family_id, ical_uid,
     # recurrence_id) identifies a VEVENT. Such rows carry no dav_href;
     # CalDAV serves them inside the series resource.

@@ -1,4 +1,4 @@
-"""Store changed occurrences of recurring calendar events as their own rows.
+"""Store changed occurrences and weekday lists of recurring calendar events.
 
 A calendar feed describes a changed occurrence of a recurring series as a
 second VEVENT with the series UID and a RECURRENCE-ID naming the
@@ -6,10 +6,14 @@ occurrence it replaces. ``calendar_events.recurrence_id`` holds that
 original start, so the UID stays unique only among series rows and
 (family_id, ical_uid, recurrence_id) identifies each changed occurrence.
 
-Downgrading deletes the changed-occurrence rows, because the old unique
-index on (family_id, ical_uid) cannot hold them.
+``calendar_events.recurrence_weekdays`` lists the weekdays (0 = Monday)
+of a weekly series that repeats on more than its start's weekday.
 
-Revision ID: 0062_calendar_recurrence_id
+Downgrading deletes the changed-occurrence rows, because the old unique
+index on (family_id, ical_uid) cannot hold them, and drops the weekday
+lists.
+
+Revision ID: 0062_calendar_recurrence_rules
 Revises: 0061_normalize_stored_photos
 """
 
@@ -19,7 +23,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0062_calendar_recurrence_id"
+revision: str = "0062_calendar_recurrence_rules"
 down_revision: Union[str, None] = "0061_normalize_stored_photos"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,6 +33,7 @@ SERIES_WHERE = sa.text("recurrence_id IS NULL")
 
 def upgrade() -> None:
     op.add_column("calendar_events", sa.Column("recurrence_id", sa.DateTime(), nullable=True))
+    op.add_column("calendar_events", sa.Column("recurrence_weekdays", sa.JSON(), nullable=True))
     op.drop_index("uq_calendar_events_family_uid", table_name="calendar_events")
     op.create_index(
         "uq_calendar_events_family_uid",
@@ -57,4 +62,5 @@ def downgrade() -> None:
         unique=True,
     )
     with op.batch_alter_table("calendar_events") as batch:
+        batch.drop_column("recurrence_weekdays")
         batch.drop_column("recurrence_id")

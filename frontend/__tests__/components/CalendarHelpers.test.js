@@ -111,9 +111,9 @@ describe('calendar event duplication action', () => {
 });
 
 describe('calendar recurrence options', () => {
-  it('offers the monthly weekday rules the backend understands', () => {
+  it('offers the weekday rules the backend understands', () => {
     expect(RECURRENCE_OPTIONS.map((option) => option.value)).toEqual(
-      expect.arrayContaining(['monthly', 'monthly_weekday', 'monthly_last_weekday']),
+      expect.arrayContaining(['monthly', 'monthly_weekday', 'monthly_last_weekday', 'yearly_weekday', 'yearly_last_weekday']),
     );
   });
 

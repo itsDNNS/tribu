@@ -788,6 +788,29 @@ class TestCalDAVChangedOccurrences:
         assert delete.status_code in (200, 204), delete.text
         assert self._rows(family_id) == []
 
+    def test_put_keeps_a_change_to_all_following_occurrences(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        from_now_on = (
+            "BEGIN:VEVENT\r\nUID:series@example.com\r\n"
+            "DTSTAMP:20260101T000000Z\r\n"
+            "RECURRENCE-ID;RANGE=THISANDFUTURE:20260819T180000\r\n"
+            "DTSTART:20260820T190000\r\nDTEND:20260820T200000\r\n"
+            "SUMMARY:Choir (Thursdays)\r\nEND:VEVENT\r\n"
+        )
+        series = self.SERIES.replace("RRULE:FREQ=WEEKLY\r\n", "RRULE:FREQ=WEEKLY;BYDAY=WE,FR\r\n")
+
+        self._put(client, token, family_id, self._calendar(series, from_now_on))
+
+        rows = self._rows(family_id)
+        assert [(r.title, r.recurrence, r.recurrence_weekdays) for r in rows] == [
+            ("Choir", "weekly", [2, 4]),
+            ("Choir (Thursdays)", "weekly", [3, 5]),
+        ]
+        get = client.get(f"/dav/{EMAIL}/cal-{family_id}/choir.ics", headers={"Authorization": _basic(EMAIL, token)})
+        assert "RECURRENCE-ID;RANGE=THISANDFUTURE:20260819T180000" in get.text
+        assert get.text.count("RRULE:") == 1
+
     def test_changed_occurrence_uid_cannot_hijack_another_resource(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)

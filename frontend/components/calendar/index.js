@@ -839,6 +839,7 @@ export default function CalendarView(props) {
           editing={modal.kind === 'edit'}
           members={members}
           messages={messages}
+          locale={locale}
           onClose={close}
           onDelete={() => {
             setModal({ kind: 'delete', event: selectedEvent });

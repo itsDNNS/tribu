@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from app.core.clock import local_today, local_wall_now, to_local_wall_naive, utcnow
 from app.core.deps import current_display_device, current_user, ensure_family_admin, next_birthday_date
 from app.core.errors import DISPLAY_DEVICE_NOT_FOUND, WEATHER_SEARCH_UNAVAILABLE, error_detail
-from app.core.recurrence import expand_event, load_overridden_dates
+from app.core.recurrence import expand_event, load_series_changes
 from app.core.scopes import require_scope
 from app.core.display_layouts import normalize_config
 from app.core import weather as weather_service
@@ -450,11 +450,11 @@ def _occurrences_overlapping(db: Session, family_id: int, start: datetime, end: 
         )
         .all()
     )
-    overridden = load_overridden_dates(db, candidates)
+    series_changes = load_series_changes(db, candidates)
     occurrences: list[dict] = []
     for event in candidates:
         duration = (event.ends_at - event.starts_at) if event.starts_at and event.ends_at and event.ends_at > event.starts_at else timedelta(0)
-        for row in expand_event(event, start - duration, end, overridden):
+        for row in expand_event(event, start - duration, end, series_changes):
             row_end = row.get("ends_at")
             if row["starts_at"] < end and (row_end > start if row_end else row["starts_at"] >= start):
                 occurrences.append(row)

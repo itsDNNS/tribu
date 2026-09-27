@@ -379,13 +379,13 @@ def test_shopping_model_defaults_match_migration_for_legacy_inserts():
     engine.dispose()
 
 
-def test_calendar_recurrence_id_migration_scopes_uid_uniqueness_and_downgrades(tmp_path, monkeypatch) -> None:
+def test_calendar_recurrence_rules_migration_scopes_uid_uniqueness_and_downgrades(tmp_path, monkeypatch) -> None:
     db_path = tmp_path / "calendar-recurrence-id.db"
     config = Config(str(BACKEND_DIR / "alembic.ini"))
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.syspath_prepend(str(BACKEND_DIR))
-    command.upgrade(config, "0062_calendar_recurrence_id")
+    command.upgrade(config, "0062_calendar_recurrence_rules")
 
     insert = (
         "INSERT INTO calendar_events (family_id, title, starts_at, all_day, created_at, ical_uid, recurrence_id) "
@@ -396,6 +396,7 @@ def test_calendar_recurrence_id_migration_scopes_uid_uniqueness_and_downgrades(t
         conn.execute(insert, ("Pack Meeting", None))
         conn.execute(insert, ("Bowling Outing", "2026-10-15 18:45:00"))
         conn.execute(insert, ("Dinner", "2026-10-22 18:45:00"))
+        conn.execute("UPDATE calendar_events SET recurrence_weekdays = '[0, 3]' WHERE recurrence_id IS NULL")
         with pytest.raises(sqlite3.IntegrityError):
             conn.execute(insert, ("Second series", None))
         with pytest.raises(sqlite3.IntegrityError):
@@ -408,3 +409,4 @@ def test_calendar_recurrence_id_migration_scopes_uid_uniqueness_and_downgrades(t
         columns = {row[1] for row in conn.execute("PRAGMA table_info(calendar_events)")}
     assert titles == ["Pack Meeting"]
     assert "recurrence_id" not in columns
+    assert "recurrence_weekdays" not in columns

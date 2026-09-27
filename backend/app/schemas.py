@@ -392,8 +392,9 @@ class CalendarEventCreate(BaseModel):
     description: Optional[str] = Field(None, description="Event description")
     location: Optional[str] = Field(None, max_length=500, description="Free-form place name or address for the event")
     all_day: bool = Field(False, description="Whether this is an all-day event")
-    recurrence: Optional[str] = Field(None, description="Recurrence rule: 'daily', 'weekly', 'biweekly', 'monthly', 'monthly_weekday' (same weekday position as the start, e.g. 2nd Thursday), 'monthly_last_weekday' (last such weekday of the month), or 'yearly'")
+    recurrence: Optional[str] = Field(None, description="Recurrence rule: 'daily', 'weekly', 'biweekly', 'monthly', 'monthly_weekday' (same weekday position as the start, e.g. 2nd Thursday), 'monthly_last_weekday' (last such weekday of the month), 'yearly', 'yearly_weekday' (same weekday position in the start's month, e.g. 4th Thursday of November), or 'yearly_last_weekday'")
     recurrence_end: Optional[datetime] = Field(None, description="End date for recurrence (null = indefinite)")
+    recurrence_weekdays: Optional[list[int]] = Field(None, description="Weekdays (0 = Monday to 6 = Sunday) a weekly or biweekly event repeats on; null or omitted means the weekday of starts_at")
     assigned_to: Optional[Union[list[int], str]] = Field(None, description="Assigned members: null (nobody), 'all' (whole family), or list of user IDs")
     color: Optional[str] = Field(None, description="Event color as hex string (e.g. '#7c3aed')")
     category: Optional[str] = Field(None, description="Event category label")
@@ -408,6 +409,13 @@ class CalendarEventCreate(BaseModel):
     def validate_icon(cls, v: Optional[str]) -> Optional[str]:
         return normalize_calendar_event_icon(v)
 
+    @field_validator("recurrence_weekdays")
+    @classmethod
+    def validate_recurrence_weekdays(cls, v: Optional[list[int]]) -> Optional[list[int]]:
+        if v is not None and any(day < 0 or day > 6 for day in v):
+            raise ValueError("recurrence_weekdays must contain weekdays from 0 (Monday) to 6 (Sunday)")
+        return v
+
 
 class CalendarEventUpdate(BaseModel):
     """Update an existing calendar event (partial update)."""
@@ -417,8 +425,9 @@ class CalendarEventUpdate(BaseModel):
     description: Optional[str] = Field(None, description="Event description")
     location: Optional[str] = Field(None, max_length=500, description="Free-form place name or address for the event, or null to clear it")
     all_day: Optional[bool] = Field(None, description="Whether this is an all-day event")
-    recurrence: Optional[str] = Field(None, description="Recurrence rule: 'daily', 'weekly', 'biweekly', 'monthly', 'monthly_weekday', 'monthly_last_weekday', 'yearly', or null to remove")
+    recurrence: Optional[str] = Field(None, description="Recurrence rule: 'daily', 'weekly', 'biweekly', 'monthly', 'monthly_weekday', 'monthly_last_weekday', 'yearly', 'yearly_weekday', 'yearly_last_weekday', or null to remove")
     recurrence_end: Optional[datetime] = Field(None, description="End date for recurrence; null clears it, omission preserves it")
+    recurrence_weekdays: Optional[list[int]] = Field(None, description="Weekdays (0 = Monday to 6 = Sunday) a weekly or biweekly event repeats on; null means the weekday of starts_at, omission preserves it")
     assigned_to: Optional[Union[list[int], str]] = Field(None, description="Assigned members: null (nobody), 'all' (whole family), or list of user IDs")
     color: Optional[str] = Field(None, description="Event color as hex string")
     category: Optional[str] = Field(None, description="Event category label")
@@ -428,6 +437,13 @@ class CalendarEventUpdate(BaseModel):
     @classmethod
     def validate_icon(cls, v: Optional[str]) -> Optional[str]:
         return normalize_calendar_event_icon(v)
+
+    @field_validator("recurrence_weekdays")
+    @classmethod
+    def validate_recurrence_weekdays(cls, v: Optional[list[int]]) -> Optional[list[int]]:
+        if v is not None and any(day < 0 or day > 6 for day in v):
+            raise ValueError("recurrence_weekdays must contain weekdays from 0 (Monday) to 6 (Sunday)")
+        return v
 
 
 class CalendarEventResponse(BaseModel):
@@ -444,6 +460,7 @@ class CalendarEventResponse(BaseModel):
     all_day: bool = Field(..., description="All-day event flag")
     recurrence: Optional[str] = Field(None, description="Recurrence rule if set")
     recurrence_end: Optional[datetime] = Field(None, description="Recurrence end date")
+    recurrence_weekdays: Optional[list[int]] = Field(None, description="Weekdays (0 = Monday) a weekly or biweekly event repeats on; null means the weekday of starts_at")
     is_recurring: bool = Field(False, description="True if this is a generated occurrence of a recurring event")
     occurrence_date: Optional[str] = Field(None, description="Date of this specific occurrence (YYYY-MM-DD)")
     recurrence_id: Optional[datetime] = Field(None, description="Original start of the series occurrence this event replaces, if it is a changed occurrence of an imported or synced series")

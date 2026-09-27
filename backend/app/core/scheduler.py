@@ -13,7 +13,7 @@ from app.core.clock import app_timezone, local_day_bounds_as_utc_naive, local_wa
 from app.core.push import send_push_for_user
 from app.core.notification_preferences import should_push_notification_type
 from app.core.notification_destinations import EligibleReminderUser, dispatch_family_notification
-from app.core.recurrence import expand_event, load_overridden_dates
+from app.core.recurrence import expand_event, load_series_changes
 from app.database import SessionLocal
 from app.models import (
     CalendarEvent, CalendarSubscription, FamilyBirthday, Membership, Notification,
@@ -399,10 +399,10 @@ def _check_notifications():
                 )
                 .all()
             )
-            overridden = load_overridden_dates(db, events)
+            series_changes = load_series_changes(db, events)
             for ev in events:
                 occurrences = (
-                    expand_event(ev, range_start=now, range_end=window + timedelta(seconds=1), overridden_dates=overridden)
+                    expand_event(ev, range_start=now, range_end=window + timedelta(seconds=1), series_changes=series_changes)
                     if ev.recurrence
                     else [{"starts_at": ev.starts_at}]
                 )

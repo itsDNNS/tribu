@@ -976,6 +976,7 @@ _MUTABLE_EVENT_FIELDS = (
     "all_day",
     "recurrence",
     "recurrence_end",
+    "recurrence_weekdays",
     "excluded_dates",
 )
 

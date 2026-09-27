@@ -555,3 +555,234 @@ class TestMonthlyByWeekdayImport:
 
         assert resp.status_code == 200, resp.text
         assert resp.json()["recurrence"] == recurrence
+
+
+def _rule(rule: str, dtstart: str) -> tuple[list[dict], list[dict]]:
+    return ics_to_event_dicts(_calendar(_vevent("UID:r@example.com", "SUMMARY:Rule", dtstart, f"RRULE:{rule}")), 1, 1)
+
+
+class TestWeeklyAndYearlyImport:
+    @pytest.mark.parametrize(
+        ("rule", "dtstart", "recurrence", "weekdays"),
+        [
+            ("FREQ=WEEKLY;BYDAY=MO,WE,FR", "DTSTART:20261005T070000", "weekly", [0, 2, 4]),
+            ("FREQ=WEEKLY;WKST=SU;BYDAY=MO,TU,WE,TH,FR", "DTSTART:20261005T070000", "weekly", [0, 1, 2, 3, 4]),
+            ("FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR", "DTSTART:20261005T070000", "weekly", [0, 1, 2, 3, 4]),
+            ("FREQ=WEEKLY;WKST=SU;INTERVAL=2;BYDAY=TU,TH", "DTSTART:20261006T070000", "biweekly", [1, 3]),
+            ("FREQ=WEEKLY;BYDAY=MO", "DTSTART:20261005T070000", "weekly", None),
+            ("FREQ=WEEKLY", "DTSTART:20261005T070000", "weekly", None),
+            ("FREQ=DAILY", "DTSTART:20261005T070000", "daily", None),
+            ("FREQ=YEARLY;BYMONTH=11;BYDAY=4TH", "DTSTART:20261126T150000", "yearly_weekday", None),
+            ("FREQ=YEARLY;BYMONTH=5;BYDAY=-1MO", "DTSTART;VALUE=DATE:20260525", "yearly_last_weekday", None),
+            ("FREQ=YEARLY;BYMONTH=11;BYDAY=TH;BYSETPOS=4", "DTSTART:20261126T150000", "yearly_weekday", None),
+            ("FREQ=YEARLY;BYMONTH=11;BYMONTHDAY=26", "DTSTART:20261126T150000", "yearly", None),
+            ("FREQ=YEARLY", "DTSTART:20261126T150000", "yearly", None),
+        ],
+    )
+    def test_supported_rules(self, rule, dtstart, recurrence, weekdays):
+        valid, errors = _rule(rule, dtstart)
+
+        assert errors == []
+        assert (valid[0]["recurrence"], valid[0]["recurrence_weekdays"]) == (recurrence, weekdays)
+
+    @pytest.mark.parametrize(
+        ("rule", "dtstart"),
+        [
+            ("FREQ=WEEKLY;INTERVAL=3", "DTSTART:20261005T070000"),
+            ("FREQ=DAILY;INTERVAL=2", "DTSTART:20261005T070000"),
+            ("FREQ=WEEKLY;BYDAY=1MO", "DTSTART:20261005T070000"),
+            ("FREQ=WEEKLY;BYMONTH=10;BYDAY=MO", "DTSTART:20261005T070000"),
+            ("FREQ=WEEKLY;WKST=SU;INTERVAL=2;BYDAY=SU,MO", "DTSTART:20261005T070000"),
+            ("FREQ=YEARLY;BYDAY=20MO", "DTSTART:20260518T070000"),
+            ("FREQ=YEARLY;BYMONTH=11;BYDAY=4TH", "DTSTART:20261119T150000"),  # the 3rd Thursday
+            ("FREQ=YEARLY;BYMONTH=10;BYDAY=4TH", "DTSTART:20261126T150000"),  # another month
+            ("FREQ=YEARLY;BYMONTHDAY=26", "DTSTART:20261126T150000"),  # the 26th of every month
+            ("FREQ=YEARLY;INTERVAL=2", "DTSTART:20261126T150000"),
+        ],
+    )
+    def test_unsupported_rules(self, rule, dtstart):
+        valid, errors = _rule(rule, dtstart)
+
+        assert valid[0]["recurrence"] is None
+        assert len(errors) == 1
+        # icalendar may reorder the rule parts.
+        message = errors[0]["error"]
+        assert message.startswith("Unsupported RRULE ") and message.endswith(", imported without recurrence")
+        assert sorted(message[len("Unsupported RRULE "):-len(", imported without recurrence")].split(";")) == sorted(rule.split(";"))
+
+    def test_weekdays_follow_a_start_that_moves_to_another_day(self, app_tz):
+        app_tz("Europe/Berlin")
+
+        valid, errors = _rule("FREQ=WEEKLY;BYDAY=MO,WE", "DTSTART;TZID=America/Chicago:20261005T184500")
+
+        # 18:45 on Monday in Chicago is 01:45 on Tuesday in Berlin.
+        assert errors == []
+        assert valid[0]["starts_at"] == datetime(2026, 10, 6, 1, 45)
+        assert valid[0]["recurrence_weekdays"] == [1, 3]
+
+    @pytest.mark.parametrize(
+        ("recurrence", "weekdays", "starts_at", "rrule"),
+        [
+            ("weekly", [0, 2, 4], datetime(2026, 10, 5, 7, 0), "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"),
+            ("biweekly", [1, 3], datetime(2026, 10, 6, 7, 0), "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH"),
+            ("yearly_weekday", None, datetime(2026, 11, 26, 15, 0), "RRULE:FREQ=YEARLY;BYDAY=4TH;BYMONTH=11"),
+            ("yearly_last_weekday", None, datetime(2026, 5, 25, 9, 0), "RRULE:FREQ=YEARLY;BYDAY=-1MO;BYMONTH=5"),
+        ],
+    )
+    def test_export_round_trips(self, recurrence, weekdays, starts_at, rrule):
+        event = CalendarEvent(
+            id=1, family_id=1, title="Rule", starts_at=starts_at, all_day=False,
+            recurrence=recurrence, recurrence_weekdays=weekdays,
+        )
+
+        ics = events_to_ics([event])
+        valid, errors = ics_to_event_dicts(ics, 1, 1)
+
+        assert rrule in ics
+        assert errors == []
+        assert (valid[0]["recurrence"], valid[0]["recurrence_weekdays"]) == (recurrence, weekdays)
+
+    def test_api_stores_and_normalizes_weekdays(self):
+        token, family_id = _seed_adult()
+        client = TestClient(app)
+
+        created = client.post(
+            "/calendar/events",
+            json={
+                "family_id": family_id, "title": "Training", "starts_at": "2026-10-05T18:00:00",
+                "recurrence": "weekly", "recurrence_weekdays": [3, 0, 3],
+            },
+            headers=_auth(token),
+        )
+        assert created.status_code == 200, created.text
+        assert created.json()["recurrence_weekdays"] == [0, 3]
+        event_id = created.json()["id"]
+
+        listed = _titles_between(client, token, family_id, "2026-10-05T00:00:00", "2026-10-12T00:00:00")
+        assert listed == [("2026-10-05", "Training"), ("2026-10-08", "Training")]
+
+        monthly = client.patch(f"/calendar/events/{event_id}", json={"recurrence": "monthly"}, headers=_auth(token))
+        assert monthly.json()["recurrence_weekdays"] is None
+
+        invalid = client.post(
+            "/calendar/events",
+            json={"family_id": family_id, "title": "X", "starts_at": "2026-10-05T18:00:00", "recurrence": "weekly", "recurrence_weekdays": [7]},
+            headers=_auth(token),
+        )
+        assert invalid.status_code == 422
+
+    @pytest.mark.parametrize("recurrence", ["yearly_weekday", "yearly_last_weekday"])
+    def test_events_can_be_created_with_yearly_weekday_rules(self, recurrence):
+        token, family_id = _seed_adult()
+        client = TestClient(app)
+
+        resp = client.post(
+            "/calendar/events",
+            json={"family_id": family_id, "title": "Holiday", "starts_at": "2026-11-26T00:00:00", "all_day": True, "recurrence": recurrence},
+            headers=_auth(token),
+        )
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["recurrence"] == recurrence
+
+
+CHOIR_UID = "choir@example.com"
+CHOIR = _vevent(
+    f"UID:{CHOIR_UID}",
+    "SUMMARY:Choir",
+    "DTSTART:20261005T180000",
+    "DTEND:20261005T193000",
+    "RRULE:FREQ=WEEKLY;UNTIL=20261231T000000",
+    "EXDATE:20261214T180000",
+)
+CHOIR_FROM_NOW_ON = _vevent(
+    f"UID:{CHOIR_UID}",
+    "RECURRENCE-ID;RANGE=THISANDFUTURE:20261026T180000",
+    "SUMMARY:Choir (Tuesdays)",
+    "DTSTART:20261027T190000",
+    "DTEND:20261027T203000",
+)
+
+
+class TestThisAndFuture:
+    def test_parser_continues_the_series_rule(self):
+        valid, errors = ics_to_event_dicts(_calendar(CHOIR, CHOIR_FROM_NOW_ON), 1, 1)
+
+        assert errors == []
+        split = valid[1]
+        assert split["recurrence_id"] == datetime(2026, 10, 26, 18, 0)
+        assert split["recurrence"] == "weekly"
+        assert split["recurrence_end"] == datetime(2026, 12, 31)
+        assert split["excluded_dates"] == ["2026-12-14"]
+
+    def test_weekdays_shift_with_the_start(self):
+        series = CHOIR.replace("RRULE:FREQ=WEEKLY;", "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;")
+        valid, _ = ics_to_event_dicts(_calendar(series, CHOIR_FROM_NOW_ON), 1, 1)
+
+        assert valid[0]["recurrence_weekdays"] == [0, 2]
+        assert valid[1]["recurrence_weekdays"] == [1, 3]
+
+    def test_cancelling_this_and_future_ends_the_series(self):
+        cancelled = _vevent(
+            f"UID:{CHOIR_UID}",
+            "RECURRENCE-ID;RANGE=THISANDFUTURE:20261102T180000",
+            "STATUS:CANCELLED",
+            "DTSTART:20261102T180000",
+        )
+        valid, errors = ics_to_event_dicts(_calendar(CHOIR, cancelled), 1, 1)
+
+        assert errors == []
+        assert len(valid) == 1
+        assert valid[0]["recurrence_end"] == datetime(2026, 11, 2, 17, 59, 59)
+
+    def test_feed_shows_the_changed_series_from_the_change_on(self, monkeypatch):
+        token, family_id = _seed_adult()
+        moved = _vevent(
+            f"UID:{CHOIR_UID}",
+            "RECURRENCE-ID:20261110T190000",
+            "SUMMARY:Choir (moved)",
+            "DTSTART:20261111T190000",
+        )
+        _patch_fetch(monkeypatch, _calendar(CHOIR, CHOIR_FROM_NOW_ON, moved))
+        client = TestClient(app)
+
+        subscription = _subscribe(client, token, family_id)
+
+        assert subscription["last_sync_status"] == "success", subscription["last_sync_error"]
+        assert _titles_between(client, token, family_id, "2026-10-01T00:00:00", "2026-11-18T00:00:00") == [
+            ("2026-10-05", "Choir"),
+            ("2026-10-12", "Choir"),
+            ("2026-10-19", "Choir"),
+            ("2026-10-27", "Choir (Tuesdays)"),
+            ("2026-11-03", "Choir (Tuesdays)"),
+            ("2026-11-11", "Choir (moved)"),
+            ("2026-11-17", "Choir (Tuesdays)"),
+        ]
+
+    def test_export_writes_range_and_no_rrule_for_the_change(self):
+        valid, _ = ics_to_event_dicts(_calendar(CHOIR, CHOIR_FROM_NOW_ON), 1, 1)
+        rows = [CalendarEvent(id=index + 1, **d) for index, d in enumerate(valid)]
+
+        ics = events_to_ics(rows)
+
+        assert "RECURRENCE-ID;RANGE=THISANDFUTURE:20261026T180000" in ics
+        assert ics.count("RRULE:") == 1
+        assert ics.count("EXDATE") == 1
+
+    def test_deleting_the_changed_series_ends_the_series_before_it(self):
+        token, family_id = _seed_adult()
+        client = TestClient(app)
+        resp = client.post(
+            "/calendar/events/import-ics",
+            json={"family_id": family_id, "ics_text": _calendar(CHOIR, CHOIR_FROM_NOW_ON)},
+            headers=_auth(token),
+        )
+        assert resp.json()["created"] == 2
+        split = next(r for r in _rows() if r.recurrence_id is not None)
+
+        deleted = client.delete(f"/calendar/events/{split.id}", headers=_auth(token))
+
+        assert deleted.status_code == 200, deleted.text
+        rows = _rows()
+        assert [(r.title, r.recurrence_end) for r in rows] == [("Choir", datetime(2026, 10, 26, 17, 59, 59))]
+        assert _titles_between(client, token, family_id, "2026-10-20T00:00:00", "2026-11-18T00:00:00") == []

@@ -3,8 +3,9 @@
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
+import pytest
 
-from app.core.recurrence import _next_occurrence, expand_event
+from app.core.recurrence import SeriesChanges, _next_occurrence, expand_event
 
 
 def make_event(**kwargs):
@@ -37,6 +38,9 @@ def make_event(**kwargs):
         "imported_at": None,
         "last_synced_at": None,
         "sync_status": None,
+        "recurrence_weekdays": None,
+        "ical_uid": None,
+        "recurrence_id": None,
     }
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
@@ -370,3 +374,87 @@ class TestSmartStartMonthly:
         ev = make_event(recurrence="monthly", starts_at=datetime(2020, 1, 31, 8, 0), ends_at=None)
         result = expand_event(ev, datetime(2026, 2, 1), datetime(2026, 4, 1))
         assert _starts(result) == [datetime(2026, 2, 28, 8, 0), datetime(2026, 3, 31, 8, 0)]
+
+
+# --- Weekly on several weekdays ---
+
+class TestWeeklyOnSeveralDays:
+    def test_weekly_on_monday_and_wednesday(self):
+        ev = make_event(recurrence="weekly", recurrence_weekdays=[0, 2])  # starts Monday 2026-03-02
+        result = expand_event(ev, datetime(2026, 3, 1), datetime(2026, 3, 16))
+        assert [o["occurrence_date"] for o in result] == ["2026-03-02", "2026-03-04", "2026-03-09", "2026-03-11"]
+        assert result[1]["starts_at"] == datetime(2026, 3, 4, 16, 0)
+        assert result[1]["ends_at"] == datetime(2026, 3, 4, 17, 0)
+
+    def test_biweekly_on_tuesday_and_thursday(self):
+        ev = make_event(recurrence="biweekly", recurrence_weekdays=[1, 3], starts_at=datetime(2026, 3, 3, 8, 0), ends_at=None)
+        result = expand_event(ev, datetime(2026, 3, 1), datetime(2026, 3, 31))
+        assert [o["occurrence_date"] for o in result] == ["2026-03-03", "2026-03-05", "2026-03-17", "2026-03-19"]
+
+    def test_start_outside_the_listed_days_is_still_the_first_occurrence(self):
+        ev = make_event(recurrence="weekly", recurrence_weekdays=[0], starts_at=datetime(2026, 3, 4, 9, 0), ends_at=None)  # Wednesday
+        result = expand_event(ev, datetime(2026, 3, 1), datetime(2026, 3, 17))
+        assert [o["occurrence_date"] for o in result] == ["2026-03-04", "2026-03-09", "2026-03-16"]
+
+    @pytest.mark.parametrize("recurrence", ["weekly", "biweekly"])
+    def test_jumping_ahead_matches_expanding_from_the_start(self, recurrence):
+        ev = make_event(recurrence=recurrence, recurrence_weekdays=[1, 4, 6], starts_at=datetime(2025, 1, 8, 7, 30), ends_at=None)  # Wednesday
+        window = (datetime(2026, 2, 10), datetime(2026, 3, 20))
+        from_start = [o["starts_at"] for o in expand_event(ev, None, window[1]) if o["starts_at"] >= window[0]]
+        assert from_start
+        assert _starts(expand_event(ev, *window)) == from_start
+
+
+# --- Yearly by weekday ---
+
+class TestYearlyByWeekday:
+    def test_fourth_thursday_of_november(self):
+        ev = make_event(recurrence="yearly_weekday", starts_at=datetime(2026, 11, 26, 15, 0), ends_at=None)
+        result = expand_event(ev, datetime(2026, 1, 1), datetime(2029, 1, 1))
+        assert _starts(result) == [datetime(2026, 11, 26, 15, 0), datetime(2027, 11, 25, 15, 0), datetime(2028, 11, 23, 15, 0)]
+
+    def test_last_monday_of_may(self):
+        ev = make_event(recurrence="yearly_last_weekday", starts_at=datetime(2026, 5, 25, 0, 0), ends_at=None, all_day=True)
+        result = expand_event(ev, datetime(2026, 1, 1), datetime(2029, 1, 1))
+        assert _starts(result) == [datetime(2026, 5, 25), datetime(2027, 5, 31), datetime(2028, 5, 29)]
+
+    def test_fifth_weekday_skips_years_without_one(self):
+        ev = make_event(recurrence="yearly_weekday", starts_at=datetime(2026, 10, 29, 9, 0), ends_at=None)  # 5th Thursday
+        result = expand_event(ev, datetime(2026, 1, 1), datetime(2031, 1, 1))
+        assert _starts(result) == [datetime(2026, 10, 29, 9, 0), datetime(2030, 10, 31, 9, 0)]
+
+    def test_old_series_expands_in_a_later_range(self):
+        ev = make_event(recurrence="yearly_weekday", starts_at=datetime(2000, 11, 23, 15, 0), ends_at=None)
+        assert _starts(expand_event(ev, datetime(2026, 1, 1), datetime(2027, 1, 1))) == [datetime(2026, 11, 26, 15, 0)]
+
+
+# --- Changes to this and all following occurrences ---
+
+class TestSeriesSplit:
+    def test_series_ends_where_a_row_changes_all_following_occurrences(self):
+        master = make_event(recurrence="weekly", ical_uid="choir@example.com", starts_at=datetime(2026, 10, 5, 18, 0), ends_at=None)
+        split = make_event(
+            id=2,
+            recurrence="weekly",
+            ical_uid="choir@example.com",
+            recurrence_id=datetime(2026, 10, 26, 18, 0),
+            starts_at=datetime(2026, 10, 27, 19, 0),
+            ends_at=None,
+        )
+        changes = {(1, "choir@example.com"): SeriesChanges(splits=(datetime(2026, 10, 26, 18, 0),))}
+        window = (datetime(2026, 10, 1), datetime(2026, 11, 15))
+
+        assert [o["occurrence_date"] for o in expand_event(master, *window, changes)] == ["2026-10-05", "2026-10-12", "2026-10-19"]
+        assert [o["occurrence_date"] for o in expand_event(split, *window, changes)] == ["2026-10-27", "2026-11-03", "2026-11-10"]
+
+    def test_later_split_ends_the_earlier_one(self):
+        split = make_event(
+            recurrence="weekly",
+            ical_uid="u",
+            recurrence_id=datetime(2026, 10, 5, 18, 0),
+            starts_at=datetime(2026, 10, 5, 18, 0),
+            ends_at=None,
+        )
+        changes = {(1, "u"): SeriesChanges(splits=(datetime(2026, 10, 5, 18, 0), datetime(2026, 10, 19, 18, 0)))}
+        result = expand_event(split, datetime(2026, 10, 1), datetime(2026, 11, 1), changes)
+        assert [o["occurrence_date"] for o in result] == ["2026-10-05", "2026-10-12"]

@@ -15,6 +15,8 @@ export const RECURRENCE_OPTIONS = [
   { value: 'monthly_weekday', key: 'module.calendar.repeat_monthly_weekday' },
   { value: 'monthly_last_weekday', key: 'module.calendar.repeat_monthly_last_weekday' },
   { value: 'yearly', key: 'module.calendar.repeat_yearly' },
+  { value: 'yearly_weekday', key: 'module.calendar.repeat_yearly_weekday' },
+  { value: 'yearly_last_weekday', key: 'module.calendar.repeat_yearly_last_weekday' },
 ];
 
 export function mapsLinksForLocation(location) {

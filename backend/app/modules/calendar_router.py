@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from typing import Callable, Optional
 
@@ -21,7 +21,7 @@ from app.core.deps import current_user, current_user_via_token_param, ensure_adu
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.notification_preferences import should_push_notification_type
 from app.core.push import send_push_for_user
-from app.core.recurrence import VALID_RECURRENCES, expand_event, load_overridden_dates
+from app.core.recurrence import VALID_RECURRENCES, WEEKLY_RECURRENCES, expand_event, load_series_changes, normalize_weekdays
 from app.core.scopes import require_scope
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
@@ -77,12 +77,12 @@ def list_calendar_events(
             .all()
         )
 
-        overridden = load_overridden_dates(db, recurring)
+        series_changes = load_series_changes(db, recurring)
         all_occurrences = []
         for ev in non_recurring:
             all_occurrences.extend(expand_event(ev, range_start, range_end))
         for ev in recurring:
-            all_occurrences.extend(expand_event(ev, range_start, range_end, overridden))
+            all_occurrences.extend(expand_event(ev, range_start, range_end, series_changes))
 
         all_occurrences.sort(key=lambda o: o["starts_at"])
         total = len(all_occurrences)
@@ -164,6 +164,7 @@ MEANINGFUL_EVENT_ACTIVITY_FIELDS = {
     "all_day",
     "recurrence",
     "recurrence_end",
+    "recurrence_weekdays",
     "assigned_to",
     "icon",
 }
@@ -787,6 +788,9 @@ def create_calendar_event(
         raise HTTPException(status_code=400, detail=error_detail(INVALID_RECURRENCE, recurrence=payload.recurrence))
 
     recurrence_end = to_local_wall_naive(payload.recurrence_end) if payload.recurrence_end else None
+    recurrence_weekdays = (
+        normalize_weekdays(payload.recurrence_weekdays, starts_at) if payload.recurrence in WEEKLY_RECURRENCES else None
+    )
 
     event = CalendarEvent(
         family_id=payload.family_id,
@@ -798,6 +802,7 @@ def create_calendar_event(
         all_day=payload.all_day,
         recurrence=payload.recurrence,
         recurrence_end=recurrence_end,
+        recurrence_weekdays=recurrence_weekdays,
         assigned_to=payload.assigned_to,
         color=payload.color,
         category=payload.category,
@@ -867,6 +872,11 @@ def update_calendar_event(
             event.recurrence = payload.recurrence
     if "recurrence_end" in payload.model_fields_set:
         event.recurrence_end = to_local_wall_naive(payload.recurrence_end)
+    if "recurrence_weekdays" in payload.model_fields_set:
+        event.recurrence_weekdays = payload.recurrence_weekdays
+    event.recurrence_weekdays = (
+        normalize_weekdays(event.recurrence_weekdays, event.starts_at) if event.recurrence in WEEKLY_RECURRENCES else None
+    )
 
     if payload.assigned_to is not None:
         old_assigned = event.assigned_to
@@ -934,12 +944,20 @@ def delete_calendar_event(
         if event.recurrence_id is None:
             # Changed occurrences belong to the series and go with it.
             same_uid.filter(CalendarEvent.recurrence_id.isnot(None)).delete(synchronize_session=False)
+        elif event.recurrence:
+            # Deleting a series that changed all following occurrences
+            # cancels those too: the earlier series rows end before it.
+            new_end = event.recurrence_id - timedelta(seconds=1)
+            for earlier in same_uid.filter(CalendarEvent.recurrence.isnot(None), CalendarEvent.id != event.id):
+                if (earlier.recurrence_id is None or earlier.recurrence_id < event.recurrence_id) and (
+                    earlier.recurrence_end is None or earlier.recurrence_end > new_end
+                ):
+                    earlier.recurrence_end = new_end
         else:
             # Deleting a changed occurrence cancels it instead of letting
             # the regular series occurrence reappear.
-            series = same_uid.filter(CalendarEvent.recurrence_id.is_(None)).first()
-            if series is not None and series.recurrence:
-                cancelled_date = event.recurrence_id.strftime("%Y-%m-%d")
+            cancelled_date = event.recurrence_id.strftime("%Y-%m-%d")
+            for series in same_uid.filter(CalendarEvent.recurrence.isnot(None)):
                 excluded = list(series.excluded_dates or [])
                 if cancelled_date not in excluded:
                     series.excluded_dates = excluded + [cancelled_date]
