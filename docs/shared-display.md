@@ -95,7 +95,7 @@ Tips:
 
 ## Offline behaviour
 
-The last successful data is kept on the device. If the network or the server is unavailable, the display keeps showing it with an "Offline · last update" note and a server error never unpairs the device. Only a revoked or unknown token clears the display.
+The last successful data is kept on the device. If the network or the server is unavailable, the display keeps showing it with an "Offline · last update" note and a server error never unpairs the device. Only a revoked or unknown token clears the display. A display without saved data says why it cannot load (no answer or a server error with its status) and tries again every 15 seconds until the family day shows.
 
 ## Weather and privacy
 

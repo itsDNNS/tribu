@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Seară · privire spre mâine",
   "display.stage.mode_night": "Noapte · planul de mâine",
   "display.state.loading": "Se încarcă ecranul familiei…",
+  "display.state.unreachable": "Tribu nu răspunde momentan.",
+  "display.state.server_error": "Tribu raportează o eroare de server ({status}).",
+  "display.state.retrying": "Se reîncearcă automat.",
   "display.state.missing": "Asociază acest dispozitiv deschizând linkul creat de un admin în Admin → Ecrane.",
   "display.state.invalid": "Acest ecran nu este asociat sau accesul nu mai este valid. Cere unui admin un nou link de asociere.",
   "display.state.revoked": "Acest ecran a fost eliminat de un admin. Cere un nou link de asociere pentru a-l reconecta."

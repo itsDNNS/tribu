@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Kväll · blick mot i morgon",
   "display.stage.mode_night": "Natt · plan för i morgon",
   "display.state.loading": "Familjeskärmen laddas…",
+  "display.state.unreachable": "Tribu svarar inte just nu.",
+  "display.state.server_error": "Tribu rapporterar ett serverfel ({status}).",
+  "display.state.retrying": "Försöker igen automatiskt.",
   "display.state.missing": "Para ihop enheten genom att öppna länken som en administratör skapade under Admin → Skärmar.",
   "display.state.invalid": "Skärmen är inte ihopparad eller så är åtkomsten inte längre giltig. Be en administratör om en ny länk.",
   "display.state.revoked": "Skärmen har tagits bort av en administratör. Be om en ny länk för att ansluta den igen."

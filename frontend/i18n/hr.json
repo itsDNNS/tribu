@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Večer · pogled na sutra",
   "display.stage.mode_night": "Noć · plan za sutra",
   "display.state.loading": "Učitavanje obiteljskog zaslona…",
+  "display.state.unreachable": "Tribu trenutačno ne odgovara.",
+  "display.state.server_error": "Tribu javlja pogrešku poslužitelja ({status}).",
+  "display.state.retrying": "Novi pokušaj slijedi automatski.",
   "display.state.missing": "Upari ovaj uređaj otvaranjem poveznice koju je administrator izradio pod Admin → Zasloni.",
   "display.state.invalid": "Ovaj zaslon nije uparen ili mu pristup više nije valjan. Zatraži od administratora novu poveznicu.",
   "display.state.revoked": "Administrator je uklonio ovaj zaslon. Zatraži novu poveznicu za ponovno povezivanje."

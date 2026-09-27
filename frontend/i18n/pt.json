@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Noite · olhar para amanhã",
   "display.stage.mode_night": "Noite · plano de amanhã",
   "display.state.loading": "A carregar o ecrã familiar…",
+  "display.state.unreachable": "O Tribu não está a responder neste momento.",
+  "display.state.server_error": "O Tribu indica um erro do servidor ({status}).",
+  "display.state.retrying": "A tentar novamente automaticamente.",
   "display.state.missing": "Emparelha este dispositivo abrindo a ligação que um admin criou em Admin → Ecrãs.",
   "display.state.invalid": "Este ecrã não está emparelhado ou o acesso já não é válido. Pede a um admin uma nova ligação de emparelhamento.",
   "display.state.revoked": "Este ecrã foi removido por um admin. Pede uma nova ligação de emparelhamento para o voltar a ligar."

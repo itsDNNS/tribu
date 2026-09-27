@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Soir · cap sur demain",
   "display.stage.mode_night": "Nuit · programme de demain",
   "display.state.loading": "Chargement de l’écran familial…",
+  "display.state.unreachable": "Tribu ne répond pas pour le moment.",
+  "display.state.server_error": "Tribu signale une erreur serveur ({status}).",
+  "display.state.retrying": "Nouvelle tentative automatique.",
   "display.state.missing": "Associe cet appareil en ouvrant le lien créé par un admin sous Admin → Écrans.",
   "display.state.invalid": "Cet écran n’est pas associé ou son accès n’est plus valide. Demande un nouveau lien d’association à un admin.",
   "display.state.revoked": "Cet écran a été retiré par un admin. Demande un nouveau lien d’association pour le reconnecter."

@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Tarde · mirando a mañana",
   "display.stage.mode_night": "Noche · plan de mañana",
   "display.state.loading": "Cargando la pantalla familiar…",
+  "display.state.unreachable": "Tribu no responde en este momento.",
+  "display.state.server_error": "Tribu informa de un error del servidor ({status}).",
+  "display.state.retrying": "Se volverá a intentar automáticamente.",
   "display.state.missing": "Vincula este dispositivo abriendo el enlace que un admin creó en Admin → Pantallas.",
   "display.state.invalid": "Esta pantalla no está vinculada o su acceso ya no es válido. Pide a un admin un nuevo enlace de vinculación.",
   "display.state.revoked": "Un admin ha eliminado esta pantalla. Pide un nuevo enlace de vinculación para volver a conectarla."

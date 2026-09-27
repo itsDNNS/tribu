@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Sera · uno sguardo a domani",
   "display.stage.mode_night": "Notte · piano per domani",
   "display.state.loading": "Caricamento del display familiare…",
+  "display.state.unreachable": "Tribu al momento non risponde.",
+  "display.state.server_error": "Tribu segnala un errore del server ({status}).",
+  "display.state.retrying": "Nuovo tentativo automatico in corso.",
   "display.state.missing": "Associa questo dispositivo aprendo il link creato da un admin in Admin → Display.",
   "display.state.invalid": "Questo display non è associato o il suo accesso non è più valido. Chiedi a un admin un nuovo link di associazione.",
   "display.state.revoked": "Questo display è stato rimosso da un admin. Chiedi un nuovo link di associazione per ricollegarlo."

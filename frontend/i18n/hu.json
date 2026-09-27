@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Este · kitekintés holnapra",
   "display.stage.mode_night": "Éjjel · holnapi terv",
   "display.state.loading": "A családi kijelző betöltése…",
+  "display.state.unreachable": "A Tribu most nem válaszol.",
+  "display.state.server_error": "A Tribu szerverhibát jelez ({status}).",
+  "display.state.retrying": "Automatikus újrapróbálkozás folyamatban.",
   "display.state.missing": "Párosítsd ezt az eszközt az admin által az Admin → Kijelzők alatt létrehozott linkkel.",
   "display.state.invalid": "Ez a kijelző nincs párosítva, vagy a hozzáférése már nem érvényes. Kérj új párosító linket egy admintól.",
   "display.state.revoked": "Ezt a kijelzőt egy admin eltávolította. Kérj új párosító linket az újracsatlakozáshoz."

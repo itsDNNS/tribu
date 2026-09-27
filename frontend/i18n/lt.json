@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Vakaras · žvilgsnis į rytojų",
   "display.stage.mode_night": "Naktis · rytojaus planas",
   "display.state.loading": "Įkeliamas šeimos ekranas…",
+  "display.state.unreachable": "Tribu šiuo metu neatsako.",
+  "display.state.server_error": "Tribu praneša apie serverio klaidą ({status}).",
+  "display.state.retrying": "Bus bandoma dar kartą automatiškai.",
   "display.state.missing": "Susiek šį įrenginį atidarydamas nuorodą, kurią administratorius sukūrė skiltyje Admin → Ekranai.",
   "display.state.invalid": "Šis ekranas nesusietas arba jo prieiga nebegalioja. Paprašyk administratoriaus naujos susiejimo nuorodos.",
   "display.state.revoked": "Šį ekraną pašalino administratorius. Paprašyk naujos susiejimo nuorodos, kad vėl jį prijungtum."

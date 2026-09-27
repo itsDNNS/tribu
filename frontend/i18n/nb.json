@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Kveld · blikk på i morgen",
   "display.stage.mode_night": "Natt · plan for i morgen",
   "display.state.loading": "Familieskjermen lastes …",
+  "display.state.unreachable": "Tribu svarer ikke akkurat nå.",
+  "display.state.server_error": "Tribu melder en serverfeil ({status}).",
+  "display.state.retrying": "Prøver igjen automatisk.",
   "display.state.missing": "Koble denne enheten ved å åpne lenken en administrator har laget under Admin → Skjermer.",
   "display.state.invalid": "Denne skjermen er ikke koblet, eller tilgangen er ikke lenger gyldig. Be en administrator om en ny koblingslenke.",
   "display.state.revoked": "Denne skjermen er fjernet av en administrator. Be om en ny koblingslenke for å koble den til igjen."

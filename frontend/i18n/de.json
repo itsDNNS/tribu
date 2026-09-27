@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Abends · Blick auf morgen",
   "display.stage.mode_night": "Nachts · Plan für morgen",
   "display.state.loading": "Das Familien-Display wird geladen …",
+  "display.state.unreachable": "Tribu antwortet gerade nicht.",
+  "display.state.server_error": "Tribu meldet einen Serverfehler ({status}).",
+  "display.state.retrying": "Neuer Versuch läuft automatisch.",
   "display.state.missing": "Kopple dieses Gerät, indem du den Link öffnest, den ein Admin unter Admin → Displays erstellt hat.",
   "display.state.invalid": "Dieses Display ist nicht gekoppelt oder sein Zugang ist nicht mehr gültig. Bitte einen Admin um einen neuen Kopplungslink.",
   "display.state.revoked": "Dieses Display wurde von einem Admin entfernt. Bitte um einen neuen Kopplungslink, um es wieder zu verbinden."

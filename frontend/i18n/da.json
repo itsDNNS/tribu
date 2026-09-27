@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Aften · blik på i morgen",
   "display.stage.mode_night": "Nat · plan for i morgen",
   "display.state.loading": "Familieskærmen indlæses…",
+  "display.state.unreachable": "Tribu svarer ikke lige nu.",
+  "display.state.server_error": "Tribu melder en serverfejl ({status}).",
+  "display.state.retrying": "Prøver igen automatisk.",
   "display.state.missing": "Par denne enhed ved at åbne linket, som en administrator har oprettet under Admin → Skærme.",
   "display.state.invalid": "Denne skærm er ikke parret, eller adgangen er ikke længere gyldig. Bed en administrator om et nyt parringslink.",
   "display.state.revoked": "Denne skærm er fjernet af en administrator. Bed om et nyt parringslink for at forbinde den igen."

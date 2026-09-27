@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Avond · vooruitblik",
   "display.stage.mode_night": "Nacht · plan voor morgen",
   "display.state.loading": "Het gezinsscherm wordt geladen…",
+  "display.state.unreachable": "Tribu reageert op dit moment niet.",
+  "display.state.server_error": "Tribu meldt een serverfout ({status}).",
+  "display.state.retrying": "Er wordt automatisch opnieuw geprobeerd.",
   "display.state.missing": "Koppel dit apparaat via de link die een beheerder onder Beheer → Schermen heeft gemaakt.",
   "display.state.invalid": "Dit scherm is niet gekoppeld of de toegang is niet meer geldig. Vraag een beheerder om een nieuwe koppellink.",
   "display.state.revoked": "Dit scherm is door een beheerder verwijderd. Vraag een nieuwe koppellink om het weer te verbinden."

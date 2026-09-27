@@ -205,6 +205,39 @@ describe('DisplayPage', () => {
     expect(window.localStorage.getItem('tribu_display_token')).toBe('tribu_display_down');
   });
 
+  test('explains why nothing loads and retries sooner until the family day shows', async () => {
+    jest.useFakeTimers();
+    mockRouter.isReady = true;
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_down');
+    api.apiDisplayMe.mockResolvedValue({ ok: false, status: 502, data: null });
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+
+    expect(screen.getByTestId('display-state-reason')).toHaveTextContent('Tribu reports a server error (502). Trying again automatically.');
+    expect(api.apiDisplayMe).toHaveBeenCalledTimes(1);
+
+    api.apiDisplayMe.mockResolvedValue({ ok: false, status: 0, data: null });
+    await act(async () => { jest.advanceTimersByTime(15 * 1000); });
+    await flushAsync();
+    expect(api.apiDisplayMe).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('display-state-reason')).toHaveTextContent('Tribu is not answering right now.');
+
+    api.apiDisplayMe.mockResolvedValue({ ok: true, status: 200, data: sampleMe });
+    api.apiDisplayDashboard.mockResolvedValue({ ok: true, status: 200, data: buildStagePayload() });
+    await act(async () => { jest.advanceTimersByTime(15 * 1000); });
+    await flushAsync();
+    await flushAsync();
+    expect(screen.getByTestId('display-dashboard')).toBeInTheDocument();
+    expect(screen.queryByTestId('display-state-reason')).not.toBeInTheDocument();
+
+    // Back on the wall, the display returns to its normal refresh interval.
+    const calls = api.apiDisplayMe.mock.calls.length;
+    await act(async () => { jest.advanceTimersByTime(15 * 1000); });
+    expect(api.apiDisplayMe.mock.calls.length).toBe(calls);
+    jest.useRealTimers();
+  });
+
   test('a revoked token shows the revoked-state message and keeps the token (so the message persists)', async () => {
     mockRouter.isReady = true;
     window.localStorage.setItem('tribu_display_token', 'tribu_display_revoked');

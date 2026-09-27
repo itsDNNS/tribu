@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Вечер · поглед към утре",
   "display.stage.mode_night": "Нощ · план за утре",
   "display.state.loading": "Семейният екран се зарежда…",
+  "display.state.unreachable": "Tribu не отговаря в момента.",
+  "display.state.server_error": "Tribu съобщава за грешка на сървъра ({status}).",
+  "display.state.retrying": "Нов опит ще бъде направен автоматично.",
   "display.state.missing": "Сдвои това устройство, като отвориш връзката, създадена от админ в Админ → Екрани.",
   "display.state.invalid": "Този екран не е сдвоен или достъпът му вече не е валиден. Помоли админ за нова връзка за сдвояване.",
   "display.state.revoked": "Този екран е премахнат от админ. Поискай нова връзка за сдвояване, за да го свържеш отново."

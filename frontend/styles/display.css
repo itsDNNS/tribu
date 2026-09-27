@@ -1131,3 +1131,4 @@
   max-width: 36em;
   line-height: 1.5;
 }
+.display-state .display-state-reason { margin-top: 1rem; font-size: 0.95em; opacity: 0.75; }

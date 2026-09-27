@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Večer · pogled na jutri",
   "display.stage.mode_night": "Noč · načrt za jutri",
   "display.state.loading": "Nalaganje družinskega zaslona …",
+  "display.state.unreachable": "Tribu trenutno ne odgovarja.",
+  "display.state.server_error": "Tribu sporoča napako strežnika ({status}).",
+  "display.state.retrying": "Samodejno bomo poskusili znova.",
   "display.state.missing": "Poveži to napravo tako, da odpreš povezavo, ki jo je skrbnik ustvaril v Skrbništvo → Zasloni.",
   "display.state.invalid": "Ta zaslon ni povezan ali njegov dostop ni več veljaven. Prosi skrbnika za novo povezavo.",
   "display.state.revoked": "Skrbnik je odstranil ta zaslon. Prosi za novo povezavo, da ga znova povežeš."

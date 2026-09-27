@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Vakars · skats uz rītdienu",
   "display.stage.mode_night": "Nakts · rītdienas plāns",
   "display.state.loading": "Ielādē ģimenes ekrānu…",
+  "display.state.unreachable": "Tribu pašlaik neatbild.",
+  "display.state.server_error": "Tribu ziņo par servera kļūdu ({status}).",
+  "display.state.retrying": "Mēģinājums tiks atkārtots automātiski.",
   "display.state.missing": "Savieno šo ierīci, atverot saiti, ko administrators izveidoja sadaļā Admin → Ekrāni.",
   "display.state.invalid": "Šis ekrāns nav savienots vai tā piekļuve vairs nav derīga. Palūdz administratoram jaunu savienošanas saiti.",
   "display.state.revoked": "Administrators noņēma šo ekrānu. Palūdz jaunu savienošanas saiti, lai to atkal pievienotu."

@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Õhtu · pilk homsele",
   "display.stage.mode_night": "Öö · homne plaan",
   "display.state.loading": "Pereekraan laadib…",
+  "display.state.unreachable": "Tribu ei vasta praegu.",
+  "display.state.server_error": "Tribu teatab serveriveast ({status}).",
+  "display.state.retrying": "Proovitakse automaatselt uuesti.",
   "display.state.missing": "Seo see seade, avades lingi, mille administraator lõi jaotises Admin → Ekraanid.",
   "display.state.invalid": "See ekraan pole seotud või selle ligipääs ei kehti enam. Küsi administraatorilt uus sidumislink.",
   "display.state.revoked": "Administraator eemaldas selle ekraani. Küsi uus sidumislink, et see uuesti ühendada."

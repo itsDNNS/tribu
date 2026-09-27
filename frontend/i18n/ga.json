@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Tráthnóna · súil ar amárach",
   "display.stage.mode_night": "Oíche · plean amárach",
   "display.state.loading": "Scáileán an teaghlaigh á lódáil…",
+  "display.state.unreachable": "Níl Tribu ag freagairt faoi láthair.",
+  "display.state.server_error": "Tuairiscíonn Tribu earráid freastalaí ({status}).",
+  "display.state.retrying": "Déanfar iarracht arís go huathoibríoch.",
   "display.state.missing": "Péireáil an gléas seo tríd an nasc a chruthaigh riarthóir faoi Riarachán → Scáileáin a oscailt.",
   "display.state.invalid": "Níl an scáileán seo péireáilte nó níl a rochtain bailí a thuilleadh. Iarr nasc péireála nua ar riarthóir.",
   "display.state.revoked": "Bhain riarthóir an scáileán seo. Iarr nasc péireála nua chun é a athcheangal."

@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Wieczór · spojrzenie na jutro",
   "display.stage.mode_night": "Noc · plan na jutro",
   "display.state.loading": "Ładowanie ekranu rodzinnego…",
+  "display.state.unreachable": "Tribu w tej chwili nie odpowiada.",
+  "display.state.server_error": "Tribu zgłasza błąd serwera ({status}).",
+  "display.state.retrying": "Ponowna próba nastąpi automatycznie.",
   "display.state.missing": "Sparuj to urządzenie, otwierając link utworzony przez admina w Admin → Ekrany.",
   "display.state.invalid": "Ten ekran nie jest sparowany albo jego dostęp wygasł. Poproś admina o nowy link parowania.",
   "display.state.revoked": "Ten ekran został usunięty przez admina. Poproś o nowy link parowania, aby go ponownie połączyć."

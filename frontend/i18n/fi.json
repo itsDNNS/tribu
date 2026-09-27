@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Ilta · katse huomiseen",
   "display.stage.mode_night": "Yö · huomisen suunnitelma",
   "display.state.loading": "Perhenäyttöä ladataan…",
+  "display.state.unreachable": "Tribu ei vastaa juuri nyt.",
+  "display.state.server_error": "Tribu ilmoittaa palvelinvirheestä ({status}).",
+  "display.state.retrying": "Yritetään uudelleen automaattisesti.",
   "display.state.missing": "Yhdistä tämä laite avaamalla linkki, jonka ylläpitäjä loi kohdassa Ylläpito → Näytöt.",
   "display.state.invalid": "Näyttöä ei ole yhdistetty tai sen käyttöoikeus ei ole enää voimassa. Pyydä ylläpitäjältä uusi yhdistämislinkki.",
   "display.state.revoked": "Ylläpitäjä on poistanut tämän näytön. Pyydä uusi yhdistämislinkki, jotta se toimii taas."

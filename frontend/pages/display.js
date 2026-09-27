@@ -8,6 +8,8 @@ import { buildMessages, listLanguages, t as translate } from '../lib/i18n';
 import { localeForLang } from '../lib/dates';
 
 const TOKEN_STORAGE_KEY = 'tribu_display_token';
+// While nothing is on the wall yet, try again sooner than the refresh interval.
+const LOADING_RETRY_MS = 15 * 1000;
 const CACHE_STORAGE_KEY = 'tribu_display_cache';
 const SUPPORTED_LANGUAGES = listLanguages().map((language) => language.key);
 
@@ -42,6 +44,7 @@ export default function DisplayPage() {
   const [me, setMe] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [offlineSince, setOfflineSince] = useState(null);
+  const [problem, setProblem] = useState(null); // { status } of the last failed load
 
   // Token bootstrap: prefer ?token=, fall back to localStorage. Once
   // captured from the URL, immediately persist + scrub the URL so the
@@ -110,6 +113,7 @@ export default function DisplayPage() {
     setMe(meRes.data);
     setDashboard(dashRes.data);
     setOfflineSince(null);
+    setProblem(null);
     setState('ready');
     writeCache({ me: meRes.data, dashboard: dashRes.data, at: Date.now() });
 
@@ -117,6 +121,7 @@ export default function DisplayPage() {
       // Unreachable server or server error: keep what is on the wall.
       if (status === 0 || status >= 500) {
         setOfflineSince((current) => current || new Date());
+        setProblem({ status });
         setState((current) => (current === 'ready' ? current : 'loading'));
         return;
       }
@@ -126,12 +131,15 @@ export default function DisplayPage() {
 
   const config = normalizeStageConfig(dashboard?.config || me?.config);
   const refreshIntervalMs = config.refreshSeconds * 1000;
+  const pollMs = state === 'ready' ? refreshIntervalMs : Math.min(LOADING_RETRY_MS, refreshIntervalMs);
+  useEffect(() => {
+    if (token) refresh(token);
+  }, [token, refresh]);
   useEffect(() => {
     if (!token) return undefined;
-    refresh(token);
-    const id = setInterval(() => { refresh(token); }, refreshIntervalMs);
+    const id = setInterval(() => { refresh(token); }, pollMs);
     return () => clearInterval(id);
-  }, [token, refresh, refreshIntervalMs]);
+  }, [token, refresh, pollMs]);
 
   useScreenWakeLock(state === 'ready' && config.mode !== 'eink');
 
@@ -157,6 +165,15 @@ export default function DisplayPage() {
         {state === 'loading' && (
           <div className="display-state" data-testid="display-state-loading" aria-busy="true" aria-label={t('display.state.loading')}>
             <p>{t('display.state.loading')}</p>
+            {problem && (
+              <p className="display-state-reason" role="status" data-testid="display-state-reason">
+                {problem.status
+                  ? t('display.state.server_error').replace('{status}', problem.status)
+                  : t('display.state.unreachable')}
+                {' '}
+                {t('display.state.retrying')}
+              </p>
+            )}
           </div>
         )}
         {state === 'missing' && (

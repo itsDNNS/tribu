@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Evening · looking ahead",
   "display.stage.mode_night": "Night · tomorrow's plan",
   "display.state.loading": "Loading the family display…",
+  "display.state.unreachable": "Tribu is not answering right now.",
+  "display.state.server_error": "Tribu reports a server error ({status}).",
+  "display.state.retrying": "Trying again automatically.",
   "display.state.missing": "Pair this device by opening the link an admin generated under Admin → Displays.",
   "display.state.invalid": "This display is not paired or its token is no longer valid. Ask an admin to create a new pairing link.",
   "display.state.revoked": "This display has been removed by an admin. Ask for a new pairing link to bring it back online."

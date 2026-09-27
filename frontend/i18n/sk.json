@@ -1928,6 +1928,9 @@
   "display.stage.mode_evening": "Večer · výhľad na zajtra",
   "display.stage.mode_night": "Noc · plán na zajtra",
   "display.state.loading": "Načítava sa rodinný displej…",
+  "display.state.unreachable": "Tribu práve neodpovedá.",
+  "display.state.server_error": "Tribu hlási chybu servera ({status}).",
+  "display.state.retrying": "Ďalší pokus prebehne automaticky.",
   "display.state.missing": "Spáruj toto zariadenie otvorením odkazu, ktorý admin vytvoril v Admin → Displeje.",
   "display.state.invalid": "Tento displej nie je spárovaný alebo jeho prístup už neplatí. Požiadaj admina o nový párovací odkaz.",
   "display.state.revoked": "Tento displej odstránil admin. Požiadaj o nový párovací odkaz, aby sa znova pripojil."
