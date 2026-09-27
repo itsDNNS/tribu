@@ -13,7 +13,7 @@ permissions:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     env:
       DATABASE_URL: sqlite:///./test-backend-ci.db
@@ -33,14 +33,49 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r backend/requirements.txt pytest httpx
 
-      - name: Run backend release-contract tests
+      # The whole suite, not only the release contracts: regressions such as
+      # the display crash (#491) were covered by tests that CI never ran.
+      - name: Run backend tests
+        run: PYTHONPATH=backend python -m pytest backend/tests -q
+
+  endpoint-budgets-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tribu
+          POSTGRES_PASSWORD: tribu
+          POSTGRES_DB: tribu
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tribu -d tribu"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: sqlite:///./test-backend-ci.db
+      JWT_SECRET: backend-ci-test-secret-key-32-bytes
+      TRIBU_BUDGET_DATABASE_URL: postgresql://tribu:tribu@localhost:5432/tribu
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend test dependencies
         run: |
-          PYTHONPATH=backend python -m pytest \
-            backend/tests/test_cors_headers.py \
-            backend/tests/test_mobile_auth.py \
-            backend/tests/test_oidc_flow.py \
-            backend/tests/test_push_delivery.py \
-            backend/tests/test_notification_reliability.py \
-            backend/tests/test_push_diagnostics.py \
-            backend/tests/test_notification_destinations.py \
-            -q
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt pytest httpx
+
+      # Production runs on PostgreSQL; check the heavy endpoints there too.
+      - name: Run endpoint budgets on PostgreSQL
+        run: PYTHONPATH=backend python -m pytest backend/tests/test_endpoint_budgets.py -q -s
