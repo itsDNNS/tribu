@@ -12,7 +12,7 @@ from PIL import Image
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.avatars import LARGE_PX, SMALL_PX, AvatarError, build_avatar_variants, try_build_avatar_variants
+from app.core.avatars import LARGE_PX, SMALL_PX, AvatarError, build_avatar_variants, normalize_photo, try_build_avatar_variants
 from app.database import Base, get_db
 from app.main import app
 from app.models import Family, Membership, PersonalAccessToken, User
@@ -81,6 +81,17 @@ class TestVariants:
             build_avatar_variants(url)
         assert try_build_avatar_variants(url) is None
 
+    def test_stored_source_is_bounded_upright_and_without_metadata(self):
+        exif = Image.Exif()
+        exif[0x0112] = 6  # rotate 90° clockwise on display
+        exif[0x8825] = {2: (52.0, 31.0, 0.0)}  # GPS latitude
+        source = _decode(build_avatar_variants(_data_url(Image.new("RGB", (3000, 2000), "red"), "JPEG", exif=exif.tobytes())).source)
+        assert source.size == (683, 1024)
+        assert "exif" not in source.info
+
+    def test_small_images_are_not_enlarged(self):
+        assert _decode(normalize_photo(_data_url(Image.new("RGB", (300, 120))))).size == (300, 120)
+
     def test_rejects_huge_dimensions(self):
         with pytest.raises(AvatarError):
             build_avatar_variants(_data_url(Image.new("1", (8000, 8000))))
@@ -144,10 +155,11 @@ def test_own_upload_serves_large_and_member_lists_serve_small(api):
     members = client.get(f"/families/{family_id}/members", headers=_auth(admin_token)).json()
     served = next(m["profile_image"] for m in members if m["display_name"] == "Admin")
     assert _decode(served).size == (SMALL_PX, SMALL_PX)
-    # The upload itself is kept but never served.
+    # Only a bounded, metadata-free source is kept, and it is never served.
     db = TestSession()
-    assert db.query(User).filter(User.email == "admin@example.com").one().profile_image == upload
+    source = db.query(User).filter(User.email == "admin@example.com").one().profile_image
     db.close()
+    assert source != upload and _decode(source).size == (900, 900)
 
 
 def test_admin_sets_member_avatar_in_sizes(api):

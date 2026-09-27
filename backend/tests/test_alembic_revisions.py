@@ -328,6 +328,40 @@ def test_process_runs_migration_creates_and_drops_the_table(tmp_path, monkeypatc
         assert not conn.execute("SELECT name FROM sqlite_master WHERE name = 'process_runs'").fetchall()
 
 
+def test_normalize_stored_photos_migration_bounds_and_strips_images(tmp_path, monkeypatch):
+    import base64
+    import io
+    from PIL import Image
+    db_path = tmp_path / "photos-0061.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    command.upgrade(config, "0060_process_runs")
+
+    def jpeg(width, height):
+        exif = Image.Exif()
+        exif[0x8825] = {2: (52.0, 31.0, 0.0)}
+        buffer = io.BytesIO()
+        Image.new("RGB", (width, height), "#3b82f6").save(buffer, format="JPEG", exif=exif.tobytes())
+        return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode()
+
+    broken = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 50).decode()
+    with sqlite3.connect(db_path) as conn:
+        conn.executemany("INSERT INTO users (id, email, display_name, profile_image) VALUES (?, ?, ?, ?)",
+                         [(1, "a@example.com", "A", jpeg(2000, 1500)), (2, "b@example.com", "B", broken)])
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'F')")
+        conn.execute("INSERT INTO shopping_lists (id, family_id, name) VALUES (1, 1, 'L')")
+        conn.execute("INSERT INTO shopping_items (id, list_id, name, photo) VALUES (1, 1, 'Cheese', ?)", (jpeg(1600, 1600),))
+    command.upgrade(config, "0061_normalize_stored_photos")
+    with sqlite3.connect(db_path) as conn:
+        profile, still_broken = [row[0] for row in conn.execute("SELECT profile_image FROM users ORDER BY id")]
+        photo = conn.execute("SELECT photo FROM shopping_items").fetchone()[0]
+    for value, size in ((profile, (1024, 768)), (photo, (1024, 1024))):
+        image = Image.open(io.BytesIO(base64.b64decode(value.split(",", 1)[1])))
+        assert image.format == "WEBP" and image.size == size and "exif" not in image.info
+    assert still_broken == broken
+
+
 def test_shopping_model_defaults_match_migration_for_legacy_inserts():
     from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session

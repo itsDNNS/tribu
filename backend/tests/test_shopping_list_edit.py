@@ -336,16 +336,57 @@ def test_conditional_child_toggle_undo_conflict_deletion_and_checked_order():
     assert client.delete(f"/shopping/items/{second}", headers=_auth(owner)).status_code == 200
     assert toggle(second, False, undo_expected).status_code == 404
 
+def _photo(width=40, height=30, fmt="PNG", **save):
+    import base64
+    import io
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (width, height), "#10b981").save(buffer, format=fmt, **save)
+    mime = "jpeg" if fmt == "JPEG" else fmt.lower()
+    return f"data:image/{mime};base64," + base64.b64encode(buffer.getvalue()).decode()
+
+
+def _decoded(data_url):
+    import base64
+    import io
+    from PIL import Image
+
+    return Image.open(io.BytesIO(base64.b64decode(data_url.split(",", 1)[1])))
+
+
+def test_product_photos_are_stored_bounded_and_without_metadata():
+    from PIL import Image
+
+    token, family_id, user_id = _seed_member(suffix="photo-size")
+    list_id = _seed_list(family_id, "Photos", user_id)
+    exif = Image.Exif()
+    exif[0x010F] = "Phone"
+    exif[0x8825] = {2: (52.0, 31.0, 0.0)}  # GPS latitude
+    upload = _photo(1800, 1200, "JPEG", exif=exif.tobytes())
+    created = client.post(f"/shopping/lists/{list_id}/items", headers=_auth(token), json={"name": "Cheese", "photo": upload})
+    assert created.status_code == 200, created.text
+    stored = _decoded(created.json()["photo"])
+    assert stored.format == "WEBP" and stored.size == (1024, 683)
+    assert "exif" not in stored.info
+
+    unreadable = "data:image/png;base64," + __import__("base64").b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 40).decode()
+    rejected = client.patch(f"/shopping/items/{created.json()['id']}", headers=_auth(token), json={"photo": unreadable})
+    assert rejected.status_code == 422
+    assert rejected.json()["detail"]["code"] == "IMAGE_UNREADABLE"
+
+
 # Visual-shopping persistence and authorization contracts.
 def test_product_details_archive_and_restore_preserve_metadata(monkeypatch):
     token, family_id, user_id = _seed_member(suffix="visual")
     list_id = _seed_list(family_id, "Weekly", user_id)
     other = _seed_item(list_id, "Bread")
-    photo = "data:image/png;base64,iVBORw0KGgo="
     response = client.post(f"/shopping/lists/{list_id}/items", headers=_auth(token), json={
-        "name":"Milk", "spec":"2 l", "category":"Dairy", "notes":"1.5% fat", "priority":"urgent", "photo":photo})
+        "name":"Milk", "spec":"2 l", "category":"Dairy", "notes":"1.5% fat", "priority":"urgent", "photo":_photo()})
     assert response.status_code == 200, response.text
     item_id = response.json()["id"]
+    photo = response.json()["photo"]
+    assert photo.startswith("data:image/webp;base64,")
     client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"checked":True})
     events = []
     monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: events.append(args))
@@ -467,7 +508,7 @@ def test_atomic_edit_move_clears_nulls_and_failed_target_leaves_all_fields_and_e
     target = _seed_list(family_id, "Target", user_id)
     foreign = _seed_list(other_family, "Foreign", other_user)
     headers = _auth(owner)
-    photo = "data:image/png;base64,iVBORw0KGgo="
+    photo = _photo()
     item = client.post(f"/shopping/lists/{source}/items", json={"name":"Milk","notes":"Brand", "photo":photo, "priority":"urgent","category":"Dairy","spec":"2 l"}, headers=headers).json()
     ws, hooks, destinations = [], [], []
     monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: ws.append(args))

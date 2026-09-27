@@ -112,11 +112,11 @@ def _measure(path: str, headers: dict) -> Measurement:
 
 # path template, headers key, max response bytes, max statements, max peak memory
 BUDGETS = {
-    "display dashboard": ("/display/dashboard", "display", 200_000, 80, 60 * MB),
-    "dashboard summary": ("/dashboard/summary?family_id={family_id}", "user", 250_000, 60, 60 * MB),
-    "members": ("/families/{family_id}/members", "user", 100_000, 20, 40 * MB),
-    "school timetables": ("/school-timetables?family_id={family_id}", "user", 100_000, 20, 40 * MB),
-    "own profile": ("/auth/me", "user", 150_000, 20, 40 * MB),
+    "display dashboard": ("/display/dashboard", "display", 200_000, 80, 20 * MB),
+    "dashboard summary": ("/dashboard/summary?family_id={family_id}", "user", 250_000, 60, 10 * MB),
+    "members": ("/families/{family_id}/members", "user", 100_000, 20, 10 * MB),
+    "school timetables": ("/school-timetables?family_id={family_id}", "user", 100_000, 20, 10 * MB),
+    "own profile": ("/auth/me", "user", 150_000, 20, 10 * MB),
 }
 
 

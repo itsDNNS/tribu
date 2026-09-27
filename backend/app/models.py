@@ -18,7 +18,7 @@ class User(Base):
     # successful password login.
     password_hash = Column(String, nullable=True)
     display_name = Column(String, nullable=False)
-    profile_image = Column(String, nullable=True)  # the upload as sent; never served
+    profile_image = Column(String, nullable=True)  # bounded, metadata-free source; never served
     # Derived square WebP sizes (app.core.avatars) that the API hands out.
     profile_image_small = Column(String, nullable=True)
     profile_image_large = Column(String, nullable=True)

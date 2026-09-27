@@ -34,6 +34,7 @@ INVALID_CONFIRMATION = "INVALID_CONFIRMATION"
 COLOR_NOT_ALLOWED = "COLOR_NOT_ALLOWED"
 COLOR_ALREADY_TAKEN = "COLOR_ALREADY_TAKEN"
 PROFILE_IMAGE_UNREADABLE = "PROFILE_IMAGE_UNREADABLE"
+IMAGE_UNREADABLE = "IMAGE_UNREADABLE"
 
 # ── Tasks ─────────────────────────────────────────────────────
 TASK_NOT_FOUND = "TASK_NOT_FOUND"
@@ -235,6 +236,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     RECIPE_INGREDIENT_NOT_IN_RECIPE: "Ingredient '{name}' is not part of this recipe",
     DISPLAY_DEVICE_NOT_FOUND: "Display device not found",
     PROFILE_IMAGE_UNREADABLE: "The profile image could not be read",
+    IMAGE_UNREADABLE: "The image could not be read",
     WEATHER_SEARCH_UNAVAILABLE: "The weather place search is unavailable right now",
     DISPLAY_TOKEN_REVOKED: "Display token has been revoked",
     OIDC_NOT_CONFIGURED: "Single sign-on is not configured on this instance",

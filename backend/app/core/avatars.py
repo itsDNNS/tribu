@@ -1,8 +1,10 @@
-"""Profile image sizes.
+"""Stored user images: profile image sizes and bounded, metadata-free sources.
 
-Uploads are kept as sent, but only derived sizes leave the server: square,
-EXIF-free WebP images small enough to embed in member lists, timetables and
-the shared display, and a larger one for the person's own profile.
+Uploads are not kept as sent. Tribu stores a source of at most SOURCE_PX with
+the EXIF orientation applied and no metadata (so no camera location), and
+serves square WebP sizes derived from it: a small one for member lists,
+timetables and the shared display, a larger one for the person's own profile.
+Shopping product photos get the same bounded, metadata-free treatment.
 """
 
 import base64
@@ -14,6 +16,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 SMALL_PX = 192  # lists, header, timetables, shared display (2x for ~96 CSS px)
 LARGE_PX = 512  # own profile and editing previews
+SOURCE_PX = 1024  # longest side of stored sources and product photos
 WEBP_QUALITY = 82
 # Avatars never need more; this also bounds decompression bombs well below
 # Pillow's default limit.
@@ -29,6 +32,7 @@ class AvatarError(ValueError):
 class AvatarVariants(NamedTuple):
     small: str
     large: str
+    source: str
 
 
 def _open(data_url: str) -> Image.Image:
@@ -51,24 +55,38 @@ def _open(data_url: str) -> Image.Image:
     return image.convert("RGBA" if has_alpha else "RGB")
 
 
-def _encode(image: Image.Image, size: int) -> str:
-    square = ImageOps.fit(image, (size, size), method=Image.Resampling.LANCZOS)
+def _webp(image: Image.Image) -> str:
     buffer = io.BytesIO()
     # No EXIF or other metadata is written, so camera location data is dropped.
-    square.save(buffer, format="WEBP", quality=WEBP_QUALITY, method=6)
+    image.save(buffer, format="WEBP", quality=WEBP_QUALITY, method=6)
     return "data:image/webp;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def _encode(image: Image.Image, size: int) -> str:
+    return _webp(ImageOps.fit(image, (size, size), method=Image.Resampling.LANCZOS))
+
+
+def _bounded(image: Image.Image, max_px: int) -> str:
+    bounded = image.copy()
+    bounded.thumbnail((max_px, max_px), Image.Resampling.LANCZOS)
+    return _webp(bounded)
+
+
+def normalize_photo(data_url: str, max_px: int = SOURCE_PX) -> str:
+    """A photo as WebP of at most max_px on its longest side, upright and without metadata."""
+    return _bounded(_open(data_url), max_px)
 
 
 def build_avatar_variants(data_url: str) -> AvatarVariants:
     """Small and large WebP avatars for an uploaded image data URL."""
     image = _open(data_url)
-    return AvatarVariants(small=_encode(image, SMALL_PX), large=_encode(image, LARGE_PX))
+    return AvatarVariants(small=_encode(image, SMALL_PX), large=_encode(image, LARGE_PX), source=_bounded(image, SOURCE_PX))
 
 
 def set_profile_image(user, data_url: str) -> None:
-    """Store an upload on a user together with its derived sizes."""
+    """Store an upload's bounded source on a user together with its sizes."""
     variants = build_avatar_variants(data_url)
-    user.profile_image = data_url
+    user.profile_image = variants.source
     user.profile_image_small = variants.small
     user.profile_image_large = variants.large
 

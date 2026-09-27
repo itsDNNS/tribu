@@ -57,9 +57,21 @@ from app.core.errors import (
     SHOPPING_STORE_LINK_NAME_TAKEN,
     SHOPPING_STORE_LINK_NOT_FOUND,
     ADULT_REQUIRED,
+    IMAGE_UNREADABLE,
 )
+from app.core.avatars import AvatarError, normalize_photo
 
 router = APIRouter(prefix="/shopping", tags=["shopping"], responses={**AUTH_RESPONSES})
+
+
+def _stored_photo(photo: str | None) -> str | None:
+    """Product photos are stored bounded and without metadata (issue #496)."""
+    if not photo:
+        return None
+    try:
+        return normalize_photo(photo)
+    except AvatarError:
+        raise HTTPException(status_code=422, detail=error_detail(IMAGE_UNREADABLE))
 
 
 def _clean_optional_text(value: str | None) -> str | None:
@@ -724,7 +736,7 @@ def add_item(
     item = transition.item
     for field in ("notes", "photo", "priority"):
         if field in payload.model_fields_set:
-            setattr(item, field, getattr(payload, field))
+            setattr(item, field, _stored_photo(payload.photo) if field == "photo" else getattr(payload, field))
     if transition.action == "created":
         record_activity(
             db,
@@ -821,7 +833,7 @@ def update_item(
 
     for field in ("notes", "photo", "priority"):
         if field in fields:
-            setattr(item, field, getattr(payload, field))
+            setattr(item, field, _stored_photo(payload.photo) if field == "photo" else getattr(payload, field))
     if payload.checked is False:
         item.archived = False
 
