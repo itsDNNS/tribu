@@ -19,24 +19,14 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_storage_folder() -> str:
-    """Pick a safe-by-default storage folder and warn if it is unset.
+    """Folder handed to Radicale's ``filesystem_folder`` setting.
 
-    Radicale's storage folder must not be world-readable because it
-    holds raw iCalendar/vCard payloads. We default to a project-local
-    directory (``./radicale-data``) that Docker volumes and backup
-    tooling can mount, and log a warning when no explicit
-    ``DAV_STORAGE_FOLDER`` is configured so operators notice.
+    Radicale's configuration schema requires a filesystem path, but Tribu's
+    storage plugin keeps all calendar and contact data in the database and
+    never writes to it, so the folder needs no persistent volume.
+    ``DAV_STORAGE_FOLDER`` can still move it elsewhere.
     """
-    configured = os.environ.get("DAV_STORAGE_FOLDER")
-    if configured:
-        return configured
-    logger.warning(
-        "DAV_STORAGE_FOLDER is not set; falling back to %r. Override "
-        "this in production so the DAV payloads live on a persistent "
-        "and permission-restricted volume.",
-        DEFAULT_STORAGE_FOLDER,
-    )
-    return DEFAULT_STORAGE_FOLDER
+    return os.environ.get("DAV_STORAGE_FOLDER") or DEFAULT_STORAGE_FOLDER
 
 
 def _prepare_storage_folder(folder: str) -> None:
