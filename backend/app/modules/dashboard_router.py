@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core import cache
 from app.core.deps import current_user, ensure_family_membership, next_birthday_date
-from app.core.recurrence import expand_event
+from app.core.recurrence import expand_event, load_overridden_dates
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, FamilyBirthday, User
@@ -55,11 +55,12 @@ def dashboard_summary(
             .all()
         )
 
+        overridden = load_overridden_dates(db, recurring)
         all_occurrences = []
         for ev in non_recurring:
             all_occurrences.extend(expand_event(ev, now, range_end))
         for ev in recurring:
-            all_occurrences.extend(expand_event(ev, now, range_end))
+            all_occurrences.extend(expand_event(ev, now, range_end, overridden))
 
         all_occurrences.sort(key=lambda o: o["starts_at"])
         next_events = [CalendarEventResponse(**o).model_dump() for o in all_occurrences[:8]]

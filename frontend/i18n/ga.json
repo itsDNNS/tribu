@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Seachtainiúil",
   "module.calendar.repeat_biweekly": "Gach 2 sheachtain",
   "module.calendar.repeat_monthly": "go míosúil",
+  "module.calendar.repeat_monthly_weekday": "Go míosúil ar an lá céanna den tseachtain (m.sh. an 2ú Déardaoin)",
+  "module.calendar.repeat_monthly_last_weekday": "Go míosúil ar an lá deireanach céanna den tseachtain (m.sh. an Aoine dheireanach)",
   "module.calendar.repeat_yearly": "Bliantúil",
   "module.calendar.repeat_until": "Déan go dtí",
   "module.calendar.repeat_forever": "go deo",

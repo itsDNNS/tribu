@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Iknedēļas",
   "module.calendar.repeat_biweekly": "Ik pēc 2 nedēļām",
   "module.calendar.repeat_monthly": "Ikmēneša",
+  "module.calendar.repeat_monthly_weekday": "Katru mēnesi tajā pašā nedēļas dienā (piem., 2. ceturtdienā)",
+  "module.calendar.repeat_monthly_last_weekday": "Katru mēnesi pēdējā tajā pašā nedēļas dienā (piem., pēdējā piektdienā)",
   "module.calendar.repeat_yearly": "Ik gadu",
   "module.calendar.repeat_until": "Atkārtojiet līdz",
   "module.calendar.repeat_forever": "Uz visiem laikiem",

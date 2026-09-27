@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Iganädalane",
   "module.calendar.repeat_biweekly": "Iga 2 nädala järel",
   "module.calendar.repeat_monthly": "Igakuine",
+  "module.calendar.repeat_monthly_weekday": "Igakuiselt samal nädalapäeval (nt 2. neljapäev)",
+  "module.calendar.repeat_monthly_last_weekday": "Igakuiselt viimasel samal nädalapäeval (nt viimane reede)",
   "module.calendar.repeat_yearly": "Aastane",
   "module.calendar.repeat_until": "Korrake kuni",
   "module.calendar.repeat_forever": "Igavesti",

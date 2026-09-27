@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Semanal",
   "module.calendar.repeat_biweekly": "Cada 2 semanas",
   "module.calendar.repeat_monthly": "Mensual",
+  "module.calendar.repeat_monthly_weekday": "Mensual el mismo día de la semana (p. ej., 2.º jueves)",
+  "module.calendar.repeat_monthly_last_weekday": "Mensual el último mismo día de la semana (p. ej., último viernes)",
   "module.calendar.repeat_yearly": "Anual",
   "module.calendar.repeat_until": "Repetir hasta",
   "module.calendar.repeat_forever": "Para siempre",

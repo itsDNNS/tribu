@@ -1,8 +1,10 @@
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import { EventCard, mapsLinksForLocation } from '../../components/calendar/CalendarHelpers';
+import { EventCard, RECURRENCE_OPTIONS, mapsLinksForLocation } from '../../components/calendar/CalendarHelpers';
 
 jest.mock('../../lib/i18n', () => ({
   t: (_messages, key) => ({
@@ -105,5 +107,27 @@ describe('calendar event duplication action', () => {
 
     expect(onDuplicate).toHaveBeenCalledWith(baseEvent);
     expect(onEdit).not.toHaveBeenCalled();
+  });
+});
+
+describe('calendar recurrence options', () => {
+  it('offers the monthly weekday rules the backend understands', () => {
+    expect(RECURRENCE_OPTIONS.map((option) => option.value)).toEqual(
+      expect.arrayContaining(['monthly', 'monthly_weekday', 'monthly_last_weekday']),
+    );
+  });
+
+  it('has a label for every option in every locale bundle', () => {
+    const localeDir = path.join(process.cwd(), 'i18n');
+    const localeFiles = fs.readdirSync(localeDir).filter((file) => file.endsWith('.json'));
+    expect(localeFiles.length).toBeGreaterThan(0);
+
+    for (const file of localeFiles) {
+      const messages = JSON.parse(fs.readFileSync(path.join(localeDir, file), 'utf8'));
+      for (const option of RECURRENCE_OPTIONS) {
+        expect(typeof messages[option.key]).toBe('string');
+        expect(messages[option.key].trim()).not.toBe('');
+      }
+    }
   });
 });

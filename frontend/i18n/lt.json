@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Kas savaitę",
   "module.calendar.repeat_biweekly": "Kas 2 savaites",
   "module.calendar.repeat_monthly": "Kas mėnesį",
+  "module.calendar.repeat_monthly_weekday": "Kas mėnesį tą pačią savaitės dieną (pvz., 2-ą ketvirtadienį)",
+  "module.calendar.repeat_monthly_last_weekday": "Kas mėnesį paskutinę tą pačią savaitės dieną (pvz., paskutinį penktadienį)",
   "module.calendar.repeat_yearly": "Kasmet",
   "module.calendar.repeat_until": "Pakartokite iki",
   "module.calendar.repeat_forever": "Amžinai",

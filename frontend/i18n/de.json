@@ -861,6 +861,8 @@
   "module.calendar.repeat_weekly": "Wöchentlich",
   "module.calendar.repeat_biweekly": "Alle 2 Wochen",
   "module.calendar.repeat_monthly": "Monatlich",
+  "module.calendar.repeat_monthly_weekday": "Monatlich am gleichen Wochentag (z. B. 2. Donnerstag)",
+  "module.calendar.repeat_monthly_last_weekday": "Monatlich am letzten gleichen Wochentag (z. B. letzter Freitag)",
   "module.calendar.repeat_yearly": "Jährlich",
   "module.calendar.repeat_until": "Wiederholen bis",
   "module.calendar.repeat_forever": "Unbegrenzt",

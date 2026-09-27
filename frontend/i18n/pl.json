@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Co tydzień",
   "module.calendar.repeat_biweekly": "Co 2 tygodnie",
   "module.calendar.repeat_monthly": "Co miesiąc",
+  "module.calendar.repeat_monthly_weekday": "Co miesiąc w ten sam dzień tygodnia (np. 2. czwartek)",
+  "module.calendar.repeat_monthly_last_weekday": "Co miesiąc w ostatni ten sam dzień tygodnia (np. ostatni piątek)",
   "module.calendar.repeat_yearly": "Co rok",
   "module.calendar.repeat_until": "Powtarzaj do",
   "module.calendar.repeat_forever": "Bez końca",

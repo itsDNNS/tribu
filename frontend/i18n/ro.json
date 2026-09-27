@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Săptămânal",
   "module.calendar.repeat_biweekly": "La fiecare 2 săptămâni",
   "module.calendar.repeat_monthly": "Lunar",
+  "module.calendar.repeat_monthly_weekday": "Lunar în aceeași zi a săptămânii (de ex. a 2-a joi)",
+  "module.calendar.repeat_monthly_last_weekday": "Lunar în ultima aceeași zi a săptămânii (de ex. ultima vineri)",
   "module.calendar.repeat_yearly": "Anual",
   "module.calendar.repeat_until": "Repetați până când",
   "module.calendar.repeat_forever": "Pentru totdeauna",

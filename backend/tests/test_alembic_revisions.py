@@ -377,3 +377,34 @@ def test_shopping_model_defaults_match_migration_for_legacy_inserts():
         assert item.priority == "normal"
         assert item.notes is None and item.photo is None
     engine.dispose()
+
+
+def test_calendar_recurrence_id_migration_scopes_uid_uniqueness_and_downgrades(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "calendar-recurrence-id.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0062_calendar_recurrence_id")
+
+    insert = (
+        "INSERT INTO calendar_events (family_id, title, starts_at, all_day, created_at, ical_uid, recurrence_id) "
+        "VALUES (1, ?, '2026-10-08 18:45:00', 0, '2026-01-01 00:00:00', 'pack@google.com', ?)"
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'F')")
+        conn.execute(insert, ("Pack Meeting", None))
+        conn.execute(insert, ("Bowling Outing", "2026-10-15 18:45:00"))
+        conn.execute(insert, ("Dinner", "2026-10-22 18:45:00"))
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(insert, ("Second series", None))
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(insert, ("Second bowling", "2026-10-15 18:45:00"))
+        conn.commit()
+
+    command.downgrade(config, "0061_normalize_stored_photos")
+    with sqlite3.connect(db_path) as conn:
+        titles = [row[0] for row in conn.execute("SELECT title FROM calendar_events")]
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(calendar_events)")}
+    assert titles == ["Pack Meeting"]
+    assert "recurrence_id" not in columns

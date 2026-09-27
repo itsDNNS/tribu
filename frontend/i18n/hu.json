@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Hetente",
   "module.calendar.repeat_biweekly": "2 hetente",
   "module.calendar.repeat_monthly": "Havonta",
+  "module.calendar.repeat_monthly_weekday": "Havonta a hét ugyanazon napján (pl. 2. csütörtök)",
+  "module.calendar.repeat_monthly_last_weekday": "Havonta a hónap utolsó ugyanilyen napján (pl. utolsó péntek)",
   "module.calendar.repeat_yearly": "Évente",
   "module.calendar.repeat_until": "Addig ismételd",
   "module.calendar.repeat_forever": "Örökké",

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership
 from app.core.errors import error_detail, INSUFFICIENT_SCOPE
-from app.core.recurrence import expand_event
+from app.core.recurrence import expand_event, load_overridden_dates
 from app.core.clock import local_today, utcnow
 from app.database import get_db
 from app.models import CalendarEvent, Membership, Notification, QuickCaptureItem, ShoppingItem, ShoppingList, Task, User
@@ -146,12 +146,13 @@ def _agenda_for_day(db: Session, family_id: int, start: datetime, end: datetime)
         )
         .all()
     )
+    overridden = load_overridden_dates(db, recurring)
     occurrences: list[dict] = []
     for event in non_recurring:
         occurrences.extend(row for row in expand_event(event, start, end) if _event_overlaps_day(row, start, end))
     for event in recurring:
         expansion_start = _recurring_expansion_start(event, start)
-        occurrences.extend(row for row in expand_event(event, expansion_start, end) if _event_overlaps_day(row, start, end))
+        occurrences.extend(row for row in expand_event(event, expansion_start, end, overridden) if _event_overlaps_day(row, start, end))
     occurrences.sort(key=lambda row: row["starts_at"])
     return [
         MobileDailyAgendaEvent(

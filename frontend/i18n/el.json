@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Εβδομαδιαία",
   "module.calendar.repeat_biweekly": "Κάθε 2 εβδομάδες",
   "module.calendar.repeat_monthly": "Μηνιαία",
+  "module.calendar.repeat_monthly_weekday": "Μηνιαία την ίδια ημέρα της εβδομάδας (π.χ. 2η Πέμπτη)",
+  "module.calendar.repeat_monthly_last_weekday": "Μηνιαία την τελευταία ίδια ημέρα της εβδομάδας (π.χ. τελευταία Παρασκευή)",
   "module.calendar.repeat_yearly": "Ετήσιο",
   "module.calendar.repeat_until": "Επαναλάβετε μέχρι",
   "module.calendar.repeat_forever": "Για πάντα",

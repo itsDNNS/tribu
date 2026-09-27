@@ -12,6 +12,8 @@ export const RECURRENCE_OPTIONS = [
   { value: 'weekly', key: 'module.calendar.repeat_weekly' },
   { value: 'biweekly', key: 'module.calendar.repeat_biweekly' },
   { value: 'monthly', key: 'module.calendar.repeat_monthly' },
+  { value: 'monthly_weekday', key: 'module.calendar.repeat_monthly_weekday' },
+  { value: 'monthly_last_weekday', key: 'module.calendar.repeat_monthly_last_weekday' },
   { value: 'yearly', key: 'module.calendar.repeat_yearly' },
 ];
 

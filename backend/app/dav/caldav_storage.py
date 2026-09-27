@@ -57,6 +57,31 @@ def _event_href(ev: "CalendarEvent") -> str:
     return f"tribu-event-{ev.id}.ics"
 
 
+def _group_resources(rows: Iterable["CalendarEvent"]) -> list[list["CalendarEvent"]]:
+    """Group event rows into CalDAV resources.
+
+    A resource is a series row followed by its changed occurrences, which
+    share the series UID. Changed occurrences whose series row is missing
+    form one resource, served at the href of the first of them.
+    """
+    groups: dict[tuple, list[CalendarEvent]] = {}
+    for ev in rows:
+        key = ("uid", ev.ical_uid) if ev.ical_uid else ("id", ev.id)
+        groups.setdefault(key, []).append(ev)
+    return [
+        sorted(members, key=lambda ev: (ev.recurrence_id is not None, ev.id))
+        for members in groups.values()
+    ]
+
+
+def _changed_occurrences_query(db, family_id: int, ical_uid: str):
+    return db.query(CalendarEvent).filter(
+        CalendarEvent.family_id == family_id,
+        CalendarEvent.ical_uid == ical_uid,
+        CalendarEvent.recurrence_id.isnot(None),
+    )
+
+
 def _legacy_href_event_id(href: str) -> Optional[int]:
     """Extract the event id from the synthesized ``tribu-event-<id>.ics`` href."""
     if not href.startswith("tribu-event-") or not href.endswith(".ics"):
@@ -178,15 +203,17 @@ class CalendarCollection(BaseCollection):
                 .all()
             )
             member_names = _family_member_names(db, self._family_id)
-        for ev in rows:
-            yield self._event_to_item(ev, member_names)
+        for resource in _group_resources(rows):
+            yield self._resource_to_item(resource, member_names)
 
     def get_multi(self, hrefs: Iterable[str]) -> Iterable[Tuple[str, Optional["radicale_item.Item"]]]:
+        results = []
         with _db() as db:
             member_names = _family_member_names(db, self._family_id)
-        for href in hrefs:
-            ev = self._find_event_by_href(href)
-            yield href, (self._event_to_item(ev, member_names) if ev is not None else None)
+            for href in hrefs:
+                resource = self._resource_by_href_scoped(db, href)
+                results.append((href, self._resource_to_item(resource, member_names) if resource else None))
+        yield from results
 
     def has_uid(self, uid: str) -> bool:
         with _db() as db:
@@ -236,15 +263,14 @@ class CalendarCollection(BaseCollection):
         # the full enumeration.
         if old_token:
             raise ValueError("sync-token replay not supported until tombstones land")
-        hrefs = []
         with _db() as db:
             rows = (
                 db.query(CalendarEvent)
                 .filter(CalendarEvent.family_id == self._family_id)
+                .order_by(CalendarEvent.id.asc())
                 .all()
             )
-        for ev in rows:
-            hrefs.append(_event_href(ev))
+        hrefs = [_event_href(resource[0]) for resource in _group_resources(rows)]
         token = f"http://radicale.org/ns/sync/{self._ctag()}"
         return token, hrefs
 
@@ -268,7 +294,14 @@ class CalendarCollection(BaseCollection):
         if not valid:
             reason = errors[0]["error"] if errors else "no VEVENT"
             raise ValueError(f"VEVENT rejected: {reason}")
-        fields = valid[0]
+        # The resource is one series plus the occurrences it changes. A
+        # resource holding only changed occurrences (for example an
+        # invitation to a single occurrence) is kept as a plain event.
+        fields = next((d for d in valid if d.get("recurrence_id") is None), None)
+        changed_occurrences = [d for d in valid if d.get("recurrence_id") is not None]
+        if fields is None:
+            fields = changed_occurrences[0]
+            changed_occurrences = []
         if not uid:
             uid = str(fields.get("title") or href)
 
@@ -282,30 +315,32 @@ class CalendarCollection(BaseCollection):
                 )
                 .first()
             )
-            existing_by_uid = (
-                db.query(CalendarEvent)
-                .filter(
-                    CalendarEvent.family_id == self._family_id,
-                    CalendarEvent.ical_uid == uid,
-                )
-                .first()
-            )
             # Defensive guard against silent cross-resource hijack on
-            # a UID match at a different href.
-            if existing_by_uid is not None and (
-                existing_by_href is None or existing_by_uid.id != existing_by_href.id
+            # a UID match at a different href. The changed occurrences
+            # of the series at this href are part of this resource.
+            for other in db.query(CalendarEvent).filter(
+                CalendarEvent.family_id == self._family_id,
+                CalendarEvent.ical_uid == uid,
             ):
-                raise ValueError(
-                    "UID already in use on another event; choose a distinct UID or PUT to the existing href"
+                part_of_this_resource = existing_by_href is not None and (
+                    other.id == existing_by_href.id
+                    or (other.recurrence_id is not None and existing_by_href.ical_uid == uid)
                 )
+                if not part_of_this_resource:
+                    raise ValueError(
+                        "UID already in use on another event; choose a distinct UID or PUT to the existing href"
+                    )
             existing = existing_by_href
             replaced_item: Optional["radicale_item.Item"] = None
             if existing is not None:
-                replaced_item = self._event_to_item(existing, member_names)
+                previous_uid = existing.ical_uid
+                replaced_item = self._resource_to_item(self._resource_rows_scoped(db, existing), member_names)
                 _apply_event_fields(existing, fields)
                 existing.ical_uid = uid
                 existing.dav_href = href
                 row = existing
+                if previous_uid and previous_uid != uid:
+                    _changed_occurrences_query(db, self._family_id, previous_uid).delete(synchronize_session=False)
             else:
                 row = CalendarEvent(
                     family_id=self._family_id,
@@ -315,6 +350,7 @@ class CalendarCollection(BaseCollection):
                 )
                 _apply_event_fields(row, fields)
                 db.add(row)
+            self._store_changed_occurrences(db, row, changed_occurrences)
             try:
                 db.commit()
             except IntegrityError as exc:
@@ -324,7 +360,7 @@ class CalendarCollection(BaseCollection):
                 # deterministic 4xx instead of letting the 500 leak.
                 raise ValueError(f"concurrent write conflict: {exc.orig}") from exc
             db.refresh(row)
-            stored_item = self._event_to_item(row, member_names)
+            stored_item = self._resource_to_item(self._resource_rows_scoped(db, row), member_names)
         return stored_item, replaced_item
 
     def delete(self, href: Optional[str] = None) -> None:
@@ -333,11 +369,12 @@ class CalendarCollection(BaseCollection):
         if href is None:
             raise ValueError("Calendar collections are managed by Tribu, not DAV")
         with _db() as db:
-            ev = self._find_event_by_href_scoped(db, href)
-            if ev is None:
+            resource = self._resource_by_href_scoped(db, href)
+            if not resource:
                 # Radicale expects KeyError on missing items.
                 raise KeyError(href)
-            db.delete(ev)
+            for ev in resource:
+                db.delete(ev)
             db.commit()
 
     def set_meta(self, props: Mapping[str, str]) -> None:
@@ -347,9 +384,54 @@ class CalendarCollection(BaseCollection):
 
     # ── helpers ───────────────────────────────────────────
 
-    def _find_event_by_href(self, href: str) -> Optional[CalendarEvent]:
-        with _db() as db:
-            return self._find_event_by_href_scoped(db, href)
+    def _store_changed_occurrences(self, db, series: CalendarEvent, occurrences: list[dict]) -> None:
+        """Make the series' changed-occurrence rows match the PUT body.
+
+        New rows take the series' Tribu-only fields (source, members,
+        color) since DAV clients cannot set those.
+        """
+        existing = {
+            ev.recurrence_id: ev
+            for ev in _changed_occurrences_query(db, self._family_id, series.ical_uid)
+        }
+        for fields in occurrences:
+            recurrence_id = fields["recurrence_id"]
+            ev = existing.pop(recurrence_id, None)
+            if ev is None:
+                ev = CalendarEvent(
+                    family_id=self._family_id,
+                    created_by_user_id=current_user_id(),
+                    ical_uid=series.ical_uid,
+                    recurrence_id=recurrence_id,
+                    **{name: getattr(series, name) for name in _INHERITED_OCCURRENCE_FIELDS},
+                )
+                db.add(ev)
+            _apply_event_fields(ev, fields)
+        for ev in existing.values():
+            db.delete(ev)
+
+    def _resource_rows_scoped(self, db, lead: CalendarEvent) -> Optional[list[CalendarEvent]]:
+        """The rows served together with ``lead``, or None if ``lead``
+        is a changed occurrence served inside another resource."""
+        if not lead.ical_uid:
+            return [lead]
+        rows = (
+            db.query(CalendarEvent)
+            .filter(
+                CalendarEvent.family_id == self._family_id,
+                CalendarEvent.ical_uid == lead.ical_uid,
+            )
+            .order_by(CalendarEvent.id.asc())
+            .all()
+        )
+        resource = _group_resources(rows)[0]
+        return resource if resource[0].id == lead.id else None
+
+    def _resource_by_href_scoped(self, db, href: str) -> Optional[list[CalendarEvent]]:
+        lead = self._find_event_by_href_scoped(db, href)
+        if lead is None:
+            return None
+        return self._resource_rows_scoped(db, lead)
 
     def _find_event_by_href_scoped(self, db, href: str) -> Optional[CalendarEvent]:
         ev = (
@@ -374,21 +456,18 @@ class CalendarCollection(BaseCollection):
             .first()
         )
 
-    def _event_to_item(
+    def _resource_to_item(
         self,
-        ev: CalendarEvent,
-        member_names: Optional[Mapping[int, str]] = None,
+        rows: list[CalendarEvent],
+        member_names: Mapping[int, str],
     ) -> "radicale_item.Item":
-        if member_names is None:
-            with _db() as db:
-                member_names = _family_member_names(db, self._family_id)
-        ics = events_to_ics([ev], calendar_name=self._family_name, member_names=member_names)
+        ics = events_to_ics(rows, calendar_name=self._family_name, member_names=member_names)
         etag = f'"{hashlib.sha256(ics.encode("utf-8")).hexdigest()[:16]}"'
-        mtime = ev.updated_at or ev.created_at
+        mtime = max((ev.updated_at or ev.created_at for ev in rows if ev.updated_at or ev.created_at), default=None)
         return radicale_item.Item(
             collection=self,
             text=ics,
-            href=_event_href(ev),
+            href=_event_href(rows[0]),
             last_modified=_http_last_modified(mtime),
             etag=etag,
         )
@@ -898,6 +977,18 @@ _MUTABLE_EVENT_FIELDS = (
     "recurrence",
     "recurrence_end",
     "excluded_dates",
+)
+
+# Copied from the series onto a changed occurrence created over DAV.
+_INHERITED_OCCURRENCE_FIELDS = (
+    "assigned_to",
+    "color",
+    "category",
+    "icon",
+    "source_type",
+    "source_name",
+    "source_url",
+    "subscription_id",
 )
 
 

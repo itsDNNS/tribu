@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Tedensko",
   "module.calendar.repeat_biweekly": "Vsaka 2 tedna",
   "module.calendar.repeat_monthly": "Mesečno",
+  "module.calendar.repeat_monthly_weekday": "Mesečno na isti dan v tednu (npr. 2. četrtek)",
+  "module.calendar.repeat_monthly_last_weekday": "Mesečno na zadnji isti dan v tednu (npr. zadnji petek)",
   "module.calendar.repeat_yearly": "Letno",
   "module.calendar.repeat_until": "Ponavljajte, dokler",
   "module.calendar.repeat_forever": "Za vedno",

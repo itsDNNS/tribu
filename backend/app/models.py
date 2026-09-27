@@ -131,6 +131,13 @@ class CalendarEvent(Base):
     # row instead of duplicating it.
     ical_uid = Column(String(200), nullable=True)
     dav_href = Column(String(250), nullable=True)
+    # RFC 5545 RECURRENCE-ID: set on a row that replaces one occurrence
+    # of the recurring series with the same ical_uid, holding that
+    # occurrence's original start (local wall time, like starts_at).
+    # The series row itself keeps it NULL, so (family_id, ical_uid,
+    # recurrence_id) identifies a VEVENT. Such rows carry no dav_href;
+    # CalDAV serves them inside the series resource.
+    recurrence_id = Column(DateTime, nullable=True)
 
     # Provenance for non-local events so the UI can show where an event
     # came from and edits can be steered safely. ``source_type`` is one
@@ -151,7 +158,21 @@ class CalendarEvent(Base):
     subscription_id = Column(Integer, ForeignKey("calendar_subscriptions.id", ondelete="SET NULL"), nullable=True, index=True)
 
     __table_args__ = (
-        UniqueConstraint("family_id", "ical_uid", name="uq_calendar_events_family_uid"),
+        Index(
+            "uq_calendar_events_family_uid",
+            "family_id",
+            "ical_uid",
+            unique=True,
+            postgresql_where=text("recurrence_id IS NULL"),
+            sqlite_where=text("recurrence_id IS NULL"),
+        ),
+        Index(
+            "uq_calendar_events_family_uid_recurrence",
+            "family_id",
+            "ical_uid",
+            "recurrence_id",
+            unique=True,
+        ),
         UniqueConstraint("family_id", "dav_href", name="uq_calendar_events_family_href"),
     )
 

@@ -704,3 +704,100 @@ class TestCalDAVMemberProjection:
         member_queries = [s for s in statements if "users" in s]
         assert len(event_queries) == 1, statements
         assert len(member_queries) <= 1, statements
+
+
+class TestCalDAVChangedOccurrences:
+    """A resource is a series plus the occurrences it changes (RECURRENCE-ID)."""
+
+    SERIES = (
+        "BEGIN:VEVENT\r\nUID:series@example.com\r\n"
+        "DTSTAMP:20260101T000000Z\r\n"
+        "DTSTART:20260805T180000\r\nDTEND:20260805T190000\r\n"
+        "RRULE:FREQ=WEEKLY\r\n"
+        "SUMMARY:Choir\r\nEND:VEVENT\r\n"
+    )
+    CHANGED = (
+        "BEGIN:VEVENT\r\nUID:series@example.com\r\n"
+        "DTSTAMP:20260101T000000Z\r\n"
+        "RECURRENCE-ID:20260812T180000\r\n"
+        "DTSTART:20260813T180000\r\nDTEND:20260813T190000\r\n"
+        "SUMMARY:Choir (moved)\r\nEND:VEVENT\r\n"
+    )
+
+    @staticmethod
+    def _calendar(*vevents: str) -> str:
+        return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n" + "".join(vevents) + "END:VCALENDAR\r\n"
+
+    @staticmethod
+    def _rows(family_id: int) -> list[CalendarEvent]:
+        db = SessionLocal()
+        try:
+            return (
+                db.query(CalendarEvent)
+                .filter(CalendarEvent.family_id == family_id, CalendarEvent.ical_uid == "series@example.com")
+                .order_by(CalendarEvent.id)
+                .all()
+            )
+        finally:
+            db.close()
+
+    def _put(self, client, token, family_id, ics):
+        resp = client.put(
+            f"/dav/{EMAIL}/cal-{family_id}/choir.ics",
+            headers={"Authorization": _basic(EMAIL, token), "Content-Type": "text/calendar"},
+            content=ics,
+        )
+        assert resp.status_code in (201, 204), resp.text
+
+    def test_put_stores_and_serves_the_changed_occurrence(self, app_under_test, seeded):
+        from datetime import datetime
+
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token)}
+
+        self._put(client, token, family_id, self._calendar(self.SERIES, self.CHANGED))
+
+        rows = self._rows(family_id)
+        assert [(r.title, r.recurrence_id, r.dav_href) for r in rows] == [
+            ("Choir", None, "choir.ics"),
+            ("Choir (moved)", datetime(2026, 8, 12, 18, 0), None),
+        ]
+        get = client.get(f"/dav/{EMAIL}/cal-{family_id}/choir.ics", headers=auth)
+        assert get.status_code == 200, get.text
+        assert get.text.count("BEGIN:VEVENT") == 2
+        assert "RECURRENCE-ID:20260812T180000" in get.text
+        listing = _propfind(client, f"/dav/{EMAIL}/cal-{family_id}/", headers=auth, depth="1")
+        assert listing.text.count("choir.ics") == 1
+        assert f"tribu-event-{rows[1].id}.ics" not in listing.text
+
+    def test_put_without_the_occurrence_restores_it_and_delete_removes_all(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        self._put(client, token, family_id, self._calendar(self.SERIES, self.CHANGED))
+
+        self._put(client, token, family_id, self._calendar(self.SERIES))
+        assert [r.title for r in self._rows(family_id)] == ["Choir"]
+
+        self._put(client, token, family_id, self._calendar(self.SERIES, self.CHANGED))
+        delete = client.request(
+            "DELETE",
+            f"/dav/{EMAIL}/cal-{family_id}/choir.ics",
+            headers={"Authorization": _basic(EMAIL, token)},
+        )
+        assert delete.status_code in (200, 204), delete.text
+        assert self._rows(family_id) == []
+
+    def test_changed_occurrence_uid_cannot_hijack_another_resource(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        self._put(client, token, family_id, self._calendar(self.SERIES, self.CHANGED))
+
+        resp = client.put(
+            f"/dav/{EMAIL}/cal-{family_id}/other.ics",
+            headers={"Authorization": _basic(EMAIL, token), "Content-Type": "text/calendar"},
+            content=self._calendar(self.CHANGED),
+        )
+
+        assert resp.status_code >= 400
+        assert [r.title for r in self._rows(family_id)] == ["Choir", "Choir (moved)"]

@@ -1,9 +1,10 @@
 from datetime import datetime
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core import cache
@@ -20,7 +21,7 @@ from app.core.deps import current_user, current_user_via_token_param, ensure_adu
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
 from app.core.notification_preferences import should_push_notification_type
 from app.core.push import send_push_for_user
-from app.core.recurrence import VALID_RECURRENCES, expand_event
+from app.core.recurrence import VALID_RECURRENCES, expand_event, load_overridden_dates
 from app.core.scopes import require_scope
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
@@ -76,11 +77,12 @@ def list_calendar_events(
             .all()
         )
 
+        overridden = load_overridden_dates(db, recurring)
         all_occurrences = []
         for ev in non_recurring:
             all_occurrences.extend(expand_event(ev, range_start, range_end))
         for ev in recurring:
-            all_occurrences.extend(expand_event(ev, range_start, range_end))
+            all_occurrences.extend(expand_event(ev, range_start, range_end, overridden))
 
         all_occurrences.sort(key=lambda o: o["starts_at"])
         total = len(all_occurrences)
@@ -197,7 +199,97 @@ def _record_calendar_activity(
 def _safe_subscription_error(exc: Exception) -> str:
     if isinstance(exc, IcsSubscriptionError):
         return str(exc)
+    if isinstance(exc, SQLAlchemyError):
+        return "Could not store the feed's events"
     return "Could not fetch subscription URL"
+
+
+MAX_ICS_EVENTS = 500
+SUBSCRIPTION_SKIP_ERROR = "VEVENT UID already exists as a non-subscription or different-feed event; skipped to avoid overwriting it"
+IMPORT_SKIP_ERROR = "VEVENT UID already exists as a non-imported event; skipped to avoid overwriting a local or synced event"
+
+
+def _find_ics_event(db: Session, family_id: int, event_dict: dict) -> tuple[Optional[CalendarEvent], Optional[CalendarEvent]]:
+    """Return the row a parsed VEVENT would update and the row deciding who owns it.
+
+    A VEVENT is identified by its UID plus RECURRENCE-ID. A changed
+    occurrence that has no row yet belongs to whoever owns its series,
+    so it cannot attach itself to another source's series.
+    """
+    ical_uid = event_dict.get("ical_uid")
+    if not ical_uid:
+        return None, None
+    recurrence_id = event_dict.get("recurrence_id")
+    by_uid = db.query(CalendarEvent).filter(
+        CalendarEvent.family_id == family_id,
+        CalendarEvent.ical_uid == ical_uid,
+    )
+    if recurrence_id is None:
+        existing = by_uid.filter(CalendarEvent.recurrence_id.is_(None)).first()
+        return existing, existing
+    existing = by_uid.filter(CalendarEvent.recurrence_id == recurrence_id).first()
+    if existing is not None:
+        return existing, existing
+    return None, by_uid.filter(CalendarEvent.recurrence_id.is_(None)).first()
+
+
+def _apply_ics_events(
+    db: Session,
+    *,
+    family_id: int,
+    valid_events: list[dict],
+    errors: list[dict],
+    owns: Callable[[CalendarEvent], bool],
+    skip_error: str,
+) -> tuple[int, int, int, int]:
+    """Create or update rows for parsed VEVENTs and return (created, updated, skipped, removed).
+
+    Rows owned by another source are skipped with ``skip_error``
+    appended to ``errors``. Changed occurrences that a series in the
+    feed no longer lists are removed, so the series shows its regular
+    occurrence again.
+    """
+    created = 0
+    updated = 0
+    skipped = 0
+    for event_dict in valid_events[:MAX_ICS_EVENTS]:
+        existing, owner = _find_ics_event(db, family_id, event_dict)
+        if owner is not None and not owns(owner):
+            skipped += 1
+            errors.append({
+                "index": created + updated + skipped,
+                "summary": event_dict.get("title", ""),
+                "error": skip_error,
+            })
+            continue
+        if existing is not None:
+            for key, value in event_dict.items():
+                if key in {"imported_at", "created_by_user_id"}:
+                    continue
+                setattr(existing, key, value)
+            updated += 1
+        else:
+            db.add(CalendarEvent(**event_dict))
+            created += 1
+
+    removed = 0
+    series_uids = {d["ical_uid"] for d in valid_events if d.get("ical_uid") and d.get("recurrence_id") is None}
+    listed = {(d["ical_uid"], d["recurrence_id"]) for d in valid_events if d.get("recurrence_id") is not None}
+    if series_uids:
+        changed_occurrences = (
+            db.query(CalendarEvent)
+            .filter(
+                CalendarEvent.family_id == family_id,
+                CalendarEvent.ical_uid.in_(series_uids),
+                CalendarEvent.recurrence_id.isnot(None),
+            )
+            .all()
+        )
+        for row in changed_occurrences:
+            if (row.ical_uid, row.recurrence_id) not in listed and owns(row):
+                db.delete(row)
+                removed += 1
+    return created, updated, skipped, removed
 
 
 def _sync_history(subscription: CalendarSubscription, limit: int = 5) -> list[CalendarSubscriptionSync]:
@@ -230,13 +322,25 @@ def _refresh_calendar_subscription(
     subscription: CalendarSubscription,
     user_id: int,
 ) -> tuple[int, int, int, list[dict]]:
+    """Fetch the feed and store its events.
+
+    The subscription row must already be committed: a failed refresh
+    rolls back the event changes and then records the failure on it.
+    """
     started_at = utcnow()
     created = 0
     updated = 0
     skipped = 0
+    removed = 0
     errors: list[dict] = []
     status = "success"
     error_summary = None
+
+    def owned_by_this_feed(row: CalendarEvent) -> bool:
+        return row.source_type == "subscription" and (
+            row.subscription_id == subscription.id
+            or (row.subscription_id is None and row.source_url == subscription.source_url)
+        )
 
     try:
         ics_text = fetch_ics_text(subscription.source_url)
@@ -248,56 +352,38 @@ def _refresh_calendar_subscription(
             source_name=subscription.name,
             source_url=subscription.source_url,
         )
-        MAX_EVENTS = 500
         now = utcnow()
-        for event_dict in valid_events[:MAX_EVENTS]:
+        for event_dict in valid_events[:MAX_ICS_EVENTS]:
             event_dict["subscription_id"] = subscription.id
             event_dict["source_name"] = subscription.name
             event_dict["source_url"] = subscription.source_url
             event_dict["last_synced_at"] = now
             event_dict["sync_status"] = "ok"
-            ical_uid = event_dict.get("ical_uid")
-            existing = None
-            if ical_uid:
-                existing = (
-                    db.query(CalendarEvent)
-                    .filter(
-                        CalendarEvent.family_id == subscription.family_id,
-                        CalendarEvent.ical_uid == ical_uid,
-                    )
-                    .first()
-                )
-            if existing:
-                owned_by_this_feed = (
-                    existing.source_type == "subscription"
-                    and (existing.subscription_id == subscription.id or (existing.subscription_id is None and existing.source_url == subscription.source_url))
-                )
-                if not owned_by_this_feed:
-                    skipped += 1
-                    errors.append({
-                        "index": created + updated + skipped,
-                        "summary": event_dict.get("title", ""),
-                        "error": "VEVENT UID already exists as a non-subscription or different-feed event; skipped to avoid overwriting it",
-                    })
-                    continue
-                for key, value in event_dict.items():
-                    if key in {"imported_at", "created_by_user_id"}:
-                        continue
-                    setattr(existing, key, value)
-                updated += 1
-            else:
-                db.add(CalendarEvent(**event_dict))
-                created += 1
-        if len(valid_events) > MAX_EVENTS:
-            skipped += len(valid_events) - MAX_EVENTS
-            errors.append({"index": MAX_EVENTS, "summary": "", "error": f"Only the first {MAX_EVENTS} events were processed"})
+        created, updated, skipped, removed = _apply_ics_events(
+            db,
+            family_id=subscription.family_id,
+            valid_events=valid_events,
+            errors=errors,
+            owns=owned_by_this_feed,
+            skip_error=SUBSCRIPTION_SKIP_ERROR,
+        )
+        if len(valid_events) > MAX_ICS_EVENTS:
+            skipped += len(valid_events) - MAX_ICS_EVENTS
+            errors.append({"index": MAX_ICS_EVENTS, "summary": "", "error": f"Only the first {MAX_ICS_EVENTS} events were processed"})
+        # Surface constraint violations here, where they can still be
+        # recorded as a failed refresh instead of an HTTP 500.
+        db.flush()
         if errors:
             status = "partial" if created or updated else "failed"
             error_summary = errors[0].get("error")
     except Exception as exc:
+        db.rollback()
+        created = updated = skipped = removed = 0
         status = "failed"
         error_summary = _safe_subscription_error(exc)
         errors = [{"index": 0, "summary": "", "error": error_summary}]
+        if isinstance(exc, SQLAlchemyError):
+            logger.exception("Storing events of calendar subscription %s failed", subscription.id)
 
     finished_at = utcnow()
     subscription.last_synced_at = finished_at
@@ -321,7 +407,7 @@ def _refresh_calendar_subscription(
     ))
     db.commit()
     db.refresh(subscription)
-    if created or updated:
+    if created or updated or removed:
         cache.invalidate_pattern(f"tribu:dashboard:{subscription.family_id}:*")
     return created, updated, skipped, errors
 
@@ -345,49 +431,28 @@ def _classify_ics_preview(
     sample_events: list[dict] = []
 
     for event_dict in valid_events[:max_events]:
-        outcome = "create"
         ical_uid = event_dict.get("ical_uid")
-        existing = None
-        if ical_uid:
-            existing = (
-                db.query(CalendarEvent)
-                .filter(
-                    CalendarEvent.family_id == family_id,
-                    CalendarEvent.ical_uid == ical_uid,
-                )
-                .first()
-            )
-
-        if existing:
-            if source_type == "import":
-                if existing.source_type != "import":
-                    outcome = "skip"
-                    would_skip += 1
-                    preview_errors.append({
-                        "index": would_create + would_update + would_skip,
-                        "summary": event_dict.get("title", ""),
-                        "error": "VEVENT UID already exists as a non-imported event; skipped to avoid overwriting a local or synced event",
-                    })
-                else:
-                    outcome = "update"
-                    would_update += 1
-            else:
-                owned_by_this_feed = (
-                    existing.source_type == "subscription"
-                    and existing.source_url == normalized_url
-                )
-                if not owned_by_this_feed:
-                    outcome = "skip"
-                    would_skip += 1
-                    preview_errors.append({
-                        "index": would_create + would_update + would_skip,
-                        "summary": event_dict.get("title", ""),
-                        "error": "VEVENT UID already exists as a non-subscription or different-feed event; skipped to avoid overwriting it",
-                    })
-                else:
-                    outcome = "update"
-                    would_update += 1
+        existing, owner = _find_ics_event(db, family_id, event_dict)
+        if source_type == "import":
+            owned = owner is None or owner.source_type == "import"
+            skip_error = IMPORT_SKIP_ERROR
         else:
+            owned = owner is None or (owner.source_type == "subscription" and owner.source_url == normalized_url)
+            skip_error = SUBSCRIPTION_SKIP_ERROR
+
+        if not owned:
+            outcome = "skip"
+            would_skip += 1
+            preview_errors.append({
+                "index": would_create + would_update + would_skip,
+                "summary": event_dict.get("title", ""),
+                "error": skip_error,
+            })
+        elif existing is not None:
+            outcome = "update"
+            would_update += 1
+        else:
+            outcome = "create"
             would_create += 1
 
         if len(sample_events) < sample_limit:
@@ -468,42 +533,17 @@ def import_calendar_ics(
         source_url=payload.source_url,
     )
 
-    MAX_EVENTS = 500
-    created = 0
-    updated = 0
-    skipped = 0
-    for event_dict in valid_events[:MAX_EVENTS]:
-        ical_uid = event_dict.get("ical_uid")
-        existing = None
-        if ical_uid:
-            existing = (
-                db.query(CalendarEvent)
-                .filter(
-                    CalendarEvent.family_id == payload.family_id,
-                    CalendarEvent.ical_uid == ical_uid,
-                )
-                .first()
-            )
-        if existing:
-            if existing.source_type != "import":
-                skipped += 1
-                errors.append({
-                    "index": created + updated + skipped,
-                    "summary": event_dict.get("title", ""),
-                    "error": "VEVENT UID already exists as a non-imported event; skipped to avoid overwriting a local or synced event",
-                })
-                continue
-            for key, value in event_dict.items():
-                if key in {"imported_at", "created_by_user_id"}:
-                    continue
-                setattr(existing, key, value)
-            updated += 1
-        else:
-            db.add(CalendarEvent(**event_dict))
-            created += 1
+    created, updated, skipped, removed = _apply_ics_events(
+        db,
+        family_id=payload.family_id,
+        valid_events=valid_events,
+        errors=errors,
+        owns=lambda row: row.source_type == "import",
+        skip_error=IMPORT_SKIP_ERROR,
+    )
 
     db.commit()
-    if created or updated:
+    if created or updated or removed:
         cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return {"status": "ok", "created": created, "updated": updated, "skipped": skipped, "errors": errors}
 
@@ -598,46 +638,17 @@ def subscribe_calendar_ics(
         source_url=normalized_url,
     )
 
-    MAX_EVENTS = 500
-    created = 0
-    updated = 0
-    skipped = 0
-    for event_dict in valid_events[:MAX_EVENTS]:
-        ical_uid = event_dict.get("ical_uid")
-        existing = None
-        if ical_uid:
-            existing = (
-                db.query(CalendarEvent)
-                .filter(
-                    CalendarEvent.family_id == payload.family_id,
-                    CalendarEvent.ical_uid == ical_uid,
-                )
-                .first()
-            )
-        if existing:
-            owned_by_this_feed = (
-                existing.source_type == "subscription"
-                and existing.source_url == normalized_url
-            )
-            if not owned_by_this_feed:
-                skipped += 1
-                errors.append({
-                    "index": created + updated + skipped,
-                    "summary": event_dict.get("title", ""),
-                    "error": "VEVENT UID already exists as a non-subscription or different-feed event; skipped to avoid overwriting it",
-                })
-                continue
-            for key, value in event_dict.items():
-                if key in {"imported_at", "created_by_user_id"}:
-                    continue
-                setattr(existing, key, value)
-            updated += 1
-        else:
-            db.add(CalendarEvent(**event_dict))
-            created += 1
+    created, updated, skipped, removed = _apply_ics_events(
+        db,
+        family_id=payload.family_id,
+        valid_events=valid_events,
+        errors=errors,
+        owns=lambda row: row.source_type == "subscription" and row.source_url == normalized_url,
+        skip_error=SUBSCRIPTION_SKIP_ERROR,
+    )
 
     db.commit()
-    if created or updated:
+    if created or updated or removed:
         cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
     return {"status": "ok", "created": created, "updated": updated, "skipped": skipped, "errors": errors}
 
@@ -703,7 +714,7 @@ def create_calendar_subscription(
             created_by_user_id=user.id,
         )
         db.add(subscription)
-    db.flush()
+    db.commit()
     _refresh_calendar_subscription(db, subscription=subscription, user_id=user.id)
     return _subscription_response(subscription)
 
@@ -915,6 +926,23 @@ def delete_calendar_event(
 
     object_label = event.title
     _record_calendar_activity(db, event=event, user=user, action="deleted", object_label=object_label)
+    if event.ical_uid:
+        same_uid = db.query(CalendarEvent).filter(
+            CalendarEvent.family_id == family_id,
+            CalendarEvent.ical_uid == event.ical_uid,
+        )
+        if event.recurrence_id is None:
+            # Changed occurrences belong to the series and go with it.
+            same_uid.filter(CalendarEvent.recurrence_id.isnot(None)).delete(synchronize_session=False)
+        else:
+            # Deleting a changed occurrence cancels it instead of letting
+            # the regular series occurrence reappear.
+            series = same_uid.filter(CalendarEvent.recurrence_id.is_(None)).first()
+            if series is not None and series.recurrence:
+                cancelled_date = event.recurrence_id.strftime("%Y-%m-%d")
+                excluded = list(series.excluded_dates or [])
+                if cancelled_date not in excluded:
+                    series.excluded_dates = excluded + [cancelled_date]
     db.delete(event)
     db.commit()
     cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")

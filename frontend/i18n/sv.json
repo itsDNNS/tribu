@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Varje vecka",
   "module.calendar.repeat_biweekly": "Varannan vecka",
   "module.calendar.repeat_monthly": "Månadsvis",
+  "module.calendar.repeat_monthly_weekday": "Månadsvis på samma veckodag (t.ex. 2:a torsdagen)",
+  "module.calendar.repeat_monthly_last_weekday": "Månadsvis på sista samma veckodag (t.ex. sista fredagen)",
   "module.calendar.repeat_yearly": "Årligen",
   "module.calendar.repeat_until": "Upprepa tills",
   "module.calendar.repeat_forever": "För alltid",

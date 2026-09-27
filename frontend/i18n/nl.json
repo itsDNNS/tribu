@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Wekelijks",
   "module.calendar.repeat_biweekly": "Elke 2 weken",
   "module.calendar.repeat_monthly": "Maandelijks",
+  "module.calendar.repeat_monthly_weekday": "Maandelijks op dezelfde weekdag (bijv. 2e donderdag)",
+  "module.calendar.repeat_monthly_last_weekday": "Maandelijks op de laatste dezelfde weekdag (bijv. laatste vrijdag)",
   "module.calendar.repeat_yearly": "Jaarlijks",
   "module.calendar.repeat_until": "Herhaal tot",
   "module.calendar.repeat_forever": "Voor altijd",

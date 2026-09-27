@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "viikoittain",
   "module.calendar.repeat_biweekly": "2 viikon välein",
   "module.calendar.repeat_monthly": "Kuukausittain",
+  "module.calendar.repeat_monthly_weekday": "Kuukausittain samana viikonpäivänä (esim. 2. torstai)",
+  "module.calendar.repeat_monthly_last_weekday": "Kuukausittain viimeisenä samana viikonpäivänä (esim. viimeinen perjantai)",
   "module.calendar.repeat_yearly": "Vuosittain",
   "module.calendar.repeat_until": "Toista kunnes",
   "module.calendar.repeat_forever": "Ikuisesti",

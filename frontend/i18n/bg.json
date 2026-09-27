@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Ежеседмично",
   "module.calendar.repeat_biweekly": "На всеки 2 седмици",
   "module.calendar.repeat_monthly": "Месечно",
+  "module.calendar.repeat_monthly_weekday": "Месечно в същия ден от седмицата (напр. 2-ри четвъртък)",
+  "module.calendar.repeat_monthly_last_weekday": "Месечно в последния такъв ден от седмицата (напр. последен петък)",
   "module.calendar.repeat_yearly": "Годишно",
   "module.calendar.repeat_until": "Повтаряйте, докато",
   "module.calendar.repeat_forever": "Завинаги",

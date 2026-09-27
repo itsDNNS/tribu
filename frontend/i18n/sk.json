@@ -828,6 +828,8 @@
   "module.calendar.repeat_weekly": "Týždenne",
   "module.calendar.repeat_biweekly": "Každé 2 týždne",
   "module.calendar.repeat_monthly": "Mesačne",
+  "module.calendar.repeat_monthly_weekday": "Mesačne v rovnaký deň v týždni (napr. 2. štvrtok)",
+  "module.calendar.repeat_monthly_last_weekday": "Mesačne v posledný rovnaký deň v týždni (napr. posledný piatok)",
   "module.calendar.repeat_yearly": "Ročne",
   "module.calendar.repeat_until": "Opakujte do",
   "module.calendar.repeat_forever": "navždy",

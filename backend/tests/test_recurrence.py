@@ -305,3 +305,68 @@ def test_recurring_span_that_started_before_the_range_is_included():
     assert len(occurrences) == 1
     assert occurrences[0]['starts_at'] == datetime(2026, 3, 1)
     assert occurrences[0]['ends_at'] == datetime(2026, 3, 4)
+
+
+# --- Monthly by weekday ---
+
+def _starts(occurrences):
+    return [o["starts_at"] for o in occurrences]
+
+
+class TestMonthlyByWeekday:
+    def test_second_thursday_follows_the_weekday_not_the_date(self):
+        ev = make_event(
+            recurrence="monthly_weekday",
+            starts_at=datetime(2026, 10, 8, 18, 45),  # 2nd Thursday
+            ends_at=datetime(2026, 10, 8, 20, 0),
+        )
+        result = expand_event(ev, datetime(2026, 10, 1), datetime(2027, 2, 1))
+        assert _starts(result) == [
+            datetime(2026, 10, 8, 18, 45),
+            datetime(2026, 11, 12, 18, 45),
+            datetime(2026, 12, 10, 18, 45),
+            datetime(2027, 1, 14, 18, 45),
+        ]
+        assert result[1]["ends_at"] == datetime(2026, 11, 12, 20, 0)
+
+    def test_fifth_weekday_skips_months_without_one(self):
+        ev = make_event(recurrence="monthly_weekday", starts_at=datetime(2026, 1, 29, 9, 0), ends_at=None)  # 5th Thursday
+        result = expand_event(ev, datetime(2026, 1, 1), datetime(2026, 8, 1))
+        assert _starts(result) == [
+            datetime(2026, 1, 29, 9, 0),
+            datetime(2026, 4, 30, 9, 0),
+            datetime(2026, 7, 30, 9, 0),
+        ]
+
+    def test_last_weekday(self):
+        ev = make_event(recurrence="monthly_last_weekday", starts_at=datetime(2026, 1, 30, 9, 0), ends_at=None)  # last Friday
+        result = expand_event(ev, datetime(2026, 1, 1), datetime(2026, 5, 1))
+        assert _starts(result) == [
+            datetime(2026, 1, 30, 9, 0),
+            datetime(2026, 2, 27, 9, 0),
+            datetime(2026, 3, 27, 9, 0),
+            datetime(2026, 4, 24, 9, 0),
+        ]
+
+    def test_old_weekday_series_expands_in_a_later_range(self):
+        ev = make_event(recurrence="monthly_weekday", starts_at=datetime(2020, 1, 9, 18, 0), ends_at=None)  # 2nd Thursday
+        result = expand_event(ev, datetime(2026, 10, 1), datetime(2026, 11, 1))
+        assert _starts(result) == [datetime(2026, 10, 8, 18, 0)]
+
+    def test_old_fifth_weekday_series_expands_in_a_later_range(self):
+        ev = make_event(recurrence="monthly_weekday", starts_at=datetime(2020, 1, 30, 18, 0), ends_at=None)  # 5th Thursday
+        result = expand_event(ev, datetime(2026, 10, 1), datetime(2027, 1, 1))
+        assert _starts(result) == [datetime(2026, 10, 29, 18, 0), datetime(2026, 12, 31, 18, 0)]
+
+
+class TestSmartStartMonthly:
+    def test_old_monthly_series_is_not_skipped(self):
+        """Fixed 28-day steps used to jump past the range for series older than a year."""
+        ev = make_event(recurrence="monthly", starts_at=datetime(2024, 1, 15, 18, 0), ends_at=datetime(2024, 1, 15, 19, 0))
+        result = expand_event(ev, datetime(2026, 10, 1), datetime(2026, 11, 1))
+        assert _starts(result) == [datetime(2026, 10, 15, 18, 0)]
+
+    def test_old_monthly_series_keeps_its_day_after_short_months(self):
+        ev = make_event(recurrence="monthly", starts_at=datetime(2020, 1, 31, 8, 0), ends_at=None)
+        result = expand_event(ev, datetime(2026, 2, 1), datetime(2026, 4, 1))
+        assert _starts(result) == [datetime(2026, 2, 28, 8, 0), datetime(2026, 3, 31, 8, 0)]
