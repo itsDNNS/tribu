@@ -138,11 +138,11 @@ export default function MemberEditor({
       busy={busy}
       actions={
         <>
-          <button className="ad-button" disabled={busy} onClick={onClose}>
+          <button className="fam-button" disabled={busy} onClick={onClose}>
             {t(messages, "cancel")}
           </button>
           <button
-            className="ad-button primary"
+            className="fam-button primary"
             type="submit"
             form="admin-member-form"
             disabled={busy || demoMode || (permissionChange && !confirmed)}
@@ -152,10 +152,10 @@ export default function MemberEditor({
         </>
       }
     >
-      <form id="admin-member-form" onSubmit={save} className="ad-editor">
+      <form id="admin-member-form" onSubmit={save} className="fam-editor">
         <fieldset disabled={busy || demoMode}>
           {!creating && (
-            <div className="ad-editor-person">
+            <div className="fam-editor-person">
               <MemberAvatar
                 member={{
                   ...member,
@@ -169,7 +169,7 @@ export default function MemberEditor({
               </div>
             </div>
           )}
-          <div className="ad-form-grid">
+          <div className="fam-form-grid">
             <label>
               {t(messages, "member_name")}
               <input
@@ -235,7 +235,7 @@ export default function MemberEditor({
                 </label>
                 <label>
                   {t(messages, "set_avatar")}
-                  <span className="ad-upload">
+                  <span className="fam-upload">
                     <ImagePlus size={16} />
                     <input type="file" accept="image/*" onChange={readAvatar} />
                   </span>
@@ -243,12 +243,12 @@ export default function MemberEditor({
               </>
             )}
           </div>
-          <p className="ad-help">
+          <p className="fam-help">
             {protectedRole ? t(messages, "admin_self_hint") : copy("role_help")}
           </p>
-          {!creating && <p className="ad-help">{copy("account_fields")}</p>}
+          {!creating && <p className="fam-help">{copy("account_fields")}</p>}
           {permissionChange && (
-            <label className="ad-check">
+            <label className="fam-check">
               <input
                 type="checkbox"
                 checked={confirmed}
@@ -258,10 +258,10 @@ export default function MemberEditor({
             </label>
           )}
           {!creating && !protectedRole && (
-            <div className="ad-danger-zone">
+            <div className="fam-danger-zone">
               <button
                 type="button"
-                className="ad-button"
+                className="fam-button"
                 onClick={() => setDangerAction("reset")}
               >
                 <KeyRound size={14} />
@@ -269,7 +269,7 @@ export default function MemberEditor({
               </button>
               <button
                 type="button"
-                className="ad-button danger"
+                className="fam-button danger"
                 onClick={() => setDangerAction("remove")}
               >
                 <Trash2 size={14} />
@@ -279,7 +279,7 @@ export default function MemberEditor({
           )}
           {dangerAction && (
             <div
-              className="ad-confirm"
+              className="fam-confirm"
               role="group"
               aria-label={copy("confirm_action")}
             >
@@ -290,14 +290,14 @@ export default function MemberEditor({
               </p>
               <button
                 type="button"
-                className="ad-button danger"
+                className="fam-button danger"
                 onClick={runDangerAction}
               >
                 {copy("confirm_action")}
               </button>
               <button
                 type="button"
-                className="ad-button"
+                className="fam-button"
                 onClick={() => setDangerAction(null)}
               >
                 {t(messages, "cancel")}
@@ -306,7 +306,7 @@ export default function MemberEditor({
           )}
         </fieldset>
         {error && (
-          <p className="ad-error" role="alert">
+          <p className="fam-error" role="alert">
             {error}
           </p>
         )}

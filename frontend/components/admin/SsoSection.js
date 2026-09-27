@@ -104,7 +104,7 @@ export default function SsoSection() {
   const redirectUri = cfg.effective_callback_url || '';
 
   return (
-    <div className="admin-subpage admin-subpage-sso ad-sso-layout"><form className="settings-section sso-section" onSubmit={handleSave} data-testid="sso-admin-section">
+    <div className="admin-subpage admin-subpage-sso fam-sso-layout"><form className="settings-section sso-section" onSubmit={handleSave} data-testid="sso-admin-section">
       <div className="view-header adm-section-header admin-subpage-header">
         <div className="admin-subpage-title-block">
           <span className="admin-subpage-icon" aria-hidden="true">
@@ -279,6 +279,6 @@ export default function SsoSection() {
           <ShieldAlert size={14} /> {t(messages, 'sso.test_fail').replace('{error}', testState.result.error || 'unknown')}
         </div>
       )}
-    </form><aside className="ad-sso-aside"><section className="ad-panel ad-support-card ad-access-card"><h3><ShieldCheck size={18}/>{adminText(messages, 'sso_access')}</h3><p>{t(messages, 'sso.desc')}</p><p>{t(messages, 'sso.disable_password_login_hint')}</p></section><section className="ad-panel ad-login-preview"><span className="ad-badge"><KeyRound size={22}/></span><h3>Tribu</h3><p>{adminText(messages, 'login_preview')}</p><span className="ad-preview-login"><KeyRound size={15}/>{cfg.button_label || t(messages, 'sso.title')}</span></section></aside></div>
+    </form><aside className="fam-sso-aside"><section className="fam-panel fam-support-card fam-access-card"><h3><ShieldCheck size={18}/>{adminText(messages, 'sso_access')}</h3><p>{t(messages, 'sso.desc')}</p><p>{t(messages, 'sso.disable_password_login_hint')}</p></section><section className="fam-panel fam-login-preview"><span className="fam-badge"><KeyRound size={22}/></span><h3>Tribu</h3><p>{adminText(messages, 'login_preview')}</p><span className="fam-preview-login"><KeyRound size={15}/>{cfg.button_label || t(messages, 'sso.title')}</span></section></aside></div>
   );
 }

@@ -42,9 +42,9 @@ export default function DisplayWeatherPanel({ familyId, messages, lang, place, o
   }
 
   return (
-    <section className="ad-weather-panel" data-testid={`${testIdPrefix}-panel`} aria-labelledby={`${testIdPrefix}-title`}>
-      <div className="ad-weather-head">
-        <span className="ad-weather-icon" aria-hidden="true"><CloudSun size={20} /></span>
+    <section className="fam-weather-panel" data-testid={`${testIdPrefix}-panel`} aria-labelledby={`${testIdPrefix}-title`}>
+      <div className="fam-weather-head">
+        <span className="fam-weather-icon" aria-hidden="true"><CloudSun size={20} /></span>
         <div>
           <h3 id={`${testIdPrefix}-title`}>{t(messages, 'display_weather_title')}</h3>
           <p data-testid={`${testIdPrefix}-place`}>
@@ -57,12 +57,12 @@ export default function DisplayWeatherPanel({ familyId, messages, lang, place, o
             )}
           </p>
         </div>
-        <div className="ad-weather-actions">
-          <button type="button" className="ad-button" onClick={() => setSearching((value) => !value)} data-testid={`${testIdPrefix}-choose`}>
+        <div className="fam-weather-actions">
+          <button type="button" className="fam-button" onClick={() => setSearching((value) => !value)} data-testid={`${testIdPrefix}-choose`}>
             {t(messages, place ? 'display_weather_change' : 'display_weather_choose')}
           </button>
           {place && (
-            <button type="button" className="ad-button" disabled={status === 'busy'} onClick={clear} data-testid={`${testIdPrefix}-remove`}>
+            <button type="button" className="fam-button" disabled={status === 'busy'} onClick={clear} data-testid={`${testIdPrefix}-remove`}>
               {t(messages, 'display_weather_remove')}
             </button>
           )}
@@ -70,7 +70,7 @@ export default function DisplayWeatherPanel({ familyId, messages, lang, place, o
       </div>
       {searching && (
         // Not a <form>: the panel also sits inside the display editor's form.
-        <div className="ad-weather-search" role="search">
+        <div className="fam-weather-search" role="search">
           <label className="form-field">
             <span>{t(messages, 'display_weather_search_label')}</span>
             <input
@@ -89,12 +89,12 @@ export default function DisplayWeatherPanel({ familyId, messages, lang, place, o
               autoComplete="off"
             />
           </label>
-          <button type="button" onClick={search} className="ad-button primary" disabled={status === 'busy' || query.trim().length < 2} data-testid={`${testIdPrefix}-search`}>
+          <button type="button" onClick={search} className="fam-button primary" disabled={status === 'busy' || query.trim().length < 2} data-testid={`${testIdPrefix}-search`}>
             <Search size={15} aria-hidden="true" /> {t(messages, 'display_weather_search')}
           </button>
           {results && (
-            <ul className="ad-weather-results">
-              {results.length === 0 && status !== 'unavailable' && <li className="ad-weather-empty">{t(messages, 'display_weather_no_results')}</li>}
+            <ul className="fam-weather-results">
+              {results.length === 0 && status !== 'unavailable' && <li className="fam-weather-empty">{t(messages, 'display_weather_no_results')}</li>}
               {results.map((result) => (
                 <li key={`${result.latitude},${result.longitude}`}>
                   <button type="button" onClick={() => choose(result)} disabled={status === 'busy'}>
@@ -107,9 +107,9 @@ export default function DisplayWeatherPanel({ familyId, messages, lang, place, o
           )}
         </div>
       )}
-      {status === 'unavailable' && <p className="ad-weather-error" role="alert">{t(messages, 'display_weather_unavailable')}</p>}
-      {status === 'error' && <p className="ad-weather-error" role="alert">{t(messages, 'toast.error')}</p>}
-      <p className="ad-weather-privacy">{t(messages, 'display_weather_privacy')}</p>
+      {status === 'unavailable' && <p className="fam-weather-error" role="alert">{t(messages, 'display_weather_unavailable')}</p>}
+      {status === 'error' && <p className="fam-weather-error" role="alert">{t(messages, 'toast.error')}</p>}
+      <p className="fam-weather-privacy">{t(messages, 'display_weather_privacy')}</p>
     </section>
   );
 }

@@ -43,11 +43,11 @@ export function everyLabel(seconds, messages) {
 
 export function StageSchematic({ layout, messages }) {
   return (
-    <div className="ad-stage-schematic" aria-hidden="true">
-      <span className="ad-stage-fixed ad-stage-fixed--hero" />
-      <span className="ad-stage-fixed ad-stage-fixed--timeline" />
+    <div className="fam-stage-schematic" aria-hidden="true">
+      <span className="fam-stage-fixed fam-stage-fixed--hero" />
+      <span className="fam-stage-fixed fam-stage-fixed--timeline" />
       {ZONES.map((zone) => (
-        <span key={zone} className={`ad-stage-zone ad-stage-zone--${zone}`}>
+        <span key={zone} className={`fam-stage-zone fam-stage-zone--${zone}`}>
           <b>{zone.toUpperCase()}</b>
           <small>{t(messages, `display_card_${layout.zones[zone].cards[0]}`)}</small>
         </span>
@@ -65,28 +65,28 @@ function ZoneEditor({ zone, value, eink, messages, onChange }) {
     onChange({ cards });
   };
   return (
-    <fieldset className="ad-zone" data-testid={`display-zone-editor-${zone}`}>
+    <fieldset className="fam-zone" data-testid={`display-zone-editor-${zone}`}>
       <legend>
-        <span className="ad-zone-letter">{zone.toUpperCase()}</span>
+        <span className="fam-zone-letter">{zone.toUpperCase()}</span>
         {t(messages, `display_zone_${zone}`)}
       </legend>
-      <ol className="ad-zone-cards">
+      <ol className="fam-zone-cards">
         {value.cards.map((card, index) => (
           <li key={card}>
             <span>{cardLabel(card)}</span>
-            <button type="button" className="ad-icon-button" disabled={index === 0} onClick={() => move(index, -1)} aria-label={t(messages, 'display_card_move_up').replace('{card}', cardLabel(card))}>
+            <button type="button" className="fam-icon-button" disabled={index === 0} onClick={() => move(index, -1)} aria-label={t(messages, 'display_card_move_up').replace('{card}', cardLabel(card))}>
               <ArrowUp size={14} />
             </button>
-            <button type="button" className="ad-icon-button" disabled={index === value.cards.length - 1} onClick={() => move(index, 1)} aria-label={t(messages, 'display_card_move_down').replace('{card}', cardLabel(card))}>
+            <button type="button" className="fam-icon-button" disabled={index === value.cards.length - 1} onClick={() => move(index, 1)} aria-label={t(messages, 'display_card_move_down').replace('{card}', cardLabel(card))}>
               <ArrowDown size={14} />
             </button>
-            <button type="button" className="ad-icon-button" disabled={value.cards.length === 1} onClick={() => onChange({ cards: value.cards.filter((item) => item !== card) })} aria-label={t(messages, 'display_card_remove').replace('{card}', cardLabel(card))}>
+            <button type="button" className="fam-icon-button" disabled={value.cards.length === 1} onClick={() => onChange({ cards: value.cards.filter((item) => item !== card) })} aria-label={t(messages, 'display_card_remove').replace('{card}', cardLabel(card))}>
               <X size={14} />
             </button>
           </li>
         ))}
       </ol>
-      <div className="ad-zone-actions">
+      <div className="fam-zone-actions">
         {available.length > 0 && (
           <select
             className="form-input"
@@ -101,7 +101,7 @@ function ZoneEditor({ zone, value, eink, messages, onChange }) {
           </select>
         )}
         {!eink && (
-          <label className="ad-inline-field">
+          <label className="fam-inline-field">
             <span>{t(messages, 'display_zone_interval')}</span>
             <select
               className="form-input"
@@ -131,10 +131,10 @@ export default function DisplayStageEditor({ draft, messages, onChange, weatherP
   const setZone = (zone, patch) => setLayout({ zones: { ...draft.layout.zones, [zone]: { ...draft.layout.zones[zone], ...patch } } });
 
   return (
-    <div className="ad-stage-editor" data-no-autofocus>
-      <section className="ad-stage-group">
+    <div className="fam-stage-editor" data-no-autofocus>
+      <section className="fam-stage-group">
         <h3>{t(messages, 'display_editor_device')}</h3>
-        <div className="ad-stage-row">
+        <div className="fam-stage-row">
           <label className="form-field">
             <span>{t(messages, 'display_mode_label')}</span>
             <select
@@ -195,28 +195,28 @@ export default function DisplayStageEditor({ draft, messages, onChange, weatherP
         </div>
       </section>
 
-      <section className="ad-stage-group">
+      <section className="fam-stage-group">
         <h3>{t(messages, 'display_editor_zones')}</h3>
-        <p className="ad-stage-hint">{t(messages, eink ? 'display_eink_rotation_hint' : 'display_editor_zones_hint')}</p>
+        <p className="fam-stage-hint">{t(messages, eink ? 'display_eink_rotation_hint' : 'display_editor_zones_hint')}</p>
         <StageSchematic layout={draft.layout} messages={messages} />
-        <div className="ad-zone-grid">
+        <div className="fam-zone-grid">
           {ZONES.map((zone) => (
             <ZoneEditor key={zone} zone={zone} value={draft.layout.zones[zone]} eink={eink} messages={messages} onChange={(patch) => setZone(zone, patch)} />
           ))}
         </div>
         {weatherPanel && usesWeatherCard(draft.layout) && (
-          <div className="ad-weather-missing" data-testid="display-weather-missing">
+          <div className="fam-weather-missing" data-testid="display-weather-missing">
             <p>{t(messages, 'display_weather_missing_hint')}</p>
             {weatherPanel}
           </div>
         )}
       </section>
 
-      <section className="ad-stage-group">
+      <section className="fam-stage-group">
         <h3>{t(messages, 'display_editor_behaviour')}</h3>
-        <div className="ad-toggle-list">
+        <div className="fam-toggle-list">
           {TOGGLES.filter((key) => !eink || key === 'skip_empty').map((key) => (
-            <label key={key} className="ad-toggle">
+            <label key={key} className="fam-toggle">
               <input type="checkbox" role="switch" checked={Boolean(draft.layout[key])} onChange={(event) => setLayout({ [key]: event.target.checked })} data-testid={`display-toggle-${key}`} />
               <span>
                 {t(messages, `display_${key}`)}
@@ -227,9 +227,9 @@ export default function DisplayStageEditor({ draft, messages, onChange, weatherP
         </div>
       </section>
 
-      <section className="ad-stage-group">
+      <section className="fam-stage-group">
         <h3>{t(messages, 'display_editor_day_parts')}</h3>
-        <div className="ad-stage-row ad-stage-row--times">
+        <div className="fam-stage-row fam-stage-row--times">
           {DAY_PARTS.map((key) => (
             <label key={key} className="form-field">
               <span>{t(messages, `display_${key}`)}</span>

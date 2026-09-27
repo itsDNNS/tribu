@@ -26,9 +26,19 @@ for (const width of [320, 390, 768, 1024, 1448])
     page.on("pageerror", (err) => errors.push(err.message));
     await page.setViewportSize({ width, height: 1053 });
     await open(page);
-    await expect(page.locator(".ad-metric").nth(2)).toContainText("1");
-    await expect(page.locator(".ad-member")).toHaveCount(4);
+    await expect(page.locator(".fam-metric").nth(2)).toContainText("1");
+    await expect(page.locator(".fam-member")).toHaveCount(4);
     await noOverflow(page);
+    if (width === 1448) {
+      const rows = await page
+        .locator(".fam-tab")
+        .evaluateAll(
+          (tabs) =>
+            new Set(tabs.map((tab) => Math.round(tab.getBoundingClientRect().top)))
+              .size,
+        );
+      expect(rows).toBe(1);
+    }
     if ([390, 1448].includes(width))
       await page.screenshot({
         path: test.info().outputPath(`admin-${width}.png`),
@@ -60,12 +70,12 @@ test("search, profile filters, time format and roles guide", async ({
   await page
     .getByRole("searchbox", { name: "Mitglied finden …" })
     .fill("Demo C");
-  await expect(page.locator(".ad-member")).toHaveCount(1);
+  await expect(page.locator(".fam-member")).toHaveCount(1);
   await page.getByRole("searchbox").fill("");
   await page.getByRole("button", { name: "Kinder", exact: true }).click();
-  await expect(page.locator(".ad-member")).toHaveCount(2);
+  await expect(page.locator(".fam-member")).toHaveCount(2);
   await page.getByRole("button", { name: "12 Stunden" }).click();
-  await expect(page.locator(".ad-time-example")).toContainText("2:30 PM");
+  await expect(page.locator(".fam-time-example")).toContainText("2:30 PM");
   expect(api.writes.some((r) => r.body?.time_format === "12h")).toBe(true);
   await page
     .getByRole("button", { name: "Rollen und Schutzregeln ansehen" })

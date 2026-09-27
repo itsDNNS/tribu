@@ -98,5 +98,5 @@ test('member dialog persists creation, role changes and removal through the API'
   await dialog.getByRole('button', { name: 'Remove', exact: true }).click();
   await dialog.getByRole('button', { name: 'Confirm change', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.locator('.ad-member-name', { hasText: name })).toHaveCount(0);
+  await expect(page.locator('.fam-member-name', { hasText: name })).toHaveCount(0);
 });

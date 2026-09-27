@@ -1,6 +1,6 @@
 # Family administration layout
 
-The admin page adopts the corrected admin mockup: a shared family header, six horizontal sections, compact live counts, a searchable family circle with adult/child filters, and supporting time-format, role-guide and recent-activity cards. Member columns stack according to the available content width; mobile navigation is supplied by the existing app shell.
+The admin page adopts the corrected admin mockup: a shared family header, seven horizontal sections, compact live counts, a searchable family circle with adult/child filters, and supporting time-format, role-guide and recent-activity cards. Member columns stack according to the available content width; mobile navigation is supplied by the existing app shell.
 
 ## Ownership and existing services
 
@@ -10,7 +10,7 @@ The admin page adopts the corrected admin mockup: a shared family header, six ho
 - `DisplaysSection.js` retains pairing, one-time token presentation, presets, slot editing, refresh controls and revocation. Editors now use dialogs with reachable footer actions.
 - Existing OIDC, backup scheduling/retention/download and audit APIs remain unchanged. The SSO preview is decorative; it does not initiate authentication. Audit search and category filters apply to the loaded entries; pagination remains available.
 - `AdminDialog.js` reuses the native dialog used by responsive planning, with an admin icon. The shared dialog retains its default calendar appearance outside admin. Dialogs keep focus, escape handling, scrollable bodies and mobile bottom-sheet placement.
-- `frontend/styles/admin.css` scopes the new presentation. Admin layout UI strings are translated in all 24 supported locale bundles.
+- `frontend/styles/admin.css` scopes the new presentation with the `fam-` class prefix. Class names must not start with `ad-` or `ads-`: generic ad-blocker lists such as EasyList hide `.ad-header`, `.ad-tabs`, `.ad-panel` and similar names on every site. `__tests__/components/AdBlockerSafeClasses.test.js` guards this. Admin layout UI strings are translated in all 24 supported locale bundles.
 
 This is an integration with the real Tribu service, not the prototype's browser-local AdminStore. No schema migration, simulated invitation acceptance, simulated SSO, fake audit events or local backup store is introduced. Existing account name/email edits remain in each person's own account settings. The member editor exposes the fields supported by the existing family-admin endpoints; prototype-only phone and points-target fields are not invented in the backend.
 

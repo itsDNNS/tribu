@@ -167,10 +167,10 @@ function AdminPage(props) {
   return (
     <div className="admin-page dashboard-today-page mockup-admin-page">
       <FamilyTopbar {...props} />
-      <section className="ad-page" aria-label={copy("title")}>
-        <header className="ad-header">
-          <div className="ad-title">
-            <span className="ad-badge admin-page-icon">
+      <section className="fam-page" aria-label={copy("title")}>
+        <header className="fam-header">
+          <div className="fam-title">
+            <span className="fam-badge admin-page-icon">
               <ShieldCheck size={25} />
             </span>
             <div>
@@ -178,13 +178,13 @@ function AdminPage(props) {
               <p>{copy("subtitle")}</p>
             </div>
           </div>
-          <div className="ad-header-actions">
-            <button className="ad-button" disabled={demoMode} onClick={invite}>
+          <div className="fam-header-actions">
+            <button className="fam-button" disabled={demoMode} onClick={invite}>
               <Link size={16} />
               {copy("invite")}
             </button>
             <button
-              className="ad-button primary"
+              className="fam-button primary"
               disabled={demoMode}
               onClick={() => setEditor(null)}
             >
@@ -193,11 +193,11 @@ function AdminPage(props) {
             </button>
           </div>
         </header>
-        <nav className="ad-tabs" aria-label={t(messages, "admin_sections")}>
+        <nav className="fam-tabs" aria-label={t(messages, "admin_sections")}>
           {TABS.map(([key, label, Icon]) => (
             <button
               key={key}
-              className={`ad-tab${activeTab === key ? " active" : ""}`}
+              className={`fam-tab${activeTab === key ? " active" : ""}`}
               aria-current={activeTab === key ? "page" : undefined}
               onClick={() => setActiveTab(key)}
             >
@@ -224,7 +224,7 @@ function AdminPage(props) {
             <div className="adm-banner-row">
               <code className="token-display">{password.value}</code>
               <button
-                className="ad-button"
+                className="fam-button"
                 onClick={async () => {
                   if (await copyTextToClipboard(password.value))
                     setCopied(true);
@@ -234,7 +234,7 @@ function AdminPage(props) {
                 {t(messages, copied ? "token_copied" : "token_copy")}
               </button>
               <button
-                className="ad-button"
+                className="fam-button"
                 aria-label={t(messages, "dismiss")}
                 onClick={() => {
                   setPassword(null);
@@ -248,10 +248,10 @@ function AdminPage(props) {
         )}
         {activeTab === "members" && (
           <>
-            <div className="ad-metrics">
+            <div className="fam-metrics">
               {metrics.map(([value, label, Icon, tone, tab]) => (
                 <button
-                  className="ad-metric"
+                  className="fam-metric"
                   key={label}
                   onClick={() => {
                     setActiveTab(tab);
@@ -261,7 +261,7 @@ function AdminPage(props) {
                     }
                   }}
                 >
-                  <span className={`ad-badge ${tone}`}>
+                  <span className={`fam-badge ${tone}`}>
                     <Icon size={19} />
                   </span>
                   <span>
@@ -279,29 +279,29 @@ function AdminPage(props) {
               ))}
             </div>
             {summaryError && (
-              <p className="ad-help" role="status">
+              <p className="fam-help" role="status">
                 {copy("summary_unavailable")}{" "}
                 <button
-                  className="ad-link"
+                  className="fam-link"
                   onClick={() => setRefresh((n) => n + 1)}
                 >
                   {copy("retry")}
                 </button>
               </p>
             )}
-            <div className="ad-members-layout">
-              <section className="ad-panel ad-family-panel">
-                <header className="ad-panel-head">
+            <div className="fam-members-layout">
+              <section className="fam-panel fam-family-panel">
+                <header className="fam-panel-head">
                   <div>
                     <h2>{copy("family_circle")}</h2>
                     <p>{copy("profiles_hint")}</p>
                   </div>
-                  <span className="ad-soft-count">
+                  <span className="fam-soft-count">
                     {copy("member_count").replace("{count}", count)}
                   </span>
                 </header>
-                <div className="ad-filters">
-                  <label className="ad-search">
+                <div className="fam-filters">
+                  <label className="fam-search">
                     <Search size={16} />
                     <input
                       type="search"
@@ -311,7 +311,7 @@ function AdminPage(props) {
                       onChange={(e) => setQuery(e.target.value)}
                     />
                   </label>
-                  <div className="ad-segmented" aria-label={copy("filter")}>
+                  <div className="fam-segmented" aria-label={copy("filter")}>
                     {[
                       ["all", "all"],
                       ["adults", "adults"],
@@ -329,26 +329,26 @@ function AdminPage(props) {
                   </div>
                 </div>
                 <div
-                  className={`ad-member-groups${groups.length === 1 ? " single" : ""}`}
+                  className={`fam-member-groups${groups.length === 1 ? " single" : ""}`}
                 >
                   {groups.map(([key, label, rows]) => (
                     <section
-                      className="ad-member-group"
+                      className="fam-member-group"
                       key={key}
                       aria-label={t(messages, label)}
                     >
-                      <h3 className="ad-group-label">
+                      <h3 className="fam-group-label">
                         {t(messages, label)} <span>{rows.length}</span>
                       </h3>
                       {rows.length ? (
                         rows.map((member) => (
-                          <article className="ad-member" key={member.user_id}>
+                          <article className="fam-member" key={member.user_id}>
                             <MemberAvatar member={member} size={40} />
-                            <div className="ad-member-copy">
-                              <div className="ad-member-name profile-name">
+                            <div className="fam-member-copy">
+                              <div className="fam-member-name profile-name">
                                 {member.display_name}
                                 {member.user_id === me?.user_id && (
-                                  <span className="ad-you">{copy("you")}</span>
+                                  <span className="fam-you">{copy("you")}</span>
                                 )}
                               </div>
                               <p className="profile-email">
@@ -359,9 +359,9 @@ function AdminPage(props) {
                                     : member.email || copy("adult_hint")}
                               </p>
                             </div>
-                            <div className="ad-member-actions">
+                            <div className="fam-member-actions">
                               <span
-                                className={`ad-role${["owner", "admin"].includes(member.role) ? "" : " member"}`}
+                                className={`fam-role${["owner", "admin"].includes(member.role) ? "" : " member"}`}
                               >
                                 {["owner", "admin"].includes(member.role) ? (
                                   <Shield size={12} />
@@ -378,7 +378,7 @@ function AdminPage(props) {
                                     )}
                               </span>
                               <button
-                                className="ad-button"
+                                className="fam-button"
                                 disabled={demoMode}
                                 aria-label={copy("edit_named").replace(
                                   "{name}",
@@ -392,14 +392,14 @@ function AdminPage(props) {
                           </article>
                         ))
                       ) : (
-                        <p className="ad-empty">{copy("no_members")}</p>
+                        <p className="fam-empty">{copy("no_members")}</p>
                       )}
                     </section>
                   ))}
                 </div>
-                <footer className="ad-member-footer">
+                <footer className="fam-member-footer">
                   <button
-                    className="ad-link"
+                    className="fam-link"
                     disabled={demoMode}
                     onClick={() => setEditor(null)}
                   >
@@ -412,17 +412,17 @@ function AdminPage(props) {
                   </span>
                 </footer>
               </section>
-              <div className="ad-support-grid">
-                <section className="ad-panel ad-support-card ad-time-card">
+              <div className="fam-support-grid">
+                <section className="fam-panel fam-support-card fam-time-card">
                   <h3>
                     <Clock size={16} />
                     {copy("time_title")}
                   </h3>
-                  <div className="ad-time-example">
+                  <div className="fam-time-example">
                     {timeFormat === "12h" ? "2:30 PM" : "14:30"}{" "}
                     <small>{copy("example")}</small>
                   </div>
-                  <div className="ad-segmented">
+                  <div className="fam-segmented">
                     {["24h", "12h"].map((value) => (
                       <button
                         key={value}
@@ -437,24 +437,24 @@ function AdminPage(props) {
                   </div>
                   <p>{copy("time_hint")}</p>
                 </section>
-                <section className="ad-panel ad-support-card ad-access-card">
+                <section className="fam-panel fam-support-card fam-access-card">
                   <h3>
                     <ShieldCheck size={16} />
                     {copy("roles_title")}
                   </h3>
                   <p>{copy("roles_hint")}</p>
-                  <button className="ad-link" onClick={() => setHelp(true)}>
+                  <button className="fam-link" onClick={() => setHelp(true)}>
                     <ArrowRight size={15} />
                     {copy("roles_link")}
                   </button>
                 </section>
-                <section className="ad-panel ad-support-card">
+                <section className="fam-panel fam-support-card">
                   <h3>
                     <Activity size={16} />
                     {copy("recent")}
                   </h3>
                   {summary.latest ? (
-                    <div className="ad-latest">
+                    <div className="fam-latest">
                       <ShieldCheck size={14} />
                       <div>
                         <strong>
@@ -476,7 +476,7 @@ function AdminPage(props) {
                     </p>
                   )}
                   <button
-                    className="ad-link"
+                    className="fam-link"
                     onClick={() => setActiveTab("audit")}
                   >
                     <ArrowRight size={15} />
@@ -487,7 +487,7 @@ function AdminPage(props) {
             </div>
           </>
         )}
-        <div className="ad-tab-content">
+        <div className="fam-tab-content">
           {activeTab === "invites" && (
             <InviteSection
               onCreateConsumed={() => setInviteRequest(0)}
@@ -501,7 +501,7 @@ function AdminPage(props) {
           {activeTab === "system" && <SystemSection />}
           {activeTab === "audit" && <AuditLogSection />}
         </div>
-        <footer className="ad-footnote">
+        <footer className="fam-footnote">
           <ShieldCheck size={14} />
           {copy("server_hint")}
         </footer>
@@ -525,14 +525,14 @@ function AdminPage(props) {
           onClose={() => setHelp(false)}
           actions={
             <button
-              className="ad-button primary"
+              className="fam-button primary"
               onClick={() => setHelp(false)}
             >
               {t(messages, "close")}
             </button>
           }
         >
-          <div className="ad-role-guide">
+          <div className="fam-role-guide">
             {["admin", "member", "child"].map((role) => (
               <section key={role}>
                 <h3>{copy(`guide_${role}_title`)}</h3>

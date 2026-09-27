@@ -271,14 +271,14 @@ export default function DisplaysSection() {
                         : t(messages, 'display_show_composer')}
                     </button>
                     {expandedDeviceId === device.id ? (
-                      <AdminDialog title={device.name} messages={messages} busy={busy} onClose={() => setExpandedDeviceId(null)} actions={<><button className="ad-button" disabled={busy} onClick={() => setExpandedDeviceId(null)}>{t(messages, 'cancel')}</button><button className="ad-button primary" disabled={busy} onClick={() => handleSaveDevice(device)} data-testid="display-save-config">{t(messages, 'save')}</button></>}>
-                        <fieldset className="ad-display-fields" disabled={busy}><DisplayStageEditor draft={deviceDrafts[device.id] || draftFromDevice(device)} messages={messages} onChange={(next) => setDeviceDrafts((current) => ({ ...current, [device.id]: next }))} weatherPanel={editorWeatherPanel} /></fieldset>
+                      <AdminDialog title={device.name} messages={messages} busy={busy} onClose={() => setExpandedDeviceId(null)} actions={<><button className="fam-button" disabled={busy} onClick={() => setExpandedDeviceId(null)}>{t(messages, 'cancel')}</button><button className="fam-button primary" disabled={busy} onClick={() => handleSaveDevice(device)} data-testid="display-save-config">{t(messages, 'save')}</button></>}>
+                        <fieldset className="fam-display-fields" disabled={busy}><DisplayStageEditor draft={deviceDrafts[device.id] || draftFromDevice(device)} messages={messages} onChange={(next) => setDeviceDrafts((current) => ({ ...current, [device.id]: next }))} weatherPanel={editorWeatherPanel} /></fieldset>
                       </AdminDialog>
                     ) : (
                       <div className="display-device-compact-preview">
                         <StageSchematic layout={draftFromDevice(device).layout} messages={messages} />
                         {weatherMissing && usesWeatherCard(draftFromDevice(device).layout) && (
-                          <p className="ad-weather-missing-badge" data-testid={`display-weather-missing-${device.id}`}>
+                          <p className="fam-weather-missing-badge" data-testid={`display-weather-missing-${device.id}`}>
                             {t(messages, 'display_weather_missing_badge')}
                           </p>
                         )}
@@ -304,8 +304,8 @@ export default function DisplaysSection() {
       {!demoMode && (
         <div className="adm-section-gap">
           {showCreate ? (
-            <AdminDialog title={t(messages, 'display_create_section_title')} messages={messages} busy={busy} onClose={() => { setShowCreate(false); resetCreateForm(); }} actions={<><button className="ad-button" disabled={busy} onClick={() => { setShowCreate(false); resetCreateForm(); }}>{t(messages, 'cancel')}</button><button type="submit" form="admin-display-form" className="ad-button primary" disabled={busy} data-testid="display-create-submit">{t(messages, 'display_create')}</button></>}>
-            <form id="admin-display-form" onSubmit={handleCreate}><fieldset className="ad-display-fields" disabled={busy}>
+            <AdminDialog title={t(messages, 'display_create_section_title')} messages={messages} busy={busy} onClose={() => { setShowCreate(false); resetCreateForm(); }} actions={<><button className="fam-button" disabled={busy} onClick={() => { setShowCreate(false); resetCreateForm(); }}>{t(messages, 'cancel')}</button><button type="submit" form="admin-display-form" className="fam-button primary" disabled={busy} data-testid="display-create-submit">{t(messages, 'display_create')}</button></>}>
+            <form id="admin-display-form" onSubmit={handleCreate}><fieldset className="fam-display-fields" disabled={busy}>
               <div className="settings-section adm-form-grid">
                 <div className="display-create-form-heading">
                   <h2>{t(messages, 'display_create_section_title')}</h2>

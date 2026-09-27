@@ -76,9 +76,9 @@ export default function AuditLogSection() {
       </div>
 
       <div className="settings-section">
-        <div className="ad-audit-filters"><label className="ad-search"><Search size={16}/><input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={copy('audit_search')} aria-label={copy('audit_search')}/></label><select className="form-input" aria-label={copy('audit_filter')} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">{copy('audit_all')}</option><option value="members">{copy('audit_members')}</option><option value="invites">{copy('audit_invites')}</option></select></div>
-        {error && <p className="ad-error" role="alert">{copy('summary_unavailable')} <button className="ad-link" onClick={() => load(entries.length)}>{copy('retry')}</button></p>}
-        {entries.length > 0 && !visibleEntries.length && <p className="ad-empty">{copy('audit_empty')}</p>}
+        <div className="fam-audit-filters"><label className="fam-search"><Search size={16}/><input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={copy('audit_search')} aria-label={copy('audit_search')}/></label><select className="form-input" aria-label={copy('audit_filter')} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">{copy('audit_all')}</option><option value="members">{copy('audit_members')}</option><option value="invites">{copy('audit_invites')}</option></select></div>
+        {error && <p className="fam-error" role="alert">{copy('summary_unavailable')} <button className="fam-link" onClick={() => load(entries.length)}>{copy('retry')}</button></p>}
+        {entries.length > 0 && !visibleEntries.length && <p className="fam-empty">{copy('audit_empty')}</p>}
         {entries.length === 0 && !loading && (
           <p className="adm-empty">{t(messages, 'audit_log_empty')}</p>
         )}

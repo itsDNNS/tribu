@@ -149,7 +149,7 @@ export default function InviteSection({
           messages={messages}
         />
       )}
-      <div className="ad-invite-heading">
+      <div className="fam-invite-heading">
         <div>
           <h2>
             <span className="admin-subpage-icon">
@@ -160,7 +160,7 @@ export default function InviteSection({
           <p>{copy("invitations_subtitle")}</p>
         </div>
         <button
-          className="ad-button primary"
+          className="fam-button primary"
           disabled={demoMode}
           onClick={() => {
             setFormError("");
@@ -180,12 +180,12 @@ export default function InviteSection({
           <p>{t(messages, "invite_link_share_hint")}</p>
           <div className="adm-banner-row">
             <code className="token-display">{createdUrl}</code>
-            <button className="ad-button" onClick={handleCopyUrl}>
+            <button className="fam-button" onClick={handleCopyUrl}>
               <Copy size={14} />
               {t(messages, copied ? "invite_copied" : "invite_copy")}
             </button>
             <button
-              className="ad-button"
+              className="fam-button"
               aria-label={t(messages, "dismiss")}
               onClick={() => {
                 setCreatedUrl(null);
@@ -197,14 +197,14 @@ export default function InviteSection({
           </div>
         </div>
       )}
-      <div className="ad-invite-layout">
-        <section className="settings-section ad-invite-list">
-          <header className="ad-panel-head">
+      <div className="fam-invite-layout">
+        <section className="settings-section fam-invite-list">
+          <header className="fam-panel-head">
             <h2>{copy("invitations_list")}</h2>
-            <span className="ad-soft-count">{invites.length}</span>
+            <span className="fam-soft-count">{invites.length}</span>
           </header>
-          <div className="ad-filters">
-            <div className="ad-segmented">
+          <div className="fam-filters">
+            <div className="fam-segmented">
               {["all", "active", "used", "revoked", "expired"].map((key) => (
                 <button
                   key={key}
@@ -228,10 +228,10 @@ export default function InviteSection({
             )
             .map((inv) => (
               <article className="adm-list-item" key={inv.id}>
-                <span className="ad-badge blue">
+                <span className="fam-badge blue">
                   <Link size={18} />
                 </span>
-                <div className="ad-invite-record">
+                <div className="fam-invite-record">
                   <div className="adm-list-item-header">
                     <strong>
                       {t(
@@ -239,7 +239,7 @@ export default function InviteSection({
                         inv.role_preset === "admin" ? "admin" : "member",
                       )}
                     </strong>
-                    <span className="ad-role member">
+                    <span className="fam-role member">
                       {copy(invitationState(inv))}
                     </span>
                   </div>
@@ -263,7 +263,7 @@ export default function InviteSection({
                 </div>
                 {invitationState(inv) === "active" && (
                   <button
-                    className="ad-button"
+                    className="fam-button"
                     onClick={() => handleRevoke(inv.id)}
                   >
                     <Trash2 size={14} />
@@ -273,9 +273,9 @@ export default function InviteSection({
               </article>
             ))}
         </section>
-        <aside className="ad-invite-aside">
-          <section className="settings-section ad-access-card">
-            <span className="ad-badge blue">
+        <aside className="fam-invite-aside">
+          <section className="settings-section fam-access-card">
+            <span className="fam-badge blue">
               <Link size={20} />
             </span>
             <h3>{copy("invitations_guide")}</h3>
@@ -292,7 +292,7 @@ export default function InviteSection({
                   handleSaveBaseUrl();
                 }}
               >
-                <label className="ad-base-field">
+                <label className="fam-base-field">
                   <span>{t(messages, "base_url_title")}</span>
                   <input
                     className="form-input"
@@ -310,7 +310,7 @@ export default function InviteSection({
                 <p>
                   {t(messages, "base_url_effective")}: {baseUrlEffective}
                 </p>
-                <button className="ad-button" type="submit">
+                <button className="fam-button" type="submit">
                   {t(messages, "base_url_save")}
                 </button>
               </form>
@@ -327,7 +327,7 @@ export default function InviteSection({
           actions={
             <>
               <button
-                className="ad-button"
+                className="fam-button"
                 disabled={busy}
                 onClick={() => setShowCreate(false)}
               >
@@ -336,7 +336,7 @@ export default function InviteSection({
               <button
                 type="submit"
                 form="admin-invite-form"
-                className="ad-button primary"
+                className="fam-button primary"
                 disabled={busy || (rolePreset === "admin" && !confirmed)}
               >
                 {t(messages, "invite_create")}
@@ -347,10 +347,10 @@ export default function InviteSection({
           <form
             id="admin-invite-form"
             onSubmit={handleCreate}
-            className="ad-editor"
+            className="fam-editor"
           >
             <fieldset disabled={busy}>
-              <div className="ad-form-grid">
+              <div className="fam-form-grid">
                 <label>
                   {copy("profile_type")}
                   <select
@@ -409,9 +409,9 @@ export default function InviteSection({
                   />
                 </label>
               </div>
-              <p className="ad-help">{copy("role_help")}</p>
+              <p className="fam-help">{copy("role_help")}</p>
               {rolePreset === "admin" && (
-                <label className="ad-check">
+                <label className="fam-check">
                   <input
                     type="checkbox"
                     checked={confirmed}
@@ -422,7 +422,7 @@ export default function InviteSection({
               )}
             </fieldset>
             {formError && (
-              <p className="ad-error" role="alert">
+              <p className="fam-error" role="alert">
                 {formError}
               </p>
             )}
