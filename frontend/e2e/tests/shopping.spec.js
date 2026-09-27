@@ -472,7 +472,8 @@ test('real backend persists photo/details through atomic move, finish and explic
     notes: 'Unsweetened',
     priority: 'urgent'
   });
-  expect(before[0].photo).toMatch(/^data:image\/jpeg;base64,/);
+  // The backend stores product photos as bounded WebP without metadata.
+  expect(before[0].photo).toMatch(/^data:image\/webp;base64,/);
   await tile(page, 'Oat drink').click();
   await menu(page);
   await page.getByRole('dialog').getByRole('button', {
