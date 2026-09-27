@@ -93,6 +93,20 @@ See [Backup & Restore](https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore).
 
 See [Self-Hosting: Updating](https://github.com/itsDNNS/tribu/wiki/Self-Hosting#updating).
 
+### Image tags
+
+| Tag | Follows | Use it when |
+| --- | --- | --- |
+| `latest` | every change merged to `main`, and every release | you want fixes and features as soon as they are merged (the reference compose file uses it) |
+| `stable` | tagged releases only | you prefer to update when a release with notes is published |
+| `vYYYY-MM-DD` | one release | you want to pin a version and update deliberately |
+
+Backend and frontend always use the same tag. **Admin → System** shows the running backend version.
+
+To pin a version, set both images in your compose file to the release tag, for example `ghcr.io/itsdnns/tribu-backend:v2026-09-27`, then `docker compose pull && docker compose up -d`.
+
+To roll back, take a backup first, then set both images to the previous release tag and recreate the containers. The database keeps its newer schema, because migrations only run forward on start. Most migrations only add tables or columns and older versions ignore them, but some convert data irreversibly. The release notes list these under **Upgrade notes**; for those, restore the backup taken before the update instead of rolling back the images.
+
 ## Server Health
 
 **Admin → System** (instance admin only) shows the running version, the backend's memory use against the container limit, and backend processes that stopped without shutting down in the last 7 days, for example after running out of memory. Each process records a heartbeat every minute; a process that stops sending it is counted as a crash within about three minutes. After three crashes within an hour, the instance admin gets a notification (and a push message if push is enabled), at most every six hours. `docker logs tribu-backend` shows the cause.

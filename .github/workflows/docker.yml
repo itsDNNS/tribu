@@ -141,6 +141,8 @@ jobs:
             type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
             type=raw,value=latest,enable=${{ steps.release_tag.outputs.stable == 'true' || github.ref_name == github.event.repository.default_branch }}
+            # Follows tagged releases only, for installs that prefer them over every merge.
+            type=raw,value=stable,enable=${{ steps.release_tag.outputs.stable == 'true' }}
             type=ref,event=branch
 
       - uses: docker/build-push-action@v7
