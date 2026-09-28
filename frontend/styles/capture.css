@@ -2,7 +2,7 @@
    the entries it recognised, then the forms. Built on the design tokens. */
 
 .capture { display: grid; gap: var(--space-3); }
-.capture-input {
+.capture .capture-input {
   width: 100%;
   min-height: 72px;
   padding: var(--space-3) var(--space-4);
@@ -15,8 +15,8 @@
   line-height: var(--type-body-line);
   resize: vertical;
 }
-.capture-input::placeholder { color: var(--color-text-muted); }
-.capture-input:focus-visible {
+.capture .capture-input::placeholder { color: var(--color-text-muted); }
+.capture .capture-input:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 1px;
   background: var(--color-surface);
@@ -100,7 +100,7 @@
 }
 
 .capture-error { margin: 0; color: var(--color-danger); font-size: var(--type-body-small-size); }
-.capture-submit {
+.capture .capture-submit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -116,7 +116,7 @@
   font-weight: 600;
   cursor: pointer;
 }
-.capture-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.capture .capture-submit:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .capture-forms { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
 .capture-forms h3 {
