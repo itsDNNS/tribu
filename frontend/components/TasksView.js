@@ -10,6 +10,7 @@ import { t } from '../lib/i18n';
 import { groupTasks, postponeOptions, OVERDUE_FOLD_LIMIT } from '../lib/taskGroups';
 import MemberAvatar from './MemberAvatar';
 import TaskEditDialog from './TaskEditDialog';
+import OnceHint from './OnceHint';
 import BottomSheet from './responsive/BottomSheet';
 
 const GROUP_LABELS = {
@@ -216,6 +217,10 @@ export default function TasksView({ createRequest, onCreateHandled }) {
             </button>
           ))}
         </div>
+      )}
+
+      {openCount > 0 && canEdit && (
+        <OnceHint id="tasks_swipe" text={t(messages, 'module.hints.tasks_swipe')} touchOnly />
       )}
 
       {openCount === 0 && (
