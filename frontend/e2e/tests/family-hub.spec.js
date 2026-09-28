@@ -51,7 +51,6 @@ test.describe('Family hub', () => {
 
     await page.getByRole('button', { name: `See ${name}'s day` }).click();
     await expect(page.locator('#main-content').getByRole('region', { name: 'Today' })).toBeVisible({ timeout: 10000 });
-    expect(await page.evaluate(() => sessionStorage.getItem('tribu_today_member'))).toBeNull();
   });
 
   test('is the first page of Family and holds the activity history', async ({ authedPage: page }) => {

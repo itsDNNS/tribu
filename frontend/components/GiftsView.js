@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
+import { peekHandOff, takeHandOff } from '../lib/handoff';
 import { errorText } from '../lib/helpers';
 import { createEmptyGiftForm, GIFT_OCCASIONS, GIFT_SORT_OPTIONS, GIFT_STATUSES } from '../lib/gifts';
 import { t } from '../lib/i18n';
@@ -347,12 +348,10 @@ export default function GiftsView() {
   };
 
   // The family hub opens someone's gift ideas or a new idea for them.
-  const [focus] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem('tribu_gifts_focus') || 'null'); } catch { return null; }
-  });
+  const [focus] = useState(() => peekHandOff('gifts_focus') || null);
   useEffect(() => {
+    takeHandOff('gifts_focus');
     if (!focus) return;
-    try { sessionStorage.removeItem('tribu_gifts_focus'); } catch { /* private mode */ }
     if (focus.add) {
       setEditingId(null);
       setForm({

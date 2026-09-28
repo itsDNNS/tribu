@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import FamilyHub from '../../components/family/FamilyHub';
 import { buildMessages } from '../../lib/i18n';
+import { takeHandOff } from '../../lib/handoff';
 
 let mockApp = {};
 let mockRewards = {};
@@ -51,7 +52,7 @@ async function renderHub(overrides = {}) {
   return setActiveView;
 }
 
-beforeEach(() => sessionStorage.clear());
+beforeEach(() => { takeHandOff('today_member'); takeHandOff('gifts_focus'); });
 
 describe('FamilyHub', () => {
   it('shows each person\'s day and opens it filtered in Today', async () => {
@@ -66,7 +67,7 @@ describe('FamilyHub', () => {
     expect(screen.getByRole('button', { name: 'Tag von Dennis ansehen' })).not.toHaveTextContent('Sterne');
 
     fireEvent.click(lena);
-    expect(sessionStorage.getItem('tribu_today_member')).toBe('3');
+    expect(takeHandOff('today_member')).toBe(3);
     expect(setActiveView).toHaveBeenCalledWith('dashboard');
   });
 
@@ -74,11 +75,11 @@ describe('FamilyHub', () => {
     const setActiveView = await renderHub();
     const birthdays = screen.getByRole('region', { name: 'Geburtstage' });
     fireEvent.click(within(birthdays).getByRole('button', { name: /1 Geschenkidee/ }));
-    expect(JSON.parse(sessionStorage.getItem('tribu_gifts_focus'))).toMatchObject({ name: 'Opa Karl', add: false });
+    expect(takeHandOff('gifts_focus')).toMatchObject({ name: 'Opa Karl', add: false });
     expect(setActiveView).toHaveBeenCalledWith('gifts');
 
     fireEvent.click(within(birthdays).getByRole('button', { name: /Idee notieren/ }));
-    expect(JSON.parse(sessionStorage.getItem('tribu_gifts_focus'))).toMatchObject({ name: 'Tante Eva', date: '2026-10-01', add: true });
+    expect(takeHandOff('gifts_focus')).toMatchObject({ name: 'Tante Eva', date: '2026-10-01', add: true });
   });
 
   it('keeps gift ideas away from children', async () => {

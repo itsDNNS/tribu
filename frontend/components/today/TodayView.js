@@ -7,6 +7,7 @@ import { apiConvertQuickCapture, apiDismissQuickCapture, apiGetEvents, apiListMe
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
 import { buildToday } from '../../lib/today/buildToday';
+import { peekHandOff, takeHandOff } from '../../lib/handoff';
 import MemberAvatar from '../MemberAvatar';
 import RewardsDashboardWidget from '../RewardsDashboardWidget';
 import { SetupChecklist, useSetupChecklist } from './SetupChecklist';
@@ -184,13 +185,8 @@ export default function TodayView({ onOpenCapture } = {}) {
   const today = isoDate(now);
   const locale = lang || 'en';
   // The family hub opens someone's day.
-  const [memberId, setMemberId] = useState(() => {
-    try {
-      const requested = sessionStorage.getItem('tribu_today_member');
-      return requested ? Number(requested) : null;
-    } catch { return null; }
-  });
-  useEffect(() => { try { sessionStorage.removeItem('tribu_today_member'); } catch { /* private mode */ } }, []);
+  const [memberId, setMemberId] = useState(() => peekHandOff('today_member') ?? null);
+  useEffect(() => { takeHandOff('today_member'); }, []);
   const [setupOpen, setSetupOpen] = useState(false);
   const [range, setRange] = useState({ key: null, events: [] });
   const [meals, setMeals] = useState({ key: null, items: [] });

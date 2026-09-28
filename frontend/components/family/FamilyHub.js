@@ -6,6 +6,7 @@ import { useRewards } from '../../hooks/useRewards';
 import { apiGetEvents, apiGetGifts } from '../../lib/api';
 import { CurrencyIcon } from '../../lib/currency-icons';
 import { buildFamily } from '../../lib/family/buildFamily';
+import { handOff } from '../../lib/handoff';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
 import HouseholdActivityFeed from '../HouseholdActivityFeed';
@@ -25,17 +26,13 @@ function count(messages, key, value) {
   return t(messages, value === 1 ? `${key}_one` : key).replace('{count}', value);
 }
 
-function remember(key, value) {
-  try { sessionStorage.setItem(key, value); } catch { /* private mode */ }
-}
-
 function Person({ member, index, person, members, ctx }) {
   const { messages, locale, timeFormat, currency, setActiveView } = ctx;
   const name = member.display_name?.split(' ')[0] || member.display_name;
   const color = getMemberColor(member, index);
   const next = person.next;
   const open = () => {
-    remember('tribu_today_member', String(member.user_id));
+    handOff('today_member', member.user_id);
     setActiveView('dashboard');
   };
   return (
@@ -95,9 +92,9 @@ function BirthdayRow({ birthday, ctx }) {
   const [year, month, day] = birthday.date.split('-').map(Number);
   const date = new Date(year, month - 1, day).toLocaleDateString(locale, { day: 'numeric', month: 'long' });
   const openGifts = () => {
-    remember('tribu_gifts_focus', JSON.stringify({
+    handOff('gifts_focus', {
       name: birthday.name, memberId: birthday.memberId, date: birthday.date, add: birthday.giftIdeas === 0,
-    }));
+    });
     setActiveView('gifts');
   };
   return (
