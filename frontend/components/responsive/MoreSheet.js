@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, LayoutGrid, LogOut, Moon, Search } from 'lucide-react';
+import { Bell, LogOut, Moon, Search } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import { localeForLang } from '../../lib/dates';
@@ -101,7 +101,7 @@ function useAreaHints() {
   }, [messages, tasks, summary, lang, mealName]);
 }
 
-export default function MoreSheet({ items, activeView, navigate, onClose, onNotifications, onLayout, onSearchAll }) {
+export default function MoreSheet({ items, activeView, navigate, onClose, onNotifications, onSearchAll }) {
   const app = useApp();
   const { messages, theme, setTheme, me, members = [], profileImage, families = [], familyId, unreadCount, showNotificationBadge = true } = app;
   const [query, setQuery] = useState('');
@@ -136,10 +136,9 @@ export default function MoreSheet({ items, activeView, navigate, onClose, onNoti
   const foundAreas = searching ? areaItems.filter((item) => matches(item.label)) : [];
   const isDark = theme !== 'light';
   const themeLabel = plannerText(messages, 'dark_mode');
-  const layoutVisible = onLayout && (!searching || matches(onLayout.label));
   const themeVisible = !searching || matches(themeLabel);
   const visibleSystemItems = searching ? systemItems.filter((item) => matches(item.label)) : systemItems;
-  const nothingFound = searching && !foundAreas.length && !visibleSystemItems.length && !layoutVisible && !themeVisible;
+  const nothingFound = searching && !foundAreas.length && !visibleSystemItems.length && !themeVisible;
 
   const ownMember = members.find((m) => m.user_id === me?.user_id) || { display_name: me?.display_name, profile_image: profileImage };
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
@@ -199,7 +198,7 @@ export default function MoreSheet({ items, activeView, navigate, onClose, onNoti
 
       {nothingFound && <p className="ui-more-empty">{plannerText(messages, 'no_area')}</p>}
 
-      {(visibleSystemItems.length > 0 || layoutVisible || themeVisible) && (
+      {(visibleSystemItems.length > 0 || themeVisible) && (
         <div className="ui-more-system">
           {visibleSystemItems.map((item) => {
             const isNotifications = item.key === 'notifications';
@@ -234,19 +233,6 @@ export default function MoreSheet({ items, activeView, navigate, onClose, onNoti
               <Moon size={19} aria-hidden="true" />
               <span>{themeLabel}</span>
               <span className={`ui-more-switch${isDark ? ' on' : ''}`} aria-hidden="true" />
-            </button>
-          )}
-          {layoutVisible && (
-            <button
-              type="button"
-              className="ui-more-row mobile-dashboard-layout-btn"
-              onClick={() => {
-                onClose();
-                onLayout.onClick();
-              }}
-            >
-              <LayoutGrid size={19} aria-hidden="true" />
-              <span>{onLayout.label}</span>
             </button>
           )}
         </div>

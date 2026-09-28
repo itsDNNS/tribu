@@ -72,7 +72,6 @@ export default function ResponsiveUI({
   navigate,
   onCreate,
   onNotifications,
-  onLayout,
   onSearchAll,
   sheet,
   setSheet,
@@ -132,7 +131,6 @@ export default function ResponsiveUI({
           navigate={navigate}
           onClose={() => setSheet(null)}
           onNotifications={onNotifications}
-          onLayout={onLayout}
           onSearchAll={(query) => {
             setSheet(null);
             onSearchAll(query);

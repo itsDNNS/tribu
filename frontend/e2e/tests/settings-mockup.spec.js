@@ -69,7 +69,7 @@ for (const width of [320, 390, 1024, 1440]) {
     } else {
       await page.locator('.sidebar .nav-item').filter({hasText:'Dashboard'}).click();
     }
-    await expect(page.locator('.bento-grid')).toHaveCSS('gap','12px');
-    await expect(page.locator('.dashboard-action-badge')).toHaveCount(0);
+    await expect(page.locator('.today-main')).toHaveCSS('row-gap','16px');
+    await expect(page.locator('.today-badge')).toHaveCount(0);
   });
 }

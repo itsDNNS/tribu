@@ -29,7 +29,7 @@ jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({ success: mockToastSuccess, error: jest.fn(), info: jest.fn() }),
 }));
 
-jest.mock('../../components/DashboardView', () => function MockDashboard({ onOpenSearch }) {
+jest.mock('../../components/today/TodayView', () => function MockDashboard({ onOpenSearch }) {
   return <button type="button" onClick={onOpenSearch}>Dashboard search trigger</button>;
 });
 jest.mock('../../components/ActivityView', () => function MockActivity() { return <div>Activity view</div>; });

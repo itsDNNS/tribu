@@ -54,7 +54,16 @@ export default function ShoppingView(props) {
   const productOpener = useRef(null);
   const toast = useToast();
   const [prefs, setPrefs] = useState(DEFAULT_PREFS),
-    [trip, setTrip] = useState(false),
+    // Today's "Start shopping" opens the list in shopping mode.
+    [trip, setTrip] = useState(() => {
+      try {
+        const start = sessionStorage.getItem('tribu_shopping_trip') === '1';
+        sessionStorage.removeItem('tribu_shopping_trip');
+        return start;
+      } catch {
+        return false;
+      }
+    }),
     [urgent, setUrgent] = useState(false),
     [query, setQuery] = useState(''),
     [focused, setFocused] = useState(false),

@@ -11,7 +11,7 @@ test.describe('Navigation UI', () => {
     await expect(sidebarNav.locator('.nav-item.active')).toContainText('Calendar');
 
     await sidebarNav.locator('.nav-item', { hasText: 'Dashboard' }).click();
-    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#main-content').getByRole('region', { name: 'Today' })).toBeVisible({ timeout: 10000 });
     await expect(sidebarNav.locator('.nav-item.active')).toContainText('Dashboard');
   });
 

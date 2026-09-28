@@ -19,8 +19,7 @@ test('settings preferences persist for a real account and all ten sections open'
   await page.locator('.ms-grid select').first().selectOption('en');
 
   await navigateTo(page, 'Dashboard');
-  await expect(page.locator('.bento-grid')).toHaveCSS('gap', '12px');
-  await expect(page.locator('.bento-card').first()).toHaveCSS('padding', '8px 12px');
+  await expect(page.locator('.today-main')).toHaveCSS('row-gap', '16px');
   await navigateTo(page, 'Calendar');
   await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible();
   const compact = await page.locator('.calendar-page').getAttribute('data-density') === 'compact';
@@ -55,5 +54,5 @@ test('settings preferences persist for a real account and all ten sections open'
   await expect(page.getByRole('switch', { name: 'Compact view', exact: true })).not.toBeChecked();
   await expect(page.getByRole('switch', { name: 'Notification badge', exact: true })).toBeChecked();
   await navigateTo(page, 'Dashboard');
-  await expect(page.locator('.bento-grid')).toHaveCSS('gap', '16px');
+  await expect(page.locator('.today-main')).toHaveCSS('row-gap', '24px');
 });

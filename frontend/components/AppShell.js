@@ -8,7 +8,7 @@ import { announce } from '../lib/announce';
 import { isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
 import MemberAvatar from './MemberAvatar';
 import { DashboardMotto } from './DashboardDetails';
-import DashboardView from './DashboardView';
+import TodayView from './today/TodayView';
 import ActivityView from './ActivityView';
 import CalendarView from './calendar';
 import ContactsView from './ContactsView';
@@ -28,7 +28,7 @@ import ForcePasswordChange from './ForcePasswordChange';
 import OnboardingWizard from './OnboardingWizard';
 
 const views = {
-  dashboard: DashboardView,
+  dashboard: TodayView,
   activity: ActivityView,
   calendar: CalendarView,
   shopping: ShoppingView,
@@ -81,7 +81,6 @@ export default function AppShell() {
   const [searchQuery, setSearchQuery] = useState('');
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [familyMenuOpen, setFamilyMenuOpen] = useState(false);
-  const [dashboardLayoutAction, setDashboardLayoutAction] = useState(null);
   const overflowRef = useRef(null);
   const familySwitcherRef = useRef(null);
   const bellBtnRef = useRef(null);
@@ -109,7 +108,7 @@ export default function AppShell() {
     });
     return ()=>cancelAnimationFrame(frame);
   },[activeView,createRequest]);
-  const ActiveComponent = views[activeView] || DashboardView;
+  const ActiveComponent = views[activeView] || TodayView;
   const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
   const openTaskCount = tasks.filter((tk) => tk.status === 'open').length;
   const totalUnchecked = shoppingLists.reduce((sum, l) => sum + (l.item_count - l.checked_count), 0);
@@ -176,14 +175,6 @@ export default function AppShell() {
     const item = itemRegistry[key];
     if (item) announce(item.label);
   }, [setActiveView, isMobile, itemRegistry]);
-
-  const handleDashboardLayoutActionChange = useCallback((action) => {
-    setDashboardLayoutAction(action);
-  }, []);
-
-  useEffect(() => {
-    if (activeView !== 'dashboard') setDashboardLayoutAction(null);
-  }, [activeView]);
 
   const handleFamilySelect = useCallback((nextFamilyId) => {
     setFamilyMenuOpen(false);
@@ -406,7 +397,7 @@ export default function AppShell() {
               onOpenNotifications={() => { setNotifPanelOpen(true); setOverflowOpen(false); }}
               unreadCount={showNotificationBadge ? unreadCount : 0}
               notificationButtonRef={bellBtnRef}
-              onDashboardLayoutActionChange={activeView === 'dashboard' ? handleDashboardLayoutActionChange : undefined}
+              onOpenCapture={isChild ? undefined : () => setMobileSheet('new')}
               createRequest={createRequest}
               onCreateHandled={()=>setCreateRequest(null)}
             />
@@ -414,7 +405,7 @@ export default function AppShell() {
         </div>
       </main>
 
-      {<ResponsiveUI onLayout={activeView==='dashboard'?dashboardLayoutAction:null} items={[...orderedItems,...pinnedItems]} navigate={navigate} sheet={mobileSheet} setSheet={setMobileSheet} onNotifications={()=>setNotifPanelOpen(true)} onSearchAll={query=>{setSearchQuery(query);setSearchOpen(true);}} onCreate={kind=>{
+      {<ResponsiveUI items={[...orderedItems,...pinnedItems]} navigate={navigate} sheet={mobileSheet} setSheet={setMobileSheet} onNotifications={()=>setNotifPanelOpen(true)} onSearchAll={query=>{setSearchQuery(query);setSearchOpen(true);}} onCreate={kind=>{
         const route={event:'calendar',task:'tasks',shopping:'shopping',meal:'meal_plans'}[kind];
         navigate(route);setCreateRequest({kind,id:Date.now()});
       }}/>}
