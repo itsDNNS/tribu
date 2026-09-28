@@ -199,11 +199,24 @@ class FamilySummary(BaseModel):
     family_name: str = Field(..., description="Family name")
     role: str = Field(..., description="User's role in this family: 'admin' or 'member'")
     is_adult: bool = Field(..., description="Whether the user is marked as adult in this family")
+    hidden_areas: list[str] = Field(default_factory=list, description="Optional areas the family does not use, as navigation keys")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"family_id": 1, "family_name": "Mueller Family", "role": "admin", "is_adult": True}]
+        "examples": [{"family_id": 1, "family_name": "Mueller Family", "role": "admin", "is_adult": True, "hidden_areas": ["school_timetables"]}]
     })
 
+
+
+class FamilyAreasUpdate(BaseModel):
+    """Choose which optional areas a family hides."""
+    hidden_areas: list[str] = Field(..., max_length=20, description="Navigation keys of optional areas to hide; an empty list shows all")
+
+
+class FamilyAreasResponse(BaseModel):
+    """The optional areas of a family and which of them are hidden."""
+    family_id: int = Field(..., description="Family ID")
+    hidden_areas: list[str] = Field(..., description="Hidden optional areas, as navigation keys")
+    optional_areas: list[str] = Field(..., description="Areas a family can hide")
 
 class FamilyMemberResponse(BaseModel):
     """Family member details."""

@@ -8,6 +8,7 @@ import { CurrencyIcon } from '../../lib/currency-icons';
 import { buildFamily } from '../../lib/family/buildFamily';
 import { handOff } from '../../lib/handoff';
 import { t } from '../../lib/i18n';
+import { NO_HIDDEN_AREAS } from '../../lib/navigation';
 import { getMemberColor } from '../../lib/member-colors';
 import HouseholdActivityFeed from '../HouseholdActivityFeed';
 import MemberAvatar from '../MemberAvatar';
@@ -121,7 +122,7 @@ function BirthdayRow({ birthday, ctx }) {
 export default function FamilyHub() {
   const {
     members = [], tasks = [], birthdays = [], activity = [], familyId, messages, lang, timeFormat,
-    isChild, demoMode, setActiveView, events = [],
+    isChild, demoMode, setActiveView, events = [], hiddenAreas = NO_HIDDEN_AREAS,
   } = useApp();
   const rewards = useRewards();
   const now = useCurrentMinute();
@@ -129,7 +130,8 @@ export default function FamilyHub() {
   const today = now.toLocaleDateString('en-CA');
   const [dayEvents, setDayEvents] = useState({ key: null, items: [] });
   const [gifts, setGifts] = useState([]);
-  const canGift = !isChild && !demoMode;
+  const canGift = !isChild && !demoMode && !hiddenAreas.includes('gifts');
+  const withRewards = !hiddenAreas.includes('rewards');
   const key = `${familyId}:${today}`;
 
   useEffect(() => {
@@ -158,11 +160,11 @@ export default function FamilyHub() {
     events: demoMode ? events : dayEvents.key === key ? dayEvents.items : [],
     tasks,
     members,
-    balances: rewards.currency ? rewards.balances : null,
+    balances: withRewards && rewards.currency ? rewards.balances : null,
     rewards: rewards.catalog || [],
     birthdays,
     gifts,
-  }), [now, demoMode, events, dayEvents, key, tasks, members, rewards.currency, rewards.balances, rewards.catalog, birthdays, gifts]);
+  }), [now, demoMode, events, dayEvents, key, tasks, members, withRewards, rewards.currency, rewards.balances, rewards.catalog, birthdays, gifts]);
 
   const ctx = { messages, locale, timeFormat, currency: rewards.currency, setActiveView, canGift };
 

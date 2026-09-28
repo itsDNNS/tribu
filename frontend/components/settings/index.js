@@ -12,6 +12,7 @@ import NotificationDestinationsTab from './NotificationDestinationsTab';
 import StoreLinksTab from './StoreLinksTab';
 import PhoneSyncTab from './PhoneSyncTab';
 import AboutTab from './AboutTab';
+import AreasTab from './AreasTab';
 
 const TABS = [
   { key: 'account',       labelKey: 'settings_tab_account',  component: AccountTab,       visible: () => true },
@@ -19,6 +20,7 @@ const TABS = [
   { key: 'navigation',    labelKey: 'nav_order_title',       component: NavigationTab,    visible: () => true },
   { key: 'phone_sync',    labelKey: 'phone_sync_title',      component: PhoneSyncTab,     visible: ({ isChild, demoMode }) => !isChild && !demoMode },
   { key: 'tokens',        labelKey: 'api_tokens',            component: ApiTokensTab,     visible: ({ isChild, demoMode }) => !isChild && !demoMode },
+  { key: 'areas',         labelKey: 'settings.areas',        component: AreasTab,         visible: ({ isAdmin, isChild, demoMode }) => isAdmin && !isChild && !demoMode },
   { key: 'data',          labelKey: 'data_management',       component: DataTab,          visible: ({ isChild, demoMode }) => !isChild && !demoMode },
   { key: 'store_links', labelKey: 'store_links_title', component: StoreLinksTab, visible: ({ isChild, demoMode }) => !isChild && !demoMode },
   { key: 'webhooks',      labelKey: 'automation_webhooks',   component: WebhooksTab,      visible: ({ isChild, demoMode }) => !isChild && !demoMode },
@@ -85,7 +87,8 @@ export default function SettingsView() {
     const tab = visibleTabs.find(item => item.key === key);
     if (!tab) return null;
     const label = t(messages, tab.labelKey);
-    return <SettingRow key={key} title={label} description={copy(`${key}_desc`)}>
+    const description = key === 'areas' ? level('areas_desc') : copy(`${key}_desc`);
+    return <SettingRow key={key} title={label} description={description}>
       {openButton(label, () => setActiveTab(key))}
     </SettingRow>;
   };
@@ -143,7 +146,7 @@ export default function SettingsView() {
         {openButton(copy('family'), () => setActiveView('contacts'))}
       </SettingRow>
     )}
-    {tabRow('data')}{tabRow('store_links')}
+    {tabRow('areas')}{tabRow('data')}{tabRow('store_links')}
     {isAdmin && !demoMode && ADMIN_ROWS.slice(1, 5).map(adminRow)}
     {tabRow('webhooks')}{tabRow('notification_destinations')}
     {isAdmin && !demoMode && ADMIN_ROWS.slice(5).map(adminRow)}

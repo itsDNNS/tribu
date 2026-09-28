@@ -7,13 +7,53 @@ from app.core.deps import current_user, ensure_family_admin, ensure_family_membe
 from app.core.scopes import require_scope
 from app.core.utils import audit_log as _audit, is_instance_admin_user
 from app.database import get_db
-from app.models import AuditLog, Membership, User
-from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
+from app.models import AuditLog, Family, Membership, User
+from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyAreasResponse, FamilyAreasUpdate, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
-from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN, PROFILE_IMAGE_UNREADABLE
+from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, UNKNOWN_AREAS, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN, PROFILE_IMAGE_UNREADABLE
 from app.core.avatars import AvatarError, set_profile_image
 
 router = APIRouter(prefix="/families", tags=["families"], responses={**AUTH_RESPONSES})
+
+# Areas a family may hide (Tribu 2.0, R4), in navigation order. Today,
+# calendar, shopping, tasks, contacts and the family hub always stay.
+OPTIONAL_AREAS = ["weekly_plan", "meal_plans", "recipes", "school_timetables", "templates", "rewards", "gifts"]
+
+
+def normalize_hidden_areas(value) -> list[str]:
+    """Known optional areas from a stored list, once each, in order."""
+    stored = value if isinstance(value, list) else []
+    return [key for key in OPTIONAL_AREAS if key in stored]
+
+
+@router.put(
+    "/{family_id}/areas",
+    response_model=FamilyAreasResponse,
+    summary="Choose the family's areas",
+    description="Hide optional areas the family does not use; they leave navigation, search and quick capture in every client. Admins only. Scope: `families:write`.",
+    response_description="Hidden and optional areas",
+)
+def set_family_areas(
+    family_id: int,
+    payload: FamilyAreasUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+    unknown = sorted({key for key in payload.hidden_areas if key not in OPTIONAL_AREAS})
+    if unknown:
+        raise HTTPException(status_code=422, detail=error_detail(UNKNOWN_AREAS, keys=", ".join(unknown)))
+    family = db.query(Family).filter(Family.id == family_id).first()
+    if not family:
+        raise HTTPException(status_code=404, detail=error_detail(NOT_A_MEMBER))
+    hidden = normalize_hidden_areas(payload.hidden_areas)
+    if hidden != normalize_hidden_areas(family.hidden_areas):
+        family.hidden_areas = hidden
+        _audit(db, family_id, user.id, "areas_changed", details={"hidden_areas": hidden})
+        db.commit()
+        cache.invalidate_pattern("tribu:families:*")
+    return FamilyAreasResponse(family_id=family_id, hidden_areas=hidden, optional_areas=OPTIONAL_AREAS)
 
 
 @router.get(
@@ -40,6 +80,7 @@ def my_families(user: User = Depends(current_user), db: Session = Depends(get_db
                 family_name=m.family.name,
                 role=m.role,
                 is_adult=m.is_adult,
+                hidden_areas=normalize_hidden_areas(m.family.hidden_areas),
             ).model_dump()
             for m in memberships
             if m.family

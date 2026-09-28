@@ -56,6 +56,9 @@ class Family(Base):
     weather_location_name = Column(String(120), nullable=True)
     weather_latitude = Column(Float, nullable=True)
     weather_longitude = Column(Float, nullable=True)
+    # Optional areas the family does not use (Tribu 2.0, R4), as navigation
+    # keys such as "recipes"; they leave navigation, search and "+".
+    hidden_areas = Column(JSON, nullable=True)
 
     memberships = relationship("Membership", back_populates="family", cascade="all, delete-orphan")
     calendar_events = relationship("CalendarEvent", back_populates="family", cascade="all, delete-orphan")

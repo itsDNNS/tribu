@@ -141,6 +141,36 @@ test.describe('Settings', () => {
     await expect(page.locator('.fam-tab[aria-current="page"]')).toHaveText(/Backups/);
   });
 
+  test('hides an area for the family and brings it back', async ({ authedPage: page, apiCtx }) => {
+    await navigateTo(page, 'Settings');
+    await page.getByRole('region', { name: 'Family' }).getByRole('button', { name: 'Areas', exact: true }).click();
+    const recipes = page.getByRole('switch', { name: 'Recipes' });
+    await expect(recipes).toHaveAttribute('aria-checked', 'true');
+    await recipes.click();
+    await expect(recipes).toHaveAttribute('aria-checked', 'false');
+
+    // Saved for the family, and gone from the navigation after a reload.
+    await expect.poll(async () => (await (await apiCtx.get('/api/families/me')).json())[0].hidden_areas).toEqual(['recipes']);
+    await page.reload();
+    await page.locator('#main-content').waitFor({ timeout: 15000 });
+    const viewport = page.viewportSize();
+    if (viewport && viewport.width > 768) {
+      await expect(page.getByRole('navigation', { name: 'Main navigation' })).not.toContainText('Recipes');
+    }
+    // A bookmark to the hidden area opens Today.
+    await page.goto('/#recipes');
+    await expect(page.locator('#main-content').getByRole('region', { name: 'Today' })).toBeVisible({ timeout: 10000 });
+
+    // Settings reopen on the areas page they showed last.
+    await navigateTo(page, 'Settings');
+    const again = page.getByRole('switch', { name: 'Recipes' });
+    if (!(await again.isVisible().catch(() => false))) {
+      await page.getByRole('region', { name: 'Family' }).getByRole('button', { name: 'Areas', exact: true }).click();
+    }
+    await again.click();
+    await expect.poll(async () => (await (await apiCtx.get('/api/families/me')).json())[0].hidden_areas).toEqual([]);
+  });
+
   test('shows push diagnostics when server push is not configured', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 

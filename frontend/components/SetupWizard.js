@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { errorText, parseServerInstant } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
+import AreaSwitches from './settings/AreaSwitches';
 
 const STEPS_FRESH = ['welcome', 'admin', 'family', 'prefs', 'done'];
 const STEPS_RESTORE = ['welcome', 'restore'];
@@ -90,6 +91,17 @@ export default function SetupWizard() {
     const { ok, data } = await api.apiRegister(email, password, displayName, familyName);
     setSubmitting(false);
     if (!ok) return setMsg(errorText(data?.detail, t(messages, 'setup_admin_failed'), messages));
+    nextStep();
+  };
+
+  // --- Areas (Tribu 2.0, R4): the family chooses what it uses ---
+  const [hiddenAreas, setHiddenAreas] = useState([]);
+  const savePrefs = async () => {
+    if (hiddenAreas.length) {
+      const { ok, data } = await api.apiGetMyFamilies();
+      const familyId = ok && Array.isArray(data) ? data[0]?.family_id : null;
+      if (familyId) await api.apiSetFamilyAreas(familyId, hiddenAreas);
+    }
     nextStep();
   };
 
@@ -322,7 +334,12 @@ export default function SetupWizard() {
                   ))}
                 </select>
               </div>
-              <button className="btn-primary" style={{ width: '100%' }} onClick={nextStep}>
+              <div className="form-field setup-areas" style={{ marginBottom: 20 }}>
+                <label>{t(messages, 'settings.areas')}</label>
+                <p className="setup-areas-intro">{t(messages, 'settings.areas_intro')}</p>
+                <AreaSwitches hidden={hiddenAreas} onChange={setHiddenAreas} />
+              </div>
+              <button className="btn-primary" style={{ width: '100%' }} onClick={savePrefs}>
                 {t(messages, 'setup_prefs_next')}
               </button>
               <button className="btn-link" style={{ width: '100%', marginTop: 8 }} onClick={nextStep}>

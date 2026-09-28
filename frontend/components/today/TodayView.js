@@ -5,6 +5,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { useCurrentMinute } from '../../hooks/useCurrentMinute';
 import { apiConvertQuickCapture, apiDismissQuickCapture, apiGetEvents, apiListMealPlans } from '../../lib/api';
 import { t } from '../../lib/i18n';
+import { NO_HIDDEN_AREAS } from '../../lib/navigation';
 import { getMemberColor } from '../../lib/member-colors';
 import { buildToday } from '../../lib/today/buildToday';
 import { peekHandOff, takeHandOff } from '../../lib/handoff';
@@ -178,7 +179,7 @@ export default function TodayView({ onOpenCapture } = {}) {
   const {
     summary, me, members = [], events = [], shoppingLists, mealPlans = [], quickCaptureInbox, familyId,
     families, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode,
-    loadQuickCaptureInbox, loadTasks, loadShoppingLists,
+    loadQuickCaptureInbox, loadTasks, loadShoppingLists, hiddenAreas = NO_HIDDEN_AREAS,
   } = useApp();
   const tk = useTasks();
   const now = useCurrentMinute();
@@ -397,7 +398,7 @@ export default function TodayView({ onOpenCapture } = {}) {
             </ul>
           </section>
         )}
-        <RewardsDashboardWidget />
+        {!hiddenAreas.includes('rewards') && <RewardsDashboardWidget />}
       </aside>
     </div>
   );

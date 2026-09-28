@@ -98,12 +98,12 @@ describe('Settings notification destinations visibility', () => {
 describe('Mockup settings overview', () => {
   const common = ['account', 'navigation', 'about'];
   const adult = ['notifications', 'phone_sync', 'data', 'tokens', 'webhooks', 'store_links'];
-  const all = [...common, ...adult, 'notification_destinations'];
+  const all = [...common, ...adult, 'notification_destinations', 'areas'];
   const labels = {
     account: 'Account', navigation: 'Navigation', about: 'About & Support',
     notifications: 'Notifications', phone_sync: 'Phone sync', data: 'Data',
     tokens: 'API Tokens', webhooks: 'Automation Webhooks', store_links: 'Store searches',
-    notification_destinations: 'Household notifications',
+    notification_destinations: 'Household notifications', areas: 'Areas',
   };
 
   it.each([

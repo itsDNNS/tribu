@@ -67,6 +67,16 @@ export function AppProvider({ children }) {
 
   const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
   const isChild = !isAdmin && !myFamilyIsAdult;
+  // Optional areas this family does not use (Tribu 2.0, R4).
+  const hiddenAreas = useMemo(() => {
+    const family = families.find((entry) => String(entry.family_id) === String(familyId));
+    return Array.isArray(family?.hidden_areas) ? family.hidden_areas : [];
+  }, [families, familyId]);
+  const setHiddenAreas = useCallback((areas) => {
+    setFamilies((current) => current.map((entry) => (
+      String(entry.family_id) === String(familyId) ? { ...entry, hidden_areas: areas } : entry
+    )));
+  }, [familyId]);
 
   const setActiveView = useCallback((view) => {
     sessionStorage.setItem('tribu_view', view);
@@ -504,7 +514,7 @@ export function AppProvider({ children }) {
     logout,
     // Family
     familyId, setFamilyId,
-    families, setFamilies,
+    families, setFamilies, hiddenAreas, setHiddenAreas,
     myFamilyRole, setMyFamilyRole,
     myFamilyIsAdult, setMyFamilyIsAdult,
     members, setMembers,

@@ -540,6 +540,15 @@ export function apiPushUnsubscribe(endpoint) {
   return post('/notifications/push/unsubscribe', { endpoint });
 }
 
+// Family areas (Tribu 2.0, R4)
+export function apiSetFamilyAreas(familyId, hidden_areas) {
+  return request(`/families/${familyId}/areas`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hidden_areas }),
+  });
+}
+
 // Nav Order
 export function apiGetNavOrder() {
   return request('/nav/order');

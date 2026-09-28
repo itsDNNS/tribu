@@ -66,9 +66,17 @@ export const NAV_ITEM_META = {
   admin: { icon: Shield, labelKey: 'admin_layout_title', adminOnly: true },
 };
 
-export function isNavItemVisible(key, { isAdmin = false, isChild = false, demoMode = false } = {}) {
+// Areas a family may hide (Tribu 2.0, R4), in navigation order; the
+// server keeps the same list (OPTIONAL_AREAS).
+export const OPTIONAL_AREAS = ['weekly_plan', 'meal_plans', 'recipes', 'school_timetables', 'templates', 'rewards', 'gifts'];
+
+// The same empty list every render, so hooks do not rerun without a family.
+export const NO_HIDDEN_AREAS = Object.freeze([]);
+
+export function isNavItemVisible(key, { isAdmin = false, isChild = false, demoMode = false, hiddenAreas = NO_HIDDEN_AREAS } = {}) {
   const meta = NAV_ITEM_META[key];
   if (!meta) return false;
+  if (hiddenAreas.includes(key)) return false;
   if (meta.adminOnly && !isAdmin) return false;
   if (meta.adultOnly && isChild) return false;
   if (meta.hideInDemo && demoMode) return false;

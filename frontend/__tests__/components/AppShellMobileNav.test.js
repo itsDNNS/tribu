@@ -363,4 +363,23 @@ describe('AppShell mobile bottom navigation', () => {
     expect(mainNav).not.toHaveTextContent('Settings');
     expect(screen.queryByRole('navigation', { name: /Pages in/ })).not.toBeInTheDocument();
   });
+
+  it('leaves hidden areas out of the navigation and opens Today instead', () => {
+    const setActiveView = jest.fn();
+    mockAppState = baseState({ isMobile: false, hiddenAreas: ['recipes', 'gifts'], activeView: 'recipes', setActiveView });
+    render(<AppShell />);
+    const mainNav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(mainNav).not.toHaveTextContent('Recipes');
+    expect(mainNav).toHaveTextContent('Calendar');
+    expect(setActiveView).toHaveBeenCalledWith('dashboard');
+  });
+
+  it('offers no meal form in "+" when meal plans are hidden', () => {
+    mockAppState = baseState({ hiddenAreas: ['meal_plans'] });
+    render(<AppShell />);
+    fireEvent.click(within(tabBar()).getByRole('button', { name: 'New', exact: true }));
+    const sheet = screen.getByRole('dialog', { name: 'What would you like to add?' });
+    expect(within(sheet).queryByRole('button', { name: 'Meal', exact: true })).not.toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: /Event/ })).toBeInTheDocument();
+  });
 });

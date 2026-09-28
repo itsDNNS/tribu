@@ -1,7 +1,7 @@
 const { test, expect } = require('../helpers/fixtures');
 const { navigateTo } = require('../helpers/navigation');
 
-test('settings preferences persist for a real account and all ten sections open', async ({ authedPage: page }) => {
+test('settings preferences persist for a real account and all eleven sections open', async ({ authedPage: page }) => {
   await navigateTo(page, 'Settings');
   await page.getByRole('switch', { name: 'Compact view', exact: true }).click();
   await page.getByRole('switch', { name: 'Notification badge', exact: true }).click();
@@ -40,11 +40,11 @@ test('settings preferences persist for a real account and all ten sections open'
   const sections = page.getByRole('combobox', { name: 'Settings section' });
   const expected = [
     ['account', 'Account'], ['navigation', 'Navigation'], ['notifications', 'Notifications'],
-    ['phone_sync', 'Phone sync'], ['data', 'Data'], ['tokens', 'API Tokens'],
+    ['phone_sync', 'Phone sync'], ['tokens', 'API Tokens'], ['areas', 'Areas'], ['data', 'Data'],
     ['webhooks', 'Automation Webhooks'], ['notification_destinations', 'Household notifications'],
     ['store_links', 'Store searches'], ['about', 'About & Support'],
   ];
-  await expect(sections.locator('option')).toHaveCount(10);
+  await expect(sections.locator('option')).toHaveCount(11);
   for (const [key, label] of expected) {
     await sections.selectOption(key);
     await expect(page.locator('.ms-list-header h1')).toHaveText(label);

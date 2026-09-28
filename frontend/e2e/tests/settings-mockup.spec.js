@@ -48,7 +48,7 @@ for (const width of [320, 390, 1024, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole('button', { name:'Account',exact:true }).click();
     await expect(page.getByLabel('Date of birth')).toBeVisible();
-    await expect(page.getByRole('combobox', {name:'Settings section'}).locator('option')).toHaveCount(10);
+    await expect(page.getByRole('combobox', {name:'Settings section'}).locator('option')).toHaveCount(11);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole('button', {name:'All settings'}).click();
     await expect(page.getByRole('heading', { name:'Settings',exact:true })).toBeFocused();

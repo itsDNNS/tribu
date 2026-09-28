@@ -5,7 +5,7 @@ import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
-import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf, navKeyOf } from '../lib/navigation';
+import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf, navKeyOf, NO_HIDDEN_AREAS } from '../lib/navigation';
 import AppHeader from './shell/AppHeader';
 import SubNav from './shell/SubNav';
 import TodayView from './today/TodayView';
@@ -69,7 +69,7 @@ function TodaySkeleton({ messages }) {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, familyId, tasks, shoppingLists, demoMode, loading, navOrder } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, familyId, tasks, shoppingLists, demoMode, loading, navOrder, hiddenAreas = NO_HIDDEN_AREAS } = useApp();
   const [mobileSheet,setMobileSheet] = useState(null);
   const [createRequest,setCreateRequest] = useState(null);
   useEffect(()=>{setMobileSheet(null);setCreateRequest(null);},[familyId]);
@@ -111,14 +111,19 @@ export default function AppShell() {
   const itemRegistry = useMemo(() => {
     const registry = {};
     for (const [key, meta] of Object.entries(NAV_ITEM_META)) {
-      if (!isNavItemVisible(key, { isAdmin, isChild, demoMode })) continue;
+      if (!isNavItemVisible(key, { isAdmin, isChild, demoMode, hiddenAreas })) continue;
       const item = { key, icon: meta.icon, label: t(messages, meta.labelKey) };
       if (key === 'shopping') item.badge = totalUnchecked || null;
       if (key === 'tasks') item.badge = openTaskCount || null;
       registry[key] = item;
     }
     return registry;
-  }, [messages, totalUnchecked, openTaskCount, isAdmin, isChild, demoMode]);
+  }, [messages, totalUnchecked, openTaskCount, isAdmin, isChild, demoMode, hiddenAreas]);
+
+  // A hidden area (a bookmark, another device) opens Today instead.
+  useEffect(() => {
+    if (hiddenAreas.includes(activeView)) setActiveView('dashboard');
+  }, [hiddenAreas, activeView, setActiveView]);
 
   const accountItems = useMemo(
     () => ACCOUNT_NAV_KEYS.map((key) => itemRegistry[key]).filter(Boolean),

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigation, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
-import { isNavItemVisible, NAV_GROUPS, NAV_ITEM_META } from '../../lib/navigation';
+import { isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, NO_HIDDEN_AREAS } from '../../lib/navigation';
 import * as api from '../../lib/api';
 
 // The order of the areas within each group of the navigation.
@@ -19,12 +19,12 @@ function groupedOrder(order, context) {
 }
 
 export default function NavigationTab() {
-  const { messages, isAdmin, isChild, demoMode, navOrder, setNavOrder } = useApp();
-  const context = { isAdmin, isChild, demoMode };
+  const { messages, isAdmin, isChild, demoMode, navOrder, setNavOrder, hiddenAreas = NO_HIDDEN_AREAS } = useApp();
+  const context = { isAdmin, isChild, demoMode, hiddenAreas };
   const [groups, setGroups] = useState(() => groupedOrder(navOrder, context));
   const [navSaved, setNavSaved] = useState(false);
 
-  useEffect(() => { setGroups(groupedOrder(navOrder, context)); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [navOrder, isAdmin, isChild, demoMode]);
+  useEffect(() => { setGroups(groupedOrder(navOrder, context)); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [navOrder, isAdmin, isChild, demoMode, hiddenAreas]);
 
   function moveNavItem(groupKey, index, direction) {
     setGroups((current) => current.map((group) => {

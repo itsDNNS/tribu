@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { parseCapture } from '../../lib/capture/parseCapture';
 import { localeForLang, weekStartIndex } from '../../lib/dates';
 import { t } from '../../lib/i18n';
+import { NO_HIDDEN_AREAS } from '../../lib/navigation';
 import { catalogProduct } from '../shopping/catalog';
 import { plannerText } from './PlannerUI';
 import BottomSheet from './BottomSheet';
@@ -46,7 +47,7 @@ function entryMeta(entry, { lang, members, messages }) {
 // The forms stay one tap away.
 export default function NewSheet({ onClose, onCreate, defaultKind = 'task' }) {
   const app = useApp();
-  const { messages, demoMode, familyId, lang, members = [], weekStart } = app;
+  const { messages, demoMode, familyId, lang, members = [], weekStart, hiddenAreas = NO_HIDDEN_AREAS } = app;
   const toast = useToast();
   const { busy, create } = useCaptureCreate(app);
   const [text, setText] = useState('');
@@ -162,7 +163,7 @@ export default function NewSheet({ onClose, onCreate, defaultKind = 'task' }) {
       <section className="capture-forms" aria-labelledby={`${captureId}-forms`}>
         <h3 id={`${captureId}-forms`}>{t(messages, 'module.capture.with_form')}</h3>
         <div className="capture-form-row">
-          {FORMS.map(([kind, Icon, labelKey]) => (
+          {FORMS.filter(([kind]) => kind !== 'meal' || !hiddenAreas.includes('meal_plans')).map(([kind, Icon, labelKey]) => (
             <button
               type="button"
               key={kind}
