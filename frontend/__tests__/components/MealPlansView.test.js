@@ -35,6 +35,10 @@ const messages = {
   'module.meal_plans.slot_taken': 'Slot belegt',
   'toast.error': 'Fehler',
   'module.meal_plans.add': 'Mahlzeit planen',
+  'module.meal_plans.week_ingredients': 'Zutaten dieser Woche',
+  'module.meal_plans.week_ingredients_count': '{count} Zutaten aus {meals} Mahlzeiten',
+  'module.meal_plans.week_ingredients_review': 'Ansehen und hinzufügen',
+  'module.meal_plans.week_ingredients_add': 'Auf die Liste setzen',
   'module.meal_plans.add_title': 'Mahlzeit planen',
   'module.meal_plans.edit_title': 'Mahlzeit bearbeiten',
   'module.meal_plans.cancel': 'Abbrechen',
@@ -107,6 +111,16 @@ function baseState(overrides) {
   return state;
 }
 
+// New meals start from an empty slot (or the global "+").
+const openAdd = () =>
+  fireEvent.click(screen.getAllByRole('button', { name: /^Slot .* am / })[0]);
+
+// The preview sheet is a <dialog>, which jsdom does not implement.
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function showModal() { this.setAttribute('open', ''); };
+  HTMLDialogElement.prototype.close = function close() { this.removeAttribute('open'); };
+});
+
 describe('MealPlansView', () => {
   beforeEach(() => {
     apiListMealPlans.mockReset();
@@ -123,13 +137,14 @@ describe('MealPlansView', () => {
     apiAddWeekMealIngredientsToShopping.mockResolvedValue({ ok: true, data: { added_count: 2 } });
   });
 
-  test('renders the add button, fetches the week, and the grid has 7 day headers + 3 slots', async () => {
+  test('renders a plain title, fetches the week, and the grid has 7 day headers + 3 slots', async () => {
     mockAppState = baseState();
     const { container } = render(<MealPlansView />);
     expect(container.querySelector('.meal-plans-page')).toBeInTheDocument();
-    expect(container.querySelector('.meal-plan-page-icon')).toBeInTheDocument();
-    expect(container.querySelector('.meal-plan-week-summary')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Mahlzeit planen' })).toBeInTheDocument();
+    // Tribu 2.0 (M1): a plain title, no counters and no header button.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Essensplan');
+    expect(container.querySelector('.meal-plan-week-summary')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mahlzeit planen' })).not.toBeInTheDocument();
     await waitFor(() => expect(apiListMealPlans).toHaveBeenCalledTimes(1));
     expect(screen.getAllByText('Morgens').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Mittags').length).toBeGreaterThan(0);
@@ -197,11 +212,11 @@ describe('MealPlansView', () => {
     }
   });
 
-  test('opens dialog on add button click and shows the meal name field', async () => {
+  test('opens the dialog from an empty slot and shows the meal name field', async () => {
     mockAppState = baseState();
     render(<MealPlansView />);
     await waitFor(() => expect(apiListMealPlans).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole('button', { name: 'Mahlzeit planen' }));
+    openAdd();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('z.B. Spaghetti')).toBeInTheDocument();
   });
@@ -209,7 +224,6 @@ describe('MealPlansView', () => {
   test('demo mode renders local demo meals instead of fetching', async () => {
     mockAppState = baseState({ demoMode: true });
     render(<MealPlansView />);
-    expect(screen.getByRole('button', { name: 'Mahlzeit planen' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText('Porridge mit Beeren')).toBeInTheDocument());
     expect(apiListMealPlans).not.toHaveBeenCalled();
     expect(apiListRecipes).not.toHaveBeenCalled();
@@ -220,7 +234,7 @@ describe('MealPlansView', () => {
     render(<MealPlansView />);
     await waitFor(() => expect(screen.getByText('Porridge mit Beeren')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Mahlzeit planen' }));
+    openAdd();
     fireEvent.change(screen.getByPlaceholderText('z.B. Spaghetti'), { target: { value: 'Demo Suppe' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
@@ -246,7 +260,7 @@ describe('MealPlansView', () => {
 
     render(<MealPlansView />);
     await waitFor(() => expect(apiListRecipes).toHaveBeenCalledWith('1'));
-    fireEvent.click(screen.getByRole('button', { name: 'Mahlzeit planen' }));
+    openAdd();
 
     fireEvent.change(screen.getByLabelText('Rezept'), { target: { value: '10' } });
     expect(screen.getByPlaceholderText('z.B. Spaghetti')).toHaveValue('Pancakes');
@@ -260,7 +274,7 @@ describe('MealPlansView', () => {
     expect(apiCreateMealPlan.mock.calls[0][0]).toMatchObject({
       family_id: 1,
       plan_date: expect.any(String),
-      slot: 'noon',
+      slot: 'morning',
       meal_name: 'Pancakes',
       ingredients: [
         { name: 'Mehl', amount: 200, unit: 'g' },
@@ -305,7 +319,13 @@ describe('MealPlansView', () => {
       render(<MealPlansView />);
       await waitFor(() => expect(screen.getByText('Weekly Pasta')).toBeInTheDocument());
 
-      fireEvent.click(screen.getByRole('button', { name: 'Alle Zutaten dieser Woche in Einkaufsliste schieben' }));
+      // M3: the week's ingredients, previewed before they go to the list.
+      expect(screen.getByText('1 Zutaten aus 1 Mahlzeiten')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Ansehen und hinzufügen' }));
+      const sheet = screen.getByRole('dialog');
+      expect(sheet).toHaveTextContent('Flour');
+      expect(sheet).toHaveTextContent('500 g');
+      fireEvent.click(screen.getByRole('button', { name: 'Auf die Liste setzen' }));
 
       await waitFor(() => expect(apiAddWeekMealIngredientsToShopping).toHaveBeenCalledWith(1, '2099-01-05', 55));
     } finally {
@@ -324,7 +344,7 @@ describe('MealPlansView', () => {
 
     render(<MealPlansView />);
     await waitFor(() => expect(apiListMealPlans).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole('button', { name: 'Mahlzeit planen' }));
+    openAdd();
     const nameInput = screen.getByPlaceholderText('z.B. Spaghetti');
     fireEvent.change(nameInput, { target: { value: 'Pasta' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));

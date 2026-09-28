@@ -941,3 +941,140 @@
 .ui-strip-toggle[aria-expanded='true'] svg { transform: rotate(180deg); }
 .tc-page .tc-list-header { margin-bottom: var(--space-2); }
 .tc-page > .person-filter { margin-bottom: var(--space-4); }
+
+/* Meal plan, Tribu 2.0 (M1–M3): a slim week bar, the week as the content
+   and the week's ingredients with a preview at the end. */
+.meal-plans-page .meal-list-header { margin-bottom: var(--space-2); }
+.meal-plans-page .meal-week-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  touch-action: pan-y;
+}
+.meal-plans-page .meal-week-nav-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.meal-week-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.meal-day {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+.meal-day + .meal-day { border-top: 1px solid var(--color-line); }
+.meal-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 0 var(--space-1);
+  font-size: var(--type-body-small-size);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.meal-day-head strong { color: var(--color-text); font-weight: 650; }
+.meal-day.today .meal-day-head strong { color: var(--color-accent); }
+.meal-day-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.meal-slot {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-height: 56px;
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  text-align: left;
+  font-size: var(--type-body-small-size);
+  line-height: 1.3;
+}
+.meal-slot small {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.meal-slot.filled {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.meal-slot.empty {
+  border: 1px dashed var(--color-line);
+  color: var(--color-text-muted);
+  justify-items: start;
+}
+.meal-slot.empty:hover { background: var(--color-surface-hover); }
+.meal-week-shopping {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-accent);
+}
+.meal-week-shopping-text { flex: 1; min-width: 0; display: grid; gap: 2px; color: var(--color-text); }
+.meal-week-shopping-text small { color: var(--color-text-muted); font-size: var(--type-body-small-size); }
+.meal-week-shopping-action {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-weight: 650;
+  cursor: pointer;
+}
+.meal-week-shopping-action:hover { background: var(--color-accent-soft); }
+.meal-ingredients-sheet .ui-bottom-sheet-body { display: grid; gap: var(--space-4); }
+.meal-ingredients-preview { list-style: none; margin: 0; padding: 0; display: grid; }
+.meal-ingredients-preview li { display: grid; gap: 2px; padding: var(--space-2) 0; border-bottom: 1px solid var(--color-line); }
+.meal-ingredients-preview small { color: var(--color-text-muted); font-size: var(--type-body-small-size); }
+.meal-ingredients-list { display: grid; gap: var(--space-1); font-size: var(--type-body-small-size); color: var(--color-text-muted); }
+.meal-ingredients-sheet .meal-ingredients-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--grad-primary);
+  color: var(--color-text-on-accent);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.meal-ingredients-sheet .meal-ingredients-add:disabled { opacity: 0.55; cursor: not-allowed; }
+/* Same page edges as the other pages. */
+.app-shell .meal-plans-page.ui-planner { padding-inline: 0; }

@@ -516,6 +516,8 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .btn-primary { background: var(--grad-primary); color: var(--text-on-primary); border: none; border-radius: var(--radius-sm); padding: 15px; font-family: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.25s var(--ease-out-expo); position: relative; overflow: hidden; }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px -4px var(--amethyst-glow); }
 .btn-primary:active { transform: translateY(0) scale(0.98); }
+/* Buttons with an icon keep it beside the label, with some room. */
+:is(.btn-primary, .btn-secondary):has(> svg) { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
 .btn-ghost { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: var(--text-primary); border-radius: var(--radius-sm); padding: 9px 16px; font-family: inherit; font-size: 0.82rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; min-height: 44px; }
 .btn-ghost:hover { background: rgba(255,255,255,0.07); }
 .btn-sm { background: var(--grad-primary); color: white; border: none; border-radius: 8px; padding: 10px 16px; font-family: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; min-height: 44px; }

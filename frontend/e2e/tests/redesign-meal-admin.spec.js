@@ -13,8 +13,10 @@ test.describe('Meal plan and admin redesign surfaces', () => {
   test('meal plan and admin subpages use the warm redesigned shells', async ({ authedPage: page }) => {
     await navigateTo(page, 'Meal plan');
     await expect(page.locator('.meal-plans-page')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.meal-plan-page-icon')).toBeVisible();
-    await expect(page.locator('.meal-plan-week-summary')).toBeVisible();
+    // Tribu 2.0 (M1, M2): a plain title and a slim week bar, no counters.
+    await expect(page.locator('.meal-list-header h1')).toBeVisible();
+    await expect(page.locator('.meal-week-nav')).toBeVisible();
+    await expect(page.locator('.meal-plan-week-summary')).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
 
     await navigateTo(page, 'Admin');

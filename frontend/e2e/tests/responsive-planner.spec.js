@@ -183,14 +183,14 @@ test("agenda requests more dates; mobile shell exposes quick capture and navigat
       .getByRole("button", { name: "Einstellungen", exact: true }),
   ).toBeVisible();
 });
-test("meal and weekly planners share day/week controls; a meal can move by date", async ({
+test("the meal week is the content on phones and the weekly plan keeps its day/week controls; a meal can move by date", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const api = await open(page);
   await page.goto("/#meal_plans");
-  await expect(page.locator(".ui-day-strip")).toBeVisible();
-  await page.locator(".ui-strip-day").filter({ hasText: /19/ }).click();
+  // Phones show the whole week as the content (Tribu 2.0, M1).
+  await expect(page.locator(".meal-week-list .meal-day")).toHaveCount(7);
   await page.getByRole("button", { name: /Demo-Mahlzeit/ }).click();
   const dialog = page.getByRole("dialog");
   await dialog.locator("input[type=date]").fill("2026-09-20");

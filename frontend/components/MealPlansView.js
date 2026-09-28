@@ -1,11 +1,6 @@
 import { usePlannerLayout } from '../hooks/useResponsiveUI';
-import {
-  DayStrip,
-  WeekPresentation,
-  AgendaDay,
-  dateKey,
-} from './responsive/PlannerUI';
-import { useEffect, useState } from 'react';
+import { dateKey } from './responsive/PlannerUI';
+import { useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,7 +9,6 @@ import {
   CalendarDays,
   GripVertical,
   ShoppingCart,
-  UtensilsCrossed,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useMealPlans, formatIsoDate, weekDays } from '../hooks/useMealPlans';
@@ -24,6 +18,26 @@ import { apiListRecipes } from '../lib/api';
 import { t } from '../lib/i18n';
 import ConfirmDialog from './ConfirmDialog';
 import MealPlanDialog from './MealPlanDialog';
+import BottomSheet from './responsive/BottomSheet';
+
+// The week's ingredients for the shopping preview: one line per name, with
+// the amounts that go with it.
+function weekIngredients(meals) {
+  const byName = new Map();
+  for (const meal of meals) {
+    for (const ingredient of meal.ingredients || []) {
+      const name = String(ingredient.name || '').trim();
+      if (!name) continue;
+      const key = name.toLocaleLowerCase();
+      const amount = [ingredient.amount, ingredient.unit].filter(Boolean).join(' ');
+      const entry = byName.get(key) || { name, amounts: [], meals: new Set() };
+      if (amount) entry.amounts.push(amount);
+      entry.meals.add(meal.meal_name);
+      byName.set(key, entry);
+    }
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
 
 const WEEKDAY_KEYS = [
   'module.meal_plans.weekday.monday',
@@ -185,7 +199,6 @@ function EmptyMealCell({
 export default function MealPlansView(props) {
   const {
     familyId,
-    families,
     messages,
     lang,
     demoMode,
@@ -194,7 +207,8 @@ export default function MealPlansView(props) {
   const hook = useMealPlans();
   const { ref: plannerRef, compact } = usePlannerLayout();
   const [selectedDay, setSelectedDay] = useState(new Date());
-  const [presentation, setPresentation] = useState('day');
+  const [ingredientsOpen, setIngredientsOpen] = useState(false);
+  const weekSwipe = useRef(null);
   useEffect(() => {
     setSelectedDay((previous) =>
       dateKey(previous) >= dateKey(hook.weekStart) &&
@@ -236,9 +250,6 @@ export default function MealPlansView(props) {
     }
   }, [shoppingLists, selectedWeekListId]);
 
-  const currentFamilyName =
-    families.find((f) => String(f.family_id) === String(familyId))
-      ?.family_name || '';
   const locale = localeForLang(lang);
   const days = weekDays(hook.weekStart);
   const today = new Date();
@@ -255,10 +266,8 @@ export default function MealPlansView(props) {
       Boolean,
     ),
   );
-  const mealCountBySlot = MEAL_SLOTS.reduce((acc, slot) => {
-    acc[slot] = visibleMeals.filter((meal) => meal.slot === slot).length;
-    return acc;
-  }, {});
+  const ingredients = weekIngredients(visibleMeals);
+  const mealsWithIngredients = visibleMeals.filter((meal) => (meal.ingredients || []).length).length;
 
   function openAdd(date, slot) {
     setEditingId(null);
@@ -352,7 +361,8 @@ export default function MealPlansView(props) {
     if (!selectedWeekListId) return;
     setPushingWeek(true);
     try {
-      await hook.pushWeekToShopping(Number(selectedWeekListId));
+      const res = await hook.pushWeekToShopping(Number(selectedWeekListId));
+      if (res?.ok) setIngredientsOpen(false);
     } finally {
       setPushingWeek(false);
     }
@@ -397,118 +407,52 @@ export default function MealPlansView(props) {
         recipes={recipes}
       />
 
-      <div className="view-header meal-plan-header">
-        <div className="meal-plan-title-block">
-          <span className="meal-plan-page-icon" aria-hidden="true">
-            <UtensilsCrossed size={22} />
-          </span>
-          <div>
-            <h1 className="view-title">
-              {t(messages, 'module.meal_plans.name')}
-            </h1>
-            <div className="view-subtitle">
-              {currentFamilyName ||
-                formatWeekRange(hook.weekStart, hook.weekEnd, locale)}
-            </div>
-          </div>
-        </div>
-        <div className="meal-header-actions">
-          <div
-            className="meal-week-nav"
-            role="group"
-            aria-label={t(messages, 'module.meal_plans.week')}
-          >
-            <button
-              type="button"
-              className="btn btn-secondary meal-week-nav-btn"
-              onClick={hook.goPrevWeek}
-              aria-label={t(messages, 'module.meal_plans.prev_week')}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary meal-week-nav-label"
-              onClick={hook.goToday}
-              aria-label={t(messages, 'module.meal_plans.today')}
-            >
-              <CalendarDays size={14} aria-hidden="true" />
-              {formatWeekRange(hook.weekStart, hook.weekEnd, locale)}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary meal-week-nav-btn"
-              onClick={hook.goNextWeek}
-              aria-label={t(messages, 'module.meal_plans.next_week')}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {!demoMode && shoppingLists.length > 0 && (
-            <div
-              className="meal-week-shopping"
-              role="group"
-              aria-label={t(
-                messages,
-                'module.meal_plans.push_week_to_shopping',
-              )}
-            >
-              <select
-                className="form-input meal-week-shopping-list"
-                value={selectedWeekListId}
-                onChange={(e) => setSelectedWeekListId(e.target.value)}
-                aria-label={t(messages, 'module.meal_plans.push_to_shopping')}
-              >
-                {shoppingLists.map((list) => (
-                  <option key={list.id} value={list.id}>
-                    {list.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handlePushWeekToShopping}
-                disabled={pushingWeek || !selectedWeekListId}
-                aria-label={t(
-                  messages,
-                  'module.meal_plans.push_week_to_shopping_aria',
-                )}
-              >
-                <ShoppingCart size={16} aria-hidden="true" />
-                {t(messages, 'module.meal_plans.push_week_to_shopping')}
-              </button>
-            </div>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => openAdd(compact ? selectedDay : days[0], 'noon')}
-          >
-            <Plus size={16} aria-hidden="true" />
-            {t(messages, 'module.meal_plans.add')}
-          </button>
-        </div>
-      </div>
-
+      {/* Tribu 2.0 (M1, M2): a plain title and a slim week bar; the week
+          is the content. New meals come from the global "+" or an empty slot. */}
+      <header className="list-header meal-list-header">
+        <h1>{t(messages, 'module.meal_plans.name')}</h1>
+      </header>
       <div
-        className="meal-plan-week-summary"
+        className="meal-week-nav"
+        role="group"
         aria-label={t(messages, 'module.meal_plans.week')}
+        onPointerDown={(e) => {
+          if (e.pointerType === 'mouse') return;
+          weekSwipe.current = e.clientX;
+        }}
+        onPointerUp={(e) => {
+          const start = weekSwipe.current;
+          weekSwipe.current = null;
+          if (start == null || Math.abs(e.clientX - start) < 60) return;
+          if (e.clientX < start) hook.goNextWeek();
+          else hook.goPrevWeek();
+        }}
       >
-        {MEAL_SLOTS.map((slot) => (
-          <div
-            key={slot}
-            className={`meal-plan-summary-card meal-plan-summary-${slot}`}
-          >
-            <span className="meal-plan-summary-label">
-              {slotLabel(messages, slot)}
-            </span>
-            <strong className="meal-plan-summary-value">
-              {mealCountBySlot[slot] || 0}
-            </strong>
-          </div>
-        ))}
+        <button
+          type="button"
+          className="tc-icon meal-week-nav-btn"
+          onClick={hook.goPrevWeek}
+          aria-label={t(messages, 'module.meal_plans.prev_week')}
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <button
+          type="button"
+          className="meal-week-nav-label"
+          onClick={hook.goToday}
+          aria-label={t(messages, 'module.meal_plans.today')}
+        >
+          <CalendarDays size={14} aria-hidden="true" />
+          {formatWeekRange(hook.weekStart, hook.weekEnd, locale)}
+        </button>
+        <button
+          type="button"
+          className="tc-icon meal-week-nav-btn"
+          onClick={hook.goNextWeek}
+          aria-label={t(messages, 'module.meal_plans.next_week')}
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
 
       {hook.loading && (
@@ -518,70 +462,53 @@ export default function MealPlansView(props) {
       )}
 
       {compact ? (
-        <>
-          <DayStrip
-            days={days}
-            selected={selectedDay}
-            onSelect={setSelectedDay}
-            locale={locale}
-            messages={messages}
-            colors={(date) =>
-              MEAL_SLOTS.filter((slot) =>
-                hook.getCell(dateKey(date), slot),
-              ).map(() => '#759c5d')
-            }
-          />
-          <WeekPresentation
-            value={presentation}
-            onChange={setPresentation}
-            messages={messages}
-          />
-          <div className="ui-agenda">
-            {(presentation === 'all' ? days : [selectedDay]).map((date) => (
-              <AgendaDay
-                key={dateKey(date)}
-                date={date}
-                locale={locale}
-                messages={messages}
-                condensed={presentation === 'all'}
-              >
+        <ol
+          className="meal-week-list"
+          aria-label={t(messages, 'module.meal_plans.name')}
+        >
+          {days.map((date) => (
+            <li
+              key={dateKey(date)}
+              className={`meal-day${isSameDay(date, today) ? ' today' : ''}`}
+            >
+              <div className="meal-day-head">
+                <strong>{t(messages, weekdayKeyForDate(date))}</strong>
+                <span>{formatDayMonth(date, locale)}</span>
+              </div>
+              <div className="meal-day-slots">
                 {MEAL_SLOTS.map((slot) => {
                   const meal = hook.getCell(dateKey(date), slot);
-                  return (
-                    <div key={slot} className="ui-meal-slot">
-                      <UtensilsCrossed size={24} />
-                      <button
-                        className="ui-meal-content"
-                        onClick={() =>
-                          meal ? openEdit(meal) : openAdd(date, slot)
-                        }
-                      >
-                        <small>{slotLabel(messages, slot)}</small>
-                        <strong>
-                          {meal?.meal_name ||
-                            t(messages, 'module.meal_plans.add_title')}
-                        </strong>
-                      </button>
-                      <button
-                        className="tc-icon"
-                        aria-label={
-                          meal
-                            ? t(messages, 'module.meal_plans.edit_title')
-                            : t(messages, 'module.meal_plans.add_title')
-                        }
-                        onClick={() =>
-                          meal ? openEdit(meal) : openAdd(date, slot)
-                        }
-                      >
-                        {meal ? <Edit2 size={16} /> : <Plus size={18} />}
-                      </button>
-                    </div>
+                  const label = `${slotLabel(messages, slot)}, ${t(messages, weekdayKeyForDate(date))} ${formatDayMonth(date, locale)}`;
+                  return meal ? (
+                    <button
+                      key={slot}
+                      type="button"
+                      className={`meal-slot filled meal-grid-slot-${slot}`}
+                      onClick={() => openEdit(meal)}
+                      aria-label={`${meal.meal_name}, ${label}`}
+                    >
+                      <small>{slotLabel(messages, slot)}</small>
+                      <span>{meal.meal_name}</span>
+                    </button>
+                  ) : (
+                    <button
+                      key={slot}
+                      type="button"
+                      className="meal-slot empty"
+                      onClick={() => openAdd(date, slot)}
+                      aria-label={t(messages, 'module.meal_plans.add_for_slot_aria')
+                        .replace('{slot}', slotLabel(messages, slot))
+                        .replace('{date}', `${t(messages, weekdayKeyForDate(date))} ${formatDayMonth(date, locale)}`)}
+                    >
+                      <small>{slotLabel(messages, slot)}</small>
+                      <Plus size={16} aria-hidden="true" />
+                    </button>
                   );
                 })}
-              </AgendaDay>
-            ))}
-          </div>
-        </>
+              </div>
+            </li>
+          ))}
+        </ol>
       ) : (
         <section
           className="meal-grid"
@@ -650,6 +577,80 @@ export default function MealPlansView(props) {
             </div>
           ))}
         </section>
+      )}
+
+      {/* M3: the week's ingredients go to the shopping list with a preview. */}
+      {!demoMode && shoppingLists.length > 0 && visibleMeals.length > 0 && (
+        <section
+          className="meal-week-shopping"
+          aria-label={t(messages, 'module.meal_plans.week_ingredients')}
+        >
+          <ShoppingCart size={18} aria-hidden="true" />
+          <span className="meal-week-shopping-text">
+            <strong>{t(messages, 'module.meal_plans.week_ingredients')}</strong>
+            <small>
+              {ingredients.length
+                ? t(messages, 'module.meal_plans.week_ingredients_count')
+                    .replace('{count}', ingredients.length)
+                    .replace('{meals}', mealsWithIngredients)
+                : t(messages, 'module.meal_plans.week_ingredients_none')}
+            </small>
+          </span>
+          {ingredients.length > 0 && (
+            <button
+              type="button"
+              className="meal-week-shopping-action"
+              aria-haspopup="dialog"
+              onClick={() => setIngredientsOpen(true)}
+            >
+              {t(messages, 'module.meal_plans.week_ingredients_review')}
+            </button>
+          )}
+        </section>
+      )}
+      {ingredientsOpen && (
+        <BottomSheet
+          title={t(messages, 'module.meal_plans.week_ingredients')}
+          messages={messages}
+          onClose={() => setIngredientsOpen(false)}
+          className="meal-ingredients-sheet"
+        >
+          <ul className="meal-ingredients-preview">
+            {ingredients.map((ingredient) => (
+              <li key={ingredient.name}>
+                <span>{ingredient.name}</span>
+                <small>
+                  {[ingredient.amounts.join(' + '), [...ingredient.meals].join(', ')]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </small>
+              </li>
+            ))}
+          </ul>
+          <label className="meal-ingredients-list">
+            <span>{t(messages, 'module.meal_plans.push_to_shopping')}</span>
+            <select
+              className="form-input"
+              value={selectedWeekListId}
+              onChange={(e) => setSelectedWeekListId(e.target.value)}
+            >
+              {shoppingLists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="meal-ingredients-add"
+            onClick={handlePushWeekToShopping}
+            disabled={pushingWeek || !selectedWeekListId}
+          >
+            <ShoppingCart size={16} aria-hidden="true" />
+            {t(messages, 'module.meal_plans.week_ingredients_add')}
+          </button>
+        </BottomSheet>
       )}
     </div>
   );
