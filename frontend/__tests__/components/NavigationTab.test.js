@@ -68,9 +68,10 @@ const LABEL_BY_KEY = {
   contacts: 'Kontakte',
   notifications: 'Benachrichtigungen',
 };
-// Today is a group of one and notifications live behind the bell; every
-// other area is sorted within its group.
-const UNSORTED_KEYS = new Set(['dashboard', 'notifications', 'settings', 'admin']);
+// Today is a group of one, the family hub leads its group, activity lives
+// in the hub and notifications behind the bell; every other area is sorted
+// within its group.
+const UNSORTED_KEYS = new Set(['dashboard', 'family', 'activity', 'notifications', 'settings', 'admin']);
 const SORTABLE_KEYS = DEFAULT_NAV_ORDER.filter((k) => !UNSORTED_KEYS.has(k));
 
 describe('NavigationTab', () => {

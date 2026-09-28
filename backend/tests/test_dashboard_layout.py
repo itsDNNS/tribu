@@ -83,6 +83,7 @@ def test_dashboard_layout_persists_normalizes_and_resets_per_user():
         "meal_plans",
         "school_timetables",
         "recipes",
+        "family",
         "rewards",
         "gifts",
         "contacts",

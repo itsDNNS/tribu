@@ -10,7 +10,6 @@ jest.mock('../../contexts/AppContext', () => ({
 
 const messages = {
   'module.activity.title': 'Activity history',
-  'module.activity.subtitle': 'See the latest changes in your household.',
   'module.dashboard.activity_title': 'Recent activity',
   'module.dashboard.activity_empty': 'No household activity yet.',
   'module.dashboard.activity_unknown_actor': 'Someone',
@@ -41,7 +40,6 @@ describe('ActivityView', () => {
     render(<ActivityView />);
 
     expect(screen.getByRole('heading', { name: 'Activity history' })).toBeVisible();
-    expect(screen.getByText('See the latest changes in your household.')).toBeVisible();
     const feed = screen.getByRole('region', { name: 'Recent activity' });
     expect(within(feed).getByText('Dennis completed task "Pay school lunch"')).toBeVisible();
   });

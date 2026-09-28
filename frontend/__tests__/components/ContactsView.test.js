@@ -45,7 +45,6 @@ describe('ContactsView', () => {
     const { container } = setup();
 
     expect(container.querySelector('.contacts-page')).toBeInTheDocument();
-    expect(container.querySelector('.contacts-page-icon')).toBeInTheDocument();
     expect(screen.getByText('Ava Brown')).toBeInTheDocument();
     expect(screen.getByText('ava@example.com')).toBeInTheDocument();
 

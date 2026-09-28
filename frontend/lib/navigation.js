@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   Sparkles,
   Sun,
+  Users,
   UtensilsCrossed,
 } from 'lucide-react';
 
@@ -29,15 +30,25 @@ export const NAV_GROUPS = [
   { key: 'today', labelKey: 'nav.group.today', fallback: 'Today', itemKeys: ['dashboard'] },
   { key: 'plan', labelKey: 'nav.group.plan', fallback: 'Plan', itemKeys: ['calendar', 'meal_plans', 'recipes', 'school_timetables', 'weekly_plan'] },
   { key: 'lists', labelKey: 'nav.group.lists', fallback: 'Lists', itemKeys: ['shopping', 'tasks', 'templates'] },
-  { key: 'family', labelKey: 'module.responsive.group_family', fallback: 'Family', itemKeys: ['contacts', 'rewards', 'gifts', 'activity'] },
+  { key: 'family', labelKey: 'module.responsive.group_family', fallback: 'Family', itemKeys: ['family', 'contacts', 'rewards', 'gifts'], pinned: 'family' },
 ];
 
+// Pages without a place in the navigation, opened from another page; they
+// count as that page for the navigation (activity lives in the family hub).
+export const NAV_SUBPAGES = { activity: 'family' };
+
+export function navKeyOf(key) {
+  return NAV_SUBPAGES[key] || key;
+}
+
 export function navGroupOf(key) {
-  return NAV_GROUPS.find((group) => group.itemKeys.includes(key)) || null;
+  const navKey = navKeyOf(key);
+  return NAV_GROUPS.find((group) => group.itemKeys.includes(navKey)) || null;
 }
 
 export const NAV_ITEM_META = {
   dashboard: { icon: Sun, labelKey: 'nav.group.today' },
+  family: { icon: Users, labelKey: 'family.overview' },
   activity: { icon: Activity, labelKey: 'activity' },
   calendar: { icon: CalendarDays, labelKey: 'calendar' },
   weekly_plan: { icon: Printer, labelKey: 'module.weekly_plan.title', adultOnly: true },

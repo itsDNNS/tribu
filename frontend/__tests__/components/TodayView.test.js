@@ -132,6 +132,15 @@ describe('TodayView', () => {
     expect(screen.queryByRole('region', { name: 'This week' })).toHaveTextContent("Grandpa's birthday");
   });
 
+  it('opens on the person chosen in the family hub', async () => {
+    sessionStorage.setItem('tribu_today_member', '3');
+    await renderToday();
+    expect(screen.getByRole('button', { name: /Lena/ })).toHaveAttribute('aria-pressed', 'true');
+    const day = screen.getByRole('region', { name: 'Today' });
+    expect(within(day).queryByText('Dentist')).not.toBeInTheDocument();
+    expect(sessionStorage.getItem('tribu_today_member')).toBeNull();
+  });
+
   it('completes tasks through the undoable task flow', async () => {
     await renderToday();
     fireEvent.click(screen.getByRole('checkbox', { name: /Buy a present/ }));

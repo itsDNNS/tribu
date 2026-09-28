@@ -2,6 +2,7 @@ import { CalendarDays, ListChecks, Plus, Sun, Users } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useVisualViewport } from '../../hooks/useResponsiveUI';
 import { t } from '../../lib/i18n';
+import { navKeyOf } from '../../lib/navigation';
 import { plannerText } from './PlannerUI';
 import AccountSheet from '../shell/AccountSheet';
 import NewSheet from './NewSheet';
@@ -61,7 +62,7 @@ export default function ResponsiveUI({
             );
           }
           const Icon = TAB_ICONS[group.key] || Sun;
-          const current = group.items.some((item) => item.key === activeView);
+          const current = group.items.some((item) => item.key === navKeyOf(activeView));
           const count = group.items.reduce((sum, item) => sum + (item.key === 'shopping' ? item.badge || 0 : 0), 0);
           return (
             <button

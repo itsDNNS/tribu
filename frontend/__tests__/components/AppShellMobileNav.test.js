@@ -91,6 +91,7 @@ const messages = {
   notifications_unread: 'unread',
   settings: 'Settings',
   admin_layout_title: 'Manage your family',
+  'family.overview': 'Overview',
   nav_more: 'More',
   'nav.group.today': 'Today',
   'nav.group.plan': 'Plan',
@@ -354,8 +355,11 @@ describe('AppShell mobile bottom navigation', () => {
     expect(within(mainNav).getByRole('region', { name: 'Plan' })).toHaveTextContent('Meals');
     expect(within(mainNav).getByRole('region', { name: 'Lists' })).toHaveTextContent('Shopping');
     expect(within(mainNav).getByRole('region', { name: 'Lists' })).toHaveTextContent('Templates');
-    expect(within(mainNav).getByRole('region', { name: 'Family' })).toHaveTextContent('Contacts');
-    expect(within(mainNav).getByRole('region', { name: 'Family' })).toHaveTextContent('Activity');
+    const family = within(mainNav).getByRole('region', { name: 'Family' });
+    expect(family).toHaveTextContent('Contacts');
+    // The hub comes first; the activity history lives in it.
+    expect(within(family).getAllByRole('button')[0]).toHaveTextContent('Overview');
+    expect(family).not.toHaveTextContent('Activity');
     expect(mainNav).not.toHaveTextContent('Settings');
     expect(screen.queryByRole('navigation', { name: /Pages in/ })).not.toBeInTheDocument();
   });

@@ -5,6 +5,7 @@ const VIEW_KEYS = {
   Shopping: 'shopping',
   Tasks: 'tasks',
   Activity: 'activity',
+  Family: 'family',
   Templates: 'templates',
   'Weekly plan': 'weekly_plan',
   'Meal plan': 'meal_plans',

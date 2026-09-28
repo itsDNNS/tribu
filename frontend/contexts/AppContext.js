@@ -6,7 +6,7 @@ import { resolveInitialView } from '../lib/navigationState';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { listThemes } from '../lib/themes';
 
-export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
+export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'family', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
 
 const AppContext = createContext(null);
 

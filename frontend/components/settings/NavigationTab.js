@@ -12,7 +12,7 @@ function groupedOrder(order, context) {
     .map((group) => ({
       ...group,
       keys: group.itemKeys
-        .filter((key) => isNavItemVisible(key, context))
+        .filter((key) => key !== group.pinned && isNavItemVisible(key, context))
         .sort((a, b) => (rank.get(a) ?? 999) - (rank.get(b) ?? 999)),
     }))
     .filter((group) => group.keys.length > 1);

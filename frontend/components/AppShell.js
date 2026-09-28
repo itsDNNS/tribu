@@ -5,10 +5,11 @@ import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
-import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf } from '../lib/navigation';
+import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf, navKeyOf } from '../lib/navigation';
 import AppHeader from './shell/AppHeader';
 import SubNav from './shell/SubNav';
 import TodayView from './today/TodayView';
+import FamilyHub from './family/FamilyHub';
 import ActivityView from './ActivityView';
 import CalendarView from './calendar';
 import ContactsView from './ContactsView';
@@ -29,6 +30,7 @@ import OnboardingWizard from './OnboardingWizard';
 
 const views = {
   dashboard: TodayView,
+  family: FamilyHub,
   activity: ActivityView,
   calendar: CalendarView,
   shopping: ShoppingView,
@@ -135,7 +137,8 @@ export default function AppShell() {
         label: t(messages, group.labelKey, group.fallback),
         items: group.itemKeys
           .filter((key) => key in itemRegistry)
-          .sort((a, b) => (navIndex.get(a) ?? 999) - (navIndex.get(b) ?? 999))
+          // A group's own overview stays first; its pages follow the order.
+          .sort((a, b) => (b === group.pinned) - (a === group.pinned) || (navIndex.get(a) ?? 999) - (navIndex.get(b) ?? 999))
           .map((key) => itemRegistry[key]),
       }))
       .filter((group) => group.items.length > 0);
@@ -173,7 +176,9 @@ export default function AppShell() {
     bellBtnRef.current?.focus();
   }
 
-  const activeGroup = navGroups.find((group) => group.items.some((item) => item.key === activeView)) || null;
+  // Pages opened from another page count as that page.
+  const navKey = navKeyOf(activeView);
+  const activeGroup = navGroups.find((group) => group.items.some((item) => item.key === navKey)) || null;
   const greetingKey = `module.dashboard.greeting_${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}`;
   const headerTitle = activeView === 'dashboard'
     ? `${t(messages, greetingKey)}${me?.display_name ? `, ${me.display_name.split(' ')[0]}` : ''}`
@@ -221,10 +226,10 @@ export default function AppShell() {
                 {group.items.map((item) => (
                   <button
                     key={item.key}
-                    className={`nav-item${activeView === item.key ? ' active' : ''}`}
+                    className={`nav-item${navKey === item.key ? ' active' : ''}`}
                     onClick={() => navigate(item.key)}
                     data-tooltip={item.label}
-                    aria-current={activeView === item.key ? 'page' : undefined}
+                    aria-current={navKey === item.key ? 'page' : undefined}
                   >
                     <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
                     {!collapsed && <span className="nav-label">{item.label}</span>}
@@ -251,7 +256,7 @@ export default function AppShell() {
             notificationButtonRef={bellBtnRef}
           />
         )}
-        {isMobile && !loading && <SubNav group={activeGroup} items={activeGroup?.items || []} activeView={activeView} navigate={navigate} />}
+        {isMobile && !loading && <SubNav group={activeGroup} items={activeGroup?.items || []} activeView={navKey} navigate={navigate} />}
 
         <div className="view-enter">
           {loading ? <TodaySkeleton messages={messages} /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
