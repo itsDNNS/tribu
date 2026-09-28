@@ -73,7 +73,8 @@ test.describe('Recipes', () => {
     await expect(page.getByRole('checkbox', { name: 'Milk' })).toBeVisible();
 
     await navigateTo(page, 'Meal plan');
-    await page.locator('.meal-header-actions').getByRole('button', { name: 'Plan a meal', exact: true }).click();
+    // New meals start from an empty slot of the week.
+    await page.locator('.meal-grid-cell-empty, .meal-slot.empty').first().click();
     await expect(page.getByRole('dialog', { name: 'Plan a meal' })).toBeVisible();
     await page.getByLabel('Recipe').selectOption({ label: 'Playwright Pancakes' });
     await expect(page.getByPlaceholder('e.g. Spaghetti Bolognese')).toHaveValue('Playwright Pancakes');
