@@ -218,19 +218,58 @@ def _fcm_error_code(data: Any) -> str:
     return str(error.get("status") or error.get("message") or "fcm_send_failed")[:120]
 
 
-def _send_fcm_push(token: str, title: str, body: str, url: str | None = None, *, urgent: bool = False, ttl: int | None = None) -> tuple[bool, str | None, bool]:
+def _fcm_message(
+    token: str,
+    title: str,
+    body: str,
+    url: str | None,
+    actions: tuple[str, ...] = (),
+    action_token: str | None = None,
+) -> dict[str, Any]:
+    """The FCM message for one device.
+
+    Devices that show action buttons themselves (Tribu 2.0, N-2) get the
+    reminder as data on Android, so the app draws the buttons, and an alert
+    with a category on iOS; everyone else keeps the plain notification.
+    """
+    data = {k: v for k, v in {"url": url or ""}.items() if v}
+    if not actions or not action_token:
+        return {"token": token, "notification": {"title": title, "body": body}, "data": data}
+    category = "tribu_" + "_".join(actions)
+    return {
+        "token": token,
+        "data": {
+            **data,
+            "title": title,
+            "body": body,
+            "actions": ",".join(actions),
+            "action_token": action_token,
+        },
+        "apns": {
+            "payload": {
+                "aps": {"alert": {"title": title, "body": body}, "sound": "default", "category": category},
+            },
+        },
+    }
+
+
+def _send_fcm_push(
+    token: str,
+    title: str,
+    body: str,
+    url: str | None = None,
+    *,
+    urgent: bool = False,
+    ttl: int | None = None,
+    actions: tuple[str, ...] = (),
+    action_token: str | None = None,
+) -> tuple[bool, str | None, bool]:
     account = _load_fcm_service_account()
     project_id = get_fcm_project_id()
     if not account or not project_id or not account.get("client_email") or not account.get("private_key"):
         return False, "fcm_not_configured", False
 
-    payload = {
-        "message": {
-            "token": token,
-            "notification": {"title": title, "body": body},
-            "data": {k: v for k, v in {"url": url or ""}.items() if v},
-        }
-    }
+    payload = {"message": _fcm_message(token, title, body, url, actions, action_token)}
     if urgent or ttl is not None:
         payload["message"]["android"] = {
             "priority": "high" if urgent else "normal",
@@ -271,6 +310,9 @@ def send_push_for_user(
     *,
     urgent: bool = False,
     expires_at: datetime | None = None,
+    actions: tuple[str, ...] = (),
+    action_token: str | None = None,
+    action_labels: dict[str, str] | None = None,
 ) -> PushResult:
     """Send a web-push payload to every active subscription for ``user_id``.
 
@@ -297,7 +339,13 @@ def send_push_for_user(
         result.skipped_reason = "no_subscriptions"
         return result
 
-    payload = json.dumps({"title": title, "body": body, "url": url})
+    web_message: dict[str, Any] = {"title": title, "body": body, "url": url}
+    if actions and action_token:
+        # The service worker shows these buttons and sends the token back.
+        labels = action_labels or {}
+        web_message["actions"] = [{"action": action, "title": labels.get(action, action)} for action in actions]
+        web_message["action_token"] = action_token
+    payload = json.dumps(web_message)
     web_subscriptions = [sub for sub in subscriptions if getattr(sub, "platform", "web") == "web"]
     expo_subscriptions = [sub for sub in subscriptions if getattr(sub, "platform", "web") == "expo"]
     fcm_subscriptions = [sub for sub in subscriptions if getattr(sub, "platform", "web") == "fcm"]
@@ -381,7 +429,10 @@ def send_push_for_user(
         if options is None:
             break
         result.attempted += 1
-        ok, error, remove = _send_fcm_push(sub.endpoint, title, body, url, **options)
+        ok, error, remove = _send_fcm_push(
+            sub.endpoint, title, body, url, **options,
+            **({"actions": actions, "action_token": action_token} if getattr(sub, "supports_actions", False) else {}),
+        )
         if ok:
             result.succeeded += 1
             continue

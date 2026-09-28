@@ -98,6 +98,10 @@ NOTIFICATION_NOT_FOUND = "NOTIFICATION_NOT_FOUND"
 # ── Navigation ────────────────────────────────────────────────
 UNKNOWN_NAV_KEYS = "UNKNOWN_NAV_KEYS"
 UNKNOWN_AREAS = "UNKNOWN_AREAS"
+ACTION_INVALID = "ACTION_INVALID"
+ACTION_EXPIRED = "ACTION_EXPIRED"
+ACTION_NOT_ALLOWED = "ACTION_NOT_ALLOWED"
+ACTION_GONE = "ACTION_GONE"
 INVALID_UI_PREFERENCE = "INVALID_UI_PREFERENCE"
 
 # ── Gifts ────────────────────────────────────────────────────
@@ -213,6 +217,10 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     NOTIFICATION_NOT_FOUND: "Notification not found",
     UNKNOWN_NAV_KEYS: "Unknown nav keys: {keys}",
     UNKNOWN_AREAS: "These areas cannot be hidden: {keys}",
+    ACTION_INVALID: "This reminder action is not valid",
+    ACTION_EXPIRED: "This reminder is too old for its buttons",
+    ACTION_NOT_ALLOWED: "This reminder does not offer that action",
+    ACTION_GONE: "The reminder's task no longer exists",
     INVALID_UI_PREFERENCE: "Invalid UI preference: {key}",
     REWARD_CURRENCY_NOT_FOUND: "Reward currency not found",
     REWARD_CURRENCY_ALREADY_EXISTS: "This family already has a reward currency",

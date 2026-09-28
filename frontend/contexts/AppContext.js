@@ -355,6 +355,13 @@ export function AppProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A language someone picks also goes to their account, so the app and the
+  // server's reminders use it too (#535).
+  const chooseLang = useCallback((value) => {
+    setLang(value);
+    if (loggedIn && !demoMode) api.apiUpdateUiPreferences({ language: value }).catch(() => {});
+  }, [loggedIn, demoMode]);
+
   // Persist theme
   useEffect(() => {
     window.localStorage.setItem('tribu_theme', theme);
@@ -545,7 +552,7 @@ export function AppProvider({ children }) {
     resetData,
     // UI
     theme, setTheme, resolvedTheme,
-    lang, setLang,
+    lang, setLang: chooseLang,
     weekStart, setWeekStart,
     messages,
     availableThemes,

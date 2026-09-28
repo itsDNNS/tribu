@@ -8,10 +8,11 @@ from app.core import cache
 from app.core.deps import current_user
 from app.core.scopes import require_scope
 from app.core.push import get_vapid_public_key, is_fcm_configured, is_pywebpush_available, is_vapid_configured, send_push_for_user
+from app.core.notification_actions import NotificationActionError, apply_action
 from app.core.notification_preferences import normalize_push_categories
 from app.database import get_db, SessionLocal
 from app.models import Notification, NotificationPreference, NotificationSentLog, PushSubscription, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushStatusResponse, PushSubscriptionCreate, PushTestResponse, PushUnsubscribe
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushStatusResponse, NotificationActionRequest, PushSubscriptionCreate, PushTestResponse, PushUnsubscribe
 from app.core.errors import error_detail, NOTIFICATION_NOT_FOUND
 
 router = APIRouter(prefix="/notifications", tags=["notifications"], responses={**AUTH_RESPONSES})
@@ -318,6 +319,7 @@ def push_subscribe(
         existing.auth = payload.auth or ""
         existing.platform = payload.platform
         existing.device_name = payload.device_name
+        existing.supports_actions = payload.supports_actions
     else:
         sub = PushSubscription(
             user_id=user.id,
@@ -326,6 +328,7 @@ def push_subscribe(
             auth=payload.auth or "",
             platform=payload.platform,
             device_name=payload.device_name,
+            supports_actions=payload.supports_actions,
         )
         db.add(sub)
 
@@ -422,3 +425,21 @@ def update_preferences(
     db.refresh(pref)
     cache.invalidate(f"tribu:notif_prefs:{user.id}")
     return pref
+
+
+@router.post(
+    "/actions",
+    summary="Run a reminder action",
+    description=(
+        "Run a button of a reminder notification (Tribu 2.0, N-2): `done` completes the task, `snooze` "
+        "reminds again in one hour. The reminder push carries a signed token for its own actions, so this "
+        "works without a session from a lock screen or a service worker."
+    ),
+    response_description="What happened",
+)
+def run_notification_action(payload: NotificationActionRequest, db: Session = Depends(get_db)):
+    try:
+        return apply_action(db, payload.token, payload.action)
+    except NotificationActionError as exc:
+        raise HTTPException(status_code=exc.status, detail=error_detail(exc.code))
+

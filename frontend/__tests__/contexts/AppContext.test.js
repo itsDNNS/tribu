@@ -111,6 +111,19 @@ describe('AppProvider bootstrap', () => {
     }
   });
 
+  test('keeps a chosen language with the account for the app and reminders', async () => {
+    api.apiUpdateUiPreferences.mockResolvedValue({ ok: true, data: {} });
+    function LanguageProbe() {
+      const { setLang, loggedIn } = useApp();
+      return <button type="button" disabled={!loggedIn} onClick={() => setLang('de')}>German</button>;
+    }
+    render(<AppProvider><LanguageProbe /></AppProvider>);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'German' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'German' }));
+    expect(api.apiUpdateUiPreferences).toHaveBeenCalledWith({ language: 'de' });
+    await waitFor(() => expect(window.localStorage.getItem('tribu_lang')).toBe('de'));
+  });
+
   test('restores a valid Sunday week-start preference', async () => {
     window.localStorage.setItem('tribu_week_start', 'sunday');
 

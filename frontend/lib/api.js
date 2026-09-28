@@ -549,6 +549,15 @@ export function apiSetFamilyAreas(familyId, hidden_areas) {
   });
 }
 
+// UI preferences shared with the app (theme and language)
+export function apiUpdateUiPreferences(preferences) {
+  return request('/nav/ui-preferences', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(preferences),
+  });
+}
+
 // Nav Order
 export function apiGetNavOrder() {
   return request('/nav/order');

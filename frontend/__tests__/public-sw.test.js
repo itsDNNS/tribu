@@ -60,3 +60,50 @@ describe('service worker runtime cache guard', () => {
     expect(sandbox.isLocalDevHost(new URL('https://tribu.example.test/_next/static/chunks/app.js'))).toBe(false);
   });
 });
+
+describe('service worker reminder actions (Tribu 2.0, N-2)', () => {
+  function handler(sandbox, type) {
+    return sandbox.self.addEventListener.mock.calls.find(([name]) => name === type)[1];
+  }
+
+  it('shows the reminder buttons and keeps their token', async () => {
+    const sandbox = loadServiceWorker();
+    const waits = [];
+    handler(sandbox, 'push')({
+      data: { json: () => ({ title: 'Bins', body: 'Overdue', url: '/tasks?id=1', actions: [{ action: 'done', title: 'Erledigt' }, { action: 'snooze', title: 'In 1 Std. erinnern' }], action_token: 'tok' }) },
+      waitUntil: (promise) => waits.push(promise),
+    });
+    const [title, options] = sandbox.self.registration.showNotification.mock.calls[0];
+    expect(title).toBe('Bins');
+    expect(options.actions).toEqual([{ action: 'done', title: 'Erledigt' }, { action: 'snooze', title: 'In 1 Std. erinnern' }]);
+    expect(options.data).toEqual({ url: '/tasks?id=1', actionToken: 'tok' });
+  });
+
+  it('leaves out buttons without a token', () => {
+    const sandbox = loadServiceWorker();
+    handler(sandbox, 'push')({
+      data: { json: () => ({ title: 'Hi', body: '', actions: [{ action: 'done', title: 'Done' }] }) },
+      waitUntil: () => {},
+    });
+    expect(sandbox.self.registration.showNotification.mock.calls[0][1].actions).toEqual([]);
+  });
+
+  it('runs a button without opening Tribu', async () => {
+    const sandbox = loadServiceWorker();
+    sandbox.fetch.mockResolvedValue({ ok: true });
+    sandbox.self.clients.matchAll = jest.fn();
+    sandbox.self.clients.openWindow = jest.fn();
+    const close = jest.fn();
+    let waited;
+    handler(sandbox, 'notificationclick')({
+      action: 'done',
+      notification: { close, data: { url: '/tasks?id=1', actionToken: 'tok' } },
+      waitUntil: (promise) => { waited = promise; },
+    });
+    await waited;
+    expect(close).toHaveBeenCalled();
+    expect(sandbox.fetch).toHaveBeenCalledWith('/api/notifications/actions', expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'done', token: 'tok' }) }));
+    expect(sandbox.self.clients.matchAll).not.toHaveBeenCalled();
+    expect(sandbox.self.clients.openWindow).not.toHaveBeenCalled();
+  });
+});

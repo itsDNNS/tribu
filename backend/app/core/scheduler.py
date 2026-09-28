@@ -11,13 +11,15 @@ from app.core import cache
 from app.core.backup import create_backup, enforce_retention
 from app.core.clock import app_timezone, local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
 from app.core.push import send_push_for_user
+from app.core.notification_actions import reminder_push_actions
+from app.core.reminder_text import reminder_text, short_date, user_language
 from app.core.notification_preferences import should_push_notification_type
 from app.core.notification_destinations import EligibleReminderUser, dispatch_family_notification
 from app.core.recurrence import expand_event, load_series_changes
 from app.database import SessionLocal
 from app.models import (
     CalendarEvent, CalendarSubscription, FamilyBirthday, Membership, Notification,
-    NotificationPreference, NotificationSentLog, Task,
+    NotificationPreference, NotificationSentLog, ReminderSnooze, Task,
 )
 
 logger = logging.getLogger(__name__)
@@ -248,12 +250,19 @@ def _check_notifications():
             legacy.last_error = None
             return True
 
+        languages: dict[int, str] = {}
+
+        def language_of(uid: int) -> str:
+            if uid not in languages:
+                languages[uid] = user_language(db, uid)
+            return languages[uid]
+
         def deliver(
             uid: int,
             fid: int,
             ntype: str,
             title: str,
-            body: str,
+            body,
             link: str | None,
             source_type: str,
             source_id: int,
@@ -272,6 +281,10 @@ def _check_notifications():
                 return
             if _in_quiet_hours(pref.quiet_start, pref.quiet_end, now):
                 return
+            # Texts in the recipient's language (#535).
+            lang = language_of(uid)
+            if callable(body):
+                body = body(lang)
 
             log = get_log(uid, trigger_key)
             first_run = log is None
@@ -306,17 +319,27 @@ def _check_notifications():
             push_allowed, push_skip_reason = should_push_notification_type(pref, ntype)
             if push_allowed:
                 try:
+                    push_body = body
                     if event_starts_at is not None:
                         # A relative countdown becomes false when Android delays
                         # delivery or the notification remains in the tray.
-                        push_body = f"Starts at {event_starts_at:%Y-%m-%d %H:%M} ({app_timezone().key})"
+                        push_body = reminder_text(
+                            lang, "event_starts_at",
+                            when=f"{event_starts_at:%Y-%m-%d %H:%M} ({app_timezone().key})",
+                        )
+                    # Buttons for the reminder (Tribu 2.0, N-2).
+                    action_options = reminder_push_actions(
+                        uid, fid, source_type, source_id, ntype, title, push_body, link, lang,
+                    )
+                    if event_starts_at is not None:
                         push_result = send_push_for_user(
                             db, uid, title, push_body, link,
                             urgent=True,
                             expires_at=local_wall_to_utc_naive(event_starts_at),
+                            **action_options,
                         )
                     else:
-                        push_result = send_push_for_user(db, uid, title, body, link)
+                        push_result = send_push_for_user(db, uid, title, push_body, link, **action_options)
                 except Exception as exc:
                     logger.exception("Push notification failed for user %s", uid)
                     log.delivery_attempts = (log.delivery_attempts or 0) + 1
@@ -414,6 +437,7 @@ def _check_notifications():
                         continue
                     mins = _minutes_until(starts_at)
                     body = f"Starts in {mins} minutes"
+                    localized_body = lambda lang, mins=mins: reminder_text(lang, "event_starts_in", minutes=mins)
                     trigger_key = _event_trigger_key(ev.id, starts_at)
                     dispatch_destination_once(
                         event_type="calendar.reminder",
@@ -429,7 +453,7 @@ def _check_notifications():
                     deliver(
                         uid, ev.family_id, "event_reminder",
                         ev.title,
-                        body,
+                        localized_body,
                         f"/calendar?event={ev.id}", "event", ev.id,
                         trigger_key,
                         event_starts_at=starts_at,
@@ -464,7 +488,7 @@ def _check_notifications():
                 deliver(
                     uid, task.family_id, "task_due",
                     task.title,
-                    "Task is overdue",
+                    lambda lang: reminder_text(lang, "task_overdue"),
                     f"/tasks?id={task.id}", "task", task.id,
                     trigger_key,
                 )
@@ -500,14 +524,17 @@ def _check_notifications():
                 deliver(
                     uid, bd.family_id, "birthday",
                     bd.person_name,
-                    body,
+                    lambda lang: reminder_text(lang, "birthday_tomorrow", date=short_date(lang, tomorrow)),
                     f"/birthdays?id={bd.id}", "birthday", bd.id,
                     trigger_key,
                 )
 
+        # 4. Reminders someone asked to hear about again (Tribu 2.0, N-2)
+        snoozed_users = deliver_snoozed_reminders(db, now=utcnow(), local_now=now, get_pref=get_pref)
+
         db.commit()
         # Invalidate notification count caches for affected users
-        for uid in user_families:
+        for uid in {*user_families, *snoozed_users}:
             cache.invalidate(f"tribu:notif_count:{uid}")
         # Dispatch external household destinations only after in-app and
         # browser push delivery state is persisted. Apprise targets are remote
@@ -520,6 +547,59 @@ def _check_notifications():
         logger.exception("Notification check failed")
     finally:
         db.close()
+
+
+def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pref) -> set[int]:
+    """Sends the reminders whose snooze has run out, once each.
+
+    Tasks done or deleted in the meantime and removed events are dropped;
+    quiet hours postpone the reminder to a later run.
+    """
+    notified: set[int] = set()
+    due = (
+        db.query(ReminderSnooze)
+        .filter(ReminderSnooze.delivered_at.is_(None), ReminderSnooze.remind_at <= now)
+        .order_by(ReminderSnooze.remind_at.asc())
+        .limit(200)
+        .all()
+    )
+    for snooze in due:
+        if snooze.source_type == "task":
+            task = db.query(Task).filter(Task.id == snooze.source_id).first()
+            if task is None or task.status != "open":
+                snooze.delivered_at = now
+                continue
+        elif snooze.source_type == "event":
+            if db.query(CalendarEvent.id).filter(CalendarEvent.id == snooze.source_id).first() is None:
+                snooze.delivered_at = now
+                continue
+        pref = get_pref(snooze.user_id)
+        if not pref.reminders_enabled:
+            snooze.delivered_at = now
+            continue
+        if _in_quiet_hours(pref.quiet_start, pref.quiet_end, local_now):
+            continue
+        snooze.delivered_at = now
+        db.add(Notification(
+            user_id=snooze.user_id, family_id=snooze.family_id, type=snooze.notification_type,
+            title=snooze.title, body=snooze.body, link=snooze.link,
+        ))
+        notified.add(snooze.user_id)
+        push_allowed, _ = should_push_notification_type(pref, snooze.notification_type)
+        if not push_allowed:
+            continue
+        try:
+            send_push_for_user(
+                db, snooze.user_id, snooze.title, snooze.body or "", snooze.link,
+                **reminder_push_actions(
+                    snooze.user_id, snooze.family_id, snooze.source_type, snooze.source_id,
+                    snooze.notification_type, snooze.title, snooze.body, snooze.link,
+                    user_language(db, snooze.user_id),
+                ),
+            )
+        except Exception:
+            logger.exception("Snoozed reminder push failed for user %s", snooze.user_id)
+    return notified
 
 
 def start_notification_job():

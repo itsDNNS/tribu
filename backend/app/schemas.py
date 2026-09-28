@@ -1279,6 +1279,12 @@ class NotificationPreferenceUpdate(BaseModel):
         return normalize_push_categories(v)
 
 
+class NotificationActionRequest(BaseModel):
+    """Run an action from a reminder notification."""
+    token: str = Field(..., min_length=20, max_length=4000, description="The action token the reminder push carried")
+    action: str = Field(..., description="done or snooze")
+
+
 class PushSubscriptionCreate(BaseModel):
     """Register a push subscription."""
     endpoint: str = Field(..., description="Push service endpoint URL")
@@ -1286,6 +1292,7 @@ class PushSubscriptionCreate(BaseModel):
     auth: Optional[str] = Field(None, description="Client browser Web Push auth secret")
     platform: str = Field("web", description="Push platform: web, expo, or fcm")
     device_name: Optional[str] = Field(None, max_length=120, description="Optional native device label")
+    supports_actions: bool = Field(False, description="Whether the client shows reminder action buttons itself (FCM: the reminder then arrives as data)")
 
     @field_validator("platform")
     @classmethod

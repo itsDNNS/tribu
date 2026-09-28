@@ -116,16 +116,31 @@ self.addEventListener('push', (event) => {
     data.body = event.data?.text() || '';
   }
 
+  // Reminders carry their buttons and a token for them (Tribu 2.0, N-2).
+  const actions = Array.isArray(data.actions) && data.action_token
+    ? data.actions.filter((item) => item && item.action && item.title).slice(0, 2)
+    : [];
+
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/icons/icon-192.png',
       // Android uses the alpha mask for its small monochrome notification icon.
       badge: '/icons/notification-badge-96.png',
-      data: { url: data.url || '/' },
+      data: { url: data.url || '/', actionToken: actions.length ? data.action_token : null },
+      actions,
     })
   );
 });
+
+// A reminder button runs without opening Tribu: done, or remind again later.
+function runReminderAction(action, token) {
+  return fetch('/api/notifications/actions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, token }),
+  }).catch(() => null);
+}
 
 function notificationViewFromUrl(rawUrl) {
   const raw = String(rawUrl || '').trim();
@@ -144,6 +159,11 @@ function notificationViewFromUrl(rawUrl) {
 // Notification click handler — focus existing tab or open new one
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const actionToken = event.notification.data?.actionToken;
+  if (event.action && actionToken) {
+    event.waitUntil(runReminderAction(event.action, actionToken));
+    return;
+  }
   const targetUrl = event.notification.data?.url || '/';
   const targetView = notificationViewFromUrl(targetUrl);
 

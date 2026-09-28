@@ -688,6 +688,31 @@ class PushSubscription(Base):
     auth = Column(Text, nullable=False)
     platform = Column(String(20), nullable=False, default="web", server_default="web")
     device_name = Column(String(120), nullable=True)
+    # Whether the client shows action buttons itself (Tribu 2.0, N-2); FCM
+    # devices without it keep the plain notification payload.
+    supports_actions = Column(Boolean, nullable=False, default=False, server_default="false")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class ReminderSnooze(Base):
+    """A reminder someone asked to hear about again later ("Remind me in 1 hour")."""
+
+    __tablename__ = "reminder_snoozes"
+    __table_args__ = (
+        Index("ix_reminder_snoozes_due", "delivered_at", "remind_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False)
+    source_type = Column(String(20), nullable=False)
+    source_id = Column(Integer, nullable=False)
+    notification_type = Column(String(40), nullable=False)
+    title = Column(String(200), nullable=False)
+    body = Column(Text, nullable=True)
+    link = Column(String, nullable=True)
+    remind_at = Column(DateTime, nullable=False)
+    delivered_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
