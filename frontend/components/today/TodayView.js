@@ -9,42 +9,15 @@ import { t } from '../../lib/i18n';
 import { NO_HIDDEN_AREAS } from '../../lib/navigation';
 import { getMemberColor } from '../../lib/member-colors';
 import { buildToday } from '../../lib/today/buildToday';
+import { clock, dayLabel, greeting, isoDate } from '../../lib/today/todayFormat';
 import { peekHandOff, takeHandOff } from '../../lib/handoff';
 import MemberAvatar from '../MemberAvatar';
 import SwipeReveal, { swipeStyle } from '../SwipeReveal';
 import RewardsDashboardWidget from '../RewardsDashboardWidget';
 import { SetupChecklist, useSetupChecklist } from './SetupChecklist';
+import KidsToday from './KidsToday';
 
 const DAYS = 7;
-
-function isoDate(date) {
-  return date.toLocaleDateString('en-CA');
-}
-
-function greeting(messages, hour) {
-  if (hour < 12) return t(messages, 'module.dashboard.greeting_morning');
-  if (hour < 18) return t(messages, 'module.dashboard.greeting_afternoon');
-  return t(messages, 'module.dashboard.greeting_evening');
-}
-
-function clock(time, locale, timeFormat) {
-  if (!time) return '';
-  const [hour, minute] = time.split(':').map(Number);
-  return new Date(2000, 0, 1, hour, minute).toLocaleTimeString(locale, {
-    hour: timeFormat === '12h' ? 'numeric' : '2-digit',
-    minute: '2-digit',
-    hour12: timeFormat === '12h',
-  });
-}
-
-function dayLabel(iso, locale) {
-  const [year, month, day] = iso.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  return {
-    weekday: date.toLocaleDateString(locale, { weekday: 'short' }),
-    date: date.toLocaleDateString(locale, { day: 'numeric', month: 'numeric' }),
-  };
-}
 
 function openShopping(setActiveView) {
   try { sessionStorage.setItem('tribu_shopping_trip', '1'); } catch { /* private mode */ }
@@ -251,9 +224,10 @@ export default function TodayView({ onOpenCapture } = {}) {
     meals: dayMeals,
     birthdays: summary?.upcoming_birthdays || [],
     members,
-    memberId,
+    // Children see only their own day (Tribu 2.0, F5).
+    memberId: isChild ? me?.user_id ?? null : memberId,
     days: DAYS,
-  }), [now, dayEvents, tk.visibleTasks, dayMeals, summary, members, memberId]);
+  }), [now, dayEvents, tk.visibleTasks, dayMeals, summary, members, memberId, isChild, me]);
 
   const setup = useSetupChecklist({
     familyId, demoMode, isChild, isAdmin, members, events, tasks: tk.visibleTasks, shoppingLists, messages, setActiveView,
@@ -288,6 +262,25 @@ export default function TodayView({ onOpenCapture } = {}) {
     );
   });
   if (hasTimed && day.nowIndex >= day.today.length) rows.push(<NowMarker key="now" label={nowLabel} messages={messages} />);
+
+  if (isChild) {
+    return (
+      <KidsToday
+        day={day}
+        tasksById={tasksById}
+        toggleTask={tk.toggleTask}
+        canComplete={canComplete}
+        name={heroName}
+        now={now}
+        locale={locale}
+        timeFormat={timeFormat}
+        messages={messages}
+        showRewards={!hiddenAreas.includes('rewards')}
+        onOpenRewards={() => setActiveView('rewards')}
+        onSuggest={onOpenCapture}
+      />
+    );
+  }
 
   return (
     <div className="today-page">

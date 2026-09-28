@@ -206,8 +206,12 @@ export default function AppShell() {
   const navKey = navKeyOf(activeView);
   const activeGroup = navGroups.find((group) => group.items.some((item) => item.key === navKey)) || null;
   const greetingKey = `module.dashboard.greeting_${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}`;
+  const firstName = me?.display_name?.split(' ')[0] || '';
+  // Children are greeted as on their Today (Tribu 2.0, F5).
   const headerTitle = activeView === 'dashboard'
-    ? `${t(messages, greetingKey)}${me?.display_name ? `, ${me.display_name.split(' ')[0]}` : ''}`
+    ? isChild && firstName
+      ? t(messages, 'module.kids.hello').replace('{name}', firstName)
+      : `${t(messages, greetingKey)}${firstName ? `, ${firstName}` : ''}`
     : activeGroup?.label || itemRegistry[activeView === 'admin' ? 'settings' : activeView]?.label || '';
   const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}`;
 

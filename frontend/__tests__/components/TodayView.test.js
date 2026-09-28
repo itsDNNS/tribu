@@ -24,6 +24,8 @@ jest.mock('../../lib/api', () => ({
   apiConvertQuickCapture: jest.fn(() => Promise.resolve({ ok: true })),
   apiDismissQuickCapture: jest.fn(() => Promise.resolve({ ok: true })),
 }));
+let mockRewards = {};
+jest.mock('../../hooks/useRewards', () => ({ useRewards: () => mockRewards }));
 jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
   return <div data-testid="rewards-widget" />;
 });
@@ -162,10 +164,63 @@ describe('TodayView', () => {
     expect(mockApp.setActiveView).not.toHaveBeenCalled();
   });
 
-  it('lets children tick only their own tasks', async () => {
-    await renderToday({ isChild: true, me: { user_id: 2, display_name: 'Anna' } });
-    expect(screen.getByRole('checkbox', { name: /Buy a present/ })).toBeEnabled();
-    expect(screen.getByRole('checkbox', { name: /Sign the letter/ })).toBeDisabled();
+  describe('for children', () => {
+    const child = { isChild: true, me: { user_id: 2, display_name: 'Anna' } };
+    beforeEach(() => {
+      mockRewards = {
+        loading: false,
+        currency: { name: 'Stars', icon: 'star' },
+        myBalance: { balance: 6 },
+        catalog: [{ id: 1, name: 'Cinema', cost: 10, is_active: true }, { id: 2, name: 'Ice cream', cost: 4, is_active: true }],
+      };
+      mockTasks = mockTasks.map((task) => (task.id === 12 ? { ...task, token_reward_amount: 2, token_require_confirmation: false } : task));
+    });
+
+    it('shows only their own day, their stars and the next reward', async () => {
+      await renderToday(child);
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hi Anna!');
+      const day = screen.getByRole('region', { name: 'Your day' });
+      expect(within(day).getByText('Buy a present')).toBeInTheDocument();
+      for (const other of ['Sign the letter', 'Dentist', 'Football']) {
+        expect(screen.queryByText(other)).not.toBeInTheDocument();
+      }
+      expect(screen.queryByRole('group', { name: messages['module.today.filter'] })).not.toBeInTheDocument();
+      expect(screen.getByText('6')).toBeInTheDocument();
+      expect(screen.getByText('4 more for Cinema')).toBeInTheDocument();
+      expect(screen.getByRole('progressbar', { name: 'Cinema' })).toHaveAttribute('aria-valuenow', '6');
+    });
+
+    it('cheers when a task is done and names the stars it earns', async () => {
+      await renderToday(child);
+      fireEvent.click(screen.getByRole('checkbox', { name: /Buy a present/ }));
+      expect(mockToggleTask).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
+      expect(screen.getByText('Well done!')).toBeInTheDocument();
+      expect(screen.getByText('+2 Stars')).toBeInTheDocument();
+    });
+
+    it('finishes a task with a swipe to the right', async () => {
+      window.PointerEvent = window.PointerEvent || MouseEvent;
+      await renderToday(child);
+      const title = screen.getByText('Buy a present');
+      fireEvent.pointerDown(title, { clientX: 100, clientY: 10, button: 0 });
+      fireEvent.pointerMove(title, { clientX: 150, clientY: 10 });
+      fireEvent.pointerMove(title, { clientX: 200, clientY: 10 });
+      fireEvent.pointerUp(title, { clientX: 200, clientY: 10 });
+      expect(mockToggleTask).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
+      expect(screen.getByText('Well done!')).toBeInTheDocument();
+    });
+
+    it('offers to suggest something', async () => {
+      const onOpenCapture = jest.fn();
+      await renderToday(child, { onOpenCapture });
+      fireEvent.click(screen.getByRole('button', { name: 'Suggest something' }));
+      expect(onOpenCapture).toHaveBeenCalled();
+    });
+
+    it('leaves the stars out when the family hides rewards', async () => {
+      await renderToday({ ...child, hiddenAreas: ['rewards'] });
+      expect(screen.queryByText('4 more for Cinema')).not.toBeInTheDocument();
+    });
   });
 
   it('offers an empty day one action', async () => {
