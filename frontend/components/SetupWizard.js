@@ -7,6 +7,12 @@ import * as api from '../lib/api';
 
 const STEPS_FRESH = ['welcome', 'admin', 'family', 'prefs', 'done'];
 const STEPS_RESTORE = ['welcome', 'restore'];
+const THEME_PREVIEWS = {
+  system: 'linear-gradient(135deg, #f0ecf8 50%, #1e293b 50%)',
+  light: '#f0ecf8',
+  dark: '#1e293b',
+  'midnight-glass': '#111628',
+};
 
 export default function SetupWizard() {
   const {
@@ -290,14 +296,15 @@ export default function SetupWizard() {
               <div className="form-field" style={{ marginBottom: 16 }}>
                 <label>{t(messages, 'theme')}</label>
                 <div className="setup-theme-grid">
-                  {availableThemes.map((th) => (
+                  {[{ key: 'system', name: t(messages, 'settings.appearance_system') }, ...availableThemes].map((th) => (
                     <button
-                      key={th.id}
-                      className={`setup-theme-card${theme === th.id ? ' active' : ''}`}
-                      onClick={() => setTheme(th.id)}
+                      key={th.key}
+                      className={`setup-theme-card${theme === th.key ? ' active' : ''}`}
+                      aria-pressed={theme === th.key}
+                      onClick={() => setTheme(th.key)}
                       type="button"
                     >
-                      <div className="setup-theme-preview" style={{ background: th.tokens?.['--void'] || '#fff', borderColor: th.tokens?.['--amethyst'] || '#7c3aed' }} />
+                      <div className="setup-theme-preview" style={{ background: THEME_PREVIEWS[th.key] }} />
                       <span>{th.name}</span>
                     </button>
                   ))}

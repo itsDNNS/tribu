@@ -9,11 +9,11 @@ import { plannerText } from '../responsive/PlannerUI';
 // admin, dark mode and signing out.
 export default function AccountSheet({ items, activeView, navigate, onClose }) {
   const app = useApp();
-  const { messages, theme, setTheme, me, members = [], profileImage, families = [], familyId, logout } = app;
+  const { messages, resolvedTheme, setTheme, me, members = [], profileImage, families = [], familyId, logout } = app;
   const own = members.find((member) => member.user_id === me?.user_id)
     || { display_name: me?.display_name, profile_image: profileImage };
   const currentFamily = families.find((family) => String(family.family_id) === String(familyId));
-  const isDark = theme !== 'light';
+  const isDark = (resolvedTheme || 'light') !== 'light';
 
   return (
     <BottomSheet title={t(messages, 'nav.account_menu')} messages={messages} onClose={onClose} className="account-sheet">

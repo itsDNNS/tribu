@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { User, Palette, Globe, CalendarDays, Check, AlertTriangle, LogOut, Trash2 } from 'lucide-react';
+import { User, Check, AlertTriangle, LogOut, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
@@ -7,16 +7,6 @@ import { t } from '../../lib/i18n';
 import { COLOR_PALETTE } from '../../lib/member-colors';
 import * as api from '../../lib/api';
 import SecuritySection from './SecuritySection';
-
-const THEME_DESCS = {
-  en: { light: 'Warm and inviting', dark: 'Subtle and dark', 'midnight-glass': 'Glassmorphism, deep violet' },
-  de: { light: 'Warm und einladend', dark: 'Dezent und dunkel', 'midnight-glass': 'Glassmorphism, tiefes Violett' },
-};
-const THEME_PREVIEWS = {
-  light: { bg: '#f0ecf8', surface: '#faf9fd', accent: '#7c3aed' },
-  dark: { bg: '#0f172a', surface: '#1e293b', accent: '#7c3aed' },
-  'midnight-glass': { bg: '#06080f', surface: '#111628', accent: '#7c3aed' },
-};
 
 const MIN_BIRTHDATE = '1900-01-01';
 
@@ -32,7 +22,7 @@ function isBirthdateInRange(value, maxBirthdate) {
 }
 
 export default function AccountTab() {
-  const { theme, setTheme, lang, setLang, weekStart, setWeekStart, availableThemes, availableLanguages, messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers, logout } = useApp();
+  const { messages, me, isAdmin, isChild, loggedIn, profileImage, setProfileImage, members, familyId, loadMembers, logout } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const [colorSaving, setColorSaving] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -186,80 +176,6 @@ export default function AccountTab() {
         </div>
       </div>
 
-      {/* Theme */}
-      <div className="settings-section">
-        <div className="settings-section-title"><Palette size={16} /> {t(messages, 'theme')}</div>
-        <div className="theme-grid" role="group" aria-label={t(messages, 'theme')}>
-          {availableThemes.map((th) => {
-            const preview = THEME_PREVIEWS[th.key] || {};
-            const isActive = theme === th.key;
-            return (
-              <button
-                key={th.key}
-                type="button"
-                aria-pressed={isActive}
-                className={`theme-item${isActive ? ' active' : ' theme-item-inactive'}`}
-                onClick={() => setTheme(th.key)}
-              >
-                <span
-                  aria-hidden="true"
-                  className="theme-preview"
-                  style={{
-                    background: `linear-gradient(135deg, ${preview.bg || '#111'} 50%, ${preview.surface || '#222'} 50%)`,
-                    boxShadow: isActive ? `0 0 0 2px ${preview.accent || 'var(--amethyst)'}` : undefined,
-                  }}
-                />
-                <span className="theme-item-info">
-                  <span className="theme-item-name">{th.name}</span>
-                  <span className="theme-item-desc">{(THEME_DESCS[lang] || THEME_DESCS.en)[th.key] || ''}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Language */}
-      <div className="settings-section language-settings-section">
-        <div className="settings-section-title"><Globe size={16} /> {t(messages, 'language')}</div>
-        <div className="lang-toggle" role="group" aria-label={t(messages, 'language')}>
-          {availableLanguages.map((l) => (
-            <button
-              key={l.key}
-              type="button"
-              aria-pressed={lang === l.key}
-              className={`lang-btn${lang === l.key ? ' active' : ''}`}
-              onClick={() => setLang(l.key)}
-            >
-              {l.nativeName}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Calendar week start */}
-      <div className="settings-section">
-        <div className="settings-section-title"><CalendarDays size={16} /> {t(messages, 'week_start_title')}</div>
-        <p className="set-section-desc">{t(messages, 'week_start_desc')}</p>
-        <div className="week-start-toggle" role="group" aria-label={t(messages, 'week_start_title')}>
-          <button
-            type="button"
-            aria-pressed={weekStart === 'monday'}
-            className={`lang-btn${weekStart === 'monday' ? ' active' : ''}`}
-            onClick={() => setWeekStart('monday')}
-          >
-            {t(messages, 'week_start_monday')}
-          </button>
-          <button
-            type="button"
-            aria-pressed={weekStart === 'sunday'}
-            className={`lang-btn${weekStart === 'sunday' ? ' active' : ''}`}
-            onClick={() => setWeekStart('sunday')}
-          >
-            {t(messages, 'week_start_sunday')}
-          </button>
-        </div>
-      </div>
       {/* Security */}
       <SecuritySection />
 
@@ -341,7 +257,7 @@ export default function AccountTab() {
               </p>
               <input
                 type="text"
-                className="input set-delete-input"
+                className="form-input set-delete-input"
                 placeholder={t(messages, 'delete_account_placeholder')}
                 value={deleteInput}
                 onChange={(e) => setDeleteInput(e.target.value)}

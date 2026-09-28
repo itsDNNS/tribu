@@ -20,7 +20,7 @@ test('settings header contains wrapped content above the overview', async ({ aut
       return {
         contentBottom: Math.max(...visible.map(element => element.getBoundingClientRect().bottom)),
         headerBottom: header.getBoundingClientRect().bottom,
-        headingTop: document.querySelector('.ms-header').getBoundingClientRect().top,
+        headingTop: document.querySelector('.ms-grid').getBoundingClientRect().top,
       };
     });
     expect(geometry.headerBottom, `${width}px: ${JSON.stringify(geometry)}`).toBeGreaterThanOrEqual(geometry.contentBottom);

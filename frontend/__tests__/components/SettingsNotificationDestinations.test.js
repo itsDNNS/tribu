@@ -90,7 +90,7 @@ describe('Settings notification destinations visibility', () => {
     rerender(<SettingsView />);
 
     expect(screen.queryByText('Notification destination panel')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
   });
 });
 
@@ -128,7 +128,7 @@ describe('Mockup settings overview', () => {
         sessionStorage.setItem('tribu_settings_tab', key);
         mockAppState = baseState(overrides);
         const { unmount } = render(<SettingsView />);
-        expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
         expect(screen.queryByRole('combobox', { name: 'Settings section' })).not.toBeInTheDocument();
         unmount();
       }
@@ -142,7 +142,7 @@ describe('Mockup settings overview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Account' }));
     expect(screen.getByText('Account panel')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'All settings' }));
-    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toHaveFocus();
     expect(sessionStorage.getItem('tribu_settings_tab')).toBeNull();
   });
 
@@ -155,15 +155,17 @@ describe('Mockup settings overview', () => {
     mockAppState = baseState({ isAdmin: false });
     render(<SettingsView />);
     expect(screen.queryByText('Notification destination panel')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Just the way you like it.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
   });
 
   it('wires appearance and calendar controls to real preferences', () => {
     const setters = Object.fromEntries(['setTheme', 'setLang', 'setWeekStart', 'setCompactDashboard', 'setShowNotificationBadge'].map(key => [key, jest.fn()]));
     mockAppState = baseState({ ...setters, theme: 'light', lang: 'en', weekStart: 'monday', availableLanguages: [{key:'en',nativeName:'English'},{key:'de',nativeName:'Deutsch'}] });
     render(<SettingsView />);
-    fireEvent.click(screen.getByRole('button', { name: 'Colour scheme' }));
-    expect(setters.setTheme).toHaveBeenCalledWith('dark');
+    expect(screen.getByRole('combobox', { name: 'Appearance' })).toHaveValue('light');
+    expect(screen.getAllByRole('option', { name: 'Match device' })).toHaveLength(1);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Appearance' }), {target:{value:'system'}});
+    expect(setters.setTheme).toHaveBeenCalledWith('system');
     fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), {target:{value:'de'}});
     expect(setters.setLang).toHaveBeenCalledWith('de');
     fireEvent.change(screen.getByRole('combobox', { name: 'Week starts on' }), {target:{value:'sunday'}});
@@ -172,5 +174,35 @@ describe('Mockup settings overview', () => {
     expect(setters.setCompactDashboard).toHaveBeenCalledWith(true);
     fireEvent.click(screen.getByRole('switch', { name: 'Notification badge' }));
     expect(setters.setShowNotificationBadge).toHaveBeenCalledWith(false);
+  });
+
+  it('groups the overview into this device, my account and the family', () => {
+    mockAppState = baseState({ families: [{ family_id: 7, family_name: 'Braun' }], familyId: '7' });
+    render(<SettingsView />);
+    const device = screen.getByRole('region', { name: 'This device' });
+    const account = screen.getByRole('region', { name: 'My account' });
+    const family = screen.getByRole('region', { name: 'Family' });
+    expect(device).toHaveTextContent('Appearance');
+    expect(account).toContainElement(screen.getByRole('button', { name: 'Phone sync' }));
+    expect(family).toHaveTextContent('Applies to everyone in Braun.');
+    expect(family).toContainElement(screen.getByRole('button', { name: 'Automation Webhooks' }));
+  });
+
+  it('opens family administration on the matching admin section', () => {
+    const setActiveView = jest.fn();
+    mockAppState = baseState({ setActiveView });
+    render(<SettingsView />);
+    fireEvent.click(screen.getByRole('button', { name: 'Backups' }));
+    expect(sessionStorage.getItem('tribu_admin_tab')).toBe('backups');
+    expect(setActiveView).toHaveBeenCalledWith('admin');
+  });
+
+  it('shows members instead of administration to adults without admin rights', () => {
+    const setActiveView = jest.fn();
+    mockAppState = baseState({ isAdmin: false, setActiveView, members: [{ user_id: 1 }, { user_id: 2 }] });
+    render(<SettingsView />);
+    expect(screen.queryByRole('button', { name: 'Backups' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Your family' }));
+    expect(setActiveView).toHaveBeenCalledWith('contacts');
   });
 });

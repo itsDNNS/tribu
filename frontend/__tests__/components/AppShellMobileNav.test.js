@@ -90,7 +90,7 @@ const messages = {
   notifications: 'Notifications',
   notifications_unread: 'unread',
   settings: 'Settings',
-  admin: 'Admin',
+  admin_layout_title: 'Manage your family',
   nav_more: 'More',
   'nav.group.today': 'Today',
   'nav.group.plan': 'Plan',
@@ -243,7 +243,7 @@ describe('AppShell mobile bottom navigation', () => {
     expect(setTheme).toHaveBeenCalledWith('dark');
     fireEvent.click(within(sheet).getByRole('button', { name: 'Logout' }));
     expect(logout).toHaveBeenCalled();
-    fireEvent.click(within(sheet).getByRole('button', { name: 'Admin', exact: true }));
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Manage your family', exact: true }));
     expect(setActiveView).toHaveBeenCalledWith('admin');
     expect(screen.queryByRole('dialog', { name: 'Account and settings' })).not.toBeInTheDocument();
   });
@@ -259,7 +259,7 @@ describe('AppShell mobile bottom navigation', () => {
     render(<AppShell />);
     fireEvent.click(screen.getByRole('button', { name: 'Account and settings' }));
     const sheet = screen.getByRole('dialog', { name: 'Account and settings' });
-    expect(within(sheet).queryByRole('button', { name: 'Admin', exact: true })).not.toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'Manage your family', exact: true })).not.toBeInTheDocument();
     fireEvent.change(within(sheet).getByRole('combobox'), { target: { value: '2' } });
     expect(switchFamily).toHaveBeenCalledWith('2');
   });

@@ -120,7 +120,8 @@ test('check, Undo, complete, recent reuse and long press', async ({
   const box = await apple.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(600);
+  // Well past the 550 ms long press, also on a busy machine.
+  await page.waitForTimeout(900);
   await page.mouse.up();
   await expect(page.getByRole('dialog', {
     name: 'Das richtige Lieblingsding.'

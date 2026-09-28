@@ -2,32 +2,44 @@ import { useState, useEffect } from 'react';
 import { Navigation, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import { useApp, DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
-import { isNavItemVisible, NAV_ITEM_META, PINNED_NAV_KEYS } from '../../lib/navigation';
+import { isNavItemVisible, NAV_GROUPS, NAV_ITEM_META } from '../../lib/navigation';
 import * as api from '../../lib/api';
+
+// The order of the areas within each group of the navigation.
+function groupedOrder(order, context) {
+  const rank = new Map(order.map((key, index) => [key, index]));
+  return NAV_GROUPS
+    .map((group) => ({
+      ...group,
+      keys: group.itemKeys
+        .filter((key) => isNavItemVisible(key, context))
+        .sort((a, b) => (rank.get(a) ?? 999) - (rank.get(b) ?? 999)),
+    }))
+    .filter((group) => group.keys.length > 1);
+}
 
 export default function NavigationTab() {
   const { messages, isAdmin, isChild, demoMode, navOrder, setNavOrder } = useApp();
-  const filterHidden = (keys) => keys.filter((k) => {
-    if (PINNED_NAV_KEYS.has(k)) return false;
-    const meta = NAV_ITEM_META[k];
-    if (!meta) return true;
-    return isNavItemVisible(k, { isAdmin, isChild, demoMode });
-  });
-  const [localNavOrder, setLocalNavOrder] = useState(() => filterHidden(navOrder));
+  const context = { isAdmin, isChild, demoMode };
+  const [groups, setGroups] = useState(() => groupedOrder(navOrder, context));
   const [navSaved, setNavSaved] = useState(false);
 
-  useEffect(() => { setLocalNavOrder(filterHidden(navOrder)); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [navOrder, isChild, demoMode]);
+  useEffect(() => { setGroups(groupedOrder(navOrder, context)); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [navOrder, isAdmin, isChild, demoMode]);
 
-  function moveNavItem(index, direction) {
-    const newOrder = [...localNavOrder];
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
-    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
-    setLocalNavOrder(newOrder);
+  function moveNavItem(groupKey, index, direction) {
+    setGroups((current) => current.map((group) => {
+      if (group.key !== groupKey) return group;
+      const keys = [...group.keys];
+      const target = index + direction;
+      if (target < 0 || target >= keys.length) return group;
+      [keys[index], keys[target]] = [keys[target], keys[index]];
+      return { ...group, keys };
+    }));
   }
 
   async function handleSaveNavOrder() {
-    const fullOrder = [...localNavOrder, 'settings', ...(isAdmin ? ['admin'] : [])];
+    const ordered = groups.flatMap((group) => group.keys);
+    const fullOrder = [...ordered, ...DEFAULT_NAV_ORDER.filter((key) => !ordered.includes(key))];
     if (demoMode) {
       setNavOrder(fullOrder);
     } else {
@@ -40,7 +52,7 @@ export default function NavigationTab() {
   }
 
   function handleResetNavOrder() {
-    setLocalNavOrder(filterHidden(DEFAULT_NAV_ORDER));
+    setGroups(groupedOrder(DEFAULT_NAV_ORDER, context));
     if (demoMode) {
       setNavOrder(DEFAULT_NAV_ORDER);
     }
@@ -51,49 +63,42 @@ export default function NavigationTab() {
       <div className="settings-section">
         <div className="settings-section-title"><Navigation size={16} /> {t(messages, 'nav_order_title')}</div>
         <p className="set-nav-desc">
-          {t(messages, 'nav_order_desc')}
+          {t(messages, 'settings.navigation_desc')}
         </p>
-        <div className="set-nav-list">
-          {localNavOrder.map((key, i) => {
-            const meta = NAV_ITEM_META[key];
-            if (!meta) return null;
-            if (key === 'admin' && !isAdmin) return null;
-            const Icon = meta.icon;
-            const isVisible = localNavOrder.length > 5 ? i < 4 : i < 5;
-            return (
-              <div
-                key={key}
-                className="set-nav-item"
-                style={{
-                  borderLeft: `3px solid ${isVisible ? 'var(--amethyst)' : 'transparent'}`,
-                  background: isVisible ? 'rgba(124, 58, 237, 0.04)' : 'transparent',
-                }}
-              >
-                <Icon size={18} className="set-nav-item-icon" aria-hidden="true" />
-                <span className="set-nav-item-label">{t(messages, meta.labelKey)}</span>
-                <span className="set-nav-item-badge">
-                  {isVisible ? t(messages, 'nav_visible') : t(messages, 'nav_overflow')}
-                </span>
-                <button
-                  className="btn-ghost set-nav-btn"
-                  onClick={() => moveNavItem(i, -1)}
-                  disabled={i === 0}
-                  aria-label={`Move ${t(messages, meta.labelKey)} up`}
-                >
-                  <ChevronUp size={16} />
-                </button>
-                <button
-                  className="btn-ghost set-nav-btn"
-                  onClick={() => moveNavItem(i, 1)}
-                  disabled={i === localNavOrder.length - 1}
-                  aria-label={`Move ${t(messages, meta.labelKey)} down`}
-                >
-                  <ChevronDown size={16} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        {groups.map((group) => (
+          <div className="set-nav-group" key={group.key} role="group" aria-labelledby={`set-nav-${group.key}`}>
+            <div className="set-nav-group-title" id={`set-nav-${group.key}`}>{t(messages, group.labelKey, group.fallback)}</div>
+            <div className="set-nav-list">
+              {group.keys.map((key, i) => {
+                const meta = NAV_ITEM_META[key];
+                const Icon = meta.icon;
+                const label = t(messages, meta.labelKey);
+                return (
+                  <div key={key} className="set-nav-item">
+                    <Icon size={18} className="set-nav-item-icon" aria-hidden="true" />
+                    <span className="set-nav-item-label">{label}</span>
+                    <button
+                      className="btn-ghost set-nav-btn"
+                      onClick={() => moveNavItem(group.key, i, -1)}
+                      disabled={i === 0}
+                      aria-label={t(messages, 'settings.navigation_up').replace('{name}', label)}
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <button
+                      className="btn-ghost set-nav-btn"
+                      onClick={() => moveNavItem(group.key, i, 1)}
+                      disabled={i === group.keys.length - 1}
+                      aria-label={t(messages, 'settings.navigation_down').replace('{name}', label)}
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
         <div className="set-nav-actions">
           <button className="btn-sm" onClick={handleSaveNavOrder}>
             {navSaved ? <><Check size={14} /> {t(messages, 'nav_saved')}</> : t(messages, 'nav_save')}

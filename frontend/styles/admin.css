@@ -1442,3 +1442,4 @@
   margin: 0;
   color: var(--danger);
 }
+.mockup-admin-page .admin-back { align-self: flex-start; min-height: 34px; margin-bottom: 14px; font-size: 12px; }

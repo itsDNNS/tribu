@@ -19,7 +19,7 @@ async function openSettings(page) {
     return route.fulfill({ status:200,contentType:'application/json',body:JSON.stringify(responses[path] ?? {}) });
   });
   await page.goto('/#settings');
-  await expect(page.getByRole('heading', { name:'Just the way you like it.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name:'Settings',exact:true })).toBeVisible();
 }
 
 for (const width of [320, 390, 1024, 1440]) {
@@ -33,7 +33,8 @@ for (const width of [320, 390, 1024, 1440]) {
     await page.getByRole('switch', { name:'Compact view' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-dashboard-density','compact');
     await page.getByRole('combobox', { name:'Week starts on' }).selectOption('sunday');
-    await page.getByRole('button', { name:'Colour scheme' }).click();
+    await expect(page.getByRole('combobox', { name:'Appearance' })).toHaveValue('system');
+    await page.getByRole('combobox', { name:'Appearance' }).selectOption('dark');
     await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
     await page.reload();
     await expect(page.getByRole('switch', { name:'Compact view' })).toBeChecked();
@@ -50,12 +51,12 @@ for (const width of [320, 390, 1024, 1440]) {
     await expect(page.getByRole('combobox', {name:'Settings section'}).locator('option')).toHaveCount(10);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole('button', {name:'All settings'}).click();
-    await expect(page.getByRole('heading', { name:'Just the way you like it.' })).toBeFocused();
+    await expect(page.getByRole('heading', { name:'Settings',exact:true })).toBeFocused();
     await page.getByRole('combobox', {name:'Language',exact:true}).selectOption('de');
-    await expect(page.getByRole('heading', {name:'So, wie es zu euch passt.'})).toBeVisible();
-    await page.getByRole('button', {name:'Farbschema',exact:true}).click();
+    await expect(page.getByRole('heading', {name:'Einstellungen',exact:true})).toBeAttached();
+    await page.getByRole('combobox', {name:'Erscheinungsbild',exact:true}).selectOption('light');
     await page.screenshot({path:test.info().outputPath(`settings-${width}-light.png`), fullPage:true, animations:'disabled'});
-    await page.getByRole('button', {name:'Farbschema',exact:true}).click();
+    await page.getByRole('combobox', {name:'Erscheinungsbild',exact:true}).selectOption('dark');
     await page.screenshot({path:test.info().outputPath(`settings-${width}-dark.png`), fullPage:true, animations:'disabled'});
     if (width <= 768) {
       // The avatar opens the account menu; Today is the first tab.

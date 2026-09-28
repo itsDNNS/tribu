@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Archive,
+  ArrowLeft,
   ArrowRight,
   Check,
   Clock,
@@ -63,10 +64,17 @@ function AdminPage(props) {
     timeFormat,
     setTimeFormat,
     lang,
+    setActiveView,
   } = useApp();
   const { error: toastError } = useToast();
   const copy = (key) => adminText(messages, key);
-  const [activeTab, setActiveTab] = useState("members");
+  // Settings › Family opens a section directly.
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === "undefined") return "members";
+    const requested = sessionStorage.getItem("tribu_admin_tab");
+    return TABS.some(([key]) => key === requested) ? requested : "members";
+  });
+  useEffect(() => sessionStorage.removeItem("tribu_admin_tab"), []);
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [editor, setEditor] = useState(undefined);
@@ -166,6 +174,15 @@ function AdminPage(props) {
   return (
     <div className="admin-page dashboard-today-page mockup-admin-page">
       <section className="fam-page" aria-label={copy("title")}>
+        {/* Family administration is part of Settings › Family (Tribu 2.0, X3). */}
+        <button
+          type="button"
+          className="fam-button admin-back"
+          onClick={() => setActiveView("settings")}
+        >
+          <ArrowLeft size={14} />
+          {t(messages, "settings_mockup_overview")}
+        </button>
         <header className="fam-header">
           <div className="fam-title">
             <span className="fam-badge admin-page-icon">

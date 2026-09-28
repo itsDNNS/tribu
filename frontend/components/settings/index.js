@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Users, ChevronRight, ArrowLeft } from 'lucide-react';
+import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
 import AccountTab from './AccountTab';
@@ -15,24 +15,39 @@ import AboutTab from './AboutTab';
 
 const TABS = [
   { key: 'account',       labelKey: 'settings_tab_account',  component: AccountTab,       visible: () => true },
-  { key: 'navigation',    labelKey: 'nav_order_title',       component: NavigationTab,    visible: () => true },
   { key: 'notifications', labelKey: 'notification_settings', component: NotificationsTab, visible: ({ demoMode }) => !demoMode },
+  { key: 'navigation',    labelKey: 'nav_order_title',       component: NavigationTab,    visible: () => true },
   { key: 'phone_sync',    labelKey: 'phone_sync_title',      component: PhoneSyncTab,     visible: ({ isChild, demoMode }) => !isChild && !demoMode },
-  { key: 'data',          labelKey: 'data_management',       component: DataTab,          visible: ({ isChild, demoMode }) => !isChild && !demoMode },
   { key: 'tokens',        labelKey: 'api_tokens',            component: ApiTokensTab,     visible: ({ isChild, demoMode }) => !isChild && !demoMode },
+  { key: 'data',          labelKey: 'data_management',       component: DataTab,          visible: ({ isChild, demoMode }) => !isChild && !demoMode },
+  { key: 'store_links', labelKey: 'store_links_title', component: StoreLinksTab, visible: ({ isChild, demoMode }) => !isChild && !demoMode },
   { key: 'webhooks',      labelKey: 'automation_webhooks',   component: WebhooksTab,      visible: ({ isChild, demoMode }) => !isChild && !demoMode },
   { key: 'notification_destinations', labelKey: 'household_notifications', component: NotificationDestinationsTab, visible: ({ isAdmin, isChild, demoMode }) => isAdmin && !isChild && !demoMode },
-  { key: 'store_links', labelKey: 'store_links_title', component: StoreLinksTab, visible: ({ isChild, demoMode }) => !isChild && !demoMode },
   { key: 'about',         labelKey: 'about_support',         component: AboutTab,         visible: () => true },
 ];
+
+// Family administration opens on the matching admin tab.
+const ADMIN_ROWS = [
+  ['members', 'admin_tab_members'],
+  ['displays', 'display_title'],
+  ['sso', 'sso.title'],
+  ['backups', 'backup_title'],
+  ['system', 'system_title'],
+  ['audit', 'audit_log_title'],
+];
+
+export const APPEARANCES = ['system', 'light', 'dark', 'midnight-glass'];
 
 function SettingRow({ title, description, children }) {
   return <div className="ms-row"><div><strong>{title}</strong>{description && <div className="ms-small">{description}</div>}</div>{children}</div>;
 }
 
-export default function SettingsView(props) {
+// Settings on three levels (Tribu 2.0, X1): this device, my account and the
+// family. Each row says what it changes; details open in place.
+export default function SettingsView() {
   const { messages, isChild, isAdmin, demoMode, theme, setTheme, lang, setLang,
-    availableLanguages = [], weekStart, setWeekStart, members = [], setActiveView,
+    availableLanguages = [], availableThemes = [], weekStart, setWeekStart, members = [], setActiveView,
+    families = [], familyId,
     compactDashboard = false, setCompactDashboard, showNotificationBadge = true, setShowNotificationBadge } = useApp();
   const visibleTabs = TABS.filter(tab => tab.visible({ isAdmin, isChild, demoMode }));
   const [activeTab, setActiveTabState] = useState(() => {
@@ -61,19 +76,87 @@ export default function SettingsView(props) {
     }
   }, [activeTab]);
   const copy = key => t(messages, `settings_mockup_${key}`);
+  const level = key => t(messages, `settings.${key}`);
+  const familyName = families.find(family => String(family.family_id) === String(familyId))?.family_name;
+  const openButton = (label, onClick) => (
+    <button className="ms-button" aria-label={label} onClick={onClick}>{copy('open')}<ChevronRight size={13}/></button>
+  );
   const tabRow = key => {
     const tab = visibleTabs.find(item => item.key === key);
     if (!tab) return null;
     const label = t(messages, tab.labelKey);
     return <SettingRow key={key} title={label} description={copy(`${key}_desc`)}>
-      <button className="ms-button" aria-label={label} onClick={() => setActiveTab(key)}>{copy('open')}<ChevronRight size={13}/></button>
+      {openButton(label, () => setActiveTab(key))}
     </SettingRow>;
   };
+  const adminRow = ([key, labelKey]) => {
+    const label = t(messages, labelKey);
+    return <SettingRow key={key} title={label} description={level(`admin_${key}_desc`)}>
+      {openButton(label, () => {
+        sessionStorage.setItem('tribu_admin_tab', key);
+        setActiveView('admin');
+      })}
+    </SettingRow>;
+  };
+  const themeName = key => {
+    if (key === 'system') return level('appearance_system');
+    if (key === 'light' || key === 'dark') return copy(key);
+    return availableThemes.find(item => item.key === key)?.name || key;
+  };
+  const appearances = APPEARANCES.filter(key => key === 'system' || availableThemes.length === 0 || availableThemes.some(item => item.key === key));
+
+  const device = <section className="ms-card" aria-labelledby="ms-device" key="device">
+    <h2 id="ms-device">{level('device_title')}</h2><p>{level('device_intro')}</p>
+    <SettingRow title={level('appearance')} description={level('appearance_desc')}>
+      <select aria-label={level('appearance')} value={appearances.includes(theme) ? theme : 'light'} onChange={event => setTheme(event.target.value)}>
+        {appearances.map(key => <option key={key} value={key}>{themeName(key)}</option>)}
+      </select>
+    </SettingRow>
+    <SettingRow title={t(messages, 'language')} description={copy('language_desc')}>
+      <select aria-label={t(messages, 'language')} value={lang} onChange={event => setLang(event.target.value)}>
+        {availableLanguages.map(item => <option key={item.key} value={item.key}>{item.nativeName}</option>)}
+      </select>
+    </SettingRow>
+    <SettingRow title={t(messages, 'week_start_title')} description={t(messages, 'week_start_desc')}>
+      <select aria-label={t(messages, 'week_start_title')} value={weekStart} onChange={event => setWeekStart(event.target.value)}>
+        {['monday', 'sunday'].map(day => <option key={day} value={day}>{t(messages, `week_start_${day}`)}</option>)}
+      </select>
+    </SettingRow>
+    <SettingRow title={copy('compact')} description={level('compact_desc')}>
+      <button className="ms-switch" role="switch" aria-label={copy('compact')} aria-checked={compactDashboard} onClick={() => setCompactDashboard(!compactDashboard)}><span/></button>
+    </SettingRow>
+    <SettingRow title={copy('badge')} description={copy('badge_desc')}>
+      <button className="ms-switch" role="switch" aria-label={copy('badge')} aria-checked={showNotificationBadge} onClick={() => setShowNotificationBadge(!showNotificationBadge)}><span/></button>
+    </SettingRow>
+  </section>;
+
+  const account = <section className="ms-card" aria-labelledby="ms-account" key="account">
+    <h2 id="ms-account">{level('account_title')}</h2><p>{level('account_intro')}</p>
+    {tabRow('account')}{tabRow('notifications')}{tabRow('navigation')}{tabRow('phone_sync')}{tabRow('tokens')}
+  </section>;
+
+  const family = <section className="ms-card" aria-labelledby="ms-family" key="family">
+    <h2 id="ms-family">{level('family_title')}</h2>
+    <p>{familyName ? level('family_intro').replace('{family}', familyName) : level('family_intro_plain')}</p>
+    {isAdmin && !demoMode ? ADMIN_ROWS.slice(0, 1).map(adminRow) : (
+      <SettingRow title={copy('family')} description={copy('family_count').replace('{count}', members.length)}>
+        {openButton(copy('family'), () => setActiveView('contacts'))}
+      </SettingRow>
+    )}
+    {tabRow('data')}{tabRow('store_links')}
+    {isAdmin && !demoMode && ADMIN_ROWS.slice(1, 5).map(adminRow)}
+    {tabRow('webhooks')}{tabRow('notification_destinations')}
+    {isAdmin && !demoMode && ADMIN_ROWS.slice(5).map(adminRow)}
+    {(demoMode || isChild) && <SettingRow title={copy('data_limited')} description={copy(demoMode ? 'demo_desc' : 'child_desc')}><span className="ms-heart" aria-hidden="true">♡</span></SettingRow>}
+  </section>;
+
+  const about = <section className="ms-card ms-card-about" aria-label={t(messages, 'about_support')} key="about">
+    {tabRow('about')}
+  </section>;
+
   return <div className="settings-page dashboard-today-page mockup-settings-page">
-    <header className="ms-header">
-      <div className="ms-eyebrow">{t(messages, 'settings')}</div>
-      <h1 ref={headingRef} tabIndex={-1}>{activeTabConfig ? t(messages, activeTabConfig.labelKey) : copy('title')}</h1>
-      <p>{activeTabConfig ? copy(`${activeTab}_desc`) : copy('subtitle')}</p>
+    <header className={`list-header ms-list-header${activeTabConfig ? '' : ' ms-overview-header'}`}>
+      <h1 ref={headingRef} tabIndex={-1}>{activeTabConfig ? t(messages, activeTabConfig.labelKey) : t(messages, 'settings')}</h1>
     </header>
     {ActiveComponent ? <>
       <div className="ms-detail-navigation">
@@ -84,46 +167,8 @@ export default function SettingsView(props) {
       </div>
       <div className="ms-detail"><ActiveComponent/></div>
     </> : <div className="ms-grid">
-      <section className="ms-card" aria-labelledby="ms-family">
-        <h2 id="ms-family">{copy('family_title')}</h2><p>{copy('family_intro')}</p>
-        <SettingRow title={copy('theme')} description={copy('theme_desc')}>
-          <button className="ms-button" aria-label={copy('theme')} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
-            {theme === 'light' ? <Sun size={14}/> : <Moon size={14}/>}{copy(theme === 'light' ? 'light' : 'dark')}
-          </button>
-        </SettingRow>
-        <SettingRow title={copy('compact')} description={copy('compact_desc')}>
-          <button className="ms-switch" role="switch" aria-label={copy('compact')} aria-checked={compactDashboard} onClick={() => setCompactDashboard(!compactDashboard)}><span/></button>
-        </SettingRow>
-        <SettingRow title={copy('badge')} description={copy('badge_desc')}>
-          <button className="ms-switch" role="switch" aria-label={copy('badge')} aria-checked={showNotificationBadge} onClick={() => setShowNotificationBadge(!showNotificationBadge)}><span/></button>
-        </SettingRow>
-        <SettingRow title={copy('family')} description={copy('family_count').replace('{count}', members.length)}>
-          <button className="ms-button" onClick={() => setActiveView('contacts')}><Users size={13}/>{copy('manage')}</button>
-        </SettingRow>
-      </section>
-      <section className="ms-card" aria-labelledby="ms-display">
-        <h2 id="ms-display">{copy('display_title')}</h2><p>{copy('display_intro')}</p>
-        <SettingRow title={t(messages, 'language')} description={copy('language_desc')}>
-          <select aria-label={t(messages, 'language')} value={lang} onChange={event => setLang(event.target.value)}>
-            {availableLanguages.map(item => <option key={item.key} value={item.key}>{item.nativeName}</option>)}
-          </select>
-        </SettingRow>
-        <SettingRow title={t(messages, 'week_start_title')} description={t(messages, 'week_start_desc')}>
-          <select aria-label={t(messages, 'week_start_title')} value={weekStart} onChange={event => setWeekStart(event.target.value)}>
-            {['monday', 'sunday'].map(day => <option key={day} value={day}>{t(messages, `week_start_${day}`)}</option>)}
-          </select>
-        </SettingRow>
-        {tabRow('navigation')}{tabRow('account')}
-      </section>
-      <section className="ms-card" aria-labelledby="ms-data">
-        <h2 id="ms-data">{copy('data_title')}</h2><p>{copy(demoMode ? 'demo_intro' : 'data_intro')}</p>
-        {tabRow('data')}{tabRow('phone_sync')}{tabRow('tokens')}
-        {(demoMode || isChild) && <SettingRow title={copy('data_limited')} description={copy(demoMode ? 'demo_desc' : 'child_desc')}><span className="ms-heart" aria-hidden="true">♡</span></SettingRow>}
-      </section>
-      <section className="ms-card" aria-labelledby="ms-more">
-        <h2 id="ms-more">{copy('more_title')}</h2><p>{copy('more_intro')}</p>
-        {tabRow('notifications')}{tabRow('webhooks')}{tabRow('notification_destinations')}{tabRow('store_links')}{tabRow('about')}
-      </section>
+      <div className="ms-column">{device}{account}</div>
+      <div className="ms-column">{family}{about}</div>
     </div>}
   </div>;
 }

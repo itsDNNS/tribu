@@ -6,7 +6,7 @@ test('settings preferences persist for a real account and all ten sections open'
   await page.getByRole('switch', { name: 'Compact view', exact: true }).click();
   await page.getByRole('switch', { name: 'Notification badge', exact: true }).click();
   await page.getByRole('combobox', { name: 'Week starts on' }).selectOption('sunday');
-  await page.getByRole('button', { name: 'Colour scheme' }).click();
+  await page.getByRole('combobox', { name: 'Appearance' }).selectOption('dark');
   await page.getByRole('combobox', { name: 'Language', exact: true }).selectOption('fr');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
@@ -16,7 +16,7 @@ test('settings preferences persist for a real account and all ten sections open'
   await expect(page.getByRole('switch', { name: 'Compact view', exact: true })).toBeChecked();
   await expect(page.getByRole('switch', { name: 'Notification badge', exact: true })).not.toBeChecked();
   await expect(page.locator('.ms-grid select').last()).toHaveValue('sunday');
-  await page.locator('.ms-grid select').first().selectOption('en');
+  await page.locator('.ms-grid select').nth(1).selectOption('en');
 
   await navigateTo(page, 'Dashboard');
   await expect(page.locator('.today-main')).toHaveCSS('row-gap', '16px');
@@ -47,7 +47,7 @@ test('settings preferences persist for a real account and all ten sections open'
   await expect(sections.locator('option')).toHaveCount(10);
   for (const [key, label] of expected) {
     await sections.selectOption(key);
-    await expect(page.locator('.ms-header h1')).toHaveText(label);
+    await expect(page.locator('.ms-list-header h1')).toHaveText(label);
     await expect(page.locator('.ms-detail > .settings-grid')).toBeVisible();
   }
   await page.getByRole('button', { name: 'All settings', exact: true }).click();

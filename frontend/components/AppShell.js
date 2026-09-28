@@ -177,7 +177,7 @@ export default function AppShell() {
   const greetingKey = `module.dashboard.greeting_${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}`;
   const headerTitle = activeView === 'dashboard'
     ? `${t(messages, greetingKey)}${me?.display_name ? `, ${me.display_name.split(' ')[0]}` : ''}`
-    : activeGroup?.label || itemRegistry[activeView]?.label || '';
+    : activeGroup?.label || itemRegistry[activeView === 'admin' ? 'settings' : activeView]?.label || '';
   const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}`;
 
   return (

@@ -46,7 +46,11 @@ export function AppProvider({ children }) {
   const lastEventIdRef = useRef(0);
 
   // UI state
+  // Appearance of this device: light, dark, midnight-glass or system,
+  // which follows the device's light or dark mode (Tribu 2.0, X2).
   const [theme, setTheme] = useState('light');
+  const [systemDark, setSystemDark] = useState(false);
+  const resolvedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
   const [compactDashboard, setCompactDashboard] = useState(false);
   const [showNotificationBadge, setShowNotificationBadge] = useState(true);
   const [lang, setLang] = useState('en');
@@ -285,7 +289,7 @@ export function AppProvider({ children }) {
 
   // Init: localStorage, resize, auto-login
   useEffect(() => {
-    setTheme(window.localStorage.getItem('tribu_theme') || 'light');
+    setTheme(window.localStorage.getItem('tribu_theme') || 'system');
     setCompactDashboard(window.localStorage.getItem('tribu_compact_dashboard') === 'true');
     setShowNotificationBadge(window.localStorage.getItem('tribu_notification_badge') !== 'false');
     const storedWeekStart = window.localStorage.getItem('tribu_week_start');
@@ -344,8 +348,20 @@ export function AppProvider({ children }) {
   // Persist theme
   useEffect(() => {
     window.localStorage.setItem('tribu_theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+  }, [resolvedTheme]);
+
+  useEffect(() => {
+    const query = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!query) return undefined;
+    const update = () => setSystemDark(query.matches);
+    update();
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem('tribu_compact_dashboard', String(compactDashboard));
@@ -518,7 +534,7 @@ export function AppProvider({ children }) {
     loadNotifications: loadNotificationsWrapped,
     resetData,
     // UI
-    theme, setTheme,
+    theme, setTheme, resolvedTheme,
     lang, setLang,
     weekStart, setWeekStart,
     messages,

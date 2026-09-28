@@ -41,7 +41,7 @@ test.describe('Navigation UI', () => {
     await page.locator('.app-header').getByRole('button', { name: 'Account and settings', exact: true }).click();
     const menu = page.getByRole('dialog');
     await menu.getByRole('button', { name: 'Settings', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Just the way you like it.' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeAttached({ timeout: 10000 });
     await expect(page.locator('.ms-card')).toHaveCount(4);
     await expect(menu).toBeHidden();
   });

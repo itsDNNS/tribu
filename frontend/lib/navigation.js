@@ -52,7 +52,7 @@ export const NAV_ITEM_META = {
   contacts: { icon: BookUser, labelKey: 'contacts' },
   notifications: { icon: Bell, labelKey: 'notifications' },
   settings: { icon: Settings, labelKey: 'settings' },
-  admin: { icon: Shield, labelKey: 'admin', adminOnly: true },
+  admin: { icon: Shield, labelKey: 'admin_layout_title', adminOnly: true },
 };
 
 export function isNavItemVisible(key, { isAdmin = false, isChild = false, demoMode = false } = {}) {
