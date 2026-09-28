@@ -9,7 +9,7 @@ const products = new Set(cases.products.map((name) => name.toLowerCase()));
 const isProduct = (name) => products.has(String(name).toLowerCase());
 
 describe('parseCapture', () => {
-  it.each(cases.cases.map((entry) => [entry.text.replace('\n', ' ⏎ '), entry]))('reads "%s"', (_, entry) => {
+  it.each(cases.cases.map((entry) => [entry.text.replaceAll('\n', ' ⏎ '), entry]))('reads "%s"', (_, entry) => {
     const result = parseCapture(entry.text, { now, lang: entry.lang, members: cases.members, isProduct });
     expect(result.map(({ text, ...rest }) => rest)).toEqual(entry.expect);
   });
