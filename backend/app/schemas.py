@@ -687,6 +687,18 @@ class ShoppingListUpdate(BaseModel):
     icon: Optional[Literal["cart", "heart", "coffee", "bag", "home"]] = None
 
 
+class ShoppingListShopper(BaseModel):
+    """Someone who is out shopping with a list right now."""
+    user_id: int = Field(..., description="The shopper's user ID")
+    display_name: str = Field(..., description="The shopper's name")
+    since: datetime = Field(..., description="When shopping mode started")
+
+
+class ShoppingTripUpdate(BaseModel):
+    """Start or end shopping mode for a list."""
+    active: bool = Field(..., description="True when shopping mode starts, false when it ends")
+
+
 class ShoppingListResponse(BaseModel):
     """Shopping list with item counts."""
     model_config = ConfigDict(from_attributes=True)
@@ -700,6 +712,7 @@ class ShoppingListResponse(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     item_count: int = Field(0, description="Total number of items")
     checked_count: int = Field(0, description="Number of checked items")
+    shopper: Optional[ShoppingListShopper] = Field(None, description="Who is shopping with this list right now")
 
 
 class ShoppingItemCreate(ShoppingProductDetails):

@@ -236,6 +236,11 @@ export default function TodayView({ onOpenCapture } = {}) {
     .filter((item) => item && (!item.status || item.status === 'open'));
   const shoppingCount = countOpenShopping(shoppingLists);
   const shoppingTime = now.getHours() >= 15 || now.getDay() === 6;
+  // Someone else out shopping right now (Tribu 2.0, L4).
+  const shopper = (Array.isArray(shoppingLists) ? shoppingLists : [])
+    .map((list) => list?.shopper)
+    .find((entry) => entry && Number(entry.user_id) !== Number(me?.user_id));
+  const showShopping = Boolean(shopper) || (shoppingCount > 0 && shoppingTime);
   const tasksById = new Map(tk.visibleTasks.map((task) => [task.id, task]));
   const canComplete = (task) => !isChild || (me?.user_id != null && String(task.assigned_to_user_id) === String(me.user_id));
   const ctx = {
@@ -309,15 +314,19 @@ export default function TodayView({ onOpenCapture } = {}) {
           </div>
         )}
 
-        {(setup.show || inboxItems.length > 0 || (shoppingCount > 0 && shoppingTime)) && (
+        {(setup.show || inboxItems.length > 0 || showShopping) && (
           <div className="today-hints">
-            {shoppingCount > 0 && shoppingTime && (
+            {showShopping && (
               <section className="today-hint" aria-label={t(messages, 'module.shopping.name')}>
                 <div className="today-hint-head">
                   <span className="today-hint-icon" aria-hidden="true"><ShoppingCart size={18} /></span>
-                  <span className="today-hint-text">{tc(messages, 'module.today.shopping_hint', shoppingCount)}</span>
-                  <button type="button" className="today-hint-action" onClick={() => openShopping(setActiveView)}>
-                    {t(messages, 'module.today.shopping_start')}
+                  <span className="today-hint-text">
+                    {shopper
+                      ? t(messages, 'module.shopping.shopper_now').replace('{name}', shopper.display_name?.split(' ')[0] || shopper.display_name)
+                      : tc(messages, 'module.today.shopping_hint', shoppingCount)}
+                  </span>
+                  <button type="button" className="today-hint-action" onClick={() => (shopper ? setActiveView('shopping') : openShopping(setActiveView))}>
+                    {t(messages, shopper ? 'module.today.shopping_view' : 'module.today.shopping_start')}
                   </button>
                 </div>
               </section>

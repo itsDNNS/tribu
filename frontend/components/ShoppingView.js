@@ -130,6 +130,13 @@ export default function ShoppingView(props) {
     tripKey.current = key;
     setTrip(false);
   }, [key]);
+  // The family sees who is out shopping (Tribu 2.0, L4).
+  const tripListId = trip ? sh.activeListId : null;
+  useEffect(() => {
+    if (!tripListId || demoMode) return undefined;
+    api.apiSetShoppingTrip(tripListId, true);
+    return () => { api.apiSetShoppingTrip(tripListId, false); };
+  }, [tripListId, demoMode]);
   // The shopping mode keeps the screen on, where the browser allows it.
   useEffect(() => {
     if (!trip || !navigator.wakeLock?.request) return undefined;
@@ -204,6 +211,10 @@ export default function ShoppingView(props) {
     done = (sh.checkedItems || []).filter(item => !removing[item.id]),
     items = sh.items || [],
     list = sh.activeList;
+  // Someone else out shopping with this list right now.
+  const otherShopper = list?.shopper && Number(list.shopper.user_id) !== Number(me?.user_id)
+    ? list.shopper.display_name?.split(' ')[0] || list.shopper.display_name
+    : null;
   const pct = open.length + done.length ? Math.round(done.length / (open.length + done.length) * 100) : 0;
   const groups = groupShoppingItems(urgent ? open.filter(i => i.priority === 'urgent') : open, list?.category_order || []);
   const products = useMemo(() => {
@@ -389,6 +400,7 @@ export default function ShoppingView(props) {
                 })}><Grid2X2 className="icon sm" /></button><button className={prefs.layout === 'list' ? 'active' : ''} aria-label={tr("module.shopping.visual.listenansicht")} aria-pressed={prefs.layout === 'list'} onClick={() => preference({
                   layout: 'list'
                 })}><List className="icon sm" /></button></div></div></div>
+ {otherShopper && <p className="shop-shopper" role="status"><ShoppingCart className="icon sm" aria-hidden="true" />{t(messages, 'module.shopping.shopper_now').replace('{name}', otherShopper)}</p>}
  <div className="shop-board-status"><span className="shop-open-count"><span className="shop-open-dot" /><strong>{open.length}</strong> {tr("module.shopping.visual.noch_besorgen")}</span>{open.some(i => i.priority === 'urgent') && <button className={`shop-priority-filter ${urgent ? 'active' : ''}`} aria-pressed={urgent} onClick={() => setUrgent(!urgent)}>{tr("module.shopping.visual.dringend")} {open.filter(i => i.priority === 'urgent').length}</button>}<span className="shop-board-progress"><span className="shop-progress-track" role="progressbar" aria-label={tr("module.shopping.visual.einkaufsfortschritt")} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style={{
                   width: `${pct}%`
                 }} /></span>{done.length} {tr("module.shopping.visual.von")} {open.length + done.length} {tr("module.shopping.visual.im_korb")}</span></div>

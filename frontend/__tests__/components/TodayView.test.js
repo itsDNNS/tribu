@@ -285,6 +285,15 @@ describe('TodayView', () => {
     expect(screen.getAllByText(/^Suggestion from/)).toHaveLength(1);
   });
 
+  it('tells who else is out shopping, at any hour', async () => {
+    mockNow = new Date(2026, 8, 30, 9, 0);
+    await renderToday({ shoppingLists: [{ id: 5, item_count: 3, checked_count: 0, shopper: { user_id: 2, display_name: 'Anna', since: '2026-09-30T08:50:00' } }] });
+    const hint = screen.getByRole('region', { name: messages['module.shopping.name'] });
+    expect(hint).toHaveTextContent('Anna is shopping right now');
+    fireEvent.click(within(hint).getByRole('button', { name: 'See the list' }));
+    expect(mockApp.setActiveView).toHaveBeenCalledWith('shopping');
+  });
+
   it('greets once and gives the date', async () => {
     await renderToday();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Good morning, Max');

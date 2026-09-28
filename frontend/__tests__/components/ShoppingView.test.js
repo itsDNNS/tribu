@@ -1066,3 +1066,25 @@ test('children do not swipe products away', () => {
   fireEvent.pointerUp(row, { clientX: 40, clientY: 10 });
   expect(screen.getByRole('checkbox', { name: /^Milch,/ })).toBeVisible();
 });
+
+test('shopping mode tells the family who is out shopping, and when it ends', () => {
+  api.apiSetShoppingTrip = jest.fn().mockResolvedValue({ ok: true });
+  sessionStorage.setItem('tribu_shopping_trip', '1');
+  setup({}, { demoMode: false });
+  expect(api.apiSetShoppingTrip).toHaveBeenCalledWith(10, true);
+  fireEvent.click(screen.getByRole('button', { name: /Beenden/ }));
+  expect(api.apiSetShoppingTrip).toHaveBeenLastCalledWith(10, false);
+});
+
+test('shows who else is shopping with the list', () => {
+  setup({ activeList: { id: 10, name: 'Wocheneinkauf', shopper: { user_id: 2, display_name: 'Anna Braun', since: '2026-09-28T17:00:00' } } });
+  expect(screen.getByRole('status')).toHaveTextContent('Anna kauft gerade ein');
+});
+
+test('does not announce yourself', () => {
+  setup(
+    { activeList: { id: 10, name: 'Wocheneinkauf', shopper: { user_id: 1, display_name: 'Dennis', since: '2026-09-28T17:00:00' } } },
+    { me: { id: 1, user_id: 1 } },
+  );
+  expect(screen.queryByText(/kauft gerade ein/)).not.toBeInTheDocument();
+});

@@ -934,3 +934,5 @@ export function apiDisplayDashboard(token) {
 }
 
 export function apiCompleteShoppingTrip(listId) { return post(`/shopping/lists/${listId}/complete`, {}); }
+// Tells the family who is out shopping with a list (Tribu 2.0, L4).
+export function apiSetShoppingTrip(listId, active) { return post(`/shopping/lists/${listId}/trip`, { active }); }

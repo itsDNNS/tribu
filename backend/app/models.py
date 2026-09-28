@@ -517,9 +517,13 @@ class ShoppingList(Base):
     icon = Column(String(20), nullable=False, default="cart", server_default="cart")
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    # Who is out shopping with this list right now (Tribu 2.0, L4).
+    shopper_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    shopping_since = Column(DateTime, nullable=True)
 
     family = relationship("Family", back_populates="shopping_lists")
     items = relationship("ShoppingItem", back_populates="shopping_list", cascade="all, delete-orphan")
+    shopper = relationship("User", foreign_keys=[shopper_user_id])
 
 
 class ShoppingItem(Base):

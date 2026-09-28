@@ -269,6 +269,10 @@ export function useShopping() {
       case 'list_deleted':
         setShoppingLists((prev) => prev.filter((l) => l.id !== msg.list_id));
         break;
+
+      case 'shopper_changed':
+        setShoppingLists((prev) => prev.map((l) => l.id === msg.list_id ? { ...l, shopper: msg.shopper } : l));
+        break;
     }
   }, [setShoppingLists, loadShoppingLists, isCurrent, familyId]);
 

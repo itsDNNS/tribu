@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.utils import utcnow
 
@@ -37,6 +39,7 @@ from app.schemas import (
     ShoppingItemUpdate,
     ShoppingListCreate,
     ShoppingListResponse,
+    ShoppingListShopper,
     ShoppingListUpdate,
     ShoppingStoreLinkCreate,
     ShoppingStoreLinkResponse,
@@ -46,6 +49,7 @@ from app.schemas import (
     ShoppingTemplateCreate,
     ShoppingTemplateResponse,
     ShoppingTemplateUpdate,
+    ShoppingTripUpdate,
 )
 from app.core.errors import (
     error_detail,
@@ -85,10 +89,32 @@ def _normalize_item_name(value: str) -> str:
         raise HTTPException(status_code=422, detail="Shopping item name cannot be blank")
 
 
+# Shopping mode left open (a phone in a pocket) stops counting after this.
+SHOPPING_TRIP_TTL = timedelta(hours=3)
+
+
+def _shopper(sl: ShoppingList) -> ShoppingListShopper | None:
+    """Who is out shopping with this list, if they started recently."""
+    if sl.shopper is None or sl.shopping_since is None:
+        return None
+    if utcnow() - sl.shopping_since > SHOPPING_TRIP_TTL:
+        return None
+    name = (sl.shopper.display_name or sl.shopper.email or "").strip()
+    return ShoppingListShopper(user_id=sl.shopper.id, display_name=name, since=sl.shopping_since)
+
+
+def _broadcast_shopper(sl: ShoppingList) -> None:
+    shopper = _shopper(sl)
+    payload = {"list_id": sl.id, "shopper": shopper.model_dump(mode="json") if shopper else None}
+    broadcast_shopping_event("family", sl.family_id, "shopper_changed", payload)
+    broadcast_shopping_event("list", sl.id, "shopper_changed", payload)
+
+
 def _list_response(sl: ShoppingList) -> ShoppingListResponse:
     total = sum(1 for i in sl.items if not i.archived)
     checked = sum(1 for i in sl.items if i.checked and not i.archived)
     return ShoppingListResponse(
+        shopper=_shopper(sl),
         id=sl.id,
         family_id=sl.family_id,
         name=sl.name,
@@ -498,7 +524,13 @@ def get_lists(
     _scope=require_scope("shopping:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
-    lists = db.query(ShoppingList).filter(ShoppingList.family_id == family_id).order_by(ShoppingList.created_at).all()
+    lists = (
+        db.query(ShoppingList)
+        .options(selectinload(ShoppingList.shopper))
+        .filter(ShoppingList.family_id == family_id)
+        .order_by(ShoppingList.created_at)
+        .all()
+    )
     return [_list_response(sl) for sl in lists]
 
 
@@ -1026,6 +1058,32 @@ def clear_checked(
     return {"status": "ok", "deleted_count": deleted}
 
 
+@router.post(
+    "/lists/{list_id}/trip",
+    response_model=ShoppingListResponse,
+    summary="Start or end shopping mode",
+    description="Tells the family who is out shopping with this list (\"Anna is shopping\"). Ending only clears the caller's own trip. Scope: `shopping:write`.",
+)
+def set_shopping_trip(list_id: int, payload: ShoppingTripUpdate, user: User = Depends(current_user),
+                      db: Session = Depends(get_db), _scope=require_scope("shopping:write")):
+    sl = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
+    if not sl:
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_LIST_NOT_FOUND))
+    ensure_family_membership(db, user.id, sl.family_id)
+    if payload.active:
+        sl.shopper_user_id = user.id
+        sl.shopping_since = utcnow()
+    elif sl.shopper_user_id == user.id:
+        sl.shopper_user_id = None
+        sl.shopping_since = None
+    else:
+        return _list_response(sl)
+    db.commit()
+    db.refresh(sl)
+    _broadcast_shopper(sl)
+    return _list_response(sl)
+
+
 @router.post("/lists/{list_id}/complete", response_model=list[ShoppingItemResponse])
 def complete_shopping_trip(list_id: int, user: User = Depends(current_user),
                            db: Session = Depends(get_db), _scope=require_scope("shopping:write")):
@@ -1043,7 +1101,15 @@ def complete_shopping_trip(list_id: int, user: User = Depends(current_user),
         .values(archived=True)
         .returning(ShoppingItem)
     ).scalars().all()
+    # Finishing the trip ends the caller's shopping mode.
+    shopping_ended = sl.shopper_user_id == user.id
+    if shopping_ended:
+        sl.shopper_user_id = None
+        sl.shopping_since = None
     db.commit()
+    if shopping_ended:
+        db.refresh(sl)
+        _broadcast_shopper(sl)
     for item in items:
         broadcast_shopping_event("list", list_id, "item_updated", {
             "item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")})
