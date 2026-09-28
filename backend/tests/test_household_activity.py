@@ -136,6 +136,8 @@ def test_task_create_and_complete_are_recorded_public_safely():
     assert feed_after_actor_delete.json()["items"][0]["actor_display_name"] == "Dennis"
 
     assert data["items"][0]["summary"] == "Dennis completed task \"Pay school lunch\""
+    # The trimmed object name lets clients phrase the entry themselves.
+    assert [item["object_label"] for item in data["items"]] == ["Pay school lunch", "Pay school lunch"]
     assert data["items"][1]["summary"] == "Dennis created task \"Pay school lunch\""
     assert "created_at" in data["items"][0]
     serialized = str(data)
@@ -183,6 +185,7 @@ def test_shopping_activity_and_family_boundaries():
         'Anna added "Milk" to shopping',
         'Anna created shopping list "Weekly groceries"',
     ]
+    assert [entry["object_label"] for entry in feed.json()["items"]] == ["Milk", "Milk", "Weekly groceries"]
     assert "private note" not in str(feed.json())
 
 
@@ -276,3 +279,24 @@ def test_activity_read_scope_is_required_for_pats():
     good_token, good_family_id, _ = _seed_member("activity:read", "good-scope")
     allowed = client.get(f"/activity?family_id={good_family_id}", headers=_auth(good_token))
     assert allowed.status_code == 200, allowed.json()
+
+
+def test_entries_without_object_label_still_read():
+    token, family_id, user_id = _seed_member("*", "legacy", display_name="Kim")
+    db = TestSession()
+    db.add(HouseholdActivity(
+        family_id=family_id,
+        actor_user_id=user_id,
+        actor_display_name="Kim",
+        action="created",
+        object_type="task",
+        summary='Kim created task "Old entry"',
+    ))
+    db.commit()
+    db.close()
+
+    feed = client.get(f"/activity?family_id={family_id}", headers=_auth(token))
+    assert feed.status_code == 200, feed.json()
+    entry = feed.json()["items"][0]
+    assert entry["object_label"] is None
+    assert entry["summary"] == 'Kim created task "Old entry"'

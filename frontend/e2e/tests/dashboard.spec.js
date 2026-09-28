@@ -139,8 +139,9 @@ test.describe('Today', () => {
     await navigateTo(page, 'Activity');
     await expect(page.getByRole('heading', { name: 'Activity history' })).toBeVisible({ timeout: 10000 });
     const activityFeed = page.getByRole('region', { name: 'Recent activity' });
-    await expect(activityFeed).toContainText(`${testUser.displayName} created task "E2E Activity Task"`, { timeout: 10000 });
-    await expect(activityFeed).toContainText(`${testUser.displayName} created calendar event "E2E Calendar Activity"`, { timeout: 10000 });
+    // Phrased by the client from the entry's action and object name.
+    await expect(activityFeed).toContainText(`${testUser.displayName} created “E2E Activity Task”`, { timeout: 10000 });
+    await expect(activityFeed).toContainText(`${testUser.displayName} added the event “E2E Calendar Activity”`, { timeout: 10000 });
     await expect(activityFeed).not.toContainText('private detail');
     await expect(activityFeed).not.toContainText('calendar private location');
   });

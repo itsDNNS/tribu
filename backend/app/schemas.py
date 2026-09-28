@@ -1018,7 +1018,8 @@ class HouseholdActivityEntry(BaseModel):
     actor_display_name: Optional[str] = Field(None, description="Actor display name, null if unavailable")
     action: str = Field(..., description="Stable action code")
     object_type: str = Field(..., description="Stable object type code")
-    summary: str = Field(..., description="Short sanitized human-readable summary")
+    object_label: Optional[str] = Field(None, description="Short sanitized name of the object, so clients can phrase the entry in their language; null for older entries")
+    summary: str = Field(..., description="Short sanitized English summary, the fallback without object_label")
     created_at: datetime = Field(..., description="Activity timestamp")
 
 

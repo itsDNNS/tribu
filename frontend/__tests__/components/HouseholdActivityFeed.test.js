@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import HouseholdActivityFeed from '../../components/HouseholdActivityFeed';
+import { buildMessages } from '../../lib/i18n';
 
 const messages = {
   'module.dashboard.activity_title': 'Recent activity',
@@ -9,6 +10,28 @@ const messages = {
 };
 
 describe('HouseholdActivityFeed', () => {
+  it('phrases entries in the reader\'s language', () => {
+    render(
+      <HouseholdActivityFeed
+        messages={buildMessages('de')}
+        lang="de"
+        activity={[
+          {
+            id: 8,
+            actor_display_name: 'Anna',
+            action: 'checked',
+            object_type: 'shopping_item',
+            object_label: 'Milch',
+            summary: 'Anna checked off "Milch"',
+            created_at: '2026-04-29T10:00:00Z',
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText('Anna hat „Milch“ gekauft')).toBeInTheDocument();
+    expect(screen.queryByText('Anna checked off "Milch"')).not.toBeInTheDocument();
+  });
+
   it('renders public activity entries without internal fields', () => {
     render(
       <HouseholdActivityFeed

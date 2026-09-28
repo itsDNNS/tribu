@@ -752,6 +752,7 @@ class HouseholdActivity(Base):
     action = Column(String(40), nullable=False)
     object_type = Column(String(60), nullable=False)
     object_id = Column(Integer, nullable=True)
+    object_label = Column(String(80), nullable=True)
     summary = Column(String(240), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
