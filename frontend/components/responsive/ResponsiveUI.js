@@ -140,7 +140,11 @@ export default function ResponsiveUI({
         />
       )}
       {sheet === 'new' && !isChild && (
-        <NewSheet onClose={() => setSheet(null)} onCreate={onCreate} />
+        <NewSheet
+          onClose={() => setSheet(null)}
+          onCreate={onCreate}
+          defaultKind={{ shopping: 'shopping', calendar: 'event' }[activeView] || 'task'}
+        />
       )}
     </>
   );

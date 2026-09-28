@@ -36,21 +36,23 @@ test('anonymous mobile menu shows task, shopping and unread badges', async ({ pa
   await expect(menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).locator('.ui-count-badge')).toHaveText('3');
   await shot(page, 'menu-badges-dark.png');
 });
-test('New sheet saves quick capture to the chosen destination', async ({ page }) => {
+test('New sheet creates what the capture field recognises', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const api = await open(page);
   await page.locator('.ui-bottom-nav').getByRole('button', { name: 'Neu', exact: true }).click();
   const sheet = page.getByRole('dialog', { name: 'Was möchtet ihr festhalten?' });
   await expect(sheet.getByRole('button', { name: 'Schließen', exact: true })).toBeFocused();
-  const destinations = sheet.getByRole('group', { name: 'Speichern als' });
-  await expect(destinations.getByRole('button', { name: 'Einkauf' })).toBeDisabled();
-  await sheet.getByRole('textbox').fill('Milch');
-  await destinations.getByRole('button', { name: 'Einkauf' }).click();
-  await expect(sheet.getByRole('status')).toHaveText('Gespeichert');
-  expect(api.requests.find((r) => r.path === '/quick-capture' && r.method === 'POST')?.body).toMatchObject({ text: 'Milch', destination: 'shopping' });
-  await expect(sheet.getByRole('textbox')).toHaveValue('');
+  await expect(sheet.getByRole('button', { name: 'Anlegen', exact: true })).toBeDisabled();
+  await sheet.getByRole('textbox').fill('Milch\nZahnarzt morgen 15 Uhr');
+  await expect(sheet.getByRole('group', { name: 'Art von Milch' }).getByRole('button', { name: 'Einkauf' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(sheet.getByRole('group', { name: 'Art von Zahnarzt' }).getByRole('button', { name: 'Termin' })).toHaveAttribute('aria-pressed', 'true');
   expect(await sheet.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await shot(page, 'new-sheet-capture.png');
+  await sheet.getByRole('button', { name: '2 anlegen', exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(api.requests.find((r) => r.path === '/shopping/lists/1/items' && r.method === 'POST')?.body).toMatchObject({ name: 'Milch' });
+  expect(api.requests.find((r) => r.path === '/calendar/events' && r.method === 'POST')?.body).toMatchObject({ title: 'Zahnarzt', all_day: false });
+  expect(api.requests.find((r) => r.path === '/calendar/events' && r.method === 'POST')?.body.starts_at).toMatch(/T15:00:00$/);
 });
 for (const width of [320, 390, 680, 768, 820, 1024, 1448])
   test(`calendar layouts at ${width}px`, async ({ page }) => {

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AppShell from '../../components/AppShell';
 import { DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
@@ -15,10 +15,18 @@ jest.mock('../../contexts/AppContext', () => ({
 jest.mock('../../lib/announce', () => ({ announce: jest.fn() }));
 const mockListMealPlans = jest.fn(() => Promise.resolve({ ok: true, data: [] }));
 const mockCreateQuickCapture = jest.fn(() => Promise.resolve({ ok: true, data: {} }));
+const mockCreateTask = jest.fn(() => Promise.resolve({ ok: true, data: {} }));
+const mockAddShoppingItem = jest.fn(() => Promise.resolve({ ok: true, data: {} }));
 jest.mock('../../lib/api', () => ({
   ...jest.requireActual('../../lib/api'),
   apiListMealPlans: (...args) => mockListMealPlans(...args),
   apiCreateQuickCapture: (...args) => mockCreateQuickCapture(...args),
+  apiCreateTask: (...args) => mockCreateTask(...args),
+  apiAddShoppingItem: (...args) => mockAddShoppingItem(...args),
+}));
+const mockToastSuccess = jest.fn();
+jest.mock('../../contexts/ToastContext', () => ({
+  useToast: () => ({ success: mockToastSuccess, error: jest.fn(), info: jest.fn() }),
 }));
 
 jest.mock('../../components/DashboardView', () => function MockDashboard({ onOpenSearch }) {
@@ -67,6 +75,15 @@ const messages = {
   'module.dashboard.quick_capture_title': 'Quick capture',
   'module.dashboard.quick_capture_placeholder': 'Note something',
   'toast.saved': 'Saved',
+  'module.capture.placeholder': 'For example: Tomorrow 3 pm dentist Max',
+  'module.capture.create': 'Add',
+  'module.capture.create_count': 'Add {count}',
+  'module.capture.created': 'Added',
+  'module.capture.created_count': '{count} entries added',
+  'module.capture.with_form': 'Or use a form',
+  'module.capture.kind_for': 'Type of {title}',
+  'module.capture.all_day': 'all day',
+  'module.capture.partial': '{count} not added. Please try again.',
   'toast.error': 'Something went wrong',
   dashboard: 'Dashboard',
   calendar: 'Calendar',
@@ -234,34 +251,50 @@ describe('AppShell mobile bottom navigation', () => {
     expect(screen.queryByRole('dialog', { name: 'What would you like to add?' })).not.toBeInTheDocument();
   });
 
-  it('saves quick capture text to the chosen destination and keeps the sheet open', async () => {
+  it('creates what the capture field recognised and closes the sheet', async () => {
     const loadShoppingLists = jest.fn();
-    mockCreateQuickCapture.mockClear();
-    mockAppState = baseState({ loadShoppingLists, loadQuickCaptureInbox: jest.fn(), loadActivity: jest.fn() });
+    const loadTasks = jest.fn();
+    [mockCreateTask, mockAddShoppingItem, mockToastSuccess].forEach((mock) => mock.mockClear());
+    mockAppState = baseState({ loadShoppingLists, loadTasks, shoppingLists: [{ id: 5, item_count: 3, checked_count: 1 }] });
     render(<AppShell />);
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'New', exact: true }));
     const sheet = screen.getByRole('dialog', { name: 'What would you like to add?' });
-    const destinations = within(sheet).getByRole('group', { name: 'Save as' });
-    expect(within(destinations).getByRole('button', { name: 'Shopping' })).toBeDisabled();
-    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Note something' }), { target: { value: '  Milk ' } });
-    fireEvent.click(within(destinations).getByRole('button', { name: 'Shopping' }));
-    expect(await within(sheet).findByRole('status')).toHaveTextContent('Saved');
-    expect(mockCreateQuickCapture).toHaveBeenCalledWith({ family_id: 1, text: 'Milk', destination: 'shopping' });
+    expect(within(sheet).getByRole('button', { name: 'Add' })).toBeDisabled();
+    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Quick capture' }), { target: { value: '2 l Milch\nOma anrufen morgen' } });
+    expect(within(sheet).getByText('Milch')).toBeInTheDocument();
+    expect(within(sheet).getByText('Oma anrufen')).toBeInTheDocument();
+    expect(within(within(sheet).getByRole('group', { name: 'Type of Milch' })).getByRole('button', { name: 'Shopping' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Add 2' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'What would you like to add?' })).not.toBeInTheDocument());
+    expect(mockAddShoppingItem).toHaveBeenCalledWith(5, { name: 'Milch', spec: '2 l', category: 'Kühlregal' });
+    expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({ family_id: 1, title: 'Oma anrufen', due_is_date: true }));
     expect(loadShoppingLists).toHaveBeenCalledWith(1);
-    expect(within(sheet).getByRole('textbox', { name: 'Note something' })).toHaveValue('');
-    expect(screen.getByRole('dialog', { name: 'What would you like to add?' })).toBeInTheDocument();
+    expect(loadTasks).toHaveBeenCalledWith(1);
+    expect(mockToastSuccess).toHaveBeenCalledWith('2 entries added');
   });
 
-  it('keeps quick capture text and reports failures', async () => {
-    mockCreateQuickCapture.mockResolvedValueOnce({ ok: false });
+  it('lets each entry change its type', async () => {
+    mockCreateQuickCapture.mockClear();
+    mockAppState = baseState({ loadQuickCaptureInbox: jest.fn() });
+    render(<AppShell />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'New', exact: true }));
+    const sheet = screen.getByRole('dialog', { name: 'What would you like to add?' });
+    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Quick capture' }), { target: { value: 'Idee fürs Wochenende' } });
+    fireEvent.click(within(within(sheet).getByRole('group', { name: 'Type of Idee fürs Wochenende' })).getByRole('button', { name: 'Note' }));
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Add' }));
+    await waitFor(() => expect(mockCreateQuickCapture).toHaveBeenCalledWith({ family_id: 1, text: 'Idee fürs Wochenende', destination: 'inbox' }));
+  });
+
+  it('keeps what failed and reports it', async () => {
+    mockCreateTask.mockResolvedValueOnce({ ok: false });
     mockAppState = baseState();
     render(<AppShell />);
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom navigation' })).getByRole('button', { name: 'New', exact: true }));
     const sheet = screen.getByRole('dialog', { name: 'What would you like to add?' });
-    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Note something' }), { target: { value: 'Call grandma' } });
-    fireEvent.click(within(within(sheet).getByRole('group', { name: 'Save as' })).getByRole('button', { name: 'Note' }));
-    expect(await within(sheet).findByRole('alert')).toHaveTextContent('Something went wrong');
-    expect(within(sheet).getByRole('textbox', { name: 'Note something' })).toHaveValue('Call grandma');
+    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Quick capture' }), { target: { value: 'Call grandma' } });
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Add' }));
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent('1 not added. Please try again.');
+    expect(within(sheet).getByRole('textbox', { name: 'Quick capture' })).toHaveValue('Call grandma');
   });
 
   it('hides quick capture in demo mode', () => {

@@ -1,0 +1,532 @@
+{
+  "description": "Shared cases for the capture parser: the web app's lib/capture/parseCapture.js and the Flutter app's lib/features/capture/capture_parser.dart must both pass them. Wednesday, 30 September 2026, 10:00.",
+  "now": "2026-09-30T10:00:00",
+  "members": [
+    {
+      "user_id": 1,
+      "display_name": "Max Müller"
+    },
+    {
+      "user_id": 2,
+      "display_name": "Anna"
+    },
+    {
+      "user_id": 3,
+      "display_name": "Lena"
+    }
+  ],
+  "products": [
+    "Milch",
+    "Äpfel",
+    "Brot",
+    "Eier",
+    "Bananen",
+    "Kaffee"
+  ],
+  "cases": [
+    {
+      "text": "Morgen 15 Uhr Zahnarzt Max",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "event",
+          "title": "Zahnarzt",
+          "date": "2026-10-01",
+          "time": "15:00",
+          "endTime": "16:00",
+          "dateOnly": false,
+          "assignees": [
+            1
+          ],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Elternabend am 12.10. um 19:30",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "event",
+          "title": "Elternabend",
+          "date": "2026-10-12",
+          "time": "19:30",
+          "endTime": "20:30",
+          "dateOnly": false,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Fußball Freitag 16-17:30 Uhr mit Lena",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "event",
+          "title": "Fußball",
+          "date": "2026-10-02",
+          "time": "16:00",
+          "endTime": "17:30",
+          "dateOnly": false,
+          "assignees": [
+            3
+          ],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Müll rausbringen jeden Dienstag",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Müll rausbringen",
+          "date": "2026-10-06",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": "weekly",
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Geschenk für Anna besorgen übermorgen",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Geschenk besorgen",
+          "date": "2026-10-02",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [
+            2
+          ],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Steuererklärung nächste Woche",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Steuererklärung",
+          "date": "2026-10-05",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Blumen gießen in 3 Tagen",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Blumen gießen",
+          "date": "2026-10-03",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Elternbrief unterschreiben",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Elternbrief unterschreiben",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "2 kg Äpfel",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "shopping",
+          "title": "Äpfel",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": "2 kg"
+        }
+      ]
+    },
+    {
+      "text": "3x Milch",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "shopping",
+          "title": "Milch",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": "3"
+        }
+      ]
+    },
+    {
+      "text": "Milch, Brot, Eier",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "shopping",
+          "title": "Milch",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        },
+        {
+          "kind": "shopping",
+          "title": "Brot",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        },
+        {
+          "kind": "shopping",
+          "title": "Eier",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Kaffee\nZahnarzt anrufen morgen",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "shopping",
+          "title": "Kaffee",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        },
+        {
+          "kind": "task",
+          "title": "Zahnarzt anrufen",
+          "date": "2026-10-01",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Yoga täglich um 7 Uhr",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "event",
+          "title": "Yoga",
+          "date": "2026-09-30",
+          "time": "07:00",
+          "endTime": "08:00",
+          "dateOnly": false,
+          "assignees": [],
+          "recurrence": "daily",
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Dentist tomorrow at 3pm for Max",
+      "lang": "en",
+      "expect": [
+        {
+          "kind": "event",
+          "title": "Dentist",
+          "date": "2026-10-01",
+          "time": "15:00",
+          "endTime": "16:00",
+          "dateOnly": false,
+          "assignees": [
+            1
+          ],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Take out the bins every Tuesday",
+      "lang": "en",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Take out the bins",
+          "date": "2026-10-06",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": "weekly",
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Parent evening 10/12 at 7",
+      "lang": "en",
+      "expect": [
+        {
+          "kind": "event",
+          "title": "Parent evening",
+          "date": "2026-10-12",
+          "time": "19:00",
+          "endTime": "20:00",
+          "dateOnly": false,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Call grandma next week",
+      "lang": "en",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Call grandma",
+          "date": "2026-10-05",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Swimming Saturday 9:30-11",
+      "lang": "en",
+      "expect": [
+        {
+          "kind": "event",
+          "title": "Swimming",
+          "date": "2026-10-03",
+          "time": "09:30",
+          "endTime": "11:00",
+          "dateOnly": false,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Zahnarzt Max",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Zahnarzt",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [
+            1
+          ],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Brot",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "shopping",
+          "title": "Brot",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Milch morgen",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Milch",
+          "date": "2026-10-01",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "15:30 Friseur",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "event",
+          "title": "Friseur",
+          "date": "2026-09-30",
+          "time": "15:30",
+          "endTime": "16:30",
+          "dateOnly": false,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Laternenfest am Sonntag",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Laternenfest",
+          "date": "2026-10-04",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Oma besuchen heute Abend",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Oma besuchen",
+          "date": "2026-09-30",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Soccer on Friday for Lena",
+      "lang": "en",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Soccer",
+          "date": "2026-10-02",
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [
+            3
+          ],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Pay rent monthly",
+      "lang": "en",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Pay rent",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": "monthly",
+          "spec": null
+        }
+      ]
+    },
+    {
+      "text": "Bananen, Zahnpasta kaufen",
+      "lang": "de",
+      "expect": [
+        {
+          "kind": "task",
+          "title": "Bananen, Zahnpasta kaufen",
+          "date": null,
+          "time": null,
+          "endTime": null,
+          "dateOnly": true,
+          "assignees": [],
+          "recurrence": null,
+          "spec": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+/* The capture sheet of Tribu 2.0 (docs/tribu-2-design.md): one field,
+   the entries it recognised, then the forms. Built on the design tokens. */
+
+.capture { display: grid; gap: var(--space-3); }
+.capture-input {
+  width: 100%;
+  min-height: 72px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  resize: vertical;
+}
+.capture-input::placeholder { color: var(--color-text-muted); }
+.capture-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+  background: var(--color-surface);
+}
+
+.capture-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.capture-entry {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.capture-entry + .capture-entry { border-top: 1px solid var(--color-line); }
+.capture-entry-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+}
+.capture-entry-icon.tone-blue { background: var(--bottom-sheet-blue-bg); color: var(--bottom-sheet-blue); }
+.capture-entry-icon.tone-green { background: var(--bottom-sheet-green-bg); color: var(--bottom-sheet-green); }
+.capture-entry-icon.tone-purple { background: var(--bottom-sheet-purple-bg); color: var(--bottom-sheet-purple); }
+.capture-entry-icon.tone-amber { background: var(--bottom-sheet-amber-bg); color: var(--bottom-sheet-amber); }
+.capture-entry-copy { display: grid; gap: 2px; min-width: 0; }
+.capture-entry-copy strong {
+  font-size: var(--type-body-size);
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.capture-entry-copy small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.capture-entry-repeat { display: inline-flex; align-items: center; gap: var(--space-1); }
+.capture-kinds {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--space-1);
+  padding: 3px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-raised);
+  justify-self: start;
+}
+.capture-kinds button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.capture-kinds button.active {
+  background: var(--color-surface);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-sm);
+}
+@media (min-width: 520px) {
+  .capture-entry { grid-template-columns: auto 1fr auto; }
+  .capture-kinds { grid-column: auto; }
+}
+
+.capture-error { margin: 0; color: var(--color-danger); font-size: var(--type-body-small-size); }
+.capture-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--grad-primary);
+  color: var(--color-text-on-accent);
+  font: inherit;
+  font-size: var(--type-body-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+.capture-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.capture-forms { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
+.capture-forms h3 {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.capture-form-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.capture-form-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-weight: 550;
+  cursor: pointer;
+}
+.capture-form-row button:hover { background: var(--color-surface-hover); color: var(--color-text); }

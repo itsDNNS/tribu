@@ -14,6 +14,7 @@ import '../styles/responsive.css';
 import '../styles/settings.css';
 import '../styles/shopping.css';
 import '../styles/tasks.css';
+import '../styles/capture.css';
 import '../styles/admin.css';
 import '../styles/display.css';
 
