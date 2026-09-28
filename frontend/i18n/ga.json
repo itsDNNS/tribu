@@ -578,6 +578,7 @@
   "search.no_results": "Níl torthaí ar \"{query}\"",
   "pwa.offline": "Tá tú as líne - ag taispeáint sonraí i dtaisce",
   "pwa.back_online": "Ar ais ar líne",
+  "offline.waiting": "Ag fanacht le líonra",
   "pwa.update_available": "Leagan nua ar fáil",
   "pwa.update_action": "Nuashonrú",
   "pwa.install_prompt": "Suiteáil Tribu le haghaidh rochtain tapaidh",

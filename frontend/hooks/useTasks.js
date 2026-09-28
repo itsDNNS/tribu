@@ -8,6 +8,7 @@ import { weekStartIndex } from '../lib/dates';
 import { postponeTarget } from '../lib/taskGroups';
 import { UNDO_WINDOW_MS } from '../lib/undo';
 import * as api from '../lib/api';
+import { sendWhenOnline } from '../lib/offline';
 
 const EMPTY_EDIT_FORM = {
   title: '',
@@ -77,9 +78,17 @@ export function useTasks() {
     if (!pending) return;
     pendingRef.current.delete(id);
     clearTimeout(pending.timer);
-    const { ok } = pending.kind === 'delete'
-      ? await api.apiDeleteTask(id)
-      : await api.apiUpdateTask(id, { status: 'done' });
+    // Without a network the task stays done (marked as waiting) and is sent
+    // once the connection is back (Tribu 2.0, D6).
+    let ok = false;
+    try {
+      ({ ok } = await sendWhenOnline(
+        () => (pending.kind === 'delete' ? api.apiDeleteTask(id) : api.apiUpdateTask(id, { status: 'done' })),
+        () => { if (pending.kind !== 'delete') setOverride(id, 'waiting'); },
+      ));
+    } catch {
+      ok = false;
+    }
     if (!ok) toastError(t(messages, 'toast.error'));
     await loadTasks();
     setOverride(id, null);
@@ -108,7 +117,11 @@ export function useTasks() {
 
   const visibleTasks = useMemo(() => tasks
     .filter((task) => overrides[task.id] !== 'deleted')
-    .map((task) => (overrides[task.id] === 'done' ? { ...task, status: 'done' } : task))
+    .map((task) => {
+      if (overrides[task.id] === 'done') return { ...task, status: 'done' };
+      if (overrides[task.id] === 'waiting') return { ...task, status: 'done', waiting: true };
+      return task;
+    })
     .filter((task) => !assigneeFilter || String(task.assigned_to_user_id || '') === String(assigneeFilter)),
   [tasks, overrides, assigneeFilter]);
 
@@ -139,6 +152,7 @@ export function useTasks() {
   }
 
   async function toggleTask(task) {
+    if (task.waiting) return;
     if (task.status !== 'done') {
       schedule(task, 'done', t(messages, 'module.tasks.completed'));
       return;

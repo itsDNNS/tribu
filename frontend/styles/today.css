@@ -170,6 +170,15 @@
   overflow-wrap: anywhere;
 }
 .today-row.done .today-row-title { color: var(--color-text-muted); text-decoration: line-through; }
+.today-row-waiting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  color: var(--color-text-muted);
+}
+.today-row-waiting svg { color: var(--color-warning); flex: none; }
 .today-row.past .today-row-title,
 .today-row.past .today-row-time { color: var(--color-text-muted); }
 .today-row .task-row-check:disabled { cursor: default; opacity: 0.6; }

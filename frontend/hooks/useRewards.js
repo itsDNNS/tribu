@@ -85,13 +85,15 @@ export function useRewards() {
       return;
     }
     setLoading(true);
+    // Without a network the rewards keep what they last showed.
+    const failed = { ok: false };
     const [cRes, bRes, catRes, rRes, tRes] = await Promise.all([
       api.apiGetRewardCurrency(familyId),
       api.apiGetRewardBalances(familyId),
       api.apiGetRewardCatalog(familyId),
       api.apiGetEarningRules(familyId),
       api.apiGetRewardTransactions(familyId, null, 50, 0),
-    ]);
+    ].map((load) => load.catch(() => failed)));
     if (cRes.ok) setCurrency(cRes.data);
     if (bRes.ok) setBalances(bRes.data?.balances || []);
     if (catRes.ok) setCatalog(catRes.data);

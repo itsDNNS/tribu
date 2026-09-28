@@ -578,6 +578,7 @@
   "search.no_results": "Ni rezultatov za \"{query}\"",
   "pwa.offline": "Ste brez povezave – prikazani so predpomnjeni podatki",
   "pwa.back_online": "Ponovno na spletu",
+  "offline.waiting": "Čaka na omrežje",
   "pwa.update_available": "Na voljo nova različica",
   "pwa.update_action": "posodobitev",
   "pwa.install_prompt": "Namestite Tribu za hiter dostop",

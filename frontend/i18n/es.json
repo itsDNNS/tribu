@@ -579,6 +579,7 @@
   "search.no_results": "No hay resultados para \"{query}\"",
   "pwa.offline": "Estás desconectado: se muestran datos almacenados en caché",
   "pwa.back_online": "De nuevo en línea",
+  "offline.waiting": "Esperando conexión",
   "pwa.update_available": "Nueva versión disponible",
   "pwa.update_action": "Actualizar",
   "pwa.install_prompt": "Instala Tribu para acceso rápido",

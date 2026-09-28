@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Cake, Check, ChevronDown, Inbox, ShoppingCart, Sparkles, Utensils, X } from 'lucide-react';
+import { Cake, Check, ChevronDown, CloudOff, Inbox, ShoppingCart, Sparkles, Utensils, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useCurrentMinute } from '../../hooks/useCurrentMinute';
@@ -92,6 +92,12 @@ function TodayRow({ item, task, past, ctx, timeLabel = null }) {
       )}
       <button type="button" className="today-row-main" onClick={open}>
         <span className="today-row-title">{title}</span>
+        {task?.waiting && (
+          <span className="today-row-waiting">
+            <CloudOff size={13} aria-hidden="true" />
+            {t(messages, 'offline.waiting')}
+          </span>
+        )}
       </button>
       <People ids={item.people} members={members} messages={messages} />
     </div>

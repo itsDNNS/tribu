@@ -205,6 +205,7 @@ button.task-row-main { cursor: pointer; }
 }
 .task-row-due.overdue { color: var(--color-warning); font-weight: 600; }
 .task-row-flag { color: var(--color-danger); font-weight: 600; }
+.task-row-waiting svg { color: var(--color-warning); }
 
 .task-row-more {
   flex: none;

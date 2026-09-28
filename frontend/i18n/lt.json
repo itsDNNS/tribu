@@ -578,6 +578,7 @@
   "search.no_results": "Nėra rezultatų pagal „{query}“",
   "pwa.offline": "Esate neprisijungę – rodomi talpyklos duomenys",
   "pwa.back_online": "Atgal internete",
+  "offline.waiting": "Laukia tinklo",
   "pwa.update_available": "Galima nauja versija",
   "pwa.update_action": "Atnaujinti",
   "pwa.install_prompt": "Įdiekite Tribu, kad galėtumėte greitai pasiekti",

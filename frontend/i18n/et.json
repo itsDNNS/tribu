@@ -579,6 +579,7 @@
   "search.no_results": "Päringule \"{query}\" ei leitud tulemusi",
   "pwa.offline": "Olete võrguühenduseta – kuvatakse vahemällu salvestatud andmed",
   "pwa.back_online": "Tagasi võrgus",
+  "offline.waiting": "Ootab võrku",
   "pwa.update_available": "Uus versioon saadaval",
   "pwa.update_action": "Värskenda",
   "pwa.install_prompt": "Kiireks juurdepääsuks installige Tribu",

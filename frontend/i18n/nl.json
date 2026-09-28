@@ -578,6 +578,7 @@
   "search.no_results": "Geen resultaat voor '{query}'",
   "pwa.offline": "Je bent offline en toont gegevens in de cache",
   "pwa.back_online": "Terug online",
+  "offline.waiting": "Wacht op netwerk",
   "pwa.update_available": "Nieuwe versie beschikbaar",
   "pwa.update_action": "Bijwerken",
   "pwa.install_prompt": "Installeer Tribu voor snelle toegang",

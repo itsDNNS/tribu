@@ -99,6 +99,27 @@ describe('useTasks', () => {
       expect(api.apiDeleteTask).toHaveBeenCalledWith(2);
     });
 
+    it('keeps a completion without network as waiting and sends it once online', async () => {
+      const api = require('../../lib/api');
+      api.apiUpdateTask.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      const { result } = renderHook(() => useTasks());
+
+      await act(async () => { await result.current.toggleTask(mockContext.tasks[0]); });
+      await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
+      const waiting = result.current.visibleTasks.find((task) => task.id === 1);
+      expect(waiting).toEqual(expect.objectContaining({ status: 'done', waiting: true }));
+
+      // Tapping it meanwhile does not reopen it on the server.
+      await act(async () => { await result.current.toggleTask(waiting); });
+      expect(api.apiUpdateTask).toHaveBeenCalledTimes(1);
+
+      await act(async () => { window.dispatchEvent(new Event('online')); });
+      expect(api.apiUpdateTask).toHaveBeenCalledTimes(2);
+      expect(api.apiUpdateTask).toHaveBeenLastCalledWith(1, { status: 'done' });
+      expect(mockLoadTasks).toHaveBeenCalled();
+      expect(result.current.visibleTasks.find((task) => task.id === 1).waiting).toBeUndefined();
+    });
+
     it('sends what is still waiting when the view goes away', async () => {
       const api = require('../../lib/api');
       const { result, unmount } = renderHook(() => useTasks());

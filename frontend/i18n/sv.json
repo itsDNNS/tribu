@@ -579,6 +579,7 @@
   "search.no_results": "Inga resultat för \"{query}\"",
   "pwa.offline": "Du är offline - visar cachad data",
   "pwa.back_online": "Tillbaka online",
+  "offline.waiting": "Väntar på nätverk",
   "pwa.update_available": "Ny version tillgänglig",
   "pwa.update_action": "Uppdatering",
   "pwa.install_prompt": "Installera Tribu för snabb åtkomst",

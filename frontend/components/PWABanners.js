@@ -3,6 +3,8 @@ import { Download, RefreshCw, WifiOff, Wifi } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 
+export const OFFLINE_BANNER_DELAY_MS = 4000;
+
 export function PWABanners() {
   const { messages } = useApp();
   const [isOffline, setIsOffline] = useState(false);
@@ -12,22 +14,39 @@ export function PWABanners() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const waitingWorkerRef = useRef(null);
 
+  // A short dropout (a tunnel, the lift) should not flash a banner: it
+  // appears after a few seconds offline, and "back online" only follows a
+  // banner that was actually shown. Check-offs made meanwhile wait and are
+  // sent once the network is back (lib/offline.js).
   useEffect(() => {
-    setIsOffline(!navigator.onLine);
+    let offlineTimer;
     let backOnlineTimer;
+    let shown = false;
 
-    const goOffline = () => setIsOffline(true);
+    const goOffline = () => {
+      clearTimeout(offlineTimer);
+      offlineTimer = setTimeout(() => {
+        shown = true;
+        setIsOffline(true);
+      }, OFFLINE_BANNER_DELAY_MS);
+    };
     const goOnline = () => {
+      clearTimeout(offlineTimer);
       setIsOffline(false);
+      if (!shown) return;
+      shown = false;
       setShowBackOnline(true);
+      clearTimeout(backOnlineTimer);
       backOnlineTimer = setTimeout(() => setShowBackOnline(false), 3000);
     };
 
+    if (!navigator.onLine) goOffline();
     window.addEventListener('offline', goOffline);
     window.addEventListener('online', goOnline);
     return () => {
       window.removeEventListener('offline', goOffline);
       window.removeEventListener('online', goOnline);
+      clearTimeout(offlineTimer);
       clearTimeout(backOnlineTimer);
     };
   }, []);

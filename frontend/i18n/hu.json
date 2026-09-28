@@ -578,6 +578,7 @@
   "search.no_results": "Nincs találat a \"{query}\" kifejezésre",
   "pwa.offline": "Offline állapotban van – a gyorsítótárazott adatok láthatók",
   "pwa.back_online": "Vissza online",
+  "offline.waiting": "Hálózatra vár",
   "pwa.update_available": "Új verzió elérhető",
   "pwa.update_action": "Frissítés",
   "pwa.install_prompt": "Telepítse a Tribu-t a gyors hozzáférés érdekében",

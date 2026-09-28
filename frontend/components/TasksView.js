@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Plus, Check, ChevronDown, MoreHorizontal, Flag, Repeat, Clock, Moon, Sun, CalendarArrowUp, Pencil, Trash2,
+  Plus, Check, ChevronDown, CloudOff, MoreHorizontal, Flag, Repeat, Clock, Moon, Sun, CalendarArrowUp, Pencil, Trash2,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
@@ -38,7 +38,7 @@ function TaskRow({ task, group, members, messages, lang, timeFormat, canEdit, on
   const content = (
     <>
       <span className="task-row-title">{task.title}</span>
-      {(due || high || task.recurrence) && (
+      {(due || high || task.recurrence || task.waiting) && (
         <span className="task-row-meta">
           {high && (
             <span className="task-row-flag">
@@ -56,6 +56,12 @@ function TaskRow({ task, group, members, messages, lang, timeFormat, canEdit, on
             <span className="task-row-repeat">
               <Repeat size={13} aria-hidden="true" />
               {t(messages, `module.tasks.recurrence.${task.recurrence}`)}
+            </span>
+          )}
+          {task.waiting && (
+            <span className="task-row-waiting">
+              <CloudOff size={13} aria-hidden="true" />
+              {t(messages, 'offline.waiting')}
             </span>
           )}
         </span>
@@ -92,7 +98,7 @@ function TaskRow({ task, group, members, messages, lang, timeFormat, canEdit, on
             type="button"
             className="task-row-main"
             onClick={() => onEdit(task)}
-            aria-label={t(messages, 'aria.edit_task').replace('{title}', task.title)}
+            aria-label={`${t(messages, 'aria.edit_task').replace('{title}', task.title)}${task.waiting ? `. ${t(messages, 'offline.waiting')}` : ''}`}
           >
             {content}
           </button>

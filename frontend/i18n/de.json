@@ -600,6 +600,7 @@
   "search.no_results": "Keine Ergebnisse für \"{query}\"",
   "pwa.offline": "Du bist offline - gespeicherte Daten werden angezeigt",
   "pwa.back_online": "Wieder online",
+  "offline.waiting": "Wartet auf Netz",
   "pwa.update_available": "Neue Version verfügbar",
   "pwa.update_action": "Aktualisieren",
   "pwa.install_prompt": "Tribu installieren für schnellen Zugriff",

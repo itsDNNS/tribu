@@ -579,6 +579,7 @@
   "search.no_results": "Ingen resultater for \"{query}\"",
   "pwa.offline": "Du er frakoblet – viser bufrede data",
   "pwa.back_online": "Tilbake på nett",
+  "offline.waiting": "Venter på nettverk",
   "pwa.update_available": "Ny versjon tilgjengelig",
   "pwa.update_action": "Oppdater",
   "pwa.install_prompt": "Installer Tribu for rask tilgang",

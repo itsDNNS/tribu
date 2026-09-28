@@ -578,6 +578,7 @@
   "search.no_results": "Žádné výsledky pro \"{query}\"",
   "pwa.offline": "Jste offline – zobrazují se data uložená v mezipaměti",
   "pwa.back_online": "Zpět online",
+  "offline.waiting": "Čeká na síť",
   "pwa.update_available": "K dispozici nová verze",
   "pwa.update_action": "Aktualizovat",
   "pwa.install_prompt": "Nainstalujte Tribu pro rychlý přístup",

@@ -580,6 +580,7 @@
   "search.no_results": "Niciun rezultat pentru „{query}”",
   "pwa.offline": "Ești offline - afișează datele din cache",
   "pwa.back_online": "Înapoi online",
+  "offline.waiting": "Așteaptă rețeaua",
   "pwa.update_available": "Versiune nouă disponibilă",
   "pwa.update_action": "Actualizare",
   "pwa.install_prompt": "Instalați Tribu pentru acces rapid",

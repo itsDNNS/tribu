@@ -579,6 +579,7 @@
   "search.no_results": "Ei tuloksia haulle \"{query}\"",
   "pwa.offline": "Olet offline-tilassa – näytetään välimuistissa olevat tiedot",
   "pwa.back_online": "Takaisin verkkoon",
+  "offline.waiting": "Odottaa verkkoa",
   "pwa.update_available": "Uusi versio saatavilla",
   "pwa.update_action": "Päivitä",
   "pwa.install_prompt": "Asenna Tribu nopeaa käyttöä varten",

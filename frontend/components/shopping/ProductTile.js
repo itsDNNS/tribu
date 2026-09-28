@@ -1,6 +1,6 @@
 import { useShoppingText } from "./useShoppingText";
 import { useEffect, useRef } from 'react';
-import { Check, MoreVertical, Trash2, Undo2 } from 'lucide-react';
+import { Check, CloudOff, MoreVertical, Trash2, Undo2 } from 'lucide-react';
 import { GroceryArt } from './catalog';
 import { useSwipeActions } from '../../hooks/useSwipeActions';
 import SwipeReveal, { swipeStyle } from '../SwipeReveal';
@@ -13,6 +13,7 @@ export default function ProductTile({
   onEdit,
   onRemove,
   pending,
+  waiting = false,
   swipe = false
 }) {
   const tr = useShoppingText();
@@ -30,7 +31,7 @@ export default function ProductTile({
   };
   useEffect(() => cancel, []);
   const body = <>
- <button className="shop-tile-main" role="checkbox" aria-checked={item.checked} aria-label={`${item.name}, ${item.spec || '1'}. ${item.checked ? tr("module.shopping.visual.wieder_auf_die_liste_setzen") : tr("module.shopping.visual.als_eingekauft_markieren")}`} disabled={pending} onPointerDown={e => {
+ <button className="shop-tile-main" role="checkbox" aria-checked={item.checked} aria-label={`${item.name}, ${item.spec || '1'}. ${waiting ? `${tr('offline.waiting')}. ` : ''}${item.checked ? tr("module.shopping.visual.wieder_auf_die_liste_setzen") : tr("module.shopping.visual.als_eingekauft_markieren")}`} disabled={pending} onPointerDown={e => {
       if (e.button !== 0 || !onEdit) return;
       cancel();
       suppressed.current = false;
@@ -61,7 +62,7 @@ export default function ProductTile({
       onToggle(item.id, item.checked);
     }}>
  <span className="shop-tile-check">{item.checked && <Check size={12} />}</span>{item.photo ? <img className="shop-product-photo" src={item.photo} alt="" /> : <GroceryArt name={item.name} />}
- <span className="shop-product-copy"><span className="shop-product-name">{item.name}</span><span className="shop-product-qty">{item.spec || tr("module.shopping.visual.1_stuck")}</span><span className="shop-product-note">{item.notes || ''}</span></span></button>
+ <span className="shop-product-copy"><span className="shop-product-name">{item.name}</span><span className="shop-product-qty">{item.spec || tr("module.shopping.visual.1_stuck")}</span>{waiting ? <span className="shop-product-note shop-waiting"><CloudOff size={11} aria-hidden="true" />{tr('offline.waiting')}</span> : <span className="shop-product-note">{item.notes || ''}</span>}</span></button>
  {item.priority === 'urgent' && !item.checked && <span className="shop-urgent">{tr("module.shopping.visual.dringend")}</span>}{onEdit && <button className="shop-tile-menu" aria-label={tr("module.shopping.visual.details_zu_0", [item.name])} onClick={() => onEdit(item)}><MoreVertical size={17} /></button>}</>;
   const className = `shop-tile ${item.checked ? 'done ' : ''}${item.priority === 'urgent' && !item.checked ? 'urgent' : ''}`;
   if (!swipe) return <article className={className}>{body}</article>;

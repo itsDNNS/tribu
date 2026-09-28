@@ -579,6 +579,7 @@
   "search.no_results": "Nema rezultata za \"{query}\"",
   "pwa.offline": "Izvan mreže ste - prikazuju se podaci iz predmemorije",
   "pwa.back_online": "Ponovno na mreži",
+  "offline.waiting": "Čeka mrežu",
   "pwa.update_available": "Nova verzija dostupna",
   "pwa.update_action": "Ažuriranje",
   "pwa.install_prompt": "Instalirajte Tribu za brzi pristup",

@@ -184,6 +184,13 @@
   font-variant-numeric: tabular-nums;
 }
 .shop-page .shop-line-list .shop-product-note:empty { display: none; }
+.shop-page .shop-product-note.shop-waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+}
+.shop-page .shop-waiting svg { color: var(--color-warning); flex: none; }
 .shop-page .shop-line-list .shop-tile-check {
   left: var(--space-4);
   top: calc(50% - 12px);
