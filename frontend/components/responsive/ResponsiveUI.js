@@ -29,6 +29,7 @@ export default function ResponsiveUI({
   sheet,
   setSheet,
   createKind = null,
+  sharedText = '',
 }) {
   const app = useApp();
   const { activeView, messages, isChild } = app;
@@ -91,11 +92,12 @@ export default function ResponsiveUI({
           onClose={() => setSheet(null)}
         />
       )}
-      {sheet === 'new' && isChild && <SuggestSheet onClose={() => setSheet(null)} />}
+      {sheet === 'new' && isChild && <SuggestSheet initialText={sharedText} onClose={() => setSheet(null)} />}
       {sheet === 'new' && !isChild && (
         <NewSheet
           onClose={() => setSheet(null)}
           onCreate={onCreate}
+          initialText={sharedText}
           defaultKind={createKind || { shopping: 'shopping', calendar: 'event' }[activeView] || 'task'}
         />
       )}

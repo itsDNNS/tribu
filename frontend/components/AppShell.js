@@ -5,7 +5,7 @@ import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
-import { resolveLaunchAction } from '../lib/navigationState';
+import { resolveLaunchAction, resolveSharedText } from '../lib/navigationState';
 import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf, navKeyOf, NO_HIDDEN_AREAS } from '../lib/navigation';
 import AppHeader from './shell/AppHeader';
 import SubNav from './shell/SubNav';
@@ -74,6 +74,7 @@ export default function AppShell() {
   const [mobileSheet,setMobileSheet] = useState(null);
   const [createRequest,setCreateRequest] = useState(null);
   const [createKind, setCreateKind] = useState(null);
+  const [sharedText, setSharedText] = useState('');
   useEffect(()=>{setMobileSheet(null);setCreateRequest(null);},[familyId]);
 
   // Home screen shortcuts (Tribu 2.0, N-3): start shopping or open "+" on
@@ -83,8 +84,15 @@ export default function AppShell() {
     if (launchHandled.current || loading || !me) return;
     launchHandled.current = true;
     const action = resolveLaunchAction(window.location.search);
-    if (!action) return;
+    const shared = resolveSharedText(window.location.search);
+    if (!action && !shared) return;
     window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
+    // Shared from another app (Tribu 2.0, N-5): "+" opens with the text.
+    if (shared) {
+      setSharedText(shared);
+      setMobileSheet('new');
+      return;
+    }
     if (action === 'shopping-trip') {
       try { sessionStorage.setItem('tribu_shopping_trip', '1'); } catch { /* private mode */ }
       setActiveView('shopping');
@@ -93,7 +101,11 @@ export default function AppShell() {
       setMobileSheet('new');
     }
   }, [loading, me, isChild, setActiveView]);
-  useEffect(() => { if (mobileSheet !== 'new') setCreateKind(null); }, [mobileSheet]);
+  useEffect(() => {
+    if (mobileSheet === 'new') return;
+    setCreateKind(null);
+    setSharedText('');
+  }, [mobileSheet]);
   const [collapsed, setCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -307,6 +319,7 @@ export default function AppShell() {
         sheet={mobileSheet}
         setSheet={setMobileSheet}
         createKind={createKind}
+        sharedText={sharedText}
         onCreate={(kind) => {
           const route = { event: 'calendar', task: 'tasks', shopping: 'shopping', meal: 'meal_plans' }[kind];
           navigate(route);
