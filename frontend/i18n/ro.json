@@ -786,6 +786,7 @@
   "module.today.shopping_hint_other": "{count} de lucruri pe lista de cumpărături",
   "module.today.shopping_start": "Începe cumpărăturile",
   "module.today.shopping_view": "Vezi lista",
+  "module.today.show_in_calendar": "Arată în calendar",
   "module.today.setup_hint": "Configurare: {completed} din {total}",
   "module.today.setup_continue": "Continuă",
   "module.today.filter": "Ziua cui",

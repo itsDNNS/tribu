@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Cake, Check, ChevronDown, CloudOff, Inbox, ShoppingCart, Sparkles, Utensils, X } from 'lucide-react';
+import { Cake, CalendarDays, Check, ChevronDown, CloudOff, Inbox, ShoppingCart, Sparkles, Utensils, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useCurrentMinute } from '../../hooks/useCurrentMinute';
@@ -16,6 +16,8 @@ import SwipeReveal, { swipeStyle } from '../SwipeReveal';
 import RewardsDashboardWidget from '../RewardsDashboardWidget';
 import { SetupChecklist, useSetupChecklist } from './SetupChecklist';
 import KidsToday from './KidsToday';
+import CalendarDialog from '../calendar/CalendarDialog';
+import EventDetails from '../calendar/EventDetails';
 
 const DAYS = 7;
 
@@ -50,13 +52,13 @@ function People({ ids, members, messages }) {
 }
 
 function TodayRow({ item, task, past, ctx, timeLabel = null }) {
-  const { messages, locale, timeFormat, members, setActiveView, toggleTask, canComplete } = ctx;
+  const { messages, locale, timeFormat, members, setActiveView, toggleTask, canComplete, openEvent } = ctx;
   const title = item.kind === 'birthday'
     ? t(messages, 'module.today.birthday').replace('{name}', item.title)
     : item.title;
   const firstPerson = members.find((member) => item.people.includes(Number(member.user_id)));
   const open = () => {
-    if (item.kind === 'event') openCalendarDay(setActiveView, item.date, item.time);
+    if (item.kind === 'event') openEvent(item);
     else setActiveView({ task: 'tasks', meal: 'meal_plans', birthday: 'contacts' }[item.kind]);
   };
   // Tribu 2.0 (N-4): swipe right to finish a task, as in the task list.
@@ -249,8 +251,16 @@ export default function TodayView({ onOpenCapture } = {}) {
   const showShopping = Boolean(shopper) || (shoppingCount > 0 && shoppingTime);
   const tasksById = new Map(tk.visibleTasks.map((task) => [task.id, task]));
   const canComplete = (task) => !isChild || (me?.user_id != null && String(task.assigned_to_user_id) === String(me.user_id));
+  // Tribu 2.0 (K5): an event opens its details over Today.
+  const [eventSheet, setEventSheet] = useState(null);
+  const openEvent = (item) => {
+    const matches = dayEvents.filter((event) => String(event.id) === String(item.id));
+    const event = matches.find((entry) => String(entry.starts_at || '').startsWith(item.date)) || matches[0];
+    if (event) setEventSheet({ event, item });
+    else openCalendarDay(setActiveView, item.date, item.time);
+  };
   const ctx = {
-    messages, locale, timeFormat, members, setActiveView, toggleTask: tk.toggleTask, canComplete,
+    messages, locale, timeFormat, members, setActiveView, toggleTask: tk.toggleTask, canComplete, openEvent,
   };
   const hasTimed = day.today.some((item) => item.time || item.kind === 'meal');
   const heroName = me?.display_name?.split(' ')[0]
@@ -436,6 +446,30 @@ export default function TodayView({ onOpenCapture } = {}) {
         )}
         {!hiddenAreas.includes('rewards') && <RewardsDashboardWidget />}
       </aside>
+      {eventSheet && (
+        <CalendarDialog
+          title={t(messages, 'module.calendar.mockup.moment')}
+          messages={messages}
+          onClose={() => setEventSheet(null)}
+          actions={(
+            <>
+              <button type="button" className="tc-btn" onClick={() => setEventSheet(null)}>
+                {t(messages, 'close')}
+              </button>
+              <button
+                type="button"
+                className="tc-btn primary"
+                onClick={() => openCalendarDay(setActiveView, eventSheet.item.date, eventSheet.item.time)}
+              >
+                <CalendarDays size={15} />
+                {t(messages, 'module.today.show_in_calendar')}
+              </button>
+            </>
+          )}
+        >
+          <EventDetails event={eventSheet.event} members={members} messages={messages} locale={locale} timeFormat={timeFormat} />
+        </CalendarDialog>
+      )}
     </div>
   );
 }

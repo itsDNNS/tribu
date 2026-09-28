@@ -783,6 +783,7 @@
   "module.today.shopping_hint": "Na popisu za kupnju: {count}",
   "module.today.shopping_start": "Kreni u kupnju",
   "module.today.shopping_view": "Prikaži popis",
+  "module.today.show_in_calendar": "Prikaži u kalendaru",
   "module.today.setup_hint": "Postavljanje: {completed} od {total}",
   "module.today.setup_continue": "Nastavi",
   "module.today.filter": "Čiji dan",

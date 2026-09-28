@@ -784,6 +784,7 @@
   "module.today.shopping_hint_one": "{count} ting på handlelisten",
   "module.today.shopping_start": "Start handling",
   "module.today.shopping_view": "Se listen",
+  "module.today.show_in_calendar": "Vis i kalenderen",
   "module.today.setup_hint": "Oppsett: {completed} av {total} ferdig",
   "module.today.setup_continue": "Fortsett",
   "module.today.filter": "Hvem sin dag",

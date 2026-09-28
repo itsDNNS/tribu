@@ -782,6 +782,7 @@
   "module.today.shopping_hint": "Na nákupnom zozname: {count}",
   "module.today.shopping_start": "Začať nakupovať",
   "module.today.shopping_view": "Zobraziť zoznam",
+  "module.today.show_in_calendar": "Zobraziť v kalendári",
   "module.today.setup_hint": "Nastavenie: {completed} z {total}",
   "module.today.setup_continue": "Pokračovať",
   "module.today.filter": "Čí deň",

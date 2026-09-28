@@ -784,6 +784,7 @@
   "module.today.shopping_hint_one": "{count} cosa nella lista della spesa",
   "module.today.shopping_start": "Inizia la spesa",
   "module.today.shopping_view": "Vedi la lista",
+  "module.today.show_in_calendar": "Mostra nel calendario",
   "module.today.setup_hint": "Configurazione: {completed} di {total}",
   "module.today.setup_continue": "Continua",
   "module.today.filter": "La giornata di chi",

@@ -87,6 +87,11 @@ function rowTitles(list) {
 }
 
 describe('TodayView', () => {
+  beforeAll(() => {
+    HTMLDialogElement.prototype.showModal = function showModal() { this.setAttribute('open', ''); };
+    HTMLDialogElement.prototype.close = function close() { this.removeAttribute('open'); };
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockNow = new Date(2026, 8, 30, 10, 0);
@@ -300,5 +305,17 @@ describe('TodayView', () => {
     await renderToday();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Good morning, Max');
     expect(screen.getByText('Wednesday, September 30')).toBeInTheDocument();
+  });
+  it('opens an event\'s details over Today, then the calendar', async () => {
+    await renderToday();
+    fireEvent.click(screen.getByRole('button', { name: /^Football/ }));
+    const dialog = screen.getByRole('dialog', { name: 'A family moment' });
+    expect(dialog).toHaveTextContent('Football');
+    expect(dialog).toHaveTextContent('Lena');
+    expect(mockApp.setActiveView).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Show in calendar' }));
+    expect(mockApp.setActiveView).toHaveBeenCalledWith('calendar');
+    expect(new Date(sessionStorage.getItem('tribu_calendar_focus')).getHours()).toBe(15);
   });
 });

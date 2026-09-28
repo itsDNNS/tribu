@@ -784,6 +784,7 @@
   "module.today.shopping_hint_one": "{count} нещо в списъка за пазаруване",
   "module.today.shopping_start": "Започни пазаруването",
   "module.today.shopping_view": "Виж списъка",
+  "module.today.show_in_calendar": "Покажи в календара",
   "module.today.setup_hint": "Настройка: {completed} от {total} готови",
   "module.today.setup_continue": "Продължи",
   "module.today.filter": "Чий ден",

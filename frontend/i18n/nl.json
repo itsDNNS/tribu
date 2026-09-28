@@ -783,6 +783,7 @@
   "module.today.shopping_hint_one": "{count} ding op de boodschappenlijst",
   "module.today.shopping_start": "Boodschappen doen",
   "module.today.shopping_view": "Lijst bekijken",
+  "module.today.show_in_calendar": "Toon in agenda",
   "module.today.setup_hint": "Instellen: {completed} van {total} klaar",
   "module.today.setup_continue": "Doorgaan",
   "module.today.filter": "Wiens dag",

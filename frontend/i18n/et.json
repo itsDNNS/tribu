@@ -783,6 +783,7 @@
   "module.today.shopping_hint": "Ostunimekirjas: {count}",
   "module.today.shopping_start": "Alusta poeskäiku",
   "module.today.shopping_view": "Vaata nimekirja",
+  "module.today.show_in_calendar": "Näita kalendris",
   "module.today.setup_hint": "Seadistus: {completed}/{total} tehtud",
   "module.today.setup_continue": "Jätka",
   "module.today.filter": "Kelle päev",

@@ -714,6 +714,10 @@
   font-size: 11px;
   color: var(--tc-muted);
 }
+.tc-detail-line p a {
+  color: var(--tc-purple);
+  text-underline-offset: 2px;
+}
 .tc-detail-description {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

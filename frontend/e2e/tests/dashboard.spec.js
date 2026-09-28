@@ -87,6 +87,24 @@ test.describe('Today', () => {
     await expect(page.locator('.tc-calendar-grid, .ui-month-grid, .ui-day-strip').first()).toBeVisible({ timeout: 10000 });
   });
 
+  test('an event opens its details over Today (K5)', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const today = localIsoDaysFromToday(0, 0, 0).slice(0, 10);
+    await seedCalendarEvent(apiCtx, familyId, {
+      title: 'E2E parents evening', starts_at: `${today}T23:00:00`, ends_at: `${today}T23:30:00`, location: 'School hall',
+    });
+
+    await page.reload();
+    const day = page.locator('#main-content').getByRole('region', { name: 'Today' });
+    await day.getByRole('button', { name: /E2E parents evening/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'A family moment' });
+    await expect(dialog).toContainText('E2E parents evening');
+    await expect(dialog).toContainText('School hall');
+
+    await dialog.getByRole('button', { name: 'Show in calendar' }).click();
+    await expect(page.getByRole('heading', { name: 'Calendar', level: 1 })).toBeVisible({ timeout: 10000 });
+  });
+
   test('completes a task from Today with undo', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
     const today = localIsoDaysFromToday(0, 0, 0).slice(0, 10);

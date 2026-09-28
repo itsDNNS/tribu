@@ -783,6 +783,7 @@
   "module.today.shopping_hint": "Iepirkumu sarakstā: {count}",
   "module.today.shopping_start": "Sākt iepirkties",
   "module.today.shopping_view": "Skatīt sarakstu",
+  "module.today.show_in_calendar": "Rādīt kalendārā",
   "module.today.setup_hint": "Iestatīšana: {completed} no {total}",
   "module.today.setup_continue": "Turpināt",
   "module.today.filter": "Kura diena",

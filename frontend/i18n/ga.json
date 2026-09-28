@@ -782,6 +782,7 @@
   "module.today.shopping_hint": "{count} rud ar an liosta siopadóireachta",
   "module.today.shopping_start": "Tosaigh ag siopadóireacht",
   "module.today.shopping_view": "Féach ar an liosta",
+  "module.today.show_in_calendar": "Taispeáin san fhéilire",
   "module.today.setup_hint": "Socrú: {completed} as {total} déanta",
   "module.today.setup_continue": "Lean ar aghaidh",
   "module.today.filter": "Lá cé",

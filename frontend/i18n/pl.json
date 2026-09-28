@@ -783,6 +783,7 @@
   "module.today.shopping_hint": "Na liście zakupów: {count}",
   "module.today.shopping_start": "Zacznij zakupy",
   "module.today.shopping_view": "Zobacz listę",
+  "module.today.show_in_calendar": "Pokaż w kalendarzu",
   "module.today.setup_hint": "Konfiguracja: {completed} z {total}",
   "module.today.setup_continue": "Kontynuuj",
   "module.today.filter": "Czyj dzień",

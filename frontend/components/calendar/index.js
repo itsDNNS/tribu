@@ -19,8 +19,6 @@ import {
   Plus,
   Pencil,
   Copy,
-  MapPin,
-  Users,
   Trash2,
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
@@ -36,13 +34,9 @@ import { weekStartIndex } from '../../lib/dates';
 import CalendarDialog from './CalendarDialog';
 import EventEditor from './EventEditor';
 import { calendarEventStyle } from '../../lib/calendar-colors';
-import { mapsLinksForLocation } from './CalendarHelpers';
+import EventDetails, { calendarDateKey as dateKey, isReadonlyEvent as readonly } from './EventDetails';
 export { retargetCreateDraft } from './draftDates';
 
-const dateKey = (date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-const readonly = (event) =>
-  event._isBirthday || ['import', 'subscription'].includes(event.source_type);
 
 export default function CalendarView(props) {
   const {
@@ -274,13 +268,6 @@ export default function CalendarView(props) {
     );
   };
   const selectedEvent = modal?.event;
-  const lastAllDayDate =
-    selectedEvent?.all_day && selectedEvent.ends_at
-      ? new Date(new Date(selectedEvent.ends_at).getTime() - 1)
-      : null;
-  const mapLinks = selectedEvent
-    ? mapsLinksForLocation(selectedEvent.location)
-    : null;
   return (
     <div
       ref={plannerRef}
@@ -824,80 +811,13 @@ export default function CalendarView(props) {
             </>
           }
         >
-          <h3 className="tc-detail-title">{selectedEvent.title}</h3>
-          <div className="tc-detail-line">
-            <CalendarDays size={20} />
-            <div>
-              <strong>
-                {parseDate(selectedEvent.starts_at)?.toLocaleDateString(
-                  locale,
-                  {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  },
-                )}
-                {lastAllDayDate &&
-                dateKey(lastAllDayDate) !==
-                  dateKey(parseDate(selectedEvent.starts_at))
-                  ? ` – ${lastAllDayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}`
-                  : ''}
-              </strong>
-              <p>
-                {selectedEvent.all_day
-                  ? t(messages, 'all_day')
-                  : time(selectedEvent.starts_at)}
-                {!selectedEvent.all_day && selectedEvent.ends_at
-                  ? ` – ${dateKey(parseDate(selectedEvent.ends_at)) !== dateKey(parseDate(selectedEvent.starts_at)) ? parseDate(selectedEvent.ends_at).toLocaleDateString(locale) + ' ' : ''}${time(selectedEvent.ends_at)}`
-                  : ''}
-              </p>
-            </div>
-          </div>
-          <div className="tc-detail-line">
-            <Users size={20} />
-            <div className="tc-people">
-              {participants(selectedEvent).length
-                ? participants(selectedEvent).map((member) => (
-                    <span key={member.user_id}>
-                      <MemberAvatar member={member} size={24} />
-                      {member.display_name}
-                    </span>
-                  ))
-                : t(messages, 'module.tasks.unassigned')}
-            </div>
-          </div>
-          {selectedEvent.location && (
-            <div className="tc-detail-line">
-              <MapPin size={20} />
-              <div>
-                {selectedEvent.location}
-                {mapLinks && (
-                  <p>
-                    <a href={mapLinks.google} target="_blank" rel="noreferrer">
-                      {t(messages, 'module.calendar.open_google_maps')}
-                    </a>{' '}
-                    ·{' '}
-                    <a
-                      href={mapLinks.openStreetMap}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t(messages, 'module.calendar.open_openstreetmap')}
-                    </a>
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-          {selectedEvent.description && (
-            <p className="tc-detail-description">{selectedEvent.description}</p>
-          )}
-          {readonly(selectedEvent) && !selectedEvent._isBirthday && (
-            <p className="tc-form-hint">
-              {t(messages, 'module.calendar.source_readonly_hint')}
-            </p>
-          )}
+          <EventDetails
+            event={selectedEvent}
+            members={members}
+            messages={messages}
+            locale={locale}
+            timeFormat={timeFormat}
+          />
         </CalendarDialog>
       )}
       {(modal?.kind === 'create' || modal?.kind === 'edit') && (

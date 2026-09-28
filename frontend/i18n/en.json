@@ -806,6 +806,7 @@
   "module.today.shopping_hint_one": "{count} thing on the shopping list",
   "module.today.shopping_start": "Start shopping",
   "module.today.shopping_view": "See the list",
+  "module.today.show_in_calendar": "Show in calendar",
   "module.today.setup_hint": "Setup: {completed} of {total} done",
   "module.today.setup_continue": "Continue",
   "module.today.filter": "Whose day",

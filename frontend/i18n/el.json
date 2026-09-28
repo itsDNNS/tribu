@@ -784,6 +784,7 @@
   "module.today.shopping_hint_one": "{count} πράγμα στη λίστα αγορών",
   "module.today.shopping_start": "Έναρξη αγορών",
   "module.today.shopping_view": "Δες τη λίστα",
+  "module.today.show_in_calendar": "Εμφάνιση στο ημερολόγιο",
   "module.today.setup_hint": "Ρύθμιση: {completed} από {total}",
   "module.today.setup_continue": "Συνέχεια",
   "module.today.filter": "Ποιανού η μέρα",

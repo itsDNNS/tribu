@@ -782,6 +782,7 @@
   "module.today.shopping_hint": "Na nakupovalnem seznamu: {count}",
   "module.today.shopping_start": "Začni nakupovanje",
   "module.today.shopping_view": "Pokaži seznam",
+  "module.today.show_in_calendar": "Prikaži v koledarju",
   "module.today.setup_hint": "Nastavitev: {completed} od {total}",
   "module.today.setup_continue": "Nadaljuj",
   "module.today.filter": "Čigav dan",

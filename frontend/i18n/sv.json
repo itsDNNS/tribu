@@ -784,6 +784,7 @@
   "module.today.shopping_hint_one": "{count} sak på inköpslistan",
   "module.today.shopping_start": "Börja handla",
   "module.today.shopping_view": "Visa listan",
+  "module.today.show_in_calendar": "Visa i kalendern",
   "module.today.setup_hint": "Konfiguration: {completed} av {total} klara",
   "module.today.setup_continue": "Fortsätt",
   "module.today.filter": "Vems dag",

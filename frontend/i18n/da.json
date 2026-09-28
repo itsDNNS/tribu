@@ -784,6 +784,7 @@
   "module.today.shopping_hint_one": "{count} ting på indkøbslisten",
   "module.today.shopping_start": "Start indkøb",
   "module.today.shopping_view": "Se listen",
+  "module.today.show_in_calendar": "Vis i kalenderen",
   "module.today.setup_hint": "Opsætning: {completed} af {total} færdige",
   "module.today.setup_continue": "Fortsæt",
   "module.today.filter": "Hvis dag",
