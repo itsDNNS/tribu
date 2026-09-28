@@ -262,7 +262,7 @@ test.describe('Dashboard', () => {
     await navigateTo(page, 'Home');
     await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });
     await page.getByRole('group', { name: 'Today status' }).getByRole('button', { name: /Tasks/i }).click();
-    await expect(page.locator('.tasks-filter-tabs')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Tasks', level: 1 })).toBeVisible({ timeout: 10000 });
   });
 
   test('shows and dismisses the first-week setup checklist', async ({ authedPage: page }) => {

@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useTasks } from '../../hooks/useTasks';
+import { useTasks, UNDO_WINDOW_MS } from '../../hooks/useTasks';
 
 const mockLoadTasks = jest.fn();
 const mockContext = {
@@ -12,14 +12,17 @@ const mockContext = {
   members: [],
   messages: {},
   loadTasks: mockLoadTasks,
+  setTasks: jest.fn(),
+  weekStart: 'monday',
 };
 
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockContext,
 }));
 
+const mockToastSuccess = jest.fn();
 jest.mock('../../contexts/ToastContext', () => ({
-  useToast: () => ({ success: jest.fn(), error: jest.fn(), info: jest.fn(), toast: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
+  useToast: () => ({ success: mockToastSuccess, error: jest.fn(), info: jest.fn(), toast: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
 }));
 
 jest.mock('../../lib/api', () => ({
@@ -31,86 +34,103 @@ jest.mock('../../lib/api', () => ({
 describe('useTasks', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('filters tasks by default (open)', () => {
+  it('filters tasks by assignee', () => {
     const { result } = renderHook(() => useTasks());
-    expect(result.current.filteredTasks).toHaveLength(2);
-    expect(result.current.filteredTasks.every(t => t.status === 'open')).toBe(true);
-  });
-
-  it('shows all tasks when filter is "all"', () => {
-    const { result } = renderHook(() => useTasks());
-    act(() => result.current.setTaskFilter('all'));
-    expect(result.current.filteredTasks).toHaveLength(3);
-  });
-
-  it('shows done tasks when filter is "done"', () => {
-    const { result } = renderHook(() => useTasks());
-    act(() => result.current.setTaskFilter('done'));
-    expect(result.current.filteredTasks).toHaveLength(1);
-    expect(result.current.filteredTasks[0].title).toBe('Task B');
-  });
-
-  it('filters open tasks by assignee and priority', () => {
-    const { result } = renderHook(() => useTasks());
-
+    expect(result.current.visibleTasks).toHaveLength(3);
     act(() => result.current.setAssigneeFilter('7'));
-    expect(result.current.filteredTasks).toHaveLength(1);
-    expect(result.current.filteredTasks[0].title).toBe('Task C');
-
-    act(() => result.current.setPriorityFilter('high'));
-    expect(result.current.filteredTasks).toHaveLength(0);
+    expect(result.current.visibleTasks.map((task) => task.title)).toEqual(['Task C']);
   });
 
-  it('sorts tasks by priority when requested', () => {
+  it('creates a task from the dialog form and closes it', async () => {
+    const api = require('../../lib/api');
     const { result } = renderHook(() => useTasks());
-
-    act(() => {
-      result.current.setTaskFilter('all');
-      result.current.setTaskSort('priority');
-    });
-
-    expect(result.current.filteredTasks.map((task) => task.title)).toEqual(['Task B', 'Task A', 'Task C']);
-  });
-
-  it('resets form fields after successful create', async () => {
-    const { result } = renderHook(() => useTasks());
-
-    act(() => {
-      result.current.setTaskTitle('New Task');
-      result.current.setTaskDesc('Some desc');
-    });
+    act(() => result.current.openCreate());
+    expect(result.current.creating).toBe(true);
+    act(() => result.current.setEditForm({ ...result.current.editForm, title: 'New Task', priority: 'high' }));
 
     await act(async () => {
       await result.current.createTask({ preventDefault: () => {} });
     });
 
-    expect(result.current.taskTitle).toBe('');
-    expect(result.current.taskDesc).toBe('');
+    expect(api.apiCreateTask).toHaveBeenCalledWith(expect.objectContaining({ family_id: 1, title: 'New Task', priority: 'high' }));
+    expect(result.current.creating).toBe(false);
     expect(mockLoadTasks).toHaveBeenCalled();
   });
 
-  it('toggleTask calls apiUpdateTask with toggled status', async () => {
+  describe('undo window', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('shows a task as done at once and sends it after the undo window', async () => {
+      const api = require('../../lib/api');
+      const { result } = renderHook(() => useTasks());
+
+      await act(async () => { await result.current.toggleTask(mockContext.tasks[0]); });
+      expect(result.current.visibleTasks.find((task) => task.id === 1).status).toBe('done');
+      expect(api.apiUpdateTask).not.toHaveBeenCalled();
+      expect(mockToastSuccess).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ onClick: expect.any(Function) }));
+
+      await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
+      expect(api.apiUpdateTask).toHaveBeenCalledWith(1, { status: 'done' });
+    });
+
+    it('undo keeps a completion from ever reaching the server', async () => {
+      const api = require('../../lib/api');
+      const { result } = renderHook(() => useTasks());
+
+      await act(async () => { await result.current.toggleTask(mockContext.tasks[0]); });
+      const undo = mockToastSuccess.mock.calls[0][1];
+      act(() => undo.onClick());
+      expect(result.current.visibleTasks.find((task) => task.id === 1).status).toBe('open');
+
+      await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS * 2); });
+      expect(api.apiUpdateTask).not.toHaveBeenCalled();
+    });
+
+    it('hides a deleted task at once and deletes it after the undo window', async () => {
+      const api = require('../../lib/api');
+      const { result } = renderHook(() => useTasks());
+
+      act(() => result.current.deleteTask(mockContext.tasks[1]));
+      expect(result.current.visibleTasks.find((task) => task.id === 2)).toBeUndefined();
+      expect(api.apiDeleteTask).not.toHaveBeenCalled();
+
+      await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
+      expect(api.apiDeleteTask).toHaveBeenCalledWith(2);
+    });
+
+    it('sends what is still waiting when the view goes away', async () => {
+      const api = require('../../lib/api');
+      const { result, unmount } = renderHook(() => useTasks());
+
+      act(() => result.current.deleteTask(mockContext.tasks[1]));
+      await act(async () => { unmount(); });
+      expect(api.apiDeleteTask).toHaveBeenCalledWith(2);
+    });
+  });
+
+  it('reopens a done task right away', async () => {
     const api = require('../../lib/api');
     const { result } = renderHook(() => useTasks());
 
-    await act(async () => {
-      await result.current.toggleTask(1, 'open');
-    });
+    await act(async () => { await result.current.toggleTask(mockContext.tasks[1]); });
 
-    expect(api.apiUpdateTask).toHaveBeenCalledWith(1, { status: 'done' });
+    expect(api.apiUpdateTask).toHaveBeenCalledWith(2, { status: 'open' });
     expect(mockLoadTasks).toHaveBeenCalled();
   });
 
-  it('deleteTask calls apiDeleteTask', async () => {
+  it('postpones a task and offers to move it back', async () => {
     const api = require('../../lib/api');
     const { result } = renderHook(() => useTasks());
+    const task = { id: 1, title: 'Task A', status: 'open', due_date: '2026-09-29T18:30:00', due_is_date: false };
 
-    await act(async () => {
-      await result.current.deleteTask(2);
-    });
+    await act(async () => { await result.current.postponeTask(task, 'tomorrow'); });
+    expect(api.apiUpdateTask).toHaveBeenCalledWith(1, expect.objectContaining({ due_is_date: false }));
+    expect(api.apiUpdateTask.mock.calls[0][1].due_date).toMatch(/T18:30:00$/);
 
-    expect(api.apiDeleteTask).toHaveBeenCalledWith(2);
-    expect(mockLoadTasks).toHaveBeenCalled();
+    const undo = mockToastSuccess.mock.calls[0][1];
+    await act(async () => { await undo.onClick(); });
+    expect(api.apiUpdateTask).toHaveBeenLastCalledWith(1, { due_date: '2026-09-29T18:30:00', due_is_date: false });
   });
 
   it('openEdit prefills the edit form from an existing task', () => {

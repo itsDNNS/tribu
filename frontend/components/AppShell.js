@@ -101,9 +101,10 @@ export default function AppShell() {
   }, []);
 
   useEffect(()=>{
-    if(!createRequest || !['task','shopping'].includes(createRequest.kind))return;
+    // Tasks open their own dialog from createRequest; shopping focuses its field.
+    if(!createRequest || createRequest.kind!=='shopping')return;
     const frame=requestAnimationFrame(()=>{
-      document.querySelector(createRequest.kind==='task'?'.quick-add-input':'#main-content .shop-add-form input, #main-content .shopping-item-suggest-field .quick-add-input')?.focus();
+      document.querySelector('#main-content .shop-add-form input, #main-content .shopping-item-suggest-field .quick-add-input')?.focus();
       setCreateRequest(null);
     });
     return ()=>cancelAnimationFrame(frame);

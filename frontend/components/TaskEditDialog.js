@@ -12,6 +12,8 @@ export default function TaskEditDialog({
   form,
   setForm,
   onSubmit,
+  title,
+  submitLabel,
 }) {
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
@@ -32,7 +34,7 @@ export default function TaskEditDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="gift-dialog-header">
-          <h2 id={titleId} className="gift-dialog-title">{t(messages, 'module.tasks.edit_title')}</h2>
+          <h2 id={titleId} className="gift-dialog-title">{title || t(messages, 'module.tasks.edit_title')}</h2>
           <button
             type="button"
             className="gift-dialog-close"
@@ -103,7 +105,7 @@ export default function TaskEditDialog({
               {t(messages, 'module.tasks.cancel')}
             </button>
             <button type="submit" className="btn btn-primary">
-              {t(messages, 'module.tasks.save')}
+              {submitLabel || t(messages, 'module.tasks.save')}
             </button>
           </div>
         </form>
