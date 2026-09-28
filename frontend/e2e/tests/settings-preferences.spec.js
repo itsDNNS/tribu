@@ -21,15 +21,18 @@ test('settings preferences persist for a real account and all ten sections open'
   await navigateTo(page, 'Dashboard');
   await expect(page.locator('.today-main')).toHaveCSS('row-gap', '16px');
   await navigateTo(page, 'Calendar');
-  await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible();
+  await expect(page.locator('.tc-calendar-grid, .ui-day-strip').first()).toBeVisible();
   const compact = await page.locator('.calendar-page').getAttribute('data-density') === 'compact';
-  await expect(page.locator(compact ? '.ui-weekday' : '.tc-weekday').first()).toHaveText(compact ? 'Sun' : 'Sunday');
-  await expect(page.locator('[data-date]').first()).toHaveAttribute('aria-label', /^Sunday,/);
-  await page.getByRole('button', { name: 'Week', exact: true }).click();
   if (compact) {
-    await expect(page.locator('.ui-day-strip button')).toHaveCount(7);
+    // Phones open on the week strip; the month opens from its toggle.
     await expect(page.locator('.ui-day-strip button').first()).toHaveAttribute('aria-label', /^Sunday,/);
+    await page.getByRole('button', { name: 'Month', exact: true }).click();
+    await expect(page.locator('.ui-weekday').first()).toHaveText('Sun');
+    await expect(page.locator('[data-date]').first()).toHaveAttribute('aria-label', /^Sunday,/);
   } else {
+    await expect(page.locator('.tc-weekday').first()).toHaveText('Sunday');
+    await expect(page.locator('[data-date]').first()).toHaveAttribute('aria-label', /^Sunday,/);
+    await page.getByRole('button', { name: 'Week', exact: true }).click();
     await expect(page.locator('.tc-week-heading').first()).toContainText(/^Sunday/);
   }
   await navigateTo(page, 'Settings');

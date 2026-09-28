@@ -23,7 +23,8 @@ test.describe('Navigation UI', () => {
 
     const bottomNav = page.locator('.bottom-nav');
     await bottomNav.getByRole('button', { name: 'Plan', exact: true }).click();
-    await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible({ timeout: 10000 });
+    // Phones open the calendar on the agenda under the week strip.
+    await expect(page.locator('.ui-day-strip')).toBeVisible({ timeout: 10000 });
     await expect(bottomNav.locator('.ui-nav-button.active')).toContainText('Plan');
     await expect(page.locator('.app-header-title')).toHaveText('Plan');
 
