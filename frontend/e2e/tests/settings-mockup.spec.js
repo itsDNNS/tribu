@@ -8,7 +8,7 @@ async function openSettings(page) {
     const responses = {
       '/auth/me': { id: 1, email: 'dennis@example.com', display_name: 'Dennis', has_completed_onboarding: true, must_change_password: false },
       '/families/me': [{ family_id: 7, family_name: 'Familie Braun', role: 'admin', is_adult: true }],
-      '/families/7/members': [{ id: 1, display_name: 'Dennis', role: 'admin', is_adult: true, color: '#73518d' }],
+      '/families/7/members': [{ user_id: 1, display_name: 'Dennis', role: 'admin', is_adult: true, color: '#73518d' }],
       '/dashboard/summary': { next_events: [], upcoming_birthdays: [] },
       '/calendar/events': { items: [] }, '/tasks': { items: [] },
       '/contacts': [], '/birthdays': [], '/shopping/lists': [], '/notifications': [],

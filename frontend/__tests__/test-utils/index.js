@@ -3,7 +3,6 @@ import { buildMessages } from '../../lib/i18n';
 
 let mockAppState = {};
 
-export const DASHBOARD_MODULES = ['quick_capture', 'daily_loop', 'events', 'tasks', 'birthdays', 'rewards'];
 
 export function buildTestMessages(overrides = {}, lang = 'en') {
   return {
@@ -66,11 +65,8 @@ export function renderWithMockApp(ui, appOverrides = {}, renderOptions) {
 
 export function createMockApi(overrides = {}) {
   return {
-    apiGetDashboardLayout: jest.fn(() => new Promise(() => {})),
     apiGetSetupChecklist: jest.fn().mockResolvedValue({ ok: true, data: null }),
     apiListMealPlans: jest.fn().mockResolvedValue({ ok: true, data: [] }),
-    apiResetDashboardLayout: jest.fn().mockResolvedValue({ ok: true, data: { modules: DASHBOARD_MODULES } }),
-    apiUpdateDashboardLayout: jest.fn().mockResolvedValue({ ok: true, data: { modules: DASHBOARD_MODULES } }),
     apiMarkNotificationRead: jest.fn().mockResolvedValue({ ok: true }),
     apiMarkAllNotificationsRead: jest.fn().mockResolvedValue({ ok: true }),
     apiDeleteNotification: jest.fn().mockResolvedValue({ ok: true }),

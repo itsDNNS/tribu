@@ -46,24 +46,21 @@ const views = {
   weekly_plan: WeeklyPlanView,
 };
 
-function DashboardSkeleton() {
+// While the family loads: the shape of Today, a title and the timeline.
+function TodaySkeleton({ messages }) {
   return (
-    <div role="status" aria-label="Loading" aria-busy="true">
-      <div className="view-header">
+    <div className="today-page" role="status" aria-label={t(messages, 'module.today.loading')} aria-busy="true">
+      <div className="today-head">
         <div>
           <div className="skeleton skeleton-text lg" />
           <div className="skeleton skeleton-text sm" />
         </div>
       </div>
-      <div className="bento-grid">
-        <div className="bento-quick-capture skeleton skeleton-card" style={{ minHeight: 220 }} />
-        <div className="bento-events skeleton skeleton-card" style={{ minHeight: 180 }} />
-        <div className="bento-tasks skeleton skeleton-card" style={{ minHeight: 180 }} />
-        <div className="bento-meals skeleton skeleton-card" style={{ minHeight: 180 }} />
-        <div className="bento-daily-loop skeleton skeleton-card" style={{ minHeight: 140 }} />
-        <div className="bento-birthdays skeleton skeleton-card" style={{ minHeight: 180 }} />
-        <div className="bento-rewards skeleton skeleton-card" style={{ minHeight: 180 }} />
-        <div className="bento-activity skeleton skeleton-card" style={{ minHeight: 180 }} />
+      <div className="today-main">
+        <div className="skeleton today-skeleton-chips" />
+        <div className="today-list">
+          {[0, 1, 2, 3, 4].map((row) => <div key={row} className="today-row"><div className="skeleton skeleton-text" /></div>)}
+        </div>
       </div>
     </div>
   );
@@ -330,7 +327,7 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-footer">
-          {!collapsed && <DashboardMotto messages={messages} sidebar />}
+          {!collapsed && <DashboardMotto messages={messages} />}
           <div className="sidebar-divider" />
 
           <div className="sidebar-user">
@@ -390,7 +387,7 @@ export default function AppShell() {
         {isMobile && <MobileHeader onSearch={()=>setSearchOpen(true)} onMore={()=>setMobileSheet('more')} moreOpen={mobileSheet === 'more'} onHome={()=>navigate('dashboard')}/>}
 
         <div className="view-enter">
-          {loading ? <DashboardSkeleton /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
+          {loading ? <TodaySkeleton messages={messages} /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
             <ActiveComponent
               onOpenNavigation={() => setMobileOpen(true)}
               onOpenSearch={() => setSearchOpen(true)}

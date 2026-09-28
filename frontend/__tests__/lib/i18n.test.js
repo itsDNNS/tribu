@@ -178,7 +178,7 @@ describe('buildMessages()', () => {
     expect(en.app_name).toBe('Tribu');
     expect(en['module.tasks.name']).toBe('Tasks');
     expect(en['module.calendar.name']).toBe('Calendar');
-    expect(en['module.dashboard.name']).toBe('Dashboard');
+    expect(en['module.today.title']).toBe('Today');
     expect(en['module.contacts.name']).toBe('Contacts');
   });
 
@@ -186,34 +186,34 @@ describe('buildMessages()', () => {
     expect(mergeMessages({ app_name: 'Localized Tribu' })).toEqual(
       expect.objectContaining({
         app_name: 'Localized Tribu',
-        'module.dashboard.name': 'Dashboard',
+        'module.today.title': 'Today',
       })
     );
   });
 
   it('returns translated messages for the expanded language pack', () => {
-    expect(buildMessages('es')['module.dashboard.name']).toBe('Panel');
-    expect(buildMessages('fr')['module.dashboard.name']).toBe('Tableau de bord');
-    expect(buildMessages('pt')['module.dashboard.name']).toBe('Painel');
-    expect(buildMessages('it')['module.dashboard.name']).toBe('Cruscotto');
-    expect(buildMessages('nl')['module.dashboard.name']).toBe('Dashboard');
-    expect(buildMessages('pl')['module.dashboard.name']).toBe('Pulpit');
-    expect(buildMessages('sv')['module.dashboard.name']).toBe('Instrumentpanel');
-    expect(buildMessages('da')['module.dashboard.name']).toBe('Dashboard');
-    expect(buildMessages('nb')['module.dashboard.name']).toBe('Dashbord');
-    expect(buildMessages('fi')['module.dashboard.name']).toBe('Kojelauta');
-    expect(buildMessages('cs')['module.dashboard.name']).toBe('Dashboard');
-    expect(buildMessages('sk')['module.dashboard.name']).toBe('Dashboard');
-    expect(buildMessages('hu')['module.dashboard.name']).toBe('Irányítópult');
-    expect(buildMessages('ro')['module.dashboard.name']).toBe('Tabloul de bord');
-    expect(buildMessages('el')['module.dashboard.name']).toBe('Ταμπλό');
-    expect(buildMessages('bg')['module.dashboard.name']).toBe('Табло за управление');
-    expect(buildMessages('hr')['module.dashboard.name']).toBe('Nadzorna ploča');
-    expect(buildMessages('sl')['module.dashboard.name']).toBe('Nadzorna plošča');
-    expect(buildMessages('lt')['module.dashboard.name']).toBe('Prietaisų skydelis');
-    expect(buildMessages('lv')['module.dashboard.name']).toBe('Informācijas panelis');
-    expect(buildMessages('et')['module.dashboard.name']).toBe('Armatuurlaud');
-    expect(buildMessages('ga')['module.dashboard.name']).toBe('Deais');
+    expect(buildMessages('es')['module.today.title']).toBe('Hoy');
+    expect(buildMessages('fr')['module.today.title']).toBe("Aujourd'hui");
+    expect(buildMessages('pt')['module.today.title']).toBe('Hoje');
+    expect(buildMessages('it')['module.today.title']).toBe('Oggi');
+    expect(buildMessages('nl')['module.today.title']).toBe('Vandaag');
+    expect(buildMessages('pl')['module.today.title']).toBe('Dziś');
+    expect(buildMessages('sv')['module.today.title']).toBe('Idag');
+    expect(buildMessages('da')['module.today.title']).toBe('I dag');
+    expect(buildMessages('nb')['module.today.title']).toBe('I dag');
+    expect(buildMessages('fi')['module.today.title']).toBe('Tänään');
+    expect(buildMessages('cs')['module.today.title']).toBe('Dnes');
+    expect(buildMessages('sk')['module.today.title']).toBe('Dnes');
+    expect(buildMessages('hu')['module.today.title']).toBe('Ma');
+    expect(buildMessages('ro')['module.today.title']).toBe('Azi');
+    expect(buildMessages('el')['module.today.title']).toBe('Σήμερα');
+    expect(buildMessages('bg')['module.today.title']).toBe('Днес');
+    expect(buildMessages('hr')['module.today.title']).toBe('Danas');
+    expect(buildMessages('sl')['module.today.title']).toBe('Danes');
+    expect(buildMessages('lt')['module.today.title']).toBe('Šiandien');
+    expect(buildMessages('lv')['module.today.title']).toBe('Šodien');
+    expect(buildMessages('et')['module.today.title']).toBe('Täna');
+    expect(buildMessages('ga')['module.today.title']).toBe('Inniu');
   });
 
   it('falls back to English for unknown language', () => {

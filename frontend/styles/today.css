@@ -368,3 +368,7 @@
 [data-dashboard-density="compact"] .today-side { gap: var(--space-4); }
 [data-dashboard-density="compact"] .today-row { min-height: 44px; padding-block: var(--space-1); }
 [data-dashboard-density="compact"] .today-week-day { min-height: 40px; padding-block: var(--space-2); }
+
+/* Loading placeholder (AppShell). */
+.today-skeleton-chips { height: 44px; width: min(100%, 420px); border-radius: var(--radius-pill); }
+.today-list .today-row .skeleton-text { grid-column: 1 / -1; margin: 0; width: 70%; }
