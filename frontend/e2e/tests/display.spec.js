@@ -29,10 +29,21 @@ async function gotoDisplayWithToken(page, token) {
 // Pin every part of the day to "day" so the stage never looks ahead to tomorrow during a CI run.
 const ALWAYS_DAY = { morning_start: '00:00', morning_end: '00:00', evening_start: '00:00', night_start: '00:00' };
 
-// An event start that is still today, so it shows in the hero regardless of when the suite runs.
+// An event start that is still today, so it shows regardless of when the suite runs.
 function soonToday() {
   const start = new Date(Date.now() + 10 * 60 * 1000);
   return start.getDate() === new Date().getDate() ? start : new Date(Date.now() - 5 * 60 * 1000);
+}
+
+// An event that started just after midnight and runs for another hour. The
+// hero shows the family's earliest event that has not ended, so this one wins
+// over events other tests left in the same family (#528).
+function heroEvent() {
+  const now = new Date();
+  return {
+    start: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 1),
+    end: new Date(now.getTime() + 60 * 60 * 1000),
+  };
 }
 
 function localDateTimeInputValue(date) {
@@ -54,11 +65,11 @@ test.describe('Display mode', () => {
     });
     expect(colorRes.ok()).toBeTruthy();
 
-    const start = soonToday();
+    const { start, end } = heroEvent();
     await seedCalendarEvent(apiCtx, familyId, {
       title: 'Dinner Plan',
       starts_at: localDateTimeInputValue(start),
-      ends_at: localDateTimeInputValue(new Date(start.getTime() + 60 * 60 * 1000)),
+      ends_at: localDateTimeInputValue(end),
       assigned_to: [currentMember.user_id],
     });
     const created = await createDisplayDevice(apiCtx, familyId, 'Kitchen Tablet', {
@@ -77,7 +88,7 @@ test.describe('Display mode', () => {
     await expect(stage).toBeVisible({ timeout: 15000 });
     await expect(stage).toHaveAttribute('data-layout-preset', 'stage');
     await expect(stage).toHaveAttribute('data-day-part', 'day');
-    await expect(page.getByTestId('display-focus')).toContainText('Dinner Plan');
+    await expect(page.getByTestId('display-focus').locator('.stage-hero-title')).toHaveText('Dinner Plan');
     await expect(page.getByTestId('display-event-participants')).toHaveAttribute('aria-label', '1 participant');
     for (const zone of ['a', 'b', 'c', 'd']) await expect(page.getByTestId(`display-zone-${zone}`)).toBeVisible();
     // No weather place is configured, so the header shows no weather.
