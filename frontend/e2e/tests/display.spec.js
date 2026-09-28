@@ -78,7 +78,7 @@ test.describe('Display mode', () => {
     await expect(stage).toHaveAttribute('data-layout-preset', 'stage');
     await expect(stage).toHaveAttribute('data-day-part', 'day');
     await expect(page.getByTestId('display-focus')).toContainText('Dinner Plan');
-    await expect(page.getByTestId('display-event-participants')).toHaveAttribute('aria-label', '1 participants');
+    await expect(page.getByTestId('display-event-participants')).toHaveAttribute('aria-label', '1 participant');
     for (const zone of ['a', 'b', 'c', 'd']) await expect(page.getByTestId(`display-zone-${zone}`)).toBeVisible();
     // No weather place is configured, so the header shows no weather.
     await expect(page.getByTestId('display-weather')).toHaveCount(0);

@@ -23,7 +23,7 @@ import {
 import { useApp } from "../../contexts/AppContext";
 import { useToast } from "../../contexts/ToastContext";
 import { copyTextToClipboard, parseServerInstant } from "../../lib/helpers";
-import { t } from "../../lib/i18n";
+import { t, tc } from "../../lib/i18n";
 import { localeForLang } from "../../lib/dates";
 import * as api from "../../lib/api";
 import MemberAvatar from "../MemberAvatar";
@@ -312,7 +312,7 @@ function AdminPage(props) {
                     <p>{copy("profiles_hint")}</p>
                   </div>
                   <span className="fam-soft-count">
-                    {copy("member_count").replace("{count}", count)}
+                    {tc(messages, 'admin_layout_member_count', count)}
                   </span>
                 </header>
                 <div className="fam-filters">

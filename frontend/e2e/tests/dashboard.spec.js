@@ -153,7 +153,7 @@ test.describe('Today', () => {
     await page.reload();
 
     const hint = page.getByRole('region', { name: 'Inbox' });
-    await expect(hint).toContainText('1 quick notes open', { timeout: 10000 });
+    await expect(hint).toContainText('1 quick note open', { timeout: 10000 });
     await hint.getByRole('button', { name: /Review/ }).click();
     await expect(hint).toContainText('Buy apples from market');
     await hint.getByRole('button', { name: 'Shopping', exact: true }).click();

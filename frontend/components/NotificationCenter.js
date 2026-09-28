@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Bell, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { t } from '../lib/i18n';
+import { t, tc } from '../lib/i18n';
 import * as api from '../lib/api';
 import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
 import { notificationLinkView } from '../lib/notificationLinks';
@@ -27,7 +27,7 @@ export function renderNotificationBody(notif, messages) {
   if (notif.type === 'system') {
     const match = notif.body.match(/^The server stopped unexpectedly (\d+) times in the last hour\.$/);
     if (match) {
-      return t(messages, 'notification_body_backend_crashes').replace('{count}', match[1]);
+      return tc(messages, 'notification_body_backend_crashes', Number(match[1]));
     }
   }
 

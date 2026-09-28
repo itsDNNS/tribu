@@ -4,7 +4,7 @@ import Head from 'next/head';
 import StageDisplay from '../components/display/StageDisplay';
 import { normalizeStageConfig, resolveLanguage } from '../components/display/stageModel';
 import { apiDisplayMe, apiDisplayDashboard } from '../lib/api';
-import { buildMessages, listLanguages, t as translate } from '../lib/i18n';
+import { buildMessages, listLanguages, t as translate, tc } from '../lib/i18n';
 import { localeForLang } from '../lib/dates';
 
 const TOKEN_STORAGE_KEY = 'tribu_display_token';
@@ -153,7 +153,8 @@ export default function DisplayPage() {
     [config.language, deviceLanguages]
   );
   const messages = useMemo(() => buildMessages(language), [language]);
-  const t = useCallback((key) => translate(messages, key), [messages]);
+  // With a count, t picks the counted form ("in 2 days").
+  const t = useCallback((key, count) => (count === undefined ? translate(messages, key) : tc(messages, key, count)), [messages]);
 
   return (
     <>

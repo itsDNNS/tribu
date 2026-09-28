@@ -7,7 +7,7 @@ import {
   localeBundles as generatedLocaleBundles,
   supportedLanguageKeys,
 } from '../../lib/generated/i18nBundles';
-import { buildMessages, listLanguages, mergeMessages, t } from '../../lib/i18n';
+import { buildMessages, listLanguages, mergeMessages, t, tc } from '../../lib/i18n';
 
 const expectedLanguages = [
   'bg',
@@ -84,6 +84,12 @@ function protectedLiteralSet(value) {
   return patterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => match[0])).sort();
 }
 
+// Counted texts keep their language's forms as key_one, key_few, … (#539).
+const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+function isPluralForm(bundle, key) {
+  return PLURAL_SUFFIX.test(key) && Object.prototype.hasOwnProperty.call(bundle, key.replace(PLURAL_SUFFIX, ''));
+}
+
 describe('i18n bundled locale files', () => {
   it('keeps locale bundle files trackable by git while ignoring unrelated tasks state', () => {
     expect(gitIgnoreRule('frontend/i18n/sv.json')).toBe('');
@@ -119,14 +125,26 @@ describe('i18n bundled locale files', () => {
 
   it('keeps keys and placeholders aligned with English', () => {
     const english = fileLocaleBundles.en;
-    const englishKeys = Object.keys(english).sort();
+    const englishKeys = Object.keys(english).filter((key) => !isPluralForm(english, key)).sort();
     for (const lang of expectedLanguages) {
       const locale = fileLocaleBundles[lang];
-      expect(Object.keys(locale).sort()).toEqual(englishKeys);
+      expect(Object.keys(locale).filter((key) => !isPluralForm(locale, key)).sort()).toEqual(englishKeys);
       for (const key of englishKeys) {
         expect(String(locale[key]).trim()).not.toBe('');
         expect(placeholderSet(locale[key])).toEqual(placeholderSet(english[key]));
         expect(protectedLiteralSet(locale[key])).toEqual(protectedLiteralSet(english[key]));
+      }
+    }
+  });
+
+  it('keeps plural forms next to their text and within its placeholders', () => {
+    for (const lang of expectedLanguages) {
+      const locale = fileLocaleBundles[lang];
+      for (const key of Object.keys(locale).filter((name) => isPluralForm(locale, name))) {
+        const base = key.replace(PLURAL_SUFFIX, '');
+        const allowed = placeholderSet(locale[base]);
+        // "once" may drop the count; nothing else may appear.
+        expect(placeholderSet(locale[key]).filter((name) => !allowed.includes(name))).toEqual([]);
       }
     }
   });
@@ -167,9 +185,10 @@ describe('listLanguages()', () => {
 
 describe('buildMessages()', () => {
   it('all supported languages produce the same set of keys as English', () => {
-    const enKeys = Object.keys(buildMessages('en')).sort();
+    const keys = (messages) => Object.keys(messages).filter((key) => !isPluralForm(messages, key)).sort();
+    const enKeys = keys(buildMessages('en'));
     for (const lang of expectedLanguages) {
-      expect(Object.keys(buildMessages(lang)).sort()).toEqual(enKeys);
+      expect(keys(buildMessages(lang))).toEqual(enKeys);
     }
   });
 
@@ -234,5 +253,50 @@ describe('t()', () => {
 
   it('returns fallback when provided and key is missing', () => {
     expect(t(messages, 'nonexistent.key', 'Fallback')).toBe('Fallback');
+  });
+});
+
+describe('tc() counted texts (#539)', () => {
+  it('picks the singular for one and the plain text otherwise', () => {
+    const en = buildMessages('en');
+    expect(tc(en, 'module.dashboard.quick_capture_inbox_count', 1)).toBe('1 quick note open');
+    expect(tc(en, 'module.dashboard.quick_capture_inbox_count', 3)).toBe('3 quick notes open');
+    const de = buildMessages('de');
+    expect(tc(de, 'module.today.shopping_hint', 1)).toBe('1 Ding auf der Einkaufsliste');
+    expect(tc(de, 'module.today.shopping_hint', 12)).toBe('12 Dinge auf der Einkaufsliste');
+  });
+
+  it('uses the forms of the language, never English ones', () => {
+    // Polish words this count neutrally and has no key_one: no "1 quick note".
+    expect(tc(buildMessages('pl'), 'module.dashboard.quick_capture_inbox_count', 1)).toBe('Otwarte szybkie notatki: 1');
+    // Czech: 1 den, 2–4 dny, 5+ dní.
+    const cs = buildMessages('cs');
+    expect(tc(cs, 'display.stage.in_days', 1)).toBe('za 1 den');
+    expect(tc(cs, 'display.stage.in_days', 3)).toBe('za 3 dny');
+    expect(tc(cs, 'display.stage.in_days', 7)).toBe('za 7 dní');
+  });
+
+  it('keeps the singular of counted texts in every language that needs one', () => {
+    const counted = [
+      'module.responsive.entries',
+      'module.today.shopping_hint',
+      'family.open_tasks',
+      'family.gift_ideas',
+      'module.calendar.import_success',
+      'module.dashboard.quick_capture_inbox_count',
+      'module.meal_plans.ingredients_summary',
+      'module.recipes.ingredients_summary',
+      'module.recipes.servings_count',
+      'admin_layout_member_count',
+      'display.stage.in_days',
+    ];
+    for (const lang of ['en', 'de', 'fr', 'es', 'it', 'nl', 'pt', 'sv', 'da', 'nb']) {
+      const bundle = JSON.parse(fs.readFileSync(path.join(__dirname, '../../i18n', `${lang}.json`), 'utf8'));
+      for (const key of counted) {
+        // Either a singular form, or a text that does not depend on the count.
+        const neutral = /:\s*\{count\}|\{count\}\s*[×x]|^\{count\} \/ /.test(bundle[key]) || bundle[key] === bundle[`${key}_one`];
+        expect({ lang, key, ok: Boolean(bundle[`${key}_one`]) || neutral }).toEqual({ lang, key, ok: true });
+      }
+    }
   });
 });

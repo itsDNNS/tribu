@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useCalendar } from '../../hooks/useCalendar';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import { parseDate } from '../../lib/helpers';
 import { localeForLang } from '../../lib/dates';
 import { eventOccursOn } from '../../lib/calendar-dates';
@@ -585,9 +585,9 @@ export default function CalendarView(props) {
             <footer className="ui-month-caption">
               <span>
                 ● &nbsp;
-                {plannerText(messages, 'month_count')
-                  .replace(
-                    '{count}',
+                {tc(
+                    messages,
+                    'module.responsive.month_count',
                     allEvents.filter(
                       (event) =>
                         matches(event) &&

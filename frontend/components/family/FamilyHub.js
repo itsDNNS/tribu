@@ -7,7 +7,7 @@ import { apiGetEvents, apiGetGifts } from '../../lib/api';
 import { CurrencyIcon } from '../../lib/currency-icons';
 import { buildFamily } from '../../lib/family/buildFamily';
 import { handOff } from '../../lib/handoff';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import { NO_HIDDEN_AREAS } from '../../lib/navigation';
 import { getMemberColor } from '../../lib/member-colors';
 import HouseholdActivityFeed from '../HouseholdActivityFeed';
@@ -21,10 +21,6 @@ function clock(time, locale, timeFormat) {
     minute: '2-digit',
     hour12: timeFormat === '12h',
   });
-}
-
-function count(messages, key, value) {
-  return t(messages, value === 1 ? `${key}_one` : key).replace('{count}', value);
 }
 
 function Person({ member, index, person, members, ctx }) {
@@ -59,7 +55,7 @@ function Person({ member, index, person, members, ctx }) {
           </span>
           {(person.openTasks > 0 || (person.points !== null && member.is_adult === false)) && (
             <span className="family-person-meta">
-              {person.openTasks > 0 && <span>{count(messages, 'family.open_tasks', person.openTasks)}</span>}
+              {person.openTasks > 0 && <span>{tc(messages, 'family.open_tasks', person.openTasks)}</span>}
               {person.points !== null && currency && member.is_adult === false && (
                 <span className="family-person-points">
                   <CurrencyIcon icon={currency.icon} size={13} />
@@ -109,7 +105,7 @@ function BirthdayRow({ birthday, ctx }) {
         <button type="button" className={`family-birthday-gifts${birthday.giftIdeas ? '' : ' add'}`} onClick={openGifts}>
           {birthday.giftIdeas ? <Gift size={15} aria-hidden="true" /> : <Plus size={15} aria-hidden="true" />}
           {birthday.giftIdeas
-            ? count(messages, 'family.gift_ideas', birthday.giftIdeas)
+            ? tc(messages, 'family.gift_ideas', birthday.giftIdeas)
             : t(messages, 'family.gift_add')}
         </button>
       )}

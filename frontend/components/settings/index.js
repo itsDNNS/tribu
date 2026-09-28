@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import AccountTab from './AccountTab';
 import NavigationTab from './NavigationTab';
 import NotificationsTab from './NotificationsTab';
@@ -142,7 +142,7 @@ export default function SettingsView() {
     <h2 id="ms-family">{level('family_title')}</h2>
     <p>{familyName ? level('family_intro').replace('{family}', familyName) : level('family_intro_plain')}</p>
     {isAdmin && !demoMode ? ADMIN_ROWS.slice(0, 1).map(adminRow) : (
-      <SettingRow title={copy('family')} description={copy('family_count').replace('{count}', members.length)}>
+      <SettingRow title={copy('family')} description={tc(messages, 'settings_mockup_family_count', members.length)}>
         {openButton(copy('family'), () => setActiveView('contacts'))}
       </SettingRow>
     )}

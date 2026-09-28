@@ -1,5 +1,5 @@
 import { Plus, MapPin, MoreVertical, CalendarDays } from 'lucide-react';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import {
   calendarEventColors,
   calendarEventStyle,
@@ -116,7 +116,7 @@ export function AgendaDay({
             })}
           </h3>
           {count != null && (
-            <p>{plannerText(messages, 'entries').replace('{count}', count)}</p>
+            <p>{tc(messages, 'module.responsive.entries', count)}</p>
           )}
         </div>
         {onAdd && (
@@ -275,7 +275,7 @@ export function CompactMonth({
               aria-current={
                 dateKey(date) === dateKey(new Date()) ? 'date' : undefined
               }
-              aria-label={`${date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}, ${plannerText(messages, 'entries').replace('{count}', eventsOn(date).length)}`}
+              aria-label={`${date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}, ${tc(messages, 'module.responsive.entries', eventsOn(date).length)}`}
               onClick={() => onSelect(date)}
               onKeyDown={(e) => keyboard(e, date)}
             >
@@ -292,8 +292,7 @@ export function CompactMonth({
       <footer className="ui-month-caption">
         <span>
           ● &nbsp;
-          {plannerText(messages, 'month_count')
-            .replace('{count}', count)
+          {tc(messages, 'module.responsive.month_count', count)
             .replace(
               '{month}',
               month.toLocaleDateString(locale, { month: 'long' }),

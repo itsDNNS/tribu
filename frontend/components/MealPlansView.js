@@ -15,7 +15,7 @@ import { useMealPlans, formatIsoDate, weekDays } from '../hooks/useMealPlans';
 import { MEAL_SLOTS } from '../lib/meal-plans';
 import { formatDayMonth, formatWeekRange, localeForLang } from '../lib/dates';
 import { apiListRecipes } from '../lib/api';
-import { t } from '../lib/i18n';
+import { t, tc } from '../lib/i18n';
 import ConfirmDialog from './ConfirmDialog';
 import MealPlanDialog from './MealPlanDialog';
 import BottomSheet from './responsive/BottomSheet';
@@ -60,12 +60,7 @@ function weekdayKeyForDate(date) {
 function ingredientsSummary(messages, ingredients) {
   const count = ingredients?.length || 0;
   if (count === 0) return '';
-  if (count === 1)
-    return t(messages, 'module.meal_plans.ingredients_summary_one');
-  return t(messages, 'module.meal_plans.ingredients_summary').replace(
-    '{count}',
-    String(count),
-  );
+  return tc(messages, 'module.meal_plans.ingredients_summary', count);
 }
 
 function isSameDay(a, b) {

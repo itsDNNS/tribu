@@ -5,7 +5,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { useCurrentMinute } from '../../hooks/useCurrentMinute';
 import { useSwipeActions } from '../../hooks/useSwipeActions';
 import { apiConvertQuickCapture, apiDismissQuickCapture, apiGetEvents, apiListMealPlans } from '../../lib/api';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import { NO_HIDDEN_AREAS } from '../../lib/navigation';
 import { getMemberColor } from '../../lib/member-colors';
 import { buildToday } from '../../lib/today/buildToday';
@@ -127,7 +127,7 @@ function InboxHint({ items, members, messages, familyId, loadQuickCaptureInbox, 
     <section className="today-hint" aria-label={t(messages, 'module.dashboard.quick_capture_inbox_title')}>
       <div className="today-hint-head">
         <span className="today-hint-icon" aria-hidden="true"><Inbox size={18} /></span>
-        <span className="today-hint-text">{t(messages, 'module.dashboard.quick_capture_inbox_count').replace('{count}', items.length)}</span>
+        <span className="today-hint-text">{tc(messages, 'module.dashboard.quick_capture_inbox_count', items.length)}</span>
         <button type="button" className="today-hint-action" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
           {t(messages, 'module.today.inbox_review')}
           <ChevronDown size={14} className={open ? 'open' : ''} aria-hidden="true" />
@@ -315,7 +315,7 @@ export default function TodayView({ onOpenCapture } = {}) {
               <section className="today-hint" aria-label={t(messages, 'module.shopping.name')}>
                 <div className="today-hint-head">
                   <span className="today-hint-icon" aria-hidden="true"><ShoppingCart size={18} /></span>
-                  <span className="today-hint-text">{t(messages, 'module.today.shopping_hint').replace('{count}', shoppingCount)}</span>
+                  <span className="today-hint-text">{tc(messages, 'module.today.shopping_hint', shoppingCount)}</span>
                   <button type="button" className="today-hint-action" onClick={() => openShopping(setActiveView)}>
                     {t(messages, 'module.today.shopping_start')}
                   </button>

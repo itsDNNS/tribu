@@ -18,7 +18,7 @@ import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 import { errorText } from '../lib/helpers';
-import { t } from '../lib/i18n';
+import { t, tc } from '../lib/i18n';
 import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient, formatIngredientAmount, recipeToForm, scaleRecipeIngredients } from '../lib/recipes';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -34,8 +34,7 @@ function safeHttpUrl(value) {
 }
 
 function ingredientCountLabel(messages, count) {
-  if (count === 1) return t(messages, 'module.recipes.ingredients_summary_one');
-  return t(messages, 'module.recipes.ingredients_summary').replace('{count}', String(count));
+  return tc(messages, 'module.recipes.ingredients_summary', count);
 }
 
 function RecipeCard({ recipe, messages, onEdit, onToggleFavorite }) {
@@ -88,7 +87,7 @@ function RecipeCard({ recipe, messages, onEdit, onToggleFavorite }) {
           {recipe.servings && (
             <span className="recipe-card-meta-item">
               <Users size={13} aria-hidden="true" />
-              {t(messages, 'module.recipes.servings_count').replace('{count}', String(recipe.servings))}
+              {tc(messages, 'module.recipes.servings_count', recipe.servings)}
             </span>
           )}
           {ingredients.length > 0 && (

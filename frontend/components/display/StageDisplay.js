@@ -67,7 +67,7 @@ function Hero({ dashboard, members, t, locale, timeFormat, now, ahead }) {
           <>
             <h1 className="stage-hero-title">{hero.title}</h1>
             <p className="stage-hero-meta">
-              <span className="stage-hero-people" data-testid="display-event-participants" aria-label={t('display.stage.participants').replace('{count}', hero.member_refs?.length || 0)}>
+              <span className="stage-hero-people" data-testid="display-event-participants" aria-label={t('display.stage.participants', hero.member_refs?.length || 0)}>
                 {(hero.member_refs || []).slice(0, 4).map((ref) => (
                   <Avatar key={ref} member={members[ref]} index={ref} size={34} />
                 ))}
