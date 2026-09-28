@@ -5824,3 +5824,36 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
 }
 .meal-suggestion:hover { background: var(--color-surface-hover); }
 .meal-suggestion svg { color: var(--color-text-muted); flex: none; }
+
+/* A tip shown once per device (Tribu 2.0, L7/D7, components/OnceHint). */
+.once-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  color: var(--color-text-secondary);
+}
+.once-hint svg { flex: none; color: var(--color-accent); }
+.once-hint p {
+  flex: 1;
+  margin: 0;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+}
+.once-hint button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.once-hint button:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
