@@ -367,6 +367,7 @@ def add_recipe_ingredients_to_shopping(
             name=entry["name"].strip(),
             spec=_format_spec(entry["amount"], entry["unit"]),
             added_by_user_id=user.id,
+            source=recipe.title,
         ))
     recipe.last_used_at = datetime.now(timezone.utc)
     db.commit()

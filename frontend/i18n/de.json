@@ -1587,6 +1587,7 @@
   "module.shopping.show_overview": "Kategorieübersicht anzeigen",
   "module.shopping.hide_overview": "Kategorieübersicht ausblenden",
   "module.shopping.undo": "Rückgängig",
+  "module.shopping.for_source": "für {source}",
   "module.shopping.help": "So funktioniert die Liste",
   "module.shopping.item_deleted": "{name} entfernt",
   "module.shopping.item_checked": "Abgehakt: {name}",

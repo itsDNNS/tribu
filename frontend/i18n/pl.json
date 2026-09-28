@@ -1562,6 +1562,7 @@
   "module.shopping.show_overview": "Pokaż przegląd kategorii",
   "module.shopping.hide_overview": "Ukryj przegląd kategorii",
   "module.shopping.undo": "Cofnij",
+  "module.shopping.for_source": "do {source}",
   "module.shopping.help": "Jak działa lista",
   "module.shopping.item_deleted": "Usunięto: {name}",
   "module.shopping.item_checked": "Zaznaczono: {name}",

@@ -757,6 +757,7 @@ class ShoppingItemResponse(ShoppingProductDetails):
     checked_at: Optional[datetime] = Field(None, description="When the item was checked")
     added_by_user_id: Optional[int] = Field(None, description="User who added the item")
     created_at: datetime = Field(..., description="Creation timestamp")
+    source: Optional[str] = Field(None, description="Recipes or meals the item was added for, comma separated")
 
 
 class ShoppingTemplateItemBase(BaseModel):

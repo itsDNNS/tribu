@@ -1566,6 +1566,7 @@
   "module.shopping.show_overview": "Mostrar resumen de categorías",
   "module.shopping.hide_overview": "Ocultar resumen de categorías",
   "module.shopping.undo": "Deshacer",
+  "module.shopping.for_source": "para {source}",
   "module.shopping.help": "Cómo funciona la lista",
   "module.shopping.item_deleted": "{name} eliminado",
   "module.shopping.item_checked": "Marcado: {name}",

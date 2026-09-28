@@ -28,7 +28,7 @@ from app.core.errors import (
 )
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
-from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item
+from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item, merge_item_source
 from app.core.ws_broadcast import broadcast_shopping_event
 from app.database import get_db
 from app.models import MealPlan, Membership, ShoppingList, User
@@ -61,6 +61,11 @@ class NormalizedIngredient(TypedDict):
     name: str
     amount: float | None
     unit: str | None
+
+
+class WeekIngredient(NormalizedIngredient):
+    # The meals it is for, e.g. "Lasagne, Pancakes" (Tribu 2.0, L5).
+    source: str | None
 
 
 def _validate_slot(slot: Optional[str]) -> None:
@@ -227,9 +232,9 @@ def _aggregation_key(entry: NormalizedIngredient) -> tuple[str, str | None] | No
     return None
 
 
-def _aggregate_week_ingredients(plans: list[MealPlan]) -> list[NormalizedIngredient]:
+def _aggregate_week_ingredients(plans: list[MealPlan]) -> list[WeekIngredient]:
     """Aggregate ingredients from multiple meal-plan rows for one week."""
-    aggregated: list[NormalizedIngredient] = []
+    aggregated: list[WeekIngredient] = []
     index: dict[tuple[str, str | None], int] = {}
     for plan in plans:
         for entry in _normalize_stored_ingredients(plan.ingredients):
@@ -237,9 +242,10 @@ def _aggregate_week_ingredients(plans: list[MealPlan]) -> list[NormalizedIngredi
             if key is None or key not in index:
                 if key is not None:
                     index[key] = len(aggregated)
-                aggregated.append(dict(entry))
+                aggregated.append({**entry, "source": merge_item_source(None, plan.meal_name)})
                 continue
             existing = aggregated[index[key]]
+            existing["source"] = merge_item_source(existing["source"], plan.meal_name)
             if existing["amount"] is not None and entry["amount"] is not None:
                 existing["amount"] += entry["amount"]
     return aggregated
@@ -466,6 +472,7 @@ def add_week_ingredients_to_shopping(
             name=entry["name"].strip(),
             spec=_format_spec(entry["amount"], entry["unit"]),
             added_by_user_id=user.id,
+            source=entry["source"],
         ))
     db.commit()
     for transition in transitions:
@@ -554,6 +561,7 @@ def add_ingredients_to_shopping(
             name=entry["name"].strip(),
             spec=_format_spec(entry["amount"], entry["unit"]),
             added_by_user_id=user.id,
+            source=plan.meal_name,
         ))
     db.commit()
     for transition in transitions:

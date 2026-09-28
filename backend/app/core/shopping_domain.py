@@ -314,6 +314,24 @@ def resolve_category(
     return canonicalize_category(db, family_id, preference.category) if preference is not None else None
 
 
+MAX_ITEM_SOURCE_LENGTH = 200
+
+
+def merge_item_source(existing: str | None, incoming: str | None) -> str | None:
+    """Adds recipes or meals to what an item is for, each once ("Lasagne, Pancakes")."""
+    names = [part.strip() for part in (existing or "").split(",") if part.strip()]
+    for name in (part.strip() for part in (incoming or "").split(",")):
+        if not name or any(part.casefold() == name.casefold() for part in names):
+            continue
+        # A long list keeps the first names instead of cutting one in half.
+        if len(", ".join([*names, name])) > MAX_ITEM_SOURCE_LENGTH:
+            if not names:
+                names.append(name[:MAX_ITEM_SOURCE_LENGTH])
+            break
+        names.append(name)
+    return ", ".join(names) or None
+
+
 def add_or_merge_shopping_item(
     db: Session,
     *,
@@ -323,8 +341,14 @@ def add_or_merge_shopping_item(
     category: str | None = None,
     added_by_user_id: int | None = None,
     position: int | None = None,
+    source: str | None = None,
 ) -> ShoppingItemTransition:
-    """Create, merge into an active row, or restore a checked compatible row."""
+    """Create, merge into an active row, or restore a checked compatible row.
+
+    ``source`` names the recipe or meal the item is added for (Tribu 2.0,
+    L5). Merging adds it to the item's sources; restoring a bought item
+    starts over with it.
+    """
     display_name = normalize_item_name(name)
     incoming_spec = clean_optional_text(spec)
     resolved_category = resolve_category(
@@ -359,9 +383,11 @@ def add_or_merge_shopping_item(
             match.archived = False
             match.checked = False
             match.checked_at = None
+            match.source = merge_item_source(None, source)
             action: ShoppingItemAction = "restored"
         else:
             match.spec = _merged_active_spec(match.spec, incoming_spec)
+            match.source = merge_item_source(match.source, source)
             action = "merged"
         if resolved_category is not None:
             match.category = resolved_category
@@ -385,6 +411,7 @@ def add_or_merge_shopping_item(
         category=resolved_category,
         added_by_user_id=added_by_user_id,
         position=position,
+        source=merge_item_source(None, source),
     )
     db.add(item)
     db.flush()

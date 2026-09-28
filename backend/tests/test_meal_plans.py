@@ -454,6 +454,15 @@ class TestWeeklyMealPlanShoppingIntegration:
             ("Milk", "500 ml"),
             ("Sugar", "2 tbsp"),
         ])
+        # Each item says which meals it is for (Tribu 2.0, L5).
+        sources = sorted((item["name"], item["spec"], item["source"]) for item in items)
+        assert sources == sorted([
+            ("Basil", None, "Pancakes, Pasta"),
+            ("Flour", "750 g", "Pancakes, Pasta"),
+            ("Milk", "1 l", "Pancakes"),
+            ("Milk", "500 ml", "Pasta"),
+            ("Sugar", "2 tbsp", "Cake"),
+        ])
 
         pushed_again = client.post(
             "/meal-plans/week/add-to-shopping",

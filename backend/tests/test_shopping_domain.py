@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.shopping_domain import (
     add_or_merge_shopping_item,
+    merge_item_source,
     normalize_product_name,
     parse_quantity,
     remember_category,
@@ -43,6 +44,40 @@ def test_quantity_parser_rejects_adversarial_whitespace_suffix():
 
 def test_product_name_uses_trimmed_unicode_casefold():
     assert normalize_product_name("  Straße ") == normalize_product_name("STRASSE") == "strasse"
+
+
+def test_item_source_names_each_recipe_once_and_stays_short():
+    assert merge_item_source(None, None) is None
+    assert merge_item_source(None, " Lasagne ") == "Lasagne"
+    assert merge_item_source("Lasagne", "lasagne") == "Lasagne"
+    assert merge_item_source("Lasagne", "Pancakes, Lasagne") == "Lasagne, Pancakes"
+    assert merge_item_source("Lasagne", None) == "Lasagne"
+    long_name = "x" * 195
+    assert merge_item_source(long_name, "Pancakes") == long_name
+    assert merge_item_source(None, "y" * 300) == "y" * 200
+
+
+def test_item_source_follows_merges_and_starts_over_on_restore(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'source.db'}")
+    Base.metadata.create_all(engine)
+    db = sessionmaker(bind=engine)()
+    family = Family(name="Source")
+    db.add(family)
+    db.flush()
+    groceries = ShoppingList(family_id=family.id, name="Groceries")
+    db.add(groceries)
+    db.flush()
+
+    first = add_or_merge_shopping_item(db, shopping_list=groceries, name="Milk", spec="1 l", source="Pancakes")
+    add_or_merge_shopping_item(db, shopping_list=groceries, name="milk", spec="1 l", source="Lasagne")
+    add_or_merge_shopping_item(db, shopping_list=groceries, name="Milk", spec="1 l")
+    assert (first.item.spec, first.item.source) == ("3 l", "Pancakes, Lasagne")
+
+    first.item.checked = True
+    restored = add_or_merge_shopping_item(db, shopping_list=groceries, name="Milk")
+    assert restored.action == "restored"
+    assert restored.item.source is None
+    db.close()
 
 
 def test_add_merge_restore_quantity_and_family_category_preference(tmp_path):

@@ -1563,6 +1563,7 @@
   "module.shopping.show_overview": "Εμφάνιση επισκόπησης κατηγοριών",
   "module.shopping.hide_overview": "Απόκρυψη επισκόπησης κατηγοριών",
   "module.shopping.undo": "Αναίρεση",
+  "module.shopping.for_source": "για {source}",
   "module.shopping.help": "Πώς λειτουργεί η λίστα",
   "module.shopping.item_deleted": "Αφαιρέθηκε: {name}",
   "module.shopping.item_checked": "Επιλέχθηκε: {name}",

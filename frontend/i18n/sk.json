@@ -1561,6 +1561,7 @@
   "module.shopping.show_overview": "Zobraziť prehľad kategórií",
   "module.shopping.hide_overview": "Skryť prehľad kategórií",
   "module.shopping.undo": "Späť",
+  "module.shopping.for_source": "na {source}",
   "module.shopping.help": "Ako zoznam funguje",
   "module.shopping.item_deleted": "{name} odstránené",
   "module.shopping.item_checked": "Zaškrtnuté: {name}",

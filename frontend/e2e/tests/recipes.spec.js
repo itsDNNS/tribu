@@ -71,6 +71,8 @@ test.describe('Recipes', () => {
     await selectShoppingList(page, 'Recipe Shopping List');
     await expect(page.getByRole('checkbox', { name: 'Flour' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('checkbox', { name: 'Milk' })).toBeVisible();
+    // Each ingredient says which recipe it is for (Tribu 2.0, L5).
+    await expect(page.locator('.shop-tile').filter({ hasText: 'Flour' })).toContainText('for Playwright Pancakes');
 
     await navigateTo(page, 'Meal plan');
     // New meals start from an empty slot of the week.

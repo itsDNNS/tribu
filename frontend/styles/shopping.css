@@ -219,6 +219,10 @@
   background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
 }
 .shop-page .shop-line-list .urgent .shop-tile-check { display: flex; }
+/* The badge sits over the row's right side; the text stops before it. */
+.shop-page .shop-line-list .shop-tile.urgent .shop-tile-main { padding-right: 148px; }
+.shop-page .shop-line-list .shop-product-copy { min-width: 0; }
+.shop-page .shop-line-list .shop-product-note { min-width: 0; }
 .shop-page .shop-line-list .shop-tile-menu {
   top: calc(50% - 22px);
   right: var(--space-1);

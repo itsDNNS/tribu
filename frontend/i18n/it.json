@@ -1566,6 +1566,7 @@
   "module.shopping.show_overview": "Mostra riepilogo categorie",
   "module.shopping.hide_overview": "Nascondi riepilogo categorie",
   "module.shopping.undo": "Annulla",
+  "module.shopping.for_source": "per {source}",
   "module.shopping.help": "Come funziona la lista",
   "module.shopping.item_deleted": "{name} rimosso",
   "module.shopping.item_checked": "Spuntato: {name}",

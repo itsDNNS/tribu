@@ -1565,6 +1565,7 @@
   "module.shopping.show_overview": "Categorieoverzicht tonen",
   "module.shopping.hide_overview": "Categorieoverzicht verbergen",
   "module.shopping.undo": "Ongedaan maken",
+  "module.shopping.for_source": "voor {source}",
   "module.shopping.help": "Zo werkt de lijst",
   "module.shopping.item_deleted": "{name} verwijderd",
   "module.shopping.item_checked": "Afgevinkt: {name}",

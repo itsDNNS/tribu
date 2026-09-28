@@ -1569,6 +1569,7 @@
   "module.shopping.show_overview": "Arată lista categoriilor",
   "module.shopping.hide_overview": "Ascunde lista categoriilor",
   "module.shopping.undo": "Anulează",
+  "module.shopping.for_source": "pentru {source}",
   "module.shopping.help": "Cum funcționează lista",
   "module.shopping.item_deleted": "{name} eliminat",
   "module.shopping.item_checked": "Bifat: {name}",

@@ -1564,6 +1564,7 @@
   "module.shopping.show_overview": "Näytä kategoriayhteenveto",
   "module.shopping.hide_overview": "Piilota kategoriayhteenveto",
   "module.shopping.undo": "Kumoa",
+  "module.shopping.for_source": "{source} varten",
   "module.shopping.help": "Näin lista toimii",
   "module.shopping.item_deleted": "{name} poistettu",
   "module.shopping.item_checked": "Merkitty ostetuksi: {name}",

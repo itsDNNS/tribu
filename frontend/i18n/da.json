@@ -1566,6 +1566,7 @@
   "module.shopping.show_overview": "Vis kategorioversigt",
   "module.shopping.hide_overview": "Skjul kategorioversigt",
   "module.shopping.undo": "Fortryd",
+  "module.shopping.for_source": "til {source}",
   "module.shopping.help": "Sådan fungerer listen",
   "module.shopping.item_deleted": "{name} fjernet",
   "module.shopping.item_checked": "Afkrydset: {name}",

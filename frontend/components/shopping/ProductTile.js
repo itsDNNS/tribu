@@ -5,6 +5,12 @@ import { GroceryArt } from './catalog';
 import { useSwipeActions } from '../../hooks/useSwipeActions';
 import SwipeReveal, { swipeStyle } from '../SwipeReveal';
 
+// The note, plus the recipes or meals the product is for (Tribu 2.0, L5).
+function productNote(item, tr) {
+  const source = item.source ? tr('module.shopping.for_source').replace('{source}', item.source) : '';
+  return [item.notes, source].filter(Boolean).join(' · ');
+}
+
 // One product. As a row (`swipe`) it also swipes: right into the basket or
 // back, left to delete.
 export default function ProductTile({
@@ -62,7 +68,7 @@ export default function ProductTile({
       onToggle(item.id, item.checked);
     }}>
  <span className="shop-tile-check">{item.checked && <Check size={12} />}</span>{item.photo ? <img className="shop-product-photo" src={item.photo} alt="" /> : <GroceryArt name={item.name} />}
- <span className="shop-product-copy"><span className="shop-product-name">{item.name}</span><span className="shop-product-qty">{item.spec || tr("module.shopping.visual.1_stuck")}</span>{waiting ? <span className="shop-product-note shop-waiting"><CloudOff size={11} aria-hidden="true" />{tr('offline.waiting')}</span> : <span className="shop-product-note">{item.notes || ''}</span>}</span></button>
+ <span className="shop-product-copy"><span className="shop-product-name">{item.name}</span><span className="shop-product-qty">{item.spec || tr("module.shopping.visual.1_stuck")}</span>{waiting ? <span className="shop-product-note shop-waiting"><CloudOff size={11} aria-hidden="true" />{tr('offline.waiting')}</span> : <span className="shop-product-note">{productNote(item, tr)}</span>}</span></button>
  {item.priority === 'urgent' && !item.checked && <span className="shop-urgent">{tr("module.shopping.visual.dringend")}</span>}{onEdit && <button className="shop-tile-menu" aria-label={tr("module.shopping.visual.details_zu_0", [item.name])} onClick={() => onEdit(item)}><MoreVertical size={17} /></button>}</>;
   const className = `shop-tile ${item.checked ? 'done ' : ''}${item.priority === 'urgent' && !item.checked ? 'urgent' : ''}`;
   if (!swipe) return <article className={className}>{body}</article>;

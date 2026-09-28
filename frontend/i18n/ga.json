@@ -1561,6 +1561,7 @@
   "module.shopping.show_overview": "Taispeáin forbhreathnú na gcatagóirí",
   "module.shopping.hide_overview": "Folaigh forbhreathnú na gcatagóirí",
   "module.shopping.undo": "Cealaigh",
+  "module.shopping.for_source": "le haghaidh {source}",
   "module.shopping.help": "Conas a oibríonn an liosta",
   "module.shopping.item_deleted": "Baineadh {name}",
   "module.shopping.item_checked": "Ticeáilte: {name}",

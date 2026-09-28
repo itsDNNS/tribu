@@ -1566,6 +1566,7 @@
   "module.shopping.show_overview": "Vis kategorioversikt",
   "module.shopping.hide_overview": "Skjul kategorioversikt",
   "module.shopping.undo": "Angre",
+  "module.shopping.for_source": "til {source}",
   "module.shopping.help": "Slik fungerer listen",
   "module.shopping.item_deleted": "{name} fjernet",
   "module.shopping.item_checked": "Avkrysset: {name}",
