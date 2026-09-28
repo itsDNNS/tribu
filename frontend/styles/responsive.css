@@ -107,7 +107,7 @@ button.ui-date-label:hover {
   height: 18px;
   padding: 0 4px;
   border-radius: 9px;
-  background: var(--amethyst);
+  background: var(--color-accent-fill);
   color: var(--text-on-primary);
   font-size: 10px;
   font-weight: 700;

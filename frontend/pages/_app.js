@@ -6,6 +6,7 @@ import { AppProvider } from '../contexts/AppContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import { ToastContainer } from '../components/Toast';
 import { PWABanners } from '../components/PWABanners';
+import '../styles/tokens.css';
 import '../styles/globals.css';
 import '../styles/dashboard.css';
 import '../styles/calendar.css';
