@@ -229,14 +229,10 @@ test.describe('Mockup calendar', () => {
     authedPage: page,
   }) => {
     await calendar(page);
-    const trigger = page.getByRole('button', {
-      name: 'Create event',
-      exact: true,
-    });
+    // The day overview is the overlay; its trigger is the day in the grid.
+    const trigger = dayButton(page, 15);
     await trigger.click();
-    await expect(
-      page.getByLabel('What is happening?', { exact: true }),
-    ).toBeFocused();
+    await expect(page.getByRole('dialog')).toBeVisible();
     for (let i = 0; i < 24; i++) {
       await page.keyboard.press('Tab');
       expect(

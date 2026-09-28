@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Plus, Search } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
+import { plannerText } from '../responsive/PlannerUI';
 import MemberAvatar from '../MemberAvatar';
 
 // The one header of every page (Tribu 2.0, R5): where you are on phones,
-// search, alerts and the account menu. It tightens once the page scrolls.
-export default function AppHeader({ title, onSearch, onNotifications, onAccount, accountOpen = false, notificationButtonRef = null }) {
+// search, the global "+" on wide screens (phones have it in the tab bar),
+// alerts and the account menu. It tightens once the page scrolls.
+export default function AppHeader({ title, onSearch, onNotifications, onAccount, onCreate, accountOpen = false, notificationButtonRef = null }) {
   const { me, members = [], profileImage, messages, unreadCount, showNotificationBadge = true } = useApp();
   const [scrolled, setScrolled] = useState(false);
   const count = showNotificationBadge ? unreadCount : 0;
@@ -30,6 +32,12 @@ export default function AppHeader({ title, onSearch, onNotifications, onAccount,
         <span className="app-header-search-text" aria-hidden="true">{t(messages, 'search.placeholder')}</span>
         <kbd aria-hidden="true">⌘K</kbd>
       </button>
+      {typeof onCreate === 'function' && (
+        <button type="button" className="app-header-new" onClick={onCreate} aria-haspopup="dialog">
+          <Plus size={18} aria-hidden="true" />
+          {plannerText(messages, 'new')}
+        </button>
+      )}
       <button
         ref={notificationButtonRef}
         type="button"

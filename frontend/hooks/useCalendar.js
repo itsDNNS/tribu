@@ -126,8 +126,11 @@ export function useCalendar() {
     const m = calendarMonth.getMonth();
     const current = () => mounted.current && request === rangeRequest.current && String(activeFamily.current) === String(familyId);
     try {
-      const start = calendarView === 'agenda' ? new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate()) : new Date(y,m,-7);
-      const end = calendarView === 'agenda' ? new Date(start.getFullYear(),start.getMonth(),start.getDate()+agendaDays) : new Date(y,m+1,15);
+      // The agenda starts at the selected day; its week strip needs the days
+      // before it in the same week as well.
+      const weekBack = (selectedDate.getDay() - startIdx + 7) % 7;
+      const start = calendarView === 'agenda' ? new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate()-weekBack) : new Date(y,m,-7);
+      const end = calendarView === 'agenda' ? new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate()+agendaDays) : new Date(y,m+1,15);
       const { ok, data } = await api.apiGetEvents(familyId,start.toISOString(),end.toISOString());
       if (!current()) return;
       if (ok) setEvents(data);
@@ -137,7 +140,7 @@ export function useCalendar() {
     } finally {
       if (current()) setRangeLoading(false);
     }
-  }, [calendarMonth, familyId, demoMode, setEvents, calendarView, selectedDate, agendaDays]);
+  }, [calendarMonth, familyId, demoMode, setEvents, calendarView, selectedDate, agendaDays, startIdx]);
 
   useEffect(() => {
     if (!familyId || demoMode) return;

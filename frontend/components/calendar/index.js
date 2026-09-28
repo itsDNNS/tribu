@@ -5,7 +5,6 @@ import {
   EmptyDay,
   CompactMonth,
   DayStrip,
-  WeekPresentation,
   addDays,
   plannerText,
 } from '../responsive/PlannerUI';
@@ -14,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Cake,
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -32,6 +32,7 @@ import { eventOccursOn } from '../../lib/calendar-dates';
 import { getMemberColor } from '../../lib/member-colors';
 import { getCalendarEventIcon } from '../../lib/calendar-icons';
 import MemberAvatar from '../MemberAvatar';
+import { weekStartIndex } from '../../lib/dates';
 import CalendarDialog from './CalendarDialog';
 import EventEditor from './EventEditor';
 import { calendarEventStyle } from '../../lib/calendar-colors';
@@ -56,7 +57,11 @@ export default function CalendarView(props) {
   } = useApp();
   const cal = useCalendar();
   const { ref: plannerRef, compact } = usePlannerLayout();
-  const [weekPresentation, setWeekPresentation] = useState('day');
+  // Phones (Tribu 2.0, K1): the agenda under a week strip; the month opens
+  // by pulling the strip down or with its toggle.
+  const [monthOpen, setMonthOpen] = useState(false);
+  const phoneDefault = useRef(false);
+  const stripDrag = useRef(null);
   const selected = cal.selectedDate || new Date();
   const selectDate = (date) => {
     cal.setSelectedDate(date);
@@ -82,6 +87,11 @@ export default function CalendarView(props) {
     cal.cancelEdit();
     cal.cancelDuplicate();
   }, [familyId]);
+  useEffect(() => {
+    if (!compact || phoneDefault.current) return;
+    phoneDefault.current = true;
+    if (cal.calendarView !== 'agenda') cal.setCalendarView('agenda');
+  }, [compact]);
   const today = new Date();
   const matches = (event) =>
     memberFilter == null ||
@@ -183,8 +193,13 @@ export default function CalendarView(props) {
   );
   const weekdayDates = days.slice(0, 7);
   const monthMode = cal.calendarView === 'month';
+  const toggleMonth = (open) => {
+    setMonthOpen(open);
+    cal.setCalendarView(open ? 'month' : 'agenda');
+  };
   const navigate = (direction) => {
-    if (cal.calendarView === 'agenda')
+    if (compact && !monthOpen) selectDate(addDays(selected, direction * 7));
+    else if (cal.calendarView === 'agenda')
       selectDate(addDays(selected, direction * 14));
     else if (monthMode) {
       const target = new Date(
@@ -272,22 +287,9 @@ export default function CalendarView(props) {
       className="calendar-page dashboard-today-page tc-page ui-planner"
       data-density={compact ? 'compact' : 'wide'}
     >
-      <header className="tc-view-header">
-        <div>
-          <div className="tc-eyebrow">{t(messages, 'calendar')}</div>
-          <h1>{copy('heading')}</h1>
-          <p>{copy('subtitle')}</p>
-        </div>
-        {!isChild && (
-          <button
-            className="tc-btn primary"
-            aria-label={t(messages, 'create_event')}
-            onClick={() => create()}
-          >
-            <Plus size={15} />
-            {t(messages, 'create_event')}
-          </button>
-        )}
+      {/* Tribu 2.0 (K4): a plain title; new events come from the global "+". */}
+      <header className="list-header tc-list-header">
+        <h1>{t(messages, 'calendar')}</h1>
       </header>
       <div className="tc-toolbar">
         <div className="tc-date-nav">
@@ -295,7 +297,7 @@ export default function CalendarView(props) {
             className="tc-icon"
             aria-label={t(
               messages,
-              monthMode ? 'aria.previous_month' : 'aria.previous_week',
+              monthMode && !(compact && !monthOpen) ? 'aria.previous_month' : 'aria.previous_week',
             )}
             onClick={() => navigate(-1)}
           >
@@ -308,7 +310,12 @@ export default function CalendarView(props) {
             aria-label={plannerText(messages, 'choose_date')}
             onClick={() => setModal({ kind: 'date', date: dateKey(selected) })}
           >
-            {cal.calendarView === 'agenda'
+            {compact && !monthOpen
+              ? selected.toLocaleDateString(locale, {
+                  month: 'long',
+                  year: 'numeric',
+                })
+              : cal.calendarView === 'agenda'
               ? selected.toLocaleDateString(locale, {
                   day: 'numeric',
                   month: 'long',
@@ -324,7 +331,7 @@ export default function CalendarView(props) {
             className="tc-icon"
             aria-label={t(
               messages,
-              monthMode ? 'aria.next_month' : 'aria.next_week',
+              monthMode && !(compact && !monthOpen) ? 'aria.next_month' : 'aria.next_week',
             )}
             onClick={() => navigate(1)}
           >
@@ -341,35 +348,53 @@ export default function CalendarView(props) {
             {t(messages, 'module.calendar.today')}
           </button>
         </div>
-        <div className="ui-planner-controls">
-          <div className="tc-segmented">
-            {['month', 'week', 'agenda'].map((mode) => (
-              <button
-                key={mode}
-                aria-pressed={cal.calendarView === mode}
-                onClick={() => cal.setCalendarView(mode)}
-              >
-                {mode === 'agenda'
-                  ? plannerText(messages, 'agenda')
-                  : t(messages, `module.calendar.${mode}`)}
-              </button>
-            ))}
+        {!compact && (
+          <div className="ui-planner-controls">
+            <div className="tc-segmented">
+              {['month', 'week', 'agenda'].map((mode) => (
+                <button
+                  key={mode}
+                  aria-pressed={cal.calendarView === mode}
+                  onClick={() => cal.setCalendarView(mode)}
+                >
+                  {mode === 'agenda'
+                    ? plannerText(messages, 'agenda')
+                    : t(messages, `module.calendar.${mode}`)}
+                </button>
+              ))}
+            </div>
           </div>
-          <select
-            className="ui-family-filter"
-            aria-label={plannerText(messages, 'family_filter')}
-            value={memberFilter ?? ''}
-            onChange={(e) => setMemberFilter(e.target.value || null)}
-          >
-            <option value="">{plannerText(messages, 'all_members')}</option>
-            {members.map((member) => (
-              <option key={member.user_id} value={member.user_id}>
-                {member.display_name}
-              </option>
-            ))}
-          </select>
-        </div>
+        )}
       </div>
+      {members.length > 1 && (
+        <div className="person-filter" role="group" aria-label={plannerText(messages, 'family_filter')}>
+          {[
+            { key: null, label: t(messages, 'module.tasks.all') },
+            ...members.map((member) => ({
+              key: String(member.user_id),
+              label: member.display_name?.split(' ')[0],
+              member,
+            })),
+          ].map((filter) => (
+            <button
+              key={filter.key ?? 'all'}
+              type="button"
+              className={`person-filter-chip${memberFilter === filter.key ? ' active' : ''}`}
+              aria-pressed={memberFilter === filter.key}
+              onClick={() => setMemberFilter(filter.key)}
+            >
+              {filter.member && (
+                <MemberAvatar
+                  member={filter.member}
+                  index={members.indexOf(filter.member)}
+                  size={22}
+                />
+              )}
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      )}
       {cal.rangeLoading && <p role="status">{copy('loading')}</p>}
       {cal.rangeError && (
         <p role="alert">
@@ -380,7 +405,70 @@ export default function CalendarView(props) {
         </p>
       )}
       {!cal.rangeError &&
-        (cal.calendarView === 'agenda' ? (
+        (compact ? (
+          <>
+            <div
+              className={`ui-phone-strip${monthOpen ? ' month' : ''}`}
+              onPointerDown={(e) => {
+                if (e.pointerType === 'mouse') return;
+                stripDrag.current = { x: e.clientX, y: e.clientY };
+              }}
+              onPointerUp={(e) => {
+                const start = stripDrag.current;
+                stripDrag.current = null;
+                if (!start) return;
+                const dx = e.clientX - start.x;
+                const dy = e.clientY - start.y;
+                if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx)) {
+                  toggleMonth(dy > 0);
+                } else if (!monthOpen && Math.abs(dx) > 50) {
+                  selectDate(addDays(selected, dx < 0 ? 7 : -7));
+                }
+              }}
+              onPointerCancel={() => {
+                stripDrag.current = null;
+              }}
+            >
+              {monthOpen ? (
+                <CompactMonth
+                  month={cal.calendarMonth}
+                  selected={selected}
+                  onSelect={selectDate}
+                  eventsOn={eventsOn}
+                  members={members}
+                  locale={locale}
+                  messages={messages}
+                  weekStart={weekStart}
+                />
+              ) : (
+                <DayStrip
+                  days={Array.from({ length: 7 }, (_, i) =>
+                    addDays(
+                      selected,
+                      i - ((selected.getDay() - weekStartIndex(weekStart) + 7) % 7),
+                    ),
+                  )}
+                  selected={selected}
+                  onSelect={selectDate}
+                  locale={locale}
+                  messages={messages}
+                  colors={(date) =>
+                    eventsOn(date).flatMap((event) =>
+                      calendarEventColors(event, members),
+                    )
+                  }
+                />
+              )}
+              <button
+                type="button"
+                className="ui-strip-toggle"
+                aria-expanded={monthOpen}
+                onClick={() => toggleMonth(!monthOpen)}
+              >
+                <ChevronDown size={16} aria-hidden="true" />
+                {t(messages, monthOpen ? 'module.calendar.week' : 'module.calendar.month')}
+              </button>
+            </div>
           <div className="ui-agenda-list">
             {Array.from({ length: cal.agendaDays || 14 }, (_, i) =>
               addDays(selected, i),
@@ -404,49 +492,31 @@ export default function CalendarView(props) {
               {plannerText(messages, 'load_more')}
             </button>
           </div>
-        ) : compact ? (
-          <>
-            {monthMode ? (
-              <>
-                <CompactMonth
-                  month={cal.calendarMonth}
-                  selected={selected}
-                  onSelect={selectDate}
-                  eventsOn={eventsOn}
-                  members={members}
-                  locale={locale}
-                  messages={messages}
-                  weekStart={weekStart}
-                />
-                <div className="ui-agenda">{agendaDay(selected)}</div>
-              </>
-            ) : (
-              <>
-                <DayStrip
-                  days={cal.weekInfo.days.map((day) => day.date)}
-                  selected={selected}
-                  onSelect={selectDate}
-                  locale={locale}
-                  messages={messages}
-                  colors={(date) =>
-                    eventsOn(date).flatMap((event) =>
-                      calendarEventColors(event, members),
-                    )
-                  }
-                />
-                <WeekPresentation
-                  value={weekPresentation}
-                  onChange={setWeekPresentation}
-                  messages={messages}
-                />
-                <div className="ui-agenda">
-                  {weekPresentation === 'all'
-                    ? cal.weekInfo.days.map((day) => agendaDay(day.date, true))
-                    : agendaDay(selected)}
-                </div>
-              </>
-            )}
           </>
+        ) : cal.calendarView === 'agenda' ? (
+          <div className="ui-agenda-list">
+            {Array.from({ length: cal.agendaDays || 14 }, (_, i) =>
+              addDays(selected, i),
+            )
+              .filter((date) => eventsOn(date).length)
+              .map((date) => agendaDay(date, true))}
+            {!Array.from(
+              { length: cal.agendaDays || 14 },
+              (_, i) => eventsOn(addDays(selected, i)).length,
+            ).some(Boolean) && (
+              <EmptyDay
+                messages={messages}
+                onAdd={isChild ? null : () => create(selected)}
+              />
+            )}
+            <button
+              className="tc-btn"
+              disabled={cal.rangeLoading}
+              onClick={() => cal.setAgendaDays((count) => count + 14)}
+            >
+              {plannerText(messages, 'load_more')}
+            </button>
+          </div>
         ) : monthMode ? (
           <section
             className="tc-calendar-shell"

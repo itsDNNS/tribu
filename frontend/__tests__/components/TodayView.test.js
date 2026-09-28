@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import '@testing-library/jest-dom';
 import messages from '../../i18n/en.json';
 import TodayView from '../../components/today/TodayView';
-import { apiConvertQuickCapture, apiGetEvents, apiGetSetupChecklist } from '../../lib/api';
+import { apiConvertQuickCapture, apiGetEvents, apiGetSetupChecklist, apiListMealPlans } from '../../lib/api';
 
 let mockApp = {};
 let mockNow = new Date(2026, 8, 30, 10, 0);
@@ -69,7 +69,11 @@ async function renderToday(overrides = {}, props = {}) {
   mockApp = baseApp(overrides);
   const view = render(<TodayView {...props} />);
   await waitFor(() => expect(apiGetEvents).toHaveBeenCalled());
-  await act(async () => {});
+  // Wait for the loaded events to render, not only for the request.
+  await act(async () => {
+    await apiGetEvents.mock.results.at(-1).value;
+    await apiListMealPlans.mock.results.at(-1)?.value;
+  });
   return view;
 }
 

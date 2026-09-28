@@ -246,6 +246,7 @@ export default function AppShell() {
             onSearch={() => setSearchOpen(true)}
             onNotifications={() => setNotifPanelOpen(true)}
             onAccount={() => setMobileSheet('account')}
+            onCreate={isChild ? undefined : () => setMobileSheet('new')}
             accountOpen={mobileSheet === 'account'}
             notificationButtonRef={bellBtnRef}
           />

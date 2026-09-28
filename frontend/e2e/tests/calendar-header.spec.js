@@ -45,7 +45,7 @@ test('calendar header contains wrapped content above month and week headings', a
             ),
             headerBottom: header.getBoundingClientRect().bottom,
             headingTop: document
-              .querySelector('.tc-view-header')
+              .querySelector('.tc-list-header')
               .getBoundingClientRect().top,
           };
         });

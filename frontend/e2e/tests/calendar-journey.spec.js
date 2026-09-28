@@ -3,6 +3,15 @@ test.use({viewport:{width:1448,height:1000},serviceWorkers:'block'});
 const { getFamilyId, seedCalendarEvent } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
+// New events start at the global "+": the header on wide screens, the tab
+// bar on phones, then the event form of the "+" sheet.
+async function newEvent(page) {
+  const headerNew = page.locator('.app-header-new');
+  if (await headerNew.isVisible()) await headerNew.click();
+  else await page.locator('.ui-bottom-nav').getByRole('button', { name: 'New', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Event', exact: true }).click();
+}
+
 // Let Playwright delay real API requests for the pending-save assertions.
 // PWA/service-worker behavior remains covered by the separate PWA suite.
 test.use({ serviceWorkers: 'block' });
@@ -65,9 +74,7 @@ test.describe('Calendar persisted journeys', () => {
     let created;
     try {
       await open(page);
-      await page
-        .getByRole('button', { name: 'Create event', exact: true })
-        .click();
+      await newEvent(page);
       await page
         .getByLabel('What is happening?', { exact: true })
         .fill('Retained plan');
@@ -276,9 +283,7 @@ test.describe('Calendar persisted journeys', () => {
     let source;
     try {
       await open(page);
-      await page
-        .getByRole('button', { name: 'Create event', exact: true })
-        .click();
+      await newEvent(page);
       await page
         .getByLabel('What is happening?', { exact: true })
         .fill('Weekly music');
@@ -467,9 +472,7 @@ test('a signed-in child can read calendar events but cannot mutate them', async 
     const child = await context.newPage();
     await child.goto('/');
     await open(child);
-    await expect(
-      child.getByRole('button', { name: 'Create event', exact: true }),
-    ).toHaveCount(0);
+    await expect(child.locator('.app-header-new')).toHaveCount(0);
     await eventInGrid(child, 'Child visible plan').click();
     await expect(child.getByRole('dialog')).toContainText('Child visible plan');
     for (const action of ['Edit', 'Delete', 'Duplicate event'])

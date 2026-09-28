@@ -824,6 +824,13 @@ button.ui-date-label:hover {
   --line: var(--border-subtle, rgba(88, 65, 80, 0.085));
   --tc-surface: var(--surface-paper);
 }
+:where(.ui-planner, .ui-bottom-nav) button {
+  font: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
 .ui-planner :is(.ui-day-strip, .ui-month-panel) {
   background: var(--surface);
   border: 1px solid var(--line);

@@ -911,3 +911,33 @@
     grid-column: 1/-1;
   }
 }
+
+/* Tribu 2.0 (K1): on phones the agenda sits under a week strip; pulling the
+   strip down or its toggle opens the month. */
+.ui-phone-strip {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  touch-action: pan-y;
+}
+.ui-strip-toggle {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+.ui-strip-toggle:hover { background: var(--color-surface-hover); }
+.ui-strip-toggle svg { transition: transform var(--motion-standard) ease-out; }
+.ui-strip-toggle[aria-expanded='true'] svg { transform: rotate(180deg); }
+.tc-page .tc-list-header { margin-bottom: var(--space-2); }
+.tc-page > .person-filter { margin-bottom: var(--space-4); }
