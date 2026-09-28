@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Realmente remover \"{name}\"?",
   "module.meal_plans.edit_aria": "Editar refeição \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Adicionar refeição para {slot} em {date}",
-  "module.meal_plans.push_week_to_shopping": "Adicionar semana à lista de compras",
-  "module.meal_plans.push_week_to_shopping_aria": "Empurre todos os ingredientes desta semana para uma lista de compras",
   "module.meal_plans.push_to_shopping": "Para lista de compras",
   "module.meal_plans.drag_aria": "Mover \"{name}\" para outro horário",
   "module.meal_plans.pushed_one": "1 ingrediente enviado para a lista de compras",

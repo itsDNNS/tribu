@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Eliminați cu adevărat „{name}”?",
   "module.meal_plans.edit_aria": "Editați masa „{name}”",
   "module.meal_plans.add_for_slot_aria": "Adăugați masa pentru {slot} pe {date}",
-  "module.meal_plans.push_week_to_shopping": "Adăugați săptămâna la lista de cumpărături",
-  "module.meal_plans.push_week_to_shopping_aria": "Împingeți toate ingredientele din această săptămână într-o listă de cumpărături",
   "module.meal_plans.push_to_shopping": "La lista de cumpărături",
   "module.meal_plans.drag_aria": "Mută „{name}” în alt interval",
   "module.meal_plans.pushed_one": "1 ingredient împins în lista de cumpărături",

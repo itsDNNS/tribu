@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Kas tõesti eemaldada \"{name}\"?",
   "module.meal_plans.edit_aria": "Muuda sööki \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Lisage {slot} jaoks {date} eine",
-  "module.meal_plans.push_week_to_shopping": "Lisage nädal ostunimekirja",
-  "module.meal_plans.push_week_to_shopping_aria": "Lükake kõik selle nädala koostisosad ostunimekirja",
   "module.meal_plans.push_to_shopping": "Ostunimekirja juurde",
   "module.meal_plans.drag_aria": "Teisalda „{name}“ teise ajapessa",
   "module.meal_plans.pushed_one": "1 koostisosa lükati ostunimekirja",

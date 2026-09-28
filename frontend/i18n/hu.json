@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Valóban eltávolítja a „{name}” elemet?",
   "module.meal_plans.edit_aria": "\"{name}\" étkezés szerkesztése",
   "module.meal_plans.add_for_slot_aria": "Adjon hozzá ételt a {slot} számára a {date} készüléken",
-  "module.meal_plans.push_week_to_shopping": "Hét hozzáadása a bevásárlólistához",
-  "module.meal_plans.push_week_to_shopping_aria": "Töltsd fel az e hét összes hozzávalóját a bevásárlólistára",
   "module.meal_plans.push_to_shopping": "A bevásárló listához",
   "module.meal_plans.drag_aria": "Helyezd át a(z) „{name}” ételt egy másik helyre",
   "module.meal_plans.pushed_one": "1 hozzávaló felkerült a bevásárlólistára",

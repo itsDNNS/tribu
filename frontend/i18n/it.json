@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Rimuovere davvero \"{name}\"?",
   "module.meal_plans.edit_aria": "Modifica pasto \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Aggiungi pasto per {slot} su {date}",
-  "module.meal_plans.push_week_to_shopping": "Aggiungi settimana alla lista della spesa",
-  "module.meal_plans.push_week_to_shopping_aria": "Inserisci tutti gli ingredienti di questa settimana nella lista della spesa",
   "module.meal_plans.push_to_shopping": "Alla lista della spesa",
   "module.meal_plans.drag_aria": "Sposta \"{name}\" in un altro spazio",
   "module.meal_plans.pushed_one": "1 ingrediente inserito nella lista della spesa",

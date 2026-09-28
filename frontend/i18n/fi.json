@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Haluatko todella poistaa \"{name}\"?",
   "module.meal_plans.edit_aria": "Muokkaa ateriaa \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Lisää ateria {slot}:lle {date}:lle",
-  "module.meal_plans.push_week_to_shopping": "Lisää viikko ostoslistalle",
-  "module.meal_plans.push_week_to_shopping_aria": "Työnnä kaikki tämän viikon ainekset ostoslistalle",
   "module.meal_plans.push_to_shopping": "Ostoslistalle",
   "module.meal_plans.drag_aria": "Siirrä \"{name}\" toiseen paikkaan",
   "module.meal_plans.pushed_one": "1 ainesosa työnnetty ostoslistalle",

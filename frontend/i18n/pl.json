@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Na pewno usunąć „{name}”?",
   "module.meal_plans.edit_aria": "Edytuj posiłek „{name}”",
   "module.meal_plans.add_for_slot_aria": "Dodaj posiłek dla {slot} dnia {date}",
-  "module.meal_plans.push_week_to_shopping": "Dodaj tydzień do listy zakupów",
-  "module.meal_plans.push_week_to_shopping_aria": "Przenieś wszystkie składniki z tego tygodnia na listę zakupów",
   "module.meal_plans.push_to_shopping": "Do listy zakupów",
   "module.meal_plans.drag_aria": "Przenieś „{name}” do innego miejsca",
   "module.meal_plans.pushed_one": "1 składnik przeniesiony na listę zakupów",

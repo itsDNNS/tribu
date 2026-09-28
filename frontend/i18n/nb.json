@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Virkelig fjerne \"{name}\"?",
   "module.meal_plans.edit_aria": "Rediger måltid \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Legg til måltid for {slot} på {date}",
-  "module.meal_plans.push_week_to_shopping": "Legg til uke på handlelisten",
-  "module.meal_plans.push_week_to_shopping_aria": "Overfør alle ingrediensene fra denne uken til en handleliste",
   "module.meal_plans.push_to_shopping": "Til handleliste",
   "module.meal_plans.drag_aria": "Flytt «{name}» til et annet tidspunkt",
   "module.meal_plans.pushed_one": "1 ingrediens presset til handlelisten",

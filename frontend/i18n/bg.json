@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Наистина ли премахвате „{name}“?",
   "module.meal_plans.edit_aria": "Редактиране на хранене „{name}“",
   "module.meal_plans.add_for_slot_aria": "Добавете храна за {slot} на {date}",
-  "module.meal_plans.push_week_to_shopping": "Добавете седмица към списъка за пазаруване",
-  "module.meal_plans.push_week_to_shopping_aria": "Поставете всички съставки от тази седмица в списък за пазаруване",
   "module.meal_plans.push_to_shopping": "Към списъка за пазаруване",
   "module.meal_plans.drag_aria": "Преместете „{name}“ в друг слот",
   "module.meal_plans.pushed_one": "1 съставка е избутана в списъка за пазаруване",

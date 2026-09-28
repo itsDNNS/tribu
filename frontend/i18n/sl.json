@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Res odstranite »{name}«?",
   "module.meal_plans.edit_aria": "Uredi obrok \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Dodajte obrok za {slot} na {date}",
-  "module.meal_plans.push_week_to_shopping": "Dodajte teden na nakupovalni seznam",
-  "module.meal_plans.push_week_to_shopping_aria": "Potisnite vse sestavine iz tega tedna na nakupovalni seznam",
   "module.meal_plans.push_to_shopping": "Na nakupovalni seznam",
   "module.meal_plans.drag_aria": "Premakni »{name}« na drugo mesto",
   "module.meal_plans.pushed_one": "1 sestavina potisnjena na nakupovalni seznam",

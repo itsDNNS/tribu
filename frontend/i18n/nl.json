@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "\"{name}\" echt verwijderen?",
   "module.meal_plans.edit_aria": "Maaltijd bewerken \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Voeg maaltijd toe voor {slot} op {date}",
-  "module.meal_plans.push_week_to_shopping": "Week toevoegen aan boodschappenlijstje",
-  "module.meal_plans.push_week_to_shopping_aria": "Zet alle ingrediënten van deze week op een boodschappenlijstje",
   "module.meal_plans.push_to_shopping": "Naar boodschappenlijstje",
   "module.meal_plans.drag_aria": "Verplaats \"{name}\" naar een ander moment",
   "module.meal_plans.pushed_one": "1 ingrediënt naar het boodschappenlijstje geduwd",

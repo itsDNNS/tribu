@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "An bhfuil fonn ort \"{name}\" a bhaint?",
   "module.meal_plans.edit_aria": "Cuir béile in eagar \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Cuir béile le haghaidh {slot} ar {date}",
-  "module.meal_plans.push_week_to_shopping": "Cuir seachtain leis an liosta siopadóireachta",
-  "module.meal_plans.push_week_to_shopping_aria": "Brúigh na comhábhair go léir ón tseachtain seo chuig liosta siopadóireachta",
   "module.meal_plans.push_to_shopping": "Go dtí an liosta siopadóireachta",
   "module.meal_plans.drag_aria": "Bog \"{name}\" go sliotán eile",
   "module.meal_plans.pushed_one": "1 chomhábhar brú chuig an liosta siopadóireachta",

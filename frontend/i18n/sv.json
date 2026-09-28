@@ -1099,8 +1099,6 @@
   "module.meal_plans.delete_confirm": "Vill du verkligen ta bort \"{name}\"?",
   "module.meal_plans.edit_aria": "Redigera måltid \"{name}\"",
   "module.meal_plans.add_for_slot_aria": "Lägg till måltid för {slot} på {date}",
-  "module.meal_plans.push_week_to_shopping": "Lägg till vecka på inköpslistan",
-  "module.meal_plans.push_week_to_shopping_aria": "Lägg alla ingredienser från denna vecka till en inköpslista",
   "module.meal_plans.push_to_shopping": "Till inköpslistan",
   "module.meal_plans.drag_aria": "Flytta \"{name}\" till en annan plats",
   "module.meal_plans.pushed_one": "1 ingrediens tryckt till inköpslistan",
