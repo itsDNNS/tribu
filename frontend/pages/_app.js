@@ -2,7 +2,8 @@ import { Component as ReactComponent } from 'react';
 import { useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { AppProvider } from '../contexts/AppContext';
+import { AppProvider, useApp } from '../contexts/AppContext';
+import { t } from '../lib/i18n';
 import { ToastProvider } from '../contexts/ToastContext';
 import { ToastContainer } from '../components/Toast';
 import { PWABanners } from '../components/PWABanners';
@@ -38,16 +39,6 @@ export function __isStandaloneRouteForTest(pathname) {
   return isStandaloneRoute(pathname);
 }
 
-const DISPLAY_MODE_BOOTSTRAP = `
-(() => {
-  try {
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true;
-    document.documentElement.dataset.displayMode = isStandalone ? 'standalone' : 'browser';
-  } catch {}
-})();
-`;
 
 // Top-level ErrorBoundary. Detail is gated by NODE_ENV: a stack trace
 // in front of an end user leaks file paths, internal symbols, and
@@ -123,6 +114,12 @@ function DisplayModeRootFlag() {
   return null;
 }
 
+// The first stop for keyboard users, in the family's language.
+function SkipLink() {
+  const { messages } = useApp();
+  return <a href="#main-content" className="skip-link">{t(messages, 'aria.skip_to_content')}</a>;
+}
+
 export default function TribuApp({ Component, pageProps }) {
   const router = useRouter();
   const standalone = isStandaloneRoute(router?.pathname);
@@ -150,11 +147,10 @@ export default function TribuApp({ Component, pageProps }) {
           <Head>
             <title>Tribu</title>
             <meta name="description" content="Self-hosted family organizer for calendars, tasks, shopping lists, contacts, meal planning, and more." />
-            <script dangerouslySetInnerHTML={{ __html: DISPLAY_MODE_BOOTSTRAP }} />
             <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
           </Head>
           <DisplayModeRootFlag />
-          <a href="#main-content" className="skip-link">Skip to main content</a>
+          <SkipLink />
           <div className="mesh-bg" aria-hidden="true" />
           <div className="grain" aria-hidden="true" />
           <PWABanners />
