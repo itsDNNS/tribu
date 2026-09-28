@@ -24,3 +24,15 @@ export function resolveInitialView({
 
   return normalize(storedView);
 }
+
+// What a home screen shortcut asks for (manifest `?action=`, Tribu 2.0 N-3).
+export const LAUNCH_ACTIONS = ['shopping-trip', 'new-shopping', 'new-event'];
+
+export function resolveLaunchAction(search = '') {
+  try {
+    const action = new URLSearchParams(search || '').get('action');
+    return LAUNCH_ACTIONS.includes(action) ? action : null;
+  } catch {
+    return null;
+  }
+}

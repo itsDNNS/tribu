@@ -75,10 +75,10 @@ test.describe('PWA mobile app shell', () => {
     expect(manifest.id).toBe('/');
     expect(manifest.scope).toBe('/');
     expect(manifest.shortcuts.map((shortcut) => shortcut.url)).toEqual([
+      '/?action=shopping-trip',
+      '/?action=new-shopping',
+      '/?action=new-event',
       '/?view=dashboard',
-      '/?view=calendar',
-      '/?view=tasks',
-      '/?view=shopping',
     ]);
   });
 });

@@ -26,12 +26,13 @@ describe('PWA manifest', () => {
   it('offers app shortcuts for the daily mobile workflows', () => {
     const manifest = loadManifest();
 
-    expect(manifest.shortcuts).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'Dashboard', url: '/?view=dashboard' }),
-      expect.objectContaining({ name: 'Calendar', url: '/?view=calendar' }),
-      expect.objectContaining({ name: 'Tasks', url: '/?view=tasks' }),
-      expect.objectContaining({ name: 'Shopping', url: '/?view=shopping' }),
-    ]));
+    // Tribu 2.0 (N-3): start shopping, put something on the list, add an event.
+    expect(manifest.shortcuts.map((shortcut) => shortcut.url)).toEqual([
+      '/?action=shopping-trip',
+      '/?action=new-shopping',
+      '/?action=new-event',
+      '/?view=dashboard',
+    ]);
 
     for (const shortcut of manifest.shortcuts) {
       expect(shortcut.short_name).toEqual(expect.any(String));

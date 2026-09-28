@@ -27,6 +27,7 @@ export default function ResponsiveUI({
   onCreate,
   sheet,
   setSheet,
+  createKind = null,
 }) {
   const app = useApp();
   const { activeView, messages, isChild } = app;
@@ -94,7 +95,7 @@ export default function ResponsiveUI({
         <NewSheet
           onClose={() => setSheet(null)}
           onCreate={onCreate}
-          defaultKind={{ shopping: 'shopping', calendar: 'event' }[activeView] || 'task'}
+          defaultKind={createKind || { shopping: 'shopping', calendar: 'event' }[activeView] || 'task'}
         />
       )}
     </>

@@ -5,6 +5,7 @@ import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
+import { resolveLaunchAction } from '../lib/navigationState';
 import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf, navKeyOf, NO_HIDDEN_AREAS } from '../lib/navigation';
 import AppHeader from './shell/AppHeader';
 import SubNav from './shell/SubNav';
@@ -72,7 +73,27 @@ export default function AppShell() {
   const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, familyId, tasks, shoppingLists, demoMode, loading, navOrder, hiddenAreas = NO_HIDDEN_AREAS } = useApp();
   const [mobileSheet,setMobileSheet] = useState(null);
   const [createRequest,setCreateRequest] = useState(null);
+  const [createKind, setCreateKind] = useState(null);
   useEffect(()=>{setMobileSheet(null);setCreateRequest(null);},[familyId]);
+
+  // Home screen shortcuts (Tribu 2.0, N-3): start shopping or open "+" on
+  // a kind, once the family has loaded.
+  const launchHandled = useRef(false);
+  useEffect(() => {
+    if (launchHandled.current || loading || !me) return;
+    launchHandled.current = true;
+    const action = resolveLaunchAction(window.location.search);
+    if (!action) return;
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
+    if (action === 'shopping-trip') {
+      try { sessionStorage.setItem('tribu_shopping_trip', '1'); } catch { /* private mode */ }
+      setActiveView('shopping');
+    } else if (!isChild) {
+      setCreateKind(action === 'new-event' ? 'event' : 'shopping');
+      setMobileSheet('new');
+    }
+  }, [loading, me, isChild, setActiveView]);
+  useEffect(() => { if (mobileSheet !== 'new') setCreateKind(null); }, [mobileSheet]);
   const [collapsed, setCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -281,6 +302,7 @@ export default function AppShell() {
         navigate={navigate}
         sheet={mobileSheet}
         setSheet={setMobileSheet}
+        createKind={createKind}
         onCreate={(kind) => {
           const route = { event: 'calendar', task: 'tasks', shopping: 'shopping', meal: 'meal_plans' }[kind];
           navigate(route);

@@ -1,4 +1,4 @@
-import { resolveInitialView } from '../../lib/navigationState';
+import { resolveInitialView, resolveLaunchAction } from '../../lib/navigationState';
 import { DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 
 describe('resolveInitialView', () => {
@@ -36,5 +36,19 @@ describe('resolveInitialView', () => {
       storedView: 'bad-view',
       validViews: DEFAULT_NAV_ORDER,
     })).toBeNull();
+  });
+});
+
+describe('resolveLaunchAction', () => {
+  it('reads the home screen shortcut actions', () => {
+    expect(resolveLaunchAction('?action=shopping-trip')).toBe('shopping-trip');
+    expect(resolveLaunchAction('?action=new-shopping')).toBe('new-shopping');
+    expect(resolveLaunchAction('?action=new-event')).toBe('new-event');
+  });
+
+  it('ignores anything else', () => {
+    expect(resolveLaunchAction('?action=delete-everything')).toBeNull();
+    expect(resolveLaunchAction('?view=tasks')).toBeNull();
+    expect(resolveLaunchAction('')).toBeNull();
   });
 });
