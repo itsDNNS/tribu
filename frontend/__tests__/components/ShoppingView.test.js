@@ -1015,3 +1015,10 @@ test('deleting a product can be undone and only then reaches the server', async 
     jest.useRealTimers();
   }
 });
+
+test('a trip started elsewhere stays on after the first render', () => {
+  sessionStorage.setItem('tribu_shopping_trip', '1');
+  setup();
+  expect(document.querySelector('.shop-trip-banner')).toBeInTheDocument();
+  expect(sessionStorage.getItem('tribu_shopping_trip')).toBeNull();
+});

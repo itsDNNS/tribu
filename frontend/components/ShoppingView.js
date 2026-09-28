@@ -122,7 +122,14 @@ export default function ShoppingView(props) {
     setQuery('');
     setError('');
   }, [sh.activeListId, key]);
-  useEffect(() => { setTrip(false); }, [key]);
+  // Another family or account ends shopping mode; the first render keeps
+  // a trip started from Today or a home screen shortcut.
+  const tripKey = useRef(key);
+  useEffect(() => {
+    if (tripKey.current === key) return;
+    tripKey.current = key;
+    setTrip(false);
+  }, [key]);
   // The shopping mode keeps the screen on, where the browser allows it.
   useEffect(() => {
     if (!trip || !navigator.wakeLock?.request) return undefined;
