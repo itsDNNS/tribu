@@ -76,7 +76,7 @@ test.describe('Recipes', () => {
     // New meals start from an empty slot of the week.
     await page.locator('.meal-grid-cell-empty, .meal-slot.empty').first().click();
     await expect(page.getByRole('dialog', { name: 'Plan a meal' })).toBeVisible();
-    await page.getByLabel('Recipe').selectOption({ label: 'Playwright Pancakes' });
+    await page.getByLabel('Recipe', { exact: true }).selectOption({ label: 'Playwright Pancakes' });
     await expect(page.getByPlaceholder('e.g. Spaghetti Bolognese')).toHaveValue('Playwright Pancakes');
     await expect(page.locator('.meal-ingredient-name').first()).toHaveValue('Flour');
     await expect(page.locator('.meal-ingredient-name').nth(1)).toHaveValue('Milk');

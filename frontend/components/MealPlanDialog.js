@@ -3,6 +3,7 @@ import { BookOpen, History, Star, X, Plus, Trash2, ShoppingCart } from 'lucide-r
 import { t } from '../lib/i18n';
 import { createEmptyMealIngredient, MEAL_SLOTS } from '../lib/meal-plans';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
+import { inBody } from './inBody';
 
 function slotLabel(messages, slot) {
   return t(messages, `module.meal_plans.slot.${slot}`);
@@ -97,7 +98,7 @@ export default function MealPlanDialog({
     }
   }
 
-  return (
+  return inBody(
     <div className="cal-dialog-backdrop" onClick={submitting ? undefined : onClose}>
       <div
         ref={dialogRef}

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { TASK_RECURRENCE_OPTIONS } from '../lib/taskRecurrenceOptions';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
+import { inBody } from './inBody';
 
 export default function TaskEditDialog({
   open,
@@ -23,7 +24,7 @@ export default function TaskEditDialog({
 
   const titleId = 'task-edit-dialog-title';
 
-  return (
+  return inBody(
     <div className="cal-dialog-backdrop" onClick={onClose}>
       <div
         ref={dialogRef}

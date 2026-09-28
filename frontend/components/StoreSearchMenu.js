@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { buildStoreSearchUrl } from '../lib/storeSearch';
+import { inBody } from './inBody';
 
 function format(messages, key, name) {
   return t(messages, key).replace('{name}', name);
@@ -39,7 +40,7 @@ export default function StoreSearchMenu({ item, stores, messages, onClose, resto
     .map((store) => ({ store, result: buildStoreSearchUrl(store.url_template, item.name) }))
     .filter(({ result }) => result);
 
-  return (
+  return inBody(
     <div className="cal-dialog-backdrop" onClick={onClose}>
       <div ref={dialogRef} className="cal-dialog" role="dialog" aria-modal="true"
         aria-labelledby="store-search-title" aria-describedby="store-search-hint"

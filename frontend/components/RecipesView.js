@@ -21,6 +21,7 @@ import { errorText } from '../lib/helpers';
 import { t, tc } from '../lib/i18n';
 import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient, formatIngredientAmount, recipeToForm, scaleRecipeIngredients } from '../lib/recipes';
 import ConfirmDialog from './ConfirmDialog';
+import { inBody } from './inBody';
 
 
 function safeHttpUrl(value) {
@@ -228,7 +229,7 @@ function RecipeDialog({
     }
   }
 
-  return (
+  return inBody(
     <div className="cal-dialog-backdrop" onClick={submitting ? undefined : onClose}>
       <div
         ref={dialogRef}

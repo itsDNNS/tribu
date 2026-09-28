@@ -664,7 +664,9 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .view-subtitle { color: var(--text-secondary); font-size: 0.88rem; margin-top: 2px; }
 .view-date { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-secondary); background: rgba(255,255,255,0.03); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border); }
 
-.view-enter { animation: viewEnter 0.4s var(--ease-out-expo) both; }
+/* backwards, not both: a kept opacity animation would trap dialogs below
+   the header and tab bar in its own stacking context. */
+.view-enter { animation: viewEnter 0.4s var(--ease-out-expo) backwards; }
 @keyframes viewEnter { from { opacity: 0; } to { opacity: 1; } }
 
 /* ═══════════════════════════════════════════

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { t } from '../lib/i18n';
+import { inBody } from './inBody';
 
 export default function ConfirmDialog({ title, message, confirmLabel, confirmDanger, onConfirm, onCancel, messages }) {
   const dialogRef = useRef(null);
@@ -40,7 +41,7 @@ export default function ConfirmDialog({ title, message, confirmLabel, confirmDan
     }
   }
 
-  return (
+  return inBody(
     <div className="cal-dialog-backdrop" onClick={loading ? undefined : onCancel}>
       <div ref={dialogRef} className="cal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby={message ? 'confirm-dialog-desc' : undefined} onClick={e => e.stopPropagation()}>
         <div id="confirm-dialog-title" className="cal-dialog-title">{title}</div>

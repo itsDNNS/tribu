@@ -5,6 +5,7 @@ import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
 import { getCalendarEventIcon } from '../../lib/calendar-icons';
 import AssignedBadges from '../AssignedBadges';
+import { inBody } from '../inBody';
 
 export const RECURRENCE_OPTIONS = [
   { value: '', key: 'module.calendar.no_repeat' },
@@ -40,7 +41,7 @@ export function DeleteRecurringDialog({ event, messages, onDeleteThis, onDeleteA
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onCancel]);
 
-  return (
+  return inBody(
     <div
       className="cal-dialog-backdrop"
       role="dialog"
