@@ -25,7 +25,6 @@ import { copyTextToClipboard, parseServerInstant } from "../../lib/helpers";
 import { t } from "../../lib/i18n";
 import { localeForLang } from "../../lib/dates";
 import * as api from "../../lib/api";
-import FamilyTopbar from "../FamilyTopbar";
 import MemberAvatar from "../MemberAvatar";
 import MemberEditor from "./MemberEditor";
 import AdminDialog from "./AdminDialog";
@@ -166,7 +165,6 @@ function AdminPage(props) {
 
   return (
     <div className="admin-page dashboard-today-page mockup-admin-page">
-      <FamilyTopbar {...props} />
       <section className="fam-page" aria-label={copy("title")}>
         <header className="fam-header">
           <div className="fam-title">

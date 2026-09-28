@@ -1,6 +1,6 @@
 import { useShoppingText } from "./shopping/useShoppingText";
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Check, X, ShoppingCart, Search, Heart, Coffee, ShoppingBag, House, MoreVertical, Upload, ArrowRight, Grid2X2, List, SlidersHorizontal, CheckCircle, ChevronDown, ArrowUp, ArrowDown, BookOpen, Menu, Copy, Download } from 'lucide-react';
+import { Plus, Check, X, ShoppingCart, Search, Heart, Coffee, ShoppingBag, House, MoreVertical, Upload, ArrowRight, Grid2X2, List, SlidersHorizontal, CheckCircle, ChevronDown, ArrowUp, ArrowDown, BookOpen, Copy, Download } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useShopping } from '../hooks/useShopping';
 import { useCurrentMinute } from '../hooks/useCurrentMinute';
@@ -8,7 +8,6 @@ import { useToast } from '../contexts/ToastContext';
 import { t } from '../lib/i18n';
 import { UNDO_WINDOW_MS } from '../lib/undo';
 import * as api from '../lib/api';
-import FamilyTopbar from './FamilyTopbar';
 import MemberAvatar from './MemberAvatar';
 import StoreSearchMenu from './StoreSearchMenu';
 import { buildStoreSearchUrl } from '../lib/storeSearch';
@@ -338,7 +337,6 @@ export default function ShoppingView(props) {
     list_id: sh.activeListId
   });
   return <div className={`shopping-page dashboard-today-page shop-page ${trip ? 'shopping-trip' : ''}`}>
- {!trip && <div className="shop-command-header"><button className="shop-navigation" aria-label={tr("module.shopping.visual.navigation_offnen")} onClick={props.onOpenNavigation}><Menu size={19} /></button><FamilyTopbar {...props} /></div>}
  {trip && <div className="shop-trip-banner"><div className="shop-trip-copy"><span className="badge-icon"><ShoppingCart size={21} /></span><div><strong>{tr("module.shopping.visual.einkaufsmodus")}</strong><small>{list?.name} · {open.length ? tr("module.shopping.visual.0_artikel_fehlen_noch", [open.length]) : tr("module.shopping.visual.alles_im_korb")}</small></div></div><button className="btn soft" onClick={() => setTrip(false)}><X className="icon sm" />{tr("module.shopping.visual.beenden")}</button></div>}
  <header className="list-header shop-list-header"><h1>{t(messages, 'module.shopping.name')}</h1></header>
  <nav className="shop-listbar" aria-label={tr("module.shopping.visual.einkaufslisten")}>{sh.shoppingLists.map(l => <button key={l.id} className={`shop-list-tab ${l.id === sh.activeListId ? 'active' : ''}`} aria-pressed={l.id === sh.activeListId} onClick={() => sh.setActiveListId(l.id)}><ListIcon name={l.icon} />{l.name}<span className="shop-list-count">{l.id === sh.activeListId ? open.length : Math.max(0, (l.item_count || 0) - (l.checked_count || 0))}</span></button>)}{!isChild && <button className="shop-list-new" aria-label={tr("module.shopping.visual.neue_einkaufsliste")} onClick={() => {

@@ -10,27 +10,38 @@ test.describe('Navigation UI', () => {
     await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible({ timeout: 10000 });
     await expect(sidebarNav.locator('.nav-item.active')).toContainText('Calendar');
 
-    await sidebarNav.locator('.nav-item', { hasText: 'Dashboard' }).click();
+    await sidebarNav.locator('.nav-item', { hasText: 'Today' }).click();
     await expect(page.locator('#main-content').getByRole('region', { name: 'Today' })).toBeVisible({ timeout: 10000 });
-    await expect(sidebarNav.locator('.nav-item.active')).toContainText('Dashboard');
+    await expect(sidebarNav.locator('.nav-item.active')).toContainText('Today');
+    // Settings and admin sit in the account menu, not in the sidebar.
+    await expect(sidebarNav).not.toContainText('Settings');
   });
 
-  test('mobile bottom nav and menu change views', async ({ authedPage: page }) => {
+  test('mobile tabs, page chips and the account menu change views', async ({ authedPage: page }) => {
     const viewport = page.viewportSize();
     test.skip(!viewport || viewport.width > 768, 'Mobile-only navigation check');
 
     const bottomNav = page.locator('.bottom-nav');
-    await bottomNav.getByRole('button', {name:'Calendar',exact:true}).click();
+    await bottomNav.getByRole('button', { name: 'Plan', exact: true }).click();
     await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible({ timeout: 10000 });
-    await expect(bottomNav.locator('.ui-nav-button.active')).toContainText('Calendar');
+    await expect(bottomNav.locator('.ui-nav-button.active')).toContainText('Plan');
+    await expect(page.locator('.app-header-title')).toHaveText('Plan');
 
-    await page.getByRole('button', { name: 'Open menu' }).click();
-    const sidebar = page.getByRole('dialog');
-    await expect(sidebar).toBeVisible();
+    const pages = page.getByRole('navigation', { name: 'Pages in Plan' });
+    await pages.getByRole('button', { name: 'Meal plan' }).click();
+    await expect(pages.getByRole('button', { name: 'Meal plan' })).toHaveAttribute('aria-current', 'page');
 
-    await sidebar.getByRole('button',{name:'Settings',exact:true}).click();
+    // Today, then Plan again: the page used last opens.
+    await bottomNav.getByRole('button', { name: 'Today', exact: true }).click();
+    await expect(page.locator('#main-content').getByRole('region', { name: 'Today' })).toBeVisible();
+    await bottomNav.getByRole('button', { name: 'Plan', exact: true }).click();
+    await expect(pages.getByRole('button', { name: 'Meal plan' })).toHaveAttribute('aria-current', 'page');
+
+    await page.locator('.app-header').getByRole('button', { name: 'Account and settings', exact: true }).click();
+    const menu = page.getByRole('dialog');
+    await menu.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Just the way you like it.' })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.ms-card')).toHaveCount(4);
-    await expect(sidebar).toBeHidden();
+    await expect(menu).toBeHidden();
   });
 });

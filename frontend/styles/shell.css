@@ -1,0 +1,212 @@
+/* The app frame of Tribu 2.0 (docs/tribu-2-design.md, R1–R6): one header on
+   every page, the pages of an area as chips on phones and the account menu.
+   Built on the design tokens. */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+.app-header-title {
+  display: none;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: var(--type-title-m-size);
+  line-height: var(--type-title-m-line);
+  font-weight: var(--type-title-m-weight);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: font-size var(--motion-standard) ease-out;
+}
+.app-header-search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(100%, 360px);
+  min-height: 44px;
+  margin-right: auto;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  text-align: left;
+  cursor: pointer;
+}
+.app-header-search:hover { background: var(--color-surface-hover); }
+.app-header-search-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.app-header-search kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 11px;
+}
+.app-header-icon,
+.app-header-avatar {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.app-header-icon:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.app-header-avatar { border-radius: 50%; }
+.app-header-avatar[aria-expanded='true'] { box-shadow: 0 0 0 2px var(--color-accent-fill); }
+.app-header-badge {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Phones: a sticky header with the area's name; it tightens on scroll.
+   It reaches the page edges, whatever padding the page has. */
+@media (max-width: 768px) {
+  .app-shell .main-content { --page-top: 12px; --page-x: 16px; }
+  .app-shell:has(.shop-page) .main-content { --page-top: 15px; --page-x: 15px; }
+  /* Scrolling to a field or row keeps it clear of the header and tab bar. */
+  html {
+    scroll-padding-top: 72px;
+    scroll-padding-bottom: calc(86px + env(safe-area-inset-bottom));
+  }
+  html:has(.shop-page) { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin: calc(-1 * var(--page-top)) calc(-1 * var(--page-x)) var(--space-2);
+    padding: calc(8px + env(safe-area-inset-top)) 12px 8px var(--page-x);
+    background: var(--color-bg);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--motion-standard) ease-out, padding var(--motion-standard) ease-out;
+  }
+  .app-header.scrolled {
+    padding-top: calc(4px + env(safe-area-inset-top));
+    padding-bottom: 4px;
+    border-bottom-color: var(--color-line);
+  }
+  .app-header.scrolled .app-header-title { font-size: var(--type-title-s-size); }
+  .app-header-title { display: block; flex: 1; }
+  .app-header-search {
+    width: 44px;
+    margin: 0;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+    background: none;
+    color: var(--color-text-secondary);
+  }
+  .app-header-search-text,
+  .app-header-search kbd { display: none; }
+}
+
+/* The pages of the open area, on phones. */
+.app-subnav {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 calc(-1 * var(--page-x, 16px)) var(--space-4);
+  padding: 0 var(--page-x, 16px) 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.app-subnav::-webkit-scrollbar { display: none; }
+.app-subnav-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-weight: 550;
+  cursor: pointer;
+}
+.app-subnav-chip.active {
+  border-color: var(--color-accent-fill);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+.app-subnav-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-fill);
+  color: var(--color-text-on-accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* The account menu opens below the avatar on wide screens. */
+.account-sheet .account-sheet-person { margin-bottom: var(--space-3); }
+@media (min-width: 769px) {
+  .ui-bottom-sheet.account-sheet {
+    width: 360px;
+    margin: 72px 24px auto auto;
+    border-radius: var(--radius-sheet);
+  }
+}
+
+/* Shopping on phones keeps the tab bar; its dock sits right above it and
+   the page leaves room for both. */
+@media (max-width: 768px) {
+  .app-shell .shop-page .shop-mobile-dock {
+    bottom: calc(66px + env(safe-area-inset-bottom));
+    padding-bottom: 11px;
+  }
+  .app-shell:has(.shop-page:not(.shopping-trip)) .main-content {
+    padding-bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+  .app-shell .shop-page:not(.shopping-trip) { padding-bottom: 80px; }
+}
+
+/* Tab bar buttons draw no browser frame. */
+.ui-bottom-nav .ui-nav-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Very narrow phones: the dock's count, catalogue, shopping and menu fit. */
+@media (max-width: 360px) {
+  .app-shell .shop-page .shop-mobile-dock { gap: 6px; padding-inline: 10px; }
+  .app-shell .shop-page .shop-mobile-dock .btn { padding: 0 10px; }
+  .app-shell .shop-page .shop-dock-count { font-size: 0; gap: 4px; }
+  .app-shell .shop-page .shop-dock-count strong { font-size: 17px; }
+}

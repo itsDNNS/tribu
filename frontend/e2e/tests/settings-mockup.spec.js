@@ -27,9 +27,9 @@ for (const width of [320, 390, 1024, 1440]) {
     await page.setViewportSize({ width, height:1000 });
     await openSettings(page);
     await expect(page.locator('.ms-card')).toHaveCount(4);
-    await expect(page.locator('.dashboard-action-badge')).toHaveText('3');
+    await expect(page.locator('.app-header-badge')).toHaveText('3');
     await page.getByRole('switch', { name:'Notification badge' }).click();
-    await expect(page.locator('.dashboard-action-badge')).toHaveCount(0);
+    await expect(page.locator('.app-header-badge')).toHaveCount(0);
     await page.getByRole('switch', { name:'Compact view' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-dashboard-density','compact');
     await page.getByRole('combobox', { name:'Week starts on' }).selectOption('sunday');
@@ -39,9 +39,9 @@ for (const width of [320, 390, 1024, 1440]) {
     await expect(page.getByRole('switch', { name:'Compact view' })).toBeChecked();
     await expect(page.getByRole('switch', { name:'Notification badge' })).not.toBeChecked();
     await page.getByRole('switch', { name:'Notification badge' }).click();
-    await expect(page.locator('.dashboard-action-badge')).toHaveText('3');
+    await expect(page.locator('.app-header-badge')).toHaveText('3');
     await page.getByRole('switch', { name:'Notification badge' }).click();
-    await expect(page.locator('.dashboard-action-badge')).toHaveCount(0);
+    await expect(page.locator('.app-header-badge')).toHaveCount(0);
     await expect(page.getByRole('combobox', { name:'Week starts on' })).toHaveValue('sunday');
     await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -58,18 +58,18 @@ for (const width of [320, 390, 1024, 1440]) {
     await page.getByRole('button', {name:'Farbschema',exact:true}).click();
     await page.screenshot({path:test.info().outputPath(`settings-${width}-dark.png`), fullPage:true, animations:'disabled'});
     if (width <= 768) {
-      await page.getByRole('button', { name: 'Menü öffnen', exact: true }).click();
+      // The avatar opens the account menu; Today is the first tab.
+      await page.locator('.app-header').getByRole('button', { name: 'Konto und Einstellungen', exact: true }).click();
       const menu = page.getByRole('dialog');
       await expect(menu).toBeVisible();
-      // The sheet no longer repeats Home; return through the header logo instead.
       await menu.getByRole('button', { name: 'Schließen', exact: true }).click();
       await expect(menu).toBeHidden();
-      await page.locator('.ui-mobile-header').getByRole('button', { name: 'Dashboard', exact: true }).click();
-      await expect(page.locator('.ui-bottom-nav').getByRole('button', { name: 'Start', exact: true })).toHaveAttribute('aria-current', 'page');
+      await page.locator('.ui-bottom-nav').getByRole('button', { name: 'Heute', exact: true }).click();
+      await expect(page.locator('.ui-bottom-nav').getByRole('button', { name: 'Heute', exact: true })).toHaveAttribute('aria-current', 'page');
     } else {
-      await page.locator('.sidebar .nav-item').filter({hasText:'Dashboard'}).click();
+      await page.locator('.sidebar .nav-item').filter({hasText:'Heute'}).click();
     }
     await expect(page.locator('.today-main')).toHaveCSS('row-gap','16px');
-    await expect(page.locator('.today-badge')).toHaveCount(0);
+    await expect(page.locator('.app-header-badge')).toHaveCount(0);
   });
 }

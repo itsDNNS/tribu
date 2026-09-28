@@ -2,7 +2,6 @@ import { useCallback, useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Users, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
-import FamilyTopbar from '../FamilyTopbar';
 import AccountTab from './AccountTab';
 import NavigationTab from './NavigationTab';
 import NotificationsTab from './NotificationsTab';
@@ -71,7 +70,6 @@ export default function SettingsView(props) {
     </SettingRow>;
   };
   return <div className="settings-page dashboard-today-page mockup-settings-page">
-    <FamilyTopbar {...props}/>
     <header className="ms-header">
       <div className="ms-eyebrow">{t(messages, 'settings')}</div>
       <h1 ref={headingRef} tabIndex={-1}>{activeTabConfig ? t(messages, activeTabConfig.labelKey) : copy('title')}</h1>

@@ -21,7 +21,7 @@ const messages = {
   nav_save: 'Speichern',
   nav_saved: 'Gespeichert',
   nav_reset: 'Zuruecksetzen',
-  dashboard: 'Dashboard',
+  'nav.group.today': 'Heute',
   calendar: 'Kalender',
   activity: 'Aktivitäten',
   contacts: 'Kontakte',
@@ -50,7 +50,7 @@ function baseState(overrides) {
 }
 
 const LABEL_BY_KEY = {
-  dashboard: 'Dashboard',
+  dashboard: 'Heute',
   calendar: 'Kalender',
   activity: 'Aktivitäten',
   shopping: 'Einkauf',

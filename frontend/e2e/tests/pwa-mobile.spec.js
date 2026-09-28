@@ -62,9 +62,9 @@ test.describe('PWA mobile app shell', () => {
 
     await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.shop-mobile-dock')).toBeVisible();
-    await page.getByRole('button', {name:'Open navigation',exact:true}).click();
-    const navigation = page.getByRole('navigation', {name:'Main navigation'});
-    await expect(navigation.getByRole('button', {name:/Shopping/i})).toHaveAttribute('aria-current', 'page');
+    // Shopping belongs to Lists: the tab and the page chip are current.
+    await expect(page.locator('.ui-bottom-nav').getByRole('button', { name: /Lists/ })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('navigation', { name: 'Pages in Lists' }).getByRole('button', { name: /Shopping/ })).toHaveAttribute('aria-current', 'page');
   });
 
   test('manifest exposes install identity and daily shortcuts', async ({ request }) => {

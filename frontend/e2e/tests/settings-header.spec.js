@@ -12,7 +12,7 @@ test('settings header contains wrapped content above the overview', async ({ aut
         .map(animation => animation.finished.catch(() => {})));
     });
     const geometry = await page.evaluate(() => {
-      const header = document.querySelector('.tc-topbar');
+      const header = document.querySelector('.app-header');
       const visible = [...header.querySelectorAll('*')].filter(element => {
         const rect = element.getBoundingClientRect();
         return getComputedStyle(element).visibility !== 'hidden' && rect.width > 0 && rect.height > 0;

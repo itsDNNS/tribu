@@ -35,7 +35,6 @@ import MemberAvatar from '../MemberAvatar';
 import CalendarDialog from './CalendarDialog';
 import EventEditor from './EventEditor';
 import { calendarEventStyle } from '../../lib/calendar-colors';
-import CalendarTopbar from './CalendarTopbar';
 import { mapsLinksForLocation } from './CalendarHelpers';
 export { retargetCreateDraft } from './draftDates';
 
@@ -273,7 +272,6 @@ export default function CalendarView(props) {
       className="calendar-page dashboard-today-page tc-page ui-planner"
       data-density={compact ? 'compact' : 'wide'}
     >
-      <CalendarTopbar {...props} />
       <header className="tc-view-header">
         <div>
           <div className="tc-eyebrow">{t(messages, 'calendar')}</div>

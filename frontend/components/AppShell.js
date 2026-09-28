@@ -1,13 +1,13 @@
-import ResponsiveUI, { MobileHeader } from './responsive/ResponsiveUI';
+import ResponsiveUI from './responsive/ResponsiveUI';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Bell, LogOut, ChevronDown, ChevronLeft, ChevronRight, Users, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
-import { isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, PINNED_NAV_KEYS } from '../lib/navigation';
-import MemberAvatar from './MemberAvatar';
-import { DashboardMotto } from './DashboardDetails';
+import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf } from '../lib/navigation';
+import AppHeader from './shell/AppHeader';
+import SubNav from './shell/SubNav';
 import TodayView from './today/TodayView';
 import ActivityView from './ActivityView';
 import CalendarView from './calendar';
@@ -67,19 +67,14 @@ function TodaySkeleton({ messages }) {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, members, families, familyId, switchFamily, tasks, shoppingLists, unreadCount, showNotificationBadge = true, logout, demoMode, loading, navOrder, profileImage } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, familyId, tasks, shoppingLists, demoMode, loading, navOrder } = useApp();
   const [mobileSheet,setMobileSheet] = useState(null);
   const [createRequest,setCreateRequest] = useState(null);
   useEffect(()=>{setMobileSheet(null);setCreateRequest(null);},[familyId]);
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [overflowOpen, setOverflowOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
-  const [familyMenuOpen, setFamilyMenuOpen] = useState(false);
-  const overflowRef = useRef(null);
-  const familySwitcherRef = useRef(null);
   const bellBtnRef = useRef(null);
   const notifPanelRef = useRef(null);
 
@@ -106,7 +101,6 @@ export default function AppShell() {
     return ()=>cancelAnimationFrame(frame);
   },[activeView,createRequest]);
   const ActiveComponent = views[activeView] || TodayView;
-  const currentFamily = families.find((f) => String(f.family_id) === String(familyId));
   const openTaskCount = tasks.filter((tk) => tk.status === 'open').length;
   const totalUnchecked = shoppingLists.reduce((sum, l) => sum + (l.item_count - l.checked_count), 0);
 
@@ -116,39 +110,24 @@ export default function AppShell() {
     const registry = {};
     for (const [key, meta] of Object.entries(NAV_ITEM_META)) {
       if (!isNavItemVisible(key, { isAdmin, isChild, demoMode })) continue;
-      const label = t(messages, meta.labelKey);
-      const item = {
-        key,
-        icon: meta.icon,
-        label,
-        mobileLabel: meta.mobileLabel || label,
-      };
+      const item = { key, icon: meta.icon, label: t(messages, meta.labelKey) };
       if (key === 'shopping') item.badge = totalUnchecked || null;
       if (key === 'tasks') item.badge = openTaskCount || null;
-      if (key === 'notifications') item.badge = unreadCount || null;
       registry[key] = item;
     }
     return registry;
-  }, [messages, totalUnchecked, openTaskCount, unreadCount, isAdmin, isChild, demoMode]);
+  }, [messages, totalUnchecked, openTaskCount, isAdmin, isChild, demoMode]);
 
-  // Split items: sortable nav items vs pinned bottom items (settings, admin)
-  const orderedItems = useMemo(() => {
-    return navOrder
-      .filter((key) => key in itemRegistry && !PINNED_NAV_KEYS.has(key))
-      .map((key) => itemRegistry[key]);
-  }, [navOrder, itemRegistry]);
-
-  const pinnedItems = useMemo(() => {
-    const items = [];
-    if (itemRegistry.settings) items.push(itemRegistry.settings);
-    if (isAdmin && itemRegistry.admin) items.push(itemRegistry.admin);
-    return items;
-  }, [itemRegistry, isAdmin]);
+  const accountItems = useMemo(
+    () => ACCOUNT_NAV_KEYS.map((key) => itemRegistry[key]).filter(Boolean),
+    [itemRegistry],
+  );
 
   const navIndex = useMemo(() => {
     return new Map(navOrder.map((key, index) => [key, index]));
   }, [navOrder]);
 
+  // Areas within a group follow the saved navigation order.
   const navGroups = useMemo(() => {
     return NAV_GROUPS
       .map((group) => ({
@@ -161,71 +140,45 @@ export default function AppShell() {
       }))
       .filter((group) => group.items.length > 0);
   }, [itemRegistry, messages, navIndex]);
-  const dailyNavGroups = navGroups.filter((group) => group.key !== 'system');
-  const systemNavGroup = navGroups.find((group) => group.key === 'system');
 
   const navigate = useCallback((key) => {
     setActiveView(key);
-    setOverflowOpen(false);
-    setFamilyMenuOpen(false);
-    if (isMobile) setMobileOpen(false);
     const item = itemRegistry[key];
     if (item) announce(item.label);
-  }, [setActiveView, isMobile, itemRegistry]);
+  }, [setActiveView, itemRegistry]);
 
-  const handleFamilySelect = useCallback((nextFamilyId) => {
-    setFamilyMenuOpen(false);
-    if (String(nextFamilyId) === String(familyId)) return;
-    switchFamily?.(String(nextFamilyId));
-  }, [familyId, switchFamily]);
-
-  // Close overflow popover on outside click
+  // A group opens the page used last in it.
+  const lastInGroup = useRef({});
   useEffect(() => {
-    if (!overflowOpen) return;
-    function handleClick(e) {
-      if (overflowRef.current && !overflowRef.current.contains(e.target)) {
-        setOverflowOpen(false);
-      }
-    }
-    document.addEventListener('pointerdown', handleClick);
-    return () => document.removeEventListener('pointerdown', handleClick);
-  }, [overflowOpen]);
+    const group = navGroupOf(activeView);
+    if (group) lastInGroup.current[group.key] = activeView;
+  }, [activeView]);
+  const openGroup = useCallback((group) => {
+    const last = lastInGroup.current[group.key];
+    navigate(group.items.some((item) => item.key === last) ? last : group.items[0].key);
+  }, [navigate]);
 
+  // Escape closes the notification panel.
   useEffect(() => {
-    if (!familyMenuOpen) return;
-    function handleClick(e) {
-      if (familySwitcherRef.current && !familySwitcherRef.current.contains(e.target)) {
-        setFamilyMenuOpen(false);
-      }
-    }
-    document.addEventListener('pointerdown', handleClick);
-    return () => document.removeEventListener('pointerdown', handleClick);
-  }, [familyMenuOpen]);
-
-  // Escape key closes mobile sidebar, overflow, family switcher, and notification panel
-  useEffect(() => {
-    if (!mobileOpen && !overflowOpen && !familyMenuOpen && !notifPanelOpen) return;
+    if (!notifPanelOpen) return;
     function handleKeyDown(e) {
-      if (e.key === 'Escape') {
-        if (notifPanelOpen) { closeNotifPanel(); return; }
-        setFamilyMenuOpen(false);
-        setMobileOpen(false);
-        setOverflowOpen(false);
-      }
+      if (e.key === 'Escape') closeNotifPanel();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [mobileOpen, overflowOpen, familyMenuOpen, notifPanelOpen]);
+  }, [notifPanelOpen]);
 
   function closeNotifPanel() {
     setNotifPanelOpen(false);
     bellBtnRef.current?.focus();
   }
 
-
-  const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}${isMobile && mobileOpen ? ' mobile-open' : ''}`;
-
-  // No system divider needed - pinned items render below the spacer
+  const activeGroup = navGroups.find((group) => group.items.some((item) => item.key === activeView)) || null;
+  const greetingKey = `module.dashboard.greeting_${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}`;
+  const headerTitle = activeView === 'dashboard'
+    ? `${t(messages, greetingKey)}${me?.display_name ? `, ${me.display_name.split(' ')[0]}` : ''}`
+    : activeGroup?.label || itemRegistry[activeView]?.label || '';
+  const sidebarClass = `sidebar${collapsed && !isMobile ? ' collapsed' : ''}`;
 
   return (
     <div className="app-shell">
@@ -235,7 +188,7 @@ export default function AppShell() {
         </div>
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar: the same four areas with their pages (R6). */}
       <aside className={sidebarClass} aria-label="Tribu">
         <div className="sidebar-header">
           <div className="sidebar-brand">
@@ -245,7 +198,6 @@ export default function AppShell() {
             {!collapsed && (
               <div className="sidebar-brand-text">
                 <h2>Tribu</h2>
-                <span>Family OS</span>
               </div>
             )}
           </div>
@@ -262,17 +214,10 @@ export default function AppShell() {
         </div>
 
         <div className="sidebar-content">
-          {!['dashboard', 'calendar', 'settings', 'shopping', 'admin'].includes(activeView) && (
-            <button className="sidebar-search-btn" onClick={() => setSearchOpen(true)}>
-              <Search size={14} />
-              {!collapsed && <span>{t(messages, 'search.placeholder')}</span>}
-              {!collapsed && <kbd className="sidebar-search-kbd">⌘K</kbd>}
-            </button>
-          )}
           <nav className="nav-groups" aria-label={t(messages, 'aria.main_navigation')}>
-            {dailyNavGroups.map((group) => (
+            {navGroups.map((group) => (
               <section className={`nav-section nav-section-${group.key}`} aria-label={group.label} key={group.key}>
-                {!collapsed && <div className="nav-section-label">{group.label}</div>}
+                {!collapsed && group.items.length > 1 && <div className="nav-section-label">{group.label}</div>}
                 {group.items.map((item) => (
                   <button
                     key={item.key}
@@ -289,111 +234,27 @@ export default function AppShell() {
               </section>
             ))}
 
-            {!collapsed && members.length > 0 && (
-              <section className="sidebar-household" aria-label={t(messages, 'module.dashboard.members')}>
-                <div className="nav-section-label">{t(messages, 'module.dashboard.members')}</div>
-                <ul className="sidebar-household-list">
-                  {members.map((member, index) => (
-                    <li key={member.user_id}>
-                      <MemberAvatar member={member} index={index} size={30} />
-                      <span>{member.display_name}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            <div className="sidebar-spacer" aria-hidden="true" />
-
-            {systemNavGroup && (
-              <section className={`nav-section nav-section-${systemNavGroup.key}`} aria-label={systemNavGroup.label}>
-                {!collapsed && <div className="nav-section-label">{systemNavGroup.label}</div>}
-                {systemNavGroup.items.map((item) => (
-                  <button
-                    key={item.key}
-                    className={`nav-item${activeView === item.key ? ' active' : ''}`}
-                    onClick={() => navigate(item.key)}
-                    data-tooltip={item.label}
-                    aria-current={activeView === item.key ? 'page' : undefined}
-                  >
-                    <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
-                    {!collapsed && <span className="nav-label">{item.label}</span>}
-                    {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
-                  </button>
-                ))}
-              </section>
-            )}
           </nav>
-
-        </div>
-
-        <div className="sidebar-footer">
-          {!collapsed && <DashboardMotto messages={messages} />}
-          <div className="sidebar-divider" />
-
-          <div className="sidebar-user">
-            <button
-              type="button"
-              className="sidebar-profile-button"
-              onClick={() => navigate('settings')}
-              aria-label={me?.display_name || 'User'}
-            >
-              <MemberAvatar member={members.find(m => m.user_id === me?.user_id) || { display_name: me?.display_name, profile_image: profileImage }} size={36} />
-            </button>
-            {!collapsed && currentFamily && (
-              <div className="sidebar-family-menu" ref={familySwitcherRef}>
-                <button
-                  type="button"
-                  className="family-switcher"
-                  onClick={() => families.length > 1 && setFamilyMenuOpen((open) => !open)}
-                  aria-label={currentFamily.family_name}
-                  aria-haspopup={families.length > 1 ? 'listbox' : undefined}
-                  aria-expanded={families.length > 1 ? familyMenuOpen : undefined}
-                >
-                  <span className="family-switcher-name">{currentFamily.family_name}</span>
-                  <ChevronDown size={16} aria-hidden="true" />
-                </button>
-                {familyMenuOpen && families.length > 1 && (
-                  <div className="family-switcher-menu" role="listbox" aria-label={t(messages, 'family_name')}>
-                    {families.map((family) => (
-                      <button
-                        key={family.family_id}
-                        type="button"
-                        className={`family-switcher-option${String(family.family_id) === String(familyId) ? ' active' : ''}`}
-                        onClick={() => handleFamilySelect(family.family_id)}
-                        role="option"
-                        aria-selected={String(family.family_id) === String(familyId)}
-                      >
-                        {family.family_name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <button className="sidebar-logout" onClick={logout} aria-label={t(messages, 'aria.logout')}>
-              <LogOut size={18} />
-            </button>
-          </div>
         </div>
       </aside>
 
-      {/* Mobile backdrop */}
-      {isMobile && mobileOpen && (
-        <div className="sidebar-backdrop active" onClick={() => setMobileOpen(false)} role="presentation" aria-hidden="true" />
-      )}
-
       {/* Main */}
       <main id="main-content" className="main-content" style={isMobile ? { marginLeft: 0, width: '100%' } : collapsed ? { marginLeft: 70, width: 'calc(100% - 70px)' } : undefined}>
-        {isMobile && <MobileHeader onSearch={()=>setSearchOpen(true)} onMore={()=>setMobileSheet('more')} moreOpen={mobileSheet === 'more'} onHome={()=>navigate('dashboard')}/>}
+        {!loading && (
+          <AppHeader
+            title={headerTitle}
+            onSearch={() => setSearchOpen(true)}
+            onNotifications={() => setNotifPanelOpen(true)}
+            onAccount={() => setMobileSheet('account')}
+            accountOpen={mobileSheet === 'account'}
+            notificationButtonRef={bellBtnRef}
+          />
+        )}
+        {isMobile && !loading && <SubNav group={activeGroup} items={activeGroup?.items || []} activeView={activeView} navigate={navigate} />}
 
         <div className="view-enter">
           {loading ? <TodaySkeleton messages={messages} /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
             <ActiveComponent
-              onOpenNavigation={() => setMobileOpen(true)}
-              onOpenSearch={() => setSearchOpen(true)}
-              onOpenNotifications={() => { setNotifPanelOpen(true); setOverflowOpen(false); }}
-              unreadCount={showNotificationBadge ? unreadCount : 0}
-              notificationButtonRef={bellBtnRef}
               onOpenCapture={isChild ? undefined : () => setMobileSheet('new')}
               createRequest={createRequest}
               onCreateHandled={()=>setCreateRequest(null)}
@@ -402,10 +263,19 @@ export default function AppShell() {
         </div>
       </main>
 
-      {<ResponsiveUI items={[...orderedItems,...pinnedItems]} navigate={navigate} sheet={mobileSheet} setSheet={setMobileSheet} onNotifications={()=>setNotifPanelOpen(true)} onSearchAll={query=>{setSearchQuery(query);setSearchOpen(true);}} onCreate={kind=>{
-        const route={event:'calendar',task:'tasks',shopping:'shopping',meal:'meal_plans'}[kind];
-        navigate(route);setCreateRequest({kind,id:Date.now()});
-      }}/>}
+      <ResponsiveUI
+        groups={navGroups}
+        openGroup={openGroup}
+        accountItems={accountItems}
+        navigate={navigate}
+        sheet={mobileSheet}
+        setSheet={setMobileSheet}
+        onCreate={(kind) => {
+          const route = { event: 'calendar', task: 'tasks', shopping: 'shopping', meal: 'meal_plans' }[kind];
+          navigate(route);
+          setCreateRequest({ kind, id: Date.now() });
+        }}
+      />
 
       {/* Notification panel */}
       {notifPanelOpen && (
@@ -429,7 +299,7 @@ export default function AppShell() {
 
       {/* Live region for screen reader announcements */}
       <div id="a11y-announcer" className="sr-only" aria-live="polite" aria-atomic="true" />
-      <SearchOverlay open={searchOpen} initialQuery={searchQuery} onClose={() => { setSearchOpen(false); setSearchQuery(''); }} />
+      <SearchOverlay open={searchOpen} areas={[...navGroups.flatMap((group) => group.items), ...accountItems]} initialQuery={searchQuery} onClose={() => { setSearchOpen(false); setSearchQuery(''); }} />
     </div>
   );
 }

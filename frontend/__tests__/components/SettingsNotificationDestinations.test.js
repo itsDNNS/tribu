@@ -6,7 +6,6 @@ import { buildMessages } from '../../lib/i18n';
 let mockAppState = {};
 
 beforeEach(() => sessionStorage.clear());
-jest.mock('../../components/FamilyTopbar', () => () => null);
 
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockAppState,

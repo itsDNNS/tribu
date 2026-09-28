@@ -20,20 +20,17 @@ const shot = async (page, name) =>
     style: "nextjs-portal{display:none}",
     fullPage: false,
   });
-test('anonymous mobile menu shows task, shopping and unread badges', async ({ page }) => {
+test('mobile header and tab bar show unread, shopping and task counts', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
-  await expect(page.locator('.ui-mobile-header .ui-count-badge')).toHaveText('3');
-  await page.locator('.ui-bottom-nav').getByRole('button', { name: 'Mehr', exact: true }).click();
-  const menu = page.getByRole('dialog');
-  await expect(menu.getByRole('button', { name: 'Aufgaben', exact: true })).toHaveAccessibleDescription('Aufgaben: 1');
-  // Shopping keeps its counter in the bottom navigation and is not repeated in the sheet.
-  await expect(menu.getByRole('button', { name: 'Einkauf', exact: true })).toHaveCount(0);
-  await expect(page.locator('.ui-bottom-nav').getByRole('button', { name: 'Einkauf', exact: true })).toHaveAccessibleDescription('Einkauf: 2');
+  await expect(page.locator('.app-header').getByRole('button', { name: 'Benachrichtigungen', exact: true })).toHaveText('3');
+  const lists = page.locator('.ui-bottom-nav').getByRole('button', { name: /Listen/ });
+  await expect(lists).toHaveAccessibleDescription('Einkauf: 2');
+  await lists.click();
+  const pages = page.getByRole('navigation', { name: 'Seiten in Listen' });
+  await expect(pages.getByRole('button', { name: /Aufgaben/ })).toHaveText('Aufgaben1');
   await shot(page, 'menu-badges-light.png');
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).scrollIntoViewIfNeeded();
-  await expect(menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).locator('.ui-count-badge')).toHaveText('3');
   await shot(page, 'menu-badges-dark.png');
 });
 test('New sheet creates what the capture field recognises', async ({ page }) => {
@@ -179,8 +176,8 @@ test("agenda requests more dates; mobile shell exposes quick capture and navigat
   ).toHaveValue("2026-09-21");
   await page.keyboard.press("Escape");
   await page
-    .locator(".ui-bottom-nav")
-    .getByRole("button", { name: "Mehr", exact: true })
+    .locator(".app-header")
+    .getByRole("button", { name: "Konto und Einstellungen", exact: true })
     .click();
   await expect(
     page

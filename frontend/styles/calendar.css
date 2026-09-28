@@ -373,20 +373,6 @@
   font-family: inherit;
   cursor: pointer;
 }
-.tc-page .tc-topbar {
-  height: auto;
-  margin: 0;
-  min-height: 78px;
-}
-.tc-topbar-note {
-  max-width: 100px;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--text-muted);
-}
-.tc-topbar-note span {
-  color: #de967e;
-}
 .tc-page .tc-view-header h1 {
   font-size: 30px;
   line-height: 1.25;
@@ -791,16 +777,7 @@
   --tc-purple: #9976b5;
   --tc-purple-bg: #342b43;
 }
-@media (max-width: 1240px) {
-  .tc-topbar-note {
-    display: none;
-  }
-}
 @media (max-width: 768px) {
-  .tc-page .tc-topbar {
-    min-height: 83px;
-    align-items: flex-start;
-  }
   .tc-page .tc-view-header {
     gap: 12px;
     margin-bottom: 20px;
@@ -923,16 +900,6 @@
   background: #65447e;
 }
 .tc-page .outside .tc-day-number {
-  color: var(--tc-muted);
-}
-.tc-page .dashboard-search-kbd {
-  opacity: 1;
-}
-.tc-page .dashboard-action-badge {
-  background: var(--tc-button);
-  color: white;
-}
-.tc-page .dashboard-welcome {
   color: var(--tc-muted);
 }
 /* Preserve profile hues while giving white avatar initials enough contrast. */

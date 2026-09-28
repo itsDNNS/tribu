@@ -44,12 +44,11 @@ test.describe('Today', () => {
     await expect(heading).toContainText(testUser.displayName.split(' ')[0], { timeout: 10000 });
     await expect(page.locator('.today-head p')).toBeVisible();
 
+    // One header on every page; phones name the area and greet on Today.
     if (testInfo.project.name.includes('Mobile')) {
-      await expect(page.locator('.today-head-actions')).toBeHidden();
-      await page.locator('.mobile-header').getByRole('button', { name: /Search|Suchen/i }).click();
-    } else {
-      await page.locator('.today-head').getByRole('button', { name: /Search/i }).click();
+      await expect(page.locator('.app-header-title')).toContainText(testUser.displayName.split(' ')[0]);
     }
+    await page.locator('.app-header').getByRole('button', { name: /Search/i }).click();
     await expect(page.locator('.search-overlay')).toBeVisible();
     await expect(page.getByPlaceholder(/Search|suchen/i)).toBeFocused();
   });

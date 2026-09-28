@@ -8,40 +8,38 @@ import {
   ClipboardList,
   Gift,
   GraduationCap,
-  LayoutDashboard,
   Printer,
   Settings,
   Shield,
   ShoppingCart,
   Sparkles,
+  Sun,
   UtensilsCrossed,
 } from 'lucide-react';
 
+// Settings and admin live in the account menu behind the avatar;
+// notifications behind the bell.
 export const PINNED_NAV_KEYS = new Set(['settings', 'admin']);
-export const MOBILE_PRIMARY_NAV_KEYS = ['dashboard', 'calendar', 'tasks', 'shopping'];
+export const ACCOUNT_NAV_KEYS = ['settings', 'admin'];
 
-// Areas reachable from the mobile bottom navigation are not repeated in the "More" sheet.
-export const MOBILE_BOTTOM_NAV_KEYS = new Set(['dashboard', 'calendar', 'shopping']);
-export const MOBILE_SYSTEM_NAV_KEYS = new Set(['notifications', 'settings', 'admin']);
-export const MOBILE_MORE_GROUPS = [
-  { key: 'plan', labelKey: 'nav.group.plan', itemKeys: ['weekly_plan', 'templates', 'school_timetables'] },
-  { key: 'lists', labelKey: 'module.responsive.group_lists', itemKeys: ['tasks', 'meal_plans', 'recipes'] },
-  { key: 'family', labelKey: 'module.responsive.group_family', itemKeys: ['contacts', 'rewards', 'gifts', 'activity'] },
-];
-
+// Tribu 2.0 (docs/tribu-2-design.md): four areas of daily life. The phone's
+// tab bar shows them around the "+" button; a group opens the page used
+// last, and the pages of a group switch with the chips below the header.
 export const NAV_GROUPS = [
   { key: 'today', labelKey: 'nav.group.today', fallback: 'Today', itemKeys: ['dashboard'] },
-  { key: 'plan', labelKey: 'nav.group.plan', fallback: 'Plan', itemKeys: ['calendar', 'weekly_plan', 'templates'] },
-  { key: 'lists', labelKey: 'nav.group.lists', fallback: 'Lists', itemKeys: ['tasks', 'shopping', 'meal_plans', 'recipes'] },
-  { key: 'people', labelKey: 'nav.group.people', fallback: 'People', itemKeys: ['contacts'] },
-  { key: 'household', labelKey: 'nav.group.household', fallback: 'Household', itemKeys: ['rewards', 'school_timetables', 'gifts'] },
-  { key: 'system', labelKey: 'nav.group.system', fallback: 'More / System', itemKeys: ['activity', 'settings', 'admin'] },
+  { key: 'plan', labelKey: 'nav.group.plan', fallback: 'Plan', itemKeys: ['calendar', 'meal_plans', 'recipes', 'school_timetables', 'weekly_plan'] },
+  { key: 'lists', labelKey: 'nav.group.lists', fallback: 'Lists', itemKeys: ['shopping', 'tasks', 'templates'] },
+  { key: 'family', labelKey: 'module.responsive.group_family', fallback: 'Family', itemKeys: ['contacts', 'rewards', 'gifts', 'activity'] },
 ];
 
+export function navGroupOf(key) {
+  return NAV_GROUPS.find((group) => group.itemKeys.includes(key)) || null;
+}
+
 export const NAV_ITEM_META = {
-  dashboard: { icon: LayoutDashboard, labelKey: 'dashboard', mobileLabel: 'Home' },
+  dashboard: { icon: Sun, labelKey: 'nav.group.today' },
   activity: { icon: Activity, labelKey: 'activity' },
-  calendar: { icon: CalendarDays, labelKey: 'calendar', mobileLabel: 'Plan' },
+  calendar: { icon: CalendarDays, labelKey: 'calendar' },
   weekly_plan: { icon: Printer, labelKey: 'module.weekly_plan.title', adultOnly: true },
   shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },

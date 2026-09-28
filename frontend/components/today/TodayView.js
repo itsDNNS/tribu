@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Cake, ChevronDown, Inbox, Search, ShoppingCart, Sparkles, Utensils, X } from 'lucide-react';
+import { Cake, ChevronDown, Inbox, ShoppingCart, Sparkles, Utensils, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useCurrentMinute } from '../../hooks/useCurrentMinute';
@@ -174,7 +174,7 @@ function countOpenShopping(lists) {
 
 // Today (Tribu 2.0): the day as one timeline, the overdue tasks folded away,
 // the week ahead in a line per day and hints only when they help.
-export default function TodayView({ onOpenSearch, onOpenNotifications, unreadCount = 0, notificationButtonRef = null, onOpenCapture } = {}) {
+export default function TodayView({ onOpenCapture } = {}) {
   const {
     summary, me, members = [], events = [], shoppingLists, mealPlans = [], activity = [], quickCaptureInbox, familyId,
     families, setActiveView, messages, lang, timeFormat, isChild, isAdmin, demoMode,
@@ -265,19 +265,6 @@ export default function TodayView({ onOpenSearch, onOpenNotifications, unreadCou
         <div>
           <h1>{greeting(messages, now.getHours())}{heroName ? `, ${heroName}` : ''}</h1>
           <p>{now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-        </div>
-        <div className="today-head-actions">
-          {typeof onOpenSearch === 'function' && (
-            <button type="button" className="today-icon-btn" onClick={onOpenSearch} aria-label={t(messages, 'search.placeholder')}>
-              <Search size={18} aria-hidden="true" />
-            </button>
-          )}
-          {typeof onOpenNotifications === 'function' && (
-            <button ref={notificationButtonRef} type="button" className="today-icon-btn" onClick={onOpenNotifications} aria-label={t(messages, 'notifications')}>
-              <Bell size={18} aria-hidden="true" />
-              {unreadCount > 0 && <span className="today-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-            </button>
-          )}
         </div>
       </header>
 

@@ -12,7 +12,12 @@ const MODULE_META = {
   birthdays: { icon: Cake, label: 'module.birthdays.name', view: 'calendar' },
 };
 
-export default function SearchOverlay({ open, onClose, initialQuery = '' }) {
+function normalize(value) {
+  return String(value || '').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// One search (Tribu 2.0, R3): areas of the app and the family's content.
+export default function SearchOverlay({ open, onClose, initialQuery = '', areas = [] }) {
   const { familyId, messages, setActiveView } = useApp();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
@@ -71,12 +76,14 @@ export default function SearchOverlay({ open, onClose, initialQuery = '' }) {
 
   if (!open) return null;
 
+  const needle = normalize(query.trim());
+  const foundAreas = needle ? areas.filter((area) => normalize(area.label).includes(needle)) : [];
   const hasResults = results && Object.keys(results).length > 0;
-  const noResults = results && Object.keys(results).length === 0 && query.length >= 2;
+  const noResults = results && Object.keys(results).length === 0 && query.length >= 2 && foundAreas.length === 0;
 
   return (
     <div className="search-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
-      <div className="search-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="search-panel" role="dialog" aria-modal="true" aria-label={t(messages, 'search.placeholder')} onClick={(e) => e.stopPropagation()}>
         <div className="search-header">
           <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
@@ -87,13 +94,31 @@ export default function SearchOverlay({ open, onClose, initialQuery = '' }) {
             value={query}
             onChange={handleInput}
             autoComplete="off"
+            aria-label={t(messages, 'search.placeholder')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && foundAreas.length === 1 && !hasResults) handleResultClick(foundAreas[0].key);
+            }}
           />
-          <button className="search-close" onClick={onClose} aria-label="Close">
+          <button className="search-close" onClick={onClose} aria-label={t(messages, 'close')}>
             <X size={18} />
           </button>
         </div>
 
         <div className="search-results">
+          {foundAreas.length > 0 && (
+            <div className="search-group">
+              <div className="search-group-header">
+                <span>{t(messages, 'search.areas')}</span>
+              </div>
+              {foundAreas.map((area) => (
+                <button key={`area-${area.key}`} className="search-result-item" onClick={() => handleResultClick(area.key)}>
+                  <area.icon size={16} aria-hidden="true" />
+                  <span>{area.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {loading && <div className="search-loading">{t(messages, 'search.searching')}</div>}
 
           {noResults && !loading && (

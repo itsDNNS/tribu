@@ -16,7 +16,6 @@ jest.mock('../../contexts/ToastContext', () => ({
     error: jest.fn()
   })
 }));
-jest.mock('../../components/FamilyTopbar', () => () => null);
 jest.mock('../../lib/api');
 const api = require('../../lib/api');
 const apple = {
