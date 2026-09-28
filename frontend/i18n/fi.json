@@ -1439,6 +1439,7 @@
   "module.tasks.group_upcoming": "Tulossa",
   "module.tasks.group_no_date": "Ei päivää",
   "module.tasks.completed": "Tehtävä tehty",
+  "module.tasks.completed_next": "Valmis · seuraavan kerran {date}",
   "module.tasks.postponed": "Siirretty: {when}",
   "module.tasks.postpone": "Siirrä",
   "module.tasks.postpone_tonight": "Tänä iltana",

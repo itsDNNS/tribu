@@ -1438,6 +1438,7 @@
   "module.tasks.group_upcoming": "Επερχόμενες",
   "module.tasks.group_no_date": "Χωρίς ημερομηνία",
   "module.tasks.completed": "Η εργασία ολοκληρώθηκε",
+  "module.tasks.completed_next": "Έγινε · επόμενη φορά {date}",
   "module.tasks.postponed": "Μεταφέρθηκε σε {when}",
   "module.tasks.postpone": "Αναβολή",
   "module.tasks.postpone_tonight": "Απόψε",

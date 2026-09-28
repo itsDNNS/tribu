@@ -1437,6 +1437,7 @@
   "module.tasks.group_upcoming": "Nadchodzące",
   "module.tasks.group_no_date": "Bez daty",
   "module.tasks.completed": "Zadanie wykonane",
+  "module.tasks.completed_next": "Gotowe · następnym razem {date}",
   "module.tasks.postponed": "Przeniesiono na {when}",
   "module.tasks.postpone": "Odłóż",
   "module.tasks.postpone_tonight": "Dziś wieczorem",

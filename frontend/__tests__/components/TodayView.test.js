@@ -72,10 +72,12 @@ async function renderToday(overrides = {}, props = {}) {
   mockApp = baseApp(overrides);
   const view = render(<TodayView {...props} />);
   await waitFor(() => expect(apiGetEvents).toHaveBeenCalled());
-  // Wait for the loaded events to render, not only for the request.
+  // Wait for the loaded events to render, not only for the request: every
+  // load the first renders started, then a macrotask for their updates.
   await act(async () => {
-    await apiGetEvents.mock.results.at(-1).value;
-    await apiListMealPlans.mock.results.at(-1)?.value;
+    await Promise.all(apiGetEvents.mock.results.map((result) => result.value));
+    await Promise.all(apiListMealPlans.mock.results.map((result) => result.value));
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
   return view;
 }

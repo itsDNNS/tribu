@@ -1436,6 +1436,7 @@
   "module.tasks.group_upcoming": "Prihajajoče",
   "module.tasks.group_no_date": "Brez datuma",
   "module.tasks.completed": "Naloga opravljena",
+  "module.tasks.completed_next": "Opravljeno · naslednjič {date}",
   "module.tasks.postponed": "Premaknjeno na {when}",
   "module.tasks.postpone": "Preloži",
   "module.tasks.postpone_tonight": "Nocoj",

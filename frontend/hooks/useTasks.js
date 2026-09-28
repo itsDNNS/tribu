@@ -4,8 +4,9 @@ import { useToast } from '../contexts/ToastContext';
 import { errorText, toIsoOrNull } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
-import { weekStartIndex } from '../lib/dates';
+import { localeForLang, weekStartIndex } from '../lib/dates';
 import { postponeTarget } from '../lib/taskGroups';
+import { nextDueDate } from '../lib/tasks/nextDue';
 import { UNDO_WINDOW_MS } from '../lib/undo';
 import * as api from '../lib/api';
 
@@ -48,7 +49,7 @@ function payloadFromForm(form) {
 }
 
 export function useTasks() {
-  const { tasks, setTasks, familyId, messages, loadTasks, demoMode, weekStart } = useApp();
+  const { tasks, setTasks, familyId, messages, loadTasks, demoMode, weekStart, lang } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [assigneeFilter, setAssigneeFilter] = useState('');
@@ -140,7 +141,14 @@ export function useTasks() {
 
   async function toggleTask(task) {
     if (task.status !== 'done') {
-      schedule(task, 'done', t(messages, 'module.tasks.completed'));
+      // A recurring task says when it comes back (Tribu 2.0, T7).
+      const next = task.recurrence ? nextDueDate(task.due_date, task.recurrence) : null;
+      schedule(task, 'done', next
+        ? t(messages, 'module.tasks.completed_next').replace(
+          '{date}',
+          next.toLocaleDateString(localeForLang(lang), { weekday: 'short', day: 'numeric', month: 'numeric' }),
+        )
+        : t(messages, 'module.tasks.completed'));
       return;
     }
     // Reopening has no side effects and needs no undo.

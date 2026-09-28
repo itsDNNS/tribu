@@ -1440,6 +1440,7 @@
   "module.tasks.group_upcoming": "Предстоящи",
   "module.tasks.group_no_date": "Без дата",
   "module.tasks.completed": "Задачата е изпълнена",
+  "module.tasks.completed_next": "Готово · следващия път на {date}",
   "module.tasks.postponed": "Преместено за {when}",
   "module.tasks.postpone": "Отложи",
   "module.tasks.postpone_tonight": "Тази вечер",

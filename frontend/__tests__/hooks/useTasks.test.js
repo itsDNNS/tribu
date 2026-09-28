@@ -109,6 +109,18 @@ describe('useTasks', () => {
     });
   });
 
+  it('says when a recurring task comes back (T7)', () => {
+    mockContext.messages = { 'module.tasks.completed_next': 'Done · next on {date}', 'module.tasks.completed': 'Task done' };
+    mockContext.lang = 'en';
+    const { result } = renderHook(() => useTasks());
+    const weekly = { id: 9, title: 'Bins', status: 'open', recurrence: 'weekly', due_date: '2026-09-30T00:00:00' };
+    act(() => { result.current.toggleTask(weekly); });
+    expect(mockToastSuccess.mock.calls.at(-1)[0]).toBe('Done · next on Wed, 10/7');
+    act(() => { result.current.toggleTask({ ...weekly, id: 10, recurrence: null }); });
+    expect(mockToastSuccess.mock.calls.at(-1)[0]).toBe('Task done');
+    mockContext.messages = {};
+  });
+
   it('reopens a done task right away', async () => {
     const api = require('../../lib/api');
     const { result } = renderHook(() => useTasks());

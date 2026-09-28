@@ -1441,6 +1441,7 @@
   "module.tasks.group_upcoming": "Próximas",
   "module.tasks.group_no_date": "Sin fecha",
   "module.tasks.completed": "Tarea hecha",
+  "module.tasks.completed_next": "Hecho · la próxima vez el {date}",
   "module.tasks.postponed": "Movida a {when}",
   "module.tasks.postpone": "Posponer",
   "module.tasks.postpone_tonight": "Esta noche",

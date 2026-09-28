@@ -1462,6 +1462,7 @@
   "module.tasks.group_upcoming": "Demnächst",
   "module.tasks.group_no_date": "Ohne Datum",
   "module.tasks.completed": "Aufgabe erledigt",
+  "module.tasks.completed_next": "Erledigt · wieder am {date}",
   "module.tasks.postponed": "Verschoben auf {when}",
   "module.tasks.postpone": "Verschieben",
   "module.tasks.postpone_tonight": "Heute Abend",

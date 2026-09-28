@@ -1437,6 +1437,7 @@
   "module.tasks.group_upcoming": "Gaidāmie",
   "module.tasks.group_no_date": "Bez datuma",
   "module.tasks.completed": "Uzdevums izpildīts",
+  "module.tasks.completed_next": "Gatavs · nākamreiz {date}",
   "module.tasks.postponed": "Pārcelts uz {when}",
   "module.tasks.postpone": "Atlikt",
   "module.tasks.postpone_tonight": "Šovakar",

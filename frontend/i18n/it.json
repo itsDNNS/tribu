@@ -1441,6 +1441,7 @@
   "module.tasks.group_upcoming": "In arrivo",
   "module.tasks.group_no_date": "Senza data",
   "module.tasks.completed": "Attività completata",
+  "module.tasks.completed_next": "Fatto · la prossima volta il {date}",
   "module.tasks.postponed": "Spostata a {when}",
   "module.tasks.postpone": "Rimanda",
   "module.tasks.postpone_tonight": "Stasera",

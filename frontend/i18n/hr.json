@@ -1437,6 +1437,7 @@
   "module.tasks.group_upcoming": "Nadolazeće",
   "module.tasks.group_no_date": "Bez datuma",
   "module.tasks.completed": "Zadatak obavljen",
+  "module.tasks.completed_next": "Gotovo · sljedeći put {date}",
   "module.tasks.postponed": "Premješteno na {when}",
   "module.tasks.postpone": "Odgodi",
   "module.tasks.postpone_tonight": "Večeras",

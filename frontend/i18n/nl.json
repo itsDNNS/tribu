@@ -1440,6 +1440,7 @@
   "module.tasks.group_upcoming": "Binnenkort",
   "module.tasks.group_no_date": "Geen datum",
   "module.tasks.completed": "Taak klaar",
+  "module.tasks.completed_next": "Klaar · volgende keer op {date}",
   "module.tasks.postponed": "Verplaatst naar {when}",
   "module.tasks.postpone": "Uitstellen",
   "module.tasks.postpone_tonight": "Vanavond",

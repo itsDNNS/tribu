@@ -1441,6 +1441,7 @@
   "module.tasks.group_upcoming": "Kommende",
   "module.tasks.group_no_date": "Ingen dato",
   "module.tasks.completed": "Opgave udført",
+  "module.tasks.completed_next": "Færdig · næste gang {date}",
   "module.tasks.postponed": "Flyttet til {when}",
   "module.tasks.postpone": "Udskyd",
   "module.tasks.postpone_tonight": "I aften",

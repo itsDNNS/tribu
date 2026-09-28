@@ -1441,6 +1441,7 @@
   "module.tasks.group_upcoming": "À venir",
   "module.tasks.group_no_date": "Sans date",
   "module.tasks.completed": "Tâche terminée",
+  "module.tasks.completed_next": "Terminé · prochaine fois le {date}",
   "module.tasks.postponed": "Déplacée à {when}",
   "module.tasks.postpone": "Reporter",
   "module.tasks.postpone_tonight": "Ce soir",

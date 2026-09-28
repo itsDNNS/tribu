@@ -1436,6 +1436,7 @@
   "module.tasks.group_upcoming": "Artėjančios",
   "module.tasks.group_no_date": "Be datos",
   "module.tasks.completed": "Užduotis atlikta",
+  "module.tasks.completed_next": "Atlikta · kitą kartą {date}",
   "module.tasks.postponed": "Perkelta į {when}",
   "module.tasks.postpone": "Atidėti",
   "module.tasks.postpone_tonight": "Šį vakarą",

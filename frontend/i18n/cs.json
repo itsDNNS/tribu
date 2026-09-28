@@ -1436,6 +1436,7 @@
   "module.tasks.group_upcoming": "Nadcházející",
   "module.tasks.group_no_date": "Bez data",
   "module.tasks.completed": "Úkol splněn",
+  "module.tasks.completed_next": "Hotovo · příště {date}",
   "module.tasks.postponed": "Přesunuto na {when}",
   "module.tasks.postpone": "Odložit",
   "module.tasks.postpone_tonight": "Dnes večer",

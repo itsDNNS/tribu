@@ -1444,6 +1444,7 @@
   "module.tasks.group_upcoming": "Urmează",
   "module.tasks.group_no_date": "Fără dată",
   "module.tasks.completed": "Sarcină finalizată",
+  "module.tasks.completed_next": "Gata · data viitoare pe {date}",
   "module.tasks.postponed": "Mutată la {when}",
   "module.tasks.postpone": "Amână",
   "module.tasks.postpone_tonight": "În seara asta",

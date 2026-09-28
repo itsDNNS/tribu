@@ -1463,6 +1463,7 @@
   "module.tasks.group_upcoming": "Upcoming",
   "module.tasks.group_no_date": "No date",
   "module.tasks.completed": "Task done",
+  "module.tasks.completed_next": "Done · next on {date}",
   "module.tasks.postponed": "Moved to {when}",
   "module.tasks.postpone": "Postpone",
   "module.tasks.postpone_tonight": "This evening",

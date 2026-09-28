@@ -1436,6 +1436,7 @@
   "module.tasks.group_upcoming": "Le teacht",
   "module.tasks.group_no_date": "Gan dáta",
   "module.tasks.completed": "Tasc déanta",
+  "module.tasks.completed_next": "Déanta · an chéad uair eile {date}",
   "module.tasks.postponed": "Bogtha go {when}",
   "module.tasks.postpone": "Cuir siar",
   "module.tasks.postpone_tonight": "Anocht",

@@ -1436,6 +1436,7 @@
   "module.tasks.group_upcoming": "Közelgő",
   "module.tasks.group_no_date": "Dátum nélkül",
   "module.tasks.completed": "Feladat kész",
+  "module.tasks.completed_next": "Kész · legközelebb: {date}",
   "module.tasks.postponed": "Áthelyezve: {when}",
   "module.tasks.postpone": "Elhalasztás",
   "module.tasks.postpone_tonight": "Ma este",

@@ -1441,6 +1441,7 @@
   "module.tasks.group_upcoming": "Kommande",
   "module.tasks.group_no_date": "Inget datum",
   "module.tasks.completed": "Uppgift klar",
+  "module.tasks.completed_next": "Klart · nästa gång {date}",
   "module.tasks.postponed": "Flyttad till {when}",
   "module.tasks.postpone": "Skjut upp",
   "module.tasks.postpone_tonight": "I kväll",
