@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { BookOpen, X, Plus, Trash2, ShoppingCart } from 'lucide-react';
+import { BookOpen, History, Star, X, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { createEmptyMealIngredient, MEAL_SLOTS } from '../lib/meal-plans';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
@@ -21,6 +21,7 @@ export default function MealPlanDialog({
   shoppingLists = [],
   onPushToShopping,
   recipes = [],
+  suggestions = [],
 }) {
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
@@ -77,6 +78,15 @@ export default function MealPlanDialog({
     }));
   }
 
+  // A suggestion fills in the meal (Tribu 2.0, M4).
+  function applySuggestion(suggestion) {
+    if (suggestion.kind === 'recipe') {
+      applyRecipe(suggestion.recipeId);
+      return;
+    }
+    setForm((prev) => ({ ...prev, meal_name: suggestion.title, ingredients: suggestion.ingredients }));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
@@ -113,6 +123,25 @@ export default function MealPlanDialog({
           </button>
         </div>
         <form className="meal-form" onSubmit={handleSubmit}><div className="ui-meal-form-body">
+          {!isEditing && !form.meal_name && suggestions.length > 0 && (
+            <div className="meal-suggestions" role="group" aria-label={t(messages, 'module.meal_plans.suggestions')}>
+              <span className="meal-suggestions-label" aria-hidden="true">{t(messages, 'module.meal_plans.suggestions')}</span>
+              <div className="meal-suggestions-chips">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.key}
+                    type="button"
+                    className="meal-suggestion"
+                    aria-label={t(messages, suggestion.kind === 'recipe' ? 'module.meal_plans.suggestion_favorite' : 'module.meal_plans.suggestion_recent').replace('{name}', suggestion.title)}
+                    onClick={() => applySuggestion(suggestion)}
+                  >
+                    {suggestion.kind === 'recipe' ? <Star size={14} aria-hidden="true" /> : <History size={14} aria-hidden="true" />}
+                    {suggestion.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {recipes.length > 0 && (
             <div className="meal-recipe-picker">
               <label className="meal-recipe-picker-label" htmlFor="meal-recipe-select">

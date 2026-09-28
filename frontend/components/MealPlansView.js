@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useMealPlans, formatIsoDate, weekDays } from '../hooks/useMealPlans';
-import { MEAL_SLOTS } from '../lib/meal-plans';
+import { MEAL_SLOTS, mealSuggestions } from '../lib/meal-plans';
 import { formatDayMonth, formatWeekRange, localeForLang } from '../lib/dates';
-import { apiListRecipes } from '../lib/api';
+import { apiListMealPlans, apiListRecipes } from '../lib/api';
 import { t, tc } from '../lib/i18n';
 import ConfirmDialog from './ConfirmDialog';
 import MealPlanDialog from './MealPlanDialog';
@@ -222,6 +222,8 @@ export default function MealPlansView(props) {
   const [dragOverCell, setDragOverCell] = useState(null);
   const [moveMenuMealId, setMoveMenuMealId] = useState(null);
   const [recipes, setRecipes] = useState([]);
+  // What the family cooked in the last eight weeks, for suggestions (M4).
+  const [pastMeals, setPastMeals] = useState([]);
   const [selectedWeekListId, setSelectedWeekListId] = useState('');
   const [pushingWeek, setPushingWeek] = useState(false);
 
@@ -269,6 +271,21 @@ export default function MealPlansView(props) {
     setForm(hook.emptyFormFor(formatIsoDate(date), slot));
     setDialogOpen(true);
   }
+
+  const adding = dialogOpen && editingId == null;
+  useEffect(() => {
+    if (!adding || !familyId || demoMode) return undefined;
+    let active = true;
+    const until = new Date();
+    until.setDate(until.getDate() - 1);
+    const from = new Date();
+    from.setDate(from.getDate() - 56);
+    apiListMealPlans(familyId, formatIsoDate(from), formatIsoDate(until)).then(({ ok, data }) => {
+      const rows = Array.isArray(data) ? data : data?.items;
+      if (active && ok && Array.isArray(rows)) setPastMeals(rows);
+    });
+    return () => { active = false; };
+  }, [adding, familyId, demoMode]);
 
   useEffect(() => {
     if (props.createRequest?.kind === 'meal') {
@@ -400,6 +417,7 @@ export default function MealPlansView(props) {
           editingId != null && !demoMode ? handlePushToShopping : null
         }
         recipes={recipes}
+        suggestions={adding ? mealSuggestions({ recipes, pastMeals, slot: form.slot }) : []}
       />
 
       {/* Tribu 2.0 (M1, M2): a plain title and a slim week bar; the week
