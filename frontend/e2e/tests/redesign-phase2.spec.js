@@ -18,7 +18,7 @@ test.describe('Phase 2 redesign system views', () => {
 
     await navigateTo(page, 'Notifications');
     await expect(page.locator('.notifications-page')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.notifications-page-icon')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Notifications', level: 1 })).toBeAttached();
     await expectNoHorizontalOverflow(page);
 
     await navigateTo(page, 'Settings');

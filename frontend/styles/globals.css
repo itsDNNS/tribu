@@ -1037,9 +1037,6 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 
 /* ─── Notifications ─── */
 .notifications-page { width: min(100%, 980px); margin: 0 auto; display: grid; gap: 12px; }
-.notifications-header { margin-bottom: 0; }
-.notifications-title-block { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.notifications-page-icon { width: 44px; height: 44px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; background: color-mix(in srgb, var(--accent-rose) 11%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-rose) 74%, var(--text-primary)); border: 1px solid var(--border-subtle); }
 .notifications-panel-content { display: grid; gap: var(--space-sm); }
 .notif-list { display: grid; gap: 8px; }
 .notif-item { min-height: 64px; padding: 12px; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; background: var(--surface-paper); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-soft); transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease; }
@@ -3070,10 +3067,6 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
 
 /* ─── Recipes module ─── */
 .recipes-page { width: min(100%, 1120px); margin: 0 auto; display: grid; gap: 12px; }
-.recipes-header { margin-bottom: 0; }
-.recipes-title-block { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.recipes-page-icon { width: 44px; height: 44px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; background: color-mix(in srgb, var(--accent-sage) 13%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-sage) 74%, var(--text-primary)); border: 1px solid var(--border-subtle); }
-.recipe-header-actions { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
 .recipe-search { min-height: 40px; min-width: min(320px, 100%); display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--surface-paper); border: 1px solid var(--border-subtle); border-radius: 12px; color: var(--text-muted); box-shadow: var(--shadow-soft); }
 .recipe-search input { border: none; outline: none; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 0.9rem; min-width: 0; width: 100%; }
 .recipe-search input::placeholder { color: var(--text-muted); }
@@ -3160,8 +3153,6 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
 .recipe-scale-preview li { display: flex; justify-content: space-between; gap: 12px; color: var(--text-secondary); font-size: 0.82rem; }
 
 @media (max-width: 780px) {
-  .recipe-header-actions { width: 100%; }
-  .recipe-search { flex: 1 1 100%; }
   .recipe-form-grid { grid-template-columns: 1fr; }
   .recipe-form-title { grid-column: auto; }
   .recipe-ingredient-row { grid-template-columns: 1fr 80px 60px auto; }
@@ -3226,50 +3217,6 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
 [data-theme="midnight-glass"] .weekly-plan-page {
   --weekly-plan-surface: rgb(22, 27, 43);
   --weekly-plan-surface-soft: rgb(31, 37, 56);
-}
-.weekly-plan-page .weekly-plan-header {
-  position: relative;
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-  overflow: hidden;
-  background: var(--weekly-plan-surface);
-  border-color: var(--weekly-plan-border);
-  box-shadow: var(--weekly-plan-shadow);
-}
-.weekly-plan-header-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 15px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--amethyst) 12%, var(--surface-paper));
-  color: var(--amethyst);
-  border: 1px solid color-mix(in srgb, var(--amethyst) 16%, var(--weekly-plan-border));
-}
-.weekly-plan-title-block {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-.weekly-plan-title-block .view-kicker {
-  margin: 0;
-}
-.weekly-plan-header h1 {
-  margin: 0;
-  color: var(--weekly-plan-text-primary);
-  font-size: 1.28rem;
-  font-weight: 880;
-  line-height: 1.15;
-  letter-spacing: 0;
-}
-.weekly-plan-header p {
-  margin: 0;
-  color: var(--weekly-plan-text-secondary);
-  font-size: 0.88rem;
-  line-height: 1.45;
 }
 .weekly-plan-week-pill {
   justify-self: end;
@@ -3577,20 +3524,7 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
     gap: 10px;
     padding-bottom: calc(104px + env(safe-area-inset-bottom));
   }
-  .weekly-plan-header {
-    grid-template-columns: 42px minmax(0, 1fr);
-    gap: 10px;
-    padding: var(--space-md);
-  }
-  .weekly-plan-header-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 13px;
-  }
-  .weekly-plan-week-pill {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
+  .weekly-plan-header { flex-wrap: wrap; }
   .weekly-plan-toolbar {
     grid-template-columns: auto 1fr auto;
     padding: 8px;
@@ -3650,9 +3584,10 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
   .no-print, .pwa-banner, .sidebar, .bottom-nav, .app-sidebar, .app-header { display: none !important; }
   .app-layout, .main-content, .weekly-plan-page { display: block !important; width: 100% !important; max-width: none !important; padding: 0 !important; margin: 0 !important; background: #fff !important; }
   :root .weekly-plan-page { --weekly-plan-surface: #ffffff; --weekly-plan-surface-soft: #f8f7f4; --weekly-plan-text-primary: #1a1520; --weekly-plan-text-secondary: #5e5673; --weekly-plan-border: #d4d4d8; --weekly-plan-shadow: none; }
-  .weekly-plan-header, .weekly-plan-section { box-shadow: none !important; border-color: #d4d4d8 !important; }
-  .weekly-plan-header { grid-template-columns: 1fr auto; margin-bottom: 12px; }
-  .weekly-plan-header-icon, .weekly-plan-section-visual { display: none !important; }
+  .weekly-plan-section { box-shadow: none !important; border-color: #d4d4d8 !important; }
+  .weekly-plan-header { margin-bottom: 12px; }
+  .weekly-plan-page .weekly-plan-header h1 { color: #1a1520; }
+  .weekly-plan-section-visual { display: none !important; }
   .weekly-plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .weekly-plan-section { min-height: 0; padding-right: 15px; }
 }
@@ -3698,11 +3633,7 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
 .invite-role-pill strong { color: var(--text-primary); font-weight: 600; }
 
 /* Household templates */
-.templates-view { width: min(100%, 1120px); margin: 0 auto; gap: 12px; }
-.templates-header { align-items: flex-start; gap: var(--space-md); margin-bottom: 0; }
-.templates-title-block { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.templates-page-icon { width: 44px; height: 44px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; background: color-mix(in srgb, var(--accent-sky) 12%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-sky) 76%, var(--text-primary)); border: 1px solid var(--border-subtle); }
-.templates-header p { color: var(--text-secondary); margin-top: 4px; }
+.templates-view { display: grid; width: min(100%, 1120px); margin: 0 auto; gap: 12px; }
 .templates-apply-panel {
   display: grid;
   grid-template-columns: minmax(180px, 240px) minmax(220px, 1fr);
@@ -3804,11 +3735,9 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
 .loading-card { padding: var(--space-lg); border-radius: var(--radius-lg); color: var(--text-secondary); }
 .template-empty { border: 1px dashed var(--border-subtle); background: var(--surface-paper); box-shadow: var(--shadow-soft); }
 @media (max-width: 780px) {
-  .templates-header,
   .templates-apply-panel,
   .template-editor-grid,
   .template-preview-grid { grid-template-columns: 1fr; }
-  .templates-header { display: grid; }
 }
 
 .settings-help { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin: 0 0 var(--space-md); }
@@ -3828,9 +3757,6 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
 .muted { color: var(--text-muted); font-size: 0.85rem; }
 .form-status { color: var(--text-secondary); font-size: 0.88rem; }
 .school-timetables-view { width: min(100%, 1180px); margin: 0 auto; display: grid; gap: 12px; }
-.school-header { margin-bottom: 0; }
-.school-title-block { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.school-page-icon { width: 44px; height: 44px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; background: color-mix(in srgb, var(--accent-sky) 12%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-sky) 76%, var(--text-primary)); border: 1px solid var(--border-subtle); }
 .school-timetables-view .btn-danger {
   display: inline-flex;
   align-items: center;
@@ -3898,15 +3824,6 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-/* Header action */
-.school-add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  font-size: 0.92rem;
 }
 
 /* Two-column desktop layout */

@@ -198,7 +198,7 @@ test.describe('Today', () => {
       const checks = await page.evaluate(() => {
         const selectors = [
           '.weekly-plan-header h1',
-          '.weekly-plan-header p',
+          '.weekly-plan-week-pill',
           '.weekly-plan-member-filter span',
           '.weekly-plan-member-filter select',
           '.weekly-plan-section-filters label',
@@ -209,7 +209,8 @@ test.describe('Today', () => {
         return selectors.flatMap((selector) => {
           const element = document.querySelector(selector);
           if (!element) return [];
-          const surface = element?.closest('.weekly-plan-header, .weekly-plan-section li, .weekly-plan-section, .weekly-plan-filters') || element;
+          // The plain title sits on the page, the week on its pill.
+          const surface = element?.closest('.weekly-plan-week-pill, .weekly-plan-section li, .weekly-plan-section, .weekly-plan-filters') || document.body;
           const elementStyle = window.getComputedStyle(element);
           const surfaceStyle = window.getComputedStyle(surface);
           return [{
@@ -260,28 +261,22 @@ test.describe('Today', () => {
         return element ? window.getComputedStyle(element) : null;
       };
       const pageStyle = styleOf('.weekly-plan-page');
-      const headerStyle = styleOf('.weekly-plan-header');
       const sectionStyle = styleOf('.weekly-plan-section');
       const toolbarStyle = styleOf('.weekly-plan-toolbar');
-      const iconStyle = styleOf('.weekly-plan-header-icon');
       const navStyle = styleOf('.bottom-nav');
       return {
         pageBackground: pageStyle?.backgroundColor,
-        headerBackground: headerStyle?.backgroundColor,
         sectionBackground: sectionStyle?.backgroundColor,
         headerColor: styleOf('.weekly-plan-header h1')?.color,
         toolbarDisplay: toolbarStyle?.display,
-        iconDisplay: iconStyle?.display,
         bottomNavDisplay: navStyle?.display || 'none',
       };
     });
 
     expect(printState.pageBackground).toBe('rgb(255, 255, 255)');
-    expect(printState.headerBackground).toBe('rgb(255, 255, 255)');
     expect(printState.sectionBackground).toBe('rgb(255, 255, 255)');
     expect(printState.headerColor).toBe('rgb(26, 21, 32)');
     expect(printState.toolbarDisplay).toBe('none');
-    expect(printState.iconDisplay).toBe('none');
     expect(printState.bottomNavDisplay).toBe('none');
     await page.emulateMedia({ media: 'screen' });
   });

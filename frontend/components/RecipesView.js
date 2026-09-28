@@ -480,7 +480,7 @@ function RecipeDialog({
 }
 
 export default function RecipesView() {
-  const { familyId, families, messages, demoMode, shoppingLists, loadShoppingLists } = useApp();
+  const { familyId, messages, demoMode, shoppingLists, loadShoppingLists } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const [recipeItems, setRecipeItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -603,7 +603,6 @@ export default function RecipesView() {
     populateFormFromRecipe: recipeToForm,
   };
 
-  const currentFamilyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
 
   const filteredRecipes = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -623,9 +622,9 @@ export default function RecipesView() {
   if (demoMode) {
     return (
       <div className="view">
-        <div className="view-header">
-          <h1 className="view-title">{t(messages, 'module.recipes.name')}</h1>
-        </div>
+        <header className="list-header">
+          <h1>{t(messages, 'module.recipes.name')}</h1>
+        </header>
         <div className="empty-state">
           <BookOpen size={32} aria-hidden="true" />
           <p>{t(messages, 'module.recipes.demo_blocked')}</p>
@@ -710,32 +709,22 @@ export default function RecipesView() {
         onPushToShopping={editingId != null ? handlePushToShopping : null}
       />
 
-      <div className="view-header recipes-header">
-        <div className="recipes-title-block">
-          <span className="recipes-page-icon" aria-hidden="true">
-            <BookOpen size={22} />
-          </span>
-          <div>
-          <h1 className="view-title">{t(messages, 'module.recipes.name')}</h1>
-          <div className="view-subtitle">{currentFamilyName}</div>
-          </div>
-        </div>
-        <div className="recipe-header-actions">
-          <label className="recipe-search">
-            <Search size={15} aria-hidden="true" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t(messages, 'module.recipes.search_placeholder')}
-              aria-label={t(messages, 'module.recipes.search')}
-            />
-          </label>
-          <button type="button" className="btn btn-primary" onClick={openAdd}>
-            <Plus size={16} aria-hidden="true" />
-            {t(messages, 'module.recipes.add')}
-          </button>
-        </div>
-      </div>
+      <header className="list-header">
+        <h1>{t(messages, 'module.recipes.name')}</h1>
+        <button type="button" className="list-header-action" onClick={openAdd}>
+          <Plus size={16} aria-hidden="true" />
+          {t(messages, 'module.recipes.add')}
+        </button>
+      </header>
+      <label className="recipe-search">
+        <Search size={15} aria-hidden="true" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t(messages, 'module.recipes.search_placeholder')}
+          aria-label={t(messages, 'module.recipes.search')}
+        />
+      </label>
 
       {recipes.loading && <p className="recipe-loading">{t(messages, 'module.recipes.loading')}</p>}
 

@@ -289,15 +289,9 @@ export default function SchoolTimetablesView() {
   if (demoMode) {
     return (
       <div className="view school-timetables-view">
-        <div className="view-header school-header">
-          <div className="school-title-block">
-            <span className="school-page-icon" aria-hidden="true"><GraduationCap size={22} /></span>
-            <div>
-              <h1 className="view-title">{t(messages, 'module.school_timetables.name')}</h1>
-              <p className="view-subtitle">{t(messages, 'module.school_timetables.subtitle')}</p>
-            </div>
-          </div>
-        </div>
+        <header className="list-header">
+          <h1>{t(messages, 'module.school_timetables.name')}</h1>
+        </header>
         <div className="school-empty-rich">
           <div className="school-empty-icon-wrap"><GraduationCap size={32} aria-hidden="true" /></div>
           <p>{msg('module.school_timetables.demo_blocked')}</p>
@@ -310,20 +304,14 @@ export default function SchoolTimetablesView() {
 
   return (
     <div className="view school-timetables-view">
-      <div className="view-header school-header">
-        <div className="school-title-block">
-          <span className="school-page-icon" aria-hidden="true"><GraduationCap size={22} /></span>
-          <div>
-            <h1 className="view-title">{t(messages, 'module.school_timetables.name')}</h1>
-            <p className="view-subtitle">{t(messages, 'module.school_timetables.subtitle')}</p>
-          </div>
-        </div>
+      <header className="list-header">
+        <h1>{t(messages, 'module.school_timetables.name')}</h1>
         {!showEmptyState && (
-          <button type="button" className="btn-primary school-add-btn" onClick={startNew}>
+          <button type="button" className="list-header-action" onClick={startNew}>
             <Plus size={16} aria-hidden="true" /> {t(messages, 'module.school_timetables.add')}
           </button>
         )}
-      </div>
+      </header>
 
       {showEmptyState ? (
         <div className="school-empty-rich">

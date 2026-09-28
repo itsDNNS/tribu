@@ -146,26 +146,14 @@ export default function NotificationCenter({ onClose } = {}) {
           </button>
         </div>
       ) : (
-        <div className="view-header notifications-header">
-          <div className="notifications-title-block">
-            <span className="notifications-page-icon" aria-hidden="true">
-              <Bell size={22} />
-            </span>
-            <div>
-              <h1 className="view-title">{t(messages, 'notifications')}</h1>
-              <div className="view-subtitle">
-                {unreadCount > 0
-                  ? `${unreadCount} ${t(messages, 'notifications_unread')}`
-                  : t(messages, 'notifications_all_read')}
-              </div>
-            </div>
-          </div>
+        <header className="list-header notifications-list-header">
+          <h1>{t(messages, 'notifications')}</h1>
           {unreadCount > 0 && (
-            <button className="btn-ghost" onClick={handleMarkAllRead}>
-              <CheckCheck size={16} /> {t(messages, 'notifications_mark_all_read')}
+            <button type="button" className="list-header-action" onClick={handleMarkAllRead}>
+              <CheckCheck size={16} aria-hidden="true" /> {t(messages, 'notifications_mark_all_read')}
             </button>
           )}
-        </div>
+        </header>
       )}
 
       {canManageHouseholdDestinations && (

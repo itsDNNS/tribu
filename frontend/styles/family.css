@@ -12,6 +12,9 @@
 /* On phones the header already names the area. */
 @media (max-width: 768px) {
   .family-hub-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* The phone header already names the page. */
+  .notifications-list-header { justify-content: flex-end; }
+  .notifications-list-header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 
 .family-people {
