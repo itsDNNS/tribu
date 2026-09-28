@@ -1559,6 +1559,8 @@
   "module.shopping.show_overview": "Kategorieübersicht anzeigen",
   "module.shopping.hide_overview": "Kategorieübersicht ausblenden",
   "module.shopping.undo": "Rückgängig",
+  "module.shopping.help": "So funktioniert die Liste",
+  "module.shopping.item_deleted": "{name} entfernt",
   "module.shopping.item_checked": "Abgehakt: {name}",
   "module.shopping.item_unchecked": "Wieder offen: {name}",
   "module.dashboard.welcome_note": "Schön, dass ihr hier seid!",

@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Visa kategoriöversikt",
   "module.shopping.hide_overview": "Dölj kategoriöversikt",
   "module.shopping.undo": "Ångra",
+  "module.shopping.help": "Så fungerar listan",
+  "module.shopping.item_deleted": "{name} borttagen",
   "module.shopping.item_checked": "Avbockad: {name}",
   "module.shopping.item_unchecked": "Öppen igen: {name}",
   "module.dashboard.welcome_note": "Vad roligt att du är här!",

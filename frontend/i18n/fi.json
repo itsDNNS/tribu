@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Näytä kategoriayhteenveto",
   "module.shopping.hide_overview": "Piilota kategoriayhteenveto",
   "module.shopping.undo": "Kumoa",
+  "module.shopping.help": "Näin lista toimii",
+  "module.shopping.item_deleted": "{name} poistettu",
   "module.shopping.item_checked": "Merkitty ostetuksi: {name}",
   "module.shopping.item_unchecked": "Ostettava uudelleen: {name}",
   "module.dashboard.welcome_note": "Ihanaa, että olet täällä!",

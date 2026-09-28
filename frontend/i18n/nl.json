@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Categorieoverzicht tonen",
   "module.shopping.hide_overview": "Categorieoverzicht verbergen",
   "module.shopping.undo": "Ongedaan maken",
+  "module.shopping.help": "Zo werkt de lijst",
+  "module.shopping.item_deleted": "{name} verwijderd",
   "module.shopping.item_checked": "Afgevinkt: {name}",
   "module.shopping.item_unchecked": "Weer open: {name}",
   "module.dashboard.welcome_note": "Fijn dat je er bent!",

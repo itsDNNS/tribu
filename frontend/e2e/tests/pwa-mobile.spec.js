@@ -60,7 +60,7 @@ test.describe('PWA mobile app shell', () => {
 
     await page.goto('/?view=shopping', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('heading', { name: 'For everything you need.' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.shop-mobile-dock')).toBeVisible();
     await page.getByRole('button', {name:'Open navigation',exact:true}).click();
     const navigation = page.getByRole('navigation', {name:'Main navigation'});

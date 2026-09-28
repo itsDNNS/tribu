@@ -8,13 +8,13 @@
   gap: var(--space-4);
 }
 
-.tasks-v2 .list-header {
+.list-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
-.tasks-v2 .list-header h1 {
+.list-header h1 {
   margin: 0;
   font-size: var(--type-title-l-size);
   line-height: var(--type-title-l-line);

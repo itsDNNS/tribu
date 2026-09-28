@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Rādīt kategoriju pārskatu",
   "module.shopping.hide_overview": "Paslēpt kategoriju pārskatu",
   "module.shopping.undo": "Atsaukt",
+  "module.shopping.help": "Kā darbojas saraksts",
+  "module.shopping.item_deleted": "{name} noņemts",
   "module.shopping.item_checked": "Atzīmēts: {name}",
   "module.shopping.item_unchecked": "Atkal atvērts: {name}",
   "module.dashboard.welcome_note": "Prieks, ka esi šeit!",

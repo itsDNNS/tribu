@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Afficher les catégories",
   "module.shopping.hide_overview": "Masquer les catégories",
   "module.shopping.undo": "Annuler",
+  "module.shopping.help": "Comment fonctionne la liste",
+  "module.shopping.item_deleted": "{name} retiré",
   "module.shopping.item_checked": "Coché : {name}",
   "module.shopping.item_unchecked": "Décoché : {name}",
   "module.dashboard.welcome_note": "Quel plaisir de te retrouver ici !",

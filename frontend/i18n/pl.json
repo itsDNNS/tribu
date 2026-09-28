@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Pokaż przegląd kategorii",
   "module.shopping.hide_overview": "Ukryj przegląd kategorii",
   "module.shopping.undo": "Cofnij",
+  "module.shopping.help": "Jak działa lista",
+  "module.shopping.item_deleted": "Usunięto: {name}",
   "module.shopping.item_checked": "Zaznaczono: {name}",
   "module.shopping.item_unchecked": "Odznaczono: {name}",
   "module.dashboard.welcome_note": "Miło, że tu jesteś!",

@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Prikaži pregled kategorij",
   "module.shopping.hide_overview": "Skrij pregled kategorij",
   "module.shopping.undo": "Razveljavi",
+  "module.shopping.help": "Kako deluje seznam",
+  "module.shopping.item_deleted": "{name} odstranjeno",
   "module.shopping.item_checked": "Označeno: {name}",
   "module.shopping.item_unchecked": "Znova odprto: {name}",
   "module.dashboard.welcome_note": "Lepo, da si tukaj!",

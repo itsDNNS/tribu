@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Kategóriaáttekintés megjelenítése",
   "module.shopping.hide_overview": "Kategóriaáttekintés elrejtése",
   "module.shopping.undo": "Visszavonás",
+  "module.shopping.help": "Így működik a lista",
+  "module.shopping.item_deleted": "{name} eltávolítva",
   "module.shopping.item_checked": "Kipipálva: {name}",
   "module.shopping.item_unchecked": "Újra nyitott: {name}",
   "module.dashboard.welcome_note": "Örülünk, hogy itt vagy!",

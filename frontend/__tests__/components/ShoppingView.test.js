@@ -9,9 +9,10 @@ jest.mock('../../contexts/AppContext', () => ({
 jest.mock('../../hooks/useShopping', () => ({
   useShopping: () => mockShopping
 }));
+const mockToastSuccess = jest.fn();
 jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({
-    success: jest.fn(),
+    success: mockToastSuccess,
     error: jest.fn()
   })
 }));
@@ -99,7 +100,8 @@ const dialog = () => within(screen.getByRole('dialog'));
 test('renders the mockup tiles, department groups and real progress', () => {
   setup();
   expect(screen.getByRole('heading', {
-    name: 'Für alles, was euch fehlt.'
+    name: 'Einkauf',
+    level: 1
   })).toBeVisible();
   expect(screen.getByRole('region', {
     name: 'Obst & Gemüse'
@@ -320,11 +322,24 @@ test('completing uses the archive operation after confirmation and exposes recen
 });
 test('preferences stay scoped to the family and user', () => {
   setup();
-  fireEvent.click(screen.getByRole('button', {
+  expect(screen.getByRole('button', {
     name: 'Listenansicht',
     exact: true
+  })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Kachelansicht',
+    exact: true
   }));
-  expect(JSON.parse(localStorage.getItem('tribu_shopping_ui:demo:1')).layout).toBe('list');
+  expect(JSON.parse(localStorage.getItem('tribu_shopping_ui_v2:demo:1')).layout).toBe('tiles');
+});
+
+test('compact rows replace a layout saved before they became the default', () => {
+  localStorage.setItem('tribu_shopping_ui:demo:1', JSON.stringify({ layout: 'tiles', favorites: ['apfel'] }));
+  setup();
+  expect(screen.getByRole('button', {
+    name: 'Listenansicht',
+    exact: true
+  })).toHaveAttribute('aria-pressed', 'true');
 });
 test('sharing is a text snapshot of open products and includes notes', () => {
   setup();
@@ -379,7 +394,8 @@ test('English UI uses the translation bundle', () => {
     messages: buildMessages('en')
   });
   expect(screen.getByRole('heading', {
-    name: 'For everything you need.'
+    name: 'Shopping',
+    level: 1
   })).toBeVisible();
   expect(screen.getByRole('button', {
     name: 'New shopping list',
@@ -738,7 +754,7 @@ test('family/user preferences are isolated and revisiting restores only that sco
     demoMode: false
   });
   fireEvent.click(screen.getByRole('button', {
-    name: 'Listenansicht',
+    name: 'Kachelansicht',
     exact: true
   }));
   fireEvent.click(screen.getByRole('button', {
@@ -754,7 +770,7 @@ test('family/user preferences are isolated and revisiting restores only that sco
   view.rerender(<ShoppingView />);
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByRole('button', {
-    name: 'Kachelansicht'
+    name: 'Listenansicht'
   })).toHaveAttribute('aria-pressed', 'true');
   fireEvent.click(screen.getByRole('button', {
     name: 'Details zu Äpfel'
@@ -771,7 +787,7 @@ test('family/user preferences are isolated and revisiting restores only that sco
   };
   view.rerender(<ShoppingView />);
   expect(screen.getByRole('button', {
-    name: 'Kachelansicht'
+    name: 'Listenansicht'
   })).toHaveAttribute('aria-pressed', 'true');
   mockApp = {
     ...mockApp,
@@ -781,7 +797,7 @@ test('family/user preferences are isolated and revisiting restores only that sco
   };
   view.rerender(<ShoppingView />);
   expect(screen.getByRole('button', {
-    name: 'Listenansicht'
+    name: 'Kachelansicht'
   })).toHaveAttribute('aria-pressed', 'true');
   fireEvent.click(screen.getByRole('button', {
     name: 'Details zu Äpfel'
@@ -912,7 +928,8 @@ test('deleting the selected list while its dialog is open renders the remaining 
   };
   expect(() => view.rerender(<ShoppingView />)).not.toThrow();
   expect(screen.getByRole('heading', {
-    name: 'Für alles, was euch fehlt.'
+    name: 'Einkauf',
+    level: 1
   })).toBeVisible();
 });
 
@@ -974,4 +991,28 @@ test.each([
   expect(mockShopping.restoreItem).not.toHaveBeenCalled();
   await waitFor(() => expect(add).toBeEnabled());
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+test('deleting a product can be undone and only then reaches the server', async () => {
+  jest.useFakeTimers();
+  try {
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Details zu Äpfel' }));
+    fireEvent.click(dialog().getByRole('button', { name: /Löschen/ }));
+    expect(screen.queryByRole('checkbox', { name: /^Äpfel,/ })).toBeNull();
+    expect(mockShopping.deleteItem).not.toHaveBeenCalled();
+
+    const undo = mockToastSuccess.mock.calls.at(-1)[1];
+    act(() => undo.onClick());
+    expect(screen.getByRole('checkbox', { name: /^Äpfel,/ })).toBeVisible();
+    act(() => { jest.advanceTimersByTime(12000); });
+    expect(mockShopping.deleteItem).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details zu Äpfel' }));
+    fireEvent.click(dialog().getByRole('button', { name: /Löschen/ }));
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(mockShopping.deleteItem).toHaveBeenCalledWith(apple.id);
+  } finally {
+    jest.useRealTimers();
+  }
 });

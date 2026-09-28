@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Taispeáin forbhreathnú na gcatagóirí",
   "module.shopping.hide_overview": "Folaigh forbhreathnú na gcatagóirí",
   "module.shopping.undo": "Cealaigh",
+  "module.shopping.help": "Conas a oibríonn an liosta",
+  "module.shopping.item_deleted": "Baineadh {name}",
   "module.shopping.item_checked": "Ticeáilte: {name}",
   "module.shopping.item_unchecked": "Gan tic: {name}",
   "module.dashboard.welcome_note": "Is deas tú a bheith anseo!",

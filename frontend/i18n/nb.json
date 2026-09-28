@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Vis kategorioversikt",
   "module.shopping.hide_overview": "Skjul kategorioversikt",
   "module.shopping.undo": "Angre",
+  "module.shopping.help": "Slik fungerer listen",
+  "module.shopping.item_deleted": "{name} fjernet",
   "module.shopping.item_checked": "Avkrysset: {name}",
   "module.shopping.item_unchecked": "Åpen igjen: {name}",
   "module.dashboard.welcome_note": "Så hyggelig at du er her!",

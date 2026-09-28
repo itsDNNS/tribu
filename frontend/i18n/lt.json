@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Rodyti kategorijų apžvalgą",
   "module.shopping.hide_overview": "Slėpti kategorijų apžvalgą",
   "module.shopping.undo": "Atšaukti",
+  "module.shopping.help": "Kaip veikia sąrašas",
+  "module.shopping.item_deleted": "{name} pašalinta",
   "module.shopping.item_checked": "Pažymėta: {name}",
   "module.shopping.item_unchecked": "Vėl atvira: {name}",
   "module.dashboard.welcome_note": "Smagu, kad esi čia!",

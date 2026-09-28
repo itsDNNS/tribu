@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Εμφάνιση επισκόπησης κατηγοριών",
   "module.shopping.hide_overview": "Απόκρυψη επισκόπησης κατηγοριών",
   "module.shopping.undo": "Αναίρεση",
+  "module.shopping.help": "Πώς λειτουργεί η λίστα",
+  "module.shopping.item_deleted": "Αφαιρέθηκε: {name}",
   "module.shopping.item_checked": "Επιλέχθηκε: {name}",
   "module.shopping.item_unchecked": "Αποεπιλέχθηκε: {name}",
   "module.dashboard.welcome_note": "Χαιρόμαστε που είσαι εδώ!",

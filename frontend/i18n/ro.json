@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Arată lista categoriilor",
   "module.shopping.hide_overview": "Ascunde lista categoriilor",
   "module.shopping.undo": "Anulează",
+  "module.shopping.help": "Cum funcționează lista",
+  "module.shopping.item_deleted": "{name} eliminat",
   "module.shopping.item_checked": "Bifat: {name}",
   "module.shopping.item_unchecked": "Debifat: {name}",
   "module.dashboard.welcome_note": "Ne bucurăm că ești aici!",

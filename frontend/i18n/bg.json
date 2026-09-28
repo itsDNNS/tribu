@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Показване на категориите",
   "module.shopping.hide_overview": "Скриване на категориите",
   "module.shopping.undo": "Отмяна",
+  "module.shopping.help": "Как работи списъкът",
+  "module.shopping.item_deleted": "{name} е премахнат",
   "module.shopping.item_checked": "Отметнато: {name}",
   "module.shopping.item_unchecked": "Неотметнато: {name}",
   "module.dashboard.welcome_note": "Радваме се, че си тук!",

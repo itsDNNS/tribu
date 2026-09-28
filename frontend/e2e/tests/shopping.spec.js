@@ -320,7 +320,8 @@ test.describe('Shopping with the backend', () => {
     }).click();
     await expect(shoppingListCard(page, 'Delete This List')).toHaveCount(0);
     await expect(page.getByRole('heading', {
-      name: 'For everything you need.'
+      name: 'Shopping',
+      level: 1
     })).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });

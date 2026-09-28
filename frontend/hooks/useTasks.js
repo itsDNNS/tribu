@@ -6,6 +6,7 @@ import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import { weekStartIndex } from '../lib/dates';
 import { postponeTarget } from '../lib/taskGroups';
+import { UNDO_WINDOW_MS } from '../lib/undo';
 import * as api from '../lib/api';
 
 const EMPTY_EDIT_FORM = {
@@ -18,9 +19,7 @@ const EMPTY_EDIT_FORM = {
   assigned_to_user_id: '',
 };
 
-// How long completing or deleting can be undone before it reaches the
-// server. It matches how long a toast with an action stays visible.
-export const UNDO_WINDOW_MS = 6000;
+export { UNDO_WINDOW_MS };
 
 function toDateTimeLocal(iso) {
   if (!iso) return '';

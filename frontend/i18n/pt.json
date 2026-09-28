@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Mostrar resumo de categorias",
   "module.shopping.hide_overview": "Ocultar resumo de categorias",
   "module.shopping.undo": "Desfazer",
+  "module.shopping.help": "Como funciona a lista",
+  "module.shopping.item_deleted": "{name} removido",
   "module.shopping.item_checked": "Marcado: {name}",
   "module.shopping.item_unchecked": "Desmarcado: {name}",
   "module.dashboard.welcome_note": "Que bom ter-te aqui!",

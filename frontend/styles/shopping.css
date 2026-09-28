@@ -122,3 +122,113 @@
 .shop-page .shop-recipe-card{background:linear-gradient(135deg,var(--green-bg),var(--surface))}
 :is([data-theme="dark"],[data-theme="midnight-glass"]) :is(.shop-page,.shop-dialog){--ink:var(--text-primary);--text:var(--text-secondary);--muted:var(--text-muted)}
 @media(max-width:680px){.app-shell:has(.shopping-trip) .main-content{padding:8px 12px 22px}.shopping-trip.shop-page{padding-bottom:10px}}
+
+/* Tribu 2.0 (docs/tribu-2-design.md): compact rows are the default, a calm
+   header, the category label like the task groups. */
+.shop-page .shop-list-header { margin: 0 0 var(--space-4); }
+.shop-page .shop-category-title {
+  margin-bottom: var(--space-2);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.shop-page .shop-category-title .category-count {
+  font-size: var(--type-label-size);
+  background: none;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.shop-page .shop-category-title::after { display: none; }
+.shop-page .shop-line-list {
+  gap: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.shop-page .shop-line-list .shop-tile,
+.shop-page .shop-line-list .shop-tile:hover,
+.shop-page .shop-line-list .shop-tile.done {
+  border: 0;
+  border-radius: 0;
+  background: var(--color-surface);
+  box-shadow: none;
+}
+.shop-page .shop-line-list .shop-tile + .shop-tile { border-top: 1px solid var(--color-line); }
+.shop-page .shop-line-list .shop-tile-main {
+  min-height: 56px;
+  padding: var(--space-2) 52px var(--space-2) 52px;
+  gap: var(--space-3);
+}
+.shop-page .shop-line-list .shop-tile-main .grocery-art,
+.shop-page .shop-line-list .shop-product-photo { width: 36px; height: 36px; }
+.shop-page .shop-line-list .shop-product-copy {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-2);
+  align-items: baseline;
+}
+.shop-page .shop-line-list .shop-product-name {
+  grid-column: 1 / -1;
+  font-size: var(--type-body-size);
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.shop-page .shop-line-list .shop-product-qty,
+.shop-page .shop-line-list .shop-product-note {
+  margin: 0;
+  min-height: 0;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.shop-page .shop-line-list .shop-product-note:empty { display: none; }
+.shop-page .shop-line-list .shop-tile-check {
+  left: var(--space-4);
+  top: calc(50% - 12px);
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-text-muted);
+  opacity: 1;
+  background: transparent;
+}
+.shop-page .shop-line-list .shop-tile.done .shop-tile-check {
+  border-color: var(--color-accent-fill);
+  background: var(--color-accent-fill);
+}
+.shop-page .shop-line-list .shop-tile.done .shop-product-name {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+.shop-page .shop-line-list .shop-tile .shop-urgent {
+  position: absolute;
+  top: 50%;
+  left: auto;
+  right: 52px;
+  transform: translateY(-50%);
+  font-size: var(--type-label-size);
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+}
+.shop-page .shop-line-list .urgent .shop-tile-check { display: flex; }
+.shop-page .shop-line-list .shop-tile-menu {
+  top: calc(50% - 22px);
+  right: var(--space-1);
+  width: 44px;
+  height: 44px;
+  color: var(--color-text-muted);
+}
+/* With a mouse the menu appears on hover or focus; touch shows it, and a
+   long press opens the details as well. */
+@media (hover: hover) and (pointer: fine) {
+  .shop-page .shop-tile-menu { opacity: 0; }
+  .shop-page .shop-tile:hover .shop-tile-menu,
+  .shop-page .shop-tile:focus-within .shop-tile-menu { opacity: 1; }
+}
+.shopping-trip .shop-line-list .shop-tile-main { min-height: 72px; }
+.shopping-trip .shop-line-list .shop-product-name { font-size: var(--type-title-s-size); }

@@ -1526,6 +1526,8 @@
   "module.shopping.show_overview": "Näita kategooriate ülevaadet",
   "module.shopping.hide_overview": "Peida kategooriate ülevaade",
   "module.shopping.undo": "Võta tagasi",
+  "module.shopping.help": "Kuidas nimekiri töötab",
+  "module.shopping.item_deleted": "{name} eemaldatud",
   "module.shopping.item_checked": "Märgitud: {name}",
   "module.shopping.item_unchecked": "Taas avatud: {name}",
   "module.dashboard.welcome_note": "Tore, et oled siin!",
