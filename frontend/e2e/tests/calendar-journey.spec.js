@@ -472,7 +472,15 @@ test('a signed-in child can read calendar events but cannot mutate them', async 
     const child = await context.newPage();
     await child.goto('/');
     await open(child);
-    await expect(child.locator('.app-header-new')).toHaveCount(0);
+    // A child's "+" suggests instead of creating (Tribu 2.0, E5).
+    const headerNew = child.locator('.app-header-new');
+    if (await headerNew.isVisible()) await headerNew.click();
+    else await child.locator('.ui-bottom-nav').getByRole('button', { name: 'New', exact: true }).click();
+    const suggest = child.getByRole('dialog', { name: 'Suggest something' });
+    await expect(suggest).toBeVisible();
+    await expect(suggest.getByRole('button', { name: 'Event', exact: true })).toHaveCount(0);
+    await child.keyboard.press('Escape');
+    await expect(suggest).toBeHidden();
     await eventInGrid(child, 'Child visible plan').click();
     await expect(child.getByRole('dialog')).toContainText('Child visible plan');
     for (const action of ['Edit', 'Delete', 'Duplicate event'])

@@ -132,7 +132,7 @@ function TodayRow({ item, task, past, ctx, timeLabel = null }) {
   );
 }
 
-function InboxHint({ items, messages, familyId, loadQuickCaptureInbox, loadTasks, loadShoppingLists }) {
+function InboxHint({ items, members, messages, familyId, loadQuickCaptureInbox, loadTasks, loadShoppingLists }) {
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const run = async (id, action, reload) => {
@@ -143,6 +143,12 @@ function InboxHint({ items, messages, familyId, loadQuickCaptureInbox, loadTasks
     } finally {
       setBusyId(null);
     }
+  };
+  // A child's entry is a suggestion (Tribu 2.0, E5).
+  const suggestedBy = (item) => {
+    if (!item.suggested_by_user_id) return '';
+    const member = members.find((m) => Number(m.user_id) === Number(item.suggested_by_user_id));
+    return member?.display_name?.split(' ')[0] || '';
   };
   return (
     <section className="today-hint" aria-label={t(messages, 'module.dashboard.quick_capture_inbox_title')}>
@@ -158,7 +164,12 @@ function InboxHint({ items, messages, familyId, loadQuickCaptureInbox, loadTasks
         <ul className="today-inbox">
           {items.map((item) => (
             <li key={item.id}>
-              <span className="today-inbox-text">{item.text}</span>
+              <span className="today-inbox-text">
+                {item.text}
+                {suggestedBy(item) && (
+                  <small>{t(messages, 'module.today.suggested_by').replace('{name}', suggestedBy(item))}</small>
+                )}
+              </span>
               <span className="today-inbox-actions">
                 <button type="button" disabled={busyId === item.id} onClick={() => run(item.id, () => apiConvertQuickCapture(item.id, { destination: 'task' }), loadTasks)}>
                   {t(messages, 'module.dashboard.quick_capture_to_task')}
@@ -267,7 +278,8 @@ export default function TodayView({ onOpenCapture } = {}) {
     if (hasTimed && index === day.nowIndex) rows.push(<NowMarker key="now" label={nowLabel} messages={messages} />);
     rows.push(
       <TodayRow
-        key={`${item.kind}-${item.id ?? item.title}-${index}`}
+        // Stable while the week's events load, so rows are not remounted.
+        key={`${item.kind}-${item.id ?? item.title}-${item.time ?? ''}`}
         item={item}
         task={item.kind === 'task' ? tasksById.get(item.id) : null}
         past={index < day.nowIndex && Boolean(item.time || item.kind === 'meal') && !(item.kind === 'task' && !item.done)}
@@ -320,6 +332,7 @@ export default function TodayView({ onOpenCapture } = {}) {
             {inboxItems.length > 0 && !isChild && (
               <InboxHint
                 items={inboxItems}
+                members={members}
                 messages={messages}
                 familyId={familyId}
                 loadQuickCaptureInbox={loadQuickCaptureInbox}

@@ -277,7 +277,7 @@ export default function AppShell() {
             onSearch={() => setSearchOpen(true)}
             onNotifications={() => setNotifPanelOpen(true)}
             onAccount={() => setMobileSheet('account')}
-            onCreate={isChild ? undefined : () => setMobileSheet('new')}
+            onCreate={() => setMobileSheet('new')}
             accountOpen={mobileSheet === 'account'}
             notificationButtonRef={bellBtnRef}
           />
@@ -287,7 +287,7 @@ export default function AppShell() {
         <div className="view-enter">
           {loading ? <TodaySkeleton messages={messages} /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
             <ActiveComponent
-              onOpenCapture={isChild ? undefined : () => setMobileSheet('new')}
+              onOpenCapture={() => setMobileSheet('new')}
               createRequest={createRequest}
               onCreateHandled={()=>setCreateRequest(null)}
             />

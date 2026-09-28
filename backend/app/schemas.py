@@ -1056,7 +1056,8 @@ class QuickCaptureDestination(str, Enum):
 
 
 class QuickCaptureCreate(BaseModel):
-    """Create a quick capture item or route it directly."""
+    """Create a quick capture item or route it directly. Children can only
+    capture into the inbox, as a suggestion for the adults."""
     family_id: int = Field(..., description="Family ID")
     text: str = Field(min_length=1, max_length=240, description="Captured text")
     destination: QuickCaptureDestination = Field(QuickCaptureDestination.inbox, description="Where to send the capture")
@@ -1069,6 +1070,7 @@ class QuickCaptureInboxItem(BaseModel):
     id: int = Field(..., description="Inbox item ID")
     text: str = Field(..., description="Captured text")
     status: str = Field(..., description="Status: open, converted, or dismissed")
+    suggested_by_user_id: Optional[int] = Field(None, description="The child who suggested this entry, for adults to confirm")
     converted_to: Optional[str] = Field(None, description="Destination after conversion")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")

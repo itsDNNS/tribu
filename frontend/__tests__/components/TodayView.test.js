@@ -220,6 +220,16 @@ describe('TodayView', () => {
     await waitFor(() => expect(mockApp.loadQuickCaptureInbox).toHaveBeenCalledWith(7));
   });
 
+  it("names the child behind a suggestion", async () => {
+    await renderToday({ quickCaptureInbox: [
+      { id: 6, text: 'Pizza on Friday', status: 'open', suggested_by_user_id: 3 },
+      { id: 5, text: 'Call the plumber', status: 'open', suggested_by_user_id: null },
+    ] });
+    fireEvent.click(screen.getByRole('button', { name: /Review/ }));
+    expect(screen.getByText('Suggestion from Lena')).toBeInTheDocument();
+    expect(screen.getAllByText(/^Suggestion from/)).toHaveLength(1);
+  });
+
   it('greets once and gives the date', async () => {
     await renderToday();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Good morning, Max');

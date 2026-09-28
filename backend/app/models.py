@@ -799,6 +799,8 @@ class QuickCaptureItem(Base):
     text = Column(String(240), nullable=False)
     status = Column(String(20), nullable=False, default="open", server_default="open")
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # A child's entry: it waits for an adult to confirm it (Tribu 2.0, E5).
+    is_suggestion = Column(Boolean, nullable=False, default=False, server_default="false")
     converted_to = Column(String(40), nullable=True)
     converted_object_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -806,6 +808,11 @@ class QuickCaptureItem(Base):
 
     family = relationship("Family", back_populates="quick_capture_items")
     created_by = relationship("User")
+
+    @property
+    def suggested_by_user_id(self) -> int | None:
+        """The child who suggested this entry; adults' notes stay anonymous."""
+        return self.created_by_user_id if self.is_suggestion else None
 
 
 class FamilyInvitation(Base):

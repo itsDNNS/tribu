@@ -273,17 +273,25 @@ test("compact editing and dark sheets retain family colors and reachable actions
     ),
   ).toBe(true);
 });
-test("children retain read-only compact planning and cannot open quick creation", async ({
+test("children plan read-only and suggest through \"+\" instead of creating", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await open(page, { child: true });
-  await expect(
-    page
-      .locator(".ui-bottom-nav")
-      .getByRole("button", { name: "Neu", exact: true }),
-  ).toBeDisabled();
-  await expect(page.locator(".app-header-new")).toHaveCount(0);
+  const api = await open(page, { child: true });
+  // "+" suggests (Tribu 2.0, E5): an adult confirms it later.
+  await page
+    .locator(".ui-bottom-nav")
+    .getByRole("button", { name: "Neu", exact: true })
+    .click();
+  const sheet = page.getByRole("dialog", { name: "Etwas vorschlagen" });
+  await expect(sheet.getByText("Ein Erwachsener sieht deinen Vorschlag und trägt ihn ein.")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Termin" })).toHaveCount(0);
+  await sheet.getByRole("textbox", { name: "Etwas vorschlagen" }).fill("Freitag Pizza");
+  await sheet.getByRole("button", { name: "Vorschlagen" }).click();
+  await expect(sheet).toBeHidden();
+  expect(
+    api.requests.filter((r) => r.path === "/quick-capture" && r.method === "POST").map((r) => r.body),
+  ).toEqual([{ family_id: 7, text: "Freitag Pizza", destination: "inbox" }]);
   await page
     .locator(".ui-event-content")
     .filter({ hasText: "Demo-Termin C" })

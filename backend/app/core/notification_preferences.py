@@ -24,6 +24,7 @@ NOTIFICATION_TYPE_TO_PUSH_CATEGORY: dict[str, str] = {
     "shopping_item_unchecked": "shopping_changes",
     "meal_plan_changed": "meal_plan_changes",
     "family_changed": "family_changes",
+    "capture_suggestion": "family_changes",
 }
 
 

@@ -6,6 +6,7 @@ import { navKeyOf } from '../../lib/navigation';
 import { plannerText } from './PlannerUI';
 import AccountSheet from '../shell/AccountSheet';
 import NewSheet from './NewSheet';
+import SuggestSheet from './SuggestSheet';
 
 function MobileBadge({ count }) {
   return count > 0 ? (
@@ -18,7 +19,7 @@ function MobileBadge({ count }) {
 const TAB_ICONS = { today: Sun, plan: CalendarDays, lists: ListChecks, family: Users };
 
 // The phone's tab bar (Tribu 2.0, R1): Today · Plan · + · Lists · Family,
-// plus the sheets it and the header open.
+// plus the sheets it and the header open. Children's "+" suggests (E5).
 export default function ResponsiveUI({
   groups,
   openGroup,
@@ -51,7 +52,6 @@ export default function ResponsiveUI({
               <button
                 type="button"
                 key="new"
-                disabled={isChild}
                 className={`ui-nav-button ui-nav-new${sheet === 'new' ? ' active' : ''}`}
                 aria-haspopup="dialog"
                 aria-expanded={sheet === 'new'}
@@ -91,6 +91,7 @@ export default function ResponsiveUI({
           onClose={() => setSheet(null)}
         />
       )}
+      {sheet === 'new' && isChild && <SuggestSheet onClose={() => setSheet(null)} />}
       {sheet === 'new' && !isChild && (
         <NewSheet
           onClose={() => setSheet(null)}

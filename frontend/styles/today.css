@@ -296,6 +296,7 @@
   border-top: 1px solid var(--color-line);
 }
 .today-inbox-text { flex: 1 1 160px; color: var(--color-text); font-size: var(--type-body-size); overflow-wrap: anywhere; }
+.today-inbox-text small { display: block; color: var(--color-text-muted); font-size: var(--type-body-small-size); }
 .today-inbox-actions { display: flex; gap: var(--space-1); }
 .today-inbox-actions button {
   display: inline-flex;

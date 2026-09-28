@@ -99,6 +99,7 @@
   .capture-kinds { grid-column: auto; }
 }
 
+.capture-hint { margin: 0; color: var(--color-text-secondary); font-size: var(--type-body-small-size); }
 .capture-error { margin: 0; color: var(--color-danger); font-size: var(--type-body-small-size); }
 .capture .capture-submit {
   display: inline-flex;
