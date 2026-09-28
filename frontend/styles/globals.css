@@ -5855,3 +5855,32 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
   .shopping-items-wrapper > .quick-add-bar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px; }
   .shopping-items-wrapper > .quick-add-bar .shopping-category-combobox { grid-column: 2 / 4; grid-row: 2; }
 }
+
+/* Swipe actions on list rows (Tribu 2.0, N-4): the action waits behind
+   the row and shows while it moves; the row slides on `.swipe-slide`. */
+.swipe-shell { position: relative; }
+.swipe-reveal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  font-size: var(--type-body-small-size);
+  font-weight: 650;
+}
+.swipe-reveal span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  opacity: 0;
+}
+.swipe-reveal span.visible { opacity: 1; }
+.swipe-reveal .swipe-reveal-end { margin-left: auto; }
+.swipe-reveal-success { color: var(--color-success); }
+.swipe-reveal-danger { color: var(--color-danger); }
+.swipe-slide {
+  position: relative;
+  background: var(--color-surface);
+  touch-action: pan-y;
+}
+.swipe-slide * { touch-action: pan-y; }

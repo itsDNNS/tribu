@@ -299,7 +299,7 @@ export default function ShoppingView(props) {
     });
   }
   const layout = prefs.layout === 'list' ? 'shop-line-list' : 'shop-tile-grid';
-  const tiles = entries => <div className={layout}>{entries.map(item => <ProductTile key={item.id} item={item} pending={sh.pendingItemIds?.has(item.id)} onToggle={sh.toggleItem} onEdit={isChild ? null : edit} />)}</div>;
+  const tiles = entries => <div className={layout}>{entries.map(item => <ProductTile key={item.id} item={item} pending={sh.pendingItemIds?.has(item.id)} onToggle={sh.toggleItem} onEdit={isChild ? null : edit} onRemove={isChild || trip ? null : removeLater} swipe={prefs.layout === 'list'} />)}</div>;
   function discovery() {
     return <>
  <div className="shop-discovery-tabs" role="group" aria-label={tr("module.shopping.visual.artikel_entdecken")}>{[['favorites', tr("module.shopping.visual.favoriten")], ['catalog', tr("module.shopping.visual.katalog")], ['recent', tr("module.shopping.visual.zuletzt")]].map(([tab, label]) => <button key={tab} className={prefs.tab === tab ? 'active' : ''} aria-pressed={prefs.tab === tab} onClick={() => {

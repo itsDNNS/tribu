@@ -1022,3 +1022,47 @@ test('a trip started elsewhere stays on after the first render', () => {
   expect(document.querySelector('.shop-trip-banner')).toBeInTheDocument();
   expect(sessionStorage.getItem('tribu_shopping_trip')).toBeNull();
 });
+
+test('rows swipe into the basket or away, with a tick at the threshold', () => {
+  const vibrate = jest.fn();
+  navigator.vibrate = vibrate;
+  try {
+    setup();
+    const swipe = (name, dx) => {
+      const row = screen.getByRole('checkbox', { name });
+      fireEvent.pointerDown(row, { clientX: 150, clientY: 10, button: 0 });
+      fireEvent.pointerMove(row, { clientX: 150 + dx / 2, clientY: 10 });
+      fireEvent.pointerMove(row, { clientX: 150 + dx, clientY: 10 });
+      fireEvent.pointerUp(row, { clientX: 150 + dx, clientY: 10 });
+      fireEvent.click(row);
+    };
+
+    swipe(/^Äpfel,/, 100);
+    // The click that ends the swipe is not a second tap.
+    expect(mockShopping.toggleItem).toHaveBeenCalledTimes(1);
+    expect(mockShopping.toggleItem).toHaveBeenCalledWith(1, false);
+    expect(vibrate).toHaveBeenCalledTimes(1);
+
+    swipe(/^Milch,/, -100);
+    expect(screen.queryByRole('checkbox', { name: /^Milch,/ })).toBeNull();
+    const undo = mockToastSuccess.mock.calls.at(-1)[1];
+    act(() => undo.onClick());
+    expect(screen.getByRole('checkbox', { name: /^Milch,/ })).toBeVisible();
+
+    // Short moves do nothing.
+    swipe(/^Milch,/, 40);
+    expect(mockShopping.toggleItem).toHaveBeenCalledTimes(1);
+  } finally {
+    delete navigator.vibrate;
+  }
+});
+
+test('children do not swipe products away', () => {
+  setup({}, { isChild: true });
+  const row = screen.getByRole('checkbox', { name: /^Milch,/ });
+  fireEvent.pointerDown(row, { clientX: 150, clientY: 10, button: 0 });
+  fireEvent.pointerMove(row, { clientX: 100, clientY: 10 });
+  fireEvent.pointerMove(row, { clientX: 40, clientY: 10 });
+  fireEvent.pointerUp(row, { clientX: 40, clientY: 10 });
+  expect(screen.getByRole('checkbox', { name: /^Milch,/ })).toBeVisible();
+});

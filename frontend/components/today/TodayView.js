@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Cake, ChevronDown, Inbox, ShoppingCart, Sparkles, Utensils, X } from 'lucide-react';
+import { Cake, Check, ChevronDown, Inbox, ShoppingCart, Sparkles, Utensils, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useCurrentMinute } from '../../hooks/useCurrentMinute';
+import { useSwipeActions } from '../../hooks/useSwipeActions';
 import { apiConvertQuickCapture, apiDismissQuickCapture, apiGetEvents, apiListMealPlans } from '../../lib/api';
 import { t } from '../../lib/i18n';
 import { NO_HIDDEN_AREAS } from '../../lib/navigation';
@@ -10,6 +11,7 @@ import { getMemberColor } from '../../lib/member-colors';
 import { buildToday } from '../../lib/today/buildToday';
 import { peekHandOff, takeHandOff } from '../../lib/handoff';
 import MemberAvatar from '../MemberAvatar';
+import SwipeReveal, { swipeStyle } from '../SwipeReveal';
 import RewardsDashboardWidget from '../RewardsDashboardWidget';
 import { SetupChecklist, useSetupChecklist } from './SetupChecklist';
 
@@ -84,8 +86,14 @@ function TodayRow({ item, task, past, ctx, timeLabel = null }) {
     if (item.kind === 'event') openCalendarDay(setActiveView, item.date, item.time);
     else setActiveView({ task: 'tasks', meal: 'meal_plans', birthday: 'contacts' }[item.kind]);
   };
-  return (
-    <li className={`today-row today-row-${item.kind}${past ? ' past' : ''}${item.done ? ' done' : ''}`}>
+  // Tribu 2.0 (N-4): swipe right to finish a task, as in the task list.
+  const swipeable = Boolean(task) && !item.done && canComplete(task);
+  const { offset, handlers } = useSwipeActions({
+    enabled: swipeable,
+    onSwipeRight: swipeable ? () => toggleTask(task) : undefined,
+  });
+  const row = (
+    <div className={`today-row today-row-${item.kind}${past ? ' past' : ''}${item.done ? ' done' : ''}${swipeable ? ' swipe-slide' : ''}`} style={swipeStyle(offset)} {...(swipeable ? handlers : {})}>
       <span className={`today-row-time${timeLabel ? ' overdue' : ''}`}>
         {timeLabel || (item.kind === 'meal' ? t(messages, `module.meal_plans.slot.${item.slot}`) : clock(item.time, locale, timeFormat))}
         {item.endTime && <small>{clock(item.endTime, locale, timeFormat)}</small>}
@@ -113,6 +121,13 @@ function TodayRow({ item, task, past, ctx, timeLabel = null }) {
         <span className="today-row-title">{title}</span>
       </button>
       <People ids={item.people} members={members} messages={messages} />
+    </div>
+  );
+  if (!swipeable) return <li>{row}</li>;
+  return (
+    <li className="swipe-shell">
+      <SwipeReveal offset={offset} right={{ icon: <Check size={18} />, label: t(messages, 'module.tasks.done'), tone: 'success' }} />
+      {row}
     </li>
   );
 }

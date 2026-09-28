@@ -148,6 +148,20 @@ describe('TodayView', () => {
     expect(mockToggleTask).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
   });
 
+  it('finishes a task with a swipe to the right', async () => {
+    window.PointerEvent = window.PointerEvent || MouseEvent;
+    await renderToday();
+    const title = screen.getByRole('button', { name: /Buy a present/ });
+    fireEvent.pointerDown(title, { clientX: 100, clientY: 10, button: 0 });
+    fireEvent.pointerMove(title, { clientX: 150, clientY: 10 });
+    fireEvent.pointerMove(title, { clientX: 200, clientY: 10 });
+    fireEvent.pointerUp(title, { clientX: 200, clientY: 10 });
+    fireEvent.click(title);
+    expect(mockToggleTask).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
+    // The click that ends the swipe does not open the task list.
+    expect(mockApp.setActiveView).not.toHaveBeenCalled();
+  });
+
   it('lets children tick only their own tasks', async () => {
     await renderToday({ isChild: true, me: { user_id: 2, display_name: 'Anna' } });
     expect(screen.getByRole('checkbox', { name: /Buy a present/ })).toBeEnabled();

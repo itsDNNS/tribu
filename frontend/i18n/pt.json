@@ -1729,6 +1729,8 @@
   "module.shopping.visual.0_endgultig_loschen": "Permanently delete “{0}”?",
   "module.shopping.visual.abbrechen": "Cancel",
   "module.shopping.visual.loschen": "Delete",
+  "module.shopping.swipe_basket": "Para o cesto",
+  "module.shopping.swipe_back": "Para a lista",
   "module.shopping.visual.neue_vorlage": "New template",
   "module.shopping.visual.bereits_notierte_zutaten_sind_abgewahlt_entfernt_zusatz": "Ingredients already on your list are deselected. Also remove what you already have at home.",
   "module.shopping.visual.ausgewahlte_zutaten_hinzufugen": "Add selected ingredients",

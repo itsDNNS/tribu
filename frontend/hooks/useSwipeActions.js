@@ -6,7 +6,7 @@ import { useRef, useState } from 'react';
 // input is ignored; every swipe action also has a button.
 export const SWIPE_THRESHOLD = 72;
 const LOCK_DISTANCE = 10;
-const MAX_OFFSET = 120;
+const MAX_OFFSET = 160;
 
 export function useSwipeActions({ onSwipeRight, onSwipeLeft, enabled = true }) {
   const [offset, setOffset] = useState(0);
