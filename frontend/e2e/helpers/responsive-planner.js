@@ -47,7 +47,9 @@ async function mockResponsivePlanner(page, { child = false } = {}) {
   const requests = [];
   await page.clock.setFixedTime(new Date("2026-09-19T20:48:00Z"));
   await page.addInitScript(() => {
-    sessionStorage.setItem("tribu_calendar_focus", "2026-09-21T12:00:00");
+    window.__tribuHandoffs = new Map([
+      ["tribu_calendar_focus", "2026-09-21T12:00:00"],
+    ]);
   });
   await page.route("**/api/**", (route) => {
     const req = route.request(),
