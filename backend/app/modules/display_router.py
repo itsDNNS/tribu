@@ -31,7 +31,7 @@ from app.core.deps import current_display_device, current_user, ensure_family_ad
 from app.core.errors import DISPLAY_DEVICE_NOT_FOUND, WEATHER_SEARCH_UNAVAILABLE, error_detail
 from app.core.recurrence import expand_event, load_series_changes
 from app.core.scopes import require_scope
-from app.core.display_layouts import normalize_config
+from app.core.display_layouts import CONTENT_TIMETABLE, normalize_config
 from app.core import weather as weather_service
 from app.database import get_db
 from app.models import (
@@ -67,6 +67,9 @@ from app.schemas import (
     DisplayShoppingList,
     DisplayWeather,
     DisplaySchoolTimetableGroup,
+    DisplaySchoolTimetableWeek,
+    DisplaySchoolWeekLesson,
+    DisplaySchoolWeekPeriod,
     DisplaySchoolTimetableLesson,
     SchoolTimetableMemberResponse,
     DisplayDeviceCreate,
@@ -536,6 +539,63 @@ def _school_timetables_for(db: Session, family_id: int, day: date, membership_by
     return groups
 
 
+def _school_week(db: Session, family_id: int, timetable_id: int | None, membership_by_user_id: dict) -> DisplaySchoolTimetableWeek | None:
+    """The chosen timetable's whole week, or the family's first one."""
+    query = (
+        db.query(SchoolTimetable)
+        .options(
+            selectinload(SchoolTimetable.periods),
+            selectinload(SchoolTimetable.lessons),
+            selectinload(SchoolTimetable.assignments).joinedload(SchoolTimetableAssignment.member),
+        )
+        .filter(SchoolTimetable.family_id == family_id)
+    )
+    timetable = query.filter(SchoolTimetable.id == timetable_id).first() if timetable_id else None
+    if timetable is None:
+        timetable = query.order_by(SchoolTimetable.name.asc(), SchoolTimetable.id.asc()).first()
+    if timetable is None:
+        return None
+    position_by_period_id = {period.id: period.position for period in timetable.periods}
+    children = []
+    for assignment in timetable.assignments:
+        member = assignment.member
+        membership = membership_by_user_id.get(assignment.member_user_id)
+        if not member or not membership:
+            continue
+        children.append(SchoolTimetableMemberResponse(
+            display_name=member.display_name,
+            color=membership.color,
+            profile_image=sanitize_profile_image_data_url(member.profile_image_small),
+        ))
+    return DisplaySchoolTimetableWeek(
+        name=timetable.name,
+        class_label=timetable.class_label,
+        include_saturday=timetable.include_saturday,
+        children=children,
+        periods=[
+            DisplaySchoolWeekPeriod(
+                position=period.position,
+                label=period.label,
+                start_time=period.start_time,
+                end_time=period.end_time,
+                kind=period.kind,
+                break_label=period.break_label,
+            )
+            for period in sorted(timetable.periods, key=lambda p: p.position)
+        ],
+        lessons=[
+            DisplaySchoolWeekLesson(
+                weekday=lesson.weekday,
+                period_position=position_by_period_id[lesson.period_id],
+                subject=lesson.subject,
+                color=lesson.color,
+            )
+            for lesson in timetable.lessons
+            if lesson.period_id in position_by_period_id and lesson.subject
+        ],
+    )
+
+
 def _upcoming_birthdays(db: Session, family_id: int, today: date) -> list[DisplayDashboardBirthday]:
     upcoming: list[DisplayDashboardBirthday] = []
     for birthday in db.query(FamilyBirthday).filter(FamilyBirthday.family_id == family_id).all():
@@ -711,6 +771,8 @@ def display_dashboard(
 ):
     family_id = device.family_id
     family = db.query(Family).filter(Family.id == family_id).first()
+    config = _device_config(device)
+    layout = config.layout_config or {}
 
     memberships = [
         m
@@ -788,5 +850,10 @@ def display_dashboard(
         rewards=_rewards(db, family_id, memberships, refs),
         countdowns=_countdowns(db, family_id, today),
         weather=_weather(family),
-        config=_device_config(device),
+        school_timetable=(
+            _school_week(db, family_id, layout.get("timetable_id"), membership_by_user_id)
+            if layout.get("content") == CONTENT_TIMETABLE
+            else None
+        ),
+        config=config,
     )

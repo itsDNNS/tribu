@@ -932,6 +932,66 @@ class TestSchoolTimetables:
         assert "@example.com" not in rendered
 
 
+    def test_a_display_can_show_one_timetable_in_full(self):
+        admin_token, _, family_id = _seed_member_with_pat("schoolWeek", role="admin", is_adult=True)
+        child = _seed_child(family_id, "Week", color="#7c3aed")
+        first = client.post("/school-timetables", json=_school_payload(family_id, [child]), headers=_auth(admin_token))
+        second = client.post(
+            "/school-timetables",
+            json={**_school_payload(family_id, []), "name": "Class 6a", "lessons": [
+                {"weekday": 3, "period_position": 3, "subject": "Art", "room": "B2"},
+            ]},
+            headers=_auth(admin_token),
+        )
+        assert first.status_code == 200 and second.status_code == 200
+        created = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Kids room", "layout_config": {"version": 2, "content": "timetable", "timetable_id": second.json()["id"]}},
+            headers=_auth(admin_token),
+        )
+        assert created.status_code == 200, created.text
+        layout = created.json()["device"]["layout_config"]
+        assert (layout["content"], layout["timetable_id"]) == ("timetable", second.json()["id"])
+
+        body = client.get("/display/dashboard", headers=_auth(created.json()["token"])).json()
+        week = body["school_timetable"]
+        assert week["name"] == "Class 6a"
+        assert [period["position"] for period in week["periods"]] == [1, 2, 3]
+        assert week["periods"][1]["kind"] == "break"
+        assert week["lessons"] == [{"weekday": 3, "period_position": 3, "subject": "Art", "color": None}]
+        rendered = json_module.dumps(week)
+        assert "B2" not in rendered and "@example.com" not in rendered
+
+    def test_timetable_content_falls_back_to_the_first_plan(self):
+        admin_token, _, family_id = _seed_member_with_pat("schoolWeekFallback", role="admin", is_adult=True)
+        child = _seed_child(family_id, "Fallback", color="#7c3aed")
+        client.post("/school-timetables", json=_school_payload(family_id, [child]), headers=_auth(admin_token))
+        created = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Hall", "layout_config": {"version": 2, "content": "timetable", "timetable_id": 999999}},
+            headers=_auth(admin_token),
+        )
+        body = client.get("/display/dashboard", headers=_auth(created.json()["token"])).json()
+        assert body["school_timetable"]["name"] == "Class 4b"
+        assert [child["display_name"] for child in body["school_timetable"]["children"]] == ["Child Fallback"]
+        assert len(body["school_timetable"]["lessons"]) == 5
+
+    def test_the_family_stage_does_not_carry_the_week(self):
+        _, _, family_id = _seed_member_with_pat("schoolWeekStage", role="admin", is_adult=True)
+        token = _mint_display_token(family_id, "Stage only")
+        assert client.get("/display/dashboard", headers=_auth(token)).json()["school_timetable"] is None
+
+    def test_content_and_timetable_id_are_validated(self):
+        admin_token, _, family_id = _seed_member_with_pat("schoolWeekValid", role="admin", is_adult=True)
+        created = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Odd", "layout_config": {"version": 2, "content": "cinema", "timetable_id": "7"}},
+            headers=_auth(admin_token),
+        )
+        layout = created.json()["device"]["layout_config"]
+        assert (layout["content"], layout["timetable_id"]) == ("stage", None)
+
+
 # ---------------------------------------------------------------------------
 # Stage dashboard data (Home Family Display 2.0)
 # ---------------------------------------------------------------------------

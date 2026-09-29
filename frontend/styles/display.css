@@ -1132,3 +1132,109 @@
   line-height: 1.5;
 }
 .display-state .display-state-reason { margin-top: 1rem; font-size: 0.95em; opacity: 0.75; }
+
+/* ---- One school timetable in full (Tribu 2.0) ------------------------------- */
+.stage--timetable .stage-head { grid-template-columns: auto minmax(0, 1fr) auto; }
+.stage-timetable-title {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  min-width: 0;
+  font-size: 1.5em;
+}
+.stage-timetable-title strong { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stage-timetable-title span {
+  padding: 0.1em 0.6em;
+  border-radius: 999px;
+  background: var(--stage-raised);
+  color: var(--stage-text);
+  font-size: 0.75em;
+  font-weight: 650;
+}
+.stage-timetable {
+  display: grid;
+  gap: 0.3em;
+  min-height: 0;
+}
+.stage-tt-row,
+.stage-tt-break { display: contents; }
+.stage-tt-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35em 0.4em;
+  border-radius: 0.7em;
+  color: var(--stage-muted);
+}
+.stage-tt-day b { color: var(--stage-ink); font-size: 1.25em; }
+.stage-tt-day span { font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.06em; }
+.stage-tt-day.is-today { background: var(--stage-accent-bg); color: var(--stage-accent); }
+.stage-tt-day.is-today span { font-weight: 700; }
+.stage-tt-period,
+.stage-tt-time {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 0.6em;
+  font-variant-numeric: tabular-nums;
+  color: var(--stage-muted);
+}
+.stage-tt-period b { color: var(--stage-ink); font-size: 1.3em; line-height: 1.1; }
+.stage-tt-period span,
+.stage-tt-time { font-size: 0.85em; }
+.stage-tt-row.is-now .stage-tt-period { box-shadow: inset 0.25em 0 0 var(--stage-accent); }
+.stage-tt-cell {
+  --tt-bg: var(--stage-surface);
+  --tt-fg: var(--stage-muted);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0.3em 0.5em;
+  border: 1px solid var(--stage-line);
+  border-radius: 0.7em;
+  background: var(--tt-bg);
+  color: var(--tt-fg);
+  font-size: 1.2em;
+  font-weight: 650;
+  text-align: center;
+  overflow: hidden;
+}
+.stage-tt-cell.is-filled { border-color: transparent; }
+.stage-tt-cell.is-today:not(.is-filled) { background: color-mix(in srgb, var(--stage-accent-bg) 55%, var(--stage-surface)); }
+.stage-tt-cell.is-now { box-shadow: 0 0 0 0.18em var(--stage-accent); }
+.stage--dark .stage-tt-cell.is-filled { background: color-mix(in srgb, var(--tt-fg) 22%, var(--stage-surface)); color: var(--stage-ink); }
+.stage-tt-now {
+  position: absolute;
+  top: 0.3em;
+  right: 0.3em;
+  padding: 0.05em 0.5em;
+  border-radius: 999px;
+  background: var(--stage-accent);
+  color: var(--stage-paper);
+  font-size: 0.55em;
+  font-weight: 700;
+}
+.stage-tt-break .stage-tt-time { grid-column: 1; }
+.stage-tt-break-label {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  border-radius: 0.7em;
+  background: var(--stage-warm-bg);
+  color: var(--stage-warm);
+  font-weight: 650;
+}
+.stage-tt-break.is-now .stage-tt-break-label { box-shadow: 0 0 0 0.18em var(--stage-accent); }
+.stage-timetable-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8em;
+  color: var(--stage-muted);
+  font-size: 1.3em;
+}

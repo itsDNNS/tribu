@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import StageDisplay from '../components/display/StageDisplay';
+import TimetableStage from '../components/display/TimetableStage';
 import { normalizeStageConfig, resolveLanguage } from '../components/display/stageModel';
 import { apiDisplayMe, apiDisplayDashboard } from '../lib/api';
 import { buildMessages, listLanguages, t as translate, tc } from '../lib/i18n';
@@ -196,7 +197,9 @@ export default function DisplayPage() {
           </div>
         )}
         {state === 'ready' && me && dashboard && (
-          <StageDisplay me={me} dashboard={dashboard} t={t} locale={localeForLang(language)} offlineSince={offlineSince} />
+          config.content === 'timetable'
+            ? <TimetableStage me={me} dashboard={dashboard} t={t} locale={localeForLang(language)} offlineSince={offlineSince} />
+            : <StageDisplay me={me} dashboard={dashboard} t={t} locale={localeForLang(language)} offlineSince={offlineSince} />
         )}
       </main>
     </>
