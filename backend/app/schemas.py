@@ -2267,7 +2267,7 @@ class DisplayDashboardResponse(BaseModel):
     upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
     open_tasks: list[DisplayDashboardTask] = Field(default_factory=list, description="Open tasks with display-safe fields only")
     today_school_timetables: list[DisplaySchoolTimetableGroup] = Field(default_factory=list, description="Display-safe school timetable groups for today")
-    school_timetable: Optional[DisplaySchoolTimetableWeek] = Field(None, description="The whole week of the chosen timetable, for displays that show it in full")
+    school_weeks: list[DisplaySchoolTimetableWeek] = Field(default_factory=list, description="Whole school weeks for displays that show a timetable card or only a timetable (the chosen one first)")
     tomorrow_school_timetables: list[DisplaySchoolTimetableGroup] = Field(default_factory=list, description="School timetable groups for tomorrow (evening preview)")
     generated_at: Optional[datetime] = Field(None, description="Local wall time the payload was built")
     time_format: str = Field("24h", description="Instance clock format: 24h or 12h")

@@ -2,7 +2,11 @@
 // deterministic so the layout can be unit tested without timers.
 
 export const SIDE_CARDS = ['dinner', 'shopping', 'weather', 'reminders', 'school', 'soon', 'stars', 'birthdays'];
-export const WIDE_CARDS = ['people', 'week'];
+export const WIDE_CARDS = ['people', 'week', 'timetable'];
+// Cards that need a large zone ("bottom_large").
+export const LARGE_CARDS = ['timetable'];
+// How the stage divides the screen (backend/app/core/display_layouts.py).
+export const ARRANGEMENTS = ['standard', 'bottom_large', 'right_tall', 'timetable'];
 export const ZONES = ['a', 'b', 'c', 'd'];
 export const ZONE_CARDS = { a: SIDE_CARDS, b: SIDE_CARDS, c: SIDE_CARDS, d: WIDE_CARDS };
 
@@ -20,8 +24,9 @@ const DEFAULT_LAYOUT = {
   eink_format: 'compact',
   language: 'auto',
   theme_mode: 'auto',
-  content: 'stage',
+  arrangement: 'standard',
   timetable_id: null,
+  timetable_pin: { enabled: false, from: '06:30', until: '08:00' },
 };
 
 const THEME_MODES = ['auto', 'light', 'dark'];
@@ -72,8 +77,14 @@ export function normalizeStageConfig(config) {
     einkFormat: source.eink_format === 'large' ? 'large' : 'compact',
     language: typeof source.language === 'string' ? source.language : 'auto',
     themeMode: themeMode(source),
-    // The family stage, or one school timetable in full.
-    content: source.content === 'timetable' ? 'timetable' : 'stage',
+    arrangement: ARRANGEMENTS.includes(source.arrangement)
+      ? source.arrangement
+      : source.content === 'timetable' ? 'timetable' : 'standard',
+    timetablePin: {
+      enabled: typeof source.timetable_pin?.enabled === 'boolean' ? source.timetable_pin.enabled : DEFAULT_LAYOUT.timetable_pin.enabled,
+      from: TIME_RE.test(source.timetable_pin?.from || '') ? source.timetable_pin.from : DEFAULT_LAYOUT.timetable_pin.from,
+      until: TIME_RE.test(source.timetable_pin?.until || '') ? source.timetable_pin.until : DEFAULT_LAYOUT.timetable_pin.until,
+    },
     timetableId: Number.isInteger(source.timetable_id) && source.timetable_id > 0 ? source.timetable_id : null,
   };
 }
@@ -234,9 +245,39 @@ export function cardHasContent(card, dashboard, { ahead = false, now = new Date(
       return (dashboard.members || []).length > 0;
     case 'week':
       return true;
+    case 'timetable':
+      return (dashboard.school_weeks || []).length > 0;
     default:
       return false;
   }
+}
+
+// The zones an arrangement shows: "right_tall" merges b into a, "timetable"
+// shows none (the whole screen is the timetable).
+export function activeZones(arrangement) {
+  if (arrangement === 'timetable') return [];
+  if (arrangement === 'right_tall') return ['a', 'c', 'd'];
+  return ZONES;
+}
+
+// Whether the large zone keeps the timetable now: a school day of some plan
+// within the pinned window.
+export function timetablePinned(config, dashboard, now) {
+  if (config.arrangement !== 'bottom_large' || !config.timetablePin.enabled) return false;
+  const weeks = dashboard.school_weeks || [];
+  const weekday = now.getDay() === 0 ? 7 : now.getDay();
+  if (!weeks.some((week) => weekday <= 5 || (weekday === 6 && week.include_saturday))) return false;
+  const at = now.getHours() * 60 + now.getMinutes();
+  return minutesOf(config.timetablePin.from) <= at && at < minutesOf(config.timetablePin.until);
+}
+
+// The cards a zone rotates: large cards only in a large zone, the pinned
+// timetable alone while it is pinned.
+export function zoneCards(zone, config, dashboard, { ahead, now }) {
+  if (zone === 'd' && timetablePinned(config, dashboard, now)) return ['timetable'];
+  const large = zone === 'd' && config.arrangement === 'bottom_large';
+  const cards = config.zones[zone].cards.filter((card) => large || !LARGE_CARDS.includes(card));
+  return rotatingCards(cards.length ? cards : DEFAULT_LAYOUT.zones[zone].cards, dashboard, { skipEmpty: config.skipEmpty, ahead, now });
 }
 
 export function rotatingCards(cards, dashboard, { skipEmpty, ahead, now }) {

@@ -1,4 +1,5 @@
 import {
+  activeZones,
   cardHasContent,
   dayPart,
   normalizeStageConfig,
@@ -6,7 +7,9 @@ import {
   rotatingCards,
   timeline,
   upcomingEvents,
+  timetablePinned,
   weatherKind,
+  zoneCards,
 } from '../../../components/display/stageModel';
 import { rotationSlot, zoneOffset } from '../../../components/display/useStageRotation';
 import { buildStagePayload } from '../../test-utils/stageFixture';
@@ -118,4 +121,44 @@ test('rotation slots are derived from the clock and staggered per zone', () => {
   expect(zoneOffset({ stagger: false, zoneIndex: 2, zoneCount: 4, intervalMs })).toBe(0);
   const slot = rotationSlot(125000, { cardCount: 3, intervalMs, offsetMs: 30000 });
   expect(slot).toEqual({ slot: 1, index: 1, startedAt: 90000, nextAt: 150000 });
+});
+
+describe('arrangements (Tribu 2.0)', () => {
+  const week = { id: 1, name: 'Lena', include_saturday: false, periods: [], lessons: [] };
+  const payload = buildStagePayload({ school_weeks: [week] });
+  const config = (layout) => normalizeStageConfig({ display_mode: 'tablet', layout_config: { version: 2, ...layout } });
+  // 2026-09-29 is a Tuesday, 2026-10-03 a Saturday.
+  const at = (iso) => new Date(iso);
+
+  test('the old full-screen content setting becomes the timetable arrangement', () => {
+    expect(config({ content: 'timetable' }).arrangement).toBe('timetable');
+    expect(config({ arrangement: 'cinema' }).arrangement).toBe('standard');
+  });
+
+  test('merged zones drop out of the arrangement', () => {
+    expect(activeZones('standard')).toEqual(['a', 'b', 'c', 'd']);
+    expect(activeZones('bottom_large')).toEqual(['a', 'b', 'c', 'd']);
+    expect(activeZones('right_tall')).toEqual(['a', 'c', 'd']);
+    expect(activeZones('timetable')).toEqual([]);
+  });
+
+  test('the week timetable only rotates in the large zone', () => {
+    const cards = { d: { cards: ['timetable', 'week'] } };
+    const now = at('2026-09-29T12:00:00');
+    expect(zoneCards('d', config({ arrangement: 'bottom_large', zones: cards }), payload, { ahead: false, now })).toEqual(['timetable', 'week']);
+    expect(zoneCards('d', config({ arrangement: 'standard', zones: cards }), payload, { ahead: false, now })).toEqual(['week']);
+  });
+
+  test('the pinned timetable holds the large zone on school mornings only', () => {
+    const pinned = config({ arrangement: 'bottom_large', timetable_pin: { enabled: true, from: '06:30', until: '08:00' } });
+    expect(timetablePinned(pinned, payload, at('2026-09-29T07:15:00'))).toBe(true);
+    expect(zoneCards('d', pinned, payload, { ahead: false, now: at('2026-09-29T07:15:00') })).toEqual(['timetable']);
+    expect(timetablePinned(pinned, payload, at('2026-09-29T08:00:00'))).toBe(false);
+    expect(timetablePinned(pinned, payload, at('2026-10-03T07:15:00'))).toBe(false);
+    expect(timetablePinned(pinned, { ...payload, school_weeks: [] }, at('2026-09-29T07:15:00'))).toBe(false);
+    const off = config({ arrangement: 'bottom_large', timetable_pin: { enabled: false, from: '06:30', until: '08:00' } });
+    expect(timetablePinned(off, payload, at('2026-09-29T07:15:00'))).toBe(false);
+    const standard = config({ arrangement: 'standard', timetable_pin: { enabled: true, from: '06:30', until: '08:00' } });
+    expect(timetablePinned(standard, payload, at('2026-09-29T07:15:00'))).toBe(false);
+  });
 });

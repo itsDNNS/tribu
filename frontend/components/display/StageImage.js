@@ -9,14 +9,15 @@ import {
   initials,
   looksAhead,
   mealsFor,
+  activeZones,
   normalizeStageConfig,
   parseLocal,
-  rotatingCards,
   sameDay,
   soonItems,
   timeline,
   upcomingEvents,
   weatherKind,
+  zoneCards,
 } from './stageModel';
 import { currentPeriodPosition, schoolToday } from '../../lib/schoolTimetable';
 
@@ -30,16 +31,19 @@ const BLACK = '#000';
 const COLUMN = { display: 'flex', flexDirection: 'column', width: '100%' };
 const WHITE = '#fff';
 
-// Which card each zone shows: one page per refresh, like the e-ink browser mode.
+// Which card each zone shows: one page per refresh, like the e-ink browser
+// mode. The round counts full turns, so several timetables take turns.
 export function imageCards(config, dashboard, { now, epochMs }) {
   const ahead = looksAhead(dayPart(now, config.dayParts));
   const page = Math.floor(epochMs / (config.refreshSeconds * 1000));
   const cards = {};
-  for (const zone of Object.keys(config.zones)) {
-    const list = rotatingCards(config.zones[zone].cards, dashboard, { skipEmpty: config.skipEmpty, ahead, now });
+  const rounds = {};
+  for (const zone of activeZones(config.arrangement)) {
+    const list = zoneCards(zone, config, dashboard, { ahead, now });
     cards[zone] = list[page % list.length];
+    rounds[zone] = Math.floor(page / list.length);
   }
-  return cards;
+  return { cards, rounds };
 }
 
 const CLOUD = 'M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242';
@@ -308,6 +312,16 @@ function CardContent({ card, ctx }) {
         </div>
       );
     }
+    case 'timetable': {
+      const weeks = dashboard.school_weeks || [];
+      const week = weeks.length ? weeks[ctx.round % weeks.length] : null;
+      return (
+        <div style={{ ...COLUMN, flex: 1 }}>
+          <Label s={s}>{week ? [week.name, week.class_label].filter(Boolean).join(' · ') : t('display.timetable.title')}</Label>
+          {week ? <WeekGrid week={week} t={t} locale={locale} now={now} s={s} ahead={ahead} size={0.72} /> : <Line s={s} size={13}>{t('display.timetable.empty')}</Line>}
+        </div>
+      );
+    }
     default:
       return null;
   }
@@ -373,19 +387,21 @@ function Timeline({ ctx, style }) {
   );
 }
 
-// One school timetable in full on an e-ink frame (Tribu 2.0): the week as
-// rows of periods, today's column and the running period in black.
-function TimetableImage({ dashboard, t, locale, now, s }) {
-  const week = dashboard.school_timetable;
-  const timeFormat = dashboard.time_format === '12h' ? '12h' : '24h';
-  const weekdays = [1, 2, 3, 4, 5, 6].filter((day) => day <= 5 || week?.include_saturday);
-  const today = schoolToday(weekdays, now);
-  const periods = [...(week?.periods || [])].sort((a, b) => a.position - b.position);
-  const current = today ? currentPeriodPosition(periods, now) : null;
-  const subjects = new Map((week?.lessons || []).map((lesson) => [`${lesson.weekday}:${lesson.period_position}`, lesson.subject]));
+// A school week as rows of periods: today's column (tomorrow's when looking
+// ahead) and the running period in black. Shared by the full-screen
+// timetable and the "timetable" card in a large zone.
+function WeekGrid({ week, t, locale, now, s, ahead = false, size = 1 }) {
+  const weekdays = [1, 2, 3, 4, 5, 6].filter((day) => day <= 5 || week.include_saturday);
+  const todayValue = now.getDay() === 0 ? 7 : now.getDay();
+  const tomorrowValue = (todayValue % 7) + 1;
+  const marked = ahead ? (weekdays.includes(tomorrowValue) ? tomorrowValue : null) : schoolToday(weekdays, now);
+  const periods = [...(week.periods || [])].sort((a, b) => a.position - b.position);
+  const current = !ahead && marked ? currentPeriodPosition(periods, now) : null;
+  const subjects = new Map((week.lessons || []).map((lesson) => [`${lesson.weekday}:${lesson.period_position}`, lesson.subject]));
   const dayName = (day) => new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, day));
   const time = (value) => String(value || '').slice(0, 5);
-  const firstColumn = 82 * s;
+  const k = s * size;
+  const firstColumn = 82 * k;
   const cell = (content, { dark = false, strong = false, flex = 1, key } = {}) => (
     <div
       key={key}
@@ -394,13 +410,13 @@ function TimetableImage({ dashboard, t, locale, now, s }) {
         alignItems: 'center',
         justifyContent: 'center',
         flex,
-        margin: 2 * s,
-        padding: `0 ${4 * s}px`,
-        borderRadius: 8 * s,
-        border: `${2 * s}px solid ${BLACK}`,
+        margin: 2 * k,
+        padding: `0 ${4 * k}px`,
+        borderRadius: 8 * k,
+        border: `${Math.max(1, 2 * k)}px solid ${BLACK}`,
         background: dark ? BLACK : WHITE,
         color: dark ? WHITE : BLACK,
-        fontSize: 15 * s,
+        fontSize: 15 * k,
         fontWeight: strong || dark ? 700 : 400,
         overflow: 'hidden',
         whiteSpace: 'nowrap',
@@ -411,6 +427,43 @@ function TimetableImage({ dashboard, t, locale, now, s }) {
   );
 
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, width: '100%' }}>
+      <div style={{ display: 'flex', height: 26 * k }}>
+        <div style={{ display: 'flex', width: firstColumn }} />
+        {weekdays.map((day) => cell(dayName(day), { dark: day === marked, strong: true, key: day }))}
+      </div>
+      {periods.map((period) => {
+        const running = period.position === current;
+        const label = (
+          <div style={{ display: 'flex', flexDirection: size < 1 ? 'row' : 'column', alignItems: size < 1 ? 'center' : 'flex-start', justifyContent: 'center', width: firstColumn, fontSize: 12 * k, fontWeight: running ? 700 : 400 }}>
+            {period.kind !== 'break' && <span style={{ fontSize: 16 * k, fontWeight: 700, marginRight: size < 1 ? 4 * k : 0 }}>{period.label}</span>}
+            <span>{size < 1 ? time(period.start_time) : `${time(period.start_time)}–${time(period.end_time)}`}</span>
+          </div>
+        );
+        if (period.kind === 'break') {
+          return (
+            <div key={period.position} style={{ display: 'flex', flex: 0.5 }}>
+              {label}
+              {cell(period.break_label || t('display.stage.school_break'), { dark: running, flex: weekdays.length })}
+            </div>
+          );
+        }
+        return (
+          <div key={period.position} style={{ display: 'flex', flex: 1 }}>
+            {label}
+            {weekdays.map((day) => cell(subjects.get(`${day}:${period.position}`) || '–', { dark: running && day === marked, key: day }))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// One school timetable in full on an e-ink frame (Tribu 2.0).
+function TimetableImage({ dashboard, t, locale, now, s }) {
+  const week = (dashboard.school_weeks || [])[0];
+  const timeFormat = dashboard.time_format === '12h' ? '12h' : '24h';
+  return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', background: WHITE, color: BLACK, padding: `${14 * s}px ${18 * s}px ${8 * s}px` }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 * s }}>
         <span style={{ fontSize: 44 * s, fontWeight: 700, letterSpacing: -1.5 * s, lineHeight: 1 }}>{formatClock(now, locale, timeFormat)}</span>
@@ -420,35 +473,7 @@ function TimetableImage({ dashboard, t, locale, now, s }) {
         </div>
       </div>
       {week ? (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-          <div style={{ display: 'flex', height: 26 * s }}>
-            <div style={{ display: 'flex', width: firstColumn }} />
-            {weekdays.map((day) => cell(dayName(day), { dark: day === today, strong: true, key: day }))}
-          </div>
-          {periods.map((period) => {
-            const running = period.position === current;
-            const label = (
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: firstColumn, fontSize: 12 * s, fontWeight: running ? 700 : 400 }}>
-                {period.kind !== 'break' && <span style={{ fontSize: 16 * s, fontWeight: 700 }}>{period.label}</span>}
-                <span>{`${time(period.start_time)}–${time(period.end_time)}`}</span>
-              </div>
-            );
-            if (period.kind === 'break') {
-              return (
-                <div key={period.position} style={{ display: 'flex', flex: 0.5 }}>
-                  {label}
-                  {cell(period.break_label || t('display.stage.school_break'), { dark: running, flex: weekdays.length })}
-                </div>
-              );
-            }
-            return (
-              <div key={period.position} style={{ display: 'flex', flex: 1 }}>
-                {label}
-                {weekdays.map((day) => cell(subjects.get(`${day}:${period.position}`) || '–', { dark: running && day === today, key: day }))}
-              </div>
-            );
-          })}
-        </div>
+        <WeekGrid week={week} t={t} locale={locale} now={now} s={s} />
       ) : (
         <Box s={s} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Line s={s} bold size={20}>{t('display.timetable.empty')}</Line>
@@ -464,7 +489,7 @@ function TimetableImage({ dashboard, t, locale, now, s }) {
 export function StageImage({ dashboard, t, locale, now, epochMs, format }) {
   const config = normalizeStageConfig(dashboard.config);
   const { scale: s } = IMAGE_FORMATS[format];
-  if (config.content === 'timetable') {
+  if (config.arrangement === 'timetable') {
     return <TimetableImage dashboard={dashboard} t={t} locale={locale} now={now} s={s} />;
   }
   const part = dayPart(now, config.dayParts);
@@ -472,7 +497,7 @@ export function StageImage({ dashboard, t, locale, now, epochMs, format }) {
   const timeFormat = dashboard.time_format === '12h' ? '12h' : '24h';
   const members = Array.isArray(dashboard.members) ? dashboard.members : [];
   const ctx = { dashboard, members, t, locale, timeFormat, now, ahead, s };
-  const cards = imageCards(config, dashboard, { now, epochMs });
+  const { cards, rounds } = imageCards(config, dashboard, { now, epochMs });
   const clock = (date) => formatClock(date, locale, timeFormat);
   const events = upcomingEvents(dashboard, now);
   const hero = events[0];
@@ -480,11 +505,13 @@ export function StageImage({ dashboard, t, locale, now, epochMs, format }) {
   const large = format === 'large';
   const zone = (name, style) => (
     <Box s={s} style={style}>
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-        <CardContent card={cards[name]} ctx={ctx} />
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1 }}>
+        <CardContent card={cards[name]} ctx={{ ...ctx, round: rounds[name] || 0 }} />
       </div>
     </Box>
   );
+  const bottomLarge = config.arrangement === 'bottom_large';
+  const rightTall = config.arrangement === 'right_tall';
 
   let heroLabel = t('display.stage.nothing_upcoming');
   if (hero?.live) heroLabel = t('display.stage.now_until').replace('{time}', clock(hero.end));
@@ -532,12 +559,13 @@ export function StageImage({ dashboard, t, locale, now, epochMs, format }) {
               <Line s={s} bold size={22}>{t('display.stage.all_quiet')}</Line>
             )}
           </Box>
-          <Timeline ctx={ctx} style={{ flex: 1, marginBottom: large ? 10 * s : 0 }} />
-          {large && zone('d', { height: 118 * s })}
+          {bottomLarge && zone('d', { flex: 1 })}
+          {!bottomLarge && <Timeline ctx={ctx} style={{ flex: 1, marginBottom: large ? 10 * s : 0 }} />}
+          {!bottomLarge && large && zone('d', { height: 118 * s })}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-          {zone('a', { flex: 1, marginBottom: 10 * s })}
-          {zone('b', { flex: 1, marginBottom: large ? 10 * s : 0 })}
+          {zone('a', { flex: 1, marginBottom: rightTall && !large ? 0 : 10 * s })}
+          {!rightTall && zone('b', { flex: 1, marginBottom: large ? 10 * s : 0 })}
           {large && zone('c', { height: 118 * s })}
         </div>
       </div>

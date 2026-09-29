@@ -150,3 +150,43 @@ test('theme_mode "light" keeps the light palette in the evening', () => {
   renderAt('2026-09-29T19:40:00', payload);
   expect(screen.getByTestId('display-dashboard')).not.toHaveClass('stage--dark');
 });
+
+describe('arrangements', () => {
+  const week = {
+    id: 1,
+    name: 'Lena',
+    class_label: '4b',
+    include_saturday: false,
+    periods: [{ position: 1, kind: 'lesson', label: '1', start_time: '08:00', end_time: '08:45' }],
+    lessons: [{ weekday: 2, period_position: 1, subject: 'Maths' }],
+  };
+  const payloadWith = (layout) =>
+    buildStagePayload({
+      school_weeks: [week],
+      config: { display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage', layout_config: { version: 2, ...layout } },
+    });
+
+  test('large bottom gives the timeline room to the week timetable', () => {
+    renderAt('2026-09-29T07:12:00', payloadWith({ arrangement: 'bottom_large', zones: { d: { cards: ['timetable'] } } }));
+    expect(screen.queryByTestId('display-events')).not.toBeInTheDocument();
+    const zone = screen.getByTestId('display-zone-d');
+    expect(zone).toHaveTextContent('Lena · 4b');
+    expect(within(zone).getByRole('grid', { name: 'Lena' })).toHaveTextContent('Maths');
+  });
+
+  test('the pinned timetable stays in the large zone on school mornings', () => {
+    renderAt('2026-09-29T07:12:00', payloadWith({
+      arrangement: 'bottom_large',
+      zones: { d: { cards: ['people', 'week'] } },
+      timetable_pin: { enabled: true, from: '06:30', until: '08:00' },
+    }));
+    expect(screen.getByTestId('display-zone-d')).toHaveTextContent('Lena · 4b');
+  });
+
+  test('tall right leaves out the middle zone and keeps the timeline', () => {
+    renderAt('2026-09-29T07:12:00', payloadWith({ arrangement: 'right_tall' }));
+    expect(screen.getByTestId('display-events')).toBeInTheDocument();
+    expect(screen.queryByTestId('display-zone-b')).not.toBeInTheDocument();
+    expect(screen.getByTestId('display-zone-a')).toBeInTheDocument();
+  });
+});

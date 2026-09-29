@@ -84,6 +84,7 @@ const messages = {
   display_card_people: 'People',
   display_card_week: 'This week',
   display_add_card: 'Add card',
+  display_zone_pick_hint: 'Tap an area to change its cards.',
   display_card_move_up: 'Move {card} up',
   display_card_move_down: 'Move {card} down',
   display_card_remove: 'Remove {card}',
@@ -102,10 +103,22 @@ const messages = {
   display_theme_mode_auto: 'Dim at night',
   display_theme_mode_light: 'Always light',
   display_theme_mode_dark: 'Always dark',
-  display_content_label: 'Shows',
-  display_content_stage: 'Family overview',
-  display_content_timetable: 'School timetable',
-  display_content_hint: 'A school timetable fills the whole screen.',
+  display_arrangement_label: 'Layout',
+  display_arrangement_standard: 'Standard',
+  display_arrangement_bottom_large: 'Large bottom',
+  display_arrangement_right_tall: 'Tall right',
+  display_arrangement_timetable: 'Timetable only',
+  display_arrangement_standard_hint: 'Rotating cards on the right and at the bottom.',
+  display_arrangement_bottom_large_hint: 'The bottom area becomes large.',
+  display_arrangement_right_tall_hint: 'One tall area on the right.',
+  display_arrangement_timetable_hint: 'One school timetable fills the whole screen.',
+  display_card_timetable: 'Timetable (week)',
+  display_zone_d_large: 'Bottom left, large',
+  display_zone_a_tall: 'Right, full height',
+  display_pin_label: 'Keep the timetable up in the morning',
+  display_pin_hint: 'On school days the large area shows only the timetable.',
+  display_pin_from: 'From',
+  display_pin_until: 'Until',
   display_timetable_label: 'Which timetable?',
   display_timetable_first: 'The first one',
   display_editor_day_parts: 'Times of day',
@@ -316,10 +329,15 @@ describe('DisplaysSection stage editor', () => {
     fireEvent.click(within(zoneA).getByRole('button', { name: 'Remove Meals' }));
     fireEvent.change(within(zoneA).getByTestId('display-zone-interval-a'), { target: { value: '120' } });
 
+    // The preview opens one area at a time.
+    expect(screen.queryByTestId('display-zone-editor-b')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('display-zone-tile-b'));
+    expect(screen.getByTestId('display-zone-tile-b')).toHaveAttribute('aria-pressed', 'true');
     const zoneB = screen.getByTestId('display-zone-editor-b');
-    fireEvent.change(within(zoneB).getByRole('combobox', { name: 'Add card · B' }), { target: { value: 'stars' } });
+    fireEvent.click(within(zoneB).getByRole('button', { name: /Stars/ }));
     // Wide-only cards are not offered in the side areas.
-    expect(within(zoneB).queryByRole('option', { name: 'People' })).not.toBeInTheDocument();
+    expect(within(zoneB).queryByRole('button', { name: /People/ })).not.toBeInTheDocument();
+    expect(screen.getByTestId('display-zone-tile-b')).toHaveTextContent('Stars');
 
     fireEvent.click(screen.getByTestId('display-toggle-stagger'));
     fireEvent.change(screen.getByTestId('display-daypart-evening_start'), { target: { value: '19:30' } });
@@ -336,6 +354,7 @@ describe('DisplaysSection stage editor', () => {
 
   test('the last card of an area cannot be removed', async () => {
     await openEditor();
+    fireEvent.click(screen.getByTestId('display-zone-tile-d'));
     const zoneD = screen.getByTestId('display-zone-editor-d');
     fireEvent.click(within(zoneD).getByRole('button', { name: 'Remove People' }));
     expect(within(zoneD).getByRole('button', { name: 'Remove This week' })).toBeDisabled();
@@ -347,7 +366,7 @@ describe('DisplaysSection stage editor', () => {
     expect(screen.getByTestId('display-refresh-select')).toHaveValue('600');
     expect(screen.queryByTestId('display-zone-interval-a')).not.toBeInTheDocument();
     expect(screen.queryByTestId('display-toggle-stagger')).not.toBeInTheDocument();
-    expect(screen.getByText('On e-ink every area turns one card per refresh.')).toBeInTheDocument();
+    expect(screen.getByText(/On e-ink every area turns one card per refresh\./)).toBeInTheDocument();
     fireEvent.change(screen.getByTestId('display-eink-format-select'), { target: { value: 'large' } });
     await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
     expect(api.apiUpdateDisplayDevice.mock.calls[0][2]).toMatchObject({ display_mode: 'eink', refresh_interval_seconds: 600 });
@@ -370,15 +389,53 @@ describe('DisplaysSection stage editor', () => {
   test('a display can show one school timetable in full', async () => {
     await openEditor();
     expect(screen.queryByTestId('display-timetable-select')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByTestId('display-content-select'), { target: { value: 'timetable' } });
+    fireEvent.click(screen.getByTestId('display-arrangement-timetable'));
     // Zones and rotation make no sense for a timetable on the whole screen.
     expect(screen.queryByText('Rotating areas')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('option', { name: 'Max 2a' })).toBeInTheDocument());
     fireEvent.change(screen.getByTestId('display-timetable-select'), { target: { value: '6' } });
     await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
     const layout = api.apiUpdateDisplayDevice.mock.calls[0][2].layout_config;
-    expect(layout.content).toBe('timetable');
+    expect(layout.arrangement).toBe('timetable');
     expect(layout.timetable_id).toBe(6);
+  });
+
+  test('the large bottom area takes the week timetable and can keep it up in the morning', async () => {
+    await openEditor();
+    await flushAsync();
+    expect(screen.queryByTestId('display-timetable-pin')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('display-arrangement-bottom_large'));
+    const zoneD = screen.getByTestId('display-zone-editor-d');
+    expect(zoneD).toHaveTextContent('Bottom left, large');
+    // With a timetable in the family the large area starts with it.
+    expect(within(zoneD).getByText('Timetable (week)')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('display-toggle-timetable_pin'));
+    fireEvent.change(screen.getByTestId('display-pin-until'), { target: { value: '07:45' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
+    const layout = api.apiUpdateDisplayDevice.mock.calls[0][2].layout_config;
+    expect(layout.arrangement).toBe('bottom_large');
+    expect(layout.zones.d.cards[0]).toBe('timetable');
+    expect(layout.timetable_pin).toEqual({ enabled: true, from: '06:30', until: '07:45' });
+  });
+
+  test('the week timetable leaves the small bottom area when the layout changes back', async () => {
+    await openEditor();
+    await flushAsync();
+    fireEvent.click(screen.getByTestId('display-arrangement-bottom_large'));
+    expect(within(screen.getByTestId('display-zone-editor-d')).getByText('Timetable (week)')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('display-arrangement-standard'));
+    fireEvent.click(screen.getByTestId('display-zone-tile-d'));
+    const zoneD = screen.getByTestId('display-zone-editor-d');
+    expect(within(zoneD).queryByText('Timetable (week)')).not.toBeInTheDocument();
+    expect(within(zoneD).queryByRole('button', { name: /Timetable \(week\)/ })).not.toBeInTheDocument();
+  });
+
+  test('the tall right area replaces the two areas on the right', async () => {
+    await openEditor();
+    fireEvent.click(screen.getByTestId('display-arrangement-right_tall'));
+    expect(screen.getByTestId('display-arrangement-right_tall')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('display-zone-editor-a')).toHaveTextContent('Right, full height');
+    expect(screen.queryByTestId('display-zone-tile-b')).not.toBeInTheDocument();
   });
 
   test('there is no separate dim-at-night toggle; it is folded into the theme select', async () => {

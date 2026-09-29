@@ -18,6 +18,7 @@ import {
   Sun,
   Umbrella,
 } from 'lucide-react';
+import TimetableWeek from './TimetableWeek';
 import {
   addDays,
   formatClock,
@@ -437,6 +438,25 @@ function WeekCard({ dashboard, t, locale, now }) {
   );
 }
 
+// The school week in a large zone (Tribu 2.0): one plan per round, today
+// (or tomorrow in the evening) and the running period marked.
+function TimetableCard({ dashboard, t, locale, ahead, now, round = 0 }) {
+  const weeks = dashboard.school_weeks || [];
+  const week = weeks.length ? weeks[((round % weeks.length) + weeks.length) % weeks.length] : null;
+  return (
+    <div className="stage-card-body stage-timetable-card">
+      <CardTitle icon={GraduationCap}>
+        {week ? [week.name, week.class_label].filter(Boolean).join(' · ') : t('display.timetable.title')}
+      </CardTitle>
+      {week ? (
+        <TimetableWeek week={week} now={now} t={t} locale={locale} ahead={ahead} />
+      ) : (
+        <Empty text={t('display.timetable.empty')} />
+      )}
+    </div>
+  );
+}
+
 export const CARD_COMPONENTS = {
   dinner: DinnerCard,
   shopping: ShoppingCard,
@@ -448,5 +468,6 @@ export const CARD_COMPONENTS = {
   birthdays: BirthdaysCard,
   people: PeopleCard,
   week: WeekCard,
+  timetable: TimetableCard,
 };
 

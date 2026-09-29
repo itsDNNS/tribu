@@ -31,7 +31,7 @@ from app.core.deps import current_display_device, current_user, ensure_family_ad
 from app.core.errors import DISPLAY_DEVICE_NOT_FOUND, WEATHER_SEARCH_UNAVAILABLE, error_detail
 from app.core.recurrence import expand_event, load_series_changes
 from app.core.scopes import require_scope
-from app.core.display_layouts import CONTENT_TIMETABLE, normalize_config
+from app.core.display_layouts import ARRANGEMENT_TIMETABLE, normalize_config
 from app.core import weather as weather_service
 from app.database import get_db
 from app.models import (
@@ -539,9 +539,23 @@ def _school_timetables_for(db: Session, family_id: int, day: date, membership_by
     return groups
 
 
-def _school_week(db: Session, family_id: int, timetable_id: int | None, membership_by_user_id: dict) -> DisplaySchoolTimetableWeek | None:
-    """The chosen timetable's whole week, or the family's first one."""
-    query = (
+def _display_school_weeks(db: Session, family_id: int, layout: dict, membership_by_user_id: dict) -> list[DisplaySchoolTimetableWeek]:
+    """School weeks only for displays that show them."""
+    if layout.get("arrangement") == ARRANGEMENT_TIMETABLE:
+        return _school_weeks(db, family_id, layout.get("timetable_id"), membership_by_user_id, only_one=True)
+    zone_d = (layout.get("zones") or {}).get("d") or {}
+    if "timetable" in (zone_d.get("cards") or []) or (layout.get("timetable_pin") or {}).get("enabled"):
+        return _school_weeks(db, family_id, None, membership_by_user_id, only_one=False)
+    return []
+
+
+def _school_weeks(db: Session, family_id: int, timetable_id: int | None, membership_by_user_id: dict, *, only_one: bool) -> list[DisplaySchoolTimetableWeek]:
+    """The family's school weeks, the chosen timetable first.
+
+    ``only_one`` keeps just the chosen (or first) timetable, for a display
+    that shows one in full.
+    """
+    timetables = (
         db.query(SchoolTimetable)
         .options(
             selectinload(SchoolTimetable.periods),
@@ -549,12 +563,16 @@ def _school_week(db: Session, family_id: int, timetable_id: int | None, membersh
             selectinload(SchoolTimetable.assignments).joinedload(SchoolTimetableAssignment.member),
         )
         .filter(SchoolTimetable.family_id == family_id)
+        .order_by(SchoolTimetable.name.asc(), SchoolTimetable.id.asc())
+        .all()
     )
-    timetable = query.filter(SchoolTimetable.id == timetable_id).first() if timetable_id else None
-    if timetable is None:
-        timetable = query.order_by(SchoolTimetable.name.asc(), SchoolTimetable.id.asc()).first()
-    if timetable is None:
-        return None
+    timetables.sort(key=lambda item: item.id != timetable_id)
+    if only_one:
+        timetables = timetables[:1]
+    return [_school_week(timetable, membership_by_user_id) for timetable in timetables]
+
+
+def _school_week(timetable: SchoolTimetable, membership_by_user_id: dict) -> DisplaySchoolTimetableWeek:
     position_by_period_id = {period.id: period.position for period in timetable.periods}
     children = []
     for assignment in timetable.assignments:
@@ -850,10 +868,6 @@ def display_dashboard(
         rewards=_rewards(db, family_id, memberships, refs),
         countdowns=_countdowns(db, family_id, today),
         weather=_weather(family),
-        school_timetable=(
-            _school_week(db, family_id, layout.get("timetable_id"), membership_by_user_id)
-            if layout.get("content") == CONTENT_TIMETABLE
-            else None
-        ),
+        school_weeks=_display_school_weeks(db, family_id, layout, membership_by_user_id),
         config=config,
     )

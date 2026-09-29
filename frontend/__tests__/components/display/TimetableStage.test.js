@@ -23,11 +23,11 @@ function renderAt(isoLocal, school_timetable = week, layout = {}) {
   jest.useFakeTimers();
   jest.setSystemTime(new Date(isoLocal));
   const payload = buildStagePayload({
-    config: { display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage', layout_config: { version: 2, content: 'timetable', ...layout } },
+    config: { display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage', layout_config: { version: 2, arrangement: 'timetable', ...layout } },
   });
   let utils;
   act(() => {
-    utils = render(<TimetableStage me={{ name: 'Kids room' }} dashboard={{ ...payload, school_timetable }} t={t} locale="en-GB" />);
+    utils = render(<TimetableStage me={{ name: 'Kids room' }} dashboard={{ ...payload, school_weeks: school_timetable ? [school_timetable] : [] }} t={t} locale="en-GB" />);
   });
   return utils;
 }
