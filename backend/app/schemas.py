@@ -1378,16 +1378,6 @@ class NavOrderUpdate(BaseModel):
     nav_order: list[str] = Field(min_length=1, max_length=20, description="Ordered list of view keys")
 
 
-class DashboardLayoutResponse(BaseModel):
-    """User's dashboard module layout."""
-    modules: list[str] = Field(..., description="Ordered dashboard module keys")
-
-
-class DashboardLayoutUpdate(BaseModel):
-    """Update dashboard module layout."""
-    modules: list[str] = Field(min_length=1, max_length=12, description="Ordered dashboard module keys")
-
-
 class UiPreferencesResponse(BaseModel):
     """User's UI preferences for Tribu clients."""
     theme: str = Field(..., description="Selected app theme key")
