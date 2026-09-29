@@ -16,7 +16,7 @@ import ProductEditor from './shopping/ProductEditor';
 import ProductTile from './shopping/ProductTile';
 import OnceHint from './OnceHint';
 import { ShoppingTemplateForm, ShoppingTemplateCard } from './shopping/ShoppingTemplates';
-import { CATEGORIES, SHOP_CATALOG, GroceryArt, categoryLabel, fold, parseProduct, groupShoppingItems } from './shopping/catalog';
+import { CATEGORIES, GroceryArt, catalogFor, categoryLabel, fold, parseProduct, productKey, groupShoppingItems } from './shopping/catalog';
 import CategoriesSheet from './shopping/CategoriesSheet';
 const ICONS = {
   cart: ShoppingCart,
@@ -48,6 +48,7 @@ export default function ShoppingView(props) {
     demoMode,
     familyId,
     me,
+    lang,
     setActiveView,
     shoppingCategories = true
   } = useApp();
@@ -223,31 +224,31 @@ export default function ShoppingView(props) {
   // Without categories (#512) the list is one flat section.
   const groups = shoppingCategories ? groupShoppingItems(shown, list?.category_order || []).map(g => ({ ...g, label: categoryLabel(g.label, tr) })) : shown.length ? [{ key: 'all', label: list?.name || '', items: shown, flat: true }] : [];
   const products = useMemo(() => {
-    const all = [...SHOP_CATALOG];
-    const seen = new Set(all.map(p => fold(p.name)));
+    const all = catalogFor(lang);
+    const seen = new Set(all.map(p => productKey(p.name)));
     for (const item of items) {
-      if (!seen.has(fold(item.name))) {
+      if (!seen.has(productKey(item.name))) {
         all.push({
           id: `custom-${item.id}`,
           name: item.name,
           category: item.category
         });
-        seen.add(fold(item.name));
+        seen.add(productKey(item.name));
       }
     }
     for (const [id, name] of Object.entries(prefs.favoriteNames || {})) {
-      if (prefs.favorites.includes(id) && typeof name === 'string' && !seen.has(fold(name))) {
+      if (prefs.favorites.includes(id) && typeof name === 'string' && !seen.has(productKey(name))) {
         all.push({id:`favorite-${id}`, name});
-        seen.add(fold(name));
+        seen.add(productKey(name));
       }
     }
     return all;
-  }, [items, prefs.favorites, prefs.favoriteNames]);
-  const parsed = useMemo(() => parseProduct(query), [query]);
+  }, [items, prefs.favorites, prefs.favoriteNames, lang]);
+  const parsed = useMemo(() => parseProduct(query, lang), [query, lang]);
   const suggestions = query.trim() ? products.filter(p => fold(p.name).includes(fold(parsed.name)) || fold(p.aliases).includes(fold(parsed.name))).slice(0, 7) : [];
   const stores = (sh.storeLinks || []).filter(link => buildStoreSearchUrl(link.url_template, 'x'));
   const recent = [...items.filter(i => i.checked)].sort((a, b) => String(b.checked_at || '').localeCompare(String(a.checked_at || ''))).filter((item, index, array) => array.findIndex(p => fold(p.name) === fold(item.name)) === index);
-  const available = prefs.tab === 'favorites' ? products.filter(p => prefs.favorites.includes(fold(p.name))) : prefs.tab === 'recent' ? recent : products.filter(p => !shoppingCategories || category === 'all' || p.category === category);
+  const available = prefs.tab === 'favorites' ? products.filter(p => prefs.favorites.includes(productKey(p.name))) : prefs.tab === 'recent' ? recent : products.filter(p => !shoppingCategories || category === 'all' || p.category === category);
   const close = () => {
     setModal(null);
     setDraft(null);
@@ -259,7 +260,7 @@ export default function ShoppingView(props) {
     setDraft(value);
   };
   const favorite = name => {
-    const id = fold(name);
+    const id = productKey(name);
     if (!id) return;
     const favoriteNames = {...prefs.favoriteNames};
     if (prefs.favorites.includes(id)) delete favoriteNames[id];
@@ -288,7 +289,7 @@ export default function ShoppingView(props) {
   async function add(product, fromSearch = false) {
     if (isChild || !list || busy || !product.name.trim()) return;
     if (product.invalid || (fromSearch && parsed.invalid)) {setError(tr("module.shopping.visual.invalid_quantity"));return;}
-    const existing = open.find(i => fold(i.name) === fold(product.name));
+    const existing = open.find(i => productKey(i.name) === productKey(product.name));
     if (existing && !fromSearch) {
       edit(existing);
       return;
@@ -329,7 +330,7 @@ export default function ShoppingView(props) {
         setLimit(12);
       }}><option value="all">{tr("module.shopping.visual.alle_kategorien")} {products.length} {tr("module.shopping.visual.artikel")}</option>{[...new Set([...CATEGORIES, ...products.map(p => p.category).filter(Boolean)])].map(c => <option key={c} value={c}>{categoryLabel(c, tr)}</option>)}</select>}
  <div className="shop-catalog-grid">{available.slice(0, limit).map(product => {
-          const on = open.some(i => fold(i.name) === fold(product.name));
+          const on = open.some(i => productKey(i.name) === productKey(product.name));
           return <button key={product.id} className={`shop-catalog-item ${on ? 'on-list' : ''}`} disabled={busy || !list || isChild} onClick={() => add(product)} aria-label={`${product.name}${on ? tr("module.shopping.visual.bereits_auf_der_liste") : tr("module.shopping.visual.hinzufugen")}`}><span className="catalog-mark">{on ? <Check size={12} /> : '+'}</span><GroceryArt name={product.name} art={product.art} /><span className="catalog-name">{product.name}</span>{on && <small>{tr("module.shopping.visual.auf_der_liste")}</small>}</button>;
         })}</div>
  {!available.length && <div className="shop-catalog-empty">{prefs.tab === 'favorites' ? tr("module.shopping.visual.markiert_lieblingsartikel_uber_das_herz_in_den_artikeld") : prefs.tab === 'recent' ? tr("module.shopping.visual.gekaufte_artikel_erscheinen_hier_zum_schnellen_wiederve") : tr("module.shopping.visual.in_dieser_kategorie_gibt_es_noch_keine_artikel")}</div>}
@@ -356,7 +357,7 @@ export default function ShoppingView(props) {
   }, () => {});
   const chooseRecipe = recipe => show('recipe', {
     recipe,
-    selected: (recipe.ingredients || []).filter(i => !items.some(p => !p.archived && fold(p.name) === fold(i.name))).map(i => i.name),
+    selected: (recipe.ingredients || []).filter(i => !items.some(p => !p.archived && productKey(p.name) === productKey(i.name))).map(i => i.name),
     list_id: sh.activeListId
   });
   return <div className={`shopping-page dashboard-today-page shop-page ${trip ? 'shopping-trip' : ''}`}>

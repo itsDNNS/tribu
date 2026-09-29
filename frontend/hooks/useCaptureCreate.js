@@ -5,7 +5,7 @@ import { catalogProduct } from '../components/shopping/catalog';
 // Creates what the capture sheet recognised (lib/capture/parseCapture.js):
 // events, tasks, shopping items and notes, then refreshes what changed.
 export function useCaptureCreate({
-  familyId, shoppingLists = [], loadTasks, loadEvents, loadDashboard, loadShoppingLists, loadQuickCaptureInbox, loadActivity,
+  familyId, lang, shoppingLists = [], loadTasks, loadEvents, loadDashboard, loadShoppingLists, loadQuickCaptureInbox, loadActivity,
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -38,7 +38,7 @@ export function useCaptureCreate({
     }
     if (entry.kind === 'shopping') {
       const list = shoppingLists[0];
-      const product = catalogProduct(entry.title);
+      const product = catalogProduct(entry.title, lang);
       if (!list) {
         return api.apiCreateQuickCapture({ family_id, text: entry.text || entry.title, destination: 'shopping' });
       }
@@ -49,7 +49,7 @@ export function useCaptureCreate({
       });
     }
     return api.apiCreateQuickCapture({ family_id, text: entry.text || entry.title, destination: 'inbox' });
-  }, [familyId, shoppingLists]);
+  }, [familyId, lang, shoppingLists]);
 
   // Answers how many entries were created and which ones failed.
   const create = useCallback(async (entries) => {
