@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Bell, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, X } from 'lucide-react';
+import { Bell, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, Utensils, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { t } from '../lib/i18n';
+import { t, tc } from '../lib/i18n';
 import * as api from '../lib/api';
 import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
 import { notificationLinkView } from '../lib/notificationLinks';
@@ -10,6 +10,7 @@ const TYPE_ICONS = {
   event_reminder: CalendarDays,
   task_due: CheckSquare,
   birthday: Cake,
+  meal_reminder: Utensils,
   system: Bell,
 };
 
@@ -27,7 +28,7 @@ export function renderNotificationBody(notif, messages) {
   if (notif.type === 'system') {
     const match = notif.body.match(/^The server stopped unexpectedly (\d+) times in the last hour\.$/);
     if (match) {
-      return t(messages, 'notification_body_backend_crashes').replace('{count}', match[1]);
+      return tc(messages, 'notification_body_backend_crashes', Number(match[1]));
     }
   }
 
@@ -146,26 +147,14 @@ export default function NotificationCenter({ onClose } = {}) {
           </button>
         </div>
       ) : (
-        <div className="view-header notifications-header">
-          <div className="notifications-title-block">
-            <span className="notifications-page-icon" aria-hidden="true">
-              <Bell size={22} />
-            </span>
-            <div>
-              <h1 className="view-title">{t(messages, 'notifications')}</h1>
-              <div className="view-subtitle">
-                {unreadCount > 0
-                  ? `${unreadCount} ${t(messages, 'notifications_unread')}`
-                  : t(messages, 'notifications_all_read')}
-              </div>
-            </div>
-          </div>
+        <header className="list-header notifications-list-header">
+          <h1>{t(messages, 'notifications')}</h1>
           {unreadCount > 0 && (
-            <button className="btn-ghost" onClick={handleMarkAllRead}>
-              <CheckCheck size={16} /> {t(messages, 'notifications_mark_all_read')}
+            <button type="button" className="list-header-action" onClick={handleMarkAllRead}>
+              <CheckCheck size={16} aria-hidden="true" /> {t(messages, 'notifications_mark_all_read')}
             </button>
           )}
-        </div>
+        </header>
       )}
 
       {canManageHouseholdDestinations && (

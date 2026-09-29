@@ -41,6 +41,7 @@ def list_activity(
             actor_display_name=activity.actor_display_name,
             action=activity.action,
             object_type=activity.object_type,
+            object_label=activity.object_label,
             summary=activity.summary,
             created_at=activity.created_at,
         )

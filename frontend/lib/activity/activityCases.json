@@ -1,0 +1,19 @@
+{
+  "_comment": "Shared with tribu-app (test/fixtures/activity_cases.json): household activity entries and the sentence each language shows.",
+  "cases": [
+    { "entry": { "actor_display_name": "Anna", "action": "checked", "object_type": "shopping_item", "object_label": "Milch", "summary": "Anna checked off \"Milch\"" },
+      "en": "Anna bought “Milch”", "de": "Anna hat „Milch“ gekauft" },
+    { "entry": { "actor_display_name": "Dennis", "action": "completed", "object_type": "task", "object_label": "Fahrrad aufpumpen", "summary": "Dennis completed task \"Fahrrad aufpumpen\"" },
+      "en": "Dennis completed “Fahrrad aufpumpen”", "de": "Dennis hat „Fahrrad aufpumpen“ erledigt" },
+    { "entry": { "actor_display_name": "Dennis", "action": "removed occurrence", "object_type": "calendar_event", "object_label": "Schwimmen", "summary": "Dennis removed occurrence calendar event \"Schwimmen\"" },
+      "en": "Dennis removed one date of “Schwimmen”", "de": "Dennis hat einen Tag von „Schwimmen“ entfernt" },
+    { "entry": { "actor_display_name": "Lena", "action": "applied", "object_type": "household_template", "object_label": "Household template", "summary": "Lena applied template \"Household template\"" },
+      "en": "Lena applied a template", "de": "Lena hat eine Vorlage angewendet" },
+    { "entry": { "actor_display_name": null, "action": "added", "object_type": "shopping_item", "object_label": "Brot", "summary": "Someone added \"Brot\" to shopping" },
+      "en": "Someone put “Brot” on the shopping list", "de": "Jemand hat „Brot“ auf die Einkaufsliste gesetzt" },
+    { "entry": { "actor_display_name": "Kim", "action": "created", "object_type": "task", "object_label": null, "summary": "Kim created task \"Old entry\"" },
+      "en": "Kim created task \"Old entry\"", "de": "Kim created task \"Old entry\"" },
+    { "entry": { "actor_display_name": "Kim", "action": "archived", "object_type": "task", "object_label": "Future", "summary": "Kim archived task \"Future\"" },
+      "en": "Kim archived task \"Future\"", "de": "Kim archived task \"Future\"" }
+  ]
+}

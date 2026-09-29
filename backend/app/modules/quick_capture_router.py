@@ -1,11 +1,16 @@
 """Universal quick capture API."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.activity import record_activity
-from app.core.deps import current_user, ensure_adult
-from app.core.errors import error_detail
+from app.core.deps import current_user, ensure_adult, ensure_family_membership
+from app.core.errors import ADULT_REQUIRED, error_detail
+from app.core.notification_preferences import should_push_notification_type
+from app.core.push import send_push_for_user
+from app.core.reminder_text import reminder_text, user_language
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item
@@ -13,7 +18,7 @@ from app.core.task_service import TaskDomainError, create_task as create_task_do
 from app.core.ws_broadcast import broadcast_shopping_event
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
-from app.models import QuickCaptureItem, ShoppingItem, ShoppingList, Task, User
+from app.models import Membership, Notification, NotificationPreference, QuickCaptureItem, ShoppingItem, ShoppingList, Task, User
 from app.schemas import (
     NOT_FOUND_RESPONSE,
     PaginatedQuickCaptureInbox,
@@ -25,6 +30,8 @@ from app.schemas import (
     ShoppingItemResponse,
     TaskResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/quick-capture", tags=["quick-capture"])
 
@@ -182,7 +189,7 @@ def _dispatch_quick_capture_shopping_events(
     "",
     response_model=QuickCaptureResponse,
     summary="Capture a quick note",
-    description="Capture text into the inbox or route it directly to a task or shopping item. Adult only. Scope: `quick_capture:write`.",
+    description="Capture text into the inbox or route it directly to a task or shopping item. Children can only capture into the inbox; the adults are notified and confirm the suggestion. Scope: `quick_capture:write`.",
 )
 def create_quick_capture(
     payload: QuickCaptureCreate,
@@ -190,7 +197,11 @@ def create_quick_capture(
     db: Session = Depends(get_db),
     _scope=require_scope("quick_capture:write"),
 ):
-    ensure_adult(db, user.id, payload.family_id)
+    membership = ensure_family_membership(db, user.id, payload.family_id)
+    # Children suggest (Tribu 2.0, E5): their entries wait in the inbox
+    # until an adult confirms them.
+    if not membership.is_adult and payload.destination != QuickCaptureDestination.inbox:
+        raise HTTPException(status_code=403, detail=error_detail(ADULT_REQUIRED))
     text = _capture_text(payload.text)
 
     if payload.destination == QuickCaptureDestination.task:
@@ -222,6 +233,7 @@ def create_quick_capture(
         family_id=payload.family_id,
         text=text,
         created_by_user_id=user.id,
+        is_suggestion=not membership.is_adult,
     )
     db.add(item)
     db.commit()
@@ -232,7 +244,36 @@ def create_quick_capture(
         event_type="quick_capture.created",
         data={"quick_capture_id": item.id, "status": item.status},
     )
+    if not membership.is_adult:
+        _notify_adults_of_suggestion(db, item, user)
     return QuickCaptureResponse(destination=QuickCaptureDestination.inbox, inbox_item=item)
+
+
+def _notify_adults_of_suggestion(db: Session, item: QuickCaptureItem, child: User) -> None:
+    """Tells the family's adults that a child suggested something."""
+    adults = (
+        db.query(Membership.user_id)
+        .filter(Membership.family_id == item.family_id, Membership.is_adult.is_(True))
+        .all()
+    )
+    name = (child.display_name or "").split(" ")[0] or child.email
+    for (adult_id,) in adults:
+        body = reminder_text(user_language(db, adult_id), "capture_suggestion", name=name)
+        db.add(Notification(
+            user_id=adult_id,
+            family_id=item.family_id,
+            type="capture_suggestion",
+            title=item.text,
+            body=body,
+            link="/dashboard?inbox=1",
+        ))
+        pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == adult_id).first()
+        if pref and should_push_notification_type(pref, "capture_suggestion")[0]:
+            try:
+                send_push_for_user(db, adult_id, item.text, body, "/dashboard?inbox=1")
+            except Exception:
+                logger.exception("Push notification failed for suggestion to user %s", adult_id)
+    db.commit()
 
 
 @router.get(

@@ -401,15 +401,8 @@ export default function WeeklyPlanView({
       className="weekly-plan-page print-surface ui-planner"
       data-density={compact ? 'compact' : 'wide'}
     >
-      <header className="family-view-header weekly-plan-header">
-        <span className="weekly-plan-header-icon" aria-hidden="true">
-          <CalendarDays size={24} />
-        </span>
-        <div className="weekly-plan-title-block">
-          <p className="view-kicker">Tribu</p>
-          <h1>{t(messages, 'module.weekly_plan.title')}</h1>
-          <p>{t(messages, 'module.weekly_plan.subtitle')}</p>
-        </div>
+      <header className="list-header weekly-plan-header">
+        <h1>{t(messages, 'module.weekly_plan.title')}</h1>
         <strong className="weekly-plan-week-pill">
           {formatWeekLabel(range, locale)}
         </strong>

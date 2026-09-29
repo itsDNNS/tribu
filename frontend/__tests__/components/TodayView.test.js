@@ -1,0 +1,321 @@
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import messages from '../../i18n/en.json';
+import TodayView from '../../components/today/TodayView';
+import { handOff, peekHandOff } from '../../lib/handoff';
+import { apiConvertQuickCapture, apiGetEvents, apiGetSetupChecklist, apiListMealPlans } from '../../lib/api';
+
+let mockApp = {};
+let mockNow = new Date(2026, 8, 30, 10, 0);
+const mockToggleTask = jest.fn();
+let mockTasks = [];
+
+jest.mock('../../contexts/AppContext', () => ({ useApp: () => mockApp }));
+jest.mock('../../hooks/useCurrentMinute', () => ({ useCurrentMinute: () => mockNow }));
+jest.mock('../../hooks/useTasks', () => ({
+  useTasks: () => ({ visibleTasks: mockTasks, toggleTask: mockToggleTask }),
+}));
+jest.mock('../../lib/api', () => ({
+  apiGetEvents: jest.fn(() => Promise.resolve({ ok: true, data: [] })),
+  apiListMealPlans: jest.fn(() => Promise.resolve({ ok: true, data: [] })),
+  apiGetSetupChecklist: jest.fn(() => Promise.resolve({ ok: false })),
+  apiCompleteSetupChecklistStep: jest.fn(),
+  apiDismissSetupChecklist: jest.fn(() => Promise.resolve({ ok: true })),
+  apiConvertQuickCapture: jest.fn(() => Promise.resolve({ ok: true })),
+  apiDismissQuickCapture: jest.fn(() => Promise.resolve({ ok: true })),
+}));
+let mockRewards = {};
+jest.mock('../../hooks/useRewards', () => ({ useRewards: () => mockRewards }));
+jest.mock('../../components/RewardsDashboardWidget', () => function RewardsDashboardWidget() {
+  return <div data-testid="rewards-widget" />;
+});
+
+const members = [
+  { user_id: 1, display_name: 'Max Müller' },
+  { user_id: 2, display_name: 'Anna' },
+  { user_id: 3, display_name: 'Lena' },
+];
+
+const events = [
+  { id: 1, title: 'Dentist', starts_at: '2026-09-30T08:00:00', ends_at: '2026-09-30T09:00:00', all_day: false, assigned_to: [1] },
+  { id: 2, title: 'Football', starts_at: '2026-09-30T15:00:00', ends_at: '2026-09-30T16:30:00', all_day: false, assigned_to: [3] },
+  { id: 3, title: 'Yoga', starts_at: '2026-10-01T18:00:00', ends_at: '2026-10-01T19:00:00', all_day: false, assigned_to: [2] },
+];
+
+function baseApp(overrides = {}) {
+  return {
+    summary: { next_events: [], upcoming_birthdays: [{ person_name: 'Grandpa', occurs_on: '2026-10-02', days_until: 2 }] },
+    me: { user_id: 1, display_name: 'Max Müller' },
+    members,
+    events: [],
+    shoppingLists: [],
+    mealPlans: [],
+    activity: [],
+    quickCaptureInbox: [],
+    familyId: 7,
+    families: [{ family_id: 7, family_name: 'Müller' }],
+    setActiveView: jest.fn(),
+    messages,
+    lang: 'en',
+    timeFormat: '24h',
+    isChild: false,
+    isAdmin: false,
+    demoMode: false,
+    loadQuickCaptureInbox: jest.fn(),
+    loadTasks: jest.fn(),
+    loadShoppingLists: jest.fn(),
+    ...overrides,
+  };
+}
+
+async function renderToday(overrides = {}, props = {}) {
+  mockApp = baseApp(overrides);
+  const view = render(<TodayView {...props} />);
+  await waitFor(() => expect(apiGetEvents).toHaveBeenCalled());
+  // Wait for the loaded events to render, not only for the request: every
+  // load the first renders started, then a macrotask for their updates.
+  await act(async () => {
+    await Promise.all(apiGetEvents.mock.results.map((result) => result.value));
+    await Promise.all(apiListMealPlans.mock.results.map((result) => result.value));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  return view;
+}
+
+function rowTitles(list) {
+  return within(list).queryAllByRole('listitem').map((row) => row.textContent);
+}
+
+describe('TodayView', () => {
+  beforeAll(() => {
+    HTMLDialogElement.prototype.showModal = function showModal() { this.setAttribute('open', ''); };
+    HTMLDialogElement.prototype.close = function close() { this.removeAttribute('open'); };
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNow = new Date(2026, 8, 30, 10, 0);
+    mockTasks = [
+      { id: 11, title: 'Sign the letter', status: 'open', due_date: '2026-09-30T00:00:00', due_is_date: true, assigned_to_user_id: 1 },
+      { id: 12, title: 'Buy a present', status: 'open', due_date: '2026-09-30T18:00:00', due_is_date: false, assigned_to_user_id: 2 },
+      { id: 14, title: 'Tax return', status: 'open', due_date: '2026-09-27T00:00:00', due_is_date: true, assigned_to_user_id: 1 },
+    ];
+    apiGetEvents.mockImplementation(() => Promise.resolve({ ok: true, data: events }));
+  });
+
+  it('shows the day in time order with a now marker', async () => {
+    await renderToday();
+    const day = screen.getByRole('region', { name: 'Today' });
+    const rows = rowTitles(within(day).getByRole('list'));
+    expect(rows[0]).toContain('Sign the letter');
+    expect(rows[1]).toContain('08:00');
+    expect(rows[1]).toContain('Dentist');
+    expect(rows[2]).toBe('10:00');
+    expect(rows[3]).toContain('Football');
+    expect(rows[4]).toContain('Buy a present');
+    expect(within(day).getByRole('listitem', { name: 'Now 10:00' })).toBeInTheDocument();
+    // The week's range is loaded for the timeline.
+    const [familyId, start, end] = apiGetEvents.mock.calls[0];
+    expect(familyId).toBe(7);
+    expect(new Date(start)).toEqual(new Date(2026, 8, 30));
+    expect(new Date(end)).toEqual(new Date(2026, 9, 7));
+  });
+
+  it('folds overdue tasks away and lists the week ahead', async () => {
+    await renderToday();
+    const overdue = screen.getByText('Still open').closest('details');
+    expect(overdue).not.toHaveAttribute('open');
+    expect(within(overdue).getByText('Tax return')).toBeInTheDocument();
+    const week = screen.getByRole('region', { name: 'This week' });
+    expect(within(week).getByText('Yoga')).toBeInTheDocument();
+    expect(within(week).getByText("Grandpa's birthday")).toBeInTheDocument();
+  });
+
+  it('filters the whole view by person', async () => {
+    await renderToday();
+    fireEvent.click(screen.getByRole('button', { name: /Lena/ }));
+    const day = screen.getByRole('region', { name: 'Today' });
+    expect(within(day).getByText('Football')).toBeInTheDocument();
+    expect(within(day).queryByText('Dentist')).not.toBeInTheDocument();
+    expect(within(day).queryByText('Sign the letter')).not.toBeInTheDocument();
+    expect(screen.queryByText('Still open')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'This week' })).toHaveTextContent("Grandpa's birthday");
+  });
+
+  it('opens on the person chosen in the family hub', async () => {
+    handOff('today_member', 3);
+    await renderToday();
+    expect(screen.getByRole('button', { name: /Lena/ })).toHaveAttribute('aria-pressed', 'true');
+    const day = screen.getByRole('region', { name: 'Today' });
+    expect(within(day).queryByText('Dentist')).not.toBeInTheDocument();
+    expect(peekHandOff('today_member')).toBeUndefined();
+  });
+
+  it('completes tasks through the undoable task flow', async () => {
+    await renderToday();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Buy a present/ }));
+    expect(mockToggleTask).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
+  });
+
+  it('finishes a task with a swipe to the right', async () => {
+    window.PointerEvent = window.PointerEvent || MouseEvent;
+    await renderToday();
+    const title = screen.getByRole('button', { name: /Buy a present/ });
+    fireEvent.pointerDown(title, { clientX: 100, clientY: 10, button: 0 });
+    fireEvent.pointerMove(title, { clientX: 150, clientY: 10 });
+    fireEvent.pointerMove(title, { clientX: 200, clientY: 10 });
+    fireEvent.pointerUp(title, { clientX: 200, clientY: 10 });
+    fireEvent.click(title);
+    expect(mockToggleTask).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
+    // The click that ends the swipe does not open the task list.
+    expect(mockApp.setActiveView).not.toHaveBeenCalled();
+  });
+
+  describe('for children', () => {
+    const child = { isChild: true, me: { user_id: 2, display_name: 'Anna' } };
+    beforeEach(() => {
+      mockRewards = {
+        loading: false,
+        currency: { name: 'Stars', icon: 'star' },
+        myBalance: { balance: 6 },
+        catalog: [{ id: 1, name: 'Cinema', cost: 10, is_active: true }, { id: 2, name: 'Ice cream', cost: 4, is_active: true }],
+      };
+      mockTasks = mockTasks.map((task) => (task.id === 12 ? { ...task, token_reward_amount: 2, token_require_confirmation: false } : task));
+    });
+
+    it('shows only their own day, their stars and the next reward', async () => {
+      await renderToday(child);
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hi Anna!');
+      const day = screen.getByRole('region', { name: 'Your day' });
+      expect(within(day).getByText('Buy a present')).toBeInTheDocument();
+      for (const other of ['Sign the letter', 'Dentist', 'Football']) {
+        expect(screen.queryByText(other)).not.toBeInTheDocument();
+      }
+      expect(screen.queryByRole('group', { name: messages['module.today.filter'] })).not.toBeInTheDocument();
+      expect(screen.getByText('6')).toBeInTheDocument();
+      expect(screen.getByText('4 more for Cinema')).toBeInTheDocument();
+      expect(screen.getByRole('progressbar', { name: 'Cinema' })).toHaveAttribute('aria-valuenow', '6');
+    });
+
+    it('cheers when a task is done and names the stars it earns', async () => {
+      await renderToday(child);
+      fireEvent.click(screen.getByRole('checkbox', { name: /Buy a present/ }));
+      expect(mockToggleTask).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
+      expect(screen.getByText('Well done!')).toBeInTheDocument();
+      expect(screen.getByText('+2 Stars')).toBeInTheDocument();
+    });
+
+    it('finishes a task with a swipe to the right', async () => {
+      window.PointerEvent = window.PointerEvent || MouseEvent;
+      await renderToday(child);
+      const title = screen.getByText('Buy a present');
+      fireEvent.pointerDown(title, { clientX: 100, clientY: 10, button: 0 });
+      fireEvent.pointerMove(title, { clientX: 150, clientY: 10 });
+      fireEvent.pointerMove(title, { clientX: 200, clientY: 10 });
+      fireEvent.pointerUp(title, { clientX: 200, clientY: 10 });
+      expect(mockToggleTask).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
+      expect(screen.getByText('Well done!')).toBeInTheDocument();
+    });
+
+    it('offers to suggest something', async () => {
+      const onOpenCapture = jest.fn();
+      await renderToday(child, { onOpenCapture });
+      fireEvent.click(screen.getByRole('button', { name: 'Suggest something' }));
+      expect(onOpenCapture).toHaveBeenCalled();
+    });
+
+    it('leaves the stars out when the family hides rewards', async () => {
+      await renderToday({ ...child, hiddenAreas: ['rewards'] });
+      expect(screen.queryByText('4 more for Cinema')).not.toBeInTheDocument();
+    });
+  });
+
+  it('offers an empty day one action', async () => {
+    mockTasks = [];
+    apiGetEvents.mockImplementation(() => Promise.resolve({ ok: true, data: [] }));
+    const onOpenCapture = jest.fn();
+    await renderToday({}, { onOpenCapture });
+    expect(screen.getByText('Nothing planned for today.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add something' }));
+    expect(onOpenCapture).toHaveBeenCalled();
+  });
+
+  it('suggests shopping in the afternoon and starts shopping mode', async () => {
+    const shoppingLists = [{ id: 1, item_count: 5, checked_count: 1 }];
+    const { unmount } = await renderToday({ shoppingLists });
+    expect(screen.queryByText('4 things on the shopping list')).not.toBeInTheDocument();
+    unmount();
+
+    mockNow = new Date(2026, 8, 30, 16, 0);
+    await renderToday({ shoppingLists });
+    fireEvent.click(screen.getByRole('button', { name: 'Start shopping' }));
+    expect(sessionStorage.getItem('tribu_shopping_trip')).toBe('1');
+    expect(mockApp.setActiveView).toHaveBeenCalledWith('shopping');
+  });
+
+  it('shows the setup checklist as a hint that opens', async () => {
+    apiGetSetupChecklist.mockImplementation(() => Promise.resolve({
+      ok: true,
+      data: {
+        dismissed: false,
+        show_on_dashboard: true,
+        completed_count: 1,
+        total_count: 2,
+        steps: [
+          { key: 'members', completed: true },
+          { key: 'calendar', completed: false, target_view: 'calendar' },
+        ],
+      },
+    }));
+    await renderToday({ isAdmin: true });
+    const hint = await screen.findByText('Setup: 1 of 2 done');
+    fireEvent.click(within(hint.closest('section')).getByRole('button', { name: /Continue/ }));
+    fireEvent.click(screen.getByRole('button', { name: messages['module.dashboard.setup_step_calendar_cta'] }));
+    expect(mockApp.setActiveView).toHaveBeenCalledWith('calendar');
+  });
+
+  it('turns open quick notes into tasks', async () => {
+    await renderToday({ quickCaptureInbox: [{ id: 5, text: 'Call the plumber', status: 'open' }] });
+    fireEvent.click(screen.getByRole('button', { name: /Review/ }));
+    fireEvent.click(screen.getByRole('button', { name: messages['module.dashboard.quick_capture_to_task'] }));
+    await waitFor(() => expect(apiConvertQuickCapture).toHaveBeenCalledWith(5, { destination: 'task' }));
+    await waitFor(() => expect(mockApp.loadQuickCaptureInbox).toHaveBeenCalledWith(7));
+  });
+
+  it("names the child behind a suggestion", async () => {
+    await renderToday({ quickCaptureInbox: [
+      { id: 6, text: 'Pizza on Friday', status: 'open', suggested_by_user_id: 3 },
+      { id: 5, text: 'Call the plumber', status: 'open', suggested_by_user_id: null },
+    ] });
+    fireEvent.click(screen.getByRole('button', { name: /Review/ }));
+    expect(screen.getByText('Suggestion from Lena')).toBeInTheDocument();
+    expect(screen.getAllByText(/^Suggestion from/)).toHaveLength(1);
+  });
+
+  it('tells who else is out shopping, at any hour', async () => {
+    mockNow = new Date(2026, 8, 30, 9, 0);
+    await renderToday({ shoppingLists: [{ id: 5, item_count: 3, checked_count: 0, shopper: { user_id: 2, display_name: 'Anna', since: '2026-09-30T08:50:00' } }] });
+    const hint = screen.getByRole('region', { name: messages['module.shopping.name'] });
+    expect(hint).toHaveTextContent('Anna is shopping right now');
+    fireEvent.click(within(hint).getByRole('button', { name: 'See the list' }));
+    expect(mockApp.setActiveView).toHaveBeenCalledWith('shopping');
+  });
+
+  it('greets once and gives the date', async () => {
+    await renderToday();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Good morning, Max');
+    expect(screen.getByText('Wednesday, September 30')).toBeInTheDocument();
+  });
+  it('opens an event\'s details over Today, then the calendar', async () => {
+    await renderToday();
+    fireEvent.click(screen.getByRole('button', { name: /^Football/ }));
+    const dialog = screen.getByRole('dialog', { name: 'A family moment' });
+    expect(dialog).toHaveTextContent('Football');
+    expect(dialog).toHaveTextContent('Lena');
+    expect(mockApp.setActiveView).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Show in calendar' }));
+    expect(mockApp.setActiveView).toHaveBeenCalledWith('calendar');
+    expect(new Date(sessionStorage.getItem('tribu_calendar_focus')).getHours()).toBe(15);
+  });
+});

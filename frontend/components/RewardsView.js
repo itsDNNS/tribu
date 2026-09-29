@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Gift, Plus, Star, Check, X, Award, ArrowUpCircle, ArrowDownCircle, Gem, Zap, Heart, Trophy, Clock, CheckSquare } from 'lucide-react';
+import { Plus, Star, Check, X, Award, ArrowUpCircle, ArrowDownCircle, Gem, Zap, Heart, Trophy, Clock, CheckSquare } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useRewards } from '../hooks/useRewards';
 import { CurrencyIcon } from '../lib/currency-icons';
 import { t } from '../lib/i18n';
+import { getMemberColor } from '../lib/member-colors';
+import { nextGoal } from '../lib/family/buildFamily';
 import { parseServerInstant } from '../lib/helpers';
 import MemberAvatar from './MemberAvatar';
 import * as api from '../lib/api';
@@ -26,19 +28,14 @@ function RewardAmount({ currency, amount, sign = '' }) {
 
 function RewardsPageHeader({ messages, currency }) {
   return (
-    <div className="family-view-header rewards-page-header">
-      <span className="rewards-page-icon" aria-hidden="true">
-        <Gift size={24} />
-      </span>
-      <div className="rewards-page-title">
-        <h1>{t(messages, 'module.rewards.name')}</h1>
-        {currency && (
-          <span className="rewards-header-currency">
-            <CurrencyIcon icon={currency.icon} label={currency.name} /> {currency.name}
-          </span>
-        )}
-      </div>
-    </div>
+    <header className="list-header">
+      <h1>{t(messages, 'module.rewards.name')}</h1>
+      {currency && (
+        <span className="rewards-header-currency">
+          <CurrencyIcon icon={currency.icon} label={currency.name} /> {currency.name}
+        </span>
+      )}
+    </header>
   );
 }
 
@@ -256,12 +253,24 @@ export default function RewardsView() {
             <div className="rewards-balances">
               {rw.balances.map((balance, index) => {
                 const member = members.find((item) => item.user_id === balance.user_id);
+                // Children see how far it is to their next reward (Tribu 2.0, F3).
+                const goal = member?.is_adult === false ? nextGoal(Number(balance.balance) || 0, rw.catalog || []) : null;
                 return (
                   <div key={balance.user_id} className="rewards-balance-card">
                     <MemberAvatar member={member || { display_name: balance.display_name }} index={index} size={30} />
-                    <div>
+                    <div className="rewards-balance-card-body">
                       <div className="rewards-balance-card-name">{balance.display_name}</div>
                       <div className="rewards-balance-card-value"><RewardAmount currency={rw.currency} amount={balance.balance} /></div>
+                      {goal && (
+                        <div className="rewards-balance-goal" style={{ '--person-color': getMemberColor(member, members.indexOf(member)) }}>
+                          <span className="family-progress" aria-hidden="true"><span style={{ width: `${Math.round(goal.progress * 100)}%` }} /></span>
+                          <small>
+                            {goal.reached
+                              ? t(messages, 'family.goal_reached').replace('{reward}', goal.name)
+                              : t(messages, 'family.goal').replace('{count}', goal.cost - (Number(balance.balance) || 0)).replace('{reward}', goal.name)}
+                          </small>
+                        </div>
+                      )}
                     </div>
                     {balance.pending > 0 && (
                       <span className="rewards-balance-pending">{t(messages, 'module.rewards.pending').replace('{count}', balance.pending)}</span>

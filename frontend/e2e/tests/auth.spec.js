@@ -25,19 +25,9 @@ test.describe('Authentication', () => {
   });
 
   test('logout', async ({ authedPage: page }) => {
-    const viewport = page.viewportSize();
-    const isMobile = viewport ? viewport.width < 768 : false;
-    if (isMobile) {
-      const mobileHeaderLogout = page.locator('.mobile-header [aria-label="Log out"]');
-      if (await mobileHeaderLogout.isVisible()) {
-        await mobileHeaderLogout.click();
-      } else {
-        await page.getByRole('button',{name:'Open menu',exact:true}).click();
-        await page.getByRole('dialog').getByRole('button',{name:'Log out',exact:true}).click();
-      }
-    } else {
-      await page.locator('.sidebar-user [aria-label="Log out"]').click();
-    }
+    // Signing out sits in the account menu behind the avatar.
+    await page.locator('.app-header').getByRole('button', { name: 'Account and settings', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Log out', exact: true }).click();
 
     // Should see auth page
     await expect(page.locator('#tab-login')).toBeVisible({ timeout: 10000 });

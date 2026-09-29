@@ -8,6 +8,8 @@ PUSH_CATEGORY_DEFAULTS: dict[str, bool] = {
     "calendar_reminders": True,
     "task_due": True,
     "birthdays": True,
+    # The evening before a meal, what is not on the list yet (Tribu 2.0, N-2).
+    "meal_reminders": True,
     "event_assignments": False,
     "shopping_changes": False,
     "meal_plan_changes": False,
@@ -18,12 +20,14 @@ NOTIFICATION_TYPE_TO_PUSH_CATEGORY: dict[str, str] = {
     "event_reminder": "calendar_reminders",
     "task_due": "task_due",
     "birthday": "birthdays",
+    "meal_reminder": "meal_reminders",
     "event_assigned": "event_assignments",
     "shopping_item_added": "shopping_changes",
     "shopping_item_checked": "shopping_changes",
     "shopping_item_unchecked": "shopping_changes",
     "meal_plan_changed": "meal_plan_changes",
     "family_changed": "family_changes",
+    "capture_suggestion": "family_changes",
 }
 
 

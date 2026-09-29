@@ -3,7 +3,7 @@ import { Database, Rss, Download, Upload, ChevronUp, ChevronDown, Plus, Copy, Ch
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { copyTextToClipboard, downloadBlob } from '../../lib/helpers';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
 export default function DataTab() {
@@ -127,7 +127,7 @@ export default function DataTab() {
     setCalErrors([]);
     const { ok, data } = await api.apiImportCalendarIcs(Number(familyId), icsText);
     if (!ok) return setCalMsg(t(messages, 'module.calendar.import_error') || 'Import failed');
-    setCalMsg(t(messages, 'module.calendar.import_success').replace('{count}', data.created));
+    setCalMsg(tc(messages, 'module.calendar.import_success', data.created));
     if (data.errors?.length) setCalErrors(data.errors);
     setIcsText('');
   }

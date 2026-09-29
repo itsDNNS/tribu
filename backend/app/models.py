@@ -56,6 +56,9 @@ class Family(Base):
     weather_location_name = Column(String(120), nullable=True)
     weather_latitude = Column(Float, nullable=True)
     weather_longitude = Column(Float, nullable=True)
+    # Optional areas the family does not use (Tribu 2.0, R4), as navigation
+    # keys such as "recipes"; they leave navigation, search and "+".
+    hidden_areas = Column(JSON, nullable=True)
 
     memberships = relationship("Membership", back_populates="family", cascade="all, delete-orphan")
     calendar_events = relationship("CalendarEvent", back_populates="family", cascade="all, delete-orphan")
@@ -514,9 +517,13 @@ class ShoppingList(Base):
     icon = Column(String(20), nullable=False, default="cart", server_default="cart")
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    # Who is out shopping with this list right now (Tribu 2.0, L4).
+    shopper_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    shopping_since = Column(DateTime, nullable=True)
 
     family = relationship("Family", back_populates="shopping_lists")
     items = relationship("ShoppingItem", back_populates="shopping_list", cascade="all, delete-orphan")
+    shopper = relationship("User", foreign_keys=[shopper_user_id])
 
 
 class ShoppingItem(Base):
@@ -536,6 +543,8 @@ class ShoppingItem(Base):
     added_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     position = Column(Integer, nullable=False, default=0)
+    # The recipes or meals it was added for, e.g. "Lasagne, Pancakes" (L5).
+    source = Column(String(200), nullable=True)
 
     shopping_list = relationship("ShoppingList", back_populates="items")
 
@@ -685,6 +694,31 @@ class PushSubscription(Base):
     auth = Column(Text, nullable=False)
     platform = Column(String(20), nullable=False, default="web", server_default="web")
     device_name = Column(String(120), nullable=True)
+    # Whether the client shows action buttons itself (Tribu 2.0, N-2); FCM
+    # devices without it keep the plain notification payload.
+    supports_actions = Column(Boolean, nullable=False, default=False, server_default="false")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class ReminderSnooze(Base):
+    """A reminder someone asked to hear about again later ("Remind me in 1 hour")."""
+
+    __tablename__ = "reminder_snoozes"
+    __table_args__ = (
+        Index("ix_reminder_snoozes_due", "delivered_at", "remind_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False)
+    source_type = Column(String(20), nullable=False)
+    source_id = Column(Integer, nullable=False)
+    notification_type = Column(String(40), nullable=False)
+    title = Column(String(200), nullable=False)
+    body = Column(Text, nullable=True)
+    link = Column(String, nullable=True)
+    remind_at = Column(DateTime, nullable=False)
+    delivered_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
@@ -722,7 +756,6 @@ class UserNavOrder(Base):
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     nav_order = Column(JSON, nullable=False, default=["dashboard", "calendar", "shopping", "tasks", "templates", "contacts", "notifications", "settings"])
-    dashboard_layout = Column(JSON, nullable=True)
     ui_theme = Column(String, nullable=True)
     ui_language = Column(String, nullable=True)
 
@@ -752,6 +785,7 @@ class HouseholdActivity(Base):
     action = Column(String(40), nullable=False)
     object_type = Column(String(60), nullable=False)
     object_id = Column(Integer, nullable=True)
+    object_label = Column(String(80), nullable=True)
     summary = Column(String(240), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
@@ -770,6 +804,8 @@ class QuickCaptureItem(Base):
     text = Column(String(240), nullable=False)
     status = Column(String(20), nullable=False, default="open", server_default="open")
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # A child's entry: it waits for an adult to confirm it (Tribu 2.0, E5).
+    is_suggestion = Column(Boolean, nullable=False, default=False, server_default="false")
     converted_to = Column(String(40), nullable=True)
     converted_object_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -777,6 +813,11 @@ class QuickCaptureItem(Base):
 
     family = relationship("Family", back_populates="quick_capture_items")
     created_by = relationship("User")
+
+    @property
+    def suggested_by_user_id(self) -> int | None:
+        """The child who suggested this entry; adults' notes stay anonymous."""
+        return self.created_by_user_id if self.is_suggestion else None
 
 
 class FamilyInvitation(Base):

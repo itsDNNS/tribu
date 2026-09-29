@@ -48,6 +48,9 @@ DEFAULT_ROTATION = 60
 EINK_FORMATS = ("compact", "large")
 DEFAULT_EINK_FORMAT = "compact"
 
+THEME_MODE_AUTO = "auto"
+THEME_MODES = (THEME_MODE_AUTO, "light", "dark")
+
 DEFAULT_LAYOUT: dict[str, Any] = {
     "version": LAYOUT_VERSION,
     "zones": {
@@ -59,7 +62,6 @@ DEFAULT_LAYOUT: dict[str, Any] = {
     "stagger": True,
     "skip_empty": True,
     "pause_on_touch": True,
-    "night_dim": True,
     "day_parts": {
         "morning_start": "05:30",
         "morning_end": "09:00",
@@ -68,6 +70,7 @@ DEFAULT_LAYOUT: dict[str, Any] = {
     },
     "eink_format": DEFAULT_EINK_FORMAT,
     "language": "auto",
+    "theme_mode": THEME_MODE_AUTO,
 }
 
 _LANGUAGE_RE = re.compile(r"^[a-z]{2}(?:-[A-Z]{2})?$")
@@ -129,12 +132,17 @@ def normalize_layout_config(value: Any) -> dict[str, Any]:
     zones = value.get("zones") if isinstance(value.get("zones"), dict) else {}
     layout = default_layout()
     layout["zones"] = {zone: _normalize_zone(zone, zones.get(zone)) for zone in ZONE_CARDS}
-    for flag in ("stagger", "skip_empty", "pause_on_touch", "night_dim"):
+    for flag in ("stagger", "skip_empty", "pause_on_touch"):
         if isinstance(value.get(flag), bool):
             layout[flag] = value[flag]
     layout["day_parts"] = _normalize_day_parts(value.get("day_parts"))
     if value.get("eink_format") in EINK_FORMATS:
         layout["eink_format"] = value["eink_format"]
+    if value.get("theme_mode") in THEME_MODES:
+        layout["theme_mode"] = value["theme_mode"]
+    elif isinstance(value.get("night_dim"), bool):
+        # Pre-theme_mode configs only had this on/off dimming flag; keep old devices looking the same.
+        layout["theme_mode"] = THEME_MODE_AUTO if value["night_dim"] else "light"
     language = value.get("language")
     if isinstance(language, str) and (language == "auto" or _LANGUAGE_RE.match(language)):
         layout["language"] = language

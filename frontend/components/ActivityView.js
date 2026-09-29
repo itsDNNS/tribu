@@ -1,24 +1,15 @@
 import HouseholdActivityFeed from './HouseholdActivityFeed';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
-import { Activity } from 'lucide-react';
 
 export default function ActivityView() {
   const { activity, messages, lang } = useApp();
 
   return (
     <div className="activity-page">
-      <div className="view-header activity-view-header">
-        <div className="activity-title-block">
-          <span className="activity-page-icon" aria-hidden="true">
-            <Activity size={22} />
-          </span>
-          <div>
-            <h1 className="view-title">{t(messages, 'module.activity.title')}</h1>
-            <p className="view-subtitle">{t(messages, 'module.activity.subtitle')}</p>
-          </div>
-        </div>
-      </div>
+      <header className="list-header">
+        <h1>{t(messages, 'module.activity.title')}</h1>
+      </header>
 
       <div className="activity-history-layout">
         <HouseholdActivityFeed activity={activity} messages={messages} lang={lang} limit={0} />

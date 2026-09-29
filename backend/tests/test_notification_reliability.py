@@ -172,10 +172,15 @@ def test_calendar_push_uses_occurrence_start_and_urgent_expiry(monkeypatch, recu
     monkeypatch.setattr(scheduler_module, "send_push_for_user", send)
     scheduler_module._check_notifications()
     scheduler_module._check_notifications()
-    assert calls == [(
-        "Starts at 2026-09-17 16:45 (Europe/Berlin)",
-        {"urgent": True, "expires_at": datetime(2026, 9, 17, 14, 45)},
-    )]
+    assert len(calls) == 1
+    body, options = calls[0]
+    assert body == "Starts at 2026-09-17 16:45 (Europe/Berlin)"
+    assert options["urgent"] is True
+    assert options["expires_at"] == datetime(2026, 9, 17, 14, 45)
+    # Event reminders offer "Remind me in 1 hour" (Tribu 2.0, N-2).
+    assert options["actions"] == ("snooze",)
+    assert options["action_labels"] == {"snooze": "Remind me in 1 hour"}
+    assert options["action_token"]
     with TestSession() as db:
         assert db.query(Notification).one().body == "Starts in 60 minutes"
 

@@ -56,9 +56,6 @@
 .shop-page .shop-add-form button{flex:none}
 .shop-page .avatar-stack{display:flex;align-items:center;padding-left:5px}
 .shop-page .avatar-stack>*{margin-left:-5px;border:2px solid var(--bg)}
-.shop-command-header .today-command-header{height:78px;min-height:78px;margin:0}
-.shop-command-header .tc-topbar-note{display:block}
-.shop-navigation{display:none}
 .shop-search-result{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 14px}
 .shop-search-result .grocery-art{width:34px;height:34px}
 .shop-search-result small{display:block;color:var(--muted);font-size:10px}
@@ -103,15 +100,14 @@
 .shop-ingredients label{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:9px}
 .shop-ingredients small{margin-left:auto;color:var(--muted)}
 :is([data-theme="dark"],[data-theme="midnight-glass"]) :is(.shop-page,.shop-dialog){--line:rgba(200,175,220,.12);--purple-bg:#362d40;--shop-lilac:#362d40;--shop-border:#4d3d59;--shop-softink:#c3abcf;--shop-green:#303a2d;--shop-green-ink:#9ab587;--grocery-fill:#47394f;--grocery-detail:#322a3a}
-.app-shell:has(.shopping-trip) .sidebar,.app-shell:has(.shopping-trip) .mobile-header,.app-shell:has(.shopping-trip) .bottom-nav{display:none!important}
+.app-shell:has(.shopping-trip) .sidebar,.app-shell:has(.shopping-trip) .bottom-nav{display:none!important}
 .app-shell:has(.shopping-trip) .main-content{margin-left:0;width:100%;max-width:1200px;margin-inline:auto}
 .shopping-trip :is(.shop-header,.shop-listbar,.shop-addbar,.shop-rail,.shop-local-footnote,.shop-mobile-dock){display:none!important}
 .shopping-trip .shop-layout{grid-template-columns:1fr}
-@media(max-width:1240px){.shop-command-header .tc-topbar-note{display:none}}
-@media(max-width:768px){.app-shell:has(.shop-page) .mobile-header,.app-shell:has(.shop-page) .bottom-nav{display:none!important}.app-shell:has(.shop-page) .main-content{padding:15px 15px 0}.shop-page .shop-command-header{position:relative;margin-bottom:16px}.shop-page .shop-command-header .today-command-header{height:auto;min-height:110px;padding:0;display:flex;flex-wrap:wrap;gap:17px}.shop-page .today-command-title{font-size:23px;line-height:1.3;letter-spacing:-.7px}.shop-command-header .today-command-header>div:first-child{padding-left:32px}.shop-page .shop-command-header .today-command-family{margin-top:6px;font-size:10px;white-space:normal}.shop-command-header .dashboard-header-actions{display:flex!important;width:100%;gap:9px;justify-content:flex-start}.shop-command-header .dashboard-search-btn{display:flex!important;flex:1;min-width:0;max-width:none;height:38px}.shop-command-header .dashboard-search-placeholder{display:block;overflow:hidden;text-overflow:clip;white-space:nowrap}.shop-command-header .dashboard-icon-action{display:flex!important;width:38px;height:38px}.shop-command-header .dashboard-search-kbd{display:block}.shop-navigation{display:flex;position:absolute;left:0;top:7px;z-index:1;padding:0}.shop-page h1{font-size:26px;letter-spacing:-.8px}.shop-header{align-items:flex-start}.shop-header .shop-people{padding-top:16px}.shop-page .shop-mobile-dock .btn{font-size:11px;height:41px;padding:0 12px}.shop-dialog .shop-modal-header{padding:20px}.shop-modal-header h2{font-size:19px}.shop-modal-body{padding:20px}.shop-modal-actions{padding:15px 20px}.shopping-trip .shop-trip-banner{padding-top:5px}.shop-page .shop-photo-area{flex-wrap:wrap}}
+@media(max-width:768px){.app-shell:has(.shopping-trip) :is(.app-header,.app-subnav,.bottom-nav){display:none!important}.app-shell:has(.shop-page) .main-content{padding:15px 15px 0}.shop-page h1{font-size:26px;letter-spacing:-.8px}.shop-header{align-items:flex-start}.shop-header .shop-people{padding-top:16px}.shop-page .shop-mobile-dock .btn{font-size:11px;height:41px;padding:0 12px}.shop-dialog .shop-modal-header{padding:20px}.shop-modal-header h2{font-size:19px}.shop-modal-body{padding:20px}.shop-modal-actions{padding:15px 20px}.shopping-trip .shop-trip-banner{padding-top:5px}.shop-page .shop-photo-area{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.shop-page *,.shop-dialog *{animation:none!important;transition:none!important}}
 
-@media(max-width:680px){.shop-people .avatar-stack>*{width:25px!important;height:25px!important}.shop-people .avatar-stack>*:nth-child(n+3){display:none}.shop-page .shop-header{gap:8px}.shop-page .shop-header>div{flex:1;min-width:0}.shop-page .shop-header h1{font-size:26px;letter-spacing:-.8px}.shop-people{flex:none}.shop-command-header .today-command-title{font-weight:400}}
+@media(max-width:680px){.shop-people .avatar-stack>*{width:25px!important;height:25px!important}.shop-people .avatar-stack>*:nth-child(n+3){display:none}.shop-page .shop-header{gap:8px}.shop-page .shop-header>div{flex:1;min-width:0}.shop-page .shop-header h1{font-size:26px;letter-spacing:-.8px}.shop-people{flex:none}}
 
 @media(max-width:680px){.shop-people .avatar-stack>:nth-child(n+3){display:none!important}.shop-page .shop-people{gap:0;padding-top:16px}.shop-page .shop-header h1{font-size:26px}.shop-dialog .shop-modal-actions{flex-wrap:wrap}}
 
@@ -122,3 +118,138 @@
 .shop-page .shop-recipe-card{background:linear-gradient(135deg,var(--green-bg),var(--surface))}
 :is([data-theme="dark"],[data-theme="midnight-glass"]) :is(.shop-page,.shop-dialog){--ink:var(--text-primary);--text:var(--text-secondary);--muted:var(--text-muted)}
 @media(max-width:680px){.app-shell:has(.shopping-trip) .main-content{padding:8px 12px 22px}.shopping-trip.shop-page{padding-bottom:10px}}
+
+/* Tribu 2.0 (docs/tribu-2-design.md): compact rows are the default, a calm
+   header, the category label like the task groups. */
+.shop-page .shop-list-header { margin: 0 0 var(--space-4); }
+.shop-page .shop-category-title {
+  margin-bottom: var(--space-2);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.shop-page .shop-category-title .category-count {
+  font-size: var(--type-label-size);
+  background: none;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.shop-page .shop-category-title::after { display: none; }
+.shop-page .shop-line-list {
+  gap: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.shop-page .shop-line-list .shop-tile,
+.shop-page .shop-line-list .shop-tile:hover,
+.shop-page .shop-line-list .shop-tile.done {
+  border: 0;
+  border-radius: 0;
+  background: var(--color-surface);
+  box-shadow: none;
+}
+.shop-page .shop-line-list .shop-tile + .shop-tile { border-top: 1px solid var(--color-line); }
+.shop-page .shop-line-list .shop-tile-main {
+  min-height: 56px;
+  padding: var(--space-2) 52px var(--space-2) 52px;
+  gap: var(--space-3);
+}
+.shop-page .shop-line-list .shop-tile-main .grocery-art,
+.shop-page .shop-line-list .shop-product-photo { width: 36px; height: 36px; }
+.shop-page .shop-line-list .shop-product-copy {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-2);
+  align-items: baseline;
+}
+.shop-page .shop-line-list .shop-product-name {
+  grid-column: 1 / -1;
+  font-size: var(--type-body-size);
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.shop-page .shop-line-list .shop-product-qty,
+.shop-page .shop-line-list .shop-product-note {
+  margin: 0;
+  min-height: 0;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.shop-page .shop-line-list .shop-product-note:empty { display: none; }
+.shop-page .shop-product-note.shop-waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+}
+.shop-page .shop-waiting svg { color: var(--color-warning); flex: none; }
+.shop-page .shop-line-list .shop-tile-check {
+  left: var(--space-4);
+  top: calc(50% - 12px);
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-text-muted);
+  opacity: 1;
+  background: transparent;
+}
+.shop-page .shop-line-list .shop-tile.done .shop-tile-check {
+  border-color: var(--color-accent-fill);
+  background: var(--color-accent-fill);
+}
+.shop-page .shop-line-list .shop-tile.done .shop-product-name {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+.shop-page .shop-line-list .shop-tile .shop-urgent {
+  position: absolute;
+  top: 50%;
+  left: auto;
+  right: 52px;
+  transform: translateY(-50%);
+  font-size: var(--type-label-size);
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+}
+.shop-page .shop-line-list .urgent .shop-tile-check { display: flex; }
+/* The badge sits over the row's right side; the text stops before it. */
+.shop-page .shop-line-list .shop-tile.urgent .shop-tile-main { padding-right: 148px; }
+.shop-page .shop-line-list .shop-product-copy { min-width: 0; }
+.shop-page .shop-line-list .shop-product-note { min-width: 0; }
+.shop-page .shop-line-list .shop-tile-menu {
+  top: calc(50% - 22px);
+  right: var(--space-1);
+  width: 44px;
+  height: 44px;
+  color: var(--color-text-muted);
+}
+/* With a mouse the menu appears on hover or focus; touch shows it, and a
+   long press opens the details as well. */
+@media (hover: hover) and (pointer: fine) {
+  .shop-page .shop-tile-menu { opacity: 0; }
+  .shop-page .shop-tile:hover .shop-tile-menu,
+  .shop-page .shop-tile:focus-within .shop-tile-menu { opacity: 1; }
+}
+.shopping-trip .shop-line-list .shop-tile-main { min-height: 72px; }
+.shopping-trip .shop-line-list .shop-product-name { font-size: var(--type-title-s-size); }
+
+/* Someone else out shopping with this list (Tribu 2.0, L4). */
+.shop-page .shop-shopper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--type-body-small-size);
+  font-weight: 600;
+}

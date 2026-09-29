@@ -5,11 +5,22 @@ import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 import { useWebSocket } from './useWebSocket';
 import { compareCheckedItems } from '../lib/shoppingPresentation';
+import { sendWhenOnline } from '../lib/offline';
 
 export function formatShoppingItemName(value) {
   const cleaned = value.trim();
   if (!cleaned) return cleaned;
   return `${cleaned.charAt(0).toUpperCase()}${cleaned.slice(1)}`;
+}
+
+// A check-off waiting for the network stays visible even when a reload
+// brings the server's older state.
+function withWaiting(items, pending) {
+  return items.map((item) => {
+    const operation = pending.get(item.id);
+    if (!operation?.waiting) return item;
+    return { ...item, checked: operation.optimistic.checked, checked_at: operation.optimistic.checked_at };
+  });
 }
 
 function cleanOptionalText(value) {
@@ -134,7 +145,12 @@ export function useShopping() {
   const [categories, setCategories] = useState([]);
   const [undoState, setUndoState] = useState(null);
   const [pendingItemIds, setPendingItemIds] = useState(new Set());
+  const [waitingItemIds, setWaitingItemIds] = useState(new Set());
   const pending = useRef(new Map());
+  const syncPending = useCallback(() => {
+    setPendingItemIds(new Set(pending.current.keys()));
+    setWaitingItemIds(new Set([...pending.current].filter(([, operation]) => operation.waiting).map(([id]) => id)));
+  }, []);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -168,7 +184,7 @@ export function useShopping() {
   useEffect(() => {
     setUndoState(null);
     pending.current.clear();
-    setPendingItemIds(new Set());
+    syncPending();
     setItems([]);
     setNewListName('');
     setNewItemName('');
@@ -269,6 +285,10 @@ export function useShopping() {
       case 'list_deleted':
         setShoppingLists((prev) => prev.filter((l) => l.id !== msg.list_id));
         break;
+
+      case 'shopper_changed':
+        setShoppingLists((prev) => prev.map((l) => l.id === msg.list_id ? { ...l, shopper: msg.shopper } : l));
+        break;
     }
   }, [setShoppingLists, loadShoppingLists, isCurrent, familyId]);
 
@@ -331,7 +351,7 @@ export function useShopping() {
     }
     api.apiGetShoppingItems(activeListId, true).then(({ ok, data }) => {
       if (!cancelled && ok && mounted.current && scope.current === requestScope && revision.current === version && readSequence.current === sequence) {
-        setItems(data);
+        setItems(withWaiting(data, pending.current));
         setUndoState((previous) => previous && sameStatus(data.find((item) => item.id === previous.id), previous) ? previous : null);
       }
     });
@@ -353,7 +373,7 @@ export function useShopping() {
     const sequence = ++readSequence.current;
     const { ok, data } = await api.apiGetShoppingItems(activeListId, true);
     if (ok && mounted.current && scope.current === requestScope && revision.current === version && readSequence.current === sequence) {
-      setItems(data);
+      setItems(withWaiting(data, pending.current));
       setUndoState((previous) => previous && sameStatus(data.find((item) => item.id === previous.id), previous) ? previous : null);
     }
   }, [activeListId, demoMode, isCurrent]);
@@ -529,17 +549,20 @@ export function useShopping() {
   async function changeChecked(item, checked, offerUndo) {
     const requestScope = scope.current;
     if (!isCurrent() || item.archived || pending.current.has(item.id) || item.list_id !== requestScope.listId) return;
-    const operation = { scope: requestScope };
+    const optimistic = { ...item, checked, checked_at: checked ? new Date().toISOString() : null };
+    const operation = { scope: requestScope, optimistic };
     pending.current.set(item.id, operation);
-    setPendingItemIds(new Set(pending.current.keys()));
+    syncPending();
     setUndoState(null);
     revision.current += 1;
-    const optimistic = { ...item, checked, checked_at: checked ? new Date().toISOString() : null };
     setItems((previous) => previous.map((entry) => entry.id === item.id ? optimistic : entry));
     try {
-      const result = await (demoMode ? { ok: true, data: optimistic } : api.apiUpdateShoppingItem(item.id, {
+      const result = await (demoMode ? { ok: true, data: optimistic } : sendWhenOnline(() => api.apiUpdateShoppingItem(item.id, {
         checked,
         expected_state: { list_id: item.list_id, checked: item.checked, checked_at: item.checked_at || null },
+      }), () => {
+        operation.waiting = true;
+        if (mounted.current && scope.current === requestScope) syncPending();
       }));
       if (!mounted.current || scope.current !== requestScope) return;
       if (!result.ok) throw new Error('Status update failed');
@@ -564,7 +587,7 @@ export function useShopping() {
     } finally {
       if (pending.current.get(item.id) === operation) pending.current.delete(item.id);
       if (mounted.current && scope.current === requestScope) {
-        setPendingItemIds(new Set(pending.current.keys()));
+        syncPending();
         if (!demoMode) {
           try {
             await reloadItems();
@@ -871,7 +894,7 @@ export function useShopping() {
     shoppingLists,
     activeListId, setActiveListId,
     activeList,
-    items, uncheckedItems, checkedItems, categories, undo, undoToggle, pendingItemIds,
+    items, uncheckedItems, checkedItems, categories, undo, undoToggle, pendingItemIds, waitingItemIds,
     newListName, setNewListName,
     newItemName, setNewItemName,
     newItemSpec, setNewItemSpec,

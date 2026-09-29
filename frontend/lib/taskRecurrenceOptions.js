@@ -2,6 +2,7 @@ export const TASK_RECURRENCE_OPTIONS = [
   '',
   'daily',
   'weekly',
+  'biweekly',
   'monthly',
   'monthly_first_monday',
   'monthly_first_tuesday',

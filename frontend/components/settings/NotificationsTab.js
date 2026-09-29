@@ -10,6 +10,7 @@ const PUSH_CATEGORY_DEFAULTS = {
   calendar_reminders: true,
   task_due: true,
   birthdays: true,
+  meal_reminders: true,
   event_assignments: false,
   shopping_changes: false,
   meal_plan_changes: false,
@@ -40,6 +41,7 @@ const PUSH_CATEGORY_GROUPS = [
   {
     titleKey: 'push_group_home',
     rows: [
+      ['meal_reminders', 'push_category_meal_reminders', 'push_category_meal_reminders_desc'],
       ['shopping_changes', 'push_category_shopping_changes', 'push_category_shopping_changes_desc'],
       ['meal_plan_changes', 'push_category_meal_plan_changes', 'push_category_meal_plan_changes_desc'],
     ],

@@ -14,33 +14,38 @@
     { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": { "title": "share_title", "text": "share_text", "url": "share_url" }
+  },
   "shortcuts": [
     {
-      "name": "Dashboard",
-      "short_name": "Today",
-      "description": "Open the family dashboard",
-      "url": "/?view=dashboard",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
-    },
-    {
-      "name": "Calendar",
-      "short_name": "Calendar",
-      "description": "Open events and birthdays",
-      "url": "/?view=calendar",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
-    },
-    {
-      "name": "Tasks",
-      "short_name": "Tasks",
-      "description": "Open household tasks",
-      "url": "/?view=tasks",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
-    },
-    {
-      "name": "Shopping",
+      "name": "Start shopping",
       "short_name": "Shopping",
-      "description": "Open shopping lists",
-      "url": "/?view=shopping",
+      "description": "Open the shopping list in shopping mode",
+      "url": "/?action=shopping-trip",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "New shopping item",
+      "short_name": "Add to list",
+      "description": "Put something on the shopping list",
+      "url": "/?action=new-shopping",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "New event",
+      "short_name": "New event",
+      "description": "Add an event to the calendar",
+      "url": "/?action=new-event",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Today",
+      "short_name": "Today",
+      "description": "Open the family's day",
+      "url": "/?view=dashboard",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

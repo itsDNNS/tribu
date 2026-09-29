@@ -84,7 +84,7 @@ describe('AppProvider bootstrap', () => {
       </AppProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('theme')).toHaveTextContent('light'));
+    await waitFor(() => expect(screen.getByTestId('theme')).toHaveTextContent('system'));
     expect(document.documentElement).toHaveAttribute('data-theme', 'light');
 
     fireEvent.click(screen.getByRole('button', { name: 'Switch dark theme' }));
@@ -92,6 +92,36 @@ describe('AppProvider bootstrap', () => {
     await waitFor(() => expect(screen.getByTestId('theme')).toHaveTextContent('dark'));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
     expect(window.localStorage.getItem('tribu_theme')).toBe('dark');
+  });
+
+  test('follows the device when the appearance is system', async () => {
+    const listeners = [];
+    const query = { matches: true, addEventListener: (_type, fn) => listeners.push(fn), removeEventListener: jest.fn() };
+    const original = window.matchMedia;
+    window.matchMedia = jest.fn(() => query);
+    try {
+      render(<AppProvider><Probe /></AppProvider>);
+      await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'dark'));
+      expect(screen.getByTestId('theme')).toHaveTextContent('system');
+      query.matches = false;
+      act(() => listeners.forEach((fn) => fn()));
+      await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'));
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  test('keeps a chosen language with the account for the app and reminders', async () => {
+    api.apiUpdateUiPreferences.mockResolvedValue({ ok: true, data: {} });
+    function LanguageProbe() {
+      const { setLang, loggedIn } = useApp();
+      return <button type="button" disabled={!loggedIn} onClick={() => setLang('de')}>German</button>;
+    }
+    render(<AppProvider><LanguageProbe /></AppProvider>);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'German' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'German' }));
+    expect(api.apiUpdateUiPreferences).toHaveBeenCalledWith({ language: 'de' });
+    await waitFor(() => expect(window.localStorage.getItem('tribu_lang')).toBe('de'));
   });
 
   test('restores a valid Sunday week-start preference', async () => {

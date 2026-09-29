@@ -12,7 +12,7 @@ test('settings header contains wrapped content above the overview', async ({ aut
         .map(animation => animation.finished.catch(() => {})));
     });
     const geometry = await page.evaluate(() => {
-      const header = document.querySelector('.tc-topbar');
+      const header = document.querySelector('.app-header');
       const visible = [...header.querySelectorAll('*')].filter(element => {
         const rect = element.getBoundingClientRect();
         return getComputedStyle(element).visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
@@ -20,7 +20,7 @@ test('settings header contains wrapped content above the overview', async ({ aut
       return {
         contentBottom: Math.max(...visible.map(element => element.getBoundingClientRect().bottom)),
         headerBottom: header.getBoundingClientRect().bottom,
-        headingTop: document.querySelector('.ms-header').getBoundingClientRect().top,
+        headingTop: document.querySelector('.ms-grid').getBoundingClientRect().top,
       };
     });
     expect(geometry.headerBottom, `${width}px: ${JSON.stringify(geometry)}`).toBeGreaterThanOrEqual(geometry.contentBottom);

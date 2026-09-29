@@ -2,117 +2,89 @@ const { test, expect } = require('../helpers/fixtures');
 const { getFamilyId, seedTask, completeTask } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
+// The undo window (hooks/useTasks.js) before a completion or deletion is sent.
+const UNDO_WINDOW_MS = 6000;
+
+async function openTasks(page, expectedTitle) {
+  await navigateTo(page, 'Tasks');
+  await page.getByRole('heading', { name: 'Tasks', level: 1 }).waitFor({ timeout: 10000 });
+  if (expectedTitle && !await page.getByText(expectedTitle).isVisible({ timeout: 3000 }).catch(() => false)) {
+    await page.reload();
+    await page.locator('#main-content').waitFor({ timeout: 10000 });
+    await navigateTo(page, 'Tasks');
+    await page.getByRole('heading', { name: 'Tasks', level: 1 }).waitFor({ timeout: 10000 });
+  }
+}
+
+function isoDaysFromNow(days, hour = 18) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  date.setHours(hour, 0, 0, 0);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:00:00`;
+}
+
 test.describe('Tasks', () => {
-  test('create a task via quick-add', async ({ authedPage: page }) => {
-    await navigateTo(page, 'Tasks');
-    await page.locator('.tasks-filter-tabs').waitFor({ timeout: 10000 });
+  test('create a task from the New task dialog', async ({ authedPage: page }) => {
+    await openTasks(page);
+    await page.getByRole('button', { name: 'New task' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New task' });
+    await dialog.getByLabel('Title').fill('E2E Dialog Task');
+    await dialog.getByRole('button', { name: 'Create task' }).click();
 
-    await page.locator('.quick-add-input').first().fill('E2E Quick Task');
-    await page.locator('[aria-label="Add task"]').click();
-
-    await expect(page.getByText('E2E Quick Task')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('E2E Dialog Task')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.quick-add-input')).toHaveCount(0);
   });
 
-  test('toggle a task open → done', async ({ authedPage: page, apiCtx }) => {
+  test('groups open tasks by due date and folds done ones away', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
-    await seedTask(apiCtx, familyId, { title: 'Toggle Me' });
+    await seedTask(apiCtx, familyId, { title: 'Was due yesterday', due_date: isoDaysFromNow(-1) });
+    await seedTask(apiCtx, familyId, { title: 'Due in three days', due_date: isoDaysFromNow(3) });
+    await seedTask(apiCtx, familyId, { title: 'Whenever' });
+    const done = await seedTask(apiCtx, familyId, { title: 'Finished already' });
+    await completeTask(apiCtx, done.id);
 
-    // Navigate to tasks — the view fetches fresh data from API
-    await navigateTo(page, 'Tasks');
-    await page.locator('.tasks-filter-tabs').waitFor({ timeout: 10000 });
+    await openTasks(page, 'Whenever');
+    await expect(page.getByRole('region', { name: 'Overdue' }).getByText('Was due yesterday')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('region', { name: 'Upcoming' }).getByText('Due in three days')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'No date' }).getByText('Whenever')).toBeVisible();
+    await expect(page.getByText('Finished already')).toHaveCount(0);
 
-    // If the task isn't visible yet, reload to pick up seeded data
-    const checkbox = page.locator('[role="checkbox"][aria-label="Mark task: Toggle Me"]');
-    if (!await checkbox.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await page.reload();
-      await page.locator('#main-content').waitFor({ timeout: 10000 });
-      await navigateTo(page, 'Tasks');
-      await page.locator('.tasks-filter-tabs').waitFor({ timeout: 10000 });
-    }
-
-    // Switch to "All" tab so the task stays visible after toggling to done
-    await page.locator('.tasks-filter-btn', { hasText: 'All' }).click();
-
-    await expect(checkbox).toBeVisible({ timeout: 10000 });
-    await expect(checkbox).toHaveAttribute('aria-checked', 'false');
-
-    await checkbox.click();
-    await expect(checkbox).toHaveAttribute('aria-checked', 'true', { timeout: 5000 });
+    await page.getByRole('region', { name: 'Done' }).getByRole('button', { name: /Done/ }).click();
+    await expect(page.getByText('Finished already')).toBeVisible();
   });
 
-  test('delete a task', async ({ authedPage: page, apiCtx }) => {
+  test('completing a task can be undone and is sent after the undo window', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
+    await seedTask(apiCtx, familyId, { title: 'Undo Me' });
+    await seedTask(apiCtx, familyId, { title: 'Finish Me' });
+    await openTasks(page, 'Finish Me');
+
+    await page.getByRole('checkbox', { name: 'Mark task: Undo Me' }).click();
+    await expect(page.getByText('Undo Me', { exact: true })).toHaveCount(0);
+    await page.locator('.toast__action', { hasText: 'Undo' }).first().click();
+    await expect(page.getByRole('checkbox', { name: 'Mark task: Undo Me' })).toHaveAttribute('aria-checked', 'false');
+
+    await page.getByRole('checkbox', { name: 'Mark task: Finish Me' }).click();
+    await page.waitForTimeout(UNDO_WINDOW_MS + 1500);
+    const tasks = await (await apiCtx.get(`/api/tasks?family_id=${familyId}`)).json();
+    const items = Array.isArray(tasks) ? tasks : tasks.items;
+    expect(items.find((task) => task.title === 'Finish Me').status).toBe('done');
+    expect(items.find((task) => task.title === 'Undo Me').status).toBe('open');
+  });
+
+  test('postpone and delete from the task actions', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    await seedTask(apiCtx, familyId, { title: 'Move Me' });
     await seedTask(apiCtx, familyId, { title: 'Delete This Task' });
+    await openTasks(page, 'Delete This Task');
 
-    await navigateTo(page, 'Tasks');
-    await page.locator('.tasks-filter-tabs').waitFor({ timeout: 10000 });
+    await page.getByRole('button', { name: 'Actions for Move Me' }).click();
+    await page.getByRole('dialog', { name: 'Move Me' }).getByRole('button', { name: 'Tomorrow' }).click();
+    await expect(page.getByRole('region', { name: 'Upcoming' }).getByText('Move Me')).toBeVisible({ timeout: 10000 });
 
-    if (!await page.getByText('Delete This Task').isVisible({ timeout: 3000 }).catch(() => false)) {
-      await page.reload();
-      await page.locator('#main-content').waitFor({ timeout: 10000 });
-      await navigateTo(page, 'Tasks');
-      await page.locator('.tasks-filter-tabs').waitFor({ timeout: 10000 });
-    }
-
-    await expect(page.getByText('Delete This Task')).toBeVisible({ timeout: 10000 });
-    await page.locator('[aria-label="Delete task: Delete This Task"]').click();
-    // ConfirmDialog appears - click the confirm button
-    await page.locator('.cal-dialog .btn-sm').first().click();
-    await expect(page.getByText('Delete This Task', { exact: true })).not.toBeVisible({ timeout: 10000 });
-  });
-
-  test('filter tabs work (All / Open / Done)', async ({ authedPage: page, apiCtx }) => {
-    const familyId = await getFamilyId(apiCtx);
-    await seedTask(apiCtx, familyId, { title: 'Still Open', priority: 'low' });
-    const doneTask = await seedTask(apiCtx, familyId, { title: 'Already Done', priority: 'high' });
-    await seedTask(apiCtx, familyId, { title: 'High Priority Open', priority: 'high' });
-    await completeTask(apiCtx, doneTask.id);
-
-    await navigateTo(page, 'Tasks');
-    await page.locator('.tasks-filter-tabs').waitFor({ timeout: 10000 });
-
-    if (!await page.getByText('Still Open').isVisible({ timeout: 3000 }).catch(() => false)) {
-      await page.reload();
-      await page.locator('#main-content').waitFor({ timeout: 10000 });
-      await navigateTo(page, 'Tasks');
-      await page.locator('.tasks-filter-tabs').waitFor({ timeout: 10000 });
-    }
-
-    // "All" tab — wait for both tasks to confirm data is loaded
-    await page.locator('.tasks-filter-btn', { hasText: 'All' }).click();
-    await expect(page.getByText('Still Open')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Already Done')).toBeVisible({ timeout: 5000 });
-
-    await page.getByRole('button', { name: 'Filters' }).click();
-    const controlsBox = await page.locator('.tasks-refine-controls').boundingBox();
-    const wrapperBox = await page.locator('.tasks-wrapper').boundingBox();
-    const viewportWidth = page.viewportSize()?.width ?? 0;
-    expect(controlsBox).not.toBeNull();
-    expect(wrapperBox).not.toBeNull();
-    expect(controlsBox.x).toBeGreaterThanOrEqual(wrapperBox.x - 1);
-    expect(controlsBox.x + controlsBox.width).toBeLessThanOrEqual(wrapperBox.x + wrapperBox.width + 1);
-    expect(controlsBox.x + controlsBox.width).toBeLessThanOrEqual(viewportWidth + 1);
-    for (const input of await page.locator('.tasks-refine-input').all()) {
-      const inputBox = await input.boundingBox();
-      expect(inputBox).not.toBeNull();
-      expect(inputBox.x).toBeGreaterThanOrEqual(controlsBox.x - 1);
-      expect(inputBox.x + inputBox.width).toBeLessThanOrEqual(controlsBox.x + controlsBox.width + 1);
-    }
-
-    // "Open" tab
-    await page.locator('.tasks-state-btn', { hasText: 'Open' }).click();
-    await expect(page.getByText('Still Open')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('High Priority Open')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Already Done')).not.toBeVisible({ timeout: 3000 });
-
-    await page.getByLabel('Filter by priority', { exact: true }).selectOption('high');
-    await expect(page.getByText('High Priority Open')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Still Open')).not.toBeVisible({ timeout: 3000 });
-    await page.getByLabel('Filter by priority', { exact: true }).selectOption('');
-
-    // "Done" tab
-    await page.locator('.tasks-state-btn', { hasText: 'Done' }).click();
-    await expect(page.getByText('Already Done')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Still Open')).not.toBeVisible({ timeout: 3000 });
+    await page.getByRole('button', { name: 'Actions for Delete This Task' }).click();
+    await page.getByRole('dialog', { name: 'Delete This Task' }).getByRole('button', { name: 'Delete task' }).click();
+    await expect(page.getByText('Delete This Task', { exact: true })).toHaveCount(0);
   });
 });

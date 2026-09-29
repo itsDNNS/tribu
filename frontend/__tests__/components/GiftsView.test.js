@@ -1,6 +1,7 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import GiftsView from '../../components/GiftsView';
+import { handOff, peekHandOff } from '../../lib/handoff';
 
 jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({ success: jest.fn(), error: jest.fn() }),
@@ -104,6 +105,35 @@ describe('GiftsView gating', () => {
     fireEvent.click(addButton);
     expect(screen.getByPlaceholderText('Was schenken?')).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  test('opens a prefilled idea for a birthday from the family hub', async () => {
+    handOff('gifts_focus', { name: 'Opa Karl', memberId: null, date: '2026-10-06', add: true });
+    mockAppState = baseState();
+    render(<GiftsView />);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Opa Karl')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('2026-10-06')).toBeInTheDocument();
+    expect(peekHandOff('gifts_focus')).toBeUndefined();
+  });
+
+  test('shows only the ideas for someone outside the family', async () => {
+    handOff('gifts_focus', { name: 'Opa Karl', memberId: null, date: '2026-10-06', add: false });
+    apiGetGifts.mockResolvedValue({
+      ok: true,
+      data: {
+        items: [
+          { id: 1, title: 'Gartenschere', status: 'idea', for_user_id: null, for_person_name: 'Opa Karl' },
+          { id: 2, title: 'Hörbuch', status: 'idea', for_user_id: null, for_person_name: 'Tante Eva' },
+        ],
+        total: 2,
+      },
+    });
+    mockAppState = baseState();
+    render(<GiftsView />);
+    expect(await screen.findByText('Gartenschere')).toBeInTheDocument();
+    expect(screen.queryByText('Hörbuch')).not.toBeInTheDocument();
+    expect(apiGetGifts).toHaveBeenLastCalledWith('1', expect.objectContaining({ forUserId: null }));
   });
 
   test('renders gift cards with the redesigned toolbar and status controls', async () => {

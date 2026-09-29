@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, ShoppingItem, Task, User
+from app.models import Family, Membership, Notification, PersonalAccessToken, ShoppingItem, Task, User, UserNavOrder
 from app.security import PAT_PREFIX, hash_password
 
 
@@ -114,6 +114,7 @@ def test_quick_capture_routes_to_task_shopping_and_inbox_public_safely():
     assert item["status"] == "open"
     assert "family_id" not in item
     assert "created_by_user_id" not in item
+    assert item["suggested_by_user_id"] is None
     assert "converted_object_id" not in item
 
     db = TestSession()
@@ -263,3 +264,49 @@ def test_quick_capture_scope_and_adult_rules():
         headers=_auth(bad_scope_token),
     )
     assert invalid.status_code == 403
+
+
+def test_children_suggest_into_the_inbox_and_adults_are_told():
+    adult_token, family_id, adult_id = _seed_member("*", "parent")
+    child_token, _, child_id = _seed_member("*", "kid", is_adult=False, family_id=family_id)
+    with TestSession() as db:
+        db.get(User, child_id).display_name = "Lena Braun"
+        db.add(UserNavOrder(user_id=adult_id, nav_order=[], ui_language="de"))
+        db.commit()
+
+    for destination in ("task", "shopping"):
+        direct = client.post(
+            "/quick-capture",
+            json={"family_id": family_id, "text": "Pizza", "destination": destination},
+            headers=_auth(child_token),
+        )
+        assert direct.status_code == 403
+
+    suggested = client.post(
+        "/quick-capture",
+        json={"family_id": family_id, "text": "Pizza on Friday"},
+        headers=_auth(child_token),
+    )
+    assert suggested.status_code == 200, suggested.json()
+    assert suggested.json()["destination"] == "inbox"
+    assert suggested.json()["inbox_item"]["suggested_by_user_id"] == child_id
+
+    inbox = client.get(f"/quick-capture/inbox?family_id={family_id}", headers=_auth(adult_token)).json()
+    assert [(item["text"], item["suggested_by_user_id"]) for item in inbox["items"]] == [("Pizza on Friday", child_id)]
+
+    with TestSession() as db:
+        notes = db.query(Notification).filter(Notification.type == "capture_suggestion").all()
+        # Only the adult hears about it, in their language.
+        assert [(n.user_id, n.title, n.body, n.link) for n in notes] == [
+            (adult_id, "Pizza on Friday", "Vorschlag von Lena", "/dashboard?inbox=1"),
+        ]
+
+    # The adult confirms it; the child still cannot.
+    item_id = inbox["items"][0]["id"]
+    assert client.post(
+        f"/quick-capture/inbox/{item_id}/convert", json={"destination": "task"}, headers=_auth(child_token),
+    ).status_code == 403
+    converted = client.post(
+        f"/quick-capture/inbox/{item_id}/convert", json={"destination": "task"}, headers=_auth(adult_token),
+    )
+    assert converted.status_code == 200

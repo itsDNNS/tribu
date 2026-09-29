@@ -1,5 +1,5 @@
 const { test, expect } = require('../helpers/fixtures');
-const { getFamilyId, seedCalendarEvent, seedTask, seedShoppingList, seedShoppingItem } = require('../helpers/api-setup');
+const { getFamilyId, seedCalendarEvent, seedTask, seedShoppingList, seedShoppingItem, seedMealPlan } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
 function parseRgb(value) {
@@ -38,240 +38,103 @@ function localIsoDaysFromToday(daysFromToday, hour = 9, minute = 0) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(hour)}:${pad(minute)}:00`;
 }
 
-test.describe('Dashboard', () => {
-  test('shows greeting with username', async ({ authedPage: page, testUser }) => {
-    const greeting = page.locator('.view-title');
-    await expect(greeting).toBeVisible({ timeout: 10000 });
-    await expect(greeting).toContainText(testUser.displayName);
-  });
+test.describe('Today', () => {
+  test('greets once and keeps search in the header', async ({ authedPage: page, testUser }, testInfo) => {
+    const heading = page.getByRole('heading', { level: 1 });
+    await expect(heading).toContainText(testUser.displayName.split(' ')[0], { timeout: 10000 });
+    await expect(page.locator('.today-head p')).toBeVisible();
 
-  test('keeps duplicate summary counts out of the dashboard header', async ({ authedPage: page }) => {
-    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('group', { name: 'Family at a glance' })).toHaveCount(0);
-    await expect(page.getByTestId('hero-chip-members')).toHaveCount(0);
-    await expect(page.getByTestId('hero-chip-events')).toHaveCount(0);
-    await expect(page.getByTestId('hero-chip-tasks')).toHaveCount(0);
-    await expect(page.getByRole('region', { name: 'Next events' })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
-  });
-
-  test('moves search into the dashboard header and removes the duplicate date chip', async ({ authedPage: page }, testInfo) => {
-    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.dashboard-header-actions .view-date')).toHaveCount(0);
-    await expect(page.locator('.sidebar-search-btn')).toHaveCount(0);
-    await expect(page.getByTestId('dashboard-clock')).toBeVisible();
-    await expect(page.getByTestId('dashboard-clock')).toContainText(/^\d{1,2}:\d{2}(\s?[AP]M)?$/i);
-
-    const dashboardSearch = page.locator('.dashboard-header-actions .dashboard-search-btn');
+    // One header on every page; phones name the area and greet on Today.
     if (testInfo.project.name.includes('Mobile')) {
-      await expect(dashboardSearch).toBeHidden();
-      await page.locator('.mobile-header').getByRole('button', { name: /Search|Suchen/i }).click();
-      await expect(page.locator('.search-overlay')).toBeVisible();
-      await expect(page.getByPlaceholder(/Search|suchen/i)).toBeFocused();
-      return;
+      await expect(page.locator('.app-header-title')).toContainText(testUser.displayName.split(' ')[0]);
     }
-
-    await expect(dashboardSearch).toBeVisible();
-    await dashboardSearch.click();
+    await page.locator('.app-header').getByRole('button', { name: /Search/i }).click();
     await expect(page.locator('.search-overlay')).toBeVisible();
-    await expect(page.getByPlaceholder(/Search/i)).toBeFocused();
+    await expect(page.getByPlaceholder(/Search|suchen/i)).toBeFocused();
   });
 
-  test('shows a future next-up date and time without overflowing', async ({ authedPage: page, apiCtx }) => {
-    const startsAt = localIsoDaysFromToday(2, 9, 0);
-    const expectedDay = String(new Date(startsAt).getDate());
-    const expectedMonth = new Date(startsAt).toLocaleDateString('en-US', { month: 'short' });
+  test('shows the day, the week ahead and folds overdue tasks', async ({ authedPage: page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
-    let event;
-    let primaryError;
+    const today = localIsoDaysFromToday(0, 0, 0).slice(0, 10);
+    await seedTask(apiCtx, familyId, { title: 'E2E today task', due_date: `${today}T00:00:00`, due_is_date: true });
+    await seedTask(apiCtx, familyId, { title: 'E2E overdue task', due_date: localIsoDaysFromToday(-3, 0, 0), due_is_date: true });
+    await seedCalendarEvent(apiCtx, familyId, {
+      title: 'E2E all-day event', starts_at: `${today}T00:00:00`, ends_at: `${localIsoDaysFromToday(1, 0, 0)}`, all_day: true,
+    });
+    await seedCalendarEvent(apiCtx, familyId, { title: 'E2E tomorrow event', starts_at: localIsoDaysFromToday(1, 9, 0) });
+    await seedMealPlan(apiCtx, familyId, { plan_date: today, meal_name: 'E2E pasta', slot: 'noon' });
 
-    try {
-      event = await seedCalendarEvent(apiCtx, familyId, {
-        title: 'Future next-up chip event',
-        starts_at: startsAt,
-        location: 'Kitchen calendar',
-      });
+    await page.reload();
+    const day = page.locator('#main-content').getByRole('region', { name: 'Today' });
+    await expect(day).toContainText('E2E today task', { timeout: 10000 });
+    await expect(day).toContainText('E2E pasta');
+    await expect(day.locator('.today-row-meal')).toContainText('Noon');
+    const allDay = day.locator('.today-row', { hasText: 'E2E all-day event' });
+    await expect(allDay.locator('.today-row-time')).toHaveText('');
+    await expect(day).not.toContainText('E2E overdue task');
+    await expect(day).not.toContainText('E2E tomorrow event');
 
-      await page.reload();
-      await expect(page.getByRole('region', { name: 'Next up' })).toBeVisible({ timeout: 10000 });
+    const week = page.getByRole('region', { name: 'This week' });
+    await expect(week).toContainText('E2E tomorrow event');
+    await expect(week.locator('.today-week-item', { hasText: 'E2E tomorrow event' })).toContainText(/0?9:00/);
 
-      const nextUp = page.getByRole('region', { name: 'Next up' });
-      await expect(nextUp).toContainText('Future next-up chip event');
-      const chip = nextUp.locator('.next-up-time-chip');
-      await expect(chip.locator('strong')).toContainText(expectedDay);
-      await expect(chip).toContainText(expectedMonth);
-      await expect(nextUp.locator('.next-up-day-label')).toContainText('in 2 days');
-      await expect(nextUp.locator('.next-up-meta').first()).toContainText(/^0?9:00(\s?[AP]M)?$/i);
+    const overdue = page.locator('.today-overdue');
+    await expect(overdue.getByText('E2E overdue task')).toBeHidden();
+    await overdue.getByText('Still open').click();
+    await expect(overdue.getByText('E2E overdue task')).toBeVisible();
 
-      const chipBox = await chip.boundingBox();
-      const cardBox = await nextUp.boundingBox();
-      expect(chipBox).not.toBeNull();
-      expect(cardBox).not.toBeNull();
-      expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
-      expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(cardBox.y + cardBox.height + 1);
-    } catch (error) {
-      primaryError = error;
-      throw error;
-    } finally {
-      if (event?.id) {
-        const cleanup = await apiCtx.delete(`/api/calendar/events/${event.id}`);
-        if (!cleanup.ok() && !primaryError) {
-          throw new Error(`Failed to clean up dashboard event ${event.id}: ${cleanup.status()}`);
-        }
-      }
-    }
+    await week.getByRole('button', { name: /E2E tomorrow event/ }).click();
+    await expect(page.locator('.tc-calendar-grid, .ui-month-grid, .ui-day-strip').first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('keeps dashboard header search usable on narrow desktop widths', async ({ authedPage: page }) => {
-    await page.setViewportSize({ width: 1024, height: 720 });
-    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
+  test('an event opens its details over Today (K5)', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const today = localIsoDaysFromToday(0, 0, 0).slice(0, 10);
+    await seedCalendarEvent(apiCtx, familyId, {
+      title: 'E2E parents evening', starts_at: `${today}T23:00:00`, ends_at: `${today}T23:30:00`, location: 'School hall',
+    });
 
-    const header = page.locator('.today-command-header');
-    const dashboardSearch = header.locator('.dashboard-search-btn');
-    await expect(dashboardSearch).toBeVisible();
+    await page.reload();
+    const day = page.locator('#main-content').getByRole('region', { name: 'Today' });
+    await day.getByRole('button', { name: /E2E parents evening/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'A family moment' });
+    await expect(dialog).toContainText('E2E parents evening');
+    await expect(dialog).toContainText('School hall');
 
-    const headerBox = await header.boundingBox();
-    const searchBox = await dashboardSearch.boundingBox();
-    expect(headerBox).not.toBeNull();
-    expect(searchBox).not.toBeNull();
-    expect(searchBox.x + searchBox.width).toBeLessThanOrEqual(headerBox.x + headerBox.width + 1);
-    expect(searchBox.width).toBeGreaterThanOrEqual(280);
+    await dialog.getByRole('button', { name: 'Show in calendar' }).click();
+    await expect(page.getByRole('heading', { name: 'Calendar', level: 1 })).toBeVisible({ timeout: 10000 });
   });
 
-  test('keeps mobile dashboard header and cards tightly stacked', async ({ authedPage: page }) => {
-    await page.setViewportSize({ width: 485, height: 873 });
-    await expect(page.getByRole('region', { name: 'Quick capture' })).toBeVisible({ timeout: 10000 });
+  test('completes a task from Today with undo', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const today = localIsoDaysFromToday(0, 0, 0).slice(0, 10);
+    const task = await seedTask(apiCtx, familyId, { title: 'E2E tick me', due_date: `${today}T00:00:00`, due_is_date: true });
+    const status = async () => {
+      const res = await apiCtx.get(`/api/tasks?family_id=${familyId}`);
+      return (await res.json()).items.find((item) => item.id === task.id)?.status;
+    };
 
-    const dateLine = page.locator('.today-command-family');
-    const dashboardSearch = page.locator('.dashboard-search-btn');
-    const notificationToggle = page.locator('.dashboard-notifications-action');
-    const layoutToggle = page.locator('.dashboard-layout-toggle');
-    const nextUp = page.locator('.next-up-card');
-    const statusCard = page.locator('.today-status-card');
-    const quickCapture = page.getByRole('region', { name: 'Quick capture' });
-    const dailyLoop = page.getByRole('region', { name: 'Daily routines' });
-    const setupChecklist = page.getByRole('region', { name: 'Set up your first week' });
+    await page.reload();
+    const check = page.getByRole('checkbox', { name: 'Mark task: E2E tick me' });
+    await check.click({ timeout: 10000 });
+    await expect(check).toHaveAttribute('aria-checked', 'true');
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(check).toHaveAttribute('aria-checked', 'false');
+    expect(await status()).toBe('open');
 
-    const boxes = await Promise.all([
-      dateLine.boundingBox(),
-      nextUp.boundingBox(),
-      statusCard.boundingBox(),
-      quickCapture.boundingBox(),
-      dailyLoop.boundingBox(),
-      setupChecklist.boundingBox(),
-    ]);
-    for (const box of boxes) expect(box).not.toBeNull();
-
-    const [dateBox, nextUpBox, statusBox, quickCaptureBox, dailyLoopBox, setupBox] = boxes;
-    expect(await dashboardSearch.isVisible()).toBe(false);
-    expect(await notificationToggle.isVisible()).toBe(false);
-    expect(await layoutToggle.isVisible()).toBe(false);
-    await expect(page.locator('.ui-mobile-header').getByRole('button')).toHaveCount(3);
-    await page.getByRole('button',{name:'Open menu',exact:true}).click();
-    await expect(page.getByRole('dialog').locator('.mobile-dashboard-layout-btn')).toBeVisible();
-    await page.keyboard.press('Escape');
-    expect(await statusCard.isVisible()).toBe(true);
-    expect(nextUpBox.y - (dateBox.y + dateBox.height)).toBeLessThanOrEqual(40);
-    expect(statusBox.y).toBeGreaterThan(nextUpBox.y + nextUpBox.height);
-    expect(quickCaptureBox.y).toBeGreaterThan(statusBox.y + statusBox.height);
-    expect(dailyLoopBox.y).toBeGreaterThan(quickCaptureBox.y + quickCaptureBox.height);
-    expect(setupBox.y).toBeGreaterThan(dailyLoopBox.y + dailyLoopBox.height);
-    const moduleBoxes = await page.locator('[data-dashboard-module]').evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().toJSON()).sort((a, b) => a.y - b.y));
-    for (let index = 1; index < moduleBoxes.length; index += 1) {
-      const gap = moduleBoxes[index].y - moduleBoxes[index - 1].bottom;
-      expect(gap).toBeGreaterThanOrEqual(0);
-      expect(gap).toBeLessThanOrEqual(24);
-    }
-  });
-
-  test('quick capture shortcuts navigate to planning views', async ({ authedPage: page }) => {
-    const quickCapture = page.getByRole('region', { name: 'Quick capture' });
-    await quickCapture.waitFor({ timeout: 10000 });
-
-    // Event → Calendar
-    await quickCapture.getByRole('button', { name: 'Event' }).click();
-    await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: 'Month', exact: true })).toHaveAttribute('aria-pressed', 'true');
-
-    // Back to Dashboard
-    await navigateTo(page, 'Home');
-    await page.getByRole('region', { name: 'Quick capture' }).waitFor({ timeout: 10000 });
-
-    // Meal → Meal plan
-    await page.getByRole('region', { name: 'Quick capture' }).getByRole('button', { name: 'Meal' }).click();
-    await expect(page.getByRole('heading', { name: 'Meal plan' })).toBeVisible({ timeout: 10000 });
-
-    // Back to Dashboard
-    await navigateTo(page, 'Home');
-    await page.getByRole('region', { name: 'Quick capture' }).waitFor({ timeout: 10000 });
-
-    await quickCapture.getByPlaceholder('Note an event, task, or shopping thought…').fill('Buy apples from market');
-    await expect(quickCapture.getByRole('button', { name: 'Task' })).toBeEnabled();
-    await expect(quickCapture.getByRole('button', { name: 'Shopping' })).toBeEnabled();
-    await expect(quickCapture.getByRole('button', { name: 'Note' })).toBeEnabled();
-  });
-
-  test('keeps the quick capture placeholder readable in all themes', async ({ authedPage: page }) => {
-    for (const theme of ['light', 'dark', 'midnight-glass']) {
-      await page.evaluate((themeKey) => {
-        window.localStorage.setItem('tribu_theme', themeKey);
-      }, theme);
-      await page.reload();
-      await expect(page.locator('html')).toHaveAttribute('data-theme', theme, { timeout: 10000 });
-
-      const input = page.locator('.quick-capture-input');
-      await expect(input).toBeVisible({ timeout: 10000 });
-      const colors = await input.evaluate((element) => {
-        const inputStyle = window.getComputedStyle(element);
-        const placeholderStyle = window.getComputedStyle(element, '::placeholder');
-        const surfaceStyle = window.getComputedStyle(element.closest('.bento-card'));
-        return {
-          inputBackground: inputStyle.backgroundColor,
-          inputColor: inputStyle.color,
-          placeholderColor: placeholderStyle.color,
-          placeholderOpacity: Number(placeholderStyle.opacity),
-          surfaceBackground: surfaceStyle.backgroundColor,
-        };
-      });
-
-      const renderedBackground = compositeRgb(colors.inputBackground, colors.surfaceBackground);
-      const renderedPlaceholder = compositeRgb(colors.placeholderColor, renderedBackground, colors.placeholderOpacity);
-      const ratio = contrastRatio(renderedPlaceholder, renderedBackground);
-      expect(ratio, `${theme} quick capture placeholder contrast`).toBeGreaterThanOrEqual(4.5);
-
-      await input.fill('Readable quick capture text');
-      await expect(input).toHaveValue('Readable quick capture text');
-      const inputRatio = contrastRatio(parseRgb(colors.inputColor), renderedBackground);
-      expect(inputRatio, `${theme} quick capture text contrast`).toBeGreaterThanOrEqual(4.5);
-    }
-  });
-
-  test('today status tiles navigate to their owning modules', async ({ authedPage: page }) => {
-    const todayStatus = page.getByRole('group', { name: 'Today status' });
-    await expect(todayStatus).toBeVisible({ timeout: 10000 });
-
-    await todayStatus.getByRole('button', { name: /Events/i }).click();
-    await expect(page.locator('.tc-calendar-grid, .ui-month-grid')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: 'Month', exact: true })).toHaveAttribute('aria-pressed', 'true');
-
-    await navigateTo(page, 'Home');
-    await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });
-    await page.getByRole('group', { name: 'Today status' }).getByRole('button', { name: /Shopping/i }).click();
-    await expect(page.getByRole('navigation', {name:'Shopping lists'})).toBeVisible({ timeout: 10000 });
-
-    await navigateTo(page, 'Home');
-    await page.getByRole('group', { name: 'Today status' }).waitFor({ timeout: 10000 });
-    await page.getByRole('group', { name: 'Today status' }).getByRole('button', { name: /Tasks/i }).click();
-    await expect(page.locator('.tasks-filter-tabs')).toBeVisible({ timeout: 10000 });
+    await check.click();
+    await expect.poll(status, { timeout: 15000 }).toBe('done');
   });
 
   test('shows and dismisses the first-week setup checklist', async ({ authedPage: page }) => {
-    const checklist = page.getByRole('region', { name: 'Set up your first week' });
-    await expect(checklist).toBeVisible({ timeout: 10000 });
+    const hint = page.getByRole('region', { name: 'Set up your first week' }).first();
+    await expect(hint).toBeVisible({ timeout: 10000 });
+    await hint.getByRole('button', { name: /Continue/ }).click();
+    const checklist = page.locator('.setup-checklist-panel');
     await expect(checklist).toContainText('Invite your family');
     await expect(checklist).toContainText('Create a shared shopping list');
     await checklist.getByRole('button', { name: 'Hide for later' }).click();
-    await expect(checklist).not.toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('region', { name: 'Set up your first week' })).toHaveCount(0, { timeout: 10000 });
   });
 
   test('moves household activity to a dedicated history view', async ({ authedPage: page, apiCtx, testUser }) => {
@@ -294,63 +157,45 @@ test.describe('Dashboard', () => {
     await navigateTo(page, 'Activity');
     await expect(page.getByRole('heading', { name: 'Activity history' })).toBeVisible({ timeout: 10000 });
     const activityFeed = page.getByRole('region', { name: 'Recent activity' });
-    await expect(activityFeed).toContainText(`${testUser.displayName} created task "E2E Activity Task"`, { timeout: 10000 });
-    await expect(activityFeed).toContainText(`${testUser.displayName} created calendar event "E2E Calendar Activity"`, { timeout: 10000 });
+    // Phrased by the client from the entry's action and object name.
+    await expect(activityFeed).toContainText(`${testUser.displayName} created “E2E Activity Task”`, { timeout: 10000 });
+    await expect(activityFeed).toContainText(`${testUser.displayName} added the event “E2E Calendar Activity”`, { timeout: 10000 });
     await expect(activityFeed).not.toContainText('private detail');
     await expect(activityFeed).not.toContainText('calendar private location');
   });
 
-  test('captures a quick note and triages it from the dashboard inbox', async ({ authedPage: page }) => {
-    const quickCapture = page.getByRole('region', { name: 'Quick capture' });
-    await expect(quickCapture).toBeVisible({ timeout: 10000 });
+  test('triages a quick note from Today', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const res = await apiCtx.post('/api/quick-capture', { data: { family_id: familyId, text: 'Buy apples from market', destination: 'inbox' } });
+    expect(res.ok()).toBeTruthy();
+    await page.reload();
 
-    await quickCapture.getByPlaceholder('Note an event, task, or shopping thought…').fill('Buy apples from market');
-    await quickCapture.getByRole('button', { name: 'Note' }).click();
-
-    await quickCapture.locator('.quick-capture-inbox-title').click();
-    await expect(quickCapture).toContainText('Buy apples from market', { timeout: 10000 });
-    await quickCapture.locator('.quick-capture-item-actions').getByRole('button', { name: 'Shopping' }).click();
-    await expect(quickCapture).not.toContainText('Buy apples from market', { timeout: 10000 });
+    const hint = page.getByRole('region', { name: 'Inbox' });
+    await expect(hint).toContainText('1 quick note open', { timeout: 10000 });
+    await hint.getByRole('button', { name: /Review/ }).click();
+    await expect(hint).toContainText('Buy apples from market');
+    await hint.getByRole('button', { name: 'Shopping', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Inbox' })).toHaveCount(0, { timeout: 10000 });
   });
 
-  test('customizes dashboard module order and keeps it after reload', async ({ authedPage: page }) => {
-    const openCustomization = async () => {
-      if (page.viewportSize().width <= 768) {
-        await page.locator('.ui-bottom-nav').getByRole('button', { name: 'More', exact: true }).click();
-        await expect(page.getByRole('dialog')).toBeVisible();
-      }
-      await page.getByRole('button', { name: 'Customize layout', exact: true }).click();
-      await expect(page.getByRole('dialog')).toHaveCount(0);
-    };
-    const tasksModule = page.locator('[data-dashboard-module="tasks"]');
-    const eventsModule = page.locator('[data-dashboard-module="events"]');
-    const dailyLoopModule = page.locator('[data-dashboard-module="daily_loop"]');
-    await expect(tasksModule).toBeVisible({ timeout: 10000 });
-    await expect(dailyLoopModule).toHaveCSS('order', '4');
-    await expect(eventsModule).toHaveCSS('order', '1');
-    await expect(tasksModule).toHaveCSS('order', '2');
-
-    await openCustomization();
-    const saved = page.waitForResponse((response) => response.url().includes('/dashboard-layout') && response.request().method() === 'PUT');
-    await page.getByRole('button', { name: 'Move Open tasks up' }).click();
-    expect((await saved).ok()).toBeTruthy();
-
-    await expect(tasksModule).toHaveCSS('order', '1');
-    await expect(eventsModule).toHaveCSS('order', '2');
-
-    await page.reload();
-    await page.locator('#main-content').waitFor({ timeout: 15000 });
-    await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '1');
-    await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '2');
-
-    await openCustomization();
-    const reset = page.waitForResponse((response) => response.url().includes('/dashboard-layout') && response.request().method() === 'DELETE');
-    await page.getByRole('button', { name: 'Reset layout' }).click();
-    expect((await reset).ok()).toBeTruthy();
-    await page.reload();
-    await expect(page.locator('[data-dashboard-module="daily_loop"]')).toHaveCSS('order', '4');
-    await expect(page.locator('[data-dashboard-module="events"]')).toHaveCSS('order', '1');
-    await expect(page.locator('[data-dashboard-module="tasks"]')).toHaveCSS('order', '2');
+  test('keeps the timeline readable in all themes', async ({ authedPage: page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const today = localIsoDaysFromToday(0, 0, 0).slice(0, 10);
+    await seedTask(apiCtx, familyId, { title: 'E2E contrast task', due_date: `${today}T00:00:00`, due_is_date: true });
+    for (const theme of ['light', 'dark', 'midnight-glass']) {
+      await page.evaluate((themeKey) => window.localStorage.setItem('tribu_theme', themeKey), theme);
+      await page.reload();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme, { timeout: 10000 });
+      const row = page.locator('.today-row', { hasText: 'E2E contrast task' });
+      await expect(row).toBeVisible({ timeout: 10000 });
+      const colors = await row.evaluate((element) => ({
+        title: getComputedStyle(element.querySelector('.today-row-title')).color,
+        surface: getComputedStyle(element.closest('.today-list')).backgroundColor,
+        page: getComputedStyle(document.body).backgroundColor,
+      }));
+      const surface = compositeRgb(colors.surface, parseRgb(colors.page));
+      expect(contrastRatio(parseRgb(colors.title), surface), `${theme} timeline text contrast`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   test('keeps weekly plan cards and filters readable in all themes', async ({ authedPage: page, apiCtx }) => {
@@ -371,7 +216,7 @@ test.describe('Dashboard', () => {
       const checks = await page.evaluate(() => {
         const selectors = [
           '.weekly-plan-header h1',
-          '.weekly-plan-header p',
+          '.weekly-plan-week-pill',
           '.weekly-plan-member-filter span',
           '.weekly-plan-member-filter select',
           '.weekly-plan-section-filters label',
@@ -382,7 +227,8 @@ test.describe('Dashboard', () => {
         return selectors.flatMap((selector) => {
           const element = document.querySelector(selector);
           if (!element) return [];
-          const surface = element?.closest('.weekly-plan-header, .weekly-plan-section li, .weekly-plan-section, .weekly-plan-filters') || element;
+          // The plain title sits on the page, the week on its pill.
+          const surface = element?.closest('.weekly-plan-week-pill, .weekly-plan-section li, .weekly-plan-section, .weekly-plan-filters') || document.body;
           const elementStyle = window.getComputedStyle(element);
           const surfaceStyle = window.getComputedStyle(surface);
           return [{
@@ -433,28 +279,22 @@ test.describe('Dashboard', () => {
         return element ? window.getComputedStyle(element) : null;
       };
       const pageStyle = styleOf('.weekly-plan-page');
-      const headerStyle = styleOf('.weekly-plan-header');
       const sectionStyle = styleOf('.weekly-plan-section');
       const toolbarStyle = styleOf('.weekly-plan-toolbar');
-      const iconStyle = styleOf('.weekly-plan-header-icon');
       const navStyle = styleOf('.bottom-nav');
       return {
         pageBackground: pageStyle?.backgroundColor,
-        headerBackground: headerStyle?.backgroundColor,
         sectionBackground: sectionStyle?.backgroundColor,
         headerColor: styleOf('.weekly-plan-header h1')?.color,
         toolbarDisplay: toolbarStyle?.display,
-        iconDisplay: iconStyle?.display,
         bottomNavDisplay: navStyle?.display || 'none',
       };
     });
 
     expect(printState.pageBackground).toBe('rgb(255, 255, 255)');
-    expect(printState.headerBackground).toBe('rgb(255, 255, 255)');
     expect(printState.sectionBackground).toBe('rgb(255, 255, 255)');
     expect(printState.headerColor).toBe('rgb(26, 21, 32)');
     expect(printState.toolbarDisplay).toBe('none');
-    expect(printState.iconDisplay).toBe('none');
     expect(printState.bottomNavDisplay).toBe('none');
     await page.emulateMedia({ media: 'screen' });
   });

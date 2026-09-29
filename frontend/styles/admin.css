@@ -12,11 +12,6 @@
   --fam-purple: var(--dashboard-purple, #75518e);
   --fam-tint: var(--dashboard-purple-bg, #f3edf9);
 }
-.mockup-admin-page .today-command-header {
-  min-height: 78px;
-  height: auto;
-  margin: 0;
-}
 .fam-page {
   container-type: inline-size;
   margin: 6px 0 20px;
@@ -963,9 +958,6 @@
   .mockup-admin-page {
     padding: 0 9px;
   }
-  .mockup-admin-page .today-command-header {
-    display: none;
-  }
   .fam-page {
     margin-top: 14px;
   }
@@ -1450,3 +1442,4 @@
   margin: 0;
   color: var(--danger);
 }
+.mockup-admin-page .admin-back { align-self: flex-start; min-height: 34px; margin-bottom: 14px; font-size: 12px; }

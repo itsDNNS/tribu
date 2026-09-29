@@ -58,6 +58,7 @@ def record_activity(
         action=action,
         object_type=object_type,
         object_id=object_id,
+        object_label=safe_activity_label(object_label),
         summary=build_activity_summary(actor_display_name, verb, object_label, object_kind=object_kind),
     )
     db.add(activity)

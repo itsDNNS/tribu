@@ -738,3 +738,35 @@ test('a delayed list summary cannot replace the more recent summary in the same 
   }]);
   expect(result.current.items[0].notes).toBe('Two');
 });
+test('a check-off without network stays checked, waits and is sent once online', async () => {
+  const {
+    result
+  } = await setup();
+  const send = api.apiUpdateShoppingItem.getMockImplementation();
+  api.apiUpdateShoppingItem.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+  let toggled;
+  await act(async () => {
+    toggled = result.current.toggleItem(1, false);
+    await Promise.resolve();
+  });
+  await waitFor(() => expect(result.current.waitingItemIds.has(1)).toBe(true));
+  expect(result.current.checkedItems.map(item => item.id)).toEqual([1]);
+  expect(mockError).not.toHaveBeenCalled();
+
+  // A reload meanwhile brings the server's older state; the item stays checked.
+  await act(async () => {
+    await result.current.reloadItems();
+  });
+  expect(result.current.checkedItems.map(item => item.id)).toEqual([1]);
+
+  api.apiUpdateShoppingItem.mockImplementation(send);
+  await act(async () => {
+    window.dispatchEvent(new Event('online'));
+    await toggled;
+  });
+  expect(api.apiUpdateShoppingItem).toHaveBeenCalledTimes(2);
+  expect(serverItems[0].checked).toBe(true);
+  expect(result.current.waitingItemIds.size).toBe(0);
+  expect(result.current.checkedItems.map(item => item.id)).toEqual([1]);
+  expect(mockError).not.toHaveBeenCalled();
+});

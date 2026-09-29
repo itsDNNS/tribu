@@ -1,0 +1,79 @@
+{
+  "_comment": "Shared with tribu-app (test/fixtures/family_cases.json): input for buildFamily and the hub it yields. now is local wall time.",
+  "cases": [
+    {
+      "name": "a Monday afternoon",
+      "now": "2026-09-28T14:30:00",
+      "members": [
+        { "user_id": 1, "display_name": "Dennis", "is_adult": true, "date_of_birth": "1985-10-05" },
+        { "user_id": 2, "display_name": "Anna", "is_adult": true, "date_of_birth": null },
+        { "user_id": 3, "display_name": "Lena", "is_adult": false, "date_of_birth": null },
+        { "user_id": 4, "display_name": "Max", "is_adult": false, "date_of_birth": "2018-11-30" }
+      ],
+      "events": [
+        { "id": 1, "title": "Schwimmen", "starts_at": "2026-09-28T16:00:00", "ends_at": "2026-09-28T17:00:00", "all_day": false, "assigned_to": [3] },
+        { "id": 2, "title": "Zahnarzt", "starts_at": "2026-09-28T09:00:00", "ends_at": "2026-09-28T10:00:00", "all_day": false, "assigned_to": [1] },
+        { "id": 3, "title": "Elternabend", "starts_at": "2026-09-28T14:00:00", "ends_at": "2026-09-28T15:30:00", "all_day": false, "assigned_to": [1, 2] },
+        { "id": 4, "title": "Oma zu Besuch", "starts_at": "2026-09-28T00:00:00", "ends_at": "2026-09-29T00:00:00", "all_day": true, "assigned_to": null }
+      ],
+      "tasks": [
+        { "id": 11, "title": "Zimmer aufräumen", "status": "open", "assigned_to_user_id": 3, "due_date": "2026-09-28T00:00:00", "due_is_date": true },
+        { "id": 12, "title": "Hausaufgaben", "status": "done", "assigned_to_user_id": 3, "due_date": "2026-09-28T00:00:00", "due_is_date": true },
+        { "id": 13, "title": "Reifen wechseln", "status": "open", "assigned_to_user_id": 1, "due_date": "2026-09-29T00:00:00", "due_is_date": true }
+      ],
+      "balances": [ { "user_id": 3, "balance": 6 }, { "user_id": 4, "balance": 12 }, { "user_id": 1, "balance": 0 } ],
+      "rewards": [
+        { "name": "Eis essen", "cost": 10, "is_active": true },
+        { "name": "Kino", "cost": 20, "is_active": true },
+        { "name": "Alt", "cost": 5, "is_active": false }
+      ],
+      "birthdays": [
+        { "person_name": "Opa Karl", "month": 10, "day": 6 },
+        { "person_name": "Lena", "month": 12, "day": 24 },
+        { "person_name": "Tante Eva", "month": 9, "day": 28 }
+      ],
+      "gifts": [
+        { "status": "idea", "for_user_id": null, "for_person_name": "Opa Karl" },
+        { "status": "purchased", "for_user_id": null, "for_person_name": "opa karl " },
+        { "status": "gifted", "for_user_id": null, "for_person_name": "Opa Karl" },
+        { "status": "idea", "for_user_id": 1, "for_person_name": null }
+      ],
+      "expected": {
+        "people": [
+          { "memberId": 1, "next": { "title": "Elternabend", "time": "14:00", "endTime": "15:30" }, "later": 1, "openTasks": 1, "points": 0, "goal": null },
+          { "memberId": 2, "next": { "title": "Elternabend", "time": "14:00", "endTime": "15:30" }, "later": 1, "openTasks": 0, "points": null, "goal": null },
+          { "memberId": 3, "next": { "title": "Schwimmen", "time": "16:00", "endTime": "17:00" }, "later": 1, "openTasks": 1, "points": 6, "goal": { "name": "Eis essen", "cost": 10, "progress": 0.6, "reached": false } },
+          { "memberId": 4, "next": { "title": "Oma zu Besuch", "time": null, "endTime": null }, "later": 0, "openTasks": 0, "points": 12, "goal": { "name": "Kino", "cost": 20, "progress": 0.6, "reached": false } }
+        ],
+        "birthdays": [
+          { "name": "Tante Eva", "date": "2026-09-28", "daysUntil": 0, "memberId": null, "giftIdeas": 0 },
+          { "name": "Dennis", "date": "2026-10-05", "daysUntil": 7, "memberId": 1, "giftIdeas": 1 },
+          { "name": "Opa Karl", "date": "2026-10-06", "daysUntil": 8, "memberId": null, "giftIdeas": 2 }
+        ]
+      }
+    },
+    {
+      "name": "late evening, every reward within reach",
+      "now": "2026-12-20T21:00:00",
+      "members": [
+        { "user_id": 3, "display_name": "Lena Braun", "is_adult": false, "date_of_birth": "2016-12-24" }
+      ],
+      "events": [
+        { "id": 1, "title": "Chor", "starts_at": "2026-12-20T18:00:00", "ends_at": "2026-12-20T19:00:00", "all_day": false, "assigned_to": [3] }
+      ],
+      "tasks": [],
+      "balances": [ { "user_id": 3, "balance": 25 } ],
+      "rewards": [ { "name": "Eis essen", "cost": 10, "is_active": true }, { "name": "Kino", "cost": 20, "is_active": true } ],
+      "birthdays": [ { "person_name": "Lena", "month": 12, "day": 24 } ],
+      "gifts": [ { "status": "idea", "for_user_id": 3, "for_person_name": null } ],
+      "expected": {
+        "people": [
+          { "memberId": 3, "next": null, "later": 0, "openTasks": 0, "points": 25, "goal": { "name": "Kino", "cost": 20, "progress": 1, "reached": true } }
+        ],
+        "birthdays": [
+          { "name": "Lena", "date": "2026-12-24", "daysUntil": 4, "memberId": 3, "giftIdeas": 1 }
+        ]
+      }
+    }
+  ]
+}

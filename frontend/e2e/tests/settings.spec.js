@@ -87,22 +87,12 @@ test.describe('Settings', () => {
     await expect(limits).toContainText('each next occurrence');
   });
 
-  test('keeps Account settings focused on preference selectors without duplicate pack inventory', async ({ authedPage: page }) => {
+  test('offers every language and the appearance on this device', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    const accountItem = page.getByRole('button', { name: 'Account', exact: true });
-    if (await accountItem.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await accountItem.click();
-    }
-
-    await page.locator('.profile-name').waitFor({ timeout: 10000 });
-
-    await expect(page.locator('.set-subheading', { hasText: 'Installed themes' })).toHaveCount(0);
-    await expect(page.locator('.set-subheading', { hasText: 'Installed languages' })).toHaveCount(0);
-    await expect(page.locator('.pack-card')).toHaveCount(0);
-
-    const languageButtons = page.locator('.lang-toggle .lang-btn');
-    await expect(languageButtons).toHaveText([
+    const device = page.getByRole('region', { name: 'This device' });
+    const language = device.getByRole('combobox', { name: 'Language', exact: true });
+    await expect(language.locator('option')).toHaveText([
       'Deutsch',
       'English',
       'Español',
@@ -129,58 +119,62 @@ test.describe('Settings', () => {
       'Gaeilge',
     ]);
 
-    async function expectLanguageSectionContained() {
-      const metrics = await page.evaluate(() => ({
-        documentWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
-        viewportWidth: document.documentElement.clientWidth,
-        languageSectionWidth: document.querySelector('.language-settings-section')?.getBoundingClientRect().width ?? 0,
-        settingsGridWidth: document.querySelector('.settings-grid')?.getBoundingClientRect().width ?? 0,
-        languageToggleWidth: document.querySelector('.lang-toggle')?.getBoundingClientRect().width ?? 0,
-      }));
-      expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
-      expect(metrics.languageSectionWidth).toBeLessThanOrEqual(metrics.settingsGridWidth + 1);
-      expect(metrics.languageToggleWidth).toBeLessThanOrEqual(metrics.languageSectionWidth + 1);
-    }
+    const html = page.locator('html');
+    const appearance = device.getByRole('combobox', { name: 'Appearance' });
+    await expect(appearance).toHaveValue('system');
+    await expect(html).toHaveAttribute('data-theme', 'light');
+    await appearance.selectOption('midnight-glass');
+    await expect(html).toHaveAttribute('data-theme', 'midnight-glass');
+    await appearance.selectOption('system');
+    await expect(html).toHaveAttribute('data-theme', 'light');
 
-    await expectLanguageSectionContained();
-
-    const swedishButton = languageButtons.filter({ hasText: 'Svenska' });
-    await expect(swedishButton).toBeVisible();
-    await swedishButton.click();
-    await expect(page.locator('.settings-section-title', { hasText: 'Språk' })).toBeVisible();
-    await expect(page.locator('.lang-toggle .lang-btn.active')).toHaveText('Svenska');
-
-    await expectLanguageSectionContained();
+    await language.selectOption('sv');
+    await expect(page.getByRole('region', { name: 'Den här enheten' })).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
   });
 
-  test('switch theme and verify data-theme attribute', async ({ authedPage: page }) => {
+  test('opens family administration on the chosen section', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
+    await page.getByRole('region', { name: 'Family' }).getByRole('button', { name: 'Backups', exact: true }).click();
+    await expect(page.locator('.admin-page')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.fam-tab[aria-current="page"]')).toHaveText(/Backups/);
+  });
 
-    // The overview links to the account detail on all screen sizes.
-    const accountItem = page.getByRole('button', { name: 'Account', exact: true });
-    const profileName = page.locator('.profile-name');
-    await expect(accountItem.or(profileName).first()).toBeVisible({ timeout: 10000 });
-    if (await accountItem.isVisible().catch(() => false)) {
-      await accountItem.click();
+  test('hides an area for the family and brings it back', async ({ authedPage: page, apiCtx }) => {
+    await navigateTo(page, 'Settings');
+    await page.getByRole('region', { name: 'Family' }).getByRole('button', { name: 'Areas', exact: true }).click();
+    const recipes = page.getByRole('switch', { name: 'Recipes' });
+    await expect(recipes).toHaveAttribute('aria-checked', 'true');
+    await recipes.click();
+    await expect(recipes).toHaveAttribute('aria-checked', 'false');
+
+    // Saved for the family, and gone from the navigation after a reload.
+    await expect.poll(async () => (await (await apiCtx.get('/api/families/me')).json())[0].hidden_areas).toEqual(['recipes']);
+    await page.reload();
+    await page.locator('#main-content').waitFor({ timeout: 15000 });
+    const viewport = page.viewportSize();
+    if (viewport && viewport.width > 768) {
+      await expect(page.getByRole('navigation', { name: 'Main navigation' })).not.toContainText('Recipes');
     }
+    // A bookmark to the hidden area opens Today.
+    await page.goto('/#recipes');
+    await expect(page.locator('#main-content').getByRole('region', { name: 'Today' })).toBeVisible({ timeout: 10000 });
 
-    await expect(profileName).toBeVisible({ timeout: 10000 });
-
-    const html = page.locator('html');
-    const initialTheme = await html.getAttribute('data-theme');
-
-    const inactiveTheme = page.locator('.theme-item:not(.active)').first();
-    if (await inactiveTheme.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await inactiveTheme.click();
-      const newTheme = await html.getAttribute('data-theme');
-      expect(newTheme).not.toBe(initialTheme);
+    // Settings reopen on the areas page they showed last.
+    await navigateTo(page, 'Settings');
+    const again = page.getByRole('switch', { name: 'Recipes' });
+    if (!(await again.isVisible().catch(() => false))) {
+      await page.getByRole('region', { name: 'Family' }).getByRole('button', { name: 'Areas', exact: true }).click();
     }
+    await again.click();
+    await expect.poll(async () => (await (await apiCtx.get('/api/families/me')).json())[0].hidden_areas).toEqual([]);
   });
 
   test('shows push diagnostics when server push is not configured', async ({ authedPage: page }) => {
     await navigateTo(page, 'Settings');
 
-    await page.getByRole('region', { name: 'Everything in its place.' })
+    await page.getByRole('region', { name: 'My account' })
       .getByRole('button', { name: 'Notifications', exact: true }).click();
 
     await expect(page.getByText('Server push is not configured')).toBeVisible({ timeout: 10000 });

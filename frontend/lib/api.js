@@ -156,22 +156,6 @@ export function apiGetDashboard(familyId) {
   return request(`/dashboard/summary?family_id=${familyId}`);
 }
 
-export function apiGetDashboardLayout() {
-  return request('/nav/dashboard-layout');
-}
-
-export function apiUpdateDashboardLayout(modules) {
-  return request('/nav/dashboard-layout', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ modules }),
-  });
-}
-
-export function apiResetDashboardLayout() {
-  return request('/nav/dashboard-layout', { method: 'DELETE' });
-}
-
 export function apiGetActivity(familyId, limit = 10, offset = 0) {
   return request(`/activity?family_id=${familyId}&limit=${limit}&offset=${offset}`);
 }
@@ -556,6 +540,24 @@ export function apiPushUnsubscribe(endpoint) {
   return post('/notifications/push/unsubscribe', { endpoint });
 }
 
+// Family areas (Tribu 2.0, R4)
+export function apiSetFamilyAreas(familyId, hidden_areas) {
+  return request(`/families/${familyId}/areas`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hidden_areas }),
+  });
+}
+
+// UI preferences shared with the app (theme and language)
+export function apiUpdateUiPreferences(preferences) {
+  return request('/nav/ui-preferences', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(preferences),
+  });
+}
+
 // Nav Order
 export function apiGetNavOrder() {
   return request('/nav/order');
@@ -932,3 +934,5 @@ export function apiDisplayDashboard(token) {
 }
 
 export function apiCompleteShoppingTrip(listId) { return post(`/shopping/lists/${listId}/complete`, {}); }
+// Tells the family who is out shopping with a list (Tribu 2.0, L4).
+export function apiSetShoppingTrip(listId, active) { return post(`/shopping/lists/${listId}/trip`, { active }); }

@@ -2,17 +2,12 @@ const { test, expect } = require('../helpers/fixtures');
 test.use({viewport:{width:1448,height:1000},serviceWorkers:'block'});
 const { navigateTo } = require('../helpers/navigation');
 
-async function openAccountSettings(page) {
+// The week start belongs to this device (Settings › This device).
+async function openWeekStart(page) {
   await navigateTo(page, 'Settings');
-
-  const accountItem = page.getByRole('button', { name: 'Account', exact: true });
-  const weekStartGroup = page.getByRole('group', { name: 'Week starts on' });
-  await expect(accountItem.or(weekStartGroup).first()).toBeVisible({ timeout: 10000 });
-  if (await accountItem.isVisible().catch(() => false)) {
-    await accountItem.click();
-  }
-  await expect(weekStartGroup).toBeVisible({ timeout: 10000 });
-  return weekStartGroup;
+  const weekStart = page.getByRole('region', { name: 'This device' }).getByRole('combobox', { name: 'Week starts on' });
+  await expect(weekStart).toBeVisible({ timeout: 10000 });
+  return weekStart;
 }
 
 test.describe('Calendar week-start preference', () => {
@@ -23,10 +18,9 @@ test.describe('Calendar week-start preference', () => {
     await navigateTo(page, 'Calendar');
     await expect(page.locator('.tc-weekday').first()).toHaveText('Monday');
 
-    let group = await openAccountSettings(page);
-    const sundayButton = group.getByRole('button', { name: 'Sunday' });
-    await sundayButton.click();
-    await expect(sundayButton).toHaveAttribute('aria-pressed', 'true');
+    let weekStart = await openWeekStart(page);
+    await weekStart.selectOption('sunday');
+    await expect(weekStart).toHaveValue('sunday');
 
     await navigateTo(page, 'Calendar');
     await expect(page.locator('.tc-weekday').first()).toHaveText('Sunday');
@@ -46,10 +40,10 @@ test.describe('Calendar week-start preference', () => {
     await page.reload();
     await expect(page.locator('.tc-weekday').first()).toHaveText('Sunday');
 
-    group = await openAccountSettings(page);
-    const mondayButton = group.getByRole('button', { name: 'Monday' });
-    await mondayButton.click();
-    await expect(mondayButton).toHaveAttribute('aria-pressed', 'true');
+    weekStart = await openWeekStart(page);
+    await expect(weekStart).toHaveValue('sunday');
+    await weekStart.selectOption('monday');
+    await expect(weekStart).toHaveValue('monday');
 
     await navigateTo(page, 'Calendar');
     await expect(page.locator('.tc-weekday').first()).toHaveText('Monday');

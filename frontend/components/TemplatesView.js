@@ -218,7 +218,7 @@ export default function TemplatesView() {
   if (isChild) {
     return (
       <div className="view-stack templates-view">
-        <div className="view-header templates-header"><h1>{t(messages, 'module.templates.name')}</h1></div>
+        <header className="list-header"><h1>{t(messages, 'module.templates.name')}</h1></header>
         <div className="empty-state glass">{t(messages, 'module.templates.adult_only')}</div>
       </div>
     );
@@ -226,20 +226,12 @@ export default function TemplatesView() {
 
   return (
     <div className="view-stack templates-view">
-      <div className="view-header templates-header">
-        <div className="templates-title-block">
-          <span className="templates-page-icon" aria-hidden="true">
-            <ClipboardList size={22} />
-          </span>
-          <div>
-            <h1>{t(messages, 'module.templates.name')}</h1>
-            <p>{t(messages, 'module.templates.subtitle')}</p>
-          </div>
-        </div>
-        <button className="btn-primary" onClick={startCreate}>
-          <Plus size={17} aria-hidden="true" /> {t(messages, 'module.templates.new')}
+      <header className="list-header">
+        <h1>{t(messages, 'module.templates.name')}</h1>
+        <button type="button" className="list-header-action" onClick={startCreate}>
+          <Plus size={16} aria-hidden="true" /> {t(messages, 'module.templates.new')}
         </button>
-      </div>
+      </header>
 
       {(status || error) && (
         <div className={error ? 'status-banner error' : 'status-banner'} role="status">

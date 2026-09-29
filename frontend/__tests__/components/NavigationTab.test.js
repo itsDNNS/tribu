@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import NavigationTab from '../../components/settings/NavigationTab';
 import { DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
@@ -15,13 +15,16 @@ jest.mock('../../lib/api', () => ({
 
 const messages = {
   nav_order_title: 'Navigation',
-  nav_order_desc: 'Sort the nav.',
-  nav_visible: 'sichtbar',
-  nav_overflow: 'mehr',
+  'settings.navigation_desc': 'Sort the areas.',
+  'settings.navigation_up': '{name} nach oben',
+  'settings.navigation_down': '{name} nach unten',
+  'nav.group.plan': 'Planen',
+  'nav.group.lists': 'Listen',
+  'module.responsive.group_family': 'Familie',
   nav_save: 'Speichern',
   nav_saved: 'Gespeichert',
   nav_reset: 'Zuruecksetzen',
-  dashboard: 'Dashboard',
+  'nav.group.today': 'Heute',
   calendar: 'Kalender',
   activity: 'Aktivitäten',
   contacts: 'Kontakte',
@@ -50,7 +53,7 @@ function baseState(overrides) {
 }
 
 const LABEL_BY_KEY = {
-  dashboard: 'Dashboard',
+  dashboard: 'Heute',
   calendar: 'Kalender',
   activity: 'Aktivitäten',
   shopping: 'Einkauf',
@@ -65,16 +68,18 @@ const LABEL_BY_KEY = {
   contacts: 'Kontakte',
   notifications: 'Benachrichtigungen',
 };
-const PINNED_KEYS = new Set(['settings', 'admin']);
-const SORTABLE_KEYS = DEFAULT_NAV_ORDER.filter((k) => !PINNED_KEYS.has(k));
+// Today is a group of one, the family hub leads its group, activity lives
+// in the hub and notifications behind the bell; every other area is sorted
+// within its group.
+const UNSORTED_KEYS = new Set(['dashboard', 'family', 'activity', 'notifications', 'settings', 'admin']);
+const SORTABLE_KEYS = DEFAULT_NAV_ORDER.filter((k) => !UNSORTED_KEYS.has(k));
 
 describe('NavigationTab', () => {
   test('renders a row for every sortable key in DEFAULT_NAV_ORDER (drift guard)', () => {
     mockAppState = baseState();
     render(<NavigationTab />);
-    // If a new key lands in DEFAULT_NAV_ORDER without a matching NAV_ITEM_META entry,
-    // NavigationTab silently drops it, reproducing the issue #149 bug. Iterating the
-    // actual default keeps this test load-bearing against that drift.
+    // If a new key lands in DEFAULT_NAV_ORDER without a navigation group or a
+    // NAV_ITEM_META entry, NavigationTab silently drops it (issue #149).
     for (const key of SORTABLE_KEYS) {
       const label = LABEL_BY_KEY[key];
       expect(label).toBeDefined();
@@ -82,12 +87,27 @@ describe('NavigationTab', () => {
     }
   });
 
-  test('includes rewards entry (regression for #149)', () => {
+  test('sorts areas within their group (regression for #149)', () => {
     mockAppState = baseState();
     render(<NavigationTab />);
-    expect(screen.getByText('Belohnungen')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /move belohnungen up/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /move belohnungen down/i })).toBeInTheDocument();
+    const family = screen.getByRole('group', { name: 'Familie' });
+    expect(within(family).getByText('Belohnungen')).toBeInTheDocument();
+    expect(within(family).getByRole('button', { name: 'Belohnungen nach oben' })).toBeInTheDocument();
+    expect(within(family).getByRole('button', { name: 'Belohnungen nach unten' })).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Listen' })).queryByText('Belohnungen')).not.toBeInTheDocument();
+  });
+
+  test('saves the full order after moving an area within its group', async () => {
+    const api = require('../../lib/api');
+    api.apiUpdateNavOrder.mockResolvedValue({ ok: true });
+    mockAppState = baseState();
+    render(<NavigationTab />);
+    fireEvent.click(screen.getByRole('button', { name: 'Aufgaben nach oben' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(mockAppState.setNavOrder).toHaveBeenCalled());
+    const saved = api.apiUpdateNavOrder.mock.calls[0][0];
+    expect(saved.indexOf('tasks')).toBeLessThan(saved.indexOf('shopping'));
+    expect([...saved].sort()).toEqual([...DEFAULT_NAV_ORDER].sort());
   });
 
   test('hides adult-only items for children but still shows rewards', () => {

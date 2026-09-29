@@ -230,7 +230,7 @@ function SchoolCard({ dashboard, members, t, ahead, locale, timeFormat, now }) {
 function daysLabel(days, t) {
   if (days <= 0) return t('display.stage.today');
   if (days === 1) return t('display.stage.in_one_day');
-  return t('display.stage.in_days').replace('{count}', days);
+  return t('display.stage.in_days', days);
 }
 
 function SoonCard({ dashboard, t }) {

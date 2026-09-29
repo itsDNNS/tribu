@@ -45,7 +45,8 @@ test.describe('Meal plan', () => {
     await expect(page.getByText(/Porridge with berries|Porridge mit Beeren/)).toBeVisible();
     await expect(page.getByText('Not available in demo mode')).toHaveCount(0);
 
-    await page.getByRole('button', { name: /Plan a meal|Mahlzeit planen/ }).click();
+    // New meals start from an empty slot.
+    await page.locator('.meal-grid-cell-empty, .meal-slot.empty').first().click();
     await page.getByPlaceholder(/Spaghetti/).fill('Demo soup');
     await page.getByRole('button', { name: /Save|Speichern/ }).click();
     await expect(page.getByText('Demo soup')).toBeVisible();
@@ -82,6 +83,33 @@ test.describe('Meal plan', () => {
       .locator(`.meal-grid-cell-filled.meal-grid-slot-${targetSlot}`)
       .filter({ hasText: mealName });
     await expect(movedMealCell).toBeVisible({ timeout: 30000 });
+  });
+
+  test('an empty slot suggests what the family cooked lately', async ({ page, baseURL, browserName }) => {
+    const workerUser = await registerWorkerUser(baseURL, browserName);
+    await page.context().addCookies(workerUser.cookies);
+    try {
+      const familyId = await getFamilyId(workerUser.api);
+      const lastWeek = new Date();
+      lastWeek.setDate(lastWeek.getDate() - 7);
+      await seedMealPlan(workerUser.api, familyId, {
+        plan_date: formatIsoDate(lastWeek),
+        slot: 'evening',
+        meal_name: 'Lentil curry',
+        ingredients: [{ name: 'Lentils', amount: 250, unit: 'g' }],
+      });
+
+      await page.goto('/');
+      await navigateTo(page, 'Meal plan');
+      await expect(page.locator('.meal-plans-page')).toBeVisible({ timeout: 30000 });
+      await page.locator('.meal-grid-cell-empty, .meal-slot.empty').first().click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('button', { name: 'Lentil curry, cooked lately' }).click();
+      await expect(dialog.getByPlaceholder(/Spaghetti/)).toHaveValue('Lentil curry');
+      await expect(dialog.locator('input[value="Lentils"]')).toHaveCount(1);
+    } finally {
+      await workerUser.api.dispose();
+    }
   });
 
   test('pushes the current week ingredients to a shopping list', async ({ page, baseURL, browserName }) => {
@@ -123,10 +151,14 @@ test.describe('Meal plan', () => {
         response.url().includes('/api/meal-plans/week/add-to-shopping')
         && response.request().method() === 'POST'
       ));
-      await expect(page.locator('.meal-week-shopping-list')).toHaveValue(String(targetList.id));
-      await page
-        .getByRole('button', { name: 'Push all ingredients from this week to a shopping list' })
-        .click();
+      // M3: the week's ingredients, merged by name, previewed in a sheet.
+      await expect(page.locator('.meal-week-shopping')).toContainText('3 ingredients from 2 meals');
+      await page.getByRole('button', { name: 'Review and add' }).click();
+      const sheet = page.getByRole('dialog', { name: "This week's ingredients" });
+      await expect(sheet.locator('.meal-ingredients-preview li')).toHaveCount(3);
+      await expect(sheet).toContainText('500 g + 250 g');
+      await expect(sheet.getByRole('combobox')).toHaveValue(String(targetList.id));
+      await sheet.getByRole('button', { name: 'Add to the list' }).click();
       const response = await pushResponse;
       expect(response.ok()).toBeTruthy();
       await expect(page.getByLabel('Notifications').getByText('3 ingredients pushed to the shopping list')).toBeVisible({ timeout: 30000 });

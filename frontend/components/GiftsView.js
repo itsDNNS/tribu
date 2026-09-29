@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
+import { peekHandOff, takeHandOff } from '../lib/handoff';
 import { errorText } from '../lib/helpers';
 import { createEmptyGiftForm, GIFT_OCCASIONS, GIFT_SORT_OPTIONS, GIFT_STATUSES } from '../lib/gifts';
 import { t } from '../lib/i18n';
@@ -206,7 +207,7 @@ function GiftCard({ gift, members, messages, onEdit, onDelete, onStatusChange })
 }
 
 export default function GiftsView() {
-  const { familyId, families, members, messages, isChild, demoMode, birthdays } = useApp();
+  const { familyId, members, messages, isChild, demoMode, birthdays } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const [gifts, setGifts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -228,7 +229,7 @@ export default function GiftsView() {
     setLoading(true);
     const { ok, data } = await api.apiGetGifts(fid, {
       status: statusFilter || null,
-      forUserId: recipientFilter ? Number(recipientFilter) : null,
+      forUserId: /^\d+$/.test(recipientFilter) ? Number(recipientFilter) : null,
       includeGifted,
       sort: sortOrder,
     });
@@ -240,7 +241,12 @@ export default function GiftsView() {
     loadGifts();
   }, [loadGifts]);
 
-  const filteredGifts = useMemo(() => gifts, [gifts]);
+  // "n:<name>" filters by someone outside the family, such as Grandpa.
+  const filteredGifts = useMemo(() => {
+    if (!recipientFilter.startsWith('n:')) return gifts;
+    const name = recipientFilter.slice(2);
+    return gifts.filter((gift) => (gift.for_person_name || '').trim().toLocaleLowerCase() === name);
+  }, [gifts, recipientFilter]);
 
   const resetForm = useCallback(() => {
     setForm(createEmptyGiftForm());
@@ -341,6 +347,26 @@ export default function GiftsView() {
     reload: loadGifts,
   };
 
+  // The family hub opens someone's gift ideas or a new idea for them.
+  const [focus] = useState(() => peekHandOff('gifts_focus') || null);
+  useEffect(() => {
+    takeHandOff('gifts_focus');
+    if (!focus) return;
+    if (focus.add) {
+      setEditingId(null);
+      setForm({
+        ...createEmptyGiftForm(),
+        for_user_id: focus.memberId ? String(focus.memberId) : '',
+        for_person_name: focus.memberId ? '' : focus.name || '',
+        occasion: 'birthday',
+        occasion_date: focus.date || '',
+      });
+      setDialogOpen(true);
+    } else {
+      setRecipientFilter(focus.memberId ? String(focus.memberId) : `n:${(focus.name || '').trim().toLocaleLowerCase()}`);
+    }
+  }, [focus]);
+
   const upcomingBirthdays = useMemo(
     () => computeUpcomingBirthdays(birthdays, BIRTHDAY_LOOKAHEAD_DAYS),
     [birthdays],
@@ -350,15 +376,9 @@ export default function GiftsView() {
     const label = isChild ? 'module.gifts.adult_only' : 'module.gifts.demo_blocked';
     return (
       <div className="gift-page">
-        <div className="family-view-header gift-page-header">
-          <span className="gift-page-icon" aria-hidden="true">
-            <GiftIcon size={24} />
-          </span>
-          <div className="gift-page-title">
-            <p className="view-kicker">Tribu</p>
-            <h1>{t(messages, 'module.gifts.name')}</h1>
-          </div>
-        </div>
+        <header className="list-header">
+          <h1>{t(messages, 'module.gifts.name')}</h1>
+        </header>
         <div className="gift-empty-rich gift-empty-panel">
           <span className="gift-empty-icon-wrap">
             <Sparkles size={32} aria-hidden="true" />
@@ -368,8 +388,6 @@ export default function GiftsView() {
       </div>
     );
   }
-
-  const currentFamilyName = families.find((f) => String(f.family_id) === String(familyId))?.family_name || '';
 
   function openAddDialog() {
     g.resetForm();
@@ -441,22 +459,13 @@ export default function GiftsView() {
         onPickBirthday={prefillFromBirthday}
       />
 
-      <div className="family-view-header gift-page-header">
-        <span className="gift-page-icon" aria-hidden="true">
-          <GiftIcon size={24} />
-        </span>
-        <div className="gift-page-title">
-          <p className="view-kicker">Tribu</p>
-          <h1>{t(messages, 'module.gifts.name')}</h1>
-          {currentFamilyName && <p>{currentFamilyName}</p>}
-        </div>
-        <div className="gift-view-header-actions">
-          <button type="button" className="btn btn-primary gift-add-btn" onClick={openAddDialog}>
-            <Plus size={16} aria-hidden="true" />
-            {t(messages, 'module.gifts.add')}
-          </button>
-        </div>
-      </div>
+      <header className="list-header">
+        <h1>{t(messages, 'module.gifts.name')}</h1>
+        <button type="button" className="list-header-action gift-add-btn" onClick={openAddDialog}>
+          <Plus size={16} aria-hidden="true" />
+          {t(messages, 'module.gifts.add')}
+        </button>
+      </header>
 
       <section className="gift-toolbar" aria-label={t(messages, 'module.gifts.filter_status')}>
         <div className="gift-status-tabs" role="group" aria-label={t(messages, 'module.gifts.filter_status')}>
@@ -489,6 +498,9 @@ export default function GiftsView() {
             {members.map((m) => (
               <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
             ))}
+            {g.recipientFilter.startsWith('n:') && (
+              <option value={g.recipientFilter}>{focus?.name || g.recipientFilter.slice(2)}</option>
+            )}
           </select>
           <select
             className="form-input"

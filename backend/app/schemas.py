@@ -199,11 +199,24 @@ class FamilySummary(BaseModel):
     family_name: str = Field(..., description="Family name")
     role: str = Field(..., description="User's role in this family: 'admin' or 'member'")
     is_adult: bool = Field(..., description="Whether the user is marked as adult in this family")
+    hidden_areas: list[str] = Field(default_factory=list, description="Optional areas the family does not use, as navigation keys")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"family_id": 1, "family_name": "Mueller Family", "role": "admin", "is_adult": True}]
+        "examples": [{"family_id": 1, "family_name": "Mueller Family", "role": "admin", "is_adult": True, "hidden_areas": ["school_timetables"]}]
     })
 
+
+
+class FamilyAreasUpdate(BaseModel):
+    """Choose which optional areas a family hides."""
+    hidden_areas: list[str] = Field(..., max_length=20, description="Navigation keys of optional areas to hide; an empty list shows all")
+
+
+class FamilyAreasResponse(BaseModel):
+    """The optional areas of a family and which of them are hidden."""
+    family_id: int = Field(..., description="Family ID")
+    hidden_areas: list[str] = Field(..., description="Hidden optional areas, as navigation keys")
+    optional_areas: list[str] = Field(..., description="Areas a family can hide")
 
 class FamilyMemberResponse(BaseModel):
     """Family member details."""
@@ -586,7 +599,7 @@ class TaskCreate(BaseModel):
     priority: str = Field("normal", description="Priority: 'low', 'normal', or 'high'")
     due_date: Optional[datetime] = Field(None, description="Due date (ISO 8601)")
     due_is_date: bool = Field(False, description="Whether the due date has date-only precision")
-    recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
+    recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'biweekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
     assigned_to_user_id: Optional[int] = Field(None, description="User ID to assign the task to")
     token_reward_amount: Optional[int] = Field(None, ge=0, description="Tokens awarded on completion")
     token_require_confirmation: bool = Field(True, description="Require adult confirmation before awarding tokens")
@@ -604,7 +617,7 @@ class TaskUpdate(BaseModel):
     priority: Optional[str] = Field(None, description="Priority: 'low', 'normal', or 'high'")
     due_date: Optional[datetime] = Field(None, description="Due date")
     due_is_date: Optional[bool] = Field(None, description="Whether the due date has date-only precision")
-    recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
+    recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'biweekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
     assigned_to_user_id: Optional[int] = Field(None, description="Assigned user ID")
     token_reward_amount: Optional[int] = Field(None, ge=0, description="Tokens awarded on completion")
     token_require_confirmation: Optional[bool] = Field(None, description="Require adult confirmation")
@@ -622,7 +635,7 @@ class TaskResponse(BaseModel):
     priority: str = Field(..., description="Priority: 'low', 'normal', or 'high'")
     due_date: Optional[datetime] = Field(None, description="Due date")
     due_is_date: bool = Field(False, description="Whether the due date has date-only precision")
-    recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
+    recurrence: Optional[str] = Field(None, description="Recurrence: 'daily', 'weekly', 'biweekly', 'monthly', 'monthly_first_<weekday>', or 'yearly'")
     assigned_to_user_id: Optional[int] = Field(None, description="Assigned user ID")
     created_by_user_id: Optional[int] = Field(None, description="Creator user ID")
     created_at: datetime = Field(..., description="Creation timestamp")
@@ -674,6 +687,18 @@ class ShoppingListUpdate(BaseModel):
     icon: Optional[Literal["cart", "heart", "coffee", "bag", "home"]] = None
 
 
+class ShoppingListShopper(BaseModel):
+    """Someone who is out shopping with a list right now."""
+    user_id: int = Field(..., description="The shopper's user ID")
+    display_name: str = Field(..., description="The shopper's name")
+    since: datetime = Field(..., description="When shopping mode started")
+
+
+class ShoppingTripUpdate(BaseModel):
+    """Start or end shopping mode for a list."""
+    active: bool = Field(..., description="True when shopping mode starts, false when it ends")
+
+
 class ShoppingListResponse(BaseModel):
     """Shopping list with item counts."""
     model_config = ConfigDict(from_attributes=True)
@@ -687,6 +712,7 @@ class ShoppingListResponse(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     item_count: int = Field(0, description="Total number of items")
     checked_count: int = Field(0, description="Number of checked items")
+    shopper: Optional[ShoppingListShopper] = Field(None, description="Who is shopping with this list right now")
 
 
 class ShoppingItemCreate(ShoppingProductDetails):
@@ -731,6 +757,7 @@ class ShoppingItemResponse(ShoppingProductDetails):
     checked_at: Optional[datetime] = Field(None, description="When the item was checked")
     added_by_user_id: Optional[int] = Field(None, description="User who added the item")
     created_at: datetime = Field(..., description="Creation timestamp")
+    source: Optional[str] = Field(None, description="Recipes or meals the item was added for, comma separated")
 
 
 class ShoppingTemplateItemBase(BaseModel):
@@ -1018,7 +1045,8 @@ class HouseholdActivityEntry(BaseModel):
     actor_display_name: Optional[str] = Field(None, description="Actor display name, null if unavailable")
     action: str = Field(..., description="Stable action code")
     object_type: str = Field(..., description="Stable object type code")
-    summary: str = Field(..., description="Short sanitized human-readable summary")
+    object_label: Optional[str] = Field(None, description="Short sanitized name of the object, so clients can phrase the entry in their language; null for older entries")
+    summary: str = Field(..., description="Short sanitized English summary, the fallback without object_label")
     created_at: datetime = Field(..., description="Activity timestamp")
 
 
@@ -1042,7 +1070,8 @@ class QuickCaptureDestination(str, Enum):
 
 
 class QuickCaptureCreate(BaseModel):
-    """Create a quick capture item or route it directly."""
+    """Create a quick capture item or route it directly. Children can only
+    capture into the inbox, as a suggestion for the adults."""
     family_id: int = Field(..., description="Family ID")
     text: str = Field(min_length=1, max_length=240, description="Captured text")
     destination: QuickCaptureDestination = Field(QuickCaptureDestination.inbox, description="Where to send the capture")
@@ -1055,6 +1084,7 @@ class QuickCaptureInboxItem(BaseModel):
     id: int = Field(..., description="Inbox item ID")
     text: str = Field(..., description="Captured text")
     status: str = Field(..., description="Status: open, converted, or dismissed")
+    suggested_by_user_id: Optional[int] = Field(None, description="The child who suggested this entry, for adults to confirm")
     converted_to: Optional[str] = Field(None, description="Destination after conversion")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
@@ -1265,6 +1295,12 @@ class NotificationPreferenceUpdate(BaseModel):
         return normalize_push_categories(v)
 
 
+class NotificationActionRequest(BaseModel):
+    """Run an action from a reminder notification."""
+    token: str = Field(..., min_length=20, max_length=4000, description="The action token the reminder push carried")
+    action: str = Field(..., description="done or snooze")
+
+
 class PushSubscriptionCreate(BaseModel):
     """Register a push subscription."""
     endpoint: str = Field(..., description="Push service endpoint URL")
@@ -1272,6 +1308,7 @@ class PushSubscriptionCreate(BaseModel):
     auth: Optional[str] = Field(None, description="Client browser Web Push auth secret")
     platform: str = Field("web", description="Push platform: web, expo, or fcm")
     device_name: Optional[str] = Field(None, max_length=120, description="Optional native device label")
+    supports_actions: bool = Field(False, description="Whether the client shows reminder action buttons itself (FCM: the reminder then arrives as data)")
 
     @field_validator("platform")
     @classmethod
@@ -1339,16 +1376,6 @@ class NavOrderResponse(BaseModel):
 class NavOrderUpdate(BaseModel):
     """Update navigation bar order."""
     nav_order: list[str] = Field(min_length=1, max_length=20, description="Ordered list of view keys")
-
-
-class DashboardLayoutResponse(BaseModel):
-    """User's dashboard module layout."""
-    modules: list[str] = Field(..., description="Ordered dashboard module keys")
-
-
-class DashboardLayoutUpdate(BaseModel):
-    """Update dashboard module layout."""
-    modules: list[str] = Field(min_length=1, max_length=12, description="Ordered dashboard module keys")
 
 
 class UiPreferencesResponse(BaseModel):

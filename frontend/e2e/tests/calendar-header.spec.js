@@ -31,7 +31,7 @@ test('calendar header contains wrapped content above month and week headings', a
           );
         });
         const geometry = await page.evaluate(() => {
-          const header = [...document.querySelectorAll('.tc-topbar, .ui-mobile-header')].find(el=>el.getBoundingClientRect().height>0);
+          const header = [...document.querySelectorAll('.app-header')].find(el=>el.getBoundingClientRect().height>0);
           const visible = [...header.querySelectorAll('*')].filter((el) => {
             const style = getComputedStyle(el);
             const rect = el.getBoundingClientRect();
@@ -45,7 +45,7 @@ test('calendar header contains wrapped content above month and week headings', a
             ),
             headerBottom: header.getBoundingClientRect().bottom,
             headingTop: document
-              .querySelector('.tc-view-header')
+              .querySelector('.tc-list-header')
               .getBoundingClientRect().top,
           };
         });

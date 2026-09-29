@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { PWABanners } from '../../components/PWABanners';
+import { OFFLINE_BANNER_DELAY_MS, PWABanners } from '../../components/PWABanners';
 
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => ({
@@ -56,14 +56,38 @@ beforeEach(() => {
 
 describe('PWABanners', () => {
   it('announces offline and back-online state without install/update actions', async () => {
-    render(<PWABanners />);
+    jest.useFakeTimers();
+    try {
+      render(<PWABanners />);
 
-    fireEvent(window, new Event('offline'));
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('You are offline'));
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+      fireEvent(window, new Event('offline'));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      act(() => { jest.advanceTimersByTime(OFFLINE_BANNER_DELAY_MS); });
+      expect(screen.getByRole('alert')).toHaveTextContent('You are offline');
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
 
-    fireEvent(window, new Event('online'));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Back online'));
+      fireEvent(window, new Event('online'));
+      expect(screen.getByRole('status')).toHaveTextContent('Back online');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('stays quiet during a short dropout', () => {
+    jest.useFakeTimers();
+    try {
+      render(<PWABanners />);
+
+      fireEvent(window, new Event('offline'));
+      act(() => { jest.advanceTimersByTime(OFFLINE_BANNER_DELAY_MS - 1000); });
+      fireEvent(window, new Event('online'));
+      act(() => { jest.advanceTimersByTime(OFFLINE_BANNER_DELAY_MS); });
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('lets users apply a waiting service-worker update', async () => {

@@ -2,12 +2,12 @@ import { Activity, MessagesSquare, CalendarDays, CheckCircle, ShoppingCart, Clip
 import { t } from '../lib/i18n';
 import { DashboardCardHeading, DashboardBadge } from './DashboardDetails';
 import { parseServerInstant } from '../lib/helpers';
+import { activitySentence } from '../lib/activity/activitySentence';
 
 function formatActivityTime(value, lang = 'en') {
   const parsed = parseServerInstant(value);
   if (!parsed || Number.isNaN(parsed.getTime())) return '';
-  const locale = lang === 'de' ? 'de-DE' : 'en-US';
-  return parsed.toLocaleString(locale, {
+  return parsed.toLocaleString(lang || 'en', {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
@@ -15,15 +15,15 @@ function formatActivityTime(value, lang = 'en') {
   });
 }
 
-export default function HouseholdActivityFeed({ activity = [], messages = {}, lang = 'en', limit = 5, dashboard = false }) {
+export default function HouseholdActivityFeed({ activity = [], messages = {}, lang = 'en', limit = 5, dashboard = false, bare = false }) {
   const allEntries = Array.isArray(activity) ? activity : [];
   const entries = limit ? allEntries.slice(0, limit) : allEntries;
   const title = t(messages, dashboard ? 'module.dashboard.feed_title' : 'module.dashboard.activity_title');
   const unknownActor = t(messages, 'module.dashboard.activity_unknown_actor');
 
   return (
-    <div className="bento-card bento-activity" role="region" aria-label={title}>
-      {dashboard ? <DashboardCardHeading title={title} icon={MessagesSquare} /> : <div className="bento-card-header"><h2 className="bento-card-title"><Activity size={16} aria-hidden="true" /> {title}</h2></div>}
+    <div className={`bento-card bento-activity${bare ? ' bento-activity-bare' : ''}`} role="region" aria-label={title}>
+      {bare ? null : dashboard ? <DashboardCardHeading title={title} icon={MessagesSquare} /> : <div className="bento-card-header"><h2 className="bento-card-title"><Activity size={16} aria-hidden="true" /> {title}</h2></div>}
       {entries.length === 0 ? (
         <div className="bento-empty">{t(messages, 'module.dashboard.activity_empty')}</div>
       ) : (
@@ -39,7 +39,7 @@ export default function HouseholdActivityFeed({ activity = [], messages = {}, la
               <div key={entry.id} className="activity-feed-item">
                 <span className="activity-feed-marker">{dashboard ? <DashboardBadge icon={feedIcon} tone={completed ? 'green' : entry.object_type === 'event' ? 'blue' : 'amber'} /> : <span className="activity-feed-dot" aria-hidden="true" />}</span>
                 <div className="activity-feed-copy">
-                  <div className="activity-feed-summary">{entry.summary}</div>
+                  <div className="activity-feed-summary">{activitySentence(entry, messages)}</div>
                   <div className="activity-feed-meta">
                     {!dashboard && <span>{actor}</span>}
                     {when && <span>{when}</span>}

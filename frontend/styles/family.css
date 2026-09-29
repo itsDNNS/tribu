@@ -1,0 +1,212 @@
+/* Family hub, Tribu 2.0 (docs/tribu-2-design.md): one card per person with
+   their day, the birthdays ahead and what happened lately. Built on the
+   design tokens. */
+
+.family-hub {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-6);
+}
+.family-section { min-width: 0; }
+/* On phones the header already names the area. */
+@media (max-width: 768px) {
+  .family-hub-header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* The phone header already names the page. */
+  .notifications-list-header { justify-content: flex-end; }
+  .notifications-list-header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+.family-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+
+.family-person {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-left: 4px solid var(--person-color, var(--color-accent));
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.family-person:hover { background: var(--color-surface-hover); }
+.family-person:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.family-person-text { display: grid; gap: var(--space-1); min-width: 0; }
+.family-person-text > strong { font-size: var(--type-body-size); font-weight: 650; }
+.family-person-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+  line-height: 1.4;
+}
+.family-person-next em {
+  font-style: normal;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+.family-person-next small { color: var(--color-text-muted); font-size: inherit; }
+.family-person-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+}
+.family-person-points { display: inline-flex; align-items: center; gap: var(--space-1); }
+.family-person-goal { display: grid; gap: var(--space-1); margin-top: var(--space-1); }
+.family-person-goal small { color: var(--color-text-muted); font-size: var(--type-label-size); }
+.family-progress {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  overflow: hidden;
+}
+.family-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--person-color, var(--color-accent));
+}
+.family-person-chevron { align-self: center; color: var(--color-text-muted); }
+
+.family-columns {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .family-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.family-birthdays {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.family-birthdays > li + li { border-top: 1px solid var(--color-line); }
+.family-birthday {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+}
+.family-birthday-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+.family-birthday-text { display: grid; min-width: 0; }
+.family-birthday-text strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.family-birthday-text small { color: var(--color-text-muted); font-size: var(--type-body-small-size); }
+.family-birthday-gifts {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.family-birthday-gifts:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.family-birthday-gifts.add { border-style: dashed; }
+
+.family-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.family-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+.family-empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-card);
+  color: var(--color-text-muted);
+}
+
+/* The main action beside a page title, as on Tasks. */
+.list-header .list-header-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-accent-fill);
+  color: var(--text-on-primary);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.list-header .list-header-action:hover { filter: brightness(1.06); }
+
+/* Rewards: a child's way to the next reward below their balance (F3). */
+.rewards-balance-card-body { min-width: 0; flex: 1; }
+.rewards-balance-goal { display: grid; gap: var(--space-1); margin-top: var(--space-2); }
+.rewards-balance-goal small { color: var(--color-text-muted); font-size: var(--type-label-size); }
+
+/* Areas a family uses (R4): settings and the setup wizard. */
+.area-switches { list-style: none; margin: 0; padding: 0; display: grid; }
+.area-switch {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-3);
+  min-height: 48px;
+  color: var(--color-text-secondary);
+}
+.area-switches > li + li { border-top: 1px solid var(--color-line); }
+.area-switch-label { color: var(--color-text); font-weight: 500; }
+.area-switch .ms-switch { width: 38px; height: 23px; padding: 3px; border: 0; border-radius: 20px; background: #d7d2dc; cursor: pointer; }
+.area-switch .ms-switch span { display: block; width: 17px; height: 17px; border-radius: 50%; background: #fff; transition: transform .18s; }
+.area-switch .ms-switch[aria-checked=true] { background: #73518d; }
+.area-switch .ms-switch[aria-checked=true] span { transform: translateX(15px); }
+.area-switch .ms-switch:disabled { opacity: 0.6; cursor: default; }
+.setup-areas-intro { margin: 0 0 var(--space-2); color: var(--text-secondary); font-size: 0.82rem; line-height: 1.45; }

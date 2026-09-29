@@ -13,7 +13,8 @@ async function open(page, options) {
   const api = await mockVisualShopping(page, options);
   await page.goto('/#shopping');
   await expect(page.getByRole('heading', {
-    name: 'Für alles, was euch fehlt.'
+    name: 'Einkauf',
+    level: 1
   })).toBeVisible();
   await expect(page.getByRole('checkbox', {
     name: /Äpfel,/
@@ -28,7 +29,8 @@ async function menu(page) {
 }
 async function catalog(page) {
   await expect(page.getByRole('heading', {
-    name: 'Für alles, was euch fehlt.'
+    name: 'Einkauf',
+    level: 1
   })).toBeVisible();
   if (await page.locator('.shop-rail').isVisible()) return page.locator('.shop-rail');
   await page.getByRole('button', {
@@ -118,7 +120,8 @@ test('check, Undo, complete, recent reuse and long press', async ({
   const box = await apple.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(600);
+  // Well past the 550 ms long press, also on a busy machine.
+  await page.waitForTimeout(900);
   await page.mouse.up();
   await expect(page.getByRole('dialog', {
     name: 'Das richtige Lieblingsding.'
@@ -203,7 +206,7 @@ for (const width of [320, 390, 768, 1024, 1448]) test(`visual shopping at ${widt
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     if (width === 390) {
       const geometry = await page.evaluate(() => ({
-        lastAction: document.querySelector('.shop-local-footnote button').getBoundingClientRect().bottom,
+        lastAction: document.querySelector('.shop-board').getBoundingClientRect().bottom,
         dockTop: document.querySelector('.shop-mobile-dock').getBoundingClientRect().top,
         remainingScroll: document.documentElement.scrollHeight - innerHeight - scrollY,
         dockBackground: getComputedStyle(document.querySelector('.shop-mobile-dock')).backgroundColor,

@@ -9,14 +9,16 @@
     "test": "jest",
     "i18n:generate": "node scripts/generate-i18n-index.js",
     "i18n:check": "node scripts/generate-i18n-index.js --check",
+    "tokens:generate": "node scripts/generate-design-tokens.js",
+    "tokens:check": "node scripts/generate-design-tokens.js --check",
     "e2e": "playwright test",
     "e2e:local": "../scripts/e2e-local.sh",
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "lucide-react": "^1.47.0",
-    "next": "16.3.5",
+    "lucide-react": "^1.48.0",
+    "next": "16.3.6",
     "qrcode-generator": "^2.0.4",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -35,7 +37,7 @@
     "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
-    "jest": "^30.5.1",
-    "jest-environment-jsdom": "^30.5.1"
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2"
   }
 }

@@ -9,13 +9,13 @@ jest.mock('../../contexts/AppContext', () => ({
 jest.mock('../../hooks/useShopping', () => ({
   useShopping: () => mockShopping
 }));
+const mockToastSuccess = jest.fn();
 jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({
-    success: jest.fn(),
+    success: mockToastSuccess,
     error: jest.fn()
   })
 }));
-jest.mock('../../components/FamilyTopbar', () => () => null);
 jest.mock('../../lib/api');
 const api = require('../../lib/api');
 const apple = {
@@ -99,7 +99,8 @@ const dialog = () => within(screen.getByRole('dialog'));
 test('renders the mockup tiles, department groups and real progress', () => {
   setup();
   expect(screen.getByRole('heading', {
-    name: 'Für alles, was euch fehlt.'
+    name: 'Einkauf',
+    level: 1
   })).toBeVisible();
   expect(screen.getByRole('region', {
     name: 'Obst & Gemüse'
@@ -320,11 +321,24 @@ test('completing uses the archive operation after confirmation and exposes recen
 });
 test('preferences stay scoped to the family and user', () => {
   setup();
-  fireEvent.click(screen.getByRole('button', {
+  expect(screen.getByRole('button', {
     name: 'Listenansicht',
     exact: true
+  })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Kachelansicht',
+    exact: true
   }));
-  expect(JSON.parse(localStorage.getItem('tribu_shopping_ui:demo:1')).layout).toBe('list');
+  expect(JSON.parse(localStorage.getItem('tribu_shopping_ui_v2:demo:1')).layout).toBe('tiles');
+});
+
+test('compact rows replace a layout saved before they became the default', () => {
+  localStorage.setItem('tribu_shopping_ui:demo:1', JSON.stringify({ layout: 'tiles', favorites: ['apfel'] }));
+  setup();
+  expect(screen.getByRole('button', {
+    name: 'Listenansicht',
+    exact: true
+  })).toHaveAttribute('aria-pressed', 'true');
 });
 test('sharing is a text snapshot of open products and includes notes', () => {
   setup();
@@ -379,7 +393,8 @@ test('English UI uses the translation bundle', () => {
     messages: buildMessages('en')
   });
   expect(screen.getByRole('heading', {
-    name: 'For everything you need.'
+    name: 'Shopping',
+    level: 1
   })).toBeVisible();
   expect(screen.getByRole('button', {
     name: 'New shopping list',
@@ -738,7 +753,7 @@ test('family/user preferences are isolated and revisiting restores only that sco
     demoMode: false
   });
   fireEvent.click(screen.getByRole('button', {
-    name: 'Listenansicht',
+    name: 'Kachelansicht',
     exact: true
   }));
   fireEvent.click(screen.getByRole('button', {
@@ -754,7 +769,7 @@ test('family/user preferences are isolated and revisiting restores only that sco
   view.rerender(<ShoppingView />);
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByRole('button', {
-    name: 'Kachelansicht'
+    name: 'Listenansicht'
   })).toHaveAttribute('aria-pressed', 'true');
   fireEvent.click(screen.getByRole('button', {
     name: 'Details zu Äpfel'
@@ -771,7 +786,7 @@ test('family/user preferences are isolated and revisiting restores only that sco
   };
   view.rerender(<ShoppingView />);
   expect(screen.getByRole('button', {
-    name: 'Kachelansicht'
+    name: 'Listenansicht'
   })).toHaveAttribute('aria-pressed', 'true');
   mockApp = {
     ...mockApp,
@@ -781,7 +796,7 @@ test('family/user preferences are isolated and revisiting restores only that sco
   };
   view.rerender(<ShoppingView />);
   expect(screen.getByRole('button', {
-    name: 'Listenansicht'
+    name: 'Kachelansicht'
   })).toHaveAttribute('aria-pressed', 'true');
   fireEvent.click(screen.getByRole('button', {
     name: 'Details zu Äpfel'
@@ -912,7 +927,8 @@ test('deleting the selected list while its dialog is open renders the remaining 
   };
   expect(() => view.rerender(<ShoppingView />)).not.toThrow();
   expect(screen.getByRole('heading', {
-    name: 'Für alles, was euch fehlt.'
+    name: 'Einkauf',
+    level: 1
   })).toBeVisible();
 });
 
@@ -974,4 +990,101 @@ test.each([
   expect(mockShopping.restoreItem).not.toHaveBeenCalled();
   await waitFor(() => expect(add).toBeEnabled());
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+test('deleting a product can be undone and only then reaches the server', async () => {
+  jest.useFakeTimers();
+  try {
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Details zu Äpfel' }));
+    fireEvent.click(dialog().getByRole('button', { name: /Löschen/ }));
+    expect(screen.queryByRole('checkbox', { name: /^Äpfel,/ })).toBeNull();
+    expect(mockShopping.deleteItem).not.toHaveBeenCalled();
+
+    const undo = mockToastSuccess.mock.calls.at(-1)[1];
+    act(() => undo.onClick());
+    expect(screen.getByRole('checkbox', { name: /^Äpfel,/ })).toBeVisible();
+    act(() => { jest.advanceTimersByTime(12000); });
+    expect(mockShopping.deleteItem).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details zu Äpfel' }));
+    fireEvent.click(dialog().getByRole('button', { name: /Löschen/ }));
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(mockShopping.deleteItem).toHaveBeenCalledWith(apple.id);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('a trip started elsewhere stays on after the first render', () => {
+  sessionStorage.setItem('tribu_shopping_trip', '1');
+  setup();
+  expect(document.querySelector('.shop-trip-banner')).toBeInTheDocument();
+  expect(sessionStorage.getItem('tribu_shopping_trip')).toBeNull();
+});
+
+test('rows swipe into the basket or away, with a tick at the threshold', () => {
+  const vibrate = jest.fn();
+  navigator.vibrate = vibrate;
+  try {
+    setup();
+    const swipe = (name, dx) => {
+      const row = screen.getByRole('checkbox', { name });
+      fireEvent.pointerDown(row, { clientX: 150, clientY: 10, button: 0 });
+      fireEvent.pointerMove(row, { clientX: 150 + dx / 2, clientY: 10 });
+      fireEvent.pointerMove(row, { clientX: 150 + dx, clientY: 10 });
+      fireEvent.pointerUp(row, { clientX: 150 + dx, clientY: 10 });
+      fireEvent.click(row);
+    };
+
+    swipe(/^Äpfel,/, 100);
+    // The click that ends the swipe is not a second tap.
+    expect(mockShopping.toggleItem).toHaveBeenCalledTimes(1);
+    expect(mockShopping.toggleItem).toHaveBeenCalledWith(1, false);
+    expect(vibrate).toHaveBeenCalledTimes(1);
+
+    swipe(/^Milch,/, -100);
+    expect(screen.queryByRole('checkbox', { name: /^Milch,/ })).toBeNull();
+    const undo = mockToastSuccess.mock.calls.at(-1)[1];
+    act(() => undo.onClick());
+    expect(screen.getByRole('checkbox', { name: /^Milch,/ })).toBeVisible();
+
+    // Short moves do nothing.
+    swipe(/^Milch,/, 40);
+    expect(mockShopping.toggleItem).toHaveBeenCalledTimes(1);
+  } finally {
+    delete navigator.vibrate;
+  }
+});
+
+test('children do not swipe products away', () => {
+  setup({}, { isChild: true });
+  const row = screen.getByRole('checkbox', { name: /^Milch,/ });
+  fireEvent.pointerDown(row, { clientX: 150, clientY: 10, button: 0 });
+  fireEvent.pointerMove(row, { clientX: 100, clientY: 10 });
+  fireEvent.pointerMove(row, { clientX: 40, clientY: 10 });
+  fireEvent.pointerUp(row, { clientX: 40, clientY: 10 });
+  expect(screen.getByRole('checkbox', { name: /^Milch,/ })).toBeVisible();
+});
+
+test('shopping mode tells the family who is out shopping, and when it ends', () => {
+  api.apiSetShoppingTrip = jest.fn().mockResolvedValue({ ok: true });
+  sessionStorage.setItem('tribu_shopping_trip', '1');
+  setup({}, { demoMode: false });
+  expect(api.apiSetShoppingTrip).toHaveBeenCalledWith(10, true);
+  fireEvent.click(screen.getByRole('button', { name: /Beenden/ }));
+  expect(api.apiSetShoppingTrip).toHaveBeenLastCalledWith(10, false);
+});
+
+test('shows who else is shopping with the list', () => {
+  setup({ activeList: { id: 10, name: 'Wocheneinkauf', shopper: { user_id: 2, display_name: 'Anna Braun', since: '2026-09-28T17:00:00' } } });
+  expect(screen.getByRole('status')).toHaveTextContent('Anna kauft gerade ein');
+});
+
+test('does not announce yourself', () => {
+  setup(
+    { activeList: { id: 10, name: 'Wocheneinkauf', shopper: { user_id: 1, display_name: 'Dennis', since: '2026-09-28T17:00:00' } } },
+    { me: { id: 1, user_id: 1 } },
+  );
+  expect(screen.queryByText(/kauft gerade ein/)).not.toBeInTheDocument();
 });

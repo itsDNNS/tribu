@@ -9,7 +9,7 @@ async function open(page, options) {
   const api = await mockResponsivePlanner(page, options);
   await page.goto("/#calendar");
   await expect(
-    page.getByRole("heading", { name: "Alles im Blick." }),
+    page.getByRole("heading", { name: "Kalender", level: 1 }),
   ).toBeVisible();
   return api;
 }
@@ -20,37 +20,36 @@ const shot = async (page, name) =>
     style: "nextjs-portal{display:none}",
     fullPage: false,
   });
-test('anonymous mobile menu shows task, shopping and unread badges', async ({ page }) => {
+test('mobile header and tab bar show unread, shopping and task counts', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
-  await expect(page.locator('.ui-mobile-header .ui-count-badge')).toHaveText('3');
-  await page.locator('.ui-bottom-nav').getByRole('button', { name: 'Mehr', exact: true }).click();
-  const menu = page.getByRole('dialog');
-  await expect(menu.getByRole('button', { name: 'Aufgaben', exact: true })).toHaveAccessibleDescription('Aufgaben: 1');
-  // Shopping keeps its counter in the bottom navigation and is not repeated in the sheet.
-  await expect(menu.getByRole('button', { name: 'Einkauf', exact: true })).toHaveCount(0);
-  await expect(page.locator('.ui-bottom-nav').getByRole('button', { name: 'Einkauf', exact: true })).toHaveAccessibleDescription('Einkauf: 2');
+  await expect(page.locator('.app-header').getByRole('button', { name: 'Benachrichtigungen', exact: true })).toHaveText('3');
+  const lists = page.locator('.ui-bottom-nav').getByRole('button', { name: /Listen/ });
+  await expect(lists).toHaveAccessibleDescription('Einkauf: 2');
+  await lists.click();
+  const pages = page.getByRole('navigation', { name: 'Seiten in Listen' });
+  await expect(pages.getByRole('button', { name: /Aufgaben/ })).toHaveText('Aufgaben1');
   await shot(page, 'menu-badges-light.png');
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).scrollIntoViewIfNeeded();
-  await expect(menu.getByRole('button', { name: 'Benachrichtigungen', exact: true }).locator('.ui-count-badge')).toHaveText('3');
   await shot(page, 'menu-badges-dark.png');
 });
-test('New sheet saves quick capture to the chosen destination', async ({ page }) => {
+test('New sheet creates what the capture field recognises', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const api = await open(page);
   await page.locator('.ui-bottom-nav').getByRole('button', { name: 'Neu', exact: true }).click();
   const sheet = page.getByRole('dialog', { name: 'Was möchtet ihr festhalten?' });
   await expect(sheet.getByRole('button', { name: 'Schließen', exact: true })).toBeFocused();
-  const destinations = sheet.getByRole('group', { name: 'Speichern als' });
-  await expect(destinations.getByRole('button', { name: 'Einkauf' })).toBeDisabled();
-  await sheet.getByRole('textbox').fill('Milch');
-  await destinations.getByRole('button', { name: 'Einkauf' }).click();
-  await expect(sheet.getByRole('status')).toHaveText('Gespeichert');
-  expect(api.requests.find((r) => r.path === '/quick-capture' && r.method === 'POST')?.body).toMatchObject({ text: 'Milch', destination: 'shopping' });
-  await expect(sheet.getByRole('textbox')).toHaveValue('');
+  await expect(sheet.getByRole('button', { name: 'Anlegen', exact: true })).toBeDisabled();
+  await sheet.getByRole('textbox').fill('Milch\nZahnarzt morgen 15 Uhr');
+  await expect(sheet.getByRole('group', { name: 'Art von Milch' }).getByRole('button', { name: 'Einkauf' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(sheet.getByRole('group', { name: 'Art von Zahnarzt' }).getByRole('button', { name: 'Termin' })).toHaveAttribute('aria-pressed', 'true');
   expect(await sheet.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await shot(page, 'new-sheet-capture.png');
+  await sheet.getByRole('button', { name: '2 anlegen', exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(api.requests.find((r) => r.path === '/shopping/lists/1/items' && r.method === 'POST')?.body).toMatchObject({ name: 'Milch' });
+  expect(api.requests.find((r) => r.path === '/calendar/events' && r.method === 'POST')?.body).toMatchObject({ title: 'Zahnarzt', all_day: false });
+  expect(api.requests.find((r) => r.path === '/calendar/events' && r.method === 'POST')?.body.starts_at).toMatch(/T15:00:00$/);
 });
 for (const width of [320, 390, 680, 768, 820, 1024, 1448])
   test(`calendar layouts at ${width}px`, async ({ page }) => {
@@ -73,10 +72,10 @@ for (const width of [320, 390, 680, 768, 820, 1024, 1448])
       (await page.locator(".ui-planner").getAttribute("data-density")) ===
       "compact";
     if (compact) {
-      await expect(page.locator(".ui-weekday")).toHaveCount(7);
-      await expect(page.locator(".ui-month-grid")).toBeVisible();
+      // Phones open on the agenda under the week strip (Tribu 2.0, K1).
+      await expect(page.locator(".ui-day-strip button")).toHaveCount(7);
       await expect(
-        page.locator(".ui-agenda").getByText("Demo-Termin C", { exact: true }),
+        page.locator(".ui-agenda-list").getByText("Demo-Termin C", { exact: true }),
       ).toBeVisible();
     } else await expect(page.locator(".tc-calendar-day")).toHaveCount(35);
     expect(
@@ -87,18 +86,16 @@ for (const width of [320, 390, 680, 768, 820, 1024, 1448])
     if (width === 390 || width === 1448)
       await shot(page, `calendar-${width}.png`);
     if(width===390)await page.setViewportSize({width,height:844});
-    await page.getByRole("button", { name: "Woche", exact: true }).click();
     if (compact) {
+      // The month opens from the strip and closes back to the week.
+      await page.getByRole("button", { name: "Monat", exact: true }).click();
+      await expect(page.locator(".ui-weekday")).toHaveCount(7);
+      await expect(page.locator(".ui-month-grid")).toBeVisible();
+      if (width === 390) await shot(page, "month-390.png");
+      await page.getByRole("button", { name: "Woche", exact: true }).click();
       await expect(page.locator(".ui-day-strip button")).toHaveCount(7);
-      await expect(
-        page.getByRole("button", { name: "Ein Tag", exact: true }),
-      ).toHaveAttribute("aria-pressed", "true");
-      if (width === 390) await shot(page, "week-390.png");
-      await page
-        .getByRole("button", { name: "Ganze Woche", exact: true })
-        .click();
-      await expect(page.locator(".ui-agenda-day")).toHaveCount(7);
     } else {
+      await page.getByRole("button", { name: "Woche", exact: true }).click();
       await expect(page.locator(".tc-week-column")).toHaveCount(7);
       if (width === 1448) await shot(page, "week-1448.png");
     }
@@ -114,21 +111,21 @@ test("selected date, family colors, responsive form state and saved details", as
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const api = await open(page);
-  await page.locator('.ui-day-button[data-date="2026-09-22"]').click();
-  await expect(page.locator(".ui-agenda")).toContainText("Demo-Termin E");
-  await page
-    .getByRole("combobox", { name: "Familienfilter" })
-    .selectOption("2");
-  await expect(page.locator(".ui-agenda")).not.toContainText("Demo-Termin E");
-  await page.getByRole("combobox", { name: "Familienfilter" }).selectOption("");
-  await page.locator('.ui-day-button[data-date="2026-09-21"]').click();
+  await page.getByRole("button", { name: "Dienstag, 22. September 2026" }).click();
+  await expect(page.locator(".ui-agenda-list")).toContainText("Demo-Termin E");
+  // The person filter: chips for everyone and each member.
+  const people = page.getByRole("group", { name: "Familienfilter" });
+  await people.getByRole("button").nth(2).click();
+  await expect(page.locator(".ui-agenda-list")).not.toContainText("Demo-Termin E");
+  await people.getByRole("button").first().click();
+  await page.getByRole("button", { name: "Montag, 21. September 2026" }).click();
   expect(
     await page
       .locator(".ui-event-card")
       .first()
       .evaluate((el) => el.style.getPropertyValue("--event-color")),
   ).toBe("#79529e");
-  await page.locator(".ui-agenda-head").getByRole("button").click();
+  await page.locator(".ui-agenda-head").first().getByRole("button").click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.locator("input[type=date]").first()).toHaveValue(
     "2026-09-21",
@@ -156,7 +153,7 @@ test("agenda requests more dates; mobile shell exposes quick capture and navigat
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const api = await open(page);
-  await page.getByRole("button", { name: "Agenda", exact: true }).click();
+  // Phones start on the agenda.
   await page.getByRole("button", { name: "Weitere 14 Tage laden" }).click();
   await expect
     .poll(
@@ -177,8 +174,8 @@ test("agenda requests more dates; mobile shell exposes quick capture and navigat
   ).toHaveValue("2026-09-21");
   await page.keyboard.press("Escape");
   await page
-    .locator(".ui-bottom-nav")
-    .getByRole("button", { name: "Mehr", exact: true })
+    .locator(".app-header")
+    .getByRole("button", { name: "Konto und Einstellungen", exact: true })
     .click();
   await expect(
     page
@@ -186,14 +183,14 @@ test("agenda requests more dates; mobile shell exposes quick capture and navigat
       .getByRole("button", { name: "Einstellungen", exact: true }),
   ).toBeVisible();
 });
-test("meal and weekly planners share day/week controls; a meal can move by date", async ({
+test("the meal week is the content on phones and the weekly plan keeps its day/week controls; a meal can move by date", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const api = await open(page);
   await page.goto("/#meal_plans");
-  await expect(page.locator(".ui-day-strip")).toBeVisible();
-  await page.locator(".ui-strip-day").filter({ hasText: /19/ }).click();
+  // Phones show the whole week as the content (Tribu 2.0, M1).
+  await expect(page.locator(".meal-week-list .meal-day")).toHaveCount(7);
   await page.getByRole("button", { name: /Demo-Mahlzeit/ }).click();
   const dialog = page.getByRole("dialog");
   await dialog.locator("input[type=date]").fill("2026-09-20");
@@ -216,6 +213,8 @@ test("date jump, keyboard navigation and sidebar resize retain the selected day"
 }) => {
   await page.setViewportSize({ width: 1024, height: 900 });
   await open(page);
+  // Next to the sidebar the calendar is narrow: the month opens from the strip.
+  await page.getByRole("button", { name: "Monat", exact: true }).click();
   await expect(page.locator(".ui-month-grid")).toBeVisible();
   await page
     .getByRole("button", { name: "Datum auswählen", exact: true })
@@ -236,9 +235,8 @@ test("date jump, keyboard navigation and sidebar resize retain the selected day"
     page.locator(".tc-calendar-day.selected .tc-day-number"),
   ).toHaveText("1");
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator(".ui-day-cell.selected .ui-day-number")).toHaveText(
-    "1",
-  );
+  // The month opened earlier stays open on the phone.
+  await expect(page.locator(".ui-day-cell.selected .ui-day-number")).toHaveText("1");
   await page.getByRole("button", { name: "Woche", exact: true }).click();
   await expect(page.locator(".ui-strip-day.selected strong")).toHaveText("1");
 });
@@ -265,7 +263,7 @@ test("compact editing and dark sheets retain family colors and reachable actions
   ).toBeInViewport();
   await shot(page, "event-sheet-dark.png");
   await dialog.getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.locator(".ui-agenda")).toContainText("Demo-Termin bearbeitet");
+  await expect(page.locator(".ui-agenda-list")).toContainText("Demo-Termin bearbeitet");
   expect(
     api.events.find((e) => e.title === "Demo-Termin bearbeitet").assigned_to,
   ).toEqual([2]);
@@ -275,17 +273,25 @@ test("compact editing and dark sheets retain family colors and reachable actions
     ),
   ).toBe(true);
 });
-test("children retain read-only compact planning and cannot open quick creation", async ({
+test("children plan read-only and suggest through \"+\" instead of creating", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await open(page, { child: true });
-  await expect(
-    page
-      .locator(".ui-bottom-nav")
-      .getByRole("button", { name: "Neu", exact: true }),
-  ).toBeDisabled();
-  await expect(page.locator(".tc-view-header .primary")).toHaveCount(0);
+  const api = await open(page, { child: true });
+  // "+" suggests (Tribu 2.0, E5): an adult confirms it later.
+  await page
+    .locator(".ui-bottom-nav")
+    .getByRole("button", { name: "Neu", exact: true })
+    .click();
+  const sheet = page.getByRole("dialog", { name: "Etwas vorschlagen" });
+  await expect(sheet.getByText("Ein Erwachsener sieht deinen Vorschlag und trägt ihn ein.")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Termin" })).toHaveCount(0);
+  await sheet.getByRole("textbox", { name: "Etwas vorschlagen" }).fill("Freitag Pizza");
+  await sheet.getByRole("button", { name: "Vorschlagen" }).click();
+  await expect(sheet).toBeHidden();
+  expect(
+    api.requests.filter((r) => r.path === "/quick-capture" && r.method === "POST").map((r) => r.body),
+  ).toEqual([{ family_id: 7, text: "Freitag Pizza", destination: "inbox" }]);
   await page
     .locator(".ui-event-content")
     .filter({ hasText: "Demo-Termin C" })

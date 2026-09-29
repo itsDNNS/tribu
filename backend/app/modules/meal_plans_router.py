@@ -28,10 +28,15 @@ from app.core.errors import (
 )
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
-from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item
+from app.core.shopping_domain import (
+    ShoppingItemTransition,
+    add_or_merge_shopping_item,
+    merge_item_source,
+    normalize_product_name,
+)
 from app.core.ws_broadcast import broadcast_shopping_event
 from app.database import get_db
-from app.models import MealPlan, Membership, ShoppingList, User
+from app.models import MealPlan, Membership, ShoppingItem, ShoppingList, User
 from app.schemas import (
     AUTH_RESPONSES,
     MEAL_SLOTS,
@@ -61,6 +66,11 @@ class NormalizedIngredient(TypedDict):
     name: str
     amount: float | None
     unit: str | None
+
+
+class WeekIngredient(NormalizedIngredient):
+    # The meals it is for, e.g. "Lasagne, Pancakes" (Tribu 2.0, L5).
+    source: str | None
 
 
 def _validate_slot(slot: Optional[str]) -> None:
@@ -227,9 +237,9 @@ def _aggregation_key(entry: NormalizedIngredient) -> tuple[str, str | None] | No
     return None
 
 
-def _aggregate_week_ingredients(plans: list[MealPlan]) -> list[NormalizedIngredient]:
+def _aggregate_week_ingredients(plans: list[MealPlan]) -> list[WeekIngredient]:
     """Aggregate ingredients from multiple meal-plan rows for one week."""
-    aggregated: list[NormalizedIngredient] = []
+    aggregated: list[WeekIngredient] = []
     index: dict[tuple[str, str | None], int] = {}
     for plan in plans:
         for entry in _normalize_stored_ingredients(plan.ingredients):
@@ -237,12 +247,74 @@ def _aggregate_week_ingredients(plans: list[MealPlan]) -> list[NormalizedIngredi
             if key is None or key not in index:
                 if key is not None:
                     index[key] = len(aggregated)
-                aggregated.append(dict(entry))
+                aggregated.append({**entry, "source": merge_item_source(None, plan.meal_name)})
                 continue
             existing = aggregated[index[key]]
+            existing["source"] = merge_item_source(existing["source"], plan.meal_name)
             if existing["amount"] is not None and entry["amount"] is not None:
                 existing["amount"] += entry["amount"]
     return aggregated
+
+
+def missing_meal_ingredients(db: Session, plan: MealPlan) -> list[NormalizedIngredient]:
+    """A meal's ingredients that are on none of the family's lists yet (N-2)."""
+    on_lists = {
+        normalize_product_name(name)
+        for (name,) in db.query(ShoppingItem.name)
+        .join(ShoppingList, ShoppingItem.list_id == ShoppingList.id)
+        .filter(ShoppingList.family_id == plan.family_id, ShoppingItem.archived.is_(False))
+        .all()
+    }
+    return [
+        entry for entry in _normalize_stored_ingredients(plan.ingredients)
+        if normalize_product_name(entry["name"]) not in on_lists
+    ]
+
+
+def add_meal_ingredients(
+    db: Session,
+    plan: MealPlan,
+    shopping_list: ShoppingList,
+    user: User,
+    entries: list[NormalizedIngredient],
+) -> list[ShoppingItemTransition]:
+    """Puts a meal's ingredients on a list and tells everyone who watches it.
+
+    Used by "add to shopping" and by the reminder's "Add to list" button.
+    """
+    transitions = [
+        add_or_merge_shopping_item(
+            db,
+            shopping_list=shopping_list,
+            name=entry["name"].strip(),
+            spec=_format_spec(entry["amount"], entry["unit"]),
+            added_by_user_id=user.id,
+            source=plan.meal_name,
+        )
+        for entry in entries
+    ]
+    db.commit()
+    for transition in transitions:
+        item = transition.item
+        db.refresh(item)
+        broadcast_shopping_event(
+            "list",
+            shopping_list.id,
+            "item_added" if transition.action == "created" else "item_updated",
+            {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
+        )
+    if transitions:
+        dispatch_shopping_destination_event(
+            family_id=plan.family_id,
+            event_type="shopping.item.changed",
+            title="Meal ingredients added",
+            body=f'{user.display_name or "Someone"} added {len(transitions)} ingredients from "{plan.meal_name}" to "{shopping_list.name}".',
+            link=f"/shopping?list={shopping_list.id}",
+            source_type="shopping_list",
+            source_id=shopping_list.id,
+            action="meal_plan_added",
+        )
+    return transitions
 
 
 def _slot_taken(db: Session, family_id: int, plan_date: date, slot: str, exclude_id: Optional[int] = None) -> bool:
@@ -466,6 +538,7 @@ def add_week_ingredients_to_shopping(
             name=entry["name"].strip(),
             spec=_format_spec(entry["amount"], entry["unit"]),
             added_by_user_id=user.id,
+            source=entry["source"],
         ))
     db.commit()
     for transition in transitions:
@@ -546,36 +619,7 @@ def add_ingredients_to_shopping(
                 )
             selected.append(match)
 
-    transitions: list[ShoppingItemTransition] = []
-    for entry in selected:
-        transitions.append(add_or_merge_shopping_item(
-            db,
-            shopping_list=shopping_list,
-            name=entry["name"].strip(),
-            spec=_format_spec(entry["amount"], entry["unit"]),
-            added_by_user_id=user.id,
-        ))
-    db.commit()
-    for transition in transitions:
-        item = transition.item
-        db.refresh(item)
-        broadcast_shopping_event(
-            "list",
-            shopping_list.id,
-            "item_added" if transition.action == "created" else "item_updated",
-            {"item": ShoppingItemResponse.model_validate(item).model_dump(mode="json")},
-        )
-    if transitions:
-        dispatch_shopping_destination_event(
-            family_id=plan.family_id,
-            event_type="shopping.item.changed",
-            title="Meal ingredients added",
-            body=f'{user.display_name or "Someone"} added {len(transitions)} ingredients from "{plan.meal_name}" to "{shopping_list.name}".',
-            link=f"/shopping?list={shopping_list.id}",
-            source_type="shopping_list",
-            source_id=shopping_list.id,
-            action="meal_plan_added",
-        )
+    transitions = add_meal_ingredients(db, plan, shopping_list, user, selected)
     return MealPlanAddToShoppingResponse(
         added_count=len(transitions),
         created_count=sum(result.action == "created" for result in transitions),

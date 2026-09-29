@@ -320,7 +320,8 @@ test.describe('Shopping with the backend', () => {
     }).click();
     await expect(shoppingListCard(page, 'Delete This List')).toHaveCount(0);
     await expect(page.getByRole('heading', {
-      name: 'For everything you need.'
+      name: 'Shopping',
+      level: 1
     })).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
@@ -347,29 +348,28 @@ test.describe('Shopping with the backend', () => {
     await expect(page.locator('.bottom-nav')).not.toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
-  test('mobile shopping navigation stays opaque while quick add is focused and reopened', async ({ authedPage: page, apiCtx }) => {
+  test('mobile shopping keeps an opaque header, dock and tab bar while quick add is focused', async ({ authedPage: page, apiCtx }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const family = await getFamilyId(apiCtx);
     await seedShoppingList(apiCtx, family, 'Opaque Menu Market List');
     await openList(page, 'Opaque Menu Market List');
 
-    const sidebar = page.locator('.sidebar.mobile-open');
+    const opaque = async (locator) => {
+      const background = await locator.evaluate(element => getComputedStyle(element).backgroundColor);
+      const channels = background.match(/rgba?\(([^)]+)\)/)[1].split(',').map(Number);
+      expect(channels[3] ?? 1).toBe(1);
+    };
     for (const theme of ['light', 'dark']) {
       await page.evaluate(value => document.documentElement.setAttribute('data-theme', value), theme);
       await search(page).focus();
       await expect(search(page)).toBeFocused();
-      await expect(page.locator('.shop-mobile-dock')).toBeVisible();
-      await expect(page.locator('.ui-bottom-nav')).toBeHidden();
-      await expect(page.locator('.ui-mobile-header')).toBeHidden();
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-        await expect(sidebar).toBeVisible();
-        const background = await sidebar.evaluate(element => getComputedStyle(element).backgroundColor);
-        const channels = background.match(/rgba?\(([^)]+)\)/)[1].split(',').map(Number);
-        expect(channels[3] ?? 1).toBe(1);
-        await page.mouse.click(370, 120);
-        await expect(sidebar).toBeHidden();
+      for (const selector of ['.app-header', '.shop-mobile-dock', '.ui-bottom-nav']) {
+        await expect(page.locator(selector)).toBeVisible();
+        await opaque(page.locator(selector));
       }
+      const dock = await page.locator('.shop-mobile-dock').boundingBox();
+      const tabs = await page.locator('.ui-bottom-nav').boundingBox();
+      expect(dock.y + dock.height).toBeLessThanOrEqual(tabs.y + 1);
     }
   });
 });

@@ -246,6 +246,7 @@ class TestRecipeShopping:
         assert [item["name"] for item in data] == ["Flour", "Salt"]
         assert data[0]["spec"] == "250 g"
         assert data[1]["spec"] is None
+        assert [item["source"] for item in data] == ["Pancakes", "Pancakes"]
 
         pushed_again = client.post(
             f"/recipes/{recipe['id']}/add-to-shopping",

@@ -6,7 +6,7 @@ import { resolveInitialView } from '../lib/navigationState';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { listThemes } from '../lib/themes';
 
-export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
+export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'family', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
 
 const AppContext = createContext(null);
 
@@ -46,7 +46,11 @@ export function AppProvider({ children }) {
   const lastEventIdRef = useRef(0);
 
   // UI state
+  // Appearance of this device: light, dark, midnight-glass or system,
+  // which follows the device's light or dark mode (Tribu 2.0, X2).
   const [theme, setTheme] = useState('light');
+  const [systemDark, setSystemDark] = useState(false);
+  const resolvedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
   const [compactDashboard, setCompactDashboard] = useState(false);
   const [showNotificationBadge, setShowNotificationBadge] = useState(true);
   const [lang, setLang] = useState('en');
@@ -63,6 +67,16 @@ export function AppProvider({ children }) {
 
   const isAdmin = myFamilyRole === 'admin' || myFamilyRole === 'owner';
   const isChild = !isAdmin && !myFamilyIsAdult;
+  // Optional areas this family does not use (Tribu 2.0, R4).
+  const hiddenAreas = useMemo(() => {
+    const family = families.find((entry) => String(entry.family_id) === String(familyId));
+    return Array.isArray(family?.hidden_areas) ? family.hidden_areas : [];
+  }, [families, familyId]);
+  const setHiddenAreas = useCallback((areas) => {
+    setFamilies((current) => current.map((entry) => (
+      String(entry.family_id) === String(familyId) ? { ...entry, hidden_areas: areas } : entry
+    )));
+  }, [familyId]);
 
   const setActiveView = useCallback((view) => {
     sessionStorage.setItem('tribu_view', view);
@@ -285,7 +299,7 @@ export function AppProvider({ children }) {
 
   // Init: localStorage, resize, auto-login
   useEffect(() => {
-    setTheme(window.localStorage.getItem('tribu_theme') || 'light');
+    setTheme(window.localStorage.getItem('tribu_theme') || 'system');
     setCompactDashboard(window.localStorage.getItem('tribu_compact_dashboard') === 'true');
     setShowNotificationBadge(window.localStorage.getItem('tribu_notification_badge') !== 'false');
     const storedWeekStart = window.localStorage.getItem('tribu_week_start');
@@ -341,11 +355,30 @@ export function AppProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A language someone picks also goes to their account, so the app and the
+  // server's reminders use it too (#535).
+  const chooseLang = useCallback((value) => {
+    setLang(value);
+    if (loggedIn && !demoMode) api.apiUpdateUiPreferences({ language: value }).catch(() => {});
+  }, [loggedIn, demoMode]);
+
   // Persist theme
   useEffect(() => {
     window.localStorage.setItem('tribu_theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+  }, [resolvedTheme]);
+
+  useEffect(() => {
+    const query = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!query) return undefined;
+    const update = () => setSystemDark(query.matches);
+    update();
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem('tribu_compact_dashboard', String(compactDashboard));
@@ -488,7 +521,7 @@ export function AppProvider({ children }) {
     logout,
     // Family
     familyId, setFamilyId,
-    families, setFamilies,
+    families, setFamilies, hiddenAreas, setHiddenAreas,
     myFamilyRole, setMyFamilyRole,
     myFamilyIsAdult, setMyFamilyIsAdult,
     members, setMembers,
@@ -518,8 +551,8 @@ export function AppProvider({ children }) {
     loadNotifications: loadNotificationsWrapped,
     resetData,
     // UI
-    theme, setTheme,
-    lang, setLang,
+    theme, setTheme, resolvedTheme,
+    lang, setLang: chooseLang,
     weekStart, setWeekStart,
     messages,
     availableThemes,

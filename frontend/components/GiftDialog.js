@@ -3,6 +3,7 @@ import { X, Cake } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { GIFT_OCCASIONS, GIFT_STATUSES } from '../lib/gifts';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
+import { inBody } from './inBody';
 
 function statusLabel(messages, status) {
   return t(messages, `module.gifts.status.${status}`);
@@ -34,7 +35,7 @@ export default function GiftDialog({
   const titleId = 'gift-dialog-title';
   const heading = isEditing ? t(messages, 'module.gifts.edit_title') : t(messages, 'module.gifts.add');
 
-  return (
+  return inBody(
     <div className="cal-dialog-backdrop" onClick={onClose}>
       <div
         ref={dialogRef}

@@ -12,11 +12,12 @@ jest.mock('../../lib/api', () => ({ apiCreateEvent: jest.fn(), apiUpdateEvent: j
 
 const member = { user_id: 1, display_name: 'Alex' };
 const event = { id: 1, title: 'Piano lesson', starts_at: '2026-05-04T14:00:00', ends_at: '2026-05-04T15:00:00', assigned_to: [1], description: 'Bring music', color: '#8052a3' };
-function Harness({ initialEvents = [event], ...overrides }) {
+function Harness({ initialEvents = [event], createRequest = null, ...overrides }) {
   const [events, setEvents] = useState(initialEvents);
   const [summary, setSummary] = useState({ next_events: [] });
   useApp.mockReturnValue({ familyId: 1, me: member, members: [member, { user_id: 2, display_name: 'Sam' }], messages: en, lang: 'en', weekStart: 'monday', timeFormat: '24h', isChild: false, demoMode: true, birthdays: [], loadDashboard: jest.fn(), events, setEvents, summary, setSummary, ...overrides });
-  return <CalendarView />;
+  // New events come from the global "+" (createRequest), as in AppShell.
+  return <CalendarView createRequest={createRequest} onCreateHandled={() => {}} />;
 }
 const openEvent = () => fireEvent.click(screen.getByRole('button', { name: /Piano lesson/ }));
 const openEditor = () => { openEvent(); fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true })); };
@@ -58,8 +59,7 @@ describe('Mockup calendar and event overlays', () => {
     expect(screen.getByRole('button',{name:/Piano lesson/})).toBeVisible();
   });
   it('creates a dated event through a modal and displays it in the calendar', async () => {
-    render(<Harness initialEvents={[]} />);
-    fireEvent.click(screen.getByRole('button',{name:'Create event'}));
+    render(<Harness initialEvents={[]} createRequest={{ kind: 'event', id: 1 }} />);
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByLabelText('What is happening?')).toHaveFocus();
     expect(within(dialog).getByLabelText('Date')).toHaveValue('2026-05-04');
@@ -159,8 +159,7 @@ describe('Mockup calendar and event overlays', () => {
     expect(container.querySelector('.tc-event-dot').style.getPropertyValue('--event-color')).toBe('#06b6d4');
   });
   it('creates automatic member colors by default and allows a manual override', async () => {
-    render(<Harness demoMode={false} />);
-    fireEvent.click(screen.getByRole('button',{name:'Create event',exact:true}));
+    render(<Harness demoMode={false} createRequest={{ kind: 'event', id: 1 }} />);
     expect(screen.getByRole('button',{name:'Family colors',exact:true})).toHaveAttribute('aria-pressed','true');
     fireEvent.change(screen.getByLabelText('What is happening?'),{target:{value:'Automatic plan'}});
     fireEvent.click(screen.getByRole('checkbox',{name:'Sam',exact:true}));

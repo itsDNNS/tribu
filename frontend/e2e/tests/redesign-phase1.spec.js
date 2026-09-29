@@ -10,15 +10,16 @@ async function expectNoHorizontalOverflow(page) {
 }
 
 test.describe('Phase 1 redesign views', () => {
-  test('recipes, templates, contacts, and school timetables use the warm view shells', async ({ authedPage: page }) => {
+  test('recipes, templates, contacts, and school timetables show a plain title', async ({ authedPage: page }) => {
     await navigateTo(page, 'Recipes');
     await expect(page.locator('.recipes-page')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.recipes-page-icon')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Recipes', level: 1 })).toBeVisible();
+    await expect(page.locator('.recipes-page-icon')).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
 
     await navigateTo(page, 'Templates');
     await expect(page.locator('.templates-view')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.templates-page-icon')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Templates', level: 1 })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     await navigateTo(page, 'Contacts');
@@ -28,7 +29,7 @@ test.describe('Phase 1 redesign views', () => {
 
     await navigateTo(page, 'School timetables');
     await expect(page.locator('.school-timetables-view')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.school-page-icon')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'School timetables', level: 1 })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 });
