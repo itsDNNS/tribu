@@ -933,14 +933,14 @@ test('deleting the selected list while its dialog is open renders the remaining 
 });
 
 test('a custom favourite remains available on another list in the same browser scope', () => {
-  const custom={...apple,name:'Oat drink'};
+  const custom={...apple,name:'Coconut drink'};
   const view=setup({items:[custom],uncheckedItems:[custom]});
-  fireEvent.click(screen.getByRole('button',{name:'Details zu Oat drink'}));
+  fireEvent.click(screen.getByRole('button',{name:'Details zu Coconut drink'}));
   fireEvent.click(dialog().getByRole('button',{name:'Favorit speichern'}));
   fireEvent.click(dialog().getByRole('button',{name:'Abbrechen'}));
   mockShopping={...mockShopping,activeListId:20,activeList:{id:20,name:'Other'},items:[],uncheckedItems:[]};
   view.rerender(<ShoppingView/>);
-  expect(screen.getByRole('button',{name:'Oat drink, hinzufügen'})).toBeVisible();
+  expect(screen.getByRole('button',{name:'Coconut drink, hinzufügen'})).toBeVisible();
 });
 
 test.each([
@@ -1093,6 +1093,13 @@ test('built-in categories show in the reader\'s language', () => {
   setup({}, { messages: buildMessages('en') });
   expect(screen.getByRole('region', { name: 'Fruit & vegetables' })).toBeVisible();
   expect(screen.getByRole('region', { name: 'Chilled' })).toBeVisible();
+});
+test('the catalogue speaks English to English readers and keeps German favourites (#562)', () => {
+  setup({}, { lang: 'en', messages: buildMessages('en') });
+  // The default favourites are saved under German names.
+  expect(screen.getByRole('button', { name: /^Bananas/ })).toBeVisible();
+  expect(screen.getByRole('button', { name: /^Mineral water/ })).toBeVisible();
+  expect(screen.queryByRole('button', { name: /^Mineralwasser/ })).not.toBeInTheDocument();
 });
 test('without categories the list is one flat section and the editor has no category', () => {
   setup({}, { shoppingCategories: false });
