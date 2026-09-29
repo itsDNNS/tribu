@@ -23,6 +23,7 @@ import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient,
 import ConfirmDialog from './ConfirmDialog';
 import RecipeDetail from './recipes/RecipeDetail';
 import { inBody } from './inBody';
+import { useHandoff } from '../lib/viewHandoff';
 
 
 function safeHttpUrl(value) {
@@ -423,7 +424,8 @@ export default function RecipesView() {
   const [query, setQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState(null);
   // The recipe open to cook from (discussion #511).
-  const [openId, setOpenId] = useState(null);
+  const wantedRecipe = useHandoff('tribu_recipe_open');
+  const [openId, setOpenId] = useState(() => Number(wantedRecipe) || null);
 
   const loadRecipes = useCallback(async (fid = familyId) => {
     if (!fid || demoMode) {

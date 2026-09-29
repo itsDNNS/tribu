@@ -136,6 +136,12 @@ export default function AppShell() {
     return ()=>cancelAnimationFrame(frame);
   },[activeView,createRequest]);
   const ActiveComponent = views[activeView] || TodayView;
+  // Opens a create form in its area, as the "+" sheet does.
+  const openCreateForm = (kind) => {
+    const route = { event: 'calendar', task: 'tasks', shopping: 'shopping', meal: 'meal_plans' }[kind];
+    navigate(route);
+    setCreateRequest({ kind, id: Date.now() });
+  };
   const openTaskCount = tasks.filter((tk) => tk.status === 'open').length;
   const totalUnchecked = shoppingLists.reduce((sum, l) => sum + (l.item_count - l.checked_count), 0);
 
@@ -304,6 +310,7 @@ export default function AppShell() {
           {loading ? <TodaySkeleton messages={messages} /> : me?.must_change_password ? <ForcePasswordChange /> : !me?.has_completed_onboarding ? <OnboardingWizard /> : (
             <ActiveComponent
               onOpenCapture={() => setMobileSheet('new')}
+              onCreateForm={openCreateForm}
               createRequest={createRequest}
               onCreateHandled={()=>setCreateRequest(null)}
             />
@@ -320,11 +327,7 @@ export default function AppShell() {
         setSheet={setMobileSheet}
         createKind={createKind}
         sharedText={sharedText}
-        onCreate={(kind) => {
-          const route = { event: 'calendar', task: 'tasks', shopping: 'shopping', meal: 'meal_plans' }[kind];
-          navigate(route);
-          setCreateRequest({ kind, id: Date.now() });
-        }}
+        onCreate={openCreateForm}
       />
 
       {/* Notification panel */}

@@ -6,6 +6,7 @@ import * as api from '../lib/api';
 import { useWebSocket } from './useWebSocket';
 import { compareCheckedItems } from '../lib/shoppingPresentation';
 import { sendWhenOnline } from '../lib/offline';
+import { useHandoff } from '../lib/viewHandoff';
 
 export function formatShoppingItemName(value) {
   const cleaned = value.trim();
@@ -133,6 +134,8 @@ export function useShopping() {
   const { error: toastError } = useToast();
 
   const [activeListId, setActiveListId] = useState(null);
+  // The weekly plan opens a given list.
+  const wantedList = useHandoff('tribu_shopping_list');
   const [items, setItems] = useState([]);
   const [newListName, setNewListName] = useState('');
   const [newItemName, setNewItemName] = useState('');
@@ -306,13 +309,14 @@ export function useShopping() {
 
   useEffect(() => {
     if (shoppingLists.length > 0 && !shoppingLists.find((l) => l.id === activeListId)) {
-      setActiveListId(shoppingLists[0].id);
+      const wanted = shoppingLists.find((l) => String(l.id) === wantedList);
+      setActiveListId((wanted || shoppingLists[0]).id);
     }
     if (shoppingLists.length === 0) {
       setActiveListId(null);
       setItems([]);
     }
-  }, [shoppingLists, activeListId]);
+  }, [shoppingLists, activeListId, wantedList]);
 
   useEffect(() => {
     let cancelled = false;

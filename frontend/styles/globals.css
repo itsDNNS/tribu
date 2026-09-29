@@ -3568,6 +3568,52 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
   font-weight: 820;
   line-height: 1.25;
 }
+/* Entries open where they come from; "+" opens the area's form (#511). */
+.weekly-plan-section-header h2 { flex: 1; }
+.weekly-plan-add {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px dashed color-mix(in srgb, var(--weekly-plan-text-secondary) 45%, transparent);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--weekly-plan-text-secondary);
+  cursor: pointer;
+}
+.weekly-plan-add:hover { border-style: solid; color: var(--weekly-plan-text-primary); background: var(--weekly-plan-surface-soft); }
+.weekly-plan-item-open {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.weekly-plan-section li:has(.weekly-plan-item-open):hover { border-color: color-mix(in srgb, var(--color-accent-fill) 40%, var(--weekly-plan-border)); }
+.weekly-plan-item-open:focus-visible { outline: 2px solid var(--color-accent-fill); outline-offset: 4px; border-radius: 6px; }
+.weekly-plan-recipe-link {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--weekly-plan-border);
+  border-radius: var(--radius-pill);
+  background: var(--weekly-plan-surface);
+  color: var(--weekly-plan-text-secondary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.weekly-plan-recipe-link:hover { color: var(--weekly-plan-text-primary); }
 .weekly-plan-empty {
   margin: 0;
   padding: 12px;

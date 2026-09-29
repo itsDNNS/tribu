@@ -19,6 +19,7 @@ import { t, tc } from '../lib/i18n';
 import ConfirmDialog from './ConfirmDialog';
 import MealPlanDialog from './MealPlanDialog';
 import BottomSheet from './responsive/BottomSheet';
+import { handoffDate, useHandoff } from '../lib/viewHandoff';
 
 // The week's ingredients for the shopping preview: one line per name, with
 // the amounts that go with it.
@@ -199,9 +200,12 @@ export default function MealPlansView(props) {
     demoMode,
     shoppingLists = [],
   } = useApp();
-  const hook = useMealPlans();
+  // Opened from the weekly plan on a given day.
+  const focusValue = useHandoff('tribu_meal_focus');
+  const [focusDay] = useState(() => handoffDate(focusValue));
+  const hook = useMealPlans({ initialDate: focusDay });
   const { ref: plannerRef, compact } = usePlannerLayout();
-  const [selectedDay, setSelectedDay] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(() => focusDay || new Date());
   const [ingredientsOpen, setIngredientsOpen] = useState(false);
   const weekSwipe = useRef(null);
   useEffect(() => {
