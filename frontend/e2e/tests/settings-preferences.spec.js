@@ -12,9 +12,9 @@ test('settings preferences persist for a real account and all eleven sections op
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-dashboard-density', 'compact');
-  // New overview copy uses the explicit English fallback in French.
-  await expect(page.getByRole('switch', { name: 'Compact view', exact: true })).toBeChecked();
-  await expect(page.getByRole('switch', { name: 'Notification badge', exact: true })).not.toBeChecked();
+  // The overview speaks French now (#550).
+  await expect(page.getByRole('switch', { name: 'Vue compacte', exact: true })).toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Pastille de notification', exact: true })).not.toBeChecked();
   await expect(page.locator('.ms-grid select').last()).toHaveValue('sunday');
   await page.locator('.ms-grid select').nth(1).selectOption('en');
 
