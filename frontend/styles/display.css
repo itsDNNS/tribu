@@ -198,6 +198,20 @@
   gap: 1.2em;
   min-height: 0;
 }
+/* Arrangements (Tribu 2.0): "bottom_large" gives the timeline's room to
+   zone d, "right_tall" merges zones a and b. */
+.stage-grid--bottom_large {
+  grid-template-areas:
+    'hero a'
+    'd b'
+    'd c';
+}
+.stage-grid--right_tall {
+  grid-template-areas:
+    'hero a'
+    'timeline a'
+    'd c';
+}
 .stage-hero { grid-area: hero; }
 .stage-timeline { grid-area: timeline; }
 .stage-zone--a { grid-area: a; }
@@ -1238,3 +1252,42 @@
   color: var(--stage-muted);
   font-size: 1.3em;
 }
+
+/* ---- Arrangements on portrait screens and small e-ink panels -------------------- */
+@media (orientation: portrait) {
+  .stage-grid--bottom_large {
+    grid-template-rows: minmax(0, 0.8fr) minmax(0, 0.95fr) minmax(0, 0.6fr) minmax(0, 1.75fr);
+    grid-template-areas:
+      'hero hero'
+      'a b'
+      'c c'
+      'd d';
+  }
+  .stage-grid--right_tall {
+    grid-template-rows: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 0.75fr);
+    grid-template-areas:
+      'hero hero'
+      'timeline timeline'
+      'a c'
+      'd d';
+  }
+}
+@media (max-width: 900px) and (orientation: landscape) {
+  .stage--eink .stage-grid--bottom_large {
+    grid-template-areas:
+      'hero a'
+      'd b';
+  }
+  .stage--eink .stage-grid--bottom_large .stage-zone--d { display: flex; }
+  .stage--eink .stage-grid--right_tall {
+    grid-template-areas:
+      'hero a'
+      'timeline a';
+  }
+}
+
+/* ---- The school week as a card in a large zone ------------------------------------ */
+.stage-card-body.stage-timetable-card { gap: 0.5em; }
+.stage-card-body.stage-timetable-card > .stage-timetable { flex: 1 1 0; min-height: 0; font-size: 0.78em; gap: 0.25em; }
+.stage-timetable-card .stage-tt-cell { font-size: 1.1em; border-radius: 0.55em; }
+.stage-timetable-card .stage-tt-period b { font-size: 1.1em; }

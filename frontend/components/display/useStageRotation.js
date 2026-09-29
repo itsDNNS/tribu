@@ -57,6 +57,9 @@ export function useStageRotation({ cardCount, intervalSeconds, zoneIndex, zoneCo
     elapsedMs: held ? 0 : now - scheduled.startedAt,
     intervalMs,
     slotKey: held ? `hold-${held.index}-${held.until}` : `slot-${scheduled.slot}`,
+    // How often the zone has gone round its cards; cards with several pages
+    // (one timetable per child) turn a page each round.
+    round: cardCount > 0 ? Math.floor(scheduled.slot / cardCount) : 0,
     next: () => step(1),
     previous: () => step(-1),
     pause,

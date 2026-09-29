@@ -11,10 +11,10 @@ Every display uses the same "stage":
 
 | Zone | Position | Cards it accepts |
 | --- | --- | --- |
-| A | right, top | Meals, Shopping list, Weather today, Don't forget, School timetable, Coming up, Stars, Birthdays |
+| A | right, top | Meals, Shopping list, Weather today, Don't forget, Timetable (today), Coming up, Stars, Birthdays |
 | B | right, middle | same as A |
 | C | right, bottom | same as A |
-| D | bottom, wide | People, This week |
+| D | bottom, wide | People, This week; Timetable (week) in the "Large bottom" arrangement |
 
 Card contents:
 
@@ -22,12 +22,28 @@ Card contents:
 - **Shopping list** – unchecked items across lists.
 - **Weather today** – the next hours and the first likely rain.
 - **Don't forget** – one-off tasks that are overdue or due today or tomorrow; in the evening also routines that are still open.
-- **School timetable** – today's lessons with the current one highlighted (tomorrow's in the evening).
+- **Timetable (today)** – today's lessons with the current one highlighted (tomorrow's in the evening).
+- **Timetable (week)** – a whole school week as a grid, today's column and the running period marked. With several timetables the zone shows one per round.
 - **Coming up** – countdowns to birthdays and all-day events (holidays, trips) in the next 60 days.
 - **Stars** – reward balances and the next reward for each child.
 - **Birthdays** – birthdays in the next four weeks.
 - **People** – per person: what is next and routine progress (or due tasks).
 - **This week** – Monday to Sunday at a glance.
+
+### Arrangements
+
+Instead of a free zone editor, every display picks one of four arrangements:
+
+| Arrangement | What it does |
+| --- | --- |
+| Standard | The stage as described above. |
+| Large bottom | The timeline makes room: zone D becomes a large area on the left, big enough for the week's timetable. |
+| Tall right | Zones A and B merge into one tall area on the right, good for long lists. |
+| Timetable only | One school timetable fills the whole screen. |
+
+With "Large bottom" the timetable can be kept up in the morning: on school days, between two times (default 06:30–08:00), the large area shows only the week's timetable.
+
+The editor under **Admin → Displays** shows the arrangements as small screens and a preview of the display: tap an area to see its cards in order and add more from the palette.
 
 ## Rhythm and behaviour
 
@@ -45,11 +61,11 @@ Each zone has its own list of cards and interval (15 seconds to 10 minutes, defa
 | Morning | 05:30–09:00 | Greeting and "heading out" focus |
 | Day | 09:00–18:00 | Today's plan |
 | Evening | 18:00–22:00 | Dark palette; Next up, timeline, meals and school look at tomorrow |
-| Night | 22:00–05:30 | Like the evening, dimmed when night dimming is on |
+| Night | 22:00–05:30 | Like the evening, dimmed when the theme follows the time of day |
 
 ## E-ink
 
-In e-ink mode the display is black and white, without animation or photos. Instead of rotating on a timer, every zone turns one card per data refresh (default every 10 minutes, at least 5). Small panels (up to 900 px wide, e.g. 7.5″ 800×480) show the clock, Next up, the timeline and zones A and B; larger panels (e.g. 10″ 1200×825) show the full stage. The "Updated" time in the corner shows how fresh the data is.
+In e-ink mode the display is black and white, without animation or photos. Instead of rotating on a timer, every zone turns one card per data refresh (default every 10 minutes, at least 5). Small panels (up to 900 px wide, e.g. 7.5″ 800×480) show the clock, Next up, the timeline and zones A and B (with "Large bottom" the large area instead of the timeline); larger panels (e.g. 10″ 1200×825) show the full stage. The "Updated" time in the corner shows how fresh the data is.
 
 This mode runs in any browser on the device (Kindle, Boox and similar).
 
@@ -119,13 +135,18 @@ The display payload contains no e-mail addresses, user IDs or account metadata. 
   "stagger": true,
   "skip_empty": true,
   "pause_on_touch": true,
-  "night_dim": true,
+  "theme_mode": "auto",
   "day_parts": { "morning_start": "05:30", "morning_end": "09:00", "evening_start": "18:00", "night_start": "22:00" },
   "eink_format": "compact",
-  "language": "auto"
+  "language": "auto",
+  "arrangement": "standard",
+  "timetable_id": null,
+  "timetable_pin": { "enabled": false, "from": "06:30", "until": "08:00" }
 }
 ```
 
-Card keys: `dinner`, `shopping`, `weather`, `reminders`, `school`, `soon`, `stars`, `birthdays` (zones a–c) and `people`, `week` (zone d). The server normalizes every value: unknown or misplaced cards are dropped, intervals are clamped and missing fields fall back to the defaults above.
+`theme_mode` is `auto` (dim at night), `light` or `dark`. `arrangement` is `standard`, `bottom_large`, `right_tall` or `timetable`; `timetable_id` picks the timetable for `timetable` (null: the family's first). `timetable_pin` only applies to `bottom_large`.
+
+Card keys: `dinner`, `shopping`, `weather`, `reminders`, `school`, `soon`, `stars`, `birthdays` (zones a–c) and `people`, `week`, `timetable` (zone d; `timetable` only shows in `bottom_large`). The server normalizes every value: unknown or misplaced cards are dropped, intervals are clamped and missing fields fall back to the defaults above.
 
 The family weather place is managed with `GET`, `PUT` and `DELETE /families/{family_id}/weather-location` and searched with `GET /families/{family_id}/weather-location/search?q=…`.

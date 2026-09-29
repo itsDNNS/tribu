@@ -222,8 +222,10 @@ test("display editor configures rotating areas and the weather place", async ({
   await expect(page.getByTestId("display-weather-place")).toContainText("Hamburg");
 
   await page.getByTestId("display-config-toggle-1").click();
+  await page.getByTestId("display-zone-tile-b").click();
   const zoneB = page.getByTestId("display-zone-editor-b");
-  await zoneB.getByRole("combobox", { name: /Karte hinzufügen/ }).selectOption("stars");
+  await zoneB.getByTestId("display-add-card-b-stars").click();
+  await expect(page.getByTestId("display-zone-tile-b")).toContainText("Sterne");
   await page.getByTestId("display-zone-interval-b").selectOption("120");
   await page.getByTestId("display-save-config").click();
   await expect(page.getByRole("dialog")).toHaveCount(0);

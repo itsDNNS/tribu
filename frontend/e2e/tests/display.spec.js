@@ -132,7 +132,7 @@ test.describe('Display mode', () => {
       },
     })).json();
     const created = await createDisplayDevice(apiCtx, familyId, 'Kids room', {
-      layout_config: { version: 2, content: 'timetable', timetable_id: timetable.id },
+      layout_config: { version: 2, arrangement: 'timetable', timetable_id: timetable.id },
     });
     try {
       await gotoDisplayWithToken(page, created.token);
@@ -143,6 +143,38 @@ test.describe('Display mode', () => {
       await expect(grid.getByText('E2E Science')).toBeVisible();
       await expect(grid.getByText('Recess')).toBeVisible();
       await expect(page.locator('.stage-timetable-title')).toContainText('2c');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    } finally {
+      await revokeDisplayDevice(apiCtx, familyId, created.device.id);
+      await apiCtx.delete(`/api/school-timetables/${timetable.id}`);
+    }
+  });
+
+  test('the large bottom area shows the week timetable beside the family cards', async ({ page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const timetable = await (await apiCtx.post('/api/school-timetables', {
+      data: {
+        family_id: familyId,
+        name: 'E2E zone timetable',
+        class_label: '3a',
+        include_saturday: false,
+        assigned_member_user_ids: [],
+        periods: [{ position: 1, label: '1', start_time: '08:00', end_time: '08:45', kind: 'lesson' }],
+        lessons: [{ weekday: 2, period_position: 1, subject: 'E2E Art' }],
+      },
+    })).json();
+    const created = await createDisplayDevice(apiCtx, familyId, 'Hall large', {
+      layout_config: { version: 2, day_parts: ALWAYS_DAY, arrangement: 'bottom_large', zones: { d: { cards: ['timetable'], interval_seconds: 60 } } },
+    });
+    try {
+      await gotoDisplayWithToken(page, created.token);
+      const zone = page.getByTestId('display-zone-d');
+      await expect(zone).toHaveAttribute('data-card', 'timetable', { timeout: 15000 });
+      await expect(zone).toContainText('E2E zone timetable · 3a');
+      await expect(zone.getByRole('grid', { name: 'E2E zone timetable' }).getByText('E2E Art')).toBeVisible();
+      // The timeline gives its room to the large area.
+      await expect(page.getByTestId('display-events')).toHaveCount(0);
+      await expect(page.getByTestId('display-zone-a')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     } finally {
       await revokeDisplayDevice(apiCtx, familyId, created.device.id);

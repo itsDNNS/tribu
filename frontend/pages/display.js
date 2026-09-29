@@ -197,7 +197,7 @@ export default function DisplayPage() {
           </div>
         )}
         {state === 'ready' && me && dashboard && (
-          config.content === 'timetable'
+          config.arrangement === 'timetable'
             ? <TimetableStage me={me} dashboard={dashboard} t={t} locale={localeForLang(language)} offlineSince={offlineSince} />
             : <StageDisplay me={me} dashboard={dashboard} t={t} locale={localeForLang(language)} offlineSince={offlineSince} />
         )}

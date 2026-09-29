@@ -8,11 +8,11 @@ import {
   looksAhead,
   memberColor,
   normalizeStageConfig,
-  rotatingCards,
+  activeZones,
   sameDay,
   timeline,
   upcomingEvents,
-  ZONES,
+  zoneCards,
 } from './stageModel';
 import { useStageRotation } from './useStageRotation';
 
@@ -182,14 +182,14 @@ function Timeline({ dashboard, members, t, locale, now, ahead }) {
   );
 }
 
-function Zone({ zone, index, config, dashboard, context, ahead, now }) {
-  const cards = rotatingCards(config.zones[zone].cards, dashboard, { skipEmpty: config.skipEmpty, ahead, now });
+function Zone({ zone, index, zoneCount, config, dashboard, context, ahead, now }) {
+  const cards = zoneCards(zone, config, dashboard, { ahead, now });
   const eink = config.mode === 'eink';
   const rotation = useStageRotation({
     cardCount: cards.length,
     intervalSeconds: config.zones[zone].interval_seconds,
     zoneIndex: index,
-    zoneCount: ZONES.length,
+    zoneCount,
     stagger: config.stagger,
     eink,
     refreshSeconds: config.refreshSeconds,
@@ -225,7 +225,7 @@ function Zone({ zone, index, config, dashboard, context, ahead, now }) {
       onPointerUp={onPointerUp}
     >
       <div key={`${card}-${rotation.slotKey}`} className="stage-zone-card">
-        {Card && <Card {...context} ahead={ahead} now={now} />}
+        {Card && <Card {...context} ahead={ahead} now={now} round={rotation.round} />}
       </div>
       {cards.length > 1 && (
         <>
@@ -264,6 +264,7 @@ export default function StageDisplay({ me, dashboard, t, locale, offlineSince = 
   const PartIcon = PART_ICONS[part];
   const weather = dashboard.weather;
   const dark = config.themeMode === 'auto' ? !eink && ahead : !eink && config.themeMode === 'dark';
+  const zones = activeZones(config.arrangement);
 
   return (
     <div
@@ -317,11 +318,12 @@ export default function StageDisplay({ me, dashboard, t, locale, offlineSince = 
           </div>
         )}
       </header>
-      <div className="stage-grid">
+      <div className={`stage-grid stage-grid--${config.arrangement}`} data-arrangement={config.arrangement}>
         <Hero {...context} now={now} ahead={ahead} />
-        <Timeline {...context} now={now} ahead={ahead} />
-        {ZONES.map((zone, index) => (
-          <Zone key={zone} zone={zone} index={index} config={config} dashboard={dashboard} context={context} ahead={ahead} now={now} />
+        {/* "Large bottom" gives the timeline's room to zone d. */}
+        {config.arrangement !== 'bottom_large' && <Timeline {...context} now={now} ahead={ahead} />}
+        {zones.map((zone, index) => (
+          <Zone key={zone} zone={zone} index={index} zoneCount={zones.length} config={config} dashboard={dashboard} context={context} ahead={ahead} now={now} />
         ))}
       </div>
       {eink && (

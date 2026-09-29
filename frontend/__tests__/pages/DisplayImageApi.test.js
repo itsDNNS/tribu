@@ -107,9 +107,38 @@ test('every refresh turns each zone one card further', () => {
   const payload = buildStagePayload({ weather: { location_name: 'X', current_temperature: 1, hourly: [], today: null, tomorrow: null } });
   const config = normalizeStageConfig({ display_mode: 'eink', refresh_interval_seconds: 600, layout_config: { version: 2 } });
   const now = new Date(2026, 8, 29, 7, 12);
-  const first = imageCards(config, payload, { now, epochMs: 0 });
-  const second = imageCards(config, payload, { now, epochMs: 600 * 1000 });
+  const first = imageCards(config, payload, { now, epochMs: 0 }).cards;
+  const second = imageCards(config, payload, { now, epochMs: 600 * 1000 }).cards;
   expect(first.a).toBe('dinner');
   expect(second.a).toBe('shopping');
-  expect(imageCards(config, payload, { now, epochMs: 1200 * 1000 }).a).toBe('weather');
+  expect(imageCards(config, payload, { now, epochMs: 1200 * 1000 }).cards.a).toBe('weather');
+});
+
+test('a large zone takes turns between the timetables, one per round', () => {
+  const week = (id) => ({ id, name: `Plan ${id}`, include_saturday: false, periods: [], lessons: [] });
+  const payload = buildStagePayload({ school_weeks: [week(1), week(2)] });
+  const config = normalizeStageConfig({
+    display_mode: 'eink',
+    refresh_interval_seconds: 600,
+    layout_config: { version: 2, arrangement: 'bottom_large', zones: { d: { cards: ['timetable', 'week'] } } },
+  });
+  const now = new Date(2026, 8, 29, 7, 12);
+  const at = (page) => imageCards(config, payload, { now, epochMs: page * 600 * 1000 });
+  expect(at(0).cards.d).toBe('timetable');
+  expect(at(0).rounds.d).toBe(0);
+  expect(at(1).cards.d).toBe('week');
+  expect(at(2).cards.d).toBe('timetable');
+  expect(at(2).rounds.d).toBe(1);
+});
+
+test('the timetable card stays out of small zones', () => {
+  const payload = buildStagePayload({ school_weeks: [{ id: 1, name: 'Plan', periods: [], lessons: [] }] });
+  const config = normalizeStageConfig({
+    display_mode: 'eink',
+    refresh_interval_seconds: 600,
+    layout_config: { version: 2, zones: { d: { cards: ['timetable', 'week'] } } },
+  });
+  const now = new Date(2026, 8, 29, 7, 12);
+  expect(imageCards(config, payload, { now, epochMs: 0 }).cards.d).toBe('week');
+  expect(imageCards(config, payload, { now, epochMs: 600 * 1000 }).cards.d).toBe('week');
 });
