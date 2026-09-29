@@ -124,6 +124,9 @@ MEAL_INGREDIENT_NOT_IN_PLAN = "MEAL_INGREDIENT_NOT_IN_PLAN"
 # ── Recipes ─────────────────────────────────────────────────
 RECIPE_NOT_FOUND = "RECIPE_NOT_FOUND"
 RECIPE_INGREDIENT_NOT_IN_RECIPE = "RECIPE_INGREDIENT_NOT_IN_RECIPE"
+RECIPE_IMPORT_NO_RECIPE = "RECIPE_IMPORT_NO_RECIPE"
+RECIPE_IMPORT_UNREACHABLE = "RECIPE_IMPORT_UNREACHABLE"
+RECIPE_IMPORT_NOT_ALLOWED = "RECIPE_IMPORT_NOT_ALLOWED"
 
 # ── Display Devices (issue #172) ─────────────────────────────
 DISPLAY_DEVICE_NOT_FOUND = "DISPLAY_DEVICE_NOT_FOUND"
@@ -248,6 +251,9 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     MEAL_INGREDIENT_NOT_IN_PLAN: "Ingredient '{name}' is not part of this meal",
     RECIPE_NOT_FOUND: "Recipe not found",
     RECIPE_INGREDIENT_NOT_IN_RECIPE: "Ingredient '{name}' is not part of this recipe",
+    RECIPE_IMPORT_NO_RECIPE: "No recipe found on this page",
+    RECIPE_IMPORT_UNREACHABLE: "The page could not be loaded",
+    RECIPE_IMPORT_NOT_ALLOWED: "This address cannot be imported",
     DISPLAY_DEVICE_NOT_FOUND: "Display device not found",
     PROFILE_IMAGE_UNREADABLE: "The profile image could not be read",
     IMAGE_UNREADABLE: "The image could not be read",

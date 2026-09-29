@@ -17,12 +17,14 @@ const apiCreateRecipe = jest.fn();
 const apiUpdateRecipe = jest.fn();
 const apiDeleteRecipe = jest.fn();
 const apiAddRecipeIngredientsToShopping = jest.fn();
+const apiImportRecipe = jest.fn();
 jest.mock('../../lib/api', () => ({
   apiListRecipes: (...args) => apiListRecipes(...args),
   apiCreateRecipe: (...args) => apiCreateRecipe(...args),
   apiUpdateRecipe: (...args) => apiUpdateRecipe(...args),
   apiDeleteRecipe: (...args) => apiDeleteRecipe(...args),
   apiAddRecipeIngredientsToShopping: (...args) => apiAddRecipeIngredientsToShopping(...args),
+  apiImportRecipe: (...args) => apiImportRecipe(...args),
 }));
 
 const messages = buildMessages('en');
@@ -102,7 +104,7 @@ describe('RecipesView', () => {
     await waitFor(() => expect(apiUpdateRecipe).toHaveBeenCalledWith(5, { is_favorite: false }));
   });
 
-  test('shows conservative serving scaling in the recipe dialog', async () => {
+  test('an open recipe scales its servings conservatively', async () => {
     mockAppState = baseState();
     apiListRecipes.mockResolvedValueOnce({
       ok: true,
@@ -113,17 +115,49 @@ describe('RecipesView', () => {
     });
 
     render(<RecipesView />);
-    await waitFor(() => expect(screen.getByText('Pancakes')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Edit recipe "Pancakes"' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pancakes' }));
+    for (let i = 0; i < 4; i += 1) fireEvent.click(screen.getByRole('button', { name: 'More servings' }));
 
-    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Edit recipe' })).toBeInTheDocument());
-    fireEvent.change(screen.getByLabelText('Scale to servings'), { target: { value: '8' } });
-
-    expect(screen.getByText('Scaled ingredients')).toBeInTheDocument();
-    expect(screen.getAllByText('Flour').length).toBeGreaterThan(0);
+    expect(screen.getByText('8 servings')).toBeInTheDocument();
     expect(screen.getByText('400 g')).toBeInTheDocument();
-    expect(screen.getAllByText('Salt').length).toBeGreaterThan(0);
-    expect(screen.getByText('Cannot scale')).toBeInTheDocument();
+    expect(screen.getByText('600 ml')).toBeInTheDocument();
+    // Salt has no amount to scale and shows none.
+    expect(screen.getByRole('checkbox', { name: 'Salt' })).toBeInTheDocument();
+  });
+
+  test('an open recipe shows ingredients and numbered steps as tabs', async () => {
+    mockAppState = baseState();
+    apiListRecipes.mockResolvedValueOnce({
+      ok: true,
+      data: [{ ...recipe, instructions: '1. Mix flour and milk.\n\n2) Rest for ten minutes.\n- Fry in a hot pan.' }],
+    });
+
+    render(<RecipesView />);
+    // The whole card opens the recipe (discussion #511).
+    fireEvent.click(await screen.findByText('Weekend breakfast'));
+    expect(screen.getByRole('heading', { name: 'Pancakes', level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Ingredients · 2' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Instructions · 3' }));
+    expect(screen.getByRole('tab', { name: 'Instructions · 3' })).toHaveAttribute('aria-selected', 'true');
+    const steps = screen.getAllByRole('checkbox').filter((box) => box.className.includes('recipe-step'));
+    expect(steps.map((step) => step.textContent)).toEqual(['1Mix flour and milk.', '2Rest for ten minutes.', '3Fry in a hot pan.']);
+    fireEvent.click(steps[0]);
+    expect(steps[0]).toHaveAttribute('aria-checked', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'All recipes' }));
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add recipe' })).toBeInTheDocument();
+  });
+
+  test('a recipe without steps points to editing', async () => {
+    mockAppState = baseState();
+    apiListRecipes.mockResolvedValueOnce({ ok: true, data: [{ ...recipe, instructions: null }] });
+
+    render(<RecipesView />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Pancakes' }));
+    expect(screen.getByText('No steps yet. Add them under “Edit”.')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit' }).pop());
+    expect(await screen.findByRole('dialog', { name: 'Edit recipe' })).toBeInTheDocument();
   });
 
   test('does not render unsafe recipe source URLs as links', async () => {
@@ -169,25 +203,59 @@ describe('RecipesView', () => {
     });
   });
 
-  test('pushes selected recipe ingredients to a shopping list and refreshes summaries', async () => {
+  test('only the ingredients still missing go on the shopping list', async () => {
     const loadShoppingLists = jest.fn();
     mockAppState = baseState({ loadShoppingLists });
     apiListRecipes.mockResolvedValueOnce({ ok: true, data: [recipe] });
 
     render(<RecipesView />);
-    await waitFor(() => expect(screen.getByText('Pancakes')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Edit recipe "Pancakes"' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pancakes' }));
+    // Milk is at home already.
+    fireEvent.click(screen.getByRole('checkbox', { name: /Milk/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'To shopping list (1)' }));
 
-    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Edit recipe' })).toBeInTheDocument());
-    let pushButton;
-    await waitFor(() => {
-      pushButton = screen.getAllByRole('button', { name: 'To shopping list' }).pop();
-      expect(pushButton).not.toBeDisabled();
-    });
-    fireEvent.click(pushButton);
-
-    await waitFor(() => expect(apiAddRecipeIngredientsToShopping).toHaveBeenCalledWith(5, 9, ['Flour', 'Milk']));
+    await waitFor(() => expect(apiAddRecipeIngredientsToShopping).toHaveBeenCalledWith(5, 9, ['Flour']));
     await waitFor(() => expect(loadShoppingLists).toHaveBeenCalled());
+  });
+
+  test('a recipe page fills the new recipe to check before saving', async () => {
+    mockAppState = baseState();
+    apiImportRecipe.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        title: 'Lentil soup',
+        description: 'Warming.',
+        source_url: 'https://example.com/lentils',
+        servings: 4,
+        tags: ['Soup'],
+        ingredients: [{ name: 'Lentils', amount: 300, unit: 'g' }, { name: 'Salt', amount: null, unit: null }],
+        instructions: 'Rinse.\nSimmer.',
+      },
+    });
+
+    render(<RecipesView />);
+    await waitFor(() => expect(apiListRecipes).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Add recipe' }));
+    // The page is loaded through the server, and the dialog says so.
+    expect(screen.getByText(/loads the page through your server/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Take it from a link'), { target: { value: 'https://example.com/lentils' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+
+    await waitFor(() => expect(screen.getByPlaceholderText('e.g. Tomato pasta')).toHaveValue('Lentil soup'));
+    expect(apiImportRecipe).toHaveBeenCalledWith('1', 'https://example.com/lentils');
+    expect(screen.getByText('Imported. Check the ingredients and steps, then save.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(apiCreateRecipe).toHaveBeenCalledWith({
+      family_id: 1,
+      title: 'Lentil soup',
+      description: 'Warming.',
+      source_url: 'https://example.com/lentils',
+      servings: 4,
+      tags: ['Soup'],
+      ingredients: [{ name: 'Lentils', amount: 300, unit: 'g' }, { name: 'Salt', amount: null, unit: null }],
+      instructions: 'Rinse.\nSimmer.',
+    }));
   });
 
   test('demo mode renders the blocked placeholder instead of fetching', () => {

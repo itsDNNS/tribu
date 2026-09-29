@@ -9,16 +9,23 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Optional, TypeAlias, TypedDict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user, ensure_family_membership
 from app.core.errors import (
+    RECIPE_IMPORT_NO_RECIPE,
+    RECIPE_IMPORT_NOT_ALLOWED,
+    RECIPE_IMPORT_UNREACHABLE,
     RECIPE_INGREDIENT_NOT_IN_RECIPE,
     RECIPE_NOT_FOUND,
     SHOPPING_LIST_NOT_FOUND,
     error_detail,
 )
+from app.core.rate_limits import limiter_storage_options
+from app.core.recipe_import import RecipeImportError, import_recipe
 from app.core.scopes import require_scope
 from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.shopping_domain import ShoppingItemTransition, add_or_merge_shopping_item
@@ -32,12 +39,20 @@ from app.schemas import (
     RecipeAddToShoppingRequest,
     RecipeAddToShoppingResponse,
     RecipeCreate,
+    RecipeImportDraft,
+    RecipeImportRequest,
     RecipeResponse,
     RecipeUpdate,
     ShoppingItemResponse,
 )
 
 router = APIRouter(prefix="/recipes", tags=["recipes"], responses={**AUTH_RESPONSES})
+limiter = Limiter(key_func=get_remote_address, **limiter_storage_options())
+_IMPORT_ERRORS = {
+    "no_recipe": (422, RECIPE_IMPORT_NO_RECIPE),
+    "not_allowed": (422, RECIPE_IMPORT_NOT_ALLOWED),
+    "invalid_url": (422, RECIPE_IMPORT_NOT_ALLOWED),
+}
 
 IngredientFieldValue: TypeAlias = str | int | float | None
 RawIngredient: TypeAlias = str | IngredientItem | Mapping[str, IngredientFieldValue]
@@ -239,6 +254,42 @@ def create_recipe(
     db.commit()
     db.refresh(recipe)
     return _serialize(recipe)
+
+
+@router.post(
+    "/import",
+    response_model=RecipeImportDraft,
+    summary="Read a recipe from a web page",
+    description=(
+        "Fetch a recipe page on the server and read its schema.org Recipe data into a draft "
+        "(title, servings, ingredients, steps, tags). Nothing is saved; the client shows the "
+        "draft for checking. The recipe site sees the server's address. Public addresses only, "
+        "4 MB and 10 seconds at most. Rate-limited to 20 requests per minute. Scope: `recipes:write`."
+    ),
+)
+@limiter.limit("20/minute")
+def import_recipe_from_url(
+    request: Request,
+    payload: RecipeImportRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("recipes:write"),
+):
+    ensure_family_membership(db, user.id, payload.family_id)
+    try:
+        draft = import_recipe(payload.url)
+    except RecipeImportError as error:
+        status, code = _IMPORT_ERRORS.get(error.code, (502, RECIPE_IMPORT_UNREACHABLE))
+        raise HTTPException(status_code=status, detail=error_detail(code)) from None
+    return RecipeImportDraft(
+        title=draft.title,
+        description=draft.description,
+        source_url=payload.url,
+        servings=draft.servings,
+        tags=draft.tags,
+        ingredients=_sanitize_ingredients(draft.ingredients),
+        instructions=draft.instructions,
+    )
 
 
 @router.get(

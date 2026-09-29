@@ -324,3 +324,55 @@ class TestRecipeShopping:
         )
         assert resp.status_code == 404
         assert "SHOPPING_LIST_NOT_FOUND" in str(resp.json())
+
+
+class TestRecipeImport:
+    """Reading a recipe page into a draft (discussion #511)."""
+
+    def test_import_returns_a_draft_without_saving(self, monkeypatch):
+        from app.core.recipe_import import RecipeDraft
+        from app.modules import recipes_router
+
+        token, family_id = _seed_member("recipes:read,recipes:write", "import")
+        monkeypatch.setattr(recipes_router, "import_recipe", lambda url: RecipeDraft(
+            title="Linsensuppe",
+            servings=4,
+            tags=["Suppe"],
+            ingredients=[{"name": "Linsen", "amount": 300.0, "unit": "g"}, {"name": "Salz", "amount": None, "unit": None}],
+            instructions="Linsen waschen.\nKochen.",
+        ))
+        response = client.post("/recipes/import", json={"family_id": family_id, "url": "https://example.com/linsen"}, headers=_auth(token))
+        assert response.status_code == 200, response.text
+        assert response.json() == {
+            "title": "Linsensuppe",
+            "description": None,
+            "source_url": "https://example.com/linsen",
+            "servings": 4,
+            "tags": ["Suppe"],
+            "ingredients": [{"name": "Linsen", "amount": 300.0, "unit": "g"}, {"name": "Salz", "amount": None, "unit": None}],
+            "instructions": "Linsen waschen.\nKochen.",
+        }
+        assert client.get(f"/recipes?family_id={family_id}", headers=_auth(token)).json() == []
+
+    def test_import_errors_and_guards(self, monkeypatch):
+        from app.core.recipe_import import RecipeImportError
+        from app.modules import recipes_router
+
+        token, family_id = _seed_member("recipes:read,recipes:write", "import-errors")
+        other, _ = _seed_member("recipes:read,recipes:write", "import-other")
+        reader, _ = _seed_member("recipes:read", "import-reader", family_id=family_id)
+
+        def fail(code):
+            def raise_error(url):
+                raise RecipeImportError(code, "nope")
+            return raise_error
+
+        cases = [("no_recipe", 422, "RECIPE_IMPORT_NO_RECIPE"), ("not_allowed", 422, "RECIPE_IMPORT_NOT_ALLOWED"), ("unreachable", 502, "RECIPE_IMPORT_UNREACHABLE"), ("too_large", 502, "RECIPE_IMPORT_UNREACHABLE")]
+        for code, status, detail in cases:
+            monkeypatch.setattr(recipes_router, "import_recipe", fail(code))
+            response = client.post("/recipes/import", json={"family_id": family_id, "url": "https://example.com/x"}, headers=_auth(token))
+            assert response.status_code == status
+            assert response.json()["detail"]["code"] == detail
+        assert client.post("/recipes/import", json={"family_id": family_id, "url": "javascript:alert(1)"}, headers=_auth(token)).status_code == 422
+        assert client.post("/recipes/import", json={"family_id": family_id, "url": "https://example.com/x"}, headers=_auth(other)).status_code == 403
+        assert client.post("/recipes/import", json={"family_id": family_id, "url": "https://example.com/x"}, headers=_auth(reader)).status_code == 403

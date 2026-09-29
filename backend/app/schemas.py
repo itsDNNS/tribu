@@ -1896,6 +1896,28 @@ class RecipeUpdate(BaseModel):
         return _validate_http_url(value)
 
 
+class RecipeImportRequest(BaseModel):
+    """A recipe page to read (discussion #511)."""
+    family_id: int = Field(..., description="Family ID")
+    url: str = Field(..., min_length=1, max_length=500, description="Address of the recipe page (http or https)")
+
+    @field_validator("url")
+    @classmethod
+    def url_must_be_http(cls, value: str) -> str:
+        return _validate_http_url(value.strip())
+
+
+class RecipeImportDraft(BaseModel):
+    """A recipe read from a page's schema.org data, not saved yet."""
+    title: str = Field(..., description="Recipe title")
+    description: Optional[str] = Field(None, description="Summary from the page")
+    source_url: str = Field(..., description="The page the recipe came from")
+    servings: Optional[int] = Field(None, description="Servings from the page, if any")
+    tags: list[str] = Field(default_factory=list, description="Category, cuisine and keywords")
+    ingredients: list[IngredientItem] = Field(default_factory=list, description="Ingredients split into amount, unit and name")
+    instructions: Optional[str] = Field(None, description="Steps, one per line")
+
+
 class RecipeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

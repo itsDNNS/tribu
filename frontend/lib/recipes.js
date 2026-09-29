@@ -15,6 +15,11 @@ export function createEmptyRecipeForm(overrides = {}) {
   };
 }
 
+// A draft read from a recipe page becomes the form to check and save.
+export function recipeDraftToForm(draft) {
+  return recipeToForm({ ...draft, is_favorite: false });
+}
+
 export function recipeToForm(recipe) {
   return createEmptyRecipeForm({
     title: recipe?.title || '',
@@ -103,4 +108,13 @@ export function scaleRecipeIngredients(ingredients, baseServings, targetServings
       scalable: canScaleAmount,
     };
   });
+}
+
+// The instructions as steps: one per line or paragraph, without the
+// numbers or bullets people type ("1.", "2)", "-", "•").
+export function recipeSteps(instructions) {
+  return String(instructions || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/^(?:\d{1,2}\s*[.)]|[-–•*])\s*/, '').trim())
+    .filter(Boolean);
 }
