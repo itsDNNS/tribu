@@ -4,6 +4,7 @@ import messages from '../../i18n/en.json';
 import TodayView from '../../components/today/TodayView';
 import { handOff, peekHandOff } from '../../lib/handoff';
 import { apiConvertQuickCapture, apiGetEvents, apiGetSetupChecklist, apiListMealPlans } from '../../lib/api';
+import { peekHandoff } from '../../lib/viewHandoff';
 
 let mockApp = {};
 let mockNow = new Date(2026, 8, 30, 10, 0);
@@ -316,6 +317,6 @@ describe('TodayView', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Show in calendar' }));
     expect(mockApp.setActiveView).toHaveBeenCalledWith('calendar');
-    expect(new Date(sessionStorage.getItem('tribu_calendar_focus')).getHours()).toBe(15);
+    expect(new Date(peekHandoff('tribu_calendar_focus')).getHours()).toBe(15);
   });
 });

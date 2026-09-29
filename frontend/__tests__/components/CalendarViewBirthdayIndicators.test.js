@@ -5,6 +5,7 @@ import CalendarView from '../../components/calendar';
 import en from '../../i18n/en.json';
 import { useApp } from '../../contexts/AppContext';
 import * as api from '../../lib/api';
+import { handOff } from '../../lib/viewHandoff';
 
 jest.mock('../../contexts/AppContext', () => ({ useApp: jest.fn() }));
 jest.mock('../../contexts/ToastContext', () => ({ useToast: () => ({ success: jest.fn(), error: jest.fn() }) }));
@@ -27,7 +28,7 @@ beforeAll(() => {
 });
 beforeEach(() => {
   jest.clearAllMocks();
-  sessionStorage.setItem('tribu_calendar_focus', '2026-05-04T12:00:00');
+  handOff('tribu_calendar_focus', '2026-05-04T12:00:00');
   api.apiGetEvents.mockResolvedValue({ ok: true, data: [event] });
   api.apiCreateEvent.mockResolvedValue({ ok: true, data: {} });
   api.apiUpdateEvent.mockResolvedValue({ ok: true, data: {} });

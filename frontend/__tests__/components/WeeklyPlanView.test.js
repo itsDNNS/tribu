@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import WeeklyPlanView, { buildWeeklyPlanSections, getWeekRange } from '../../components/WeeklyPlanView';
 import { apiGetEvents, apiListRecipes } from '../../lib/api';
+import { peekHandoff } from '../../lib/viewHandoff';
 
 let mockAppState = {};
 
@@ -197,7 +198,6 @@ describe('WeeklyPlanView', () => {
 describe('WeeklyPlanView links (discussion #511)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    sessionStorage.clear();
   });
 
   it('opens each entry where it comes from and orders meals through the day', async () => {
@@ -235,24 +235,24 @@ describe('WeeklyPlanView links (discussion #511)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Football/ }));
     expect(setActiveView).toHaveBeenLastCalledWith('calendar');
-    expect(sessionStorage.getItem('tribu_calendar_focus')).toBe(new Date('2026-05-08T17:00:00').toISOString());
+    expect(peekHandoff('tribu_calendar_focus')).toBe(new Date('2026-05-08T17:00:00').toISOString());
 
     fireEvent.click(meals.getByRole('button', { name: /Pasta/ }));
     expect(setActiveView).toHaveBeenLastCalledWith('meal_plans');
-    expect(sessionStorage.getItem('tribu_meal_focus')).toBe('2026-05-08');
+    expect(peekHandoff('tribu_meal_focus')).toBe('2026-05-08');
 
     fireEvent.click(await meals.findByRole('button', { name: 'Recipe' }));
     expect(setActiveView).toHaveBeenLastCalledWith('recipes');
-    expect(sessionStorage.getItem('tribu_recipe_open')).toBe('31');
+    expect(peekHandoff('tribu_recipe_open')).toBe('31');
 
     const shopping = within(screen.getByRole('region', { name: 'Shopping reminders' }));
     fireEvent.click(shopping.getByRole('button', { name: /2 open\s*Groceries/ }));
     expect(setActiveView).toHaveBeenLastCalledWith('shopping');
-    expect(sessionStorage.getItem('tribu_shopping_list')).toBe('4');
+    expect(peekHandoff('tribu_shopping_list')).toBe('4');
 
     fireEvent.click(screen.getByRole('button', { name: /Martin/ }));
     expect(setActiveView).toHaveBeenLastCalledWith('contacts');
-    expect(sessionStorage.getItem('tribu_contacts_tab')).toBe('birthdays');
+    expect(peekHandoff('tribu_contacts_tab')).toBe('birthdays');
   });
 
   it('"+" opens the form of each area on the chosen day, not for children', () => {
@@ -261,10 +261,10 @@ describe('WeeklyPlanView links (discussion #511)', () => {
     const { unmount } = render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={[]} initialMeals={[]} onCreateForm={onCreateForm} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to Events' }));
     expect(onCreateForm).toHaveBeenLastCalledWith('event');
-    expect(sessionStorage.getItem('tribu_calendar_focus')).toBe(new Date('2026-05-06T14:00').toISOString());
+    expect(peekHandoff('tribu_calendar_focus')).toBe(new Date('2026-05-06T14:00').toISOString());
     fireEvent.click(screen.getByRole('button', { name: 'Add to Meals' }));
     expect(onCreateForm).toHaveBeenLastCalledWith('meal');
-    expect(sessionStorage.getItem('tribu_meal_focus')).toBe('2026-05-06');
+    expect(peekHandoff('tribu_meal_focus')).toBe('2026-05-06');
     expect(screen.queryByRole('button', { name: 'Add to Birthdays' })).not.toBeInTheDocument();
     unmount();
 

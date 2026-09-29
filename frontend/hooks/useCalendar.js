@@ -8,6 +8,7 @@ import { weekStartIndex, localeForLang } from '../lib/dates';
 import { eventOccursOn } from '../lib/calendar-dates';
 import { weekdaysPayload } from '../lib/calendar-recurrence';
 import * as api from '../lib/api';
+import { useHandoff } from '../lib/viewHandoff';
 
 function formatLocalDateTimeInput(date, hour = date.getHours(), minute = date.getMinutes()) {
   const local = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
@@ -34,13 +35,11 @@ export function useCalendar() {
   const [calendarView, setCalendarViewRaw] = useState('month');
   const [agendaDays, setAgendaDays] = useState(14);
 
-  // Read and consume focus date from dashboard click (single read, shared value)
+  // The day to open on, left by Today or the weekly plan.
+  const focusValue = useHandoff('tribu_calendar_focus');
   const _initialFocus = (() => {
-    if (typeof window === 'undefined') return null;
-    const raw = sessionStorage.getItem('tribu_calendar_focus');
-    if (!raw) return null;
-    sessionStorage.removeItem('tribu_calendar_focus');
-    const d = new Date(raw);
+    if (!focusValue) return null;
+    const d = new Date(focusValue);
     return isNaN(d.getTime()) ? null : d;
   })();
 
