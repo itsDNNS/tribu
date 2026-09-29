@@ -1436,6 +1436,7 @@
   "module.tasks.priority.high": "High",
   "module.tasks.recurrence.daily": "Daily",
   "module.tasks.recurrence.weekly": "Weekly",
+  "module.tasks.recurrence.biweekly": "Every 2 weeks",
   "module.tasks.recurrence.monthly": "Monthly",
   "module.tasks.recurrence.yearly": "Yearly",
   "module.tasks.recurrence.none": "None",

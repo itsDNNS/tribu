@@ -37,6 +37,7 @@ export function nextDueDate(dueDate, recurrence, now = new Date()) {
   const next = new Date(base);
   if (recurrence === 'daily') next.setDate(next.getDate() + 1);
   else if (recurrence === 'weekly') next.setDate(next.getDate() + 7);
+  else if (recurrence === 'biweekly') next.setDate(next.getDate() + 14);
   else if (recurrence === 'monthly') return addMonths(base, 1);
   else if (recurrence === 'yearly') return addMonths(base, 12);
   else if (recurrence in FIRST_WEEKDAYS) {

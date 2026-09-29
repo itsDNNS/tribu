@@ -6,6 +6,7 @@ describe('nextDueDate (T7)', () => {
   it('follows the recurrence from the due date', () => {
     expect(iso(nextDueDate('2026-09-30T00:00:00', 'daily'))).toBe('2026-10-01');
     expect(iso(nextDueDate('2026-09-30T18:00:00', 'weekly'))).toBe('2026-10-07');
+    expect(iso(nextDueDate('2026-09-30T18:00:00', 'biweekly'))).toBe('2026-10-14');
     expect(iso(nextDueDate('2026-01-31T00:00:00', 'monthly'))).toBe('2026-02-28');
     expect(iso(nextDueDate('2028-02-29T00:00:00', 'yearly'))).toBe('2029-02-28');
     // The first Monday of October 2026 is the 5th.

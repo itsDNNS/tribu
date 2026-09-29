@@ -119,6 +119,39 @@ def test_first_weekday_monthly_creates_next_occurrence_on_completion(recurrence,
         db.close()
 
 
+def test_biweekly_creates_next_occurrence_on_completion():
+    token, family_id, user_id = _seed_admin()
+    current_due = datetime(2026, 6, 1, 9, 0)
+    expected_due = datetime(2026, 6, 15, 9, 0)
+    db = TestSession()
+    try:
+        task = Task(
+            family_id=family_id,
+            title="Water the plants",
+            priority="normal",
+            due_date=current_due,
+            recurrence="biweekly",
+            assigned_to_user_id=user_id,
+            created_by_user_id=user_id,
+        )
+        db.add(task)
+        db.commit()
+        task_id = task.id
+    finally:
+        db.close()
+
+    resp = client.patch(f"/tasks/{task_id}", headers=_auth(token), json={"status": "done"})
+
+    assert resp.status_code == 200, resp.json()
+    db = TestSession()
+    try:
+        next_task = db.query(Task).filter(Task.id != task_id, Task.title == "Water the plants").one()
+        assert next_task.recurrence == "biweekly"
+        assert next_task.due_date == expected_due
+    finally:
+        db.close()
+
+
 def test_list_tasks_reward_only_returns_open_reward_tasks():
     token, family_id, user_id = _seed_admin()
     db = TestSession()

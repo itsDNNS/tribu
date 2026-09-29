@@ -31,7 +31,7 @@ FIRST_WEEKDAY_RECURRENCES = {
     "monthly_first_saturday": 5,
     "monthly_first_sunday": 6,
 }
-VALID_RECURRENCES = {"daily", "weekly", "monthly", "yearly", *FIRST_WEEKDAY_RECURRENCES.keys()}
+VALID_RECURRENCES = {"daily", "weekly", "biweekly", "monthly", "yearly", *FIRST_WEEKDAY_RECURRENCES.keys()}
 
 
 class TaskDomainError(Exception):
@@ -133,6 +133,8 @@ def _compute_next_due(current_due: Optional[datetime], recurrence: str) -> datet
         return base + timedelta(days=1)
     if recurrence == "weekly":
         return base + timedelta(weeks=1)
+    if recurrence == "biweekly":
+        return base + timedelta(weeks=2)
     if recurrence == "monthly":
         return base + relativedelta(months=1)
     if recurrence in FIRST_WEEKDAY_RECURRENCES:
