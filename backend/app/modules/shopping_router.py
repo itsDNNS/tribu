@@ -11,7 +11,7 @@ from app.core.deps import current_user, ensure_adult, ensure_family_membership
 from app.core.activity import record_activity
 from app.core.scopes import require_scope
 from app.database import get_db
-from app.models import ShoppingItem, ShoppingList, ShoppingStoreLink, ShoppingTemplate, ShoppingTemplateItem, User
+from app.models import FamilyProductPreference, ShoppingItem, ShoppingList, ShoppingStoreLink, ShoppingTemplate, ShoppingTemplateItem, User
 from app.core.ws_broadcast import broadcast_shopping_event
 from app.core.shopping_notifications import dispatch_shopping_destination_event
 from app.core.shopping_domain import (
@@ -25,15 +25,20 @@ from app.core.shopping_domain import (
     canonicalize_categories,
     category_vocabulary,
     normalize_item_name,
+    normalize_product_name,
     remember_category,
     normalize_store_name,
     store_name_key,
     validate_store_url_template,
 )
+from app.core.shopping_categories import builtin_category_key, stored_category
+from app.core.utils import audit_log
 from app.core.webhooks import dispatch_webhook_event
 from app.schemas import (
     AUTH_RESPONSES,
     NOT_FOUND_RESPONSE,
+    ShoppingCategoryRename,
+    ShoppingCategoryUsage,
     ShoppingItemCreate,
     ShoppingItemResponse,
     ShoppingItemUpdate,
@@ -62,6 +67,8 @@ from app.core.errors import (
     SHOPPING_STORE_LINK_NOT_FOUND,
     ADULT_REQUIRED,
     IMAGE_UNREADABLE,
+    SHOPPING_CATEGORY_BUILTIN,
+    SHOPPING_CATEGORY_NOT_FOUND,
 )
 from app.core.avatars import AvatarError, normalize_photo
 
@@ -214,6 +221,155 @@ def get_categories(
 ):
     ensure_family_membership(db, user.id, family_id)
     return category_vocabulary(db, family_id)
+
+
+def _category_rows(db: Session, family_id: int, name: str):
+    """Items, template items and remembered products filed under a category."""
+    key = normalize_product_name(name)
+    items = [
+        item for item in db.query(ShoppingItem).join(ShoppingList).filter(
+            ShoppingList.family_id == family_id, ShoppingItem.category.isnot(None),
+        ).all()
+        if normalize_product_name(item.category) == key
+    ]
+    template_items = [
+        item for item in db.query(ShoppingTemplateItem).join(ShoppingTemplate).filter(
+            ShoppingTemplate.family_id == family_id, ShoppingTemplateItem.category.isnot(None),
+        ).all()
+        if normalize_product_name(item.category) == key
+    ]
+    preferences = [
+        preference for preference in db.query(FamilyProductPreference).filter(
+            FamilyProductPreference.family_id == family_id,
+        ).all()
+        if normalize_product_name(preference.category) == key
+    ]
+    return items, template_items, preferences
+
+
+def _category_usage(db: Session, family_id: int) -> list[ShoppingCategoryUsage]:
+    counts: dict[str, int] = {}
+    rows = db.query(ShoppingItem.category).join(ShoppingList).filter(
+        ShoppingList.family_id == family_id, ShoppingItem.archived.is_(False),
+    ).all()
+    rows += db.query(ShoppingTemplateItem.category).join(ShoppingTemplate).filter(
+        ShoppingTemplate.family_id == family_id,
+    ).all()
+    for (value,) in rows:
+        cleaned = clean_optional_text(value)
+        if cleaned:
+            key = normalize_product_name(stored_category(cleaned))
+            counts[key] = counts.get(key, 0) + 1
+    return [
+        ShoppingCategoryUsage(
+            name=name,
+            builtin=builtin_category_key(name),
+            items=counts.get(normalize_product_name(name), 0),
+        )
+        for name in category_vocabulary(db, family_id)
+    ]
+
+
+def _custom_category(db: Session, family_id: int, name: str) -> str:
+    """The stored spelling of one of the family's own categories."""
+    if builtin_category_key(name):
+        raise HTTPException(status_code=422, detail=error_detail(SHOPPING_CATEGORY_BUILTIN))
+    key = normalize_product_name(name)
+    stored = next((label for label in category_vocabulary(db, family_id) if normalize_product_name(label) == key), None)
+    if stored is None:
+        raise HTTPException(status_code=404, detail=error_detail(SHOPPING_CATEGORY_NOT_FOUND))
+    return stored
+
+
+def _replace_in_orders(db: Session, family_id: int, old: str, new: str | None) -> None:
+    key = normalize_product_name(old)
+    for sl in db.query(ShoppingList).filter(ShoppingList.family_id == family_id).all():
+        order = sl.category_order or []
+        if not any(normalize_product_name(entry) == key for entry in order):
+            continue
+        replaced = [new if normalize_product_name(entry) == key else entry for entry in order]
+        sl.category_order = list(dict.fromkeys(entry for entry in replaced if entry))
+
+
+def _broadcast_categories(db: Session, family_id: int) -> None:
+    """Tell open lists that item categories changed, so they reload."""
+    payload = {"family_id": family_id}
+    broadcast_shopping_event("family", family_id, "categories_changed", payload)
+    for (list_id,) in db.query(ShoppingList.id).filter(ShoppingList.family_id == family_id).all():
+        broadcast_shopping_event("list", list_id, "categories_changed", payload)
+
+
+@router.get(
+    "/categories/usage",
+    response_model=list[ShoppingCategoryUsage],
+    summary="List categories with their use",
+    description="Every category of the family with the number of items on lists and in templates. Built-in categories carry a key so clients show them translated. Scope: `shopping:read`.",
+)
+def get_category_usage(
+    family_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:read"),
+):
+    ensure_family_membership(db, user.id, family_id)
+    return _category_usage(db, family_id)
+
+
+@router.post(
+    "/categories/rename",
+    response_model=list[ShoppingCategoryUsage],
+    summary="Rename a category",
+    description="Rename one of the family's own categories on every list, template and remembered product. A name that already exists merges both. Built-in categories cannot be renamed. Adults only. Scope: `shopping:write`.",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def rename_category(
+    payload: ShoppingCategoryRename,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+    old = _custom_category(db, payload.family_id, payload.name)
+    new = canonicalize_category(db, payload.family_id, payload.new_name)
+    if new is None:
+        raise HTTPException(status_code=422, detail="Invalid category name")
+    if new != old:
+        items, template_items, preferences = _category_rows(db, payload.family_id, old)
+        for row in [*items, *template_items, *preferences]:
+            row.category = new
+        _replace_in_orders(db, payload.family_id, old, new)
+        audit_log(db, payload.family_id, user.id, "shopping_category_renamed", details={"from": old, "to": new})
+        db.commit()
+        _broadcast_categories(db, payload.family_id)
+    return _category_usage(db, payload.family_id)
+
+
+@router.delete(
+    "/categories",
+    response_model=list[ShoppingCategoryUsage],
+    summary="Delete a category",
+    description="Delete one of the family's own categories: its items move to \"Other\" and remembered products forget it. Built-in categories cannot be deleted. Adults only. Scope: `shopping:write`.",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def delete_category(
+    family_id: int,
+    name: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("shopping:write"),
+):
+    ensure_adult(db, user.id, family_id)
+    old = _custom_category(db, family_id, name)
+    items, template_items, preferences = _category_rows(db, family_id, old)
+    for row in [*items, *template_items]:
+        row.category = None
+    for preference in preferences:
+        db.delete(preference)
+    _replace_in_orders(db, family_id, old, None)
+    audit_log(db, family_id, user.id, "shopping_category_deleted", details={"name": old, "items": len(items) + len(template_items)})
+    db.commit()
+    _broadcast_categories(db, family_id)
+    return _category_usage(db, family_id)
 
 
 @router.get(

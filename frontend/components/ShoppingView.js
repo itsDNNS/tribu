@@ -16,7 +16,8 @@ import ProductEditor from './shopping/ProductEditor';
 import ProductTile from './shopping/ProductTile';
 import OnceHint from './OnceHint';
 import { ShoppingTemplateForm, ShoppingTemplateCard } from './shopping/ShoppingTemplates';
-import { CATEGORIES, SHOP_CATALOG, GroceryArt, fold, parseProduct, groupShoppingItems } from './shopping/catalog';
+import { CATEGORIES, SHOP_CATALOG, GroceryArt, categoryLabel, fold, parseProduct, groupShoppingItems } from './shopping/catalog';
+import CategoriesSheet from './shopping/CategoriesSheet';
 const ICONS = {
   cart: ShoppingCart,
   heart: Heart,
@@ -47,7 +48,8 @@ export default function ShoppingView(props) {
     demoMode,
     familyId,
     me,
-    setActiveView
+    setActiveView,
+    shoppingCategories = true
   } = useApp();
   const sh = useShopping();
   const today = useCurrentMinute().toLocaleDateString('en-CA');
@@ -217,7 +219,9 @@ export default function ShoppingView(props) {
     ? list.shopper.display_name?.split(' ')[0] || list.shopper.display_name
     : null;
   const pct = open.length + done.length ? Math.round(done.length / (open.length + done.length) * 100) : 0;
-  const groups = groupShoppingItems(urgent ? open.filter(i => i.priority === 'urgent') : open, list?.category_order || []);
+  const shown = urgent ? open.filter(i => i.priority === 'urgent') : open;
+  // Without categories (#512) the list is one flat section.
+  const groups = shoppingCategories ? groupShoppingItems(shown, list?.category_order || []).map(g => ({ ...g, label: categoryLabel(g.label, tr) })) : shown.length ? [{ key: 'all', label: list?.name || '', items: shown, flat: true }] : [];
   const products = useMemo(() => {
     const all = [...SHOP_CATALOG];
     const seen = new Set(all.map(p => fold(p.name)));
@@ -243,7 +247,7 @@ export default function ShoppingView(props) {
   const suggestions = query.trim() ? products.filter(p => fold(p.name).includes(fold(parsed.name)) || fold(p.aliases).includes(fold(parsed.name))).slice(0, 7) : [];
   const stores = (sh.storeLinks || []).filter(link => buildStoreSearchUrl(link.url_template, 'x'));
   const recent = [...items.filter(i => i.checked)].sort((a, b) => String(b.checked_at || '').localeCompare(String(a.checked_at || ''))).filter((item, index, array) => array.findIndex(p => fold(p.name) === fold(item.name)) === index);
-  const available = prefs.tab === 'favorites' ? products.filter(p => prefs.favorites.includes(fold(p.name))) : prefs.tab === 'recent' ? recent : products.filter(p => category === 'all' || p.category === category);
+  const available = prefs.tab === 'favorites' ? products.filter(p => prefs.favorites.includes(fold(p.name))) : prefs.tab === 'recent' ? recent : products.filter(p => !shoppingCategories || category === 'all' || p.category === category);
   const close = () => {
     setModal(null);
     setDraft(null);
@@ -320,10 +324,10 @@ export default function ShoppingView(props) {
           });
           setLimit(12);
         }}>{label}</button>)}</div>
- {prefs.tab === 'catalog' && <select className="shop-catalog-filter" aria-label={tr("module.shopping.visual.artikelkategorie")} value={category} onChange={e => {
+ {prefs.tab === 'catalog' && shoppingCategories && <select className="shop-catalog-filter" aria-label={tr("module.shopping.visual.artikelkategorie")} value={category} onChange={e => {
         setCategory(e.target.value);
         setLimit(12);
-      }}><option value="all">{tr("module.shopping.visual.alle_kategorien")} {products.length} {tr("module.shopping.visual.artikel")}</option>{[...new Set([...CATEGORIES, ...products.map(p => p.category).filter(Boolean)])].map(c => <option key={c}>{c}</option>)}</select>}
+      }}><option value="all">{tr("module.shopping.visual.alle_kategorien")} {products.length} {tr("module.shopping.visual.artikel")}</option>{[...new Set([...CATEGORIES, ...products.map(p => p.category).filter(Boolean)])].map(c => <option key={c} value={c}>{categoryLabel(c, tr)}</option>)}</select>}
  <div className="shop-catalog-grid">{available.slice(0, limit).map(product => {
           const on = open.some(i => fold(i.name) === fold(product.name));
           return <button key={product.id} className={`shop-catalog-item ${on ? 'on-list' : ''}`} disabled={busy || !list || isChild} onClick={() => add(product)} aria-label={`${product.name}${on ? tr("module.shopping.visual.bereits_auf_der_liste") : tr("module.shopping.visual.hinzufugen")}`}><span className="catalog-mark">{on ? <Check size={12} /> : '+'}</span><GroceryArt name={product.name} art={product.art} /><span className="catalog-name">{product.name}</span>{on && <small>{tr("module.shopping.visual.auf_der_liste")}</small>}</button>;
@@ -332,10 +336,10 @@ export default function ShoppingView(props) {
  {available.length > limit && <button className="shop-catalog-more" onClick={() => setLimit(limit + 12)}>{tr("module.shopping.visual.weitere")} {Math.min(12, available.length - limit)} {tr("module.shopping.visual.anzeigen")}</button>}
  <div className="shop-catalog-bottom"><span>{prefs.tab === 'favorites' ? tr("module.shopping.visual.eure_gespeicherten_lieblingsartikel") : prefs.tab === 'recent' ? tr("module.shopping.visual.wiederverwenden_statt_neu_schreiben") : tr("module.shopping.visual.0_artikel_im_katalog", [available.length])}</span>{!isChild && <button disabled={!list} onClick={() => edit({})}>{tr("module.shopping.visual.eigener_artikel")} <Plus className="icon xs" /></button>}</div></>;
   }
-  function openSort() {
-    show('sort', [...new Set([...(list?.category_order || []), ...groups.map(g => g.label), ...CATEGORIES])]);
+  function openCategories() {
+    show('categories', [...new Set([...(list?.category_order || []), ...groupShoppingItems(open, list?.category_order || []).map(g => g.label), ...CATEGORIES])]);
   }
-  const snapshot = () => `${list?.name || tr("module.shopping.visual.einkauf")}\n\n${groupShoppingItems(open, list?.category_order).map(g => `${g.label}\n${g.items.map(i => `☐ ${i.name} · ${i.spec || '1'}${i.notes ? ' · ' + i.notes : ''}${i.priority === 'urgent' ? ' · ' + tr('module.shopping.visual.dringend') : ''}`).join('\n')}`).join('\n\n')}`;
+  const snapshot = () => `${list?.name || tr("module.shopping.visual.einkauf")}\n\n${(shoppingCategories ? groupShoppingItems(open, list?.category_order) : [{ label: '', items: open }]).map(g => `${g.label ? categoryLabel(g.label, tr) + '\n' : ''}${g.items.map(i => `☐ ${i.name} · ${i.spec || '1'}${i.notes ? ' · ' + i.notes : ''}${i.priority === 'urgent' ? ' · ' + tr('module.shopping.visual.dringend') : ''}`).join('\n')}`).join('\n\n')}`;
   const download = () => {
     const url = URL.createObjectURL(new Blob([snapshot()], {
       type: 'text/plain;charset=utf-8'
@@ -394,9 +398,9 @@ export default function ShoppingView(props) {
           ...(parsed.explicit ? {
             spec: parsed.spec
           } : {})
-        }, true)}><GroceryArt name={p.name} art={p.art} /><span className="grow">{p.name}<small>{p.category}</small></span><Plus size={15} /></button>)}</div>}</div>}
+        }, true)}><GroceryArt name={p.name} art={p.art} /><span className="grow">{p.name}{shoppingCategories && p.category && <small>{categoryLabel(p.category, tr)}</small>}</span><Plus size={15} /></button>)}</div>}</div>}
  {error && !modal && <p className="shop-error" role="alert">{error}</p>}
- <div className="shop-layout"><div className="shop-main"><section className="panel shop-board"><div className="shop-board-head"><div className="shop-board-name"><ListIcon name={list?.icon} /><h3>{list?.name || tr("module.shopping.visual.eure_einkaufslisten")}</h3></div><div className="shop-board-tools">{!isChild && <button className="shop-sort shop-catalog-mobile" aria-label={tr("module.shopping.visual.artikelkatalog_offnen")} onClick={() => show('catalog')}><Plus className="icon sm" /></button>}{!isChild && <button className="shop-sort" aria-label={tr("module.shopping.visual.reihenfolge_der_kategorien_andern")} disabled={!list} onClick={openSort}><SlidersHorizontal className="icon sm" /><span>{tr("module.shopping.visual.sortieren")}</span></button>}<div className="shop-view-toggle" role="group" aria-label={tr("module.shopping.visual.darstellung")}><button className={prefs.layout === 'tiles' ? 'active' : ''} aria-label={tr("module.shopping.visual.kachelansicht")} aria-pressed={prefs.layout === 'tiles'} onClick={() => preference({
+ <div className="shop-layout"><div className="shop-main"><section className="panel shop-board"><div className="shop-board-head"><div className="shop-board-name"><ListIcon name={list?.icon} /><h3>{list?.name || tr("module.shopping.visual.eure_einkaufslisten")}</h3></div><div className="shop-board-tools">{!isChild && <button className="shop-sort shop-catalog-mobile" aria-label={tr("module.shopping.visual.artikelkatalog_offnen")} onClick={() => show('catalog')}><Plus className="icon sm" /></button>}{!isChild && <button className="shop-sort" disabled={!list} onClick={openCategories}><SlidersHorizontal className="icon sm" /><span>{tr("module.shopping.categories.title")}</span></button>}<div className="shop-view-toggle" role="group" aria-label={tr("module.shopping.visual.darstellung")}><button className={prefs.layout === 'tiles' ? 'active' : ''} aria-label={tr("module.shopping.visual.kachelansicht")} aria-pressed={prefs.layout === 'tiles'} onClick={() => preference({
                   layout: 'tiles'
                 })}><Grid2X2 className="icon sm" /></button><button className={prefs.layout === 'list' ? 'active' : ''} aria-label={tr("module.shopping.visual.listenansicht")} aria-pressed={prefs.layout === 'list'} onClick={() => preference({
                   layout: 'list'
@@ -405,7 +409,7 @@ export default function ShoppingView(props) {
  <div className="shop-board-status"><span className="shop-open-count"><span className="shop-open-dot" /><strong>{open.length}</strong> {tr("module.shopping.visual.noch_besorgen")}</span>{open.some(i => i.priority === 'urgent') && <button className={`shop-priority-filter ${urgent ? 'active' : ''}`} aria-pressed={urgent} onClick={() => setUrgent(!urgent)}>{tr("module.shopping.visual.dringend")} {open.filter(i => i.priority === 'urgent').length}</button>}<span className="shop-board-progress"><span className="shop-progress-track" role="progressbar" aria-label={tr("module.shopping.visual.einkaufsfortschritt")} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style={{
                   width: `${pct}%`
                 }} /></span>{done.length} {tr("module.shopping.visual.von")} {open.length + done.length} {tr("module.shopping.visual.im_korb")}</span></div>
- {groups.length > 0 && prefs.layout === 'list' && <OnceHint id="shopping_swipe" text={tr('module.hints.shopping_swipe')} touchOnly />}{groups.length ? <div className="shop-sections">{groups.map(group => <section key={group.key} className={`shop-section ${group.items.length <= 2 && prefs.layout === 'tiles' ? 'shop-section-half' : ''}`} aria-label={group.label}><h4 className="shop-category-title"><GroceryArt name={group.items[0].name} />{group.label}<span className="category-count">{group.items.length}</span></h4>{tiles(group.items)}</section>)}</div> : <div className="shop-empty"><ShoppingCart className="icon" /><h4>{!list ? tr("module.shopping.visual.platz_fur_eure_einkaufslisten") : urgent ? tr("module.shopping.visual.nichts_dringendes_mehr") : done.length ? tr("module.shopping.visual.alles_im_korb_gut_gemacht") : tr("module.shopping.visual.platz_fur_eure_lieblingsdinge")}</h4><p>{list ? tr("module.shopping.visual.fugt_artikel_uber_die_suche_hinzu_oder_tippt_im_katalog") : tr("module.shopping.visual.legt_eure_erste_liste_an_und_sammelt_gemeinsam_was_fehl")}</p>{!isChild && <button className="btn small soft" onClick={() => urgent ? setUrgent(false) : show(list ? 'catalog' : 'new-list')}><Plus className="icon sm" />{urgent ? tr("module.shopping.visual.alle_artikel_anzeigen") : list ? tr("module.shopping.visual.artikel_auswahlen") : tr("module.shopping.visual.neue_liste")}</button>}</div>}
+ {groups.length > 0 && prefs.layout === 'list' && <OnceHint id="shopping_swipe" text={tr('module.hints.shopping_swipe')} touchOnly />}{groups.length ? <div className="shop-sections">{groups.map(group => <section key={group.key} className={`shop-section ${group.items.length <= 2 && prefs.layout === 'tiles' && !group.flat ? 'shop-section-half' : ''}`} aria-label={group.label}>{!group.flat && <h4 className="shop-category-title"><GroceryArt name={group.items[0].name} />{group.label}<span className="category-count">{group.items.length}</span></h4>}{tiles(group.items)}</section>)}</div> : <div className="shop-empty"><ShoppingCart className="icon" /><h4>{!list ? tr("module.shopping.visual.platz_fur_eure_einkaufslisten") : urgent ? tr("module.shopping.visual.nichts_dringendes_mehr") : done.length ? tr("module.shopping.visual.alles_im_korb_gut_gemacht") : tr("module.shopping.visual.platz_fur_eure_lieblingsdinge")}</h4><p>{list ? tr("module.shopping.visual.fugt_artikel_uber_die_suche_hinzu_oder_tippt_im_katalog") : tr("module.shopping.visual.legt_eure_erste_liste_an_und_sammelt_gemeinsam_was_fehl")}</p>{!isChild && <button className="btn small soft" onClick={() => urgent ? setUrgent(false) : show(list ? 'catalog' : 'new-list')}><Plus className="icon sm" />{urgent ? tr("module.shopping.visual.alle_artikel_anzeigen") : list ? tr("module.shopping.visual.artikel_auswahlen") : tr("module.shopping.visual.neue_liste")}</button>}</div>}
  {done.length > 0 && <details className="shop-done" open={prefs.doneOpen} onToggle={e => {
             if (e.currentTarget.open !== prefs.doneOpen) preference({
               doneOpen: e.currentTarget.open
@@ -417,14 +421,14 @@ export default function ShoppingView(props) {
  <section className="panel shop-recipe-card"><div className="eyebrow">{selectedRecipe ? tr("module.shopping.visual.aus_eurem_essensplan") : tr("module.shopping.visual.aus_euren_rezepten")}</div>{selectedRecipe ? <><div className="shop-recipe-content">{/nudel|pasta/i.test(selectedRecipe.title) ? <img className="meal-photo" src="/illustrations/meal-lunch.jpg" alt="" /> : <span className="shop-recipe-art"><BookOpen size={28} /></span>}<div><h3>{selectedRecipe.title}</h3><p>{selectedRecipe.servings} {tr("module.shopping.visual.portionen")}</p></div></div><button className="btn" onClick={() => chooseRecipe(selectedRecipe)}><BookOpen className="icon sm" />{tr("module.shopping.visual.zutaten_auswahlen")}<ArrowRight className="icon xs" /></button></> : <><p>{tr("module.shopping.visual.was_kommt_bei_euch_auf_den_tisch")}</p><button className="btn" onClick={() => recipes.length ? show('recipes') : setActiveView('recipes')}><BookOpen className="icon sm" />{tr("module.shopping.visual.rezepte_auswahlen")}<ArrowRight className="icon xs" /></button></>}</section>
 </aside>}</div>
  <div className="shop-mobile-dock"><span className="shop-dock-count"><ShoppingCart className="icon sm" /><strong>{open.length}</strong> {tr("module.shopping.visual.offen")}</span>{!isChild && <button className="btn" onClick={() => show('catalog')}><Plus className="icon sm" />{tr("module.shopping.visual.katalog")}</button>}<button className="btn shop-mode-button" disabled={!list} onClick={() => setTrip(true)}>{tr("module.shopping.visual.einkaufen")}<ArrowRight className="icon sm" /></button><button className="shop-dock-more" aria-label={tr("module.shopping.visual.listenoptionen")} disabled={!list} onClick={() => show('list-menu')}><MoreVertical className="icon sm" /></button></div>
- {modal === 'product' && <ProductEditor item={draft} lists={sh.shoppingLists} activeListId={sh.activeListId} categories={sh.categories || []} onClose={close} favorites={prefs.favorites} onStoreSearch={stores.length ? () => {
+ {modal === 'product' && <ProductEditor showCategory={shoppingCategories} item={draft} lists={sh.shoppingLists} activeListId={sh.activeListId} categories={sh.categories || []} onClose={close} favorites={prefs.favorites} onStoreSearch={stores.length ? () => {
       setStoreItem(draft);
       close();
     } : undefined} onFavorite={favorite} onSave={payload => draft.id ? sh.editItem(draft.id, payload) : sh.addProduct(payload)} onDelete={() => { const item = draft; close(); removeLater(item); }} />}
  {modal && modal !== 'product' && (list || ['new-list', 'members', 'info'].includes(modal)) && <ShoppingDialog title={{
       catalog: tr("module.shopping.visual.schnell_hinzufugen"),
       share: tr("module.shopping.visual.liste_weitergeben"),
-      sort: tr("module.shopping.visual.so_geht_ihr_durch_den_laden"),
+      categories: tr("module.shopping.categories.title"),
       'new-list': tr("module.shopping.visual.eine_neue_einkaufsliste"),
       'edit-list': tr("module.shopping.visual.eure_liste_euer_name"),
       'list-menu': list?.name || tr("module.shopping.visual.listenoptionen"),
@@ -444,7 +448,7 @@ export default function ShoppingView(props) {
  {modal === 'list-menu' && <div className="shop-menu">{!isChild && <><button onClick={() => show('edit-list', {
             name: list.name,
             icon: list.icon || 'cart'
-          })}>{tr("module.shopping.visual.liste_bearbeiten")}</button><button onClick={openSort}>{tr("module.shopping.visual.abteilungsreihenfolge")}</button><button onClick={() => show('templates')}>{tr("module.shopping.visual.einkaufsvorlagen")}</button><button onClick={() => recipes.length ? show('recipes') : setActiveView('recipes')}>{tr("module.shopping.visual.zutaten_aus_rezepten")}</button><button disabled={!done.length} onClick={() => show('complete')}>{tr("module.shopping.visual.einkauf_abschlie_en")}</button></>}<button onClick={() => show('share')}>{tr("module.shopping.visual.liste_weitergeben")}</button><button onClick={() => show('info')}>{t(messages, 'module.shopping.help')}</button>{!isChild && <button className="shop-danger" onClick={() => show('delete-list')}>{tr("module.shopping.visual.liste_loschen_113")}</button>}</div>}
+          })}>{tr("module.shopping.visual.liste_bearbeiten")}</button><button onClick={openCategories}>{tr("module.shopping.categories.title")}</button><button onClick={() => show('templates')}>{tr("module.shopping.visual.einkaufsvorlagen")}</button><button onClick={() => recipes.length ? show('recipes') : setActiveView('recipes')}>{tr("module.shopping.visual.zutaten_aus_rezepten")}</button><button disabled={!done.length} onClick={() => show('complete')}>{tr("module.shopping.visual.einkauf_abschlie_en")}</button></>}<button onClick={() => show('share')}>{tr("module.shopping.visual.liste_weitergeben")}</button><button onClick={() => show('info')}>{t(messages, 'module.shopping.help')}</button>{!isChild && <button className="shop-danger" onClick={() => show('delete-list')}>{tr("module.shopping.visual.liste_loschen_113")}</button>}</div>}
  {(modal === 'new-list' || modal === 'edit-list') && <form className="shop-fields" onSubmit={e => {
         e.preventDefault();
         run(() => modal === 'new-list' ? sh.createList(e) : sh.updateListDetails(draft));
@@ -455,16 +459,12 @@ export default function ShoppingView(props) {
             ...draft,
             icon
           })}><ListIcon name={icon} /></button>)}</div>}<button className="btn primary" disabled={busy}>{tr("module.shopping.visual.speichern")}</button></form>}
- {modal === 'sort' && <><p>{tr("module.shopping.visual.ordnet_die_abteilungen_passend_zu_eurem_supermarkt_leer")}</p><div className="shop-sort-list">{draft.map((c, index) => <div className="shop-sort-row" key={c}><span className="grow">{c}</span>{[-1, 1].map(direction => <button key={direction} className="btn small" disabled={index + direction < 0 || index + direction >= draft.length} aria-label={tr("module.shopping.visual.0_nach_1", [c, direction < 0 ? tr("module.shopping.visual.oben") : tr("module.shopping.visual.unten")])} onClick={() => {
-              const next = [...draft];
-              [next[index], next[index + direction]] = [next[index + direction], next[index]];
-              setDraft(next);
-            }}>{direction < 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}</button>)}</div>)}</div><button className="btn primary" disabled={busy} onClick={() => run(() => sh.updateListDetails({
-          category_order: draft
-        }))}>{tr("module.shopping.visual.reihenfolge_speichern")}</button></>}
+ {modal === 'categories' && <CategoriesSheet order={draft} busy={busy} onSaveOrder={order => run(() => sh.updateListDetails({
+          category_order: order
+        }))} onChanged={() => sh.refreshCategories()} />}
  {['complete', 'delete-list'].includes(modal) && <><p>{modal === 'complete' ? tr("module.shopping.visual.0_gekaufte_artikel_werden_aus_1_entfernt_unter_zuletzt_", [done.length, list.name]) : tr("module.shopping.visual.0_und_alle_zugehorigen_artikel_endgultig_loschen", [list.name])}</p><div className="shop-modal-actions"><button className="btn" onClick={close}>{tr("module.shopping.visual.abbrechen")}</button><button className={`btn ${modal === 'complete' ? 'primary' : 'danger'}`} disabled={busy} onClick={() => run(() => modal === 'complete' ? sh.completeTrip() : sh.deleteList(list.id))}>{modal === 'complete' ? tr("module.shopping.visual.einkauf_abschlie_en") : tr("module.shopping.visual.loschen")}</button></div></>}
- {modal === 'templates' && <><button className="btn" onClick={() => show('template-edit', null)}><Plus size={15} />{tr("module.shopping.visual.neue_vorlage")}</button>{(sh.templates || []).map(template => <ShoppingTemplateCard key={template.id} template={template} messages={messages} onApply={() => run(() => sh.applyTemplate(template.id))} onEdit={t => show('template-edit', t)} onDelete={() => run(() => sh.deleteTemplate(template.id), () => {})} />)}</>}
- {modal === 'template-edit' && <ShoppingTemplateForm messages={messages} initialTemplate={draft} onCancel={() => show('templates')} onSubmit={payload => run(() => draft ? sh.updateTemplate(draft.id, payload) : sh.createTemplate(payload), () => show('templates'))} />}
+ {modal === 'templates' && <><button className="btn" onClick={() => show('template-edit', null)}><Plus size={15} />{tr("module.shopping.visual.neue_vorlage")}</button>{(sh.templates || []).map(template => <ShoppingTemplateCard key={template.id} template={template} messages={messages} showCategory={shoppingCategories} onApply={() => run(() => sh.applyTemplate(template.id))} onEdit={t => show('template-edit', t)} onDelete={() => run(() => sh.deleteTemplate(template.id), () => {})} />)}</>}
+ {modal === 'template-edit' && <ShoppingTemplateForm messages={messages} showCategory={shoppingCategories} initialTemplate={draft} onCancel={() => show('templates')} onSubmit={payload => run(() => draft ? sh.updateTemplate(draft.id, payload) : sh.createTemplate(payload), () => show('templates'))} />}
  {modal === 'recipes' && <div className="shop-menu">{recipes.map(recipe => <button key={recipe.id} onClick={() => chooseRecipe(recipe)}>{recipe.title}<ArrowRight size={15} /></button>)}</div>}
  {modal === 'recipe' && <><h3>{draft.recipe.title}</h3><p>{tr("module.shopping.visual.bereits_notierte_zutaten_sind_abgewahlt_entfernt_zusatz")}</p><div className="shop-ingredients">{(draft.recipe.ingredients || []).map((ingredient, index) => <label key={index}><input type="checkbox" checked={draft.selected.includes(ingredient.name)} onChange={e => setDraft({
               ...draft,

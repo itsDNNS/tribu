@@ -143,6 +143,8 @@ export function useShopping() {
   const [storeLinks, setStoreLinks] = useState([]);
   const itemInputRef = useRef(null);
   const [categories, setCategories] = useState([]);
+  // Bumped when a category is renamed or deleted, here or on another device.
+  const [categoriesVersion, setCategoriesVersion] = useState(0);
   const [undoState, setUndoState] = useState(null);
   const [pendingItemIds, setPendingItemIds] = useState(new Set());
   const [waitingItemIds, setWaitingItemIds] = useState(new Set());
@@ -289,6 +291,10 @@ export function useShopping() {
       case 'shopper_changed':
         setShoppingLists((prev) => prev.map((l) => l.id === msg.list_id ? { ...l, shopper: msg.shopper } : l));
         break;
+
+      case 'categories_changed':
+        setCategoriesVersion((version) => version + 1);
+        break;
     }
   }, [setShoppingLists, loadShoppingLists, isCurrent, familyId]);
 
@@ -378,6 +384,14 @@ export function useShopping() {
     }
   }, [activeListId, demoMode, isCurrent]);
 
+  useEffect(() => {
+    if (!categoriesVersion) return;
+    reloadItems();
+    loadShoppingLists();
+    loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriesVersion]);
+  const refreshCategories = useCallback(() => setCategoriesVersion((version) => version + 1), []);
 
   async function createList(e) {
     if (!isCurrent() || isChild) return false;
@@ -894,7 +908,7 @@ export function useShopping() {
     shoppingLists,
     activeListId, setActiveListId,
     activeList,
-    items, uncheckedItems, checkedItems, categories, undo, undoToggle, pendingItemIds, waitingItemIds,
+    items, uncheckedItems, checkedItems, categories, refreshCategories, undo, undoToggle, pendingItemIds, waitingItemIds,
     newListName, setNewListName,
     newItemName, setNewItemName,
     newItemSpec, setNewItemSpec,

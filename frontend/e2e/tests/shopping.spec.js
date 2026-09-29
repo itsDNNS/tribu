@@ -202,8 +202,8 @@ test.describe('Shopping with the backend', () => {
     });
     await openList(page, 'Department Order');
     await menu(page);
-    await page.getByRole('button', {
-      name: 'Department order',
+    await page.getByRole('dialog').getByRole('button', {
+      name: 'Categories',
       exact: true
     }).click();
     await page.getByRole('button', {
@@ -217,6 +217,43 @@ test.describe('Shopping with the backend', () => {
     await page.reload();
     await selectShoppingList(page, 'Department Order');
     await expect(page.locator('.shop-category-title').first()).toContainText('Dairy');
+  });
+  test('own categories are renamed and categories can be turned off for the family', async ({
+    authedPage: page,
+    apiCtx
+  }) => {
+    const family = await getFamilyId(apiCtx);
+    const list = await seedShoppingList(apiCtx, family, 'Category Shop');
+    await seedShoppingItem(apiCtx, list.id, 'Candles', '1', 'Party');
+    // Stored under its one name, shown in the reader's language (#512).
+    await seedShoppingItem(apiCtx, list.id, 'Oat milk', '1 l', 'Kühlregal');
+    try {
+      await openList(page, 'Category Shop');
+      await expect(page.getByRole('region', { name: 'Chilled' })).toBeVisible();
+      await menu(page);
+      await page.getByRole('dialog').getByRole('button', { name: 'Categories', exact: true }).click();
+      const sheet = page.getByRole('dialog');
+      // Only the family's own categories are listed, not the built-in ones.
+      await expect(sheet.getByTestId('shop-own-category').filter({ hasText: 'Party' })).toHaveCount(1);
+      await expect(sheet.getByTestId('shop-own-category').filter({ hasText: 'Chilled' })).toHaveCount(0);
+      await sheet.getByRole('button', { name: 'Rename Party' }).click();
+      await sheet.getByRole('textbox', { name: 'New name' }).fill('Celebration');
+      await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(sheet.getByTestId('shop-own-category').filter({ hasText: 'Celebration' })).toHaveCount(1);
+      await expect(page.getByRole('region', { name: 'Celebration' })).toBeAttached();
+
+      await sheet.getByRole('switch', { name: 'Sort by category' }).click();
+      await expect(sheet.getByRole('switch', { name: 'Sort by category' })).toHaveAttribute('aria-checked', 'false');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.shop-category-title')).toHaveCount(0);
+      await expect(tile(page, 'Candles')).toBeVisible();
+      await page.reload();
+      await selectShoppingList(page, 'Category Shop');
+      await expect(tile(page, 'Oat milk')).toBeVisible();
+      await expect(page.locator('.shop-category-title')).toHaveCount(0);
+    } finally {
+      await apiCtx.put(`/api/families/${family}/shopping-categories`, { data: { enabled: true } });
+    }
   });
   test('create, edit and apply a shopping template', async ({
     authedPage: page,

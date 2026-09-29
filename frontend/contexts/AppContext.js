@@ -77,6 +77,16 @@ export function AppProvider({ children }) {
       String(entry.family_id) === String(familyId) ? { ...entry, hidden_areas: areas } : entry
     )));
   }, [familyId]);
+  // Families that do not sort their shopping by category turn it off (#512).
+  const shoppingCategories = useMemo(() => {
+    const family = families.find((entry) => String(entry.family_id) === String(familyId));
+    return family?.shopping_categories !== false;
+  }, [families, familyId]);
+  const setShoppingCategories = useCallback((enabled) => {
+    setFamilies((current) => current.map((entry) => (
+      String(entry.family_id) === String(familyId) ? { ...entry, shopping_categories: enabled } : entry
+    )));
+  }, [familyId]);
 
   const setActiveView = useCallback((view) => {
     sessionStorage.setItem('tribu_view', view);
@@ -522,6 +532,7 @@ export function AppProvider({ children }) {
     // Family
     familyId, setFamilyId,
     families, setFamilies, hiddenAreas, setHiddenAreas,
+    shoppingCategories, setShoppingCategories,
     myFamilyRole, setMyFamilyRole,
     myFamilyIsAdult, setMyFamilyIsAdult,
     members, setMembers,

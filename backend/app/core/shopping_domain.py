@@ -18,6 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.shopping_categories import stored_category
 from app.core.utils import utcnow
 from app.models import FamilyProductPreference, ShoppingItem, ShoppingList, ShoppingTemplate, ShoppingTemplateItem
 
@@ -82,6 +83,7 @@ def category_vocabulary(db: Session, family_id: int) -> list[str]:
     for (value,) in rows:
         cleaned = clean_optional_text(value)
         if cleaned:
+            cleaned = stored_category(cleaned)
             vocabulary.setdefault(normalize_product_name(cleaned), cleaned)
     return list(vocabulary.values())
 
@@ -91,6 +93,9 @@ def canonicalize_categories(db: Session, family_id: int, values: list[str | None
     categories = []
     for value in values:
         cleaned = clean_optional_text(value)
+        if cleaned:
+            # A built-in category in any language is stored under one name.
+            cleaned = stored_category(cleaned)
         categories.append(vocabulary.setdefault(normalize_product_name(cleaned), cleaned) if cleaned else None)
     return categories
 

@@ -202,23 +202,24 @@ def test_category_is_remembered_after_checked_item_is_cleared_and_readded():
     )
 
     assert readded.status_code == 200, readded.json()
-    assert readded.json()["category"] == "Fruit & Vegetables"
+    # A built-in category in any language is stored under its one name.
+    assert readded.json()["category"] == "Obst & Gemüse"
 
 
 def test_explicit_category_edit_wins_and_updates_memory():
     token, _family_id, list_id = _seed_owner()
     created = client.post(
         f"/shopping/lists/{list_id}/items",
-        json={"name": "Bread", "category": "Pantry"},
+        json={"name": "Bread", "category": "Tins"},
         headers=_auth(token),
     )
     edited = client.patch(
         f"/shopping/items/{created.json()['id']}",
-        json={"category": " Bakery "},
+        json={"category": " Bread shelf "},
         headers=_auth(token),
     )
     assert edited.status_code == 200, edited.json()
-    assert edited.json()["category"] == "Bakery"
+    assert edited.json()["category"] == "Bread shelf"
     assert client.patch(
         f"/shopping/items/{created.json()['id']}",
         json={"checked": True},
@@ -232,7 +233,7 @@ def test_explicit_category_edit_wins_and_updates_memory():
         headers=_auth(token),
     )
     assert readded.status_code == 200, readded.json()
-    assert readded.json()["category"] == "Bakery"
+    assert readded.json()["category"] == "Bread shelf"
 
 
 def test_add_item_keeps_separate_rows_when_details_differ_and_capitalizes_names():

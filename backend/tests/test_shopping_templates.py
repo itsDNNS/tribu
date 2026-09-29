@@ -121,7 +121,7 @@ def test_template_create_edit_list_delete_and_apply_to_shopping_list():
         json={
             "name": "Weekly basics",
             "items": [
-                {"name": "Oats", "spec": "1 kg", "category": "Pantry"},
+                {"name": "Oats", "spec": "1 kg", "category": "Cereals"},
                 {"name": "Milk", "spec": "2 L", "category": "Dairy"},
             ],
         },
@@ -144,12 +144,12 @@ def test_template_create_edit_list_delete_and_apply_to_shopping_list():
     assert applied.json()["added_count"] == 2
     assert [item["name"] for item in applied.json()["items"]] == ["Oats", "Milk"]
     assert applied.json()["items"][0]["checked"] is False
-    assert applied.json()["items"][0]["category"] == "Pantry"
+    assert applied.json()["items"][0]["category"] == "Cereals"
 
     items = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token))
     assert items.status_code == 200
     assert [(item["name"], item["spec"], item["category"], item["checked"]) for item in items.json()] == [
-        ("Oats", "1 kg", "Pantry", False),
+        ("Oats", "1 kg", "Cereals", False),
         ("Milk", "2 L", "Dairy", False),
     ]
 

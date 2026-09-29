@@ -275,7 +275,7 @@ test('department order saves against the current list and supports custom catego
     }, milk]
   });
   fireEvent.click(screen.getByRole('button', {
-    name: 'Reihenfolge der Kategorien ändern'
+    name: 'Kategorien'
   }));
   fireEvent.click(dialog().getByRole('button', {
     name: 'Mein Laden nach unten'
@@ -1087,4 +1087,55 @@ test('does not announce yourself', () => {
     { me: { id: 1, user_id: 1 } },
   );
   expect(screen.queryByText(/kauft gerade ein/)).not.toBeInTheDocument();
+});
+
+test('built-in categories show in the reader\'s language', () => {
+  setup({}, { messages: buildMessages('en') });
+  expect(screen.getByRole('region', { name: 'Fruit & vegetables' })).toBeVisible();
+  expect(screen.getByRole('region', { name: 'Chilled' })).toBeVisible();
+});
+test('without categories the list is one flat section and the editor has no category', () => {
+  setup({}, { shoppingCategories: false });
+  expect(document.querySelector('.shop-category-title')).toBeNull();
+  expect(screen.getByRole('checkbox', { name: /^Äpfel,/ })).toBeVisible();
+  expect(screen.getByRole('checkbox', { name: /^Milch,/ })).toBeVisible();
+  fireEvent.click(screen.getAllByRole('button', { name: /Äpfel/ }).find(button => button.className.includes('shop-tile-menu')));
+  expect(dialog().queryByText('Kategorie')).not.toBeInTheDocument();
+});
+test('the categories sheet turns categories off for the family', async () => {
+  const setShoppingCategories = jest.fn();
+  api.apiSetShoppingCategories.mockResolvedValue({ ok: true, data: { family_id: 1, enabled: false } });
+  api.apiGetShoppingCategoryUsage.mockResolvedValue({ ok: true, data: [] });
+  setup({}, { demoMode: false, shoppingCategories: true, setShoppingCategories });
+  fireEvent.click(screen.getByRole('button', { name: 'Kategorien' }));
+  fireEvent.click(dialog().getByRole('switch', { name: 'Nach Kategorien sortieren' }));
+  expect(setShoppingCategories).toHaveBeenCalledWith(false);
+  await waitFor(() => expect(api.apiSetShoppingCategories).toHaveBeenCalledWith(1, false));
+});
+test('own categories can be renamed and deleted from the sheet', async () => {
+  const refreshCategories = jest.fn();
+  api.apiGetShoppingCategoryUsage.mockResolvedValue({ ok: true, data: [
+    { name: 'Obst & Gemüse', builtin: 'produce', items: 1 },
+    { name: 'Party', builtin: null, items: 2 },
+  ] });
+  api.apiRenameShoppingCategory.mockResolvedValue({ ok: true, data: [{ name: 'Feier', builtin: null, items: 2 }] });
+  api.apiDeleteShoppingCategory.mockResolvedValue({ ok: true, data: [] });
+  setup({ refreshCategories }, { demoMode: false, shoppingCategories: true, setShoppingCategories: jest.fn() });
+  fireEvent.click(screen.getByRole('button', { name: 'Kategorien' }));
+  // Built-in categories are not listed as the family's own.
+  const own = await screen.findAllByTestId('shop-own-category');
+  expect(own).toHaveLength(1);
+  expect(own[0]).toHaveTextContent('Party');
+  expect(own[0]).toHaveTextContent('Artikel: 2');
+  fireEvent.click(dialog().getByRole('button', { name: 'Party umbenennen' }));
+  fireEvent.change(dialog().getByRole('textbox', { name: 'Neuer Name' }), { target: { value: 'Feier' } });
+  fireEvent.click(dialog().getByRole('button', { name: 'Speichern' }));
+  await waitFor(() => expect(api.apiRenameShoppingCategory).toHaveBeenCalledWith(1, 'Party', 'Feier'));
+  await waitFor(() => expect(refreshCategories).toHaveBeenCalled());
+  expect(await dialog().findByText('Feier')).toBeInTheDocument();
+  fireEvent.click(dialog().getByRole('button', { name: 'Feier löschen' }));
+  expect(dialog().getByText('„Feier“ löschen? Die Artikel darin landen unter „Sonstiges“.')).toBeInTheDocument();
+  fireEvent.click(dialog().getByRole('button', { name: 'Löschen' }));
+  await waitFor(() => expect(api.apiDeleteShoppingCategory).toHaveBeenCalledWith(1, 'Feier'));
+  expect(await dialog().findByText(/Noch keine eigenen Kategorien/)).toBeInTheDocument();
 });

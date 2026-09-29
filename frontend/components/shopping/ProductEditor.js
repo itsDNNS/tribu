@@ -2,7 +2,7 @@ import { useShoppingText } from "./useShoppingText";
 import { useEffect, useRef, useState } from 'react';
 import { Heart, Trash2, Check, X, FileImage } from 'lucide-react';
 import ShoppingDialog from './ShoppingDialog';
-import { GroceryArt, splitSpec, CATEGORIES, fold } from './catalog';
+import { GroceryArt, splitSpec, CATEGORIES, categoryLabel, fold } from './catalog';
 export default function ProductEditor({
   item,
   lists,
@@ -13,7 +13,8 @@ export default function ProductEditor({
   onClose,
   favorites,
   onFavorite,
-  onStoreSearch
+  onStoreSearch,
+  showCategory = true
 }) {
   const tr = useShoppingText();
   const mounted = useRef(true);
@@ -88,8 +89,7 @@ export default function ProductEditor({
  <label className="field">{tr("module.shopping.visual.menge")}<input required type="number" min="0.001" max="99999" step="0.001" inputMode="decimal" value={draft.qty} onChange={e => change('qty', e.target.value)} /></label>
  <label className="field">{tr("module.shopping.visual.einheit")}<input value={draft.unit} maxLength={20} onChange={e => change('unit', e.target.value)} placeholder={tr("module.shopping.visual.z_b_kg_l_stuck")} list="shop-units" /></label>
  <datalist id="shop-units">{['Stück', 'g', 'kg', 'ml', 'l', 'Packung', 'Dose', 'Flaschen', 'EL', 'TL'].map(v => <option key={v} value={v} />)}</datalist>
- <label className="field">{tr("module.shopping.visual.kategorie")}<select value={customCategory ? '__custom__' : draft.category} onChange={e => { if(e.target.value === '__custom__'){setCustomCategory(true);change('category','');}else{setCustomCategory(false);change('category',e.target.value);} }}>{[...new Set([...CATEGORIES, ...categories, draft.category])].filter(Boolean).map(v => <option key={v}>{v}</option>)}<option value="__custom__">{tr('module.shopping.visual.custom_category')}</option></select>{customCategory&&<input aria-label={tr('module.shopping.visual.custom_category')} required maxLength={100} autoFocus value={draft.category} onChange={e=>change('category',e.target.value)}/>}</label>
- <datalist id="shop-categories">{[...new Set([...CATEGORIES, ...categories])].map(v => <option key={v} value={v} />)}</datalist>
+ {showCategory && <label className="field">{tr("module.shopping.visual.kategorie")}<select value={customCategory ? '__custom__' : draft.category} onChange={e => { if(e.target.value === '__custom__'){setCustomCategory(true);change('category','');}else{setCustomCategory(false);change('category',e.target.value);} }}>{[...new Map([...CATEGORIES, ...categories, draft.category].filter(Boolean).map(v => [fold(v), v])).values()].map(v => <option key={v} value={v}>{categoryLabel(v, tr)}</option>)}<option value="__custom__">{tr('module.shopping.visual.custom_category')}</option></select>{customCategory&&<input aria-label={tr('module.shopping.visual.custom_category')} required maxLength={100} autoFocus value={draft.category} onChange={e=>change('category',e.target.value)}/>}</label>}
  <label className="field">{tr("module.shopping.visual.einkaufsliste")}<select value={draft.list_id} onChange={e => change('list_id', Number(e.target.value))}>{lists.map(list => <option key={list.id} value={list.id}>{list.name}</option>)}</select></label>
  <label className="field full">{tr("module.shopping.visual.details_fur_die_familie")}<input maxLength={500} value={draft.notes} onChange={e => change('notes', e.target.value)} placeholder={tr("module.shopping.visual.zum_beispiel_1_5_fett_oder_die_lieblingsmarke")} /></label>
  <label className="field full">{tr("module.shopping.visual.dringlichkeit")}<select value={draft.priority} onChange={e => change('priority', e.target.value)}><option value="normal">{tr("module.shopping.visual.beim_nachsten_einkauf")}</option><option value="urgent">{tr("module.shopping.visual.dringend")}</option></select></label>

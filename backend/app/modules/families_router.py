@@ -3,12 +3,12 @@ from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session, joinedload, aliased
 
 from app.core import cache
-from app.core.deps import current_user, ensure_family_admin, ensure_family_membership
+from app.core.deps import current_user, ensure_adult, ensure_family_admin, ensure_family_membership
 from app.core.scopes import require_scope
 from app.core.utils import audit_log as _audit, is_instance_admin_user
 from app.database import get_db
 from app.models import AuditLog, Family, Membership, User
-from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyAreasResponse, FamilyAreasUpdate, FamilyMemberResponse, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
+from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyAreasResponse, FamilyAreasUpdate, FamilyMemberResponse, FamilyShoppingCategoriesResponse, FamilyShoppingCategoriesUpdate, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
 from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, UNKNOWN_AREAS, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN, PROFILE_IMAGE_UNREADABLE
 from app.core.avatars import AvatarError, set_profile_image
@@ -56,6 +56,32 @@ def set_family_areas(
     return FamilyAreasResponse(family_id=family_id, hidden_areas=hidden, optional_areas=OPTIONAL_AREAS)
 
 
+@router.put(
+    "/{family_id}/shopping-categories",
+    response_model=FamilyShoppingCategoriesResponse,
+    summary="Turn shopping categories on or off",
+    description="Families that do not sort their shopping by category turn it off: lists show flat and clients hide category fields. Items keep their categories. Adults only. Scope: `families:write`.",
+    response_description="Whether the family uses shopping categories",
+)
+def set_shopping_categories(
+    family_id: int,
+    payload: FamilyShoppingCategoriesUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_adult(db, user.id, family_id)
+    family = db.query(Family).filter(Family.id == family_id).first()
+    if not family:
+        raise HTTPException(status_code=404, detail=error_detail(NOT_A_MEMBER))
+    if family.shopping_categories != payload.enabled:
+        family.shopping_categories = payload.enabled
+        _audit(db, family_id, user.id, "shopping_categories_changed", details={"enabled": payload.enabled})
+        db.commit()
+        cache.invalidate_pattern("tribu:families:*")
+    return FamilyShoppingCategoriesResponse(family_id=family_id, enabled=family.shopping_categories)
+
+
 @router.get(
     "/me",
     response_model=list[FamilySummary],
@@ -81,6 +107,7 @@ def my_families(user: User = Depends(current_user), db: Session = Depends(get_db
                 role=m.role,
                 is_adult=m.is_adult,
                 hidden_areas=normalize_hidden_areas(m.family.hidden_areas),
+                shopping_categories=m.family.shopping_categories is not False,
             ).model_dump()
             for m in memberships
             if m.family

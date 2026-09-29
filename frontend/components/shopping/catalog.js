@@ -1,6 +1,13 @@
 import { SHOP_CATALOG, GROCERY_ART } from '../../lib/shoppingCatalog';
 export const CATEGORIES = ['Obst & Gemüse','Kühlregal','Bäckerei','Vorrat','Getränke','Fleisch & Fisch','Tiefkühl','Haushalt','Sonstiges'];
 export const fold = value => String(value || '').toLocaleLowerCase('de').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ß/g,'ss').trim();
+// Built-in categories keep these labels as their stored value; every client
+// shows them in its own language (#512). The server folds any translation back.
+export const CATEGORY_KEYS = ['produce','chilled','bakery','pantry','drinks','meat','frozen','household','other'];
+const ENGLISH_CATEGORIES = ['Fruit & vegetables','Chilled','Bakery','Pantry','Drinks','Meat & fish','Frozen','Household','Other'];
+const BUILTIN_BY_LABEL = new Map([...CATEGORIES, ...ENGLISH_CATEGORIES].map((label, index) => [fold(label), CATEGORY_KEYS[index % CATEGORY_KEYS.length]]));
+export function builtinCategory(label) { return BUILTIN_BY_LABEL.get(fold(label)) || null; }
+export function categoryLabel(label, tr) { const key = builtinCategory(label); return key ? tr(`module.shopping.category.${key}`) : label; }
 export function catalogProduct(name) { const q = fold(name); return SHOP_CATALOG.find(p => fold(p.name) === q || p.aliases.split(' ').some(a => a && fold(a) === q)); }
 export function GroceryArt({name, art, className=''}) {
   const key = art && GROCERY_ART[art] ? art : catalogProduct(name)?.art || 'bag';
