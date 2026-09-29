@@ -137,6 +137,51 @@ describe('i18n bundled locale files', () => {
     }
   });
 
+  // Texts of several words that stay English in another language were left
+  // untranslated (#550). These read the same on purpose: formats, product
+  // names and terms the language borrows.
+  const SAME_AS_ENGLISH = {
+    display_eink_format_large: 'all',
+    'module.calendar.import_placeholder': 'all',
+    'module.kids.earned': 'all',
+    api_tokens: ['de'],
+    audit_log_title: ['de'],
+    auth_selfhosted: ['de'],
+    automation_webhooks: ['de'],
+    'display.stage.participants': ['fr'],
+    'display.stage.participants_one': ['fr'],
+    'display.stage.routines_open': ['nl'],
+    'module.school_timetables.day_plan_aria': ['da', 'nb'],
+    'module.weekly_plan.shopping_open': ['nl'],
+    notification_destinations_send_test: ['da', 'nb'],
+    notification_destinations_url: ['hr', 'hu', 'lt', 'lv'],
+    notification_minutes_15: ['fr'],
+    notification_minutes_30: ['fr'],
+    notification_minutes_60: ['fr'],
+    'sso.client_id': ['pl'],
+    'sso.client_secret': ['pl'],
+    'sso.title': ['da', 'de', 'pl'],
+    sub_setup_android_title: ['pl', 'ro'],
+    sub_setup_ios_title: ['pl'],
+    webhooks_send_test: ['da', 'nb'],
+    webhooks_url_label: ['de', 'hu', 'lt'],
+  };
+
+  it('translates every text of several words', () => {
+    const english = fileLocaleBundles.en;
+    const untranslated = [];
+    for (const lang of expectedLanguages.filter((name) => name !== 'en')) {
+      for (const [key, value] of Object.entries(fileLocaleBundles[lang])) {
+        const allowed = SAME_AS_ENGLISH[key];
+        if (allowed === 'all' || allowed?.includes(lang)) continue;
+        if (value === english[key] && String(value).trim().split(/\s+/).length > 1) {
+          untranslated.push(`${lang}: ${key}`);
+        }
+      }
+    }
+    expect(untranslated).toEqual([]);
+  });
+
   it('keeps plural forms next to their text and within its placeholders', () => {
     for (const lang of expectedLanguages) {
       const locale = fileLocaleBundles[lang];
