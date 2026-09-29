@@ -4,7 +4,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.database import Base
+from app.database import Base, normalize_database_url
 from app.models import *  # noqa: F401,F403  ensure all models are registered
 
 config = context.config
@@ -16,7 +16,7 @@ target_metadata = Base.metadata
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(database_url))
 
 
 def run_migrations_offline():

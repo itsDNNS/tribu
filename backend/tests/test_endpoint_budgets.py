@@ -23,7 +23,7 @@ from sqlalchemy.orm import sessionmaker
 import app.modules.dashboard_router as dashboard_router
 import app.modules.display_router as display_router
 from app.core.clock import local_today
-from app.database import Base, get_db
+from app.database import Base, get_db, normalize_database_url
 from app.main import app
 from tests.realistic_family import seed_realistic_family
 
@@ -33,7 +33,7 @@ MB = 1024 * 1024
 def _engine():
     url = os.getenv("TRIBU_BUDGET_DATABASE_URL")
     if url:
-        return create_engine(url)
+        return create_engine(normalize_database_url(url))
     fd, path = tempfile.mkstemp(prefix="tribu-budgets-", suffix=".db")
     os.close(fd)
     return create_engine(f"sqlite:///{path}", connect_args={"check_same_thread": False})
