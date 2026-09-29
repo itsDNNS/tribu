@@ -96,8 +96,11 @@ const messages = {
   display_skip_empty_hint: 'Empty cards are left out.',
   display_pause_on_touch: 'Hold on touch',
   display_pause_on_touch_hint: 'Tapping holds an area.',
-  display_night_dim: 'Dim at night',
-  display_night_dim_hint: 'Darkens the screen at night.',
+  display_theme_mode_label: 'Theme',
+  display_theme_mode_hint: 'Choose a fixed theme, or let it follow the time of day.',
+  display_theme_mode_auto: 'Dim at night',
+  display_theme_mode_light: 'Always light',
+  display_theme_mode_dark: 'Always dark',
   display_editor_day_parts: 'Times of day',
   display_morning_start: 'Morning from',
   display_morning_end: 'Morning until',
@@ -271,7 +274,7 @@ const DEVICE = {
     },
     stagger: true, skip_empty: true, pause_on_touch: true, night_dim: true,
     day_parts: { morning_start: '05:30', morning_end: '09:00', evening_start: '18:00', night_start: '22:00' },
-    eink_format: 'compact', language: 'auto',
+    eink_format: 'compact', language: 'auto', theme_mode: 'auto',
   },
 };
 
@@ -347,6 +350,19 @@ describe('DisplaysSection stage editor', () => {
   test('the e-ink size is only offered in e-ink mode', async () => {
     await openEditor();
     expect(screen.queryByTestId('display-eink-format-select')).not.toBeInTheDocument();
+  });
+
+  test('admins can force the display to always be light or dark, overriding the time-based default', async () => {
+    await openEditor();
+    expect(screen.getByTestId('display-theme-mode-select')).toHaveValue('auto');
+    fireEvent.change(screen.getByTestId('display-theme-mode-select'), { target: { value: 'dark' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
+    expect(api.apiUpdateDisplayDevice.mock.calls[0][2].layout_config.theme_mode).toBe('dark');
+  });
+
+  test('there is no separate dim-at-night toggle; it is folded into the theme select', async () => {
+    await openEditor();
+    expect(screen.queryByTestId('display-toggle-night_dim')).not.toBeInTheDocument();
   });
 
   test('a new e-ink display also shows the picture address for frames', async () => {

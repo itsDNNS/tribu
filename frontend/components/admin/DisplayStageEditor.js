@@ -4,7 +4,7 @@ import { normalizeStageConfig, ZONE_CARDS, ZONES } from '../display/stageModel';
 
 const REFRESH_OPTIONS = { tablet: [30, 60, 120, 300, 600], eink: [300, 600, 900, 1800, 3600] };
 const INTERVAL_OPTIONS = [15, 30, 60, 120, 300, 600];
-const TOGGLES = ['stagger', 'skip_empty', 'pause_on_touch', 'night_dim'];
+const TOGGLES = ['stagger', 'skip_empty', 'pause_on_touch'];
 const DAY_PARTS = ['morning_start', 'morning_end', 'evening_start', 'night_start'];
 
 // Editable draft built from the same normalization the wall display uses.
@@ -19,13 +19,15 @@ export function draftFromDevice(device) {
       stagger: config.stagger,
       skip_empty: config.skipEmpty,
       pause_on_touch: config.pauseOnTouch,
-      night_dim: config.nightDim,
       day_parts: config.dayParts,
       eink_format: config.einkFormat,
       language: config.language,
+      theme_mode: config.themeMode,
     },
   };
 }
+
+const THEME_MODES = ['auto', 'light', 'dark'];
 
 export function draftToPayload(draft) {
   return {
@@ -225,6 +227,22 @@ export default function DisplayStageEditor({ draft, messages, onChange, weatherP
             </label>
           ))}
         </div>
+        {!eink && (
+          <label className="form-field">
+            <span>{t(messages, 'display_theme_mode_label')}</span>
+            <select
+              className="form-input"
+              value={draft.layout.theme_mode}
+              data-testid="display-theme-mode-select"
+              onChange={(event) => setLayout({ theme_mode: event.target.value })}
+            >
+              {THEME_MODES.map((mode) => (
+                <option key={mode} value={mode}>{t(messages, `display_theme_mode_${mode}`)}</option>
+              ))}
+            </select>
+            <small>{t(messages, 'display_theme_mode_hint')}</small>
+          </label>
+        )}
       </section>
 
       <section className="fam-stage-group">

@@ -32,6 +32,19 @@ describe('normalizeStageConfig', () => {
     expect(config.stagger).toBe(false);
     expect(config.dayParts).toMatchObject({ evening_start: '19:30', morning_start: '05:30' });
     expect(config.language).toBe('de');
+    expect(config.themeMode).toBe('auto');
+  });
+
+  test('accepts a valid theme_mode override and falls back to auto otherwise', () => {
+    expect(normalizeStageConfig({ layout_config: { version: 2, theme_mode: 'dark' } }).themeMode).toBe('dark');
+    expect(normalizeStageConfig({ layout_config: { version: 2, theme_mode: 'light' } }).themeMode).toBe('light');
+    expect(normalizeStageConfig({ layout_config: { version: 2, theme_mode: 'purple' } }).themeMode).toBe('auto');
+    expect(normalizeStageConfig({}).themeMode).toBe('auto');
+  });
+
+  test('migrates the retired night_dim flag to an equivalent theme_mode', () => {
+    expect(normalizeStageConfig({ layout_config: { version: 2, night_dim: true } }).themeMode).toBe('auto');
+    expect(normalizeStageConfig({ layout_config: { version: 2, night_dim: false } }).themeMode).toBe('light');
   });
 
   test('treats retired grid layouts as the default stage', () => {

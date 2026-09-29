@@ -557,6 +557,7 @@ class TestStageLayoutConfig:
         assert layout["stagger"] is True and layout["skip_empty"] is True
         assert layout["day_parts"]["evening_start"] == "18:00"
         assert layout["language"] == "auto"
+        assert layout["theme_mode"] == "auto"
 
     def test_admin_config_is_bounded_and_whitelisted(self):
         admin_token, _, family_id = _seed_member_with_pat("stageBounds", role="admin", is_adult=True)
@@ -581,6 +582,7 @@ class TestStageLayoutConfig:
                     "day_parts": {"morning_start": "06:15", "evening_start": "25:00"},
                     "eink_format": "large",
                     "language": "<script>",
+                    "theme_mode": "dark",
                 },
             },
             headers=_auth(admin_token),
@@ -600,6 +602,48 @@ class TestStageLayoutConfig:
         assert layout["day_parts"]["evening_start"] == "18:00"
         assert layout["eink_format"] == "large"
         assert layout["language"] == "auto"
+        assert layout["theme_mode"] == "dark"
+
+    def test_invalid_theme_mode_falls_back_to_auto(self):
+        admin_token, _, family_id = _seed_member_with_pat("stageThemeInvalid", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={
+                "name": "Hall",
+                "layout_config": {"version": 2, "theme_mode": "purple"},
+            },
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["device"]["layout_config"]["theme_mode"] == "auto"
+
+    def test_legacy_night_dim_true_migrates_to_auto_theme(self):
+        # Pre-theme_mode configs defaulted night_dim to True; that behaviour is "auto" now.
+        admin_token, _, family_id = _seed_member_with_pat("stageLegacyDimOn", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Hall", "layout_config": {"version": 2, "night_dim": True}},
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["device"]["layout_config"]["theme_mode"] == "auto"
+
+    def test_legacy_night_dim_false_migrates_to_light_theme(self):
+        # Devices that had turned dimming off keep looking the same: always light.
+        admin_token, _, family_id = _seed_member_with_pat("stageLegacyDimOff", role="admin", is_adult=True)
+        resp = client.post(
+            f"/families/{family_id}/display-devices",
+            json={"name": "Hall", "layout_config": {"version": 2, "night_dim": False}},
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["device"]["layout_config"]["theme_mode"] == "light"
+
+    def test_night_dim_is_no_longer_a_stored_field(self):
+        admin_token, _, family_id = _seed_member_with_pat("stageNoNightDim", role="admin", is_adult=True)
+        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Kitchen"}, headers=_auth(admin_token))
+        assert resp.status_code == 200, resp.text
+        assert "night_dim" not in resp.json()["device"]["layout_config"]
 
     def test_retired_grid_layouts_reset_to_the_stage_default(self):
         admin_token, _, family_id = _seed_member_with_pat("stageLegacy", role="admin", is_adult=True)

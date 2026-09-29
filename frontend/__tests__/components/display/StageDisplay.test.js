@@ -115,8 +115,38 @@ test('e-ink renders monochrome without progress bars and shows the update time',
   expect(screen.getByText('display.stage.updated')).toBeInTheDocument();
 });
 
-test('night dims the display when enabled', () => {
+test('night dims the display in time-based theme mode', () => {
   const { container } = renderAt('2026-09-29T23:10:00');
   expect(screen.getByTestId('display-dashboard')).toHaveAttribute('data-day-part', 'night');
   expect(container.querySelector('.stage-night-veil')).not.toBeNull();
+});
+
+test('a fixed theme_mode never shows the extra night veil', () => {
+  const lightPayload = buildStagePayload({
+    config: { display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage', layout_config: { version: 2, theme_mode: 'light' } },
+  });
+  const { container: lightContainer } = renderAt('2026-09-29T23:10:00', lightPayload);
+  expect(lightContainer.querySelector('.stage-night-veil')).toBeNull();
+
+  const darkPayload = buildStagePayload({
+    config: { display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage', layout_config: { version: 2, theme_mode: 'dark' } },
+  });
+  const { container: darkContainer } = renderAt('2026-09-29T23:10:00', darkPayload);
+  expect(darkContainer.querySelector('.stage-night-veil')).toBeNull();
+});
+
+test('theme_mode "dark" forces the dark palette during the day', () => {
+  const payload = buildStagePayload({
+    config: { display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage', layout_config: { version: 2, theme_mode: 'dark' } },
+  });
+  renderAt('2026-09-29T07:12:00', payload);
+  expect(screen.getByTestId('display-dashboard')).toHaveClass('stage--dark');
+});
+
+test('theme_mode "light" keeps the light palette in the evening', () => {
+  const payload = buildStagePayload({
+    config: { display_mode: 'tablet', refresh_interval_seconds: 60, layout_preset: 'stage', layout_config: { version: 2, theme_mode: 'light' } },
+  });
+  renderAt('2026-09-29T19:40:00', payload);
+  expect(screen.getByTestId('display-dashboard')).not.toHaveClass('stage--dark');
 });

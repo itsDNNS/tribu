@@ -16,11 +16,20 @@ const DEFAULT_LAYOUT = {
   stagger: true,
   skip_empty: true,
   pause_on_touch: true,
-  night_dim: true,
   day_parts: { morning_start: '05:30', morning_end: '09:00', evening_start: '18:00', night_start: '22:00' },
   eink_format: 'compact',
   language: 'auto',
+  theme_mode: 'auto',
 };
+
+const THEME_MODES = ['auto', 'light', 'dark'];
+
+// Pre-theme_mode configs only had this on/off dimming flag; keep old devices looking the same.
+function themeMode(source) {
+  if (THEME_MODES.includes(source.theme_mode)) return source.theme_mode;
+  if (typeof source.night_dim === 'boolean') return source.night_dim ? 'auto' : 'light';
+  return DEFAULT_LAYOUT.theme_mode;
+}
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -57,10 +66,10 @@ export function normalizeStageConfig(config) {
     stagger: flag('stagger'),
     skipEmpty: flag('skip_empty'),
     pauseOnTouch: flag('pause_on_touch'),
-    nightDim: flag('night_dim'),
     dayParts,
     einkFormat: source.eink_format === 'large' ? 'large' : 'compact',
     language: typeof source.language === 'string' ? source.language : 'auto',
+    themeMode: themeMode(source),
   };
 }
 

@@ -263,7 +263,7 @@ export default function StageDisplay({ me, dashboard, t, locale, offlineSince = 
   const context = { dashboard, members, t, locale, timeFormat };
   const PartIcon = PART_ICONS[part];
   const weather = dashboard.weather;
-  const dark = !eink && ahead;
+  const dark = config.themeMode === 'auto' ? !eink && ahead : !eink && config.themeMode === 'dark';
 
   return (
     <div
@@ -329,7 +329,7 @@ export default function StageDisplay({ me, dashboard, t, locale, offlineSince = 
           {t('display.stage.updated').replace('{time}', formatClock(parseGenerated(dashboard.generated_at) || now, locale, timeFormat))}
         </p>
       )}
-      {config.nightDim && part === 'night' && !eink && <div className="stage-night-veil" aria-hidden="true" />}
+      {config.themeMode === 'auto' && part === 'night' && !eink && <div className="stage-night-veil" aria-hidden="true" />}
     </div>
   );
 }
