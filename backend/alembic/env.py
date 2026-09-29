@@ -16,7 +16,8 @@ target_metadata = Base.metadata
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", normalize_database_url(database_url))
+    # Alembic interpolates ini values, so escape "%" from URL-encoded passwords.
+    config.set_main_option("sqlalchemy.url", normalize_database_url(database_url).replace("%", "%%"))
 
 
 def run_migrations_offline():
