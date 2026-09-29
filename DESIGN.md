@@ -236,8 +236,8 @@ into Plan, Lists & meals and Family, using pastel tones per area and the
 existing counters. Tiles may show one short, data-backed hint (overdue or due
 tasks, today’s next meal, the next birthday within two weeks); hints never
 replace the label. A field at the top filters areas and settings while typing
-and offers a hand-off to the global search. Notifications, settings, admin, the
-dark-design switch and dashboard layout follow as compact rows, with the
+and offers a hand-off to the global search. Notifications, settings, admin and the
+dark-design switch follow as compact rows, with the
 account, family switcher and logout last. The sheet keeps its opening height
 while filtering and can be closed by swiping the header down.
 
