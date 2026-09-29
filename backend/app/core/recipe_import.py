@@ -32,6 +32,8 @@ from app.core.calendar_subscriptions import (
 MAX_PAGE_BYTES = 4 * 1024 * 1024
 FETCH_TIMEOUT = 10.0
 MAX_REDIRECTS = 4
+# The longest text read from one schema.org value.
+MAX_TEXT = 20000
 USER_AGENT = "Mozilla/5.0 (compatible; Tribu recipe import; +https://github.com/itsDNNS/tribu)"
 
 
@@ -60,14 +62,21 @@ class RecipeDraft:
 # ── Fetching ──────────────────────────────────────────
 
 
+def _charset_after(text: str) -> str | None:
+    """The charset name after the first "charset=", read without a regex."""
+    index = text.lower().find("charset=")
+    if index == -1:
+        return None
+    name = []
+    for char in text[index + len("charset="):index + 48].lstrip("\"' "):
+        if not (char.isalnum() or char in "-_"):
+            break
+        name.append(char)
+    return "".join(name) or None
+
+
 def _charset(content_type: str | None, body: bytes) -> str:
-    match = re.search(r"charset=([\w-]+)", content_type or "", re.I)
-    if not match:
-        match = re.search(rb"<meta[^>]+charset=[\"']?([\w-]+)", body[:4096], re.I)
-        if match:
-            return match.group(1).decode("ascii", "ignore") or "utf-8"
-        return "utf-8"
-    return match.group(1)
+    return _charset_after(content_type or "") or _charset_after(body[:4096].decode("ascii", "ignore")) or "utf-8"
 
 
 def _get(url: str, allow_private_networks: bool) -> tuple[int, dict[str, str], bytes]:
@@ -196,8 +205,9 @@ def _text(value) -> str:
         value = value.get("text") or value.get("name") or ""
     if isinstance(value, list):
         value = " ".join(_text(item) for item in value)
-    # Block tags separate words; inline tags (<b>, <a>) do not.
-    text = re.sub(r"</?(?:p|br|div|li|ul|ol|h\d)\b[^>]*>", " ", str(value or ""), flags=re.I)
+    # Block tags separate words; inline tags (<b>, <a>) do not. Values are
+    # capped first so a hostile page cannot make the tag patterns crawl.
+    text = re.sub(r"</?(?:p|br|div|li|ul|ol|h\d)\b[^>]*>", " ", str(value or "")[:MAX_TEXT], flags=re.I)
     text = re.sub(r"<[^>]+>", "", text)
     return re.sub(r"\s+", " ", html.unescape(text)).strip()
 
@@ -231,7 +241,7 @@ def _steps(value, depth: int = 0) -> list[str]:
     if depth > 4 or value is None:
         return []
     if isinstance(value, str):
-        text = html.unescape(re.sub(r"<br\s*/?>|</p>|</li>", "\n", value, flags=re.I))
+        text = html.unescape(re.sub(r"<br\s*/?>|</p>|</li>", "\n", value[:MAX_TEXT * 5], flags=re.I))
         lines = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", line)).strip() for line in text.splitlines()]
         return [line for line in lines if line]
     if isinstance(value, list):

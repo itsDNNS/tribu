@@ -108,3 +108,11 @@ def test_redirects_are_followed_and_checked_again(monkeypatch):
     monkeypatch.setattr(recipe_import, "_get", loop)
     with pytest.raises(RecipeImportError):
         fetch_page("https://example.com/r")
+
+
+def test_the_charset_comes_from_the_header_or_the_page():
+    from app.core.recipe_import import _charset
+
+    assert _charset("text/html; charset=ISO-8859-1", b"") == "ISO-8859-1"
+    assert _charset("text/html", b'<html><meta charset="windows-1252">') == "windows-1252"
+    assert _charset(None, b"<meta " * 2000) == "utf-8"
