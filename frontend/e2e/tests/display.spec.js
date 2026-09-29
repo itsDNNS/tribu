@@ -115,6 +115,41 @@ test.describe('Display mode', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 
+  test('a display can show one school timetable in full', async ({ page, apiCtx }) => {
+    const familyId = await getFamilyId(apiCtx);
+    const timetable = await (await apiCtx.post('/api/school-timetables', {
+      data: {
+        family_id: familyId,
+        name: 'E2E wall timetable',
+        class_label: '2c',
+        include_saturday: false,
+        assigned_member_user_ids: [],
+        periods: [
+          { position: 1, label: '1', start_time: '08:00', end_time: '08:45', kind: 'lesson' },
+          { position: 2, label: '2', start_time: '08:45', end_time: '09:00', kind: 'break', break_label: 'Recess' },
+        ],
+        lessons: [{ weekday: 3, period_position: 1, subject: 'E2E Science' }],
+      },
+    })).json();
+    const created = await createDisplayDevice(apiCtx, familyId, 'Kids room', {
+      layout_config: { version: 2, content: 'timetable', timetable_id: timetable.id },
+    });
+    try {
+      await gotoDisplayWithToken(page, created.token);
+      const stage = page.getByTestId('display-dashboard');
+      await expect(stage).toHaveAttribute('data-layout-preset', 'timetable', { timeout: 15000 });
+      const grid = page.getByRole('grid', { name: 'E2E wall timetable' });
+      await expect(grid.getByRole('columnheader')).toHaveCount(5);
+      await expect(grid.getByText('E2E Science')).toBeVisible();
+      await expect(grid.getByText('Recess')).toBeVisible();
+      await expect(page.locator('.stage-timetable-title')).toContainText('2c');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    } finally {
+      await revokeDisplayDevice(apiCtx, familyId, created.device.id);
+      await apiCtx.delete(`/api/school-timetables/${timetable.id}`);
+    }
+  });
+
   test('shows the cards chosen for a zone', async ({ page, apiCtx }) => {
     const familyId = await getFamilyId(apiCtx);
     const list = await seedShoppingList(apiCtx, familyId, 'Display groceries');

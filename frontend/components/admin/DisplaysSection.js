@@ -72,6 +72,17 @@ export default function DisplaysSection() {
 
   useEffect(() => { load(); }, [load]);
 
+  // A display can show one school timetable in full (Tribu 2.0).
+  const [timetables, setTimetables] = useState([]);
+  useEffect(() => {
+    if (demoMode || !familyId) return;
+    let cancelled = false;
+    api.apiListSchoolTimetables(familyId).then(({ ok, data }) => {
+      if (!cancelled && ok && Array.isArray(data)) setTimetables(data);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [familyId, demoMode]);
+
   // Picture address for e-ink frames that cannot run a browser.
   function buildImageUrl(token) {
     const origin = typeof window === 'undefined' ? '' : window.location.origin;
@@ -272,7 +283,7 @@ export default function DisplaysSection() {
                     </button>
                     {expandedDeviceId === device.id ? (
                       <AdminDialog title={device.name} messages={messages} busy={busy} onClose={() => setExpandedDeviceId(null)} actions={<><button className="fam-button" disabled={busy} onClick={() => setExpandedDeviceId(null)}>{t(messages, 'cancel')}</button><button className="fam-button primary" disabled={busy} onClick={() => handleSaveDevice(device)} data-testid="display-save-config">{t(messages, 'save')}</button></>}>
-                        <fieldset className="fam-display-fields" disabled={busy}><DisplayStageEditor draft={deviceDrafts[device.id] || draftFromDevice(device)} messages={messages} onChange={(next) => setDeviceDrafts((current) => ({ ...current, [device.id]: next }))} weatherPanel={editorWeatherPanel} /></fieldset>
+                        <fieldset className="fam-display-fields" disabled={busy}><DisplayStageEditor draft={deviceDrafts[device.id] || draftFromDevice(device)} messages={messages} onChange={(next) => setDeviceDrafts((current) => ({ ...current, [device.id]: next }))} weatherPanel={editorWeatherPanel} timetables={timetables} /></fieldset>
                       </AdminDialog>
                     ) : (
                       <div className="display-device-compact-preview">
@@ -326,7 +337,7 @@ export default function DisplaysSection() {
                   />
                   <small className="invite-helper-text">{t(messages, 'display_name_helper')}</small>
                 </div>
-                <DisplayStageEditor draft={newDraft} messages={messages} onChange={setNewDraft} weatherPanel={editorWeatherPanel} />
+                <DisplayStageEditor draft={newDraft} messages={messages} onChange={setNewDraft} weatherPanel={editorWeatherPanel} timetables={timetables} />
               </div>
               </fieldset>
             </form></AdminDialog>

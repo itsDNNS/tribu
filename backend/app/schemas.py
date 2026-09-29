@@ -2009,6 +2009,32 @@ class DisplaySchoolTimetableGroup(BaseModel):
     lessons: list[DisplaySchoolTimetableLesson]
 
 
+class DisplaySchoolWeekPeriod(BaseModel):
+    position: int
+    label: str
+    start_time: time
+    end_time: time
+    kind: str
+    break_label: Optional[str] = None
+
+
+class DisplaySchoolWeekLesson(BaseModel):
+    weekday: int
+    period_position: int
+    subject: str
+    color: Optional[str] = None
+
+
+class DisplaySchoolTimetableWeek(BaseModel):
+    """A whole school week for a display that shows one timetable in full."""
+    name: str
+    class_label: Optional[str] = None
+    include_saturday: bool = False
+    children: list[SchoolTimetableMemberResponse]
+    periods: list[DisplaySchoolWeekPeriod]
+    lessons: list[DisplaySchoolWeekLesson]
+
+
 # ---------------------------------------------------------------------------
 # Display Devices (issue #172)
 #
@@ -2241,6 +2267,7 @@ class DisplayDashboardResponse(BaseModel):
     upcoming_birthdays: list[DisplayDashboardBirthday] = Field(..., description="Upcoming birthdays within 28 days")
     open_tasks: list[DisplayDashboardTask] = Field(default_factory=list, description="Open tasks with display-safe fields only")
     today_school_timetables: list[DisplaySchoolTimetableGroup] = Field(default_factory=list, description="Display-safe school timetable groups for today")
+    school_timetable: Optional[DisplaySchoolTimetableWeek] = Field(None, description="The whole week of the chosen timetable, for displays that show it in full")
     tomorrow_school_timetables: list[DisplaySchoolTimetableGroup] = Field(default_factory=list, description="School timetable groups for tomorrow (evening preview)")
     generated_at: Optional[datetime] = Field(None, description="Local wall time the payload was built")
     time_format: str = Field("24h", description="Instance clock format: 24h or 12h")

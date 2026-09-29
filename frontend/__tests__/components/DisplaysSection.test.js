@@ -30,6 +30,7 @@ jest.mock('../../lib/api', () => ({
   apiSetWeatherLocation: jest.fn(),
   apiClearWeatherLocation: jest.fn(),
   apiSearchWeatherLocation: jest.fn(),
+  apiListSchoolTimetables: jest.fn(() => Promise.resolve({ ok: true, data: [{ id: 5, name: 'Lena 4b' }, { id: 6, name: 'Max 2a' }] })),
 }));
 
 const api = require('../../lib/api');
@@ -101,6 +102,12 @@ const messages = {
   display_theme_mode_auto: 'Dim at night',
   display_theme_mode_light: 'Always light',
   display_theme_mode_dark: 'Always dark',
+  display_content_label: 'Shows',
+  display_content_stage: 'Family overview',
+  display_content_timetable: 'School timetable',
+  display_content_hint: 'A school timetable fills the whole screen.',
+  display_timetable_label: 'Which timetable?',
+  display_timetable_first: 'The first one',
   display_editor_day_parts: 'Times of day',
   display_morning_start: 'Morning from',
   display_morning_end: 'Morning until',
@@ -358,6 +365,20 @@ describe('DisplaysSection stage editor', () => {
     fireEvent.change(screen.getByTestId('display-theme-mode-select'), { target: { value: 'dark' } });
     await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
     expect(api.apiUpdateDisplayDevice.mock.calls[0][2].layout_config.theme_mode).toBe('dark');
+  });
+
+  test('a display can show one school timetable in full', async () => {
+    await openEditor();
+    expect(screen.queryByTestId('display-timetable-select')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('display-content-select'), { target: { value: 'timetable' } });
+    // Zones and rotation make no sense for a timetable on the whole screen.
+    expect(screen.queryByText('Rotating areas')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Max 2a' })).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('display-timetable-select'), { target: { value: '6' } });
+    await act(async () => { fireEvent.click(screen.getByTestId('display-save-config')); });
+    const layout = api.apiUpdateDisplayDevice.mock.calls[0][2].layout_config;
+    expect(layout.content).toBe('timetable');
+    expect(layout.timetable_id).toBe(6);
   });
 
   test('there is no separate dim-at-night toggle; it is folded into the theme select', async () => {

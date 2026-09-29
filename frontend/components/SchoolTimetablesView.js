@@ -4,7 +4,7 @@ import MemberAvatar from './MemberAvatar';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { useCurrentMinute } from '../hooks/useCurrentMinute';
-import { currentPeriodPosition, openingWeekday, schoolToday } from '../lib/schoolTimetable';
+import { currentPeriodPosition, openingWeekday, schoolToday, subjectPalette } from '../lib/schoolTimetable';
 import {
   apiCreateSchoolTimetable,
   apiDeleteSchoolTimetable,
@@ -20,16 +20,6 @@ const WEEKDAYS = [
   { value: 4, shortKey: 'module.school_timetables.weekday.thursday.short', fullKey: 'module.school_timetables.weekday.thursday.full' },
   { value: 5, shortKey: 'module.school_timetables.weekday.friday.short', fullKey: 'module.school_timetables.weekday.friday.full' },
   { value: 6, shortKey: 'module.school_timetables.weekday.saturday.short', fullKey: 'module.school_timetables.weekday.saturday.full' },
-];
-
-const SUBJECT_PALETTE = [
-  { bg: 'rgba(124, 58, 237, 0.12)', fg: '#7c3aed' },
-  { bg: 'rgba(59, 130, 246, 0.12)', fg: '#2563eb' },
-  { bg: 'rgba(16, 185, 129, 0.13)', fg: '#059669' },
-  { bg: 'rgba(245, 158, 11, 0.15)', fg: '#d97706' },
-  { bg: 'rgba(244, 63, 94, 0.12)', fg: '#e11d48' },
-  { bg: 'rgba(6, 182, 212, 0.14)', fg: '#0891b2' },
-  { bg: 'rgba(168, 85, 247, 0.12)', fg: '#9333ea' },
 ];
 
 const DEFAULT_PERIODS = [
@@ -70,17 +60,6 @@ function buildLessonMap(lessons) {
     map.set(lessonKey(lesson.weekday, lesson.period_position), lesson);
   }
   return map;
-}
-
-function subjectPalette(subject) {
-  if (!subject) return null;
-  const key = subject.trim().toLowerCase();
-  if (!key) return null;
-  let hash = 0;
-  for (let i = 0; i < key.length; i += 1) {
-    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-  }
-  return SUBJECT_PALETTE[hash % SUBJECT_PALETTE.length];
 }
 
 const SELECTED_KEY = 'tribu_school_timetable';

@@ -19,7 +19,7 @@ import { useStageRotation } from './useStageRotation';
 const PART_ICONS = { morning: Sunrise, day: Sun, evening: Moon, night: Moon };
 const SWIPE_DISTANCE = 60;
 
-function useMinuteClock() {
+export function useMinuteClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     let id;

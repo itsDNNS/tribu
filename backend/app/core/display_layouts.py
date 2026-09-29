@@ -51,6 +51,11 @@ DEFAULT_EINK_FORMAT = "compact"
 THEME_MODE_AUTO = "auto"
 THEME_MODES = (THEME_MODE_AUTO, "light", "dark")
 
+# What a display shows: the family stage or one school timetable in full.
+CONTENT_STAGE = "stage"
+CONTENT_TIMETABLE = "timetable"
+CONTENTS = (CONTENT_STAGE, CONTENT_TIMETABLE)
+
 DEFAULT_LAYOUT: dict[str, Any] = {
     "version": LAYOUT_VERSION,
     "zones": {
@@ -71,6 +76,9 @@ DEFAULT_LAYOUT: dict[str, Any] = {
     "eink_format": DEFAULT_EINK_FORMAT,
     "language": "auto",
     "theme_mode": THEME_MODE_AUTO,
+    "content": CONTENT_STAGE,
+    # The timetable to show; none means the family's first one.
+    "timetable_id": None,
 }
 
 _LANGUAGE_RE = re.compile(r"^[a-z]{2}(?:-[A-Z]{2})?$")
@@ -146,6 +154,11 @@ def normalize_layout_config(value: Any) -> dict[str, Any]:
     language = value.get("language")
     if isinstance(language, str) and (language == "auto" or _LANGUAGE_RE.match(language)):
         layout["language"] = language
+    if value.get("content") in CONTENTS:
+        layout["content"] = value["content"]
+    timetable_id = value.get("timetable_id")
+    if isinstance(timetable_id, int) and not isinstance(timetable_id, bool) and timetable_id > 0:
+        layout["timetable_id"] = timetable_id
     return layout
 
 

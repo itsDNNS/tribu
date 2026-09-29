@@ -20,6 +20,8 @@ const DEFAULT_LAYOUT = {
   eink_format: 'compact',
   language: 'auto',
   theme_mode: 'auto',
+  content: 'stage',
+  timetable_id: null,
 };
 
 const THEME_MODES = ['auto', 'light', 'dark'];
@@ -70,6 +72,9 @@ export function normalizeStageConfig(config) {
     einkFormat: source.eink_format === 'large' ? 'large' : 'compact',
     language: typeof source.language === 'string' ? source.language : 'auto',
     themeMode: themeMode(source),
+    // The family stage, or one school timetable in full.
+    content: source.content === 'timetable' ? 'timetable' : 'stage',
+    timetableId: Number.isInteger(source.timetable_id) && source.timetable_id > 0 ? source.timetable_id : null,
   };
 }
 
