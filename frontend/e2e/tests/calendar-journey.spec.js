@@ -385,9 +385,11 @@ test.describe('Calendar persisted journeys', () => {
       });
       expect(response.ok()).toBeTruthy();
       contact = await response.json();
-      await page.evaluate(() =>
-        sessionStorage.setItem('tribu_calendar_focus', '2026-12-15T12:00:00'),
-      );
+      await page.addInitScript(() => {
+        window.__tribuHandoffs = new Map([
+          ['tribu_calendar_focus', '2026-12-15T12:00:00'],
+        ]);
+      });
       await page.reload();
       await open(page);
       await expect(

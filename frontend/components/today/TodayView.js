@@ -18,6 +18,7 @@ import { SetupChecklist, useSetupChecklist } from './SetupChecklist';
 import KidsToday from './KidsToday';
 import CalendarDialog from '../calendar/CalendarDialog';
 import EventDetails from '../calendar/EventDetails';
+import { handOff } from '../../lib/viewHandoff';
 
 const DAYS = 7;
 
@@ -29,9 +30,7 @@ function openShopping(setActiveView) {
 function openCalendarDay(setActiveView, iso, time) {
   const [year, month, day] = iso.split('-').map(Number);
   const [hour, minute] = (time || '08:00').split(':').map(Number);
-  try {
-    sessionStorage.setItem('tribu_calendar_focus', new Date(year, month - 1, day, hour, minute).toISOString());
-  } catch { /* private mode */ }
+  handOff('tribu_calendar_focus', new Date(year, month - 1, day, hour, minute).toISOString());
   setActiveView('calendar');
 }
 

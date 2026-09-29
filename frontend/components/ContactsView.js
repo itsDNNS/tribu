@@ -8,6 +8,7 @@ import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
+import { useHandoff } from '../lib/viewHandoff';
 
 const AVATAR_COLORS = [
   'var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)',
@@ -134,7 +135,9 @@ export default function ContactsView() {
   const { success: toastSuccess, error: toastError } = useToast();
   const birthdaysHook = useBirthdays();
   const canEdit = !isChild;
-  const [activeTab, setActiveTab] = useState('contacts');
+  // The weekly plan opens birthdays directly.
+  const wantedTab = useHandoff('tribu_contacts_tab');
+  const [activeTab, setActiveTab] = useState(() => (wantedTab === 'birthdays' ? 'birthdays' : 'contacts'));
   const [showForm, setShowForm] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [contactName, setContactName] = useState('');

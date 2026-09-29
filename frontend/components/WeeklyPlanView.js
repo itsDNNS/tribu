@@ -17,9 +17,12 @@ import {
   Utensils,
   Cake,
   ArrowLeft,
+  BookOpen,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { apiGetEvents, apiListMealPlans } from '../lib/api';
+import { apiGetEvents, apiListMealPlans, apiListRecipes } from '../lib/api';
+import { handOff } from '../lib/viewHandoff';
 import { parseDate } from '../lib/helpers';
 import { t } from '../lib/i18n';
 
@@ -115,6 +118,14 @@ function openShoppingCount(list) {
   ).length;
 }
 
+// Meals of a day in the order they are eaten.
+const SLOT_ORDER = { morning: 0, noon: 1, evening: 2 };
+
+function compareMeals(a, b) {
+  const byDate = String(normalizeDateOnly(mealDate(a)) || '').localeCompare(String(normalizeDateOnly(mealDate(b)) || ''));
+  return byDate || (SLOT_ORDER[a?.slot] ?? 9) - (SLOT_ORDER[b?.slot] ?? 9);
+}
+
 function compareByDate(getter) {
   return (a, b) =>
     String(normalizeDateOnly(getter(a)) || '').localeCompare(
@@ -168,7 +179,6 @@ export function buildWeeklyPlanSections({
     .map((list) => ({
       id: list.id,
       title: list.name || list.title,
-      detail: `${openShoppingCount(list)} open`,
       count: openShoppingCount(list),
     }))
     .filter((item) => item.count > 0);
@@ -199,7 +209,7 @@ export function buildWeeklyPlanSections({
             selectedMemberId,
           ),
       )
-      .sort(compareByDate(mealDate)),
+      .sort(compareMeals),
     birthdays: (Array.isArray(birthdays) ? birthdays : [])
       .filter((birthday) => {
         const next = birthdayDate(birthday, weekStart);
@@ -242,6 +252,8 @@ function Section({
   emptyLabel,
   renderItem,
   sectionKey,
+  onAdd,
+  addLabel,
 }) {
   return (
     <section
@@ -258,6 +270,17 @@ function Section({
       <div className="weekly-plan-section-header">
         <h2>{title}</h2>
         <span className="weekly-plan-section-count">{items.length}</span>
+        {onAdd && (
+          <button
+            type="button"
+            className="weekly-plan-add no-print"
+            onClick={onAdd}
+            aria-label={addLabel}
+            title={addLabel}
+          >
+            <Plus size={15} aria-hidden="true" />
+          </button>
+        )}
       </div>
       {items.length ? (
         <ul>{items.map(renderItem)}</ul>
@@ -268,11 +291,22 @@ function Section({
   );
 }
 
-function WeeklyPlanItem({ meta, title, accent = 'neutral' }) {
+// Each entry opens where it comes from (discussion #511).
+function WeeklyPlanItem({ meta, title, accent = 'neutral', onOpen, extra = null }) {
   return (
     <li className={`weekly-plan-item weekly-plan-item-${accent}`}>
-      <span>{meta}</span>
-      <strong>{title}</strong>
+      {onOpen ? (
+        <button type="button" className="weekly-plan-item-open" onClick={onOpen}>
+          <span>{meta}</span>
+          <strong>{title}</strong>
+        </button>
+      ) : (
+        <>
+          <span>{meta}</span>
+          <strong>{title}</strong>
+        </>
+      )}
+      {extra}
     </li>
   );
 }
@@ -281,6 +315,7 @@ export default function WeeklyPlanView({
   initialDate,
   initialMeals = null,
   initialEvents = null,
+  onCreateForm,
 }) {
   const {
     events = [],
@@ -293,6 +328,8 @@ export default function WeeklyPlanView({
     lang,
     timeFormat,
     setActiveView,
+    isChild,
+    hiddenAreas = [],
   } = useApp();
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const [anchor, setAnchor] = useState(initialDate || new Date());
@@ -301,6 +338,7 @@ export default function WeeklyPlanView({
   const [meals, setMeals] = useState(initialMeals || []);
   const [weeklyEvents, setWeeklyEvents] = useState(initialEvents || events);
   const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [recipes, setRecipes] = useState([]);
   const [visibleSections, setVisibleSections] = useState(
     () => new Set(SECTION_CONFIG.map((section) => section.key)),
   );
@@ -357,6 +395,67 @@ export default function WeeklyPlanView({
       cancelled = true;
     };
   }, [familyId, initialMeals, range.startIso, range.endIso]);
+
+  // Meals named like a family recipe link to it.
+  const recipesShown = !hiddenAreas.includes('recipes');
+  useEffect(() => {
+    let cancelled = false;
+    if (!familyId || !recipesShown) return undefined;
+    apiListRecipes(familyId)
+      .then((res) => {
+        if (!cancelled && Array.isArray(res?.data)) setRecipes(res.data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [familyId, recipesShown]);
+  const recipeFor = (meal) => {
+    const name = String(meal?.meal_name || meal?.title || '').trim().toLowerCase();
+    return name ? recipes.find((recipe) => String(recipe.title || '').trim().toLowerCase() === name) : null;
+  };
+
+  const go = (view, key, value) => {
+    if (key) handOff(key, value);
+    setActiveView(view);
+  };
+  const openEvent = (event) => {
+    const at = parseDate(eventDate(event));
+    go('calendar', at ? 'tribu_calendar_focus' : null, at?.toISOString());
+  };
+  const openMeal = (meal) => go('meal_plans', 'tribu_meal_focus', normalizeDateOnly(mealDate(meal)));
+  const openList = (list) => go('shopping', 'tribu_shopping_list', list.id);
+  const slotLabel = (slot) => (slot ? t(messages, `module.meal_plans.slot.${slot}`) : '');
+  const recipeLink = (meal) => {
+    const recipe = recipesShown ? recipeFor(meal) : null;
+    return recipe ? (
+      <button
+        type="button"
+        className="weekly-plan-recipe-link no-print"
+        onClick={() => go('recipes', 'tribu_recipe_open', recipe.id)}
+      >
+        <BookOpen size={13} aria-hidden="true" />
+        {t(messages, 'module.weekly_plan.recipe')}
+      </button>
+    ) : null;
+  };
+  const dayIso = toIsoDate(anchor);
+  // "+" opens the area's form, on the chosen day where the form has one.
+  const adders = isChild || !onCreateForm ? {} : {
+    events: () => {
+      handOff('tribu_calendar_focus', new Date(`${dayIso}T14:00`).toISOString());
+      onCreateForm('event');
+    },
+    tasks: () => onCreateForm('task'),
+    meals: hiddenAreas.includes('meal_plans') ? null : () => {
+      handOff('tribu_meal_focus', dayIso);
+      onCreateForm('meal');
+    },
+    shopping: () => onCreateForm('shopping'),
+  };
+  const addProps = (key) => (adders[key]
+    ? { onAdd: adders[key], addLabel: t(messages, 'module.weekly_plan.add').replace('{section}', t(messages, SECTION_CONFIG.find((section) => section.key === key).labelKey)) }
+    : {});
 
   const sections = useMemo(
     () =>
@@ -580,8 +679,15 @@ export default function WeeklyPlanView({
                                   locale,
                                   timeOptions,
                                 )
-                              : item.slot || ''
+                              : slotLabel(item.slot)
                           }
+                          onOpen={{
+                            events: () => openEvent(item),
+                            tasks: () => go('tasks'),
+                            meals: () => openMeal(item),
+                            birthdays: () => go('contacts', 'tribu_contacts_tab', 'birthdays'),
+                          }[section.key]}
+                          extra={section.key === 'meals' ? recipeLink(item) : null}
                         />
                       )}
                     />
@@ -601,8 +707,9 @@ export default function WeeklyPlanView({
                 <WeeklyPlanItem
                   key={item.id}
                   accent="shopping"
-                  meta={item.detail}
+                  meta={t(messages, 'module.weekly_plan.shopping_open').replace('{count}', item.count)}
                   title={item.title}
+                  onOpen={() => openList(item)}
                 />
               )}
             />
@@ -617,9 +724,11 @@ export default function WeeklyPlanView({
             icon={CalendarDays}
             items={sections.events}
             emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
+            {...addProps('events')}
             renderItem={(event) => (
               <WeeklyPlanItem
                 key={`event-${event.id || event.title}`}
+                onOpen={() => openEvent(event)}
                 accent="events"
                 meta={`${formatDate(eventDate(event), locale)} ${parseDate(eventDate(event))?.toLocaleTimeString(locale, timeOptions) || ''}`}
                 title={event.title}
@@ -634,9 +743,11 @@ export default function WeeklyPlanView({
             icon={ListChecks}
             items={sections.tasks}
             emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
+            {...addProps('tasks')}
             renderItem={(task) => (
               <WeeklyPlanItem
                 key={`task-${task.id || task.title}`}
+                onOpen={() => go('tasks')}
                 accent="tasks"
                 meta={
                   formatDate(taskDate(task), locale) ||
@@ -654,12 +765,15 @@ export default function WeeklyPlanView({
             icon={Utensils}
             items={sections.meals}
             emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
+            {...addProps('meals')}
             renderItem={(meal) => (
               <WeeklyPlanItem
                 key={`meal-${meal.id || meal.meal_name}`}
                 accent="meals"
-                meta={`${formatDate(mealDate(meal), locale)} ${meal.slot || meal.meal_type || ''}`}
+                meta={`${formatDate(mealDate(meal), locale)} ${slotLabel(meal.slot)}`}
                 title={meal.meal_name || meal.title || meal.name}
+                onOpen={() => openMeal(meal)}
+                extra={recipeLink(meal)}
               />
             )}
           />
@@ -674,6 +788,7 @@ export default function WeeklyPlanView({
             renderItem={(birthday) => (
               <WeeklyPlanItem
                 key={`birthday-${birthday.id || birthday.person_name || birthday.name}`}
+                onOpen={() => go('contacts', 'tribu_contacts_tab', 'birthdays')}
                 accent="birthdays"
                 meta={formatDate(birthdayDate(birthday, range.start), locale)}
                 title={birthday.person_name || birthday.name}
@@ -688,12 +803,14 @@ export default function WeeklyPlanView({
             icon={ShoppingCart}
             items={sections.shopping}
             emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
+            {...addProps('shopping')}
             renderItem={(item) => (
               <WeeklyPlanItem
                 key={`shopping-${item.id || item.title}`}
                 accent="shopping"
-                meta={item.detail}
+                meta={t(messages, 'module.weekly_plan.shopping_open').replace('{count}', item.count)}
                 title={item.title}
+                onOpen={() => openList(item)}
               />
             )}
           />

@@ -3,7 +3,8 @@ import '@testing-library/jest-dom';
 import fs from 'fs';
 import path from 'path';
 import WeeklyPlanView, { buildWeeklyPlanSections, getWeekRange } from '../../components/WeeklyPlanView';
-import { apiGetEvents } from '../../lib/api';
+import { apiGetEvents, apiListRecipes } from '../../lib/api';
+import { peekHandoff } from '../../lib/viewHandoff';
 
 let mockAppState = {};
 
@@ -18,6 +19,7 @@ jest.mock('../../lib/i18n', () => ({
 jest.mock('../../lib/api', () => ({
   apiGetEvents: jest.fn().mockResolvedValue({ data: [] }),
   apiListMealPlans: jest.fn().mockResolvedValue({ data: { items: [] } }),
+  apiListRecipes: jest.fn().mockResolvedValue({ data: [] }),
 }));
 
 const messages = {
@@ -27,7 +29,7 @@ const messages = {
   'module.weekly_plan.next_week': 'Next week',
   'module.weekly_plan.previous_week': 'Previous week',
   'module.weekly_plan.print': 'Print',
-  'module.weekly_plan.back_dashboard': 'Back to dashboard',
+  'module.weekly_plan.back_dashboard': 'Back to Today',
   'module.weekly_plan.events': 'Events',
   'module.weekly_plan.tasks': 'Tasks and routines',
   'module.weekly_plan.meals': 'Meals',
@@ -87,7 +89,7 @@ describe('weekly plan helpers', () => {
     expect(sections.tasks).toHaveLength(1);
     expect(sections.meals).toHaveLength(1);
     expect(sections.birthdays).toHaveLength(1);
-    expect(sections.shopping).toEqual([{ id: 8, title: 'Groceries', detail: '3 open', count: 3 }]);
+    expect(sections.shopping).toEqual([{ id: 8, title: 'Groceries', count: 3 }]);
   });
 
   it('includes birthdays when the selected week crosses into a new year', () => {
@@ -187,9 +189,88 @@ describe('WeeklyPlanView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Print' }));
     expect(window.print).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Back to dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Today' }));
     expect(setActiveView).toHaveBeenCalledWith('dashboard');
     expect(screen.queryByRole('link', { name: /share/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('WeeklyPlanView links (discussion #511)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('opens each entry where it comes from and orders meals through the day', async () => {
+    const setActiveView = jest.fn();
+    apiListRecipes.mockResolvedValueOnce({ data: [{ id: 31, title: 'pasta' }] });
+    mockAppState = baseApp({
+      setActiveView,
+      messages: {
+        ...messages,
+        'module.meal_plans.slot.morning': 'Morning',
+        'module.meal_plans.slot.evening': 'Evening',
+        'module.weekly_plan.shopping_open': '{count} open',
+        'module.weekly_plan.recipe': 'Recipe',
+      },
+      events: [{ id: 1, title: 'Football', starts_at: '2026-05-08T17:00:00' }],
+      shoppingLists: [{ id: 4, name: 'Groceries', item_count: 3, checked_count: 1 }],
+      birthdays: [{ id: 3, person_name: 'Martin', month: 5, day: 9 }],
+    });
+    render(<WeeklyPlanView
+      initialDate={new Date('2026-05-06T12:00:00')}
+      initialEvents={mockAppState.events}
+      initialMeals={[
+        { id: 5, meal_name: 'Pasta', plan_date: '2026-05-08', slot: 'evening' },
+        { id: 6, meal_name: 'Porridge', plan_date: '2026-05-08', slot: 'morning' },
+      ]}
+    />);
+    const meals = within(screen.getByRole('region', { name: 'Meals' }));
+    // Pasta is also a family recipe (matched by name) and links to it.
+    await meals.findByRole('button', { name: 'Recipe' });
+    expect(meals.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      expect.stringContaining('Morning'),
+      expect.stringContaining('Evening'),
+      expect.stringContaining('Recipe'),
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: /Football/ }));
+    expect(setActiveView).toHaveBeenLastCalledWith('calendar');
+    expect(peekHandoff('tribu_calendar_focus')).toBe(new Date('2026-05-08T17:00:00').toISOString());
+
+    fireEvent.click(meals.getByRole('button', { name: /Pasta/ }));
+    expect(setActiveView).toHaveBeenLastCalledWith('meal_plans');
+    expect(peekHandoff('tribu_meal_focus')).toBe('2026-05-08');
+
+    fireEvent.click(await meals.findByRole('button', { name: 'Recipe' }));
+    expect(setActiveView).toHaveBeenLastCalledWith('recipes');
+    expect(peekHandoff('tribu_recipe_open')).toBe('31');
+
+    const shopping = within(screen.getByRole('region', { name: 'Shopping reminders' }));
+    fireEvent.click(shopping.getByRole('button', { name: /2 open\s*Groceries/ }));
+    expect(setActiveView).toHaveBeenLastCalledWith('shopping');
+    expect(peekHandoff('tribu_shopping_list')).toBe('4');
+
+    fireEvent.click(screen.getByRole('button', { name: /Martin/ }));
+    expect(setActiveView).toHaveBeenLastCalledWith('contacts');
+    expect(peekHandoff('tribu_contacts_tab')).toBe('birthdays');
+  });
+
+  it('"+" opens the form of each area on the chosen day, not for children', () => {
+    const onCreateForm = jest.fn();
+    mockAppState = baseApp({ messages: { ...messages, 'module.weekly_plan.add': 'Add to {section}' } });
+    const { unmount } = render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={[]} initialMeals={[]} onCreateForm={onCreateForm} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to Events' }));
+    expect(onCreateForm).toHaveBeenLastCalledWith('event');
+    expect(peekHandoff('tribu_calendar_focus')).toBe(new Date('2026-05-06T14:00').toISOString());
+    fireEvent.click(screen.getByRole('button', { name: 'Add to Meals' }));
+    expect(onCreateForm).toHaveBeenLastCalledWith('meal');
+    expect(peekHandoff('tribu_meal_focus')).toBe('2026-05-06');
+    expect(screen.queryByRole('button', { name: 'Add to Birthdays' })).not.toBeInTheDocument();
+    unmount();
+
+    mockAppState = baseApp({ isChild: true, messages: { ...messages, 'module.weekly_plan.add': 'Add to {section}' } });
+    render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={[]} initialMeals={[]} onCreateForm={onCreateForm} />);
+    expect(screen.queryByRole('button', { name: 'Add to Events' })).not.toBeInTheDocument();
   });
 });
 

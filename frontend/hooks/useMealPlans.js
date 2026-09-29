@@ -35,11 +35,11 @@ function ingredientNamesFromMeals(items) {
   )).sort((a, b) => a.localeCompare(b));
 }
 
-export function useMealPlans() {
+export function useMealPlans({ initialDate = null } = {}) {
   const { familyId, messages, lang, demoMode, mealPlans: demoMeals = [], setMealPlans } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
 
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), weekStartsOn(lang)));
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(initialDate || new Date(), weekStartsOn(lang)));
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ingredientHints, setIngredientHints] = useState([]);
