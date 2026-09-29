@@ -8,6 +8,7 @@ const VIEW_KEYS = {
   Family: 'family',
   Templates: 'templates',
   'Weekly plan': 'weekly_plan',
+  'Week at a glance': 'weekly_plan',
   'Meal plan': 'meal_plans',
   Recipes: 'recipes',
   Rewards: 'rewards',

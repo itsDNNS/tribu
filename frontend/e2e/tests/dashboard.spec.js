@@ -210,25 +210,25 @@ test.describe('Today', () => {
       await page.reload();
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme, { timeout: 10000 });
       await page.locator('#main-content').waitFor({ timeout: 15000 });
-      await navigateTo(page, 'Weekly plan');
-      await expect(page.getByRole('heading', { name: 'Weekly plan' })).toBeVisible({ timeout: 10000 });
+      await navigateTo(page, 'Week at a glance');
+      await expect(page.getByRole('heading', { name: 'Week at a glance' })).toBeVisible({ timeout: 10000 });
 
       const checks = await page.evaluate(() => {
         const selectors = [
           '.weekly-plan-header h1',
           '.weekly-plan-week-pill',
-          '.weekly-plan-member-filter span',
-          '.weekly-plan-member-filter select',
-          '.weekly-plan-section-filters label',
-          '.weekly-plan-section h2',
-          '.weekly-plan-section li strong',
-          '.weekly-plan-section li span',
+          '.week-day-name',
+          '.week-day-date',
+          '.week-entry-title',
+          '.week-entry-meta',
+          '.week-day-free',
+          '.week-list-chip',
         ];
         return selectors.flatMap((selector) => {
           const element = document.querySelector(selector);
           if (!element) return [];
           // The plain title sits on the page, the week on its pill.
-          const surface = element?.closest('.weekly-plan-week-pill, .weekly-plan-section li, .weekly-plan-section, .weekly-plan-filters') || document.body;
+          const surface = element?.closest('.weekly-plan-week-pill, .week-list-chip, .week-day') || document.body;
           const elementStyle = window.getComputedStyle(element);
           const surfaceStyle = window.getComputedStyle(surface);
           return [{
@@ -264,8 +264,8 @@ test.describe('Today', () => {
     });
     await page.reload();
     await page.locator('#main-content').waitFor({ timeout: 15000 });
-    await navigateTo(page, 'Weekly plan');
-    await expect(page.getByRole('heading', { name: 'Weekly plan' })).toBeVisible({ timeout: 10000 });
+    await navigateTo(page, 'Week at a glance');
+    await expect(page.getByRole('heading', { name: 'Week at a glance' })).toBeVisible({ timeout: 10000 });
 
     await page.emulateMedia({ media: 'print' });
     const shopping = page.getByRole('region', { name: 'Shopping reminders', exact: true });
@@ -280,13 +280,15 @@ test.describe('Today', () => {
       };
       const pageStyle = styleOf('.weekly-plan-page');
       const sectionStyle = styleOf('.weekly-plan-section');
-      const toolbarStyle = styleOf('.weekly-plan-toolbar');
+      const toolbarStyle = styleOf('.week-glance-nav .weekly-plan-nav');
+      const boardStyle = styleOf('.week-board') || styleOf('.ui-weekly-compact');
       const navStyle = styleOf('.bottom-nav');
       return {
         pageBackground: pageStyle?.backgroundColor,
         sectionBackground: sectionStyle?.backgroundColor,
         headerColor: styleOf('.weekly-plan-header h1')?.color,
         toolbarDisplay: toolbarStyle?.display,
+        boardDisplay: boardStyle?.display,
         bottomNavDisplay: navStyle?.display || 'none',
       };
     });
@@ -295,6 +297,8 @@ test.describe('Today', () => {
     expect(printState.sectionBackground).toBe('rgb(255, 255, 255)');
     expect(printState.headerColor).toBe('rgb(26, 21, 32)');
     expect(printState.toolbarDisplay).toBe('none');
+    // The day board is for the screen; printing keeps the sections.
+    expect(printState.boardDisplay).toBe('none');
     expect(printState.bottomNavDisplay).toBe('none');
     await page.emulateMedia({ media: 'screen' });
   });
