@@ -1,4 +1,4 @@
-import { resolveInitialView, resolveLaunchAction } from '../../lib/navigationState';
+import { resolveInitialView, resolveLaunchAction, resolveSharedText, SHARED_TEXT_LIMIT } from '../../lib/navigationState';
 import { DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 
 describe('resolveInitialView', () => {
@@ -50,5 +50,22 @@ describe('resolveLaunchAction', () => {
     expect(resolveLaunchAction('?action=delete-everything')).toBeNull();
     expect(resolveLaunchAction('?view=tasks')).toBeNull();
     expect(resolveLaunchAction('')).toBeNull();
+  });
+});
+
+describe('resolveSharedText', () => {
+  it('joins the title, the text and the link of a share, each once', () => {
+    expect(resolveSharedText('?share_title=Lasagne&share_url=https%3A%2F%2Fexample.com%2Flasagne'))
+      .toBe('Lasagne\nhttps://example.com/lasagne');
+    expect(resolveSharedText('?share_title=Lasagne&share_text=Lasagne%20https%3A%2F%2Fexample.com&share_url=https%3A%2F%2Fexample.com'))
+      .toBe('Lasagne https://example.com');
+    expect(resolveSharedText('?share_text=%20%202%20kg%20apples%0AMilk%20'))
+      .toBe('2 kg apples\nMilk');
+  });
+
+  it('ignores empty shares and limits long ones', () => {
+    expect(resolveSharedText('?share_text=%20')).toBeNull();
+    expect(resolveSharedText('?action=new-event')).toBeNull();
+    expect(resolveSharedText(`?share_text=${'x'.repeat(3000)}`)).toHaveLength(SHARED_TEXT_LIMIT);
   });
 });

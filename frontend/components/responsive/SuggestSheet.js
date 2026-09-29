@@ -8,10 +8,10 @@ import BottomSheet from './BottomSheet';
 
 // "+" for children (Tribu 2.0, E5): they suggest, an adult confirms. Each
 // line becomes one suggestion in the family's inbox.
-export default function SuggestSheet({ onClose }) {
+export default function SuggestSheet({ onClose, initialText = '' }) {
   const { messages, familyId, demoMode } = useApp();
   const toast = useToast();
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialText);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const hintId = useId();

@@ -45,12 +45,13 @@ function entryMeta(entry, { lang, members, messages }) {
 // "+" (Tribu 2.0): one field that understands "Tomorrow 3 pm dentist Max",
 // "2 kg apples" or several lines, shows what it will create and creates it.
 // The forms stay one tap away.
-export default function NewSheet({ onClose, onCreate, defaultKind = 'task' }) {
+export default function NewSheet({ onClose, onCreate, defaultKind = 'task', initialText = '' }) {
   const app = useApp();
   const { messages, demoMode, familyId, lang, members = [], weekStart, hiddenAreas = NO_HIDDEN_AREAS } = app;
   const toast = useToast();
   const { busy, create } = useCaptureCreate(app);
-  const [text, setText] = useState('');
+  // Text shared from another app arrives filled in (Tribu 2.0, N-5).
+  const [text, setText] = useState(initialText);
   const [kinds, setKinds] = useState({});
   const [error, setError] = useState('');
   const captureId = useId();
