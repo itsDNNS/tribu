@@ -410,3 +410,38 @@ def test_calendar_recurrence_rules_migration_scopes_uid_uniqueness_and_downgrade
     assert titles == ["Pack Meeting"]
     assert "recurrence_id" not in columns
     assert "recurrence_weekdays" not in columns
+
+
+def test_shopping_categories_migration_folds_translations_and_adds_switch(tmp_path, monkeypatch):
+    import json
+    db_path = tmp_path / "shopping-0070.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0069_drop_dashboard_layout")
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'Family')")
+        conn.execute(
+            "INSERT INTO shopping_lists (id, family_id, name, category_order) VALUES (1, 1, 'Weekly', ?)",
+            (json.dumps(["Chilled", "Kühlregal", "Party"]),),
+        )
+        conn.execute(
+            """
+            INSERT INTO shopping_items (id, list_id, name, category, checked) VALUES
+                (1, 1, 'Pears', 'Fruit & vegetables', 0),
+                (2, 1, 'Plums', 'Obst & Gemüse', 0),
+                (3, 1, 'Candles', 'Party', 0),
+                (4, 1, 'Bread', NULL, 0)
+            """
+        )
+    command.upgrade(config, "0070_shopping_categories")
+    with sqlite3.connect(db_path) as conn:
+        categories = conn.execute("SELECT category FROM shopping_items ORDER BY id").fetchall()
+        assert categories == [("Obst & Gemüse",), ("Obst & Gemüse",), ("Party",), (None,)]
+        assert json.loads(conn.execute("SELECT category_order FROM shopping_lists").fetchone()[0]) == ["Kühlregal", "Party"]
+        assert conn.execute("SELECT shopping_categories FROM families").fetchone() == (1,)
+    command.downgrade(config, "0069_drop_dashboard_layout")
+    with sqlite3.connect(db_path) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(families)")}
+        assert "shopping_categories" not in columns

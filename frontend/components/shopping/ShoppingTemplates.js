@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {Plus, X, Pencil, Trash2} from 'lucide-react';
 import {t} from '../../lib/i18n';
+import {categoryLabel} from './catalog';
 const EMPTY_TEMPLATE_ITEM = { name: '', spec: '', category: '' };
 
 function normaliseTemplateItems(items) {
@@ -13,14 +14,15 @@ function normaliseTemplateItems(items) {
     .filter((item) => item.name);
 }
 
-export function ShoppingTemplateForm({ messages, initialTemplate, onSubmit, onCancel }) {
+export function ShoppingTemplateForm({ messages, initialTemplate, onSubmit, onCancel, showCategory = true }) {
   const [name, setName] = useState(initialTemplate?.name || '');
   const [items, setItems] = useState(
     initialTemplate?.items?.length
       ? initialTemplate.items.map((item) => ({
           name: item.name || '',
           spec: item.spec || '',
-          category: item.category || '',
+          // Built-in categories in the reader's language; the server folds them back.
+          category: categoryLabel(item.category || '', (key) => t(messages, key)),
         }))
       : [{ ...EMPTY_TEMPLATE_ITEM }],
   );
@@ -68,12 +70,12 @@ export function ShoppingTemplateForm({ messages, initialTemplate, onSubmit, onCa
               value={item.spec}
               onChange={(e) => updateDraftItem(index, 'spec', e.target.value)}
             />
-            <input
+            {showCategory && <input
               className="form-input"
               placeholder={t(messages, 'module.shopping.template_item_category_placeholder')}
               value={item.category}
               onChange={(e) => updateDraftItem(index, 'category', e.target.value)}
-            />
+            />}
             <button
               className="btn-ghost shopping-template-remove-item"
               type="button"
@@ -101,7 +103,7 @@ export function ShoppingTemplateForm({ messages, initialTemplate, onSubmit, onCa
   );
 }
 
-export function ShoppingTemplateCard({ template, messages, onApply, onEdit, onDelete }) {
+export function ShoppingTemplateCard({ template, messages, onApply, onEdit, onDelete, showCategory = true }) {
   return (
     <article className="shopping-template-card">
       <div className="shopping-template-card-header">
@@ -133,7 +135,7 @@ export function ShoppingTemplateCard({ template, messages, onApply, onEdit, onDe
           <div className="shopping-template-item" key={item.id || `${item.name}-${item.spec}-${item.category}`}>
             <span className="shopping-template-item-name">{item.name}</span>
             {item.spec && <span className="shopping-spec">{item.spec}</span>}
-            {item.category && <span className="shopping-category-pill">{item.category}</span>}
+            {showCategory && item.category && <span className="shopping-category-pill">{categoryLabel(item.category, (key) => t(messages, key))}</span>}
           </div>
         ))}
       </div>

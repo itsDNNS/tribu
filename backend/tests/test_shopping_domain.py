@@ -174,14 +174,14 @@ def test_add_merge_restore_quantity_and_family_category_preference(tmp_path):
         shopping_list=first_list,
         name="milk",
         spec="1 kg",
-        category="Chilled",
+        category="Cold shelf",
     )
     assert explicit.action == "created"
-    assert explicit.item.category == "Chilled"
+    assert explicit.item.category == "Cold shelf"
     assert db.query(FamilyProductPreference).filter_by(
         family_id=first_family.id,
         normalized_name=normalize_product_name("Milk"),
-    ).one().category == "Chilled"
+    ).one().category == "Cold shelf"
 
 
 def test_category_upsert_recovers_unique_race_inside_savepoint():

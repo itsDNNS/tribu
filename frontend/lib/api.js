@@ -332,6 +332,22 @@ export function apiGetShoppingCategories(familyId) {
   return request(`/shopping/categories?family_id=${familyId}`);
 }
 
+export function apiGetShoppingCategoryUsage(familyId) {
+  return request(`/shopping/categories/usage?family_id=${familyId}`);
+}
+
+export function apiRenameShoppingCategory(familyId, name, newName) {
+  return request('/shopping/categories/rename', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ family_id: familyId, name, new_name: newName }),
+  });
+}
+
+export function apiDeleteShoppingCategory(familyId, name) {
+  return request(`/shopping/categories?family_id=${familyId}&name=${encodeURIComponent(name)}`, { method: 'DELETE' });
+}
+
 export function apiGetShoppingLists(familyId) {
   return request(`/shopping/lists?family_id=${familyId}`);
 }
@@ -541,6 +557,14 @@ export function apiPushUnsubscribe(endpoint) {
 }
 
 // Family areas (Tribu 2.0, R4)
+export function apiSetShoppingCategories(familyId, enabled) {
+  return request(`/families/${familyId}/shopping-categories`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+}
+
 export function apiSetFamilyAreas(familyId, hidden_areas) {
   return request(`/families/${familyId}/areas`, {
     method: 'PUT',

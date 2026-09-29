@@ -59,6 +59,9 @@ class Family(Base):
     # Optional areas the family does not use (Tribu 2.0, R4), as navigation
     # keys such as "recipes"; they leave navigation, search and "+".
     hidden_areas = Column(JSON, nullable=True)
+    # Families that do not sort their shopping by category turn it off
+    # (discussion #512); items keep their categories for when it comes back.
+    shopping_categories = Column(Boolean, nullable=False, default=True, server_default="true")
 
     memberships = relationship("Membership", back_populates="family", cascade="all, delete-orphan")
     calendar_events = relationship("CalendarEvent", back_populates="family", cascade="all, delete-orphan")

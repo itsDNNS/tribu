@@ -200,9 +200,10 @@ class FamilySummary(BaseModel):
     role: str = Field(..., description="User's role in this family: 'admin' or 'member'")
     is_adult: bool = Field(..., description="Whether the user is marked as adult in this family")
     hidden_areas: list[str] = Field(default_factory=list, description="Optional areas the family does not use, as navigation keys")
+    shopping_categories: bool = Field(True, description="Whether the family sorts its shopping by category; off shows flat lists without category fields")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"family_id": 1, "family_name": "Mueller Family", "role": "admin", "is_adult": True, "hidden_areas": ["school_timetables"]}]
+        "examples": [{"family_id": 1, "family_name": "Mueller Family", "role": "admin", "is_adult": True, "hidden_areas": ["school_timetables"], "shopping_categories": True}]
     })
 
 
@@ -210,6 +211,31 @@ class FamilySummary(BaseModel):
 class FamilyAreasUpdate(BaseModel):
     """Choose which optional areas a family hides."""
     hidden_areas: list[str] = Field(..., max_length=20, description="Navigation keys of optional areas to hide; an empty list shows all")
+
+
+class FamilyShoppingCategoriesUpdate(BaseModel):
+    """Turn shopping categories on or off for a family."""
+    enabled: bool = Field(..., description="Sort shopping by category; off shows flat lists")
+
+
+class FamilyShoppingCategoriesResponse(BaseModel):
+    """Whether a family uses shopping categories."""
+    family_id: int = Field(..., description="Family ID")
+    enabled: bool = Field(..., description="Sort shopping by category")
+
+
+class ShoppingCategoryUsage(BaseModel):
+    """A category of the family's shopping and how much uses it."""
+    name: str = Field(..., description="Stored name; built-in categories keep their original label")
+    builtin: str | None = Field(None, description="Key of a built-in category (produce, chilled, bakery, pantry, drinks, meat, frozen, household, other); clients show it translated")
+    items: int = Field(..., description="Items on shopping lists and in templates with this category")
+
+
+class ShoppingCategoryRename(BaseModel):
+    """Rename a family's own category; a name that exists merges both."""
+    family_id: int = Field(..., description="Family ID")
+    name: str = Field(..., min_length=1, max_length=100, description="Current name")
+    new_name: str = Field(..., min_length=1, max_length=100, description="New name")
 
 
 class FamilyAreasResponse(BaseModel):

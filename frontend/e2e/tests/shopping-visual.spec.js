@@ -157,8 +157,8 @@ test('department order is saved per list; text snapshot and display preference p
 }) => {
   await open(page);
   await menu(page);
-  await page.getByRole('button', {
-    name: 'Abteilungsreihenfolge',
+  await page.getByRole('dialog').getByRole('button', {
+    name: 'Kategorien',
     exact: true
   }).click();
   await page.getByRole('button', {
