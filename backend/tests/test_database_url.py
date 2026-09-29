@@ -60,7 +60,9 @@ def test_alembic_uses_psycopg2_for_bare_postgresql_url(monkeypatch):
     monkeypatch.setattr(sqlalchemy, "engine_from_config", _record)
     monkeypatch.setenv("DATABASE_URL", BARE_POSTGRES_URL)
     monkeypatch.syspath_prepend(str(BACKEND_DIR))
-    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    # No ini file: env.py then skips fileConfig, which would disable the app
+    # loggers that later tests assert on.
+    config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
 
     with pytest.raises(_EngineCreated):
