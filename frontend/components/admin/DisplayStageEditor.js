@@ -23,6 +23,8 @@ export function draftFromDevice(device) {
       eink_format: config.einkFormat,
       language: config.language,
       theme_mode: config.themeMode,
+      content: config.content,
+      timetable_id: config.timetableId,
     },
   };
 }
@@ -126,8 +128,10 @@ export function usesWeatherCard(layout) {
   return Object.values(layout?.zones || {}).some((zone) => (zone?.cards || []).includes('weather'));
 }
 
-export default function DisplayStageEditor({ draft, messages, onChange, weatherPanel = null }) {
+export default function DisplayStageEditor({ draft, messages, onChange, weatherPanel = null, timetables = [] }) {
   const eink = draft.display_mode === 'eink';
+  // One school timetable in full needs no zones or rotation (Tribu 2.0).
+  const timetable = draft.layout.content === 'timetable';
   const refreshOptions = [...new Set([...REFRESH_OPTIONS[draft.display_mode], Number(draft.refresh_interval_seconds)])].sort((a, b) => a - b);
   const setLayout = (patch) => onChange({ ...draft, layout: { ...draft.layout, ...patch } });
   const setZone = (zone, patch) => setLayout({ zones: { ...draft.layout.zones, [zone]: { ...draft.layout.zones[zone], ...patch } } });
@@ -181,6 +185,35 @@ export default function DisplayStageEditor({ draft, messages, onChange, weatherP
             </label>
           )}
           <label className="form-field">
+            <span>{t(messages, 'display_content_label')}</span>
+            <select
+              className="form-input"
+              value={draft.layout.content}
+              data-testid="display-content-select"
+              onChange={(event) => setLayout({ content: event.target.value })}
+            >
+              <option value="stage">{t(messages, 'display_content_stage')}</option>
+              <option value="timetable">{t(messages, 'display_content_timetable')}</option>
+            </select>
+            <small>{t(messages, 'display_content_hint')}</small>
+          </label>
+          {timetable && (
+            <label className="form-field">
+              <span>{t(messages, 'display_timetable_label')}</span>
+              <select
+                className="form-input"
+                value={draft.layout.timetable_id ?? ''}
+                data-testid="display-timetable-select"
+                onChange={(event) => setLayout({ timetable_id: event.target.value ? Number(event.target.value) : null })}
+              >
+                <option value="">{t(messages, 'display_timetable_first')}</option>
+                {timetables.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="form-field">
             <span>{t(messages, 'display_language_label')}</span>
             <select
               className="form-input"
@@ -197,6 +230,7 @@ export default function DisplayStageEditor({ draft, messages, onChange, weatherP
         </div>
       </section>
 
+      {!timetable && (
       <section className="fam-stage-group">
         <h3>{t(messages, 'display_editor_zones')}</h3>
         <p className="fam-stage-hint">{t(messages, eink ? 'display_eink_rotation_hint' : 'display_editor_zones_hint')}</p>
@@ -213,11 +247,12 @@ export default function DisplayStageEditor({ draft, messages, onChange, weatherP
           </div>
         )}
       </section>
+      )}
 
       <section className="fam-stage-group">
         <h3>{t(messages, 'display_editor_behaviour')}</h3>
         <div className="fam-toggle-list">
-          {TOGGLES.filter((key) => !eink || key === 'skip_empty').map((key) => (
+          {TOGGLES.filter((key) => !timetable && (!eink || key === 'skip_empty')).map((key) => (
             <label key={key} className="fam-toggle">
               <input type="checkbox" role="switch" checked={Boolean(draft.layout[key])} onChange={(event) => setLayout({ [key]: event.target.checked })} data-testid={`display-toggle-${key}`} />
               <span>
