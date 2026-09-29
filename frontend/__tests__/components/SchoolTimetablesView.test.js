@@ -9,6 +9,14 @@ jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockAppState,
 }));
 
+const mockToastSuccess = jest.fn();
+jest.mock('../../contexts/ToastContext', () => ({
+  useToast: () => ({ success: mockToastSuccess, error: jest.fn() }),
+}));
+
+let mockNow = new Date(2026, 8, 28, 8, 10); // Monday, first period
+jest.mock('../../hooks/useCurrentMinute', () => ({ useCurrentMinute: () => mockNow }));
+
 const apiListSchoolTimetables = jest.fn();
 const apiCreateSchoolTimetable = jest.fn();
 const apiUpdateSchoolTimetable = jest.fn();
@@ -61,10 +69,48 @@ describe('SchoolTimetablesView localization', () => {
     apiDeleteSchoolTimetable.mockReset();
   });
 
+  it('shows the timetable first, today and the running period marked', async () => {
+    renderSchoolTimetables('en');
+
+    const grid = await screen.findByRole('grid', { name: 'School timetable' });
+    expect(screen.getByText('Riley school week')).toBeVisible();
+    // No form fields until someone asks to edit.
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Who is this plan for?' })).not.toBeInTheDocument();
+    expect(within(grid).getByText('Today')).toBeVisible();
+    expect(within(grid).getByLabelText('Monday, period 1, Math')).toHaveClass('now');
+    expect(within(grid).getAllByText('Now')).toHaveLength(1);
+    expect(screen.getByRole('tab', { name: 'Mon' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('edits behind "Edit" and returns to the plan on cancel', async () => {
+    renderSchoolTimetables('en');
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    expect(screen.getByRole('heading', { name: 'Edit timetable' })).toBeVisible();
+    fireEvent.change(screen.getByDisplayValue('Riley school week'), { target: { value: 'Changed' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('heading', { name: 'Edit timetable' })).not.toBeInTheDocument();
+    expect(screen.getByText('Riley school week')).toBeVisible();
+    expect(apiUpdateSchoolTimetable).not.toHaveBeenCalled();
+  });
+
+  it('saves and shows the plan again', async () => {
+    apiUpdateSchoolTimetable.mockImplementation(async (id, payload) => ({ ok: true, data: { ...timetable, name: payload.name } }));
+    renderSchoolTimetables('en');
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByDisplayValue('Riley school week'), { target: { value: 'Riley term two' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save timetable' }));
+
+    await waitFor(() => expect(apiUpdateSchoolTimetable).toHaveBeenCalledWith(41, expect.objectContaining({ name: 'Riley term two' })));
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Edit timetable' })).not.toBeInTheDocument());
+    expect(mockToastSuccess).toHaveBeenCalledWith('Saved.');
+  });
+
   it('renders the timetable editor in English without German labels', async () => {
     renderSchoolTimetables('en');
 
-    await waitFor(() => expect(screen.getByText('Riley school week')).toBeInTheDocument());
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
 
     expect(screen.getByRole('heading', { name: 'Who is this plan for?' })).toBeVisible();
     expect(screen.getByText('Tap a cell to add a subject.')).toBeVisible();

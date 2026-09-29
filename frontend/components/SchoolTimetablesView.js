@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronDown, Coffee, GraduationCap, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, Coffee, GraduationCap, Pencil, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
 import MemberAvatar from './MemberAvatar';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
+import { useCurrentMinute } from '../hooks/useCurrentMinute';
+import { currentPeriodPosition, openingWeekday, schoolToday } from '../lib/schoolTimetable';
 import {
   apiCreateSchoolTimetable,
   apiDeleteSchoolTimetable,
@@ -80,6 +83,155 @@ function subjectPalette(subject) {
   return SUBJECT_PALETTE[hash % SUBJECT_PALETTE.length];
 }
 
+const SELECTED_KEY = 'tribu_school_timetable';
+
+function storedTimetableId() {
+  try { return Number(localStorage.getItem(SELECTED_KEY)) || null; } catch { return null; }
+}
+
+function weekdaysFor(includeSaturday, msg) {
+  return WEEKDAYS
+    .filter((d) => d.value <= 5 || includeSaturday)
+    .map((d) => ({ ...d, short: msg(d.shortKey), full: msg(d.fullKey) }));
+}
+
+// The timetable as it is: today first, the running period marked
+// (Tribu 2.0). Changing it is one tap away behind "Edit".
+function TimetableView({ timetable, msg }) {
+  const now = useCurrentMinute();
+  const weekdays = weekdaysFor(timetable.include_saturday, msg);
+  const values = weekdays.map((d) => d.value);
+  const today = schoolToday(values, now);
+  const current = today ? currentPeriodPosition(timetable.periods, now) : null;
+  const [day, setDay] = useState(() => openingWeekday(values, now));
+  const activeDay = weekdays.find((d) => d.value === day) || weekdays[0];
+  const lessons = buildLessonMap(timetable.lessons);
+  const periods = [...(timetable.periods || [])].sort((a, b) => Number(a.position) - Number(b.position));
+  const nowLabel = msg('module.school_timetables.now');
+  const members = timetable.assigned_members || [];
+
+  const subjectCell = (weekday, period) => {
+    const subject = lessons.get(lessonKey(weekday, Number(period.position)))?.subject || '';
+    const palette = subjectPalette(subject);
+    return { subject, style: palette ? { '--st-bg': palette.bg, '--st-fg': palette.fg } : undefined };
+  };
+
+  return (
+    <section className="school-view" aria-label={timetable.name}>
+      <div className="school-view-meta">
+        {members.length > 0 && (
+          <span className="school-view-people">
+            {members.map((member, index) => <MemberAvatar key={member.user_id ?? index} member={member} index={index} size={24} />)}
+          </span>
+        )}
+        <span className="school-view-name">{timetable.name}</span>
+        {timetable.class_label && <span className="school-view-class">{timetable.class_label}</span>}
+      </div>
+
+      <div
+        className="school-grid school-grid--view"
+        role="grid"
+        aria-label={msg('module.school_timetables.grid_label')}
+        style={{ '--school-columns': weekdays.length }}
+      >
+        <div className="school-grid-corner" role="presentation" />
+        {weekdays.map((entry) => (
+          <div key={entry.value} role="columnheader" className={`school-grid-day-head${entry.value === today ? ' today' : ''}`}>
+            <span className="school-grid-day-short" aria-hidden="true">{entry.short}</span>
+            <span className="school-grid-day-full">{entry.value === today ? msg('module.school_timetables.today') : entry.full}</span>
+          </div>
+        ))}
+        {periods.map((period) => {
+          const time = `${normalizeTime(period.start_time)}–${normalizeTime(period.end_time)}`;
+          const running = Number(period.position) === current;
+          if (period.kind === 'break') {
+            return (
+              <div key={`brk-${period.position}`} className={`school-grid-row school-grid-row--break${running ? ' now' : ''}`} role="row">
+                <div className="school-grid-time school-grid-time--break" role="rowheader">
+                  <span className="school-grid-time-range">{time}</span>
+                </div>
+                <div className="school-grid-break-bar">
+                  <Coffee size={14} aria-hidden="true" />
+                  <span>{period.break_label || msg('module.school_timetables.period_kind_break')}</span>
+                  {running && <span className="school-now-pill">{nowLabel}</span>}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div key={`row-${period.position}`} className={`school-grid-row${running ? ' now' : ''}`} role="row">
+              <div className="school-grid-time" role="rowheader">
+                <span className="school-grid-time-num">{period.label}</span>
+                <span className="school-grid-time-range">{time}</span>
+              </div>
+              {weekdays.map((entry) => {
+                const { subject, style } = subjectCell(entry.value, period);
+                const isNow = running && entry.value === today;
+                return (
+                  <div
+                    key={`${entry.value}-${period.position}`}
+                    role="gridcell"
+                    className={`school-cell${subject ? ' school-cell--filled' : ''}${entry.value === today ? ' today' : ''}${isNow ? ' now' : ''}`}
+                    style={style}
+                    aria-label={formatMessage(msg('module.school_timetables.cell_aria'), { day: entry.full, period: period.label, subject: subject || msg('module.school_timetables.empty_cell') })}
+                  >
+                    <span className="school-cell-text">{subject || '—'}</span>
+                    {isNow && <span className="school-now-pill">{nowLabel}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="school-day-pager" role="tablist" aria-label={msg('module.school_timetables.choose_weekday')}>
+        {weekdays.map((entry) => (
+          <button
+            key={entry.value}
+            type="button"
+            role="tab"
+            aria-selected={activeDay?.value === entry.value}
+            className={`school-day-tab${activeDay?.value === entry.value ? ' active' : ''}${entry.value === today ? ' today' : ''}`}
+            onClick={() => setDay(entry.value)}
+          >
+            {entry.short}
+          </button>
+        ))}
+      </div>
+      <ol className="school-day-list school-day-list--view" aria-label={formatMessage(msg('module.school_timetables.day_plan_aria'), { day: activeDay?.full || '' })}>
+        {periods.map((period) => {
+          const time = `${normalizeTime(period.start_time)}–${normalizeTime(period.end_time)}`;
+          const running = activeDay?.value === today && Number(period.position) === current;
+          if (period.kind === 'break') {
+            return (
+              <li key={`mbrk-${period.position}`} className={`school-day-list-item school-day-list-item--break${running ? ' now' : ''}`}>
+                <div className="school-day-list-time">{time}</div>
+                <div className="school-grid-break-bar">
+                  <Coffee size={14} aria-hidden="true" />
+                  <span>{period.break_label || msg('module.school_timetables.period_kind_break')}</span>
+                  {running && <span className="school-now-pill">{nowLabel}</span>}
+                </div>
+              </li>
+            );
+          }
+          const { subject, style } = subjectCell(activeDay?.value, period);
+          return (
+            <li key={`mlsn-${period.position}`} className={`school-day-list-item${subject ? ' school-day-list-item--filled' : ''}${running ? ' now' : ''}`} style={style}>
+              <div className="school-day-list-time">
+                <span className="school-day-list-num">{period.label}</span>
+                <span className="school-day-list-range">{time}</span>
+              </div>
+              <span className="school-day-list-subject">{subject || '—'}</span>
+              {running && <span className="school-now-pill">{nowLabel}</span>}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 function payloadFromForm(form, familyId) {
   return {
     family_id: Number(familyId),
@@ -117,16 +269,16 @@ export default function SchoolTimetablesView() {
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [mobileDay, setMobileDay] = useState(1);
+  const { success: toastSuccess } = useToast();
 
   const childCandidates = useMemo(
     () => (members || []).filter((m) => !m.is_adult),
     [members]
   );
   const msg = (key, fallback) => t(messages, key, fallback);
-  const visibleWeekdays = WEEKDAYS
-    .filter((d) => d.value <= 5 || form.include_saturday)
-    .map((d) => ({ ...d, short: msg(d.shortKey), full: msg(d.fullKey) }));
+  const visibleWeekdays = weekdaysFor(form.include_saturday, msg);
   const lessonMap = buildLessonMap(form.lessons);
   const activeMobileDay = visibleWeekdays.find((d) => d.value === mobileDay) || visibleWeekdays[0];
 
@@ -136,7 +288,8 @@ export default function SchoolTimetablesView() {
     if (ok && Array.isArray(data)) {
       setTimetables(data);
       if (!selectedId && !creating && data.length > 0) {
-        selectTimetable(data[0]);
+        const stored = storedTimetableId();
+        selectTimetable(data.find((item) => item.id === stored) || data[0]);
       }
     }
   }
@@ -146,6 +299,7 @@ export default function SchoolTimetablesView() {
     setSelectedId(null);
     setTimetables([]);
     setCreating(false);
+    setEditing(false);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [familyId, demoMode]);
@@ -159,6 +313,7 @@ export default function SchoolTimetablesView() {
   function selectTimetable(item) {
     setCreating(false);
     setSelectedId(item.id);
+    try { localStorage.setItem(SELECTED_KEY, String(item.id)); } catch { /* private mode */ }
     setForm({
       family_id: item.family_id,
       name: item.name || '',
@@ -177,6 +332,27 @@ export default function SchoolTimetablesView() {
     setForm(emptyForm(familyId));
     setStatus('');
     setCreating(true);
+    setEditing(true);
+  }
+
+  function startEdit() {
+    const item = timetables.find((entry) => entry.id === selectedId);
+    if (item) selectTimetable(item);
+    setMobileDay(openingWeekday(weekdaysFor(item?.include_saturday, msg).map((d) => d.value), new Date()));
+    setEditing(true);
+  }
+
+  // Leaving the editor drops unsaved changes and shows the plan again.
+  function cancelEdit() {
+    const item = timetables.find((entry) => entry.id === selectedId) || timetables[0];
+    setEditing(false);
+    setCreating(false);
+    setStatus('');
+    if (item) selectTimetable(item);
+    else {
+      setSelectedId(null);
+      setForm(emptyForm(familyId));
+    }
   }
 
   function updatePeriod(index, key, value) {
@@ -267,9 +443,11 @@ export default function SchoolTimetablesView() {
       setStatus(result.data?.detail || msg('module.school_timetables.save_failed'));
       return;
     }
-    setStatus(msg('module.school_timetables.saved'));
+    setStatus('');
+    toastSuccess(msg('module.school_timetables.saved'));
     await load();
     selectTimetable(result.data);
+    setEditing(false);
   }
 
   async function remove() {
@@ -280,6 +458,7 @@ export default function SchoolTimetablesView() {
       return;
     }
     setCreating(false);
+    setEditing(false);
     setSelectedId(null);
     setForm(emptyForm(familyId));
     setStatus('');
@@ -301,15 +480,23 @@ export default function SchoolTimetablesView() {
   }
 
   const showEmptyState = timetables.length === 0 && !creating && !selectedId;
+  const current = timetables.find((item) => item.id === selectedId) || null;
 
   return (
     <div className="view school-timetables-view">
       <header className="list-header">
         <h1>{t(messages, 'module.school_timetables.name')}</h1>
-        {!showEmptyState && (
-          <button type="button" className="list-header-action" onClick={startNew}>
-            <Plus size={16} aria-hidden="true" /> {t(messages, 'module.school_timetables.add')}
-          </button>
+        {!showEmptyState && !editing && (
+          <div className="school-header-actions">
+            {current && (
+              <button type="button" className="school-edit-button" onClick={startEdit}>
+                <Pencil size={16} aria-hidden="true" /> {msg('module.school_timetables.edit')}
+              </button>
+            )}
+            <button type="button" className="list-header-action school-add-button" onClick={startNew} aria-label={t(messages, 'module.school_timetables.add')}>
+              <Plus size={16} aria-hidden="true" /> <span className="school-add-label">{t(messages, 'module.school_timetables.add')}</span>
+            </button>
+          </div>
         )}
       </header>
 
@@ -324,45 +511,32 @@ export default function SchoolTimetablesView() {
             <Sparkles size={16} aria-hidden="true" /> {msg('module.school_timetables.empty_cta')}
           </button>
         </div>
+      ) : !editing ? (
+        <>
+          {timetables.length > 1 && (
+            <div className="person-filter school-plan-picker" role="group" aria-label={msg('module.school_timetables.list_label')}>
+              {timetables.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`person-filter-chip${item.id === selectedId ? ' active' : ''}`}
+                  aria-pressed={item.id === selectedId}
+                  onClick={() => selectTimetable(item)}
+                >
+                  {(item.assigned_members || [])[0] && <MemberAvatar member={item.assigned_members[0]} index={0} size={24} />}
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {current && <TimetableView key={current.id} timetable={current} msg={msg} />}
+        </>
       ) : (
-        <div className="school-layout">
-          <aside className="school-list-card" aria-label={msg('module.school_timetables.list_label')}>
-            <div className="school-list-header">
-              <span className="school-list-title">{msg('module.school_timetables.list_title')}</span>
-              <span className="school-list-count">{timetables.length}</span>
-            </div>
-            {timetables.length === 0 && creating && (
-              <p className="muted school-list-empty">{msg('module.school_timetables.list_empty_creating')}</p>
-            )}
-            <div className="school-list-items">
-              {timetables.map((item) => {
-                const active = selectedId === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`school-list-item${active ? ' active' : ''}`}
-                    onClick={() => selectTimetable(item)}
-                    aria-current={active ? 'true' : undefined}
-                  >
-                    <div className="school-list-item-name">{item.name}</div>
-                    <div className="school-list-item-meta">
-                      <span className="school-list-item-class">{item.class_label || msg('module.school_timetables.no_class')}</span>
-                      {(item.assigned_members || []).length > 0 && (
-                        <span className="school-list-item-children" aria-label={msg('module.school_timetables.assigned_children')}>
-                          {item.assigned_members.map((m, i) => (
-                            <MemberAvatar key={m.user_id ?? i} member={m} index={i} size={20} />
-                          ))}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-
           <main className="school-editor-card">
+            <div className="school-editor-head">
+              <h2>{msg(creating ? 'module.school_timetables.new_title' : 'module.school_timetables.edit_title')}</h2>
+              <button type="button" className="btn-ghost" onClick={cancelEdit}>{t(messages, 'cancel')}</button>
+            </div>
             <section className="school-editor-section school-meta-section">
               <div className="school-meta-grid">
                 <label className="school-field">
@@ -640,7 +814,6 @@ export default function SchoolTimetablesView() {
               )}
             </div>
           </main>
-        </div>
       )}
     </div>
   );
