@@ -850,6 +850,11 @@ export function apiCreateRecipe(payload) {
   return post('/recipes', payload);
 }
 
+// Reads a recipe page on the server into a draft; nothing is saved (#511).
+export function apiImportRecipe(familyId, url) {
+  return post('/recipes/import', { family_id: Number(familyId), url });
+}
+
 export function apiUpdateRecipe(recipeId, payload) {
   return patch(`/recipes/${recipeId}`, payload);
 }

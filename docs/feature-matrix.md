@@ -13,7 +13,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Contacts | Family address book | Contact cards, CSV import and export, birthday extraction, and CardDAV sync. |
 | Birthdays | Birthday tracking | Lookahead, countdowns, and sync from contacts. |
 | Meal planning | Weekly meals | Shared compact day/week selection, meal slots, date-based moves, ingredients, and connection to recipes and shopping. |
-| Recipes | Household recipe library | Recipe cards, ingredient scaling, and push-to-shopping support. |
+| Recipes | Household recipe library | Recipe cards that open to cook from (ingredients and steps side by side or as tabs, tick-off while cooking, servings scaling), import from a recipe page's schema.org data, and push-to-shopping for what is still missing. |
 | School timetables | School schedule planning | Timetable views for school routines. |
 | Templates | Repeatable household plans | Reusable task and routine templates. |
 | Gifts | Gift planning | Gift ideas and planning around family dates. |
@@ -44,6 +44,12 @@ The shopping update adds migration `0057_shopping_visual_details`. Run the norma
 
 
 Shopping interface copy is available in German and English. The other 22 locale bundles include explicit English fallback copy for the new shopping controls; the bundled product names and default units remain German. The nine built-in departments appear in every language; any translation a client sends is stored under one name, so they no longer grow once per language (#512). Custom family product names and categories are preserved. [Browser screenshots and capture provenance](assets/shopping/README.md) document the illustrated layout.
+
+### Recipes
+
+Tapping a recipe card opens it to cook from: ingredients and numbered steps side by side, or as tabs on a phone. Ingredients and steps can be ticked off while cooking, and the servings can be scaled. **To shopping list** adds only the ingredients that are not ticked off.
+
+**Take it from a link** in *Add recipe* reads the recipe page's schema.org `Recipe` data (title, servings, ingredients split into amount, unit and name, steps with their sections, category and keywords) into the form for checking; nothing is saved until the family saves it. Tribu loads the page on the server, so the recipe site sees the server's address; the dialog says so. The fetch follows the calendar subscriptions' egress rules: http and https only, public addresses unless `SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS` is set, each redirect checked again, 4 MB and 10 seconds at most, 20 imports per minute.
 
 ## Planned or under evaluation
 

@@ -57,15 +57,17 @@ test.describe('Recipes', () => {
     await page.getByRole('button', { name: 'Add Playwright Pancakes to favorites' }).click();
     await expect(page.getByText('Favorite')).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole('button', { name: 'Edit recipe "Playwright Pancakes"' }).click();
-    await page.getByLabel('Scale to servings').fill('8');
-    await expect(page.locator('.recipe-scale-preview').getByText('400 g')).toBeVisible();
-    await expect(page.locator('.recipe-scale-preview').getByText('600 ml')).toBeVisible();
-    await expect(page.getByRole('dialog', { name: 'Edit recipe' })).toBeVisible();
-    await page.locator('.recipe-push-list').selectOption({ label: 'Recipe Shopping List' });
-    await page.locator('.recipe-push-btn').click();
+    // The recipe opens to cook from; servings scale there (discussion #511).
+    await page.getByRole('button', { name: 'Playwright Pancakes', exact: true }).click();
+    const detail = page.locator('.recipe-detail');
+    await expect(detail.getByRole('heading', { name: 'Playwright Pancakes' })).toBeVisible();
+    for (let i = 0; i < 4; i += 1) await detail.getByRole('button', { name: 'More servings' }).click();
+    await expect(detail.getByText('400 g')).toBeVisible();
+    await expect(detail.getByText('600 ml')).toBeVisible();
+    await detail.locator('.recipe-detail-push select').selectOption({ label: 'Recipe Shopping List' });
+    await detail.getByRole('button', { name: 'To shopping list (2)' }).click();
     await expect(page.getByLabel('Notifications').getByText('2 ingredients pushed to the shopping list')).toBeVisible({ timeout: 10000 });
-    await page.locator('.recipe-form-actions-right').getByRole('button', { name: 'Cancel' }).click();
+    await detail.getByRole('button', { name: 'All recipes' }).click();
 
     await navigateTo(page, 'Shopping');
     await selectShoppingList(page, 'Recipe Shopping List');

@@ -3,9 +3,9 @@ import {
   BookOpen,
   Edit2,
   ExternalLink,
+  Link2,
   Plus,
   Search,
-  ShoppingCart,
   Star,
   Tags,
   Trash2,
@@ -19,8 +19,9 @@ import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 import { errorText } from '../lib/helpers';
 import { t, tc } from '../lib/i18n';
-import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient, formatIngredientAmount, recipeToForm, scaleRecipeIngredients } from '../lib/recipes';
+import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient, formatIngredientAmount, recipeDraftToForm, recipeToForm } from '../lib/recipes';
 import ConfirmDialog from './ConfirmDialog';
+import RecipeDetail from './recipes/RecipeDetail';
 import { inBody } from './inBody';
 
 
@@ -38,19 +39,22 @@ function ingredientCountLabel(messages, count) {
   return tc(messages, 'module.recipes.ingredients_summary', count);
 }
 
-function RecipeCard({ recipe, messages, onEdit, onToggleFavorite }) {
+function RecipeCard({ recipe, messages, onOpen, onEdit, onToggleFavorite }) {
   const ingredients = recipe.ingredients || [];
   const previewIngredients = ingredients.slice(0, 4);
   const sourceUrl = safeHttpUrl(recipe.source_url);
 
   return (
-    <article className="recipe-card">
+    // The whole card opens the recipe; its buttons and link keep their own jobs.
+    <article className="recipe-card recipe-card-clickable" onClick={(e) => { if (!e.target.closest('button, a')) onOpen(recipe); }}>
       <div className="recipe-card-visual" aria-hidden="true">
         <BookOpen size={24} />
       </div>
       <div className="recipe-card-header">
         <div className="recipe-card-title-row">
-          <h3 className="recipe-card-title">{recipe.title}</h3>
+          <h3 className="recipe-card-title">
+            <button type="button" className="recipe-card-open" onClick={() => onOpen(recipe)}>{recipe.title}</button>
+          </h3>
         </div>
         <div className="recipe-card-actions">
           <button
@@ -147,49 +151,37 @@ function RecipeDialog({
   onDelete,
   isEditing,
   ingredientHints = [],
-  shoppingLists = [],
-  onPushToShopping,
+  onImport,
 }) {
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
-  const [pushing, setPushing] = useState(false);
-  const [selectedListId, setSelectedListId] = useState('');
-  const [selectedIngredientNames, setSelectedIngredientNames] = useState([]);
-  const [scaleServings, setScaleServings] = useState('');
+  // Reading a recipe from a web page (discussion #511).
+  const [importUrl, setImportUrl] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setImportUrl('');
+    setImported(false);
+  }, [open]);
+
+  async function runImport() {
+    if (importing || !importUrl.trim()) return;
+    setImporting(true);
+    try {
+      setImported(await onImport(importUrl.trim()));
+    } finally {
+      setImporting(false);
+    }
+  }
   const datalistId = useId();
   const titleId = 'recipe-dialog-title';
-
-  useEffect(() => {
-    if (!open) return;
-    if (shoppingLists.length > 0 && !selectedListId) {
-      setSelectedListId(String(shoppingLists[0].id));
-    }
-  }, [open, selectedListId, shoppingLists]);
-
-  useEffect(() => {
-    if (!open) return;
-    setSelectedIngredientNames(
-      (form.ingredients || [])
-        .map((ingredient) => (ingredient.name || '').trim())
-        .filter(Boolean),
-    );
-  }, [open, form.ingredients]);
-
-  useEffect(() => {
-    if (open) setScaleServings('');
-  }, [open, form.servings]);
 
   useDialogFocusTrap({ open, containerRef: dialogRef, initialFocusRef: firstFieldRef, onClose });
 
   if (!open) return null;
-
-  const namedIngredients = (form.ingredients || [])
-    .map((ingredient) => (ingredient.name || '').trim())
-    .filter(Boolean);
-  const scaledIngredients = scaleServings
-    ? scaleRecipeIngredients(form.ingredients || [], form.servings, scaleServings)
-    : [];
 
   function updateIngredient(index, patch) {
     setForm((prev) => {
@@ -211,12 +203,6 @@ function RecipeDialog({
       ...prev,
       ingredients: prev.ingredients.filter((_, i) => i !== index),
     }));
-  }
-
-  function toggleIngredient(name) {
-    setSelectedIngredientNames((prev) => (
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    ));
   }
 
   async function handleSubmit(e) {
@@ -254,6 +240,37 @@ function RecipeDialog({
         </div>
 
         <form className="recipe-form ui-sheet-form" onSubmit={handleSubmit}><div className="ui-sheet-body">
+          {!isEditing && onImport && (
+            <div className="recipe-import">
+              <label className="recipe-import-label" htmlFor="recipe-import-url">
+                <Link2 size={15} aria-hidden="true" /> {t(messages, 'module.recipes.import_title')}
+              </label>
+              <div className="recipe-import-row">
+                <input
+                  id="recipe-import-url"
+                  className="form-input"
+                  type="url"
+                  inputMode="url"
+                  placeholder={t(messages, 'module.recipes.import_placeholder')}
+                  value={importUrl}
+                  onChange={(e) => { setImportUrl(e.target.value); setImported(false); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runImport(); } }}
+                  maxLength={500}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={importing || !importUrl.trim()}
+                  onClick={runImport}
+                >
+                  {importing ? t(messages, 'module.recipes.import_loading') : t(messages, 'module.recipes.import_button')}
+                </button>
+              </div>
+              <p className="recipe-import-hint" role="status">
+                {imported ? t(messages, 'module.recipes.import_done') : t(messages, 'module.recipes.import_hint')}
+              </p>
+            </div>
+          )}
           <div className="recipe-form-grid">
             <input
               ref={firstFieldRef}
@@ -363,40 +380,6 @@ function RecipeDialog({
                 </li>
               ))}
             </ul>
-            {form.ingredients.length > 0 && form.servings && (
-              <div className="recipe-scale">
-                <label className="recipe-scale-label">
-                  {t(messages, 'module.recipes.scale_to_servings')}
-                  <input
-                    className="form-input recipe-scale-input"
-                    type="number"
-                    min="1"
-                    max="999"
-                    step="1"
-                    inputMode="numeric"
-                    aria-label={t(messages, 'module.recipes.scale_to_servings')}
-                    value={scaleServings}
-                    onChange={(e) => setScaleServings(e.target.value)}
-                  />
-                </label>
-                {scaledIngredients.length > 0 && (
-                  <div className="recipe-scale-preview">
-                    <span className="recipe-section-title">{t(messages, 'module.recipes.scaled_ingredients')}</span>
-                    <ul>
-                      {scaledIngredients.map((ingredient) => {
-                        const amount = formatIngredientAmount(ingredient);
-                        return (
-                          <li key={ingredient.name}>
-                            <span>{ingredient.name}</span>
-                            <span>{ingredient.scalable ? amount : t(messages, 'module.recipes.cannot_scale')}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           <textarea
@@ -406,56 +389,6 @@ function RecipeDialog({
             value={form.instructions}
             onChange={(e) => setForm((prev) => ({ ...prev, instructions: e.target.value }))}
           />
-
-          {isEditing && onPushToShopping && namedIngredients.length > 0 && shoppingLists.length > 0 && (
-            <div className="recipe-push">
-              <div className="recipe-push-label">
-                <ShoppingCart size={14} aria-hidden="true" />
-                {t(messages, 'module.recipes.push_to_shopping')}
-              </div>
-              <div className="recipe-push-picker">
-                {namedIngredients.map((name) => (
-                  <label key={name} className="recipe-push-chip">
-                    <input
-                      type="checkbox"
-                      checked={selectedIngredientNames.includes(name)}
-                      onChange={() => toggleIngredient(name)}
-                    />
-                    <span>{name}</span>
-                  </label>
-                ))}
-              </div>
-              <div className="recipe-push-row">
-                <select
-                  className="form-input recipe-push-list"
-                  value={selectedListId}
-                  onChange={(e) => setSelectedListId(e.target.value)}
-                  aria-label={t(messages, 'module.recipes.push_to_shopping')}
-                >
-                  {shoppingLists.map((list) => (
-                    <option key={list.id} value={list.id}>{list.name}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn btn-secondary recipe-push-btn"
-                  disabled={pushing || !selectedListId || selectedIngredientNames.length === 0}
-                  onClick={async () => {
-                    if (!selectedListId || selectedIngredientNames.length === 0) return;
-                    setPushing(true);
-                    try {
-                      await onPushToShopping(Number(selectedListId), selectedIngredientNames);
-                    } finally {
-                      setPushing(false);
-                    }
-                  }}
-                >
-                  <ShoppingCart size={14} aria-hidden="true" />
-                  {t(messages, 'module.recipes.push_to_shopping')}
-                </button>
-              </div>
-            </div>
-          )}
 
           </div><div className="recipe-form-actions ui-sheet-actions">
             {isEditing && onDelete && (
@@ -489,6 +422,8 @@ export default function RecipesView() {
   const [form, setForm] = useState(() => createEmptyRecipeForm());
   const [query, setQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState(null);
+  // The recipe open to cook from (discussion #511).
+  const [openId, setOpenId] = useState(null);
 
   const loadRecipes = useCallback(async (fid = familyId) => {
     if (!fid || demoMode) {
@@ -604,6 +539,8 @@ export default function RecipesView() {
   };
 
 
+  const openRecipe = openId != null ? recipeItems.find((recipe) => recipe.id === openId) || null : null;
+
   const filteredRecipes = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return recipes.recipes;
@@ -650,6 +587,17 @@ export default function RecipesView() {
     setEditingId(null);
   }
 
+  // Fills the form from a recipe page; the family checks it before saving.
+  async function importFromUrl(url) {
+    const { ok, data } = await api.apiImportRecipe(familyId, url);
+    if (!ok) {
+      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+      return false;
+    }
+    setForm(recipeDraftToForm(data));
+    return true;
+  }
+
   async function handleSubmit() {
     const res = editingId != null
       ? await recipes.updateRecipe(editingId, form)
@@ -671,11 +619,6 @@ export default function RecipesView() {
       },
     });
     closeDialog();
-  }
-
-  async function handlePushToShopping(shoppingListId, ingredientNames) {
-    if (editingId == null) return { ok: false };
-    return recipes.pushToShopping(editingId, shoppingListId, ingredientNames);
   }
 
   async function handleToggleFavorite(recipe) {
@@ -705,17 +648,30 @@ export default function RecipesView() {
         onDelete={editingId != null ? handleDelete : null}
         isEditing={editingId != null}
         ingredientHints={recipes.ingredientHints}
-        shoppingLists={shoppingLists}
-        onPushToShopping={editingId != null ? handlePushToShopping : null}
+        onImport={importFromUrl}
       />
 
       <header className="list-header">
         <h1>{t(messages, 'module.recipes.name')}</h1>
-        <button type="button" className="list-header-action" onClick={openAdd}>
-          <Plus size={16} aria-hidden="true" />
-          {t(messages, 'module.recipes.add')}
-        </button>
+        {!openRecipe && (
+          <button type="button" className="list-header-action" onClick={openAdd}>
+            <Plus size={16} aria-hidden="true" />
+            {t(messages, 'module.recipes.add')}
+          </button>
+        )}
       </header>
+      {openRecipe ? (
+        <RecipeDetail
+          key={openRecipe.id}
+          recipe={openRecipe}
+          messages={messages}
+          shoppingLists={shoppingLists}
+          onBack={() => setOpenId(null)}
+          onEdit={openEdit}
+          onToggleFavorite={handleToggleFavorite}
+          onPushToShopping={recipes.pushToShopping}
+        />
+      ) : (<>
       <label className="recipe-search">
         <Search size={15} aria-hidden="true" />
         <input
@@ -755,12 +711,14 @@ export default function RecipesView() {
               key={recipe.id}
               recipe={recipe}
               messages={messages}
+              onOpen={(item) => setOpenId(item.id)}
               onEdit={openEdit}
               onToggleFavorite={handleToggleFavorite}
             />
           ))}
         </section>
       )}
+      </>)}
     </div>
   );
 }

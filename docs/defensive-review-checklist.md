@@ -66,7 +66,8 @@ Relevant coverage to check first:
 - [ ] Signing or verification behavior is tested when payload shape or delivery logic changes.
 - [ ] Delivery errors, retries, and logs do not expose secrets or full internal payloads unnecessarily.
 - [ ] Home Assistant examples use placeholders and least-privilege Tribu token scopes.
-- [ ] DAV, calendar subscription, and import paths treat external input as untrusted.
+- [ ] DAV, calendar subscription, recipe import, and import paths treat external input as untrusted.
+- [ ] Server-side fetches (calendar subscriptions, recipe import) allow only http(s), check every address and redirect hop against the private-network policy (`SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS`), and cap size and time.
 - [ ] Parser failures return bounded user-facing errors without tracebacks, connection strings, or raw remote content.
 
 Relevant coverage to check first:
@@ -78,6 +79,7 @@ Relevant coverage to check first:
 - `backend/tests/test_dav_carddav.py`
 - `backend/tests/test_dav_caldav_read.py`
 - `backend/tests/test_calendar_subscriptions.py`
+- `backend/tests/test_recipe_import.py`
 - `backend/tests/test_calendar_ics_import.py`
 - `backend/tests/test_calendar_preview.py`
 - `docs/home-assistant.md`
