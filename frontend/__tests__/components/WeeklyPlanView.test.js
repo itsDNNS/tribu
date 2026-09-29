@@ -106,35 +106,63 @@ describe('weekly plan helpers', () => {
   });
 });
 
-describe('WeeklyPlanView', () => {
+const board = () => within(document.querySelector('.week-board'));
+const day = (name) => within(board().getByRole('region', { name }));
+const glanceMessages = {
+  ...messages,
+  'module.weekly_plan.day_free': 'Free',
+  'module.weekly_plan.add_to_day': 'Add to {day}',
+  'module.weekly_plan.shopping_open': '{count} open',
+  'module.weekly_plan.recipe': 'Recipe',
+  'module.meal_plans.slot.morning': 'Morning',
+  'module.meal_plans.slot.evening': 'Evening',
+  'module.dashboard.quick_event': 'Event',
+  'module.dashboard.quick_capture_add_task': 'Task',
+  'module.dashboard.quick_meal': 'Meal',
+};
+
+describe('Week at a glance', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAppState = baseApp();
+    mockAppState = baseApp({ messages: glanceMessages });
     window.print = jest.fn();
   });
 
-  it('renders a print-ready weekly plan and hides app navigation controls behind print classes', () => {
+  it('shows the week by day and keeps the sections for printing', () => {
     mockAppState = baseApp({
+      messages: glanceMessages,
       events: [{ id: 1, title: 'Football', starts_at: '2026-05-08T17:00:00' }],
       tasks: [{ id: 2, title: 'Pack bags', status: 'open', due_date: '2026-05-08' }],
       birthdays: [{ id: 3, person_name: 'Martin', month: 5, day: 9 }],
       shoppingLists: [{ id: 4, name: 'Groceries', item_count: 3, checked_count: 1 }],
     });
 
-    const { container } = render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={mockAppState.events} initialMeals={[{ id: 5, meal_name: 'Pasta', plan_date: '2026-05-08', slot: 'dinner' }]} />);
+    const { container } = render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={mockAppState.events} initialMeals={[{ id: 5, meal_name: 'Pasta', plan_date: '2026-05-08', slot: 'evening' }]} />);
 
-    expect(screen.getByRole('heading', { name: 'Weekly plan' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Weekly plan', level: 1 })).toBeVisible();
+    const friday = day(/Friday, May 8/);
+    expect(friday.getByRole('button', { name: /17:00\s*Football/ })).toBeVisible();
+    expect(friday.getByRole('button', { name: /Evening\s*Pasta/ })).toBeVisible();
+    expect(friday.getByRole('button', { name: /Pack bags/ })).toBeVisible();
+    expect(day(/Saturday, May 9/).getByRole('button', { name: /Martin/ })).toBeVisible();
+    expect(day(/Monday, May 4/).getByText('Free')).toBeVisible();
+    expect(within(document.querySelector('.week-glance-shopping')).getByRole('button', { name: /Groceries\s*2 open/ })).toBeVisible();
+
+    // Printing is still there, quietly: the icon button and the sections.
     expect(screen.getByRole('button', { name: 'Print' })).toHaveClass('no-print');
+    fireEvent.click(screen.getByRole('button', { name: 'Print' }));
+    expect(window.print).toHaveBeenCalledTimes(1);
     expect(container.querySelector('.weekly-plan-page')).toHaveClass('print-surface');
-    expect(within(screen.getByRole('region', { name: 'Events' })).getByText('Football')).toBeVisible();
-    expect(within(screen.getByRole('region', { name: 'Tasks and routines' })).getByText('Pack bags')).toBeVisible();
-    expect(within(screen.getByRole('region', { name: 'Meals' })).getByText('Pasta')).toBeVisible();
-    expect(within(screen.getByRole('region', { name: 'Birthdays' })).getByText('Martin')).toBeVisible();
-    expect(within(screen.getByRole('region', { name: 'Shopping reminders' })).getByText('Groceries')).toBeVisible();
+    const printed = container.querySelector('.weekly-plan-grid');
+    expect(printed).toHaveClass('ui-print-only');
+    expect(within(printed).getByRole('region', { name: 'Events' })).toHaveTextContent('Football');
+    expect(container.querySelector('.week-board')).toHaveClass('no-print');
+    expect(screen.queryByRole('link', { name: /share/i })).not.toBeInTheDocument();
   });
 
-  it('filters printable sections and member-specific assignments without exposing controls in print', () => {
+  it('filters by person and kind with chips', () => {
     mockAppState = baseApp({
+      messages: glanceMessages,
       members: [
         { user_id: 10, display_name: 'Mia' },
         { user_id: 11, display_name: 'Leo' },
@@ -151,53 +179,31 @@ describe('WeeklyPlanView', () => {
 
     render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={mockAppState.events} initialMeals={[]} />);
 
-    const filters = screen.getByRole('group', { name: 'Filters' });
-    expect(filters).toHaveClass('no-print');
-    fireEvent.change(screen.getByLabelText('Member'), { target: { value: '10' } });
-    expect(screen.getByText('Mia training')).toBeVisible();
-    expect(screen.queryByText('Leo training')).not.toBeInTheDocument();
-    expect(screen.getByText('Mia bag')).toBeVisible();
-    expect(screen.queryByText('Leo bag')).not.toBeInTheDocument();
+    const mia = screen.getByRole('button', { name: /Mia$/ });
+    fireEvent.click(mia);
+    expect(mia).toHaveAttribute('aria-pressed', 'true');
+    expect(board().getByText('Mia training')).toBeVisible();
+    expect(board().queryByText('Leo training')).not.toBeInTheDocument();
+    expect(board().getByText('Mia bag')).toBeVisible();
+    expect(board().queryByText('Leo bag')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Tasks and routines\s+1/i }));
-    expect(screen.queryByRole('region', { name: 'Tasks and routines' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Tasks and routines\s+1/i })).toHaveAttribute('aria-pressed', 'false');
-    fireEvent.click(screen.getByRole('button', { name: /Tasks and routines\s+1/i }));
-    expect(screen.getByRole('region', { name: 'Tasks and routines' })).toBeVisible();
-    expect(screen.getByRole('button', { name: /Tasks and routines\s+1/i })).toHaveAttribute('aria-pressed', 'true');
-
-    fireEvent.click(within(screen.getByLabelText('Sections')).getByLabelText('Tasks and routines'));
-    expect(screen.queryByRole('region', { name: 'Tasks and routines' })).not.toBeInTheDocument();
+    const tasksChip = screen.getByRole('button', { name: /Tasks and routines\s*1/ });
+    fireEvent.click(tasksChip);
+    expect(tasksChip).toHaveAttribute('aria-pressed', 'false');
+    expect(board().queryByText('Mia bag')).not.toBeInTheDocument();
+    fireEvent.click(tasksChip);
+    expect(board().getByText('Mia bag')).toBeVisible();
   });
 
-  it('fetches ranged calendar events for the selected printable week', async () => {
+  it('fetches ranged calendar events for the selected week', async () => {
     apiGetEvents.mockResolvedValueOnce({ data: [{ id: 9, title: 'Recurring training', starts_at: '2026-05-08T17:00:00' }] });
-    mockAppState = baseApp({ events: [{ id: 1, title: 'Cached later event', starts_at: '2026-06-08T17:00:00' }] });
+    mockAppState = baseApp({ messages: glanceMessages, events: [{ id: 1, title: 'Cached later event', starts_at: '2026-06-08T17:00:00' }] });
 
     render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialMeals={[]} />);
 
     await waitFor(() => expect(apiGetEvents).toHaveBeenCalledWith(7, new Date(2026,4,4).toISOString(), new Date(2026,4,11).toISOString()));
-    expect(await screen.findByText('Recurring training')).toBeVisible();
+    expect(await board().findByText('Recurring training')).toBeVisible();
     expect(screen.queryByText('Cached later event')).not.toBeInTheDocument();
-  });
-
-  it('prints and navigates back without creating a public share link', () => {
-    const setActiveView = jest.fn();
-    mockAppState = baseApp({ setActiveView });
-    render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={mockAppState.events} initialMeals={[]} />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Print' }));
-    expect(window.print).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Back to Today' }));
-    expect(setActiveView).toHaveBeenCalledWith('dashboard');
-    expect(screen.queryByRole('link', { name: /share/i })).not.toBeInTheDocument();
-  });
-});
-
-describe('WeeklyPlanView links (discussion #511)', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
   });
 
   it('opens each entry where it comes from and orders meals through the day', async () => {
@@ -205,13 +211,7 @@ describe('WeeklyPlanView links (discussion #511)', () => {
     apiListRecipes.mockResolvedValueOnce({ data: [{ id: 31, title: 'pasta' }] });
     mockAppState = baseApp({
       setActiveView,
-      messages: {
-        ...messages,
-        'module.meal_plans.slot.morning': 'Morning',
-        'module.meal_plans.slot.evening': 'Evening',
-        'module.weekly_plan.shopping_open': '{count} open',
-        'module.weekly_plan.recipe': 'Recipe',
-      },
+      messages: glanceMessages,
       events: [{ id: 1, title: 'Football', starts_at: '2026-05-08T17:00:00' }],
       shoppingLists: [{ id: 4, name: 'Groceries', item_count: 3, checked_count: 1 }],
       birthdays: [{ id: 3, person_name: 'Martin', month: 5, day: 9 }],
@@ -224,53 +224,53 @@ describe('WeeklyPlanView links (discussion #511)', () => {
         { id: 6, meal_name: 'Porridge', plan_date: '2026-05-08', slot: 'morning' },
       ]}
     />);
-    const meals = within(screen.getByRole('region', { name: 'Meals' }));
+    const friday = day(/Friday, May 8/);
     // Pasta is also a family recipe (matched by name) and links to it.
-    await meals.findByRole('button', { name: 'Recipe' });
-    expect(meals.getAllByRole('button').map((button) => button.textContent)).toEqual([
-      expect.stringContaining('Morning'),
-      expect.stringContaining('Evening'),
-      expect.stringContaining('Recipe'),
+    await friday.findByRole('button', { name: 'Recipe' });
+    expect(friday.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      expect.stringContaining('Football'),
+      expect.stringContaining('Porridge'),
+      expect.stringContaining('Pasta'),
+      'Recipe',
     ]);
 
-    fireEvent.click(screen.getByRole('button', { name: /Football/ }));
+    fireEvent.click(friday.getByRole('button', { name: /Football/ }));
     expect(setActiveView).toHaveBeenLastCalledWith('calendar');
     expect(peekHandoff('tribu_calendar_focus')).toBe(new Date('2026-05-08T17:00:00').toISOString());
 
-    fireEvent.click(meals.getByRole('button', { name: /Pasta/ }));
+    fireEvent.click(friday.getByRole('button', { name: /Pasta/ }));
     expect(setActiveView).toHaveBeenLastCalledWith('meal_plans');
     expect(peekHandoff('tribu_meal_focus')).toBe('2026-05-08');
 
-    fireEvent.click(await meals.findByRole('button', { name: 'Recipe' }));
+    fireEvent.click(friday.getByRole('button', { name: 'Recipe' }));
     expect(setActiveView).toHaveBeenLastCalledWith('recipes');
     expect(peekHandoff('tribu_recipe_open')).toBe('31');
 
-    const shopping = within(screen.getByRole('region', { name: 'Shopping reminders' }));
-    fireEvent.click(shopping.getByRole('button', { name: /2 open\s*Groceries/ }));
+    fireEvent.click(within(document.querySelector('.week-glance-shopping')).getByRole('button', { name: /Groceries/ }));
     expect(setActiveView).toHaveBeenLastCalledWith('shopping');
     expect(peekHandoff('tribu_shopping_list')).toBe('4');
 
-    fireEvent.click(screen.getByRole('button', { name: /Martin/ }));
+    fireEvent.click(day(/Saturday, May 9/).getByRole('button', { name: /Martin/ }));
     expect(setActiveView).toHaveBeenLastCalledWith('contacts');
     expect(peekHandoff('tribu_contacts_tab')).toBe('birthdays');
   });
 
-  it('"+" opens the form of each area on the chosen day, not for children', () => {
+  it('"+" on a day opens a form for that day, not for children', () => {
     const onCreateForm = jest.fn();
-    mockAppState = baseApp({ messages: { ...messages, 'module.weekly_plan.add': 'Add to {section}' } });
     const { unmount } = render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={[]} initialMeals={[]} onCreateForm={onCreateForm} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add to Events' }));
+    const wednesday = day(/Wednesday, May 6/);
+    expect(wednesday.getByText('', { selector: 'summary[aria-label="Add to Wednesday, May 6"]' })).toBeInTheDocument();
+    fireEvent.click(wednesday.getByRole('button', { name: 'Event' }));
     expect(onCreateForm).toHaveBeenLastCalledWith('event');
     expect(peekHandoff('tribu_calendar_focus')).toBe(new Date('2026-05-06T14:00').toISOString());
-    fireEvent.click(screen.getByRole('button', { name: 'Add to Meals' }));
+    fireEvent.click(day(/Thursday, May 7/).getByRole('button', { name: 'Meal' }));
     expect(onCreateForm).toHaveBeenLastCalledWith('meal');
-    expect(peekHandoff('tribu_meal_focus')).toBe('2026-05-06');
-    expect(screen.queryByRole('button', { name: 'Add to Birthdays' })).not.toBeInTheDocument();
+    expect(peekHandoff('tribu_meal_focus')).toBe('2026-05-07');
     unmount();
 
-    mockAppState = baseApp({ isChild: true, messages: { ...messages, 'module.weekly_plan.add': 'Add to {section}' } });
+    mockAppState = baseApp({ isChild: true, messages: glanceMessages });
     render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={[]} initialMeals={[]} onCreateForm={onCreateForm} />);
-    expect(screen.queryByRole('button', { name: 'Add to Events' })).not.toBeInTheDocument();
+    expect(document.querySelector('.week-day-add')).toBeNull();
   });
 });
 

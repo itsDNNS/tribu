@@ -200,7 +200,7 @@ test("the meal week is the content on phones and the weekly plan keeps its day/w
   await page.goto("/#weekly_plan");
   await expect(page.locator(".ui-day-strip")).toBeVisible();
   await page.getByRole("button", { name: "Ganze Woche", exact: true }).click();
-  await expect(page.locator(".ui-agenda-day")).toHaveCount(7);
+  await expect(page.locator(".week-glance-days .week-day")).toHaveCount(7);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

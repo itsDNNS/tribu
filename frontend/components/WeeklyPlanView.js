@@ -2,7 +2,6 @@ import { usePlannerLayout } from '../hooks/useResponsiveUI';
 import {
   DayStrip,
   WeekPresentation,
-  AgendaDay,
   dateKey,
 } from './responsive/PlannerUI';
 import { eventOccursOn } from '../lib/calendar-dates';
@@ -16,11 +15,11 @@ import {
   ShoppingCart,
   Utensils,
   Cake,
-  ArrowLeft,
   BookOpen,
   Plus,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import MemberAvatar from './MemberAvatar';
 import { apiGetEvents, apiListMealPlans, apiListRecipes } from '../lib/api';
 import { handOff } from '../lib/viewHandoff';
 import { parseDate } from '../lib/helpers';
@@ -252,8 +251,6 @@ function Section({
   emptyLabel,
   renderItem,
   sectionKey,
-  onAdd,
-  addLabel,
 }) {
   return (
     <section
@@ -270,17 +267,6 @@ function Section({
       <div className="weekly-plan-section-header">
         <h2>{title}</h2>
         <span className="weekly-plan-section-count">{items.length}</span>
-        {onAdd && (
-          <button
-            type="button"
-            className="weekly-plan-add no-print"
-            onClick={onAdd}
-            aria-label={addLabel}
-            title={addLabel}
-          >
-            <Plus size={15} aria-hidden="true" />
-          </button>
-        )}
       </div>
       {items.length ? (
         <ul>{items.map(renderItem)}</ul>
@@ -439,24 +425,6 @@ export default function WeeklyPlanView({
       </button>
     ) : null;
   };
-  const dayIso = toIsoDate(anchor);
-  // "+" opens the area's form, on the chosen day where the form has one.
-  const adders = isChild || !onCreateForm ? {} : {
-    events: () => {
-      handOff('tribu_calendar_focus', new Date(`${dayIso}T14:00`).toISOString());
-      onCreateForm('event');
-    },
-    tasks: () => onCreateForm('task'),
-    meals: hiddenAreas.includes('meal_plans') ? null : () => {
-      handOff('tribu_meal_focus', dayIso);
-      onCreateForm('meal');
-    },
-    shopping: () => onCreateForm('shopping'),
-  };
-  const addProps = (key) => (adders[key]
-    ? { onAdd: adders[key], addLabel: t(messages, 'module.weekly_plan.add').replace('{section}', t(messages, SECTION_CONFIG.find((section) => section.key === key).labelKey)) }
-    : {});
-
   const sections = useMemo(
     () =>
       buildWeeklyPlanSections({
@@ -494,229 +462,253 @@ export default function WeeklyPlanView({
     });
   };
 
+  const days = Array.from({ length: 7 }, (_, i) => addDays(range.start, i));
+  const todayKey = dateKey(new Date());
+  // Everything of one day, in the order people look for it (discussion #511).
+  const dayItems = (date) => {
+    const key = dateKey(date);
+    const items = [];
+    if (visibleSections.has('birthdays')) {
+      for (const birthday of sections.birthdays) {
+        if (birthdayDate(birthday, range.start) !== key) continue;
+        items.push({
+          kind: 'birthdays',
+          id: `birthday-${birthday.id || birthday.person_name}`,
+          title: birthday.person_name || birthday.name,
+          meta: '',
+          onOpen: () => go('contacts', 'tribu_contacts_tab', 'birthdays'),
+        });
+      }
+    }
+    if (visibleSections.has('events')) {
+      const events = sections.events
+        .filter((event) => eventOccursOn(event, date))
+        .sort((a, b) => (a.all_day ? 0 : 1) - (b.all_day ? 0 : 1) || String(eventDate(a)).localeCompare(String(eventDate(b))));
+      for (const event of events) {
+        items.push({
+          kind: 'events',
+          id: `event-${event.id || event.title}`,
+          title: event.title,
+          meta: event.all_day ? '' : parseDate(eventDate(event))?.toLocaleTimeString(locale, timeOptions) || '',
+          onOpen: () => openEvent(event),
+        });
+      }
+    }
+    if (visibleSections.has('meals')) {
+      for (const meal of sections.meals) {
+        if (normalizeDateOnly(mealDate(meal)) !== key) continue;
+        items.push({
+          kind: 'meals',
+          id: `meal-${meal.id || meal.meal_name}`,
+          title: meal.meal_name || meal.title || meal.name,
+          meta: slotLabel(meal.slot),
+          onOpen: () => openMeal(meal),
+          extra: recipeLink(meal),
+        });
+      }
+    }
+    if (visibleSections.has('tasks')) {
+      for (const task of sections.tasks) {
+        if (normalizeDateOnly(taskDate(task)) !== key) continue;
+        items.push({
+          kind: 'tasks',
+          id: `task-${task.id || task.title}`,
+          title: task.title,
+          meta: '',
+          onOpen: () => go('tasks'),
+        });
+      }
+    }
+    return items;
+  };
+  const dayAdders = (date) => {
+    if (isChild || !onCreateForm) return [];
+    const iso = toIsoDate(date);
+    return [
+      ['event', CalendarDays, 'module.dashboard.quick_event', () => {
+        handOff('tribu_calendar_focus', new Date(`${iso}T14:00`).toISOString());
+        onCreateForm('event');
+      }],
+      ['task', ListChecks, 'module.dashboard.quick_capture_add_task', () => onCreateForm('task')],
+      ...(hiddenAreas.includes('meal_plans') ? [] : [['meal', Utensils, 'module.dashboard.quick_meal', () => {
+        handOff('tribu_meal_focus', iso);
+        onCreateForm('meal');
+      }]]),
+    ];
+  };
+  const dayColumn = (date, { wide = false } = {}) => {
+    const key = dateKey(date);
+    const items = dayItems(date);
+    const adders = dayAdders(date);
+    const long = date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+    return (
+      <section key={key} className={`week-day${key === todayKey ? ' is-today' : ''}${wide ? ' is-wide' : ''}`} aria-label={long}>
+        <header className="week-day-head">
+          <span className="week-day-name">
+            {key === todayKey && !wide ? t(messages, 'nav.group.today') : date.toLocaleDateString(locale, { weekday: wide ? 'long' : 'short' })}
+          </span>
+          <strong className="week-day-date">{date.toLocaleDateString(locale, { day: 'numeric', month: wide ? 'long' : 'numeric' })}</strong>
+          {key === todayKey && wide && <span className="week-day-today">{t(messages, 'nav.group.today')}</span>}
+          {adders.length > 0 && (
+            <details className="week-day-add">
+              <summary aria-label={t(messages, 'module.weekly_plan.add_to_day').replace('{day}', long)} title={t(messages, 'module.weekly_plan.add_to_day').replace('{day}', long)}>
+                <Plus size={15} aria-hidden="true" />
+              </summary>
+              <div className="week-day-add-menu">
+                {adders.map(([kind, Icon, labelKey, run]) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={(event) => {
+                      event.currentTarget.closest('details').open = false;
+                      run();
+                    }}
+                  >
+                    <Icon size={15} aria-hidden="true" /> {t(messages, labelKey)}
+                  </button>
+                ))}
+              </div>
+            </details>
+          )}
+        </header>
+        {items.length ? (
+          <ul className="week-day-items">
+            {items.map((item) => {
+              const Icon = SECTION_CONFIG.find((section) => section.key === item.kind).icon;
+              return (
+                <li key={item.id} className={`week-entry week-entry-${item.kind}`}>
+                  <button type="button" className="week-entry-open" onClick={item.onOpen}>
+                    <Icon size={14} aria-hidden="true" />
+                    <span className="week-entry-text">
+                      {item.meta && <span className="week-entry-meta">{item.meta}</span>}
+                      <span className="week-entry-title">{item.title}</span>
+                    </span>
+                  </button>
+                  {item.extra}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="week-day-free">{t(messages, 'module.weekly_plan.day_free')}</p>
+        )}
+      </section>
+    );
+  };
+  const memberChips = members.length > 1 && (
+    <div className="person-filter" role="group" aria-label={t(messages, 'module.weekly_plan.filter_member')}>
+      {[{ key: '', label: t(messages, 'module.weekly_plan.filter_all_members') }, ...members.map((member) => ({
+        key: String(member.user_id || member.id),
+        label: (member.display_name || member.name || '').split(' ')[0],
+        member,
+      }))].map((filter) => (
+        <button
+          key={filter.key || 'all'}
+          type="button"
+          className={`person-filter-chip${selectedMemberId === filter.key ? ' active' : ''}`}
+          aria-pressed={selectedMemberId === filter.key}
+          onClick={() => setSelectedMemberId(filter.key)}
+        >
+          {filter.member && <MemberAvatar member={filter.member} index={members.indexOf(filter.member)} size={22} />}
+          {filter.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <main
       ref={plannerRef}
-      className="weekly-plan-page print-surface ui-planner"
+      className="weekly-plan-page week-glance print-surface ui-planner"
       data-density={compact ? 'compact' : 'wide'}
     >
       <header className="list-header weekly-plan-header">
         <h1>{t(messages, 'module.weekly_plan.title')}</h1>
-        <strong className="weekly-plan-week-pill">
-          {formatWeekLabel(range, locale)}
-        </strong>
-      </header>
-
-      <div className="weekly-plan-toolbar no-print">
-        <button
-          type="button"
-          className="btn-secondary weekly-plan-back-btn"
-          onClick={() => setActiveView('dashboard')}
-        >
-          <ArrowLeft size={16} />{' '}
-          {t(messages, 'module.weekly_plan.back_dashboard')}
-        </button>
-        <div className="weekly-plan-nav">
-          <button
-            type="button"
-            className="btn-secondary weekly-plan-icon-btn"
-            onClick={() => setAnchor(addDays(anchor, -7))}
-            aria-label={t(messages, 'module.weekly_plan.previous_week')}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            type="button"
-            className="btn-secondary weekly-plan-today-btn"
-            onClick={() => setAnchor(new Date())}
-          >
-            {t(messages, 'module.weekly_plan.this_week')}
-          </button>
-          <button
-            type="button"
-            className="btn-secondary weekly-plan-icon-btn"
-            onClick={() => setAnchor(addDays(anchor, 7))}
-            aria-label={t(messages, 'module.weekly_plan.next_week')}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-        <button
-          type="button"
-          className="btn-primary weekly-plan-print-btn no-print"
-          onClick={() => window.print()}
-        >
-          <Printer size={16} /> {t(messages, 'module.weekly_plan.print')}
-        </button>
-      </div>
-
-      <fieldset
-        className="weekly-plan-filters no-print"
-        aria-label={t(messages, 'module.weekly_plan.filters')}
-      >
-        <label className="weekly-plan-member-filter">
-          <span>{t(messages, 'module.weekly_plan.filter_member')}</span>
-          <select
-            value={selectedMemberId}
-            onChange={(event) => setSelectedMemberId(event.target.value)}
-          >
-            <option value="">
-              {t(messages, 'module.weekly_plan.filter_all_members')}
-            </option>
-            {members.map((member) => (
-              <option
-                key={member.user_id || member.id}
-                value={member.user_id || member.id}
-              >
-                {member.display_name || member.name || member.email}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div
-          className="weekly-plan-section-filters"
-          aria-label={t(messages, 'module.weekly_plan.filter_sections')}
-        >
-          {SECTION_CONFIG.map((section) => (
-            <label key={section.key}>
-              <input
-                type="checkbox"
-                checked={visibleSections.has(section.key)}
-                onChange={() => toggleSection(section.key)}
-              />
-              <span>{t(messages, section.labelKey)}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <div className="weekly-plan-summary no-print">
-        {SECTION_CONFIG.map((section) => {
-          const Icon = section.icon;
-          return (
+        <div className="week-glance-nav">
+          <div className="weekly-plan-nav no-print">
             <button
               type="button"
-              key={section.key}
-              className={`weekly-plan-summary-card weekly-plan-summary-card-${section.key}${visibleSections.has(section.key) ? ' active' : ''}`}
-              onClick={() => toggleSection(section.key)}
-              aria-pressed={visibleSections.has(section.key)}
+              className="btn-secondary weekly-plan-icon-btn"
+              onClick={() => setAnchor(addDays(anchor, -7))}
+              aria-label={t(messages, 'module.weekly_plan.previous_week')}
             >
-              <span className="weekly-plan-summary-icon" aria-hidden="true">
-                <Icon size={18} />
-              </span>
-              <span className="weekly-plan-summary-label">
-                {t(messages, section.labelKey)}
-              </span>
-              <strong>{sections[section.key]?.length || 0}</strong>
+              <ChevronLeft size={16} />
             </button>
-          );
-        })}
+            <button type="button" className="btn-secondary weekly-plan-today-btn" onClick={() => setAnchor(new Date())}>
+              {t(messages, 'module.weekly_plan.this_week')}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary weekly-plan-icon-btn"
+              onClick={() => setAnchor(addDays(anchor, 7))}
+              aria-label={t(messages, 'module.weekly_plan.next_week')}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          <strong className="weekly-plan-week-pill">{formatWeekLabel(range, locale)}</strong>
+          <button
+            type="button"
+            className="btn-secondary weekly-plan-icon-btn weekly-plan-print-btn no-print"
+            onClick={() => window.print()}
+            aria-label={t(messages, 'module.weekly_plan.print')}
+            title={t(messages, 'module.weekly_plan.print')}
+          >
+            <Printer size={16} />
+          </button>
+        </div>
+      </header>
+
+      <div className="week-glance-filters no-print">
+        {memberChips}
+        <div className="week-glance-kinds" role="group" aria-label={t(messages, 'module.weekly_plan.filter_sections')}>
+          {SECTION_CONFIG.map((section) => {
+            const Icon = section.icon;
+            return (
+              <button
+                type="button"
+                key={section.key}
+                className={`week-kind-chip week-kind-chip-${section.key}${visibleSections.has(section.key) ? ' active' : ''}`}
+                onClick={() => toggleSection(section.key)}
+                aria-pressed={visibleSections.has(section.key)}
+              >
+                <Icon size={15} aria-hidden="true" />
+                {t(messages, section.labelKey)}
+                <strong>{sections[section.key]?.length || 0}</strong>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {compact && (
-        <div className="ui-weekly-compact">
-          <DayStrip
-            days={Array.from({ length: 7 }, (_, i) => addDays(range.start, i))}
-            selected={anchor}
-            onSelect={setAnchor}
-            locale={locale}
-            messages={messages}
-          />
-          <WeekPresentation
-            value={presentation}
-            onChange={setPresentation}
-            messages={messages}
-          />
-          <div className="ui-agenda">
-            {(presentation === 'all'
-              ? Array.from({ length: 7 }, (_, i) => addDays(range.start, i))
-              : [anchor]
-            ).map((date) => (
-              <AgendaDay
-                key={dateKey(date)}
-                date={date}
-                locale={locale}
-                messages={messages}
-                condensed={presentation === 'all'}
-              >
-                {SECTION_CONFIG.filter(
-                  (section) =>
-                    visibleSections.has(section.key) &&
-                    section.key !== 'shopping',
-                ).map((section) => {
-                  const entries = sections[section.key].filter((item) =>
-                    section.key === 'events'
-                      ? eventOccursOn(item, date)
-                      : normalizeDateOnly(
-                          section.key === 'tasks'
-                            ? taskDate(item)
-                            : section.key === 'meals'
-                              ? mealDate(item)
-                              : birthdayDate(item, range.start),
-                        ) === dateKey(date),
-                  );
-                  return entries.length ? (
-                    <Section
-                      key={section.key}
-                      sectionKey={section.key}
-                      title={t(messages, section.labelKey)}
-                      icon={section.icon}
-                      items={entries}
-                      emptyLabel=""
-                      renderItem={(item) => (
-                        <WeeklyPlanItem
-                          key={item.id || item.title}
-                          accent={section.key}
-                          title={
-                            item.title ||
-                            item.meal_name ||
-                            item.person_name ||
-                            item.name
-                          }
-                          meta={
-                            section.key === 'events'
-                              ? parseDate(eventDate(item))?.toLocaleTimeString(
-                                  locale,
-                                  timeOptions,
-                                )
-                              : slotLabel(item.slot)
-                          }
-                          onOpen={{
-                            events: () => openEvent(item),
-                            tasks: () => go('tasks'),
-                            meals: () => openMeal(item),
-                            birthdays: () => go('contacts', 'tribu_contacts_tab', 'birthdays'),
-                          }[section.key]}
-                          extra={section.key === 'meals' ? recipeLink(item) : null}
-                        />
-                      )}
-                    />
-                  ) : null;
-                })}
-              </AgendaDay>
-            ))}
+      {compact ? (
+        <div className="ui-weekly-compact no-print">
+          <DayStrip days={days} selected={anchor} onSelect={setAnchor} locale={locale} messages={messages} />
+          <WeekPresentation value={presentation} onChange={setPresentation} messages={messages} />
+          <div className="week-glance-days">
+            {(presentation === 'all' ? days : [anchor]).map((date) => dayColumn(date, { wide: true }))}
           </div>
-          {visibleSections.has('shopping') && (
-            <Section
-              sectionKey="shopping"
-              title={t(messages, 'module.weekly_plan.shopping')}
-              icon={ShoppingCart}
-              items={sections.shopping}
-              emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
-              renderItem={(item) => (
-                <WeeklyPlanItem
-                  key={item.id}
-                  accent="shopping"
-                  meta={t(messages, 'module.weekly_plan.shopping_open').replace('{count}', item.count)}
-                  title={item.title}
-                  onOpen={() => openList(item)}
-                />
-              )}
-            />
-          )}
         </div>
+      ) : (
+        <div className="week-board no-print">{days.map((date) => dayColumn(date))}</div>
       )}
-      <div className={`weekly-plan-grid ${compact ? 'ui-print-only' : ''}`}>
+
+      {visibleSections.has('shopping') && sections.shopping.length > 0 && (
+        <section className="week-glance-shopping no-print" aria-label={t(messages, 'module.weekly_plan.shopping')}>
+          <span className="week-glance-shopping-label">
+            <ShoppingCart size={15} aria-hidden="true" /> {t(messages, 'module.weekly_plan.shopping')}
+          </span>
+          {sections.shopping.map((list) => (
+            <button key={list.id} type="button" className="week-list-chip" onClick={() => openList(list)}>
+              {list.title}
+              <span>{t(messages, 'module.weekly_plan.shopping_open').replace('{count}', list.count)}</span>
+            </button>
+          ))}
+        </section>
+      )}
+
+      {/* Printing keeps the whole week per section. */}
+      <div className="weekly-plan-grid ui-print-only">
         {visibleSections.has('events') && (
           <Section
             sectionKey="events"
@@ -724,7 +716,6 @@ export default function WeeklyPlanView({
             icon={CalendarDays}
             items={sections.events}
             emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
-            {...addProps('events')}
             renderItem={(event) => (
               <WeeklyPlanItem
                 key={`event-${event.id || event.title}`}
@@ -743,7 +734,6 @@ export default function WeeklyPlanView({
             icon={ListChecks}
             items={sections.tasks}
             emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
-            {...addProps('tasks')}
             renderItem={(task) => (
               <WeeklyPlanItem
                 key={`task-${task.id || task.title}`}
@@ -765,7 +755,6 @@ export default function WeeklyPlanView({
             icon={Utensils}
             items={sections.meals}
             emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
-            {...addProps('meals')}
             renderItem={(meal) => (
               <WeeklyPlanItem
                 key={`meal-${meal.id || meal.meal_name}`}
@@ -803,7 +792,6 @@ export default function WeeklyPlanView({
             icon={ShoppingCart}
             items={sections.shopping}
             emptyLabel={t(messages, 'module.weekly_plan.empty_section')}
-            {...addProps('shopping')}
             renderItem={(item) => (
               <WeeklyPlanItem
                 key={`shopping-${item.id || item.title}`}
