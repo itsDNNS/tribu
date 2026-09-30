@@ -129,23 +129,23 @@ class TestGiftScopes:
         assert resp.status_code == 200
 
 
-class TestGiftAdultOnly:
-    def test_child_cannot_list(self):
+class TestGiftChildren:
+    def test_child_can_list(self):
         adult_token, family_id = _seed_adult("gifts:read", "d")
         child_token = _seed_child_in_family(family_id, "gifts:read")
         resp = client.get(f"/gifts?family_id={family_id}", headers=_auth(child_token))
-        assert resp.status_code == 403
-        assert "ADULT_REQUIRED" in str(resp.json())
+        assert resp.status_code == 200
 
-    def test_child_cannot_create(self):
+    def test_child_cannot_wish_for_someone_else(self):
         adult_token, family_id = _seed_adult("gifts:write", "e")
         child_token = _seed_child_in_family(family_id, "gifts:write")
         resp = client.post(
             "/gifts",
-            json={"family_id": family_id, "title": "Book"},
+            json={"family_id": family_id, "title": "Book", "kind": "wish", "for_person_name": "Oma"},
             headers=_auth(child_token),
         )
         assert resp.status_code == 403
+        assert "ADULT_REQUIRED" in str(resp.json())
 
 
 class TestGiftCrud:
@@ -348,9 +348,19 @@ class TestGiftRecipientExclusivity:
         child_user_id = child.id
         db.close()
 
-        conflict = client.patch(
+        # Naming a member replaces the name.
+        replaced = client.patch(
             f"/gifts/{gift_id}",
             json={"for_user_id": child_user_id},
+            headers=_auth(token),
+        )
+        assert replaced.status_code == 200
+        assert replaced.json()["for_user_id"] == child_user_id
+        assert replaced.json()["for_person_name"] is None
+
+        conflict = client.patch(
+            f"/gifts/{gift_id}",
+            json={"for_user_id": child_user_id, "for_person_name": "Oma"},
             headers=_auth(token),
         )
         assert conflict.status_code == 400

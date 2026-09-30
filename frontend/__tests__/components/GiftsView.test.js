@@ -1,169 +1,169 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import GiftsView from '../../components/GiftsView';
-import { handOff, peekHandOff } from '../../lib/handoff';
+import { handOff } from '../../lib/handoff';
+import { buildMessages } from '../../lib/i18n';
+import { isoDate } from '../../lib/gifts';
 
-jest.mock('../../contexts/ToastContext', () => ({
-  useToast: () => ({ success: jest.fn(), error: jest.fn() }),
-}));
+let mockApp;
+jest.mock('../../contexts/AppContext', () => ({ useApp: () => mockApp }));
+jest.mock('../../contexts/ToastContext', () => ({ useToast: () => ({ success: jest.fn(), error: jest.fn() }) }));
+jest.mock('../../lib/api');
+const api = require('../../lib/api');
 
-let mockAppState = {};
-jest.mock('../../contexts/AppContext', () => ({
-  useApp: () => mockAppState,
-}));
+const members = [
+  { user_id: 1, display_name: 'Dennis', is_adult: true },
+  { user_id: 2, display_name: 'Anna', is_adult: true },
+  { user_id: 3, display_name: 'Lena', is_adult: false },
+];
 
-const apiGetGifts = jest.fn();
-jest.mock('../../lib/api', () => ({
-  apiGetGifts: (...args) => apiGetGifts(...args),
-  apiCreateGift: jest.fn(),
-  apiUpdateGift: jest.fn(),
-  apiDeleteGift: jest.fn(),
-}));
+function inDays(days) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+  return isoDate(date);
+}
 
-const messages = {
-  'module.gifts.name': 'Geschenke',
-  'module.gifts.adult_only': 'Nur für Erwachsene.',
-  'module.gifts.demo_blocked': 'Im Demo nicht verfügbar.',
-  'module.gifts.add': 'Geschenk hinzufügen',
-  'module.gifts.edit_title': 'Geschenk bearbeiten',
-  'module.gifts.cancel': 'Abbrechen',
-  'module.gifts.title_placeholder': 'Was schenken?',
-  'module.gifts.empty_title': 'Sammle Geschenkideen',
-  'module.gifts.empty_body': 'Halte Ideen an einem Ort fest.',
-  'module.gifts.empty_chip_hint': 'Oder starte mit einem Anlass',
-  'module.gifts.filter_status': 'Nach Status filtern',
-  'module.gifts.filter_all_statuses': 'Alle Status',
-  'module.gifts.filter_recipient': 'Nach Empfänger filtern',
-  'module.gifts.filter_all_recipients': 'Alle Empfänger',
-  'module.gifts.filter_include_gifted': 'Verschenkte anzeigen',
-  'module.gifts.group_by_recipient': 'Nach Empfänger gruppieren',
-  'module.gifts.sort_aria': 'Sortierung',
-  'module.gifts.sort.created_desc': 'Neueste zuerst',
-  'module.gifts.sort.created_asc': 'Älteste zuerst',
-  'module.gifts.sort.occasion_date_asc': 'Nächster Anlass',
-  'module.gifts.sort.price_desc': 'Preis absteigend',
-  'module.gifts.sort.price_asc': 'Preis aufsteigend',
-  'module.gifts.sort.title_asc': 'Titel A-Z',
-  'module.gifts.occasion.birthday': 'Geburtstag',
-  'module.gifts.occasion.christmas': 'Weihnachten',
-  'module.gifts.occasion.easter': 'Ostern',
-  'module.gifts.status.idea': 'Idee',
-  'module.gifts.status.ordered': 'Bestellt',
-  'module.gifts.status.purchased': 'Gekauft',
-  'module.gifts.status.gifted': 'Verschenkt',
-  'module.gifts.status_aria': 'Status setzen',
-  'module.gifts.open_link': 'Produkt öffnen',
-  'module.gifts.edit_aria': 'Geschenk "{title}" bearbeiten',
-  'module.gifts.delete_aria': 'Geschenk "{title}" löschen',
-  'module.gifts.empty_filtered': 'Keine Geschenke passen zu diesen Filtern.',
-  'module.gifts.clear_filters': 'Filter zurücksetzen',
-};
-
-function baseState(overrides) {
+function gift(fields) {
   return {
-    familyId: '1',
-    families: [{ family_id: 1, family_name: 'Test' }],
-    members: [],
-    birthdays: [],
-    messages,
-    isChild: false,
-    demoMode: false,
-    ...overrides,
+    id: 1, family_id: 1, kind: 'idea', for_user_id: null, for_contact_id: null, for_person_name: null, title: 'Gift',
+    description: null, url: null, image: null, occasion: null, occasion_date: null, status: 'idea', notes: null,
+    current_price_cents: null, currency: 'EUR', gifted_at: null, claimed_by_user_id: null, claimed_at: null,
+    for_me: false, created_by_user_id: 1, created_at: '2026-09-01T10:00:00', updated_at: '2026-09-01T10:00:00',
+    ...fields,
   };
 }
 
-describe('GiftsView gating', () => {
-  beforeEach(() => {
-    apiGetGifts.mockReset();
-    apiGetGifts.mockResolvedValue({ ok: true, data: { items: [], total: 0 } });
+function occasion(fields) {
+  return {
+    key: 'birthday', occasion: 'birthday', date: inDays(6), days_until: 6, recipient_key: 'u:2', for_user_id: 2,
+    for_contact_id: null, person_name: 'Anna', turns: 39, for_me: false, gift_ids: [], gift_count: 0, claimed_count: 0,
+    purchased_count: 0, wish_count: 0, budget_cents: null, spent_cents: null, ...fields,
+  };
+}
+
+function setup({ gifts = [], occasions = [], me = members[0], isChild = false, demoMode = false } = {}) {
+  mockApp = {
+    messages: buildMessages('de'), lang: 'de', familyId: 1, me, members, contacts: [], birthdays: [], isChild, demoMode,
+  };
+  api.apiGetGifts.mockResolvedValue({ ok: true, data: { items: gifts, total: gifts.length } });
+  api.apiGetGiftOccasions.mockResolvedValue({ ok: true, data: { items: occasions } });
+}
+
+beforeEach(() => {
+  jest.resetAllMocks();
+  for (const fn of ['apiCreateGift', 'apiUpdateGift', 'apiDeleteGift', 'apiClaimGift', 'apiUnclaimGift', 'apiSetGiftBudget']) {
+    api[fn].mockResolvedValue({ ok: true, data: {} });
+  }
+});
+
+test('the next occasion leads, with what is planned and what is missing', async () => {
+  const necklace = gift({ id: 7, title: 'Kette', for_user_id: 2, occasion: 'birthday', current_price_cents: 4500 });
+  setup({ gifts: [necklace], occasions: [occasion({ gift_ids: [7], gift_count: 1, wish_count: 2 })] });
+  render(<GiftsView />);
+  const card = await screen.findByRole('region', { name: /Anna · Geburtstag/ });
+  expect(within(card).getByText('Noch nichts geplant')).toBeInTheDocument();
+  expect(within(card).getByText('2 offene Wünsche')).toBeInTheDocument();
+  expect(within(card).getByText('in 6 Tagen · wird 39')).toBeInTheDocument();
+  expect(within(card).getByText('Kette')).toBeInTheDocument();
+
+  fireEvent.click(within(card).getByRole('button', { name: /Ich kümmere mich/ }));
+  await waitFor(() => expect(api.apiClaimGift).toHaveBeenCalledWith(7));
+});
+
+test('someone else taking care shows who, and adults may set a budget', async () => {
+  const scarf = gift({ id: 8, title: 'Schal', for_user_id: 2, occasion: 'birthday', claimed_by_user_id: 3, status: 'purchased', current_price_cents: 3000 });
+  setup({ gifts: [scarf], occasions: [occasion({ gift_ids: [8], gift_count: 1, claimed_count: 1, purchased_count: 1, budget_cents: 5000, spent_cents: 3000 })] });
+  render(<GiftsView />);
+  const card = await screen.findByRole('region', { name: /Anna · Geburtstag/ });
+  expect(within(card).getByText('Lena kümmert sich')).toBeInTheDocument();
+  expect(within(card).getByText(/30 € von 50 € verplant/)).toBeInTheDocument();
+
+  fireEvent.click(within(card).getByRole('button', { name: 'Budget' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Budget für Anna' });
+  fireEvent.change(within(dialog).getByLabelText('Betrag'), { target: { value: '80' } });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+  await waitFor(() => expect(api.apiSetGiftBudget).toHaveBeenCalledWith({
+    family_id: 1, occasion: 'birthday', occasion_date: inDays(6), recipient_key: 'u:2', amount_cents: 8000,
+  }));
+});
+
+test('my own wishes show no hint of who takes care of them', async () => {
+  const wish = gift({ id: 9, kind: 'wish', title: 'Kopfhörer', for_user_id: 1, for_me: true });
+  setup({ gifts: [wish] });
+  render(<GiftsView />);
+  fireEvent.click(await screen.findByRole('tab', { name: /Meine Wünsche/ }));
+  expect(await screen.findByText('Kopfhörer')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Ich kümmere mich/ })).not.toBeInTheDocument();
+  expect(screen.getByText('Deine Wunschliste')).toBeInTheDocument();
+});
+
+test('a person page gathers their wishes and ideas', async () => {
+  setup({
+    gifts: [
+      gift({ id: 1, kind: 'wish', title: 'Malkasten', for_user_id: 3, created_by_user_id: 3 }),
+      gift({ id: 2, title: 'Roller', for_user_id: 3 }),
+    ],
   });
+  render(<GiftsView />);
+  fireEvent.click(await screen.findByRole('tab', { name: 'Personen' }));
+  fireEvent.click(await screen.findByRole('button', { name: /Lena/ }));
+  expect(await screen.findByRole('heading', { name: 'Lena' })).toBeInTheDocument();
+  expect(screen.getByText('Wünsche von Lena')).toBeInTheDocument();
+  expect(screen.getByText('Malkasten')).toBeInTheDocument();
+  expect(screen.getByText('Roller')).toBeInTheDocument();
+  expect(screen.getByText('Ideen hier bleiben vor Lena verborgen.')).toBeInTheDocument();
+});
 
-  test('renders the adult-only placeholder for children and does not fetch', async () => {
-    mockAppState = baseState({ isChild: true });
-    render(<GiftsView />);
-    expect(screen.getByText('Nur für Erwachsene.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Geschenk hinzufügen' })).not.toBeInTheDocument();
-    expect(apiGetGifts).not.toHaveBeenCalled();
+test('a product link fills in name, picture and price', async () => {
+  setup();
+  api.apiPreviewGiftLink.mockResolvedValue({ ok: true, data: { title: 'Holzeisenbahn', image: 'data:image/webp;base64,AAAA', price_cents: 4990, currency: 'EUR', site: 'toys.example' } });
+  api.apiCreateGift.mockResolvedValue({ ok: true, data: {} });
+  render(<GiftsView />);
+  fireEvent.click(await screen.findByRole('button', { name: /Idee notieren/ }));
+  const dialog = await screen.findByRole('dialog', { name: 'Neue Geschenkidee' });
+  fireEvent.change(within(dialog).getByLabelText('Link zum Produkt'), { target: { value: 'https://toys.example/train' } });
+  fireEvent.click(within(dialog).getByRole('button', { name: /Übernehmen/ }));
+  await waitFor(() => expect(within(dialog).getByLabelText('Geschenk')).toHaveValue('Holzeisenbahn'));
+  expect(within(dialog).getByLabelText('Preis')).toHaveValue(49.9);
+  expect(within(dialog).getByText('toys.example')).toBeInTheDocument();
+
+  fireEvent.click(within(dialog).getByRole('radio', { name: /Lena/ }));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Idee notieren' }));
+  await waitFor(() => expect(api.apiCreateGift).toHaveBeenCalled());
+  expect(api.apiCreateGift.mock.calls[0][0]).toMatchObject({
+    family_id: 1, kind: 'idea', title: 'Holzeisenbahn', for_user_id: 3, current_price_cents: 4990, url: 'https://toys.example/train',
+    image: 'data:image/webp;base64,AAAA',
   });
+});
 
-  test('renders the demo placeholder in demo mode and does not fetch', async () => {
-    mockAppState = baseState({ demoMode: true });
-    render(<GiftsView />);
-    expect(screen.getByText('Im Demo nicht verfügbar.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Geschenk hinzufügen' })).not.toBeInTheDocument();
-    expect(apiGetGifts).not.toHaveBeenCalled();
-  });
+test('children add wishes for themselves', async () => {
+  setup({ me: members[2], isChild: true });
+  render(<GiftsView />);
+  fireEvent.click(await screen.findByRole('button', { name: /Wunsch eintragen/ }));
+  const dialog = await screen.findByRole('dialog', { name: 'Neuer Wunsch' });
+  expect(within(dialog).queryByRole('radiogroup', { name: 'Empfänger' })).not.toBeInTheDocument();
+  fireEvent.change(within(dialog).getByLabelText('Geschenk'), { target: { value: 'Rollschuhe' } });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Wunsch eintragen' }));
+  await waitFor(() => expect(api.apiCreateGift).toHaveBeenCalled());
+  expect(api.apiCreateGift.mock.calls[0][0]).toMatchObject({ kind: 'wish', title: 'Rollschuhe', for_user_id: 3 });
+  expect(api.apiCreateGift.mock.calls[0][0]).not.toHaveProperty('notes');
+});
 
-  test('adult, non-demo user sees the add button and fetches once; dialog opens on click', async () => {
-    mockAppState = baseState();
-    render(<GiftsView />);
-    const addButton = screen.getByRole('button', { name: 'Geschenk hinzufügen' });
-    expect(addButton).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Was schenken?')).not.toBeInTheDocument();
-    await waitFor(() => expect(apiGetGifts).toHaveBeenCalledTimes(1));
+test('the family hub opens a new idea for a birthday', async () => {
+  setup();
+  act(() => { handOff('gifts_focus', { name: 'Anna', memberId: 2, date: inDays(6), add: true }); });
+  render(<GiftsView />);
+  const dialog = await screen.findByRole('dialog', { name: 'Neue Geschenkidee' });
+  expect(within(dialog).getByRole('radio', { name: /Anna/ })).toHaveAttribute('aria-checked', 'true');
+  expect(within(dialog).getByRole('radio', { name: 'Geburtstag' })).toHaveAttribute('aria-checked', 'true');
+});
 
-    fireEvent.click(addButton);
-    expect(screen.getByPlaceholderText('Was schenken?')).toBeInTheDocument();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-  });
-
-  test('opens a prefilled idea for a birthday from the family hub', async () => {
-    handOff('gifts_focus', { name: 'Opa Karl', memberId: null, date: '2026-10-06', add: true });
-    mockAppState = baseState();
-    render(<GiftsView />);
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Opa Karl')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('2026-10-06')).toBeInTheDocument();
-    expect(peekHandOff('gifts_focus')).toBeUndefined();
-  });
-
-  test('shows only the ideas for someone outside the family', async () => {
-    handOff('gifts_focus', { name: 'Opa Karl', memberId: null, date: '2026-10-06', add: false });
-    apiGetGifts.mockResolvedValue({
-      ok: true,
-      data: {
-        items: [
-          { id: 1, title: 'Gartenschere', status: 'idea', for_user_id: null, for_person_name: 'Opa Karl' },
-          { id: 2, title: 'Hörbuch', status: 'idea', for_user_id: null, for_person_name: 'Tante Eva' },
-        ],
-        total: 2,
-      },
-    });
-    mockAppState = baseState();
-    render(<GiftsView />);
-    expect(await screen.findByText('Gartenschere')).toBeInTheDocument();
-    expect(screen.queryByText('Hörbuch')).not.toBeInTheDocument();
-    expect(apiGetGifts).toHaveBeenLastCalledWith('1', expect.objectContaining({ forUserId: null }));
-  });
-
-  test('renders gift cards with the redesigned toolbar and status controls', async () => {
-    apiGetGifts.mockResolvedValueOnce({
-      ok: true,
-      data: {
-        items: [{
-          id: 5,
-          title: 'Buch fuer Oma',
-          description: 'Historischer Roman',
-          for_user_id: 2,
-          occasion: 'birthday',
-          occasion_date: '2026-05-20',
-          status: 'idea',
-          current_price_cents: 1899,
-          currency: 'EUR',
-        }],
-        total: 1,
-      },
-    });
-    mockAppState = baseState({
-      members: [{ user_id: 2, display_name: 'Oma' }],
-    });
-    const { container } = render(<GiftsView />);
-
-    await waitFor(() => expect(screen.getByText('Buch fuer Oma')).toBeInTheDocument());
-    expect(container.querySelector('.gift-page')).toBeInTheDocument();
-    expect(container.querySelector('.gift-toolbar')).toBeInTheDocument();
-    expect(container.querySelector('.gift-card-visual')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Idee' }).some((button) => button.getAttribute('aria-pressed') === 'true')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Alle Status' })).toHaveClass('active');
-  });
+test('the demo shows a family planning gifts without a server', async () => {
+  setup({ demoMode: true });
+  mockApp.birthdays = [{ id: 1, person_name: 'Helga Müller', month: 1, day: 1 }];
+  render(<GiftsView />);
+  fireEvent.click(await screen.findByRole('tab', { name: 'Personen' }));
+  expect(await screen.findByText('Anna')).toBeInTheDocument();
+  expect(api.apiGetGifts).not.toHaveBeenCalled();
 });

@@ -39,11 +39,12 @@ test.describe('Family hub', () => {
     await expect(birthdays).toContainText('Grandpa E2E');
     await expect(birthdays).toContainText('in 5 days');
     await birthdays.getByRole('button', { name: 'Note an idea' }).click();
-    const dialog = page.getByRole('dialog');
+    const dialog = page.getByRole('dialog', { name: 'New gift idea' });
     await expect(dialog).toBeVisible({ timeout: 10000 });
-    await expect(dialog.getByLabel('Or name (grandma, colleague...)')).toHaveValue('Grandpa E2E');
-    await dialog.getByPlaceholder('What should be gifted?').fill('Garden gloves');
-    await dialog.getByRole('button', { name: 'Add gift', exact: true }).click();
+    await expect(dialog.getByLabel('Someone else')).toHaveValue('Grandpa E2E');
+    await expect(dialog.getByRole('radio', { name: 'Birthday' })).toHaveAttribute('aria-checked', 'true');
+    await dialog.getByLabel('Gift', { exact: true }).fill('Garden gloves');
+    await dialog.getByRole('button', { name: 'Note an idea', exact: true }).click();
     await expect(dialog).toBeHidden({ timeout: 10000 });
 
     await navigateTo(page, 'Family');

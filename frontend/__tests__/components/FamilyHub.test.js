@@ -82,10 +82,16 @@ describe('FamilyHub', () => {
     expect(takeHandOff('gifts_focus')).toMatchObject({ name: 'Tante Eva', date: '2026-10-01', add: true });
   });
 
-  it('keeps gift ideas away from children', async () => {
+  it('takes children to the gifts too, where they see wishes', async () => {
     await renderHub({ isChild: true });
     const birthdays = screen.getByRole('region', { name: 'Geburtstage' });
     expect(within(birthdays).getByText('Opa Karl')).toBeInTheDocument();
+    expect(within(birthdays).getAllByRole('button').length).toBeGreaterThan(0);
+  });
+
+  it('leaves the gifts out when the family hides them', async () => {
+    await renderHub({ hiddenAreas: ['gifts'] });
+    const birthdays = screen.getByRole('region', { name: 'Geburtstage' });
     expect(within(birthdays).queryByRole('button')).not.toBeInTheDocument();
   });
 });

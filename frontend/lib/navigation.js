@@ -59,7 +59,7 @@ export const NAV_ITEM_META = {
   school_timetables: { icon: GraduationCap, labelKey: 'module.school_timetables.name', hideInDemo: true, adultOnly: true },
   recipes: { icon: BookOpen, labelKey: 'module.recipes.name', hideInDemo: true },
   rewards: { icon: Gift, labelKey: 'module.rewards.name' },
-  gifts: { icon: Sparkles, labelKey: 'module.gifts.name', adultOnly: true, hideInDemo: true },
+  gifts: { icon: Sparkles, labelKey: 'module.gifts.name' },
   contacts: { icon: BookUser, labelKey: 'contacts' },
   notifications: { icon: Bell, labelKey: 'notifications' },
   settings: { icon: Settings, labelKey: 'settings' },

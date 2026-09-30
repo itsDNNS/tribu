@@ -1314,7 +1314,7 @@ button.ui-date-label:hover {
     align-items: flex-end;
     padding: 0;
   }
-  :is(.gift-dialog, .recipe-dialog, .contact-modal-panel, .rewards-dialog) {
+  :is(.recipe-dialog, .contact-modal-panel, .rewards-dialog) {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -1324,14 +1324,13 @@ button.ui-date-label:hover {
     overflow: hidden;
   }
   :is(
-    .gift-dialog-header,
     .recipe-dialog-header,
     .contact-modal-panel .modal-header,
     .rewards-dialog-header
   ) {
     flex: none;
   }
-  :is(.gift-dialog, .recipe-dialog, .contact-modal-panel, .rewards-dialog) .ui-sheet-form {
+  :is(.recipe-dialog, .contact-modal-panel, .rewards-dialog) .ui-sheet-form {
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1368,8 +1367,7 @@ button.ui-date-label:hover {
     max-height: calc(var(--ui-viewport-height, 100dvh) - 12px);
     overflow: auto;
   }
-  .recipe-grid,
-  .gift-grid {
+  .recipe-grid {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
   }
 }
