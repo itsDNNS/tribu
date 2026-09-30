@@ -160,6 +160,7 @@ REWARD_GOAL_NOT_REACHED = "REWARD_GOAL_NOT_REACHED"
 REWARD_TRANSACTION_NOT_APPROVED = "REWARD_TRANSACTION_NOT_APPROVED"
 PRAISE_NOT_FOUND = "PRAISE_NOT_FOUND"
 PRAISE_SELF = "PRAISE_SELF"
+BIRTHDAY_FROM_PROFILE = "BIRTHDAY_FROM_PROFILE"
 
 
 _DEFAULT_MESSAGES: dict[str, str] = {
@@ -252,6 +253,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     REWARD_TRANSACTION_NOT_APPROVED: "Only an approved wish can be marked as given",
     PRAISE_NOT_FOUND: "Praise not found",
     PRAISE_SELF: "You cannot praise yourself",
+    BIRTHDAY_FROM_PROFILE: "This birthday comes from a family member's profile; change it there",
     GIFT_NOT_FOUND: "Gift not found",
     GIFT_RECIPIENT_NOT_FAMILY_MEMBER: "Gift recipient is not a family member",
     GIFT_RECIPIENT_CONFLICT: "Provide either a family member or an external recipient name, not both",

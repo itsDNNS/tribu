@@ -1755,6 +1755,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Kā pasniegtu var atzīmēt tikai apstiprinātu vēlmi",
   "error.PRAISE_NOT_FOUND": "Uzslava nav atrasta",
   "error.PRAISE_SELF": "Sevi uzslavēt nevar",
+  "error.BIRTHDAY_FROM_PROFILE": "Šī dzimšanas diena nāk no ģimenes locekļa profila. Maini to tur.",
   "module.shopping.show_overview": "Rādīt kategoriju pārskatu",
   "module.shopping.hide_overview": "Paslēpt kategoriju pārskatu",
   "module.shopping.undo": "Atsaukt",
@@ -2189,5 +2190,14 @@
   "module.contacts.select_hint": "Izvēlieties kontaktu, lai redzētu visu par to.",
   "module.contacts.back": "Visi kontakti",
   "module.contacts.no_match": "Neviens kontakts neatbilst.",
-  "module.contacts.import_merged": "Papildināti esošie: {count}"
+  "module.contacts.import_merged": "Papildināti esošie: {count}",
+  "module.contacts.reason_first_name": "Tas pats vārds",
+  "module.contacts.reason_birthday": "Tā pati dzimšanas diena",
+  "module.contacts.member_title": "Vai tas ir kāds no ģimenes?",
+  "module.contacts.member_hint": "“{contact}” izskatās pēc {member} no jūsu ģimenes. Sasaistītus Tribu rāda kā vienu personu ar vienu dzimšanas dienu.",
+  "module.contacts.member_link": "Sasaistīt",
+  "module.contacts.member_linked": "Ģimenes loceklis: {name}",
+  "module.contacts.member_unlink": "Atsaistīt",
+  "module.contacts.toast_linked": "Kontakts sasaistīts",
+  "module.contacts.toast_unlinked": "Saite noņemta"
 }

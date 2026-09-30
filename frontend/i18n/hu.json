@@ -1754,6 +1754,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Csak jóváhagyott kívánság jelölhető átadottnak",
   "error.PRAISE_NOT_FOUND": "A dicséret nem található",
   "error.PRAISE_SELF": "Magadat nem dicsérheted meg",
+  "error.BIRTHDAY_FROM_PROFILE": "Ez a születésnap egy családtag profiljából származik. Ott módosítsd.",
   "module.shopping.show_overview": "Kategóriaáttekintés megjelenítése",
   "module.shopping.hide_overview": "Kategóriaáttekintés elrejtése",
   "module.shopping.undo": "Visszavonás",
@@ -2187,5 +2188,14 @@
   "module.contacts.select_hint": "Válassz egy névjegyet, hogy mindent láss róla.",
   "module.contacts.back": "Összes névjegy",
   "module.contacts.no_match": "Nincs egyező névjegy.",
-  "module.contacts.import_merged": "Kiegészített meglévők: {count}"
+  "module.contacts.import_merged": "Kiegészített meglévők: {count}",
+  "module.contacts.reason_first_name": "Azonos keresztnév",
+  "module.contacts.reason_birthday": "Azonos születésnap",
+  "module.contacts.member_title": "Ez valaki a családból?",
+  "module.contacts.member_hint": "„{contact}” úgy tűnik, {member} a családotokból. Összekapcsolva a Tribu egy személyként mutatja őket, egy születésnappal.",
+  "module.contacts.member_link": "Összekapcsolás",
+  "module.contacts.member_linked": "Családtag: {name}",
+  "module.contacts.member_unlink": "Kapcsolat bontása",
+  "module.contacts.toast_linked": "Névjegy összekapcsolva",
+  "module.contacts.toast_unlinked": "Kapcsolat bontva"
 }

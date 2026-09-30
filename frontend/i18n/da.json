@@ -1759,6 +1759,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Kun et godkendt ønske kan markeres som givet",
   "error.PRAISE_NOT_FOUND": "Rosen blev ikke fundet",
   "error.PRAISE_SELF": "Du kan ikke rose dig selv",
+  "error.BIRTHDAY_FROM_PROFILE": "Denne fødselsdag kommer fra et familiemedlems profil. Ret den dér.",
   "module.shopping.show_overview": "Vis kategorioversigt",
   "module.shopping.hide_overview": "Skjul kategorioversigt",
   "module.shopping.undo": "Fortryd",
@@ -2198,5 +2199,14 @@
   "module.contacts.select_hint": "Vælg en kontakt for at se alt om den.",
   "module.contacts.back": "Alle kontakter",
   "module.contacts.no_match": "Ingen kontakt passer.",
-  "module.contacts.import_merged": "Eksisterende suppleret: {count}"
+  "module.contacts.import_merged": "Eksisterende suppleret: {count}",
+  "module.contacts.reason_first_name": "Samme fornavn",
+  "module.contacts.reason_birthday": "Samme fødselsdag",
+  "module.contacts.member_title": "Er det en fra familien?",
+  "module.contacts.member_hint": "»{contact}« ligner {member} fra jeres familie. Forbundet viser Tribu dem som én person med én fødselsdag.",
+  "module.contacts.member_link": "Forbind",
+  "module.contacts.member_linked": "Familiemedlem: {name}",
+  "module.contacts.member_unlink": "Fjern forbindelse",
+  "module.contacts.toast_linked": "Kontakt forbundet",
+  "module.contacts.toast_unlinked": "Forbindelse fjernet"
 }

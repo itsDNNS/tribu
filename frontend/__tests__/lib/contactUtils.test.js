@@ -53,4 +53,15 @@ describe('contact helpers', () => {
     const groups = groupByLetter([{ full_name: 'Özlem' }, { full_name: 'Otto' }, { full_name: '1 Plumber' }], 'de-DE');
     expect(groups.map(([letter, list]) => [letter, list.length])).toEqual([['#', 1], ['O', 2]]);
   });
+
+  it('shows a contact that is a family member once, with the member\'s birthday', () => {
+    const people = birthdayPeople({
+      contacts: [{ id: 9, full_name: 'Hannelore Müller', birthday_month: 3, birthday_day: 14, member_user_id: 5 }],
+      members: [{ user_id: 5, display_name: 'Hannelore', date_of_birth: '1950-03-14' }],
+    });
+    expect(people).toHaveLength(1);
+    expect(people[0]).toMatchObject({ key: 'member-5', name: 'Hannelore', year: 1950 });
+    expect(people[0].contact.id).toBe(9);
+  });
 });
+

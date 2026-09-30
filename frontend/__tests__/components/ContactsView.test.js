@@ -12,6 +12,7 @@ jest.mock('../../lib/api', () => ({
   apiGetContactDuplicates: jest.fn(),
   apiMergeContacts: jest.fn(),
   apiDismissContactDuplicates: jest.fn(),
+  apiLinkContactMember: jest.fn(),
   apiCreateContact: jest.fn(),
   apiUpdateContact: jest.fn(),
   apiDeleteContact: jest.fn(),
@@ -121,4 +122,20 @@ describe('ContactsView', () => {
     expect(screen.queryByRole('button', { name: 'Add contact' })).not.toBeInTheDocument();
     expect(api.apiGetContactDuplicates).not.toHaveBeenCalled();
   });
+
+  it('suggests linking a phone contact to the family member it is', async () => {
+    api.apiGetContactDuplicates.mockResolvedValue({
+      ok: true,
+      data: [{ contact_ids: [2], member_user_id: 12, reasons: ['birthday', 'first_name'] }],
+    });
+    api.apiLinkContactMember.mockResolvedValue({ ok: true, data: {} });
+    setup({ loadMembers: jest.fn() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Review' }));
+    const dialog = screen.getByRole('dialog', { name: 'Is this someone from the family?' });
+    expect(dialog).toHaveTextContent('“Grandma Ilse” looks like Mia from your family.');
+    expect(dialog).toHaveTextContent('Same first name');
+    fireEvent.click(within(dialog).getByRole('button', { name: /Link/ }));
+    await waitFor(() => expect(api.apiLinkContactMember).toHaveBeenCalledWith(2, 7, 12));
+  });
 });
+

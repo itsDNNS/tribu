@@ -3,11 +3,12 @@ from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session, joinedload, aliased
 
 from app.core import cache
+from app.core.contact_birthdays import sync_contact_birthday, sync_member_birthday
 from app.core.deps import current_user, ensure_adult, ensure_family_admin, ensure_family_membership
 from app.core.scopes import require_scope
 from app.core.utils import audit_log as _audit, is_instance_admin_user
 from app.database import get_db
-from app.models import AuditLog, Family, Membership, User
+from app.models import AuditLog, Contact, Family, FamilyBirthday, Membership, User
 from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyAreasResponse, FamilyAreasUpdate, FamilyMemberResponse, FamilyShoppingCategoriesResponse, FamilyShoppingCategoriesUpdate, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
 from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, UNKNOWN_AREAS, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN, PROFILE_IMAGE_UNREADABLE
@@ -325,8 +326,11 @@ def update_member_birthdate(
     if not membership:
         raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
     membership.date_of_birth = payload.date_of_birth
+    db.flush()
+    sync_member_birthday(db, family_id, target_user_id)
     db.commit()
     cache.invalidate(f"tribu:members:{family_id}")
+    cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")
     return {"status": "ok", "user_id": target_user_id, "date_of_birth": str(membership.date_of_birth) if membership.date_of_birth else None}
 
 
@@ -490,6 +494,19 @@ def remove_member(
            details={"display_name": display_name, "role": membership.role})
     db.delete(membership)
     db.flush()
+    # Their birthday leaves the list; contacts that were them stand alone again.
+    db.query(FamilyBirthday).filter(
+        FamilyBirthday.family_id == family_id, FamilyBirthday.member_user_id == target_user_id,
+    ).delete(synchronize_session=False)
+    linked = db.query(Contact).filter(Contact.family_id == family_id, Contact.member_user_id == target_user_id).all()
+    for contact in linked:
+        contact.member_user_id = None
+    db.flush()
+    for contact in linked:
+        sync_contact_birthday(
+            db, family_id, contact.id, contact.full_name,
+            contact.birthday_month, contact.birthday_day, contact.birthday_year,
+        )
 
     remaining = db.query(Membership).filter(Membership.user_id == target_user_id).count()
     user_deleted = False

@@ -1759,6 +1759,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Solo un deseo aprobado se puede marcar como entregado",
   "error.PRAISE_NOT_FOUND": "No se encontró el elogio",
   "error.PRAISE_SELF": "No puedes elogiarte a ti mismo",
+  "error.BIRTHDAY_FROM_PROFILE": "Este cumpleaños viene del perfil de un miembro de la familia. Cámbialo allí.",
   "module.shopping.show_overview": "Mostrar resumen de categorías",
   "module.shopping.hide_overview": "Ocultar resumen de categorías",
   "module.shopping.undo": "Deshacer",
@@ -2198,5 +2199,14 @@
   "module.contacts.select_hint": "Elige un contacto para ver todo sobre él.",
   "module.contacts.back": "Todos los contactos",
   "module.contacts.no_match": "Ningún contacto coincide.",
-  "module.contacts.import_merged": "Existentes completados: {count}"
+  "module.contacts.import_merged": "Existentes completados: {count}",
+  "module.contacts.reason_first_name": "Mismo nombre",
+  "module.contacts.reason_birthday": "Mismo cumpleaños",
+  "module.contacts.member_title": "¿Es alguien de la familia?",
+  "module.contacts.member_hint": "«{contact}» parece {member} de vuestra familia. Vinculados, Tribu los muestra como una sola persona con un solo cumpleaños.",
+  "module.contacts.member_link": "Vincular",
+  "module.contacts.member_linked": "Miembro de la familia: {name}",
+  "module.contacts.member_unlink": "Desvincular",
+  "module.contacts.toast_linked": "Contacto vinculado",
+  "module.contacts.toast_unlinked": "Vínculo eliminado"
 }

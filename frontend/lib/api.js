@@ -270,8 +270,12 @@ export function apiMergeContacts(family_id, keep_id, merge_ids) {
   return post('/contacts/merge', { family_id, keep_id, merge_ids });
 }
 
-export function apiDismissContactDuplicates(family_id, contact_ids) {
-  return post('/contacts/duplicates/dismiss', { family_id, contact_ids });
+export function apiDismissContactDuplicates(family_id, contact_ids, member_user_id = null) {
+  return post('/contacts/duplicates/dismiss', { family_id, contact_ids, member_user_id });
+}
+
+export function apiLinkContactMember(contactId, family_id, member_user_id) {
+  return post(`/contacts/${contactId}/member`, { family_id, member_user_id });
 }
 
 export function apiImportContactsCsv(family_id, csv_text) {

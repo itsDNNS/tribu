@@ -10,7 +10,7 @@ from app.database import get_db
 from app.core.contact_birthdays import sync_contact_birthday
 from app.models import Contact, FamilyBirthday, User
 from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, BirthdayCreate, BirthdayUpdate, BirthdayResponse
-from app.core.errors import error_detail, BIRTHDAY_NOT_FOUND, INVALID_MONTH, INVALID_DAY, INVALID_YEAR
+from app.core.errors import error_detail, BIRTHDAY_FROM_PROFILE, BIRTHDAY_NOT_FOUND, INVALID_MONTH, INVALID_DAY, INVALID_YEAR
 
 router = APIRouter(prefix="/birthdays", tags=["birthdays"], responses={**AUTH_RESPONSES})
 
@@ -25,6 +25,12 @@ def _contact_for(db: Session, birthday: FamilyBirthday):
     return db.query(Contact).filter(Contact.id == birthday.contact_id).first()
 
 _MIN_BIRTHDAY_YEAR = 1900
+
+
+def _refuse_member_birthday(birthday: FamilyBirthday) -> None:
+    # A member's birthday follows their profile.
+    if birthday.member_user_id is not None:
+        raise HTTPException(status_code=400, detail=error_detail(BIRTHDAY_FROM_PROFILE))
 
 
 def _validate_year(year):
@@ -116,6 +122,7 @@ def update_birthday(
     if not birthday:
         raise HTTPException(status_code=404, detail=error_detail(BIRTHDAY_NOT_FOUND))
     ensure_family_membership(db, user.id, birthday.family_id)
+    _refuse_member_birthday(birthday)
 
     if payload.person_name is not None:
         birthday.person_name = payload.person_name
@@ -164,6 +171,7 @@ def delete_birthday(
     if not birthday:
         raise HTTPException(status_code=404, detail=error_detail(BIRTHDAY_NOT_FOUND))
     ensure_family_membership(db, user.id, birthday.family_id)
+    _refuse_member_birthday(birthday)
 
     family_id = birthday.family_id
     contact = _contact_for(db, birthday)

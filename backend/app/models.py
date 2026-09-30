@@ -263,6 +263,9 @@ class FamilyBirthday(Base):
         nullable=True,
         index=True,
     )
+    # A family member's own birthday (their profile), kept here so the
+    # calendar, Today, displays, reminders and phones read one list.
+    member_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = (
@@ -354,6 +357,9 @@ class Contact(Base):
     # The year of birth when known; shows the age. Birthdays are part of
     # the contact, and family_birthdays follows it for the calendar.
     birthday_year = Column(Integer, nullable=True)
+    # The family member this contact is (the phone's "Hannelore Müller"
+    # for member "Hannelore"); their birthday then stands for both.
+    member_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(
         DateTime,
@@ -384,6 +390,19 @@ class Contact(Base):
         uselist=False,
         passive_deletes=True,
     )
+
+
+class ContactMemberDismissal(Base):
+    """A contact someone said is not this family member."""
+
+    __tablename__ = "contact_member_dismissals"
+    __table_args__ = (UniqueConstraint("contact_id", "member_user_id", name="uq_contact_member_dismissal"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    contact_id = Column(Integer, ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False)
+    member_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
 class ContactDuplicateDismissal(Base):

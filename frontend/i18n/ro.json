@@ -1762,6 +1762,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Doar o dorință aprobată poate fi marcată ca oferită",
   "error.PRAISE_NOT_FOUND": "Lauda nu a fost găsită",
   "error.PRAISE_SELF": "Nu te poți lăuda singur",
+  "error.BIRTHDAY_FROM_PROFILE": "Această zi de naștere vine din profilul unui membru al familiei. Modific-o acolo.",
   "module.shopping.show_overview": "Arată lista categoriilor",
   "module.shopping.hide_overview": "Ascunde lista categoriilor",
   "module.shopping.undo": "Anulează",
@@ -2197,5 +2198,14 @@
   "module.contacts.select_hint": "Alege un contact pentru a vedea totul despre el.",
   "module.contacts.back": "Toate contactele",
   "module.contacts.no_match": "Niciun contact nu se potrivește.",
-  "module.contacts.import_merged": "Existente completate: {count}"
+  "module.contacts.import_merged": "Existente completate: {count}",
+  "module.contacts.reason_first_name": "Același prenume",
+  "module.contacts.reason_birthday": "Aceeași zi de naștere",
+  "module.contacts.member_title": "E cineva din familie?",
+  "module.contacts.member_hint": "„{contact}” pare să fie {member} din familia voastră. Legați, Tribu îi arată ca o singură persoană cu o singură zi de naștere.",
+  "module.contacts.member_link": "Leagă",
+  "module.contacts.member_linked": "Membru al familiei: {name}",
+  "module.contacts.member_unlink": "Dezleagă",
+  "module.contacts.toast_linked": "Contact legat",
+  "module.contacts.toast_unlinked": "Legătură eliminată"
 }

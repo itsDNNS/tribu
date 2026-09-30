@@ -1755,6 +1755,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Tylko zatwierdzone życzenie można oznaczyć jako wręczone",
   "error.PRAISE_NOT_FOUND": "Nie znaleziono pochwały",
   "error.PRAISE_SELF": "Nie można pochwalić samego siebie",
+  "error.BIRTHDAY_FROM_PROFILE": "Te urodziny pochodzą z profilu członka rodziny. Zmień je tam.",
   "module.shopping.show_overview": "Pokaż przegląd kategorii",
   "module.shopping.hide_overview": "Ukryj przegląd kategorii",
   "module.shopping.undo": "Cofnij",
@@ -2189,5 +2190,14 @@
   "module.contacts.select_hint": "Wybierz kontakt, aby zobaczyć wszystko o nim.",
   "module.contacts.back": "Wszystkie kontakty",
   "module.contacts.no_match": "Żaden kontakt nie pasuje.",
-  "module.contacts.import_merged": "Uzupełnione istniejące: {count}"
+  "module.contacts.import_merged": "Uzupełnione istniejące: {count}",
+  "module.contacts.reason_first_name": "To samo imię",
+  "module.contacts.reason_birthday": "Te same urodziny",
+  "module.contacts.member_title": "Czy to ktoś z rodziny?",
+  "module.contacts.member_hint": "„{contact}” wygląda jak {member} z waszej rodziny. Po połączeniu Tribu pokazuje ich jako jedną osobę z jednymi urodzinami.",
+  "module.contacts.member_link": "Połącz",
+  "module.contacts.member_linked": "Członek rodziny: {name}",
+  "module.contacts.member_unlink": "Rozłącz",
+  "module.contacts.toast_linked": "Kontakt połączony",
+  "module.contacts.toast_unlinked": "Połączenie usunięte"
 }

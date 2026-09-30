@@ -1759,6 +1759,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Solo un desiderio approvato può essere segnato come consegnato",
   "error.PRAISE_NOT_FOUND": "Lode non trovata",
   "error.PRAISE_SELF": "Non puoi lodare te stesso",
+  "error.BIRTHDAY_FROM_PROFILE": "Questo compleanno viene dal profilo di un membro della famiglia. Modificalo lì.",
   "module.shopping.show_overview": "Mostra riepilogo categorie",
   "module.shopping.hide_overview": "Nascondi riepilogo categorie",
   "module.shopping.undo": "Annulla",
@@ -2198,5 +2199,14 @@
   "module.contacts.select_hint": "Scegli un contatto per vedere tutto su di lui.",
   "module.contacts.back": "Tutti i contatti",
   "module.contacts.no_match": "Nessun contatto corrisponde.",
-  "module.contacts.import_merged": "Esistenti completati: {count}"
+  "module.contacts.import_merged": "Esistenti completati: {count}",
+  "module.contacts.reason_first_name": "Stesso nome",
+  "module.contacts.reason_birthday": "Stesso compleanno",
+  "module.contacts.member_title": "È qualcuno della famiglia?",
+  "module.contacts.member_hint": "«{contact}» sembra {member} della vostra famiglia. Collegati, Tribu li mostra come una sola persona con un solo compleanno.",
+  "module.contacts.member_link": "Collega",
+  "module.contacts.member_linked": "Membro della famiglia: {name}",
+  "module.contacts.member_unlink": "Scollega",
+  "module.contacts.toast_linked": "Contatto collegato",
+  "module.contacts.toast_unlinked": "Collegamento rimosso"
 }

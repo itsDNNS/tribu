@@ -1757,6 +1757,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Antuks saab märkida ainult kinnitatud soovi",
   "error.PRAISE_NOT_FOUND": "Kiitust ei leitud",
   "error.PRAISE_SELF": "Iseennast kiita ei saa",
+  "error.BIRTHDAY_FROM_PROFILE": "See sünnipäev tuleb pereliikme profiilist. Muuda seda seal.",
   "module.shopping.show_overview": "Näita kategooriate ülevaadet",
   "module.shopping.hide_overview": "Peida kategooriate ülevaade",
   "module.shopping.undo": "Võta tagasi",
@@ -2191,5 +2192,14 @@
   "module.contacts.select_hint": "Valige kontakt, et näha selle kohta kõike.",
   "module.contacts.back": "Kõik kontaktid",
   "module.contacts.no_match": "Ükski kontakt ei sobi.",
-  "module.contacts.import_merged": "Olemasolevaid täiendatud: {count}"
+  "module.contacts.import_merged": "Olemasolevaid täiendatud: {count}",
+  "module.contacts.reason_first_name": "Sama eesnimi",
+  "module.contacts.reason_birthday": "Sama sünnipäev",
+  "module.contacts.member_title": "Kas see on keegi perest?",
+  "module.contacts.member_hint": "„{contact}“ paistab olevat {member} teie perest. Seotuna näitab Tribu neid ühe inimesena ühe sünnipäevaga.",
+  "module.contacts.member_link": "Seo",
+  "module.contacts.member_linked": "Pereliige: {name}",
+  "module.contacts.member_unlink": "Eemalda seos",
+  "module.contacts.toast_linked": "Kontakt seotud",
+  "module.contacts.toast_unlinked": "Seos eemaldatud"
 }

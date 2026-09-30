@@ -64,11 +64,17 @@ export function turningAge(year, month, day, now = new Date()) {
   return (thisYear < today ? now.getFullYear() + 1 : now.getFullYear()) - year;
 }
 
-// Everyone with a birthday: contacts, and members from their profiles.
+const MEMBER_BIRTH = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+
+// Everyone with a birthday: contacts, and members from their profiles. A
+// contact that is a member shows once, with the member's birthday.
 export function birthdayPeople({ contacts = [], members = [] }) {
   const people = [];
+  const withBirthday = new Set(members.filter((m) => MEMBER_BIRTH.test(String(m?.date_of_birth || ''))).map((m) => m.user_id));
+  const linked = new Map(contacts.filter((c) => c.member_user_id).map((c) => [c.member_user_id, c]));
   for (const contact of contacts) {
     if (!contact.birthday_month || !contact.birthday_day) continue;
+    if (contact.member_user_id && withBirthday.has(contact.member_user_id)) continue;
     people.push({
       key: `contact-${contact.id}`,
       contact,
@@ -79,11 +85,12 @@ export function birthdayPeople({ contacts = [], members = [] }) {
     });
   }
   for (const member of members) {
-    const match = String(member?.date_of_birth || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    const match = String(member?.date_of_birth || '').match(MEMBER_BIRTH);
     if (!match) continue;
     people.push({
       key: `member-${member.user_id}`,
       member,
+      contact: linked.get(member.user_id),
       name: member.display_name || '',
       month: Number(match[2]),
       day: Number(match[3]),

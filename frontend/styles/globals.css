@@ -1252,6 +1252,17 @@ button.contact-row:hover { background: var(--surface-soft); }
 .contact-duplicate-text strong { color: var(--text-primary); font-size: 0.95rem; }
 .contact-duplicate-source { font-size: 0.76rem; color: var(--text-muted); }
 .contact-duplicate-keep { flex: none; font-size: 0.74rem; font-weight: 800; color: var(--amethyst); }
+.contact-member-pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 8px; margin-bottom: 12px; }
+.contact-member-card { display: flex; align-items: flex-start; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 14px; }
+.contact-member-card.family { border-color: color-mix(in srgb, var(--amethyst) 35%, var(--border-subtle)); background: color-mix(in srgb, var(--amethyst) 6%, var(--surface-paper)); }
+.contact-member-link { align-self: center; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-soft); color: var(--text-secondary); }
+.contact-member-kind { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; font-weight: 700; color: var(--amethyst); }
+.contact-detail-member { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.78rem; font-weight: 700; color: var(--amethyst); }
+.contact-detail-unlink { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 2px 8px; font-size: 0.74rem; color: var(--text-secondary); }
+@media (max-width: 560px) {
+  .contact-member-pair { grid-template-columns: 1fr; }
+  .contact-member-link { justify-self: center; transform: rotate(90deg); }
+}
 .contacts-empty-hint { margin-top: var(--space-md); font-size: 0.82rem; color: var(--text-muted); max-width: 440px; line-height: 1.5; }
 .contacts-empty { padding: var(--space-xl); text-align: center; grid-column: 1 / -1; color: var(--text-muted); background: var(--surface-paper); border: 1px dashed var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-soft); }
 .contacts-empty-text { font-size: 0.95rem; }

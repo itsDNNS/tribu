@@ -1758,6 +1758,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Само одобрено желание може да се отбележи като дадено",
   "error.PRAISE_NOT_FOUND": "Похвалата не е намерена",
   "error.PRAISE_SELF": "Не можеш да похвалиш сам себе си",
+  "error.BIRTHDAY_FROM_PROFILE": "Този рожден ден идва от профила на член на семейството. Промени го там.",
   "module.shopping.show_overview": "Показване на категориите",
   "module.shopping.hide_overview": "Скриване на категориите",
   "module.shopping.undo": "Отмяна",
@@ -2193,5 +2194,14 @@
   "module.contacts.select_hint": "Изберете контакт, за да видите всичко за него.",
   "module.contacts.back": "Всички контакти",
   "module.contacts.no_match": "Няма съвпадащ контакт.",
-  "module.contacts.import_merged": "Допълнени съществуващи: {count}"
+  "module.contacts.import_merged": "Допълнени съществуващи: {count}",
+  "module.contacts.reason_first_name": "Същото име",
+  "module.contacts.reason_birthday": "Същия рожден ден",
+  "module.contacts.member_title": "Това някой от семейството ли е?",
+  "module.contacts.member_hint": "„{contact}“ изглежда като {member} от вашето семейство. Свързани, Tribu ги показва като един човек с един рожден ден.",
+  "module.contacts.member_link": "Свържи",
+  "module.contacts.member_linked": "Член на семейството: {name}",
+  "module.contacts.member_unlink": "Премахни връзката",
+  "module.contacts.toast_linked": "Контактът е свързан",
+  "module.contacts.toast_unlinked": "Връзката е премахната"
 }
