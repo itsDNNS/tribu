@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV var mainīt tikai nosaukumu, piezīmes, termiņu, prioritāti un pabeigšanu. Ģimene, atbildīgais, atlīdzības, izveidotājs, ID un atkārtošanās paliek tikai Tribu.",
   "phone_sync_task_unknown_fields": "Drošie papildu VTODO lauki un brīdinājumi tiek saglabāti. Termiņš tikai ar datumu nerāda pusnakti.",
   "phone_sync_task_recurrence": "Atkārtošanos pārvalda Tribu. RRULE netiek pieņemts vai izvadīts; katrs nākamais gadījums ir atsevišķs uzdevums.",
-  "phone_sync_limit_incremental": "Sinhronizācijas marķieri vēl nav ievēroti; klienti atgriežas pie pilnīgas atsvaidzināšanas katrā konfliktā. Izpildījums, nevis pareizība.",
+  "phone_sync_limit_event_fields": "Notikumi saglabā atgādinājumus, saites un citas ziņas, ko pievieno kalendāra lietotne. Tribu rāda nosaukumu, laiku, vietu, piezīmes un atkārtošanu.",
   "phone_sync_limit_fields": "Tribu modelē tikai katras kontaktpersonas vārdu, e-pasta adresi, tālruņa numuru un dzimšanas dienu. Visi papildu lauki (ORG, ADR, piezīmes utt.) ir neskarti turp un atpakaļ, bet neparādās Tribu lietotāja saskarnē.",
   "phone_sync_coexist_heading": "Tribu izmantošana kopā ar Apple, Google vai Outlook",
   "phone_sync_coexist_intro": "Tribu ir atsevišķs kalendāra konts, nevis sinhronizācijas tilts. Tas darbojas līdzās jūsu esošajiem kontiem, tāpēc katrs notikums pieder tieši vienam no tiem — izvēlieties to, kuru vēlaties rediģēt.",

@@ -150,6 +150,10 @@ class CalendarEvent(Base):
     # recurrence_id) identifies a VEVENT. Such rows carry no dav_href;
     # CalDAV serves them inside the series resource.
     recurrence_id = Column(DateTime, nullable=True)
+    # The VEVENT a DAV client last wrote, so what Tribu does not model
+    # (alarms, URL, transparency, the client's own categories) comes back
+    # on the next GET; Tribu's own fields always override it.
+    raw_vevent = Column(Text, nullable=True)
 
     # Provenance for non-local events so the UI can show where an event
     # came from and edits can be steered safely. ``source_type`` is one
@@ -311,6 +315,28 @@ class Task(Base):
     )
 
     family = relationship("Family", back_populates="tasks")
+
+
+class DavSyncSnapshot(Base):
+    """What a DAV collection held when a sync token was handed out.
+
+    ``state`` maps each resource href to its ETag. Comparing it with the
+    current state answers an incremental sync-collection REPORT: changed
+    and new hrefs, and hrefs that are gone (RFC 6578).
+    """
+
+    __tablename__ = "dav_sync_snapshots"
+
+    id = Column(Integer, primary_key=True)
+    collection_key = Column(String(120), nullable=False)
+    token = Column(String(64), nullable=False)
+    state = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("collection_key", "token", name="uq_dav_sync_snapshots_key_token"),
+        Index("ix_dav_sync_snapshots_key_created", "collection_key", "created_at"),
+    )
 
 
 class Contact(Base):

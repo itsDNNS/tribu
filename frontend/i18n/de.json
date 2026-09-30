@@ -136,7 +136,7 @@
   "phone_sync_task_fields": "DAV darf nur Titel, Notizen, Fälligkeitsdatum oder -zeit, Priorität und Abschluss ändern. Familie, Zuweisung, Belohnungen, Ersteller, IDs und Wiederholung bleiben Tribu vorbehalten.",
   "phone_sync_task_unknown_fields": "Sichere zusätzliche VTODO-Felder und Alarme bleiben erhalten. Reine Fälligkeitsdaten bleiben Datumswerte, statt Mitternacht anzuzeigen.",
   "phone_sync_task_recurrence": "Wiederholungen verwaltet weiterhin Tribu. RRULE wird weder akzeptiert noch ausgegeben; jedes nächste Vorkommen erscheint als eigene Aufgabe.",
-  "phone_sync_limit_incremental": "Sync-Token werden noch nicht ausgewertet; Clients machen periodisch einen vollständigen Refresh. Performance, nicht Korrektheit.",
+  "phone_sync_limit_event_fields": "Termine behalten Erinnerungen, Links und andere Angaben aus der Kalender-App. Tribu zeigt davon Titel, Zeit, Ort, Notizen und Wiederholung.",
   "phone_sync_limit_fields": "Tribu modelliert pro Kontakt nur Name, E-Mail, Telefon und Geburtstag. Weitere Felder (ORG, ADR, Notizen etc.) bleiben erhalten, erscheinen aber nicht in der Oberfläche.",
   "phone_sync_coexist_heading": "Tribu zusammen mit Apple, Google oder Outlook",
   "phone_sync_coexist_intro": "Tribu ist ein eigenes Kalenderkonto, keine Sync-Brücke. Es läuft parallel zu deinen bestehenden Konten – jeder Termin gehört genau einem davon. Wähle pro Kalender, wo du ihn pflegen willst.",

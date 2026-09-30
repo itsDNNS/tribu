@@ -21,6 +21,7 @@ from app.core.vtodo_utils import VTodoError, parse_vtodo, task_to_vtodo
 from app.database import SessionLocal
 from app.models import Membership, Task, User
 from .rights_plugin import current_user_id
+from .sync_snapshots import sync_changes
 
 
 TASK_PREFIX = "task-"
@@ -142,11 +143,10 @@ class TaskCollection(BaseCollection):
         return calendar.to_ical().decode("utf-8")
 
     def sync(self, old_token: str = ""):
-        if old_token:
-            raise ValueError("sync-token replay not supported until tombstones land")
-        with SessionLocal() as db:
-            hrefs = [task_href(row) for row in self._visible_query(db).all()]
-        return f"http://radicale.org/ns/sync/{self._ctag()}", hrefs
+        # Children see only their own tasks, so each person's view of the
+        # collection has its own snapshots.
+        state = {item.href: item.etag for item in self.get_all()}
+        return sync_changes(f"tasks:{self._family_id}:{current_user_id()}", state, old_token)
 
     def upload(self, href: str, item: "radicale_item.Item"):
         if not href or len(href) > 250:

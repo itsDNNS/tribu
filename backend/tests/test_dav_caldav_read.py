@@ -11,6 +11,7 @@ import base64
 import hashlib
 import logging
 import os
+import re
 import tempfile
 
 import pytest
@@ -843,3 +844,89 @@ class TestCalDAVChangedOccurrences:
 
         assert resp.status_code >= 400
         assert [r.title for r in self._rows(family_id)] == ["Choir", "Choir (moved)"]
+
+
+def _event_ics(uid: str, title: str, extra: str = "") -> str:
+    return (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
+        f"BEGIN:VEVENT\r\nUID:{uid}\r\nDTSTAMP:20260101T000000Z\r\n"
+        "DTSTART:20261020T100000\r\nDTEND:20261020T110000\r\n"
+        f"SUMMARY:{title}\r\n{extra}END:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+
+
+def _sync_report(client, path, auth, token=""):
+    body = (
+        '<sync-collection xmlns="DAV:">'
+        f"<sync-token>{token}</sync-token><sync-level>1</sync-level>"
+        "<prop><getetag/></prop></sync-collection>"
+    )
+    resp = client.request(
+        "REPORT", path, headers={**auth, "Depth": "1", "Content-Type": "application/xml"}, content=body
+    )
+    responses = re.findall(r"<response><href>([^<]*)</href>(.*?)</response>", resp.text, re.S)
+    changes = {href.rsplit("/", 1)[-1]: ("gone" if "404" in rest else "changed") for href, rest in responses}
+    new_token = re.search(r"<sync-token>([^<]*)</sync-token>", resp.text)
+    return resp.status_code, changes, new_token.group(1) if new_token else None
+
+
+class TestCalDAVIncrementalSync:
+    def test_a_sync_token_returns_only_what_changed(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token)}
+        collection = f"/dav/{EMAIL}/cal-{family_id}/"
+        put = {**auth, "Content-Type": "text/calendar"}
+        for uid in ("keep", "edit", "drop"):
+            assert client.put(f"{collection}sync-{uid}.ics", headers=put, content=_event_ics(f"sync-{uid}", uid)).status_code in (201, 204)
+
+        status, changes, first = _sync_report(client, collection, auth)
+        assert status == 207 and first
+        assert {"sync-keep.ics", "sync-edit.ics", "sync-drop.ics"} <= set(changes)
+
+        status, changes, same = _sync_report(client, collection, auth, first)
+        assert status == 207 and changes == {} and same == first
+
+        client.put(f"{collection}sync-edit.ics", headers=put, content=_event_ics("sync-edit", "edited"))
+        client.request("DELETE", f"{collection}sync-drop.ics", headers=auth)
+        client.put(f"{collection}sync-new.ics", headers=put, content=_event_ics("sync-new", "new"))
+        status, changes, _ = _sync_report(client, collection, auth, first)
+        assert status == 207
+        assert changes == {"sync-edit.ics": "changed", "sync-drop.ics": "gone", "sync-new.ics": "changed"}
+
+    def test_an_unknown_token_asks_for_a_full_sync(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token)}
+        status, _, _ = _sync_report(client, f"/dav/{EMAIL}/cal-{family_id}/", auth, "http://radicale.org/ns/sync/unknown")
+        assert status == 403
+
+
+class TestCalDAVKeepsClientProperties:
+    def test_alarms_and_links_survive_a_tribu_edit(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        auth = {"Authorization": _basic(EMAIL, token)}
+        path = f"/dav/{EMAIL}/cal-{family_id}/with-alarm.ics"
+        extra = (
+            "URL:https://example.com/course\r\nTRANSP:TRANSPARENT\r\n"
+            "X-TRIBU-COLOR:#ff0000\r\n"
+            "BEGIN:VALARM\r\nACTION:DISPLAY\r\nTRIGGER:-PT30M\r\nDESCRIPTION:Reminder\r\nEND:VALARM\r\n"
+        )
+        assert client.put(path, headers={**auth, "Content-Type": "text/calendar"}, content=_event_ics("with-alarm", "Course", extra)).status_code in (201, 204)
+
+        db = SessionLocal()
+        try:
+            row = db.query(CalendarEvent).filter(CalendarEvent.ical_uid == "with-alarm").one()
+            row.title = "Course (renamed in Tribu)"
+            db.commit()
+        finally:
+            db.close()
+
+        served = client.get(path, headers=auth).text
+        assert "SUMMARY:Course (renamed in Tribu)" in served
+        assert "BEGIN:VALARM" in served and "TRIGGER:-PT30M" in served
+        assert "URL:https://example.com/course" in served
+        assert "TRANSP:TRANSPARENT" in served
+        # Tribu's reserved properties never come from a client.
+        assert "#ff0000" not in served

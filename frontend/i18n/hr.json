@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV može mijenjati samo naslov, bilješke, rok, prioritet i dovršenost. Obitelj, zaduženje, nagrade, autor, identifikatori i ponavljanje ostaju samo u Tribu.",
   "phone_sync_task_unknown_fields": "Sigurna dodatna VTODO polja i alarmi ostaju sačuvani. Rok samo s datumom ne prikazuje ponoć.",
   "phone_sync_task_recurrence": "Ponavljanje vodi Tribu. RRULE se ne prihvaća niti šalje; svako sljedeće pojavljivanje zaseban je zadatak.",
-  "phone_sync_limit_incremental": "Tokeni sinkronizacije još nisu poštovani; klijenti se vraćaju na potpuno osvježavanje za svaki sukob. Izvedba, a ne ispravnost.",
+  "phone_sync_limit_event_fields": "Događaji zadržavaju podsjetnike, poveznice i druge pojedinosti koje dodaje aplikacija kalendara. Tribu prikazuje naslov, vrijeme, mjesto, bilješke i ponavljanje.",
   "phone_sync_limit_fields": "Tribu prikazuje samo ime modela, e-poštu, telefon i rođendan po kontaktu. Sva dodatna polja (ORG, ADR, bilješke, itd.) vraćaju se netaknuta, ali se ne pojavljuju u korisničkom sučelju Tribu.",
   "phone_sync_coexist_heading": "Korištenje Tribu uz Apple, Google ili Outlook",
   "phone_sync_coexist_intro": "Tribu je zasebni kalendarski račun, a ne most za sinkronizaciju. Pokreće se paralelno s vašim postojećim računima tako da je svaki događaj u vlasništvu točno jednog od njih — odaberite onaj s kojeg želite uređivati.",

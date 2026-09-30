@@ -29,6 +29,7 @@ from app.core.vcard_utils import contact_to_vcard, contacts_to_vcards, vcard_to_
 from app.database import SessionLocal
 from app.models import CalendarEvent, Contact, Family, Membership, User
 from .rights_plugin import current_scopes, current_user_id, current_user_login
+from .sync_snapshots import sync_changes
 from .task_collection import TASK_PREFIX, TaskCollection
 
 
@@ -255,24 +256,9 @@ class CalendarCollection(BaseCollection):
         return events_to_ics(events, calendar_name=self._family_name, member_names=member_names)
 
     def sync(self, old_token: str = "") -> Tuple[str, Iterable[str]]:
-        # Deletion tombstones are not tracked yet, so handing a client
-        # an old token and expecting it to ask only for the delta would
-        # let a deleted event linger in its cache forever. Phase D adds
-        # a tombstone journal; until then we reject non-empty tokens so
-        # Radicale returns ``valid-sync-token`` and the client re-runs
-        # the full enumeration.
-        if old_token:
-            raise ValueError("sync-token replay not supported until tombstones land")
-        with _db() as db:
-            rows = (
-                db.query(CalendarEvent)
-                .filter(CalendarEvent.family_id == self._family_id)
-                .order_by(CalendarEvent.id.asc())
-                .all()
-            )
-        hrefs = [_event_href(resource[0]) for resource in _group_resources(rows)]
-        token = f"http://radicale.org/ns/sync/{self._ctag()}"
-        return token, hrefs
+        # The resources as served now; an older token gets what changed.
+        state = {item.href: item.etag for item in self.get_all()}
+        return sync_changes(f"cal:{self._family_id}", state, old_token)
 
     # ── writes ────────────────────────────────────────────
 
@@ -290,7 +276,7 @@ class CalendarCollection(BaseCollection):
             raise ValueError("Unsupported calendar component; only VEVENT can be stored")
         ics_text = getattr(item, "text", None) or item.serialize()
         uid = getattr(item, "uid", None) or ""
-        valid, errors = ics_to_event_dicts(ics_text, self._family_id, current_user_id())
+        valid, errors = ics_to_event_dicts(ics_text, self._family_id, current_user_id(), keep_raw=True)
         if not valid:
             reason = errors[0]["error"] if errors else "no VEVENT"
             raise ValueError(f"VEVENT rejected: {reason}")
@@ -713,18 +699,8 @@ class AddressBookCollection(BaseCollection):
         return contacts_to_vcards(rows)
 
     def sync(self, old_token: str = "") -> Tuple[str, Iterable[str]]:
-        if old_token:
-            raise ValueError("sync-token replay not supported until tombstones land")
-        hrefs = []
-        with _db() as db:
-            rows = (
-                db.query(Contact)
-                .filter(Contact.family_id == self._family_id)
-                .all()
-            )
-        for c in rows:
-            hrefs.append(_contact_href(c))
-        return f"http://radicale.org/ns/sync/{self._ctag()}", hrefs
+        state = {item.href: item.etag for item in self.get_all()}
+        return sync_changes(f"book:{self._family_id}", state, old_token)
 
     def upload(self, href: str, item: "radicale_item.Item") -> Tuple["radicale_item.Item", Optional["radicale_item.Item"]]:
         vcard_text = getattr(item, "text", None) or item.serialize()
@@ -981,6 +957,7 @@ _MUTABLE_EVENT_FIELDS = (
     "recurrence_end",
     "recurrence_weekdays",
     "excluded_dates",
+    "raw_vevent",
 )
 
 # Copied from the series onto a changed occurrence created over DAV.

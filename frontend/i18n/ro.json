@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV poate schimba doar titlul, notițele, termenul, prioritatea și finalizarea. Familia, responsabilul, recompensele, creatorul, identificatorii și recurența rămân numai în Tribu.",
   "phone_sync_task_unknown_fields": "Câmpurile VTODO suplimentare sigure și alarmele se păstrează. Un termen fără oră nu afișează miezul nopții.",
   "phone_sync_task_recurrence": "Recurența este gestionată de Tribu. RRULE nu este acceptat sau emis; fiecare apariție următoare este o sarcină separată.",
-  "phone_sync_limit_incremental": "Jetoanele de sincronizare nu sunt încă onorate; clienții revin la o reîmprospătare completă la fiecare conflict. Performanță, nu corectitudine.",
+  "phone_sync_limit_event_fields": "Evenimentele păstrează alertele, linkurile și alte detalii adăugate de o aplicație de calendar. Tribu afișează titlul, ora, locul, notițele și repetarea.",
   "phone_sync_limit_fields": "Tribu numai numele modelului, e-mailul, telefonul și ziua de naștere per persoană de contact. Orice câmpuri suplimentare (ORG, ADR, note etc.) dus-întors intacte, dar nu apar în interfața de utilizare Tribu.",
   "phone_sync_coexist_heading": "Folosind Tribu alături de Apple, Google sau Outlook",
   "phone_sync_coexist_intro": "Tribu este un cont de calendar separat, nu o punte de sincronizare. Funcționează alături de conturile dvs. existente, astfel încât fiecare eveniment este deținut de exact unul dintre ele - alegeți-l pe cel din care doriți să editați.",

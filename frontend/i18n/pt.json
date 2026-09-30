@@ -114,7 +114,7 @@
   "phone_sync_task_fields": "O DAV só pode alterar título, notas, data ou hora limite, prioridade e conclusão. Família, responsável, recompensas, criador, identificadores e recorrência permanecem exclusivos do Tribu.",
   "phone_sync_task_unknown_fields": "Os campos VTODO adicionais seguros e os alarmes são preservados. Uma data limite sem hora não mostra meia-noite.",
   "phone_sync_task_recurrence": "A recorrência é gerida pelo Tribu. RRULE não é aceite nem emitido; cada ocorrência seguinte aparece como tarefa separada.",
-  "phone_sync_limit_incremental": "Os tokens de sincronização ainda não foram respeitados; os clientes recorrem a uma atualização completa em cada conflito. Desempenho, não correção.",
+  "phone_sync_limit_event_fields": "Os eventos mantêm alarmes, links e outros detalhes adicionados por um app de calendário. O Tribu mostra título, horário, local, notas e repetição.",
   "phone_sync_limit_fields": "Tribu modela apenas nome, e-mail, telefone e data de nascimento por contato. Quaisquer campos extras (ORG, ADR, notas, etc.) de ida e volta intactos, mas não aparecem na interface do usuário Tribu.",
   "phone_sync_coexist_heading": "Usando Tribu junto com Apple, Google ou Outlook",
   "phone_sync_coexist_intro": "Tribu é uma conta de calendário separada, não uma ponte de sincronização. Ele funciona lado a lado com suas contas existentes para que cada evento seja propriedade de exatamente uma delas – escolha aquela que você deseja editar.",

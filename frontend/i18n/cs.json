@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV může měnit jen název, poznámky, termín, prioritu a dokončení. Rodina, řešitel, odměny, autor, identifikátory a opakování zůstávají pouze v Tribu.",
   "phone_sync_task_unknown_fields": "Bezpečná doplňková pole VTODO a alarmy se zachovají. Termín pouze s datem nezobrazuje půlnoc.",
   "phone_sync_task_recurrence": "Opakování spravuje Tribu. RRULE se nepřijímá ani nevydává; každý další výskyt je samostatný úkol.",
-  "phone_sync_limit_incremental": "Synchronizační tokeny ještě nejsou respektovány; klienti se při každém konfliktu vrátí k úplnému obnovení. Výkon, ne korektnost.",
+  "phone_sync_limit_event_fields": "Události si ponechávají upozornění, odkazy a další údaje, které přidá kalendářová aplikace. Tribu z nich zobrazuje název, čas, místo, poznámky a opakování.",
   "phone_sync_limit_fields": "Tribu pouze u modelu jméno, e-mail, telefon a datum narození na kontakt. Jakákoli další pole (ORG, ADR, poznámky atd.) jsou pro zpáteční cestu nedotčená, ale nezobrazují se v uživatelském rozhraní Tribu.",
   "phone_sync_coexist_heading": "Používání Tribu společně s Apple, Google nebo Outlook",
   "phone_sync_coexist_intro": "Tribu je samostatný kalendářový účet, nikoli synchronizační most. Probíhá souběžně s vašimi stávajícími účty, takže každá událost je vlastněna přesně jedním z nich – vyberte ten, ze kterého chcete upravovat.",
