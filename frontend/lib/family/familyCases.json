@@ -74,6 +74,31 @@
           { "name": "Lena", "date": "2026-12-24", "daysUntil": 4, "memberId": 3, "giftIdeas": 1 }
         ]
       }
+    },
+    {
+      "name": "a chosen wish, a parent saving too, and a family goal left out",
+      "now": "2026-10-01T17:00:00",
+      "members": [
+        { "user_id": 1, "display_name": "Anna Braun", "is_adult": true, "date_of_birth": null },
+        { "user_id": 3, "display_name": "Lena Braun", "is_adult": false, "date_of_birth": null }
+      ],
+      "events": [],
+      "tasks": [],
+      "balances": [ { "user_id": 1, "balance": 6, "goal_reward_id": 1 }, { "user_id": 3, "balance": 5, "goal_reward_id": 2 } ],
+      "rewards": [
+        { "id": 1, "name": "Eis essen", "cost": 5, "is_active": true, "kind": "personal" },
+        { "id": 2, "name": "Kino", "cost": 20, "is_active": true, "kind": "personal" },
+        { "id": 3, "name": "Zoo", "cost": 3, "is_active": true, "kind": "family" }
+      ],
+      "birthdays": [],
+      "gifts": [],
+      "expected": {
+        "people": [
+          { "memberId": 1, "next": null, "later": 0, "openTasks": 0, "points": 6, "goal": { "name": "Eis essen", "cost": 5, "progress": 1, "reached": true } },
+          { "memberId": 3, "next": null, "later": 0, "openTasks": 0, "points": 5, "goal": { "name": "Kino", "cost": 20, "progress": 0.25, "reached": false } }
+        ],
+        "birthdays": []
+      }
     }
   ]
 }
