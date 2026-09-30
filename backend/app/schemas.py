@@ -1566,13 +1566,13 @@ class BaseUrlUpdate(BaseModel):
 class RewardCurrencyCreate(BaseModel):
     """Create the family reward currency."""
     family_id: int = Field(..., description="Family ID")
-    name: str = Field(min_length=1, max_length=50, description="Currency name (e.g. Stars, Coins)")
+    name: str = Field("", max_length=50, description="Currency name (e.g. Stars, Coins); empty for the reader's word for stars")
     icon: str = Field(default="star", pattern=r"^(star|gem|heart|zap|trophy)$", description="Lucide icon name")
 
 
 class RewardCurrencyUpdate(BaseModel):
     """Update reward currency."""
-    name: Optional[str] = Field(None, min_length=1, max_length=50, description="Currency name")
+    name: Optional[str] = Field(None, max_length=50, description="Currency name; empty for the reader's word for stars")
     icon: Optional[str] = Field(None, pattern=r"^(star|gem|heart|zap|trophy)$", description="Lucide icon name")
 
 
@@ -1591,14 +1591,14 @@ class EarningRuleCreate(BaseModel):
     family_id: int = Field(..., description="Family ID")
     currency_id: int = Field(..., description="Currency ID")
     name: str = Field(min_length=1, max_length=100, description="Activity name")
-    amount: int = Field(ge=1, le=10000, description="Tokens earned")
+    amount: int = Field(ge=0, le=10000, description="Stars that come with this praise; 0 for a plain thank-you")
     require_confirmation: bool = Field(True, description="Require adult confirmation")
 
 
 class EarningRuleUpdate(BaseModel):
     """Update an earning rule."""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
-    amount: Optional[int] = Field(None, ge=1, le=10000)
+    amount: Optional[int] = Field(None, ge=0, le=10000)
     require_confirmation: Optional[bool] = None
 
 
@@ -1620,7 +1620,8 @@ class RewardItemCreate(BaseModel):
     currency_id: int = Field(..., description="Currency ID")
     name: str = Field(min_length=1, max_length=100, description="Reward name")
     cost: int = Field(ge=1, le=100000, description="Token cost")
-    icon: Optional[str] = Field(None, max_length=10, description="Emoji icon")
+    icon: Optional[str] = Field(None, max_length=10, description="Icon name (gift, film, ...) or an emoji")
+    kind: str = Field("personal", pattern=r"^(personal|family)$", description="personal: bought from one's own stars; family: everyone puts stars in")
 
 
 class RewardItemUpdate(BaseModel):
@@ -1629,6 +1630,12 @@ class RewardItemUpdate(BaseModel):
     cost: Optional[int] = Field(None, ge=1, le=100000)
     icon: Optional[str] = Field(None, max_length=10)
     is_active: Optional[bool] = None
+
+
+class RewardContribution(BaseModel):
+    """What one member put into a family goal."""
+    user_id: int
+    amount: int
 
 
 class RewardItemResponse(BaseModel):
@@ -1641,6 +1648,42 @@ class RewardItemResponse(BaseModel):
     cost: int
     icon: Optional[str]
     is_active: bool
+    kind: str = "personal"
+    achieved_at: Optional[datetime] = None
+    progress: int = Field(0, description="Family goals: stars put in so far")
+    contributions: list[RewardContribution] = Field(default_factory=list, description="Family goals: stars per member")
+    created_at: datetime
+
+
+class RewardGoalSet(BaseModel):
+    """Choose the wish to save for, or none."""
+    family_id: int
+    reward_id: Optional[int] = Field(None, description="A personal wish from the catalog, or null to clear")
+
+
+class RewardGive(BaseModel):
+    """Put stars into a family goal."""
+    family_id: int
+    amount: int = Field(ge=1, le=10000)
+
+
+class PraiseCreate(BaseModel):
+    """Praise someone, with or without stars."""
+    family_id: int
+    to_user_id: int
+    message: str = Field(min_length=1, max_length=200)
+    amount: int = Field(0, ge=0, le=100, description="Stars that come with it; only adults can add stars")
+
+
+class PraiseResponse(BaseModel):
+    """A thank-you in the family."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    family_id: int
+    from_user_id: Optional[int]
+    to_user_id: int
+    message: str
+    amount: int
     created_at: datetime
 
 
@@ -1677,6 +1720,7 @@ class TokenTransactionResponse(BaseModel):
     source_rule_id: Optional[int]
     confirmed_by_user_id: Optional[int]
     confirmed_at: Optional[datetime]
+    fulfilled_at: Optional[datetime] = None
     created_at: datetime
 
 
@@ -1694,6 +1738,7 @@ class MemberBalance(BaseModel):
     display_name: str
     balance: int
     pending: int
+    goal_reward_id: Optional[int] = Field(None, description="The wish this member saves for")
 
 
 class BalancesResponse(BaseModel):

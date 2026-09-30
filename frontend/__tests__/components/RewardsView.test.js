@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import RewardsView from '../../components/RewardsView';
 
@@ -17,91 +17,88 @@ jest.mock('../../lib/i18n', () => ({
   t: (messages, key) => messages?.[key] || key,
 }));
 
-jest.mock('../../lib/api', () => ({
-  apiUpdateTask: jest.fn(() => Promise.resolve({ ok: true })),
-}));
-
 const messages = {
   'module.rewards.name': 'Belohnungen',
-  'module.rewards.view_all': 'Alle anzeigen',
-  'module.rewards.balance': 'Guthaben',
-  'module.rewards.pending': '{count} ausstehend',
-  'module.rewards.currency_setup': 'Belohnungs-Währung einrichten',
-  'module.rewards.earning_rules': 'Verdienst-Regeln',
-  'module.rewards.catalog': 'Belohnungskatalog',
-  'module.rewards.redeem': 'Einlösen',
-  'module.rewards.confirm': 'Bestätigen',
-  'module.rewards.reject': 'Ablehnen',
-  'module.rewards.earn_tokens': 'Tokens vergeben',
-  'module.rewards.earn_member': 'Mitglied',
-  'module.rewards.earn_amount': 'Anzahl',
-  'module.rewards.earn_note': 'Notiz (optional)',
-  'module.rewards.balances_title': 'Familien-Guthaben',
+  'module.rewards.stars': 'Sterne',
+  'module.rewards.praise': 'Loben',
+  'module.rewards.praise_title': 'Jemanden loben',
+  'module.rewards.praise_send': 'Lob senden',
+  'module.rewards.praise_for': 'Wofür?',
+  'module.rewards.praise_who': 'Wen?',
+  'module.rewards.praise_stars': '{currency} dazu (optional)',
+  'module.rewards.my_stars': 'Meine {currency}',
+  'module.rewards.my_goal': 'Mein Ziel',
   'module.rewards.tab_overview': 'Übersicht',
-  'module.rewards.tab_catalog': 'Katalog',
+  'module.rewards.tab_wishes': 'Wünsche',
   'module.rewards.tab_history': 'Verlauf',
-  'module.rewards.no_currency': 'Noch keine Belohnungs-Währung eingerichtet.',
-  'module.rewards.from_task': 'Aufgabe: {title}',
-  'module.rewards.tasks_with_reward': 'Aufgaben mit Belohnung',
-  'module.rewards.history_link': 'Verlauf anzeigen',
-  'module.rewards.earn_quick': 'Schnell vergeben',
-  'module.rewards.widget_pending': '{count} zur Bestätigung',
-  'module.rewards.progress_toward': 'Nächstes Ziel: {name}',
-  'module.rewards.progress_remaining': 'noch {count}',
-  'module.rewards.no_rules': 'Noch keine Verdienst-Regeln angelegt.',
-  'module.rewards.no_rewards': 'Noch keine Belohnungen im Katalog.',
-  'module.rewards.rule_name': 'Aktivität',
-  'module.rewards.rule_amount': 'Tokens',
-  'module.rewards.reward_name': 'Belohnungsname',
-  'module.rewards.reward_cost': 'Kosten',
-  'module.rewards.reward_icon': 'Symbol',
-  'module.rewards.add_rule': 'Regel hinzufügen',
-  'module.rewards.add_reward': 'Belohnung hinzufügen',
-  'module.rewards.transactions': 'Verlauf',
-  'module.rewards.txn_earn': 'Verdient',
-  'module.rewards.txn_redeem': 'Eingelöst',
+  'module.rewards.waiting_title': 'Wartet auf dich',
+  'module.rewards.waiting_wish': '{name} möchte: {wish}',
+  'module.rewards.waiting_give': 'Noch zu übergeben: {wish} für {name}',
+  'module.rewards.approve': 'Freigeben',
+  'module.rewards.reject': 'Ablehnen',
+  'module.rewards.mark_given': 'Übergeben',
+  'module.rewards.family_goal_count': '{progress} von {cost}',
+  'module.rewards.give_stars': 'Beisteuern',
+  'module.rewards.give': 'Dazulegen',
+  'module.rewards.give_title': 'Für „{goal}“ beisteuern',
+  'module.rewards.set_goal': 'Darauf sparen',
+  'module.rewards.is_goal': 'Mein Ziel',
+  'module.rewards.redeem': 'Einlösen',
+  'module.rewards.add_wish': 'Wunsch hinzufügen',
+  'module.rewards.wish_name': 'Wunsch',
+  'module.rewards.save': 'Speichern',
+  'module.rewards.txn_give': 'Fürs Familienziel',
   'module.rewards.txn_pending': 'Ausstehend',
-  'module.rewards.txn_confirmed': 'Bestätigt',
-  'module.rewards.txn_rejected': 'Abgelehnt',
-  'aria.delete_item': 'Delete item: {name}',
+  'cancel': 'Abbrechen',
 };
 
+const members = [
+  { user_id: 1, display_name: 'Dennis', is_adult: true },
+  { user_id: 2, display_name: 'Anna', is_adult: true },
+  { user_id: 3, display_name: 'Mia', is_adult: false },
+];
+
 function baseApp(overrides = {}) {
-  return {
-    messages,
-    members: [
-      { user_id: 1, display_name: 'Dennis', is_adult: true },
-      { user_id: 2, display_name: 'Mia', is_adult: false },
-    ],
-    me: { user_id: 1, display_name: 'Dennis' },
-    isChild: false,
-    tasks: [],
-    loadTasks: jest.fn(),
-    lang: 'de',
-    ...overrides,
-  };
+  return { messages, members, me: members[0], isChild: false, tasks: [], lang: 'de', ...overrides };
 }
+
+const catalog = [
+  { id: 1, name: 'Filmabend', cost: 6, kind: 'personal', is_active: true, icon: 'film' },
+  { id: 2, name: 'Eis essen', cost: 20, kind: 'personal', is_active: true, icon: 'icecream' },
+  { id: 9, name: 'Zoo', cost: 40, kind: 'family', is_active: true, icon: 'ferris', progress: 20, contributions: [{ user_id: 1, amount: 12 }, { user_id: 3, amount: 8 }] },
+];
 
 function baseRewards(overrides = {}) {
   return {
     loading: false,
-    currency: { id: 1, name: 'Sterne', icon: 'star' },
-    balances: [{ user_id: 2, display_name: 'Mia', balance: 8, pending: 1 }],
-    catalog: [{ id: 1, name: 'Filmabend', cost: 6, is_active: true }],
-    rules: [{ id: 2, name: 'Tisch decken', amount: 1 }],
-    transactions: [{ id: 3, user_id: 2, kind: 'earn', amount: 1, note: 'Zimmer', status: 'pending', created_at: '2026-05-13T10:00:00Z' }],
-    pendingTxns: [{ id: 3, user_id: 2, kind: 'earn', amount: 1, note: 'Zimmer', status: 'pending', created_at: '2026-05-13T10:00:00Z' }],
-    pendingCount: 1,
-    myBalance: null,
-    earnTokens: jest.fn(),
+    currency: { id: 1, name: '', icon: 'star' },
+    balances: [
+      { user_id: 1, display_name: 'Dennis', balance: 7, pending: 0, goal_reward_id: 1 },
+      { user_id: 3, display_name: 'Mia', balance: 3, pending: 0, goal_reward_id: 2 },
+    ],
+    catalog,
+    rules: [{ id: 5, name: 'Tisch gedeckt', amount: 1 }],
+    praise: [],
+    transactions: [
+      { id: 11, user_id: 3, kind: 'redeem', amount: 6, note: 'Filmabend', status: 'pending', source_reward_id: 1, created_at: '2026-09-30T10:00:00' },
+      { id: 12, user_id: 3, kind: 'redeem', amount: 5, note: 'Eis essen', status: 'confirmed', fulfilled_at: null, created_at: '2026-09-29T10:00:00' },
+      { id: 13, user_id: 1, kind: 'give', amount: 12, note: 'Zoo', status: 'confirmed', source_reward_id: 9, created_at: '2026-09-28T10:00:00' },
+    ],
+    myBalance: { user_id: 1, balance: 7, pending: 0, goal_reward_id: 1 },
+    sendPraise: jest.fn(() => Promise.resolve(true)),
+    deletePraise: jest.fn(),
+    setGoal: jest.fn(() => Promise.resolve(true)),
+    giveToGoal: jest.fn(() => Promise.resolve(true)),
+    achieveGoal: jest.fn(),
     redeem: jest.fn(),
     confirmTxn: jest.fn(),
     rejectTxn: jest.fn(),
+    fulfillTxn: jest.fn(),
     createRule: jest.fn(),
     deleteRule: jest.fn(),
-    createReward: jest.fn(),
+    saveReward: jest.fn(() => Promise.resolve(true)),
     deleteReward: jest.fn(),
-    createCurrency: jest.fn(),
+    updateCurrency: jest.fn(),
     ...overrides,
   };
 }
@@ -112,47 +109,83 @@ describe('RewardsView', () => {
     mockRewards = baseRewards();
   });
 
-  test('renders rewards as paper panels with balances and quick award', () => {
+  test('shows my stars and goal, with the stars named in the reader\'s language', () => {
     const { container } = render(<RewardsView />);
-
-    expect(container.querySelector('.rewards-page')).toBeInTheDocument();
-    expect(container.querySelectorAll('.rewards-panel').length).toBeGreaterThan(1);
-    expect(screen.getByRole('heading', { name: 'Belohnungen' })).toBeInTheDocument();
-    expect(screen.getByText('Familien-Guthaben')).toBeInTheDocument();
-    expect(screen.getByText('Schnell vergeben')).toBeInTheDocument();
-    expect(screen.getAllByText('Mia').length).toBeGreaterThan(0);
+    const hero = container.querySelector('.rewards-hero');
+    expect(within(hero).getByText('Meine Sterne')).toBeInTheDocument();
+    expect(within(hero).getByText('Filmabend')).toBeInTheDocument();
+    expect(within(hero).getByText('6 / 6')).toBeInTheDocument();
+    // Reached: the wish can be redeemed from here.
+    fireEvent.click(within(hero).getByRole('button', { name: /Einlösen/ }));
+    expect(mockRewards.redeem).toHaveBeenCalledWith(catalog[0]);
   });
 
-  test('quick award keeps the existing earn action', async () => {
+  test('grown-ups approve wishes and mark approved ones as given', () => {
     render(<RewardsView />);
-
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '2' } });
-    fireEvent.change(screen.getByLabelText('Anzahl'), { target: { value: '3' } });
-    fireEvent.change(screen.getByPlaceholderText('Notiz (optional)'), { target: { value: 'Danke' } });
-    fireEvent.click(screen.getByRole('button', { name: /Tokens vergeben/i }));
-
-    await waitFor(() => expect(mockRewards.earnTokens).toHaveBeenCalledWith(2, 3, 'Danke'));
+    const waiting = screen.getByRole('region', { name: 'Wartet auf dich' });
+    expect(within(waiting).getByText('Mia möchte: Filmabend')).toBeInTheDocument();
+    fireEvent.click(within(waiting).getByRole('button', { name: 'Freigeben' }));
+    expect(mockRewards.confirmTxn).toHaveBeenCalledWith(11);
+    fireEvent.click(within(waiting).getByRole('button', { name: /Übergeben/ }));
+    expect(mockRewards.fulfillTxn).toHaveBeenCalledWith(12);
   });
 
-  test('catalog creation preserves reward icon selection', async () => {
+  test('everyone puts stars into the family goal', async () => {
     render(<RewardsView />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Katalog' }));
-    fireEvent.change(screen.getByPlaceholderText('Belohnungsname'), { target: { value: 'Extra Geschichte' } });
-    fireEvent.change(screen.getByLabelText('Kosten'), { target: { value: '4' } });
-    fireEvent.change(screen.getByLabelText('Symbol'), { target: { value: 'heart' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Belohnung hinzufügen' }));
-
-    await waitFor(() => expect(mockRewards.createReward).toHaveBeenCalledWith('Extra Geschichte', 4, 'heart'));
+    const goal = screen.getByRole('region', { name: 'Zoo' });
+    expect(within(goal).getByText(/20 von 40/)).toBeInTheDocument();
+    expect(within(goal).getByRole('progressbar', { name: 'Zoo' })).toHaveAttribute('aria-valuenow', '20');
+    fireEvent.click(within(goal).getByRole('button', { name: /Beisteuern/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Für „Zoo“ beisteuern' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Dazulegen' }));
+    await waitFor(() => expect(mockRewards.giveToGoal).toHaveBeenCalledWith(catalog[2], 1));
   });
 
-  test('shows the calm currency setup state before rewards are configured', () => {
-    mockRewards = baseRewards({ currency: null, balances: [], catalog: [], rules: [], pendingTxns: [], pendingCount: 0 });
+  test('praise needs no stars, and grown-ups can add some', async () => {
+    render(<RewardsView />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Loben' })[0]);
+    const dialog = screen.getByRole('dialog', { name: 'Jemanden loben' });
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Mia/ }));
+    fireEvent.change(within(dialog).getByLabelText('Wofür?'), { target: { value: 'Danke fürs Helfen' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Lob senden' }));
+    await waitFor(() => expect(mockRewards.sendPraise).toHaveBeenCalledWith({ toUserId: 3, message: 'Danke fürs Helfen', amount: 0 }));
 
-    const { container } = render(<RewardsView />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Loben' })[0]);
+    const again = screen.getByRole('dialog', { name: 'Jemanden loben' });
+    fireEvent.click(within(again).getByRole('radio', { name: /Anna/ }));
+    fireEvent.click(within(again).getByRole('button', { name: /Tisch gedeckt/ }));
+    fireEvent.click(within(again).getByRole('button', { name: 'Lob senden' }));
+    await waitFor(() => expect(mockRewards.sendPraise).toHaveBeenLastCalledWith({ toUserId: 2, message: 'Tisch gedeckt', amount: 1 }));
+  });
 
-    expect(screen.getByText('Belohnungs-Währung einrichten')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Stars/i })).toBeInTheDocument();
-    expect(container.querySelector('.rewards-setup')).toBeInTheDocument();
+  test('children praise without stars and do not see the grown-ups\' queue', () => {
+    mockAppState = baseApp({ me: members[2], isChild: true });
+    mockRewards = baseRewards({ myBalance: { user_id: 3, balance: 3, pending: 0, goal_reward_id: 2 }, balances: [{ user_id: 3, display_name: 'Mia', balance: 3, pending: 0, goal_reward_id: 2 }] });
+    render(<RewardsView />);
+    expect(screen.queryByRole('region', { name: 'Wartet auf dich' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Loben' })[0]);
+    const dialog = screen.getByRole('dialog', { name: 'Jemanden loben' });
+    expect(within(dialog).queryByText('Sterne dazu (optional)')).not.toBeInTheDocument();
+  });
+
+  test('wishes can become my goal, and grown-ups add new ones', async () => {
+    render(<RewardsView />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Wünsche' }));
+    const toggles = screen.getAllByRole('button', { name: /Darauf sparen|Mein Ziel/ });
+    fireEvent.click(toggles[1]);
+    expect(mockRewards.setGoal).toHaveBeenCalledWith(2);
+
+    fireEvent.click(screen.getByRole('button', { name: /Wunsch hinzufügen/ }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Wunsch'), { target: { value: 'Neues Buch' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(mockRewards.saveReward).toHaveBeenCalledWith(undefined, { name: 'Neues Buch', cost: 10, icon: 'gift', kind: 'personal' }));
+  });
+
+  test('the history tells stars for the family goal apart', () => {
+    render(<RewardsView />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Verlauf' }));
+    expect(screen.getByText('Dennis · Fürs Familienziel')).toBeInTheDocument();
+    expect(screen.getByText('Ausstehend')).toBeInTheDocument();
   });
 });

@@ -1,85 +1,51 @@
 import { useState } from 'react';
-import { Plus, Star, Check, X, Award, ArrowUpCircle, ArrowDownCircle, Gem, Zap, Heart, Trophy, Clock, CheckSquare } from 'lucide-react';
+import {
+  Check, CheckSquare, Gift, HandHeart, Heart, Hourglass, PartyPopper, Pencil, Plus,
+  Settings2, Star, Target, Trash2, Users, X,
+} from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useRewards } from '../hooks/useRewards';
 import { CurrencyIcon } from '../lib/currency-icons';
+import { localeForLang } from '../lib/dates';
+import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { getMemberColor } from '../lib/member-colors';
-import { nextGoal } from '../lib/family/buildFamily';
-import { parseServerInstant } from '../lib/helpers';
+import {
+  achievedFamilyGoals, currencyName, familyGoalProgress, goalFor, groupByDay,
+  openFamilyGoals, personalWishes, transactionSign, waitingForAdults,
+} from '../lib/rewards';
 import MemberAvatar from './MemberAvatar';
-import * as api from '../lib/api';
+import { GiveDialog, PraiseDialog, StarsDialog, WishDialog } from './rewards/dialogs';
+import { Progress, SectionTitle, Stars, WishIcon } from './rewards/parts';
 
-const CURRENCY_PRESETS = [
-  { name: 'Stars', icon: 'star', Icon: Star },
-  { name: 'Gems', icon: 'gem', Icon: Gem },
-  { name: 'Hearts', icon: 'heart', Icon: Heart },
-  { name: 'Bolts', icon: 'zap', Icon: Zap },
-  { name: 'Trophies', icon: 'trophy', Icon: Trophy },
-];
-
-function RewardAmount({ currency, amount, sign = '' }) {
-  return (
-    <span className="rewards-amount">
-      {sign}{amount} <CurrencyIcon icon={currency.icon} label={currency.name} />
-    </span>
-  );
+function firstName(member) {
+  return (member?.display_name || '').split(' ')[0] || '';
 }
 
-function RewardsPageHeader({ messages, currency }) {
-  return (
-    <header className="list-header">
-      <h1>{t(messages, 'module.rewards.name')}</h1>
-      {currency && (
-        <span className="rewards-header-currency">
-          <CurrencyIcon icon={currency.icon} label={currency.name} /> {currency.name}
-        </span>
-      )}
-    </header>
-  );
-}
-
-function RewardsPanel({ title, children, className = '', action }) {
-  return (
-    <section className={`rewards-panel${className ? ` ${className}` : ''}`}>
-      <div className="rewards-panel-header">
-        <h2 className="rewards-section-title">{title}</h2>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function RewardRowIcon({ children, tone = 'neutral' }) {
-  return <span className={`rewards-row-icon rewards-row-icon-${tone}`} aria-hidden="true">{children}</span>;
-}
-
+/**
+ * Rewards around goals: everyone collects stars (grown-ups too), saves for
+ * a wish of their own and puts stars into goals the family reaches
+ * together. Praise needs no stars; a thank-you counts on its own.
+ */
 export default function RewardsView() {
-  const { messages, members, me, isChild, tasks, loadTasks, lang, demoMode } = useApp();
+  const { messages, members = [], me, isChild, tasks, lang } = useApp();
   const rw = useRewards();
-
   const [tab, setTab] = useState('overview');
-  const [creatingCurrency, setCreatingCurrency] = useState(false);
-  const [ruleName, setRuleName] = useState('');
-  const [ruleAmount, setRuleAmount] = useState(1);
-  const [rewardName, setRewardName] = useState('');
-  const [rewardCost, setRewardCost] = useState(5);
-  const [rewardIcon, setRewardIcon] = useState('');
-  const [earnUserId, setEarnUserId] = useState('');
-  const [earnAmount, setEarnAmount] = useState(1);
-  const [earnNote, setEarnNote] = useState('');
-  const [confirmingTask, setConfirmingTask] = useState(null);
-  const [confirmAmount, setConfirmAmount] = useState(1);
-
-  const rewardTasks = (tasks || []).filter((task) => task.status === 'open' && task.token_reward_amount > 0);
-  const activeCatalog = rw.catalog.filter((reward) => reward.is_active);
+  const [dialog, setDialog] = useState(null);
+  const locale = localeForLang(lang);
+  const isAdult = !isChild;
+  const starsName = currencyName(rw.currency, messages);
+  const memberById = new Map(members.map((member) => [member.user_id, member]));
+  const indexOf = (member) => Math.max(0, members.indexOf(member));
+  const colorOf = (member) => (member ? getMemberColor(member, indexOf(member)) : 'var(--accent-amber)');
+  const waiting = isAdult ? waitingForAdults(rw.transactions) : { wishes: [], earnings: [], toGive: [], count: 0 };
+  const stars = (amount, sign = '') => <Stars currency={rw.currency} name={starsName} amount={amount} sign={sign} />;
 
   if (rw.loading) {
     return (
       <div className="rewards-page">
-        <RewardsPageHeader messages={messages} />
-        <section className="rewards-panel">
+        <header className="list-header"><h1>{t(messages, 'module.rewards.name')}</h1></header>
+        <section className="rewards-card">
           <div className="skeleton skeleton-text rewards-widget-skeleton-line" />
           <div className="skeleton skeleton-text rewards-widget-skeleton-line short" />
         </section>
@@ -87,365 +53,634 @@ export default function RewardsView() {
     );
   }
 
-  async function handleEarnForTask() {
-    if (!confirmingTask || !rw.currency) return;
-    if (!demoMode) {
-      const { ok } = await api.apiUpdateTask(confirmingTask.id, { status: 'done' });
-      if (!ok) return;
-    }
-    const note = t(messages, 'module.rewards.from_task').replace('{title}', confirmingTask.title);
-    await rw.earnTokens(confirmingTask.assigned_to_user_id || me?.user_id, confirmAmount, note);
-    setConfirmingTask(null);
-    if (loadTasks) await loadTasks();
-  }
-
-  async function handleEarn(e) {
-    e.preventDefault();
-    if (!earnUserId) return;
-    await rw.earnTokens(Number(earnUserId), earnAmount, earnNote);
-    setEarnUserId('');
-    setEarnAmount(1);
-    setEarnNote('');
-  }
-
-  if (!rw.currency && !isChild) {
-    return (
-      <div className="rewards-page rewards-page-setup">
-        <RewardsPageHeader messages={messages} />
-        <section className="rewards-panel rewards-setup">
-          <div className="rewards-panel-header">
-            <h2 className="rewards-section-title">{t(messages, 'module.rewards.currency_setup')}</h2>
-          </div>
-          <div className="rewards-setup-grid">
-            {CURRENCY_PRESETS.map((preset) => {
-              const PresetIcon = preset.Icon;
-              return (
-                <button
-                  key={preset.name}
-                  className="rewards-setup-option"
-                  type="button"
-                  disabled={creatingCurrency}
-                  onClick={async () => {
-                    if (creatingCurrency) return;
-                    setCreatingCurrency(true);
-                    await rw.createCurrency(preset.name, preset.icon);
-                    setCreatingCurrency(false);
-                  }}
-                >
-                  <RewardRowIcon tone={preset.icon}>
-                    <PresetIcon size={20} />
-                  </RewardRowIcon>
-                  <span className="rewards-setup-option-name">{preset.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      </div>
-    );
-  }
-
-  if (!rw.currency && isChild) {
-    return (
-      <div className="rewards-page">
-        <RewardsPageHeader messages={messages} />
-        <div className="rewards-empty">{t(messages, 'module.rewards.no_currency')}</div>
-      </div>
-    );
-  }
-
-  if (isChild) {
-    const myTasks = rewardTasks.filter((task) => task.assigned_to_user_id === me?.user_id);
-    const target = activeCatalog
-      .filter((reward) => !rw.myBalance || rw.myBalance.balance < reward.cost)
-      .sort((a, b) => a.cost - b.cost)[0];
-    const progress = target && rw.myBalance ? Math.min(100, Math.round((rw.myBalance.balance / target.cost) * 100)) : 0;
-    const remaining = target && rw.myBalance ? Math.max(0, target.cost - rw.myBalance.balance) : 0;
-
-    return (
-      <div className="rewards-page rewards-child-page">
-        <RewardsPageHeader messages={messages} currency={rw.currency} />
-        {rw.myBalance && (
-          <section className="rewards-hero rewards-panel">
-            <div className="rewards-hero-value">
-              <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {rw.myBalance.balance}
-            </div>
-            <div className="rewards-hero-label">{rw.currency.name}</div>
-            {rw.myBalance.pending > 0 && <div className="rewards-hero-pending">{t(messages, 'module.rewards.pending').replace('{count}', rw.myBalance.pending)}</div>}
-          </section>
-        )}
-
-        {target && rw.myBalance && (
-          <section className="rewards-progress rewards-panel">
-            <div className="rewards-progress-label">
-              {t(messages, 'module.rewards.progress_toward').replace('{name}', target.name)}
-            </div>
-            <div className="rewards-progress-bar">
-              <span className="rewards-progress-fill" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="rewards-progress-info">
-              <span><RewardAmount currency={rw.currency} amount={`${rw.myBalance.balance} / ${target.cost}`} /></span>
-              <span>{t(messages, 'module.rewards.progress_remaining').replace('{count}', remaining)}</span>
-            </div>
-          </section>
-        )}
-
-        {myTasks.length > 0 && (
-          <RewardsPanel title={t(messages, 'module.rewards.tasks_with_reward')}>
-            <div className="rewards-list">
-              {myTasks.map((task) => (
-                <div key={task.id} className="rewards-row rewards-row-task">
-                  <RewardRowIcon tone="task"><CheckSquare size={16} /></RewardRowIcon>
-                  <span className="rewards-row-title">{task.title}</span>
-                  <RewardAmount currency={rw.currency} amount={task.token_reward_amount} sign="+" />
-                </div>
-              ))}
-            </div>
-          </RewardsPanel>
-        )}
-
-        <RewardsPanel title={t(messages, 'module.rewards.catalog')}>
-          {activeCatalog.length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rewards')}</div>}
-          <div className="rewards-catalog-grid">
-            {activeCatalog.map((reward) => {
-              const canAfford = rw.myBalance && rw.myBalance.balance >= reward.cost;
-              return (
-                <div key={reward.id} className={`rewards-catalog-card${canAfford ? '' : ' rewards-catalog-card-locked'}`}>
-                  <RewardRowIcon tone="spend"><Award size={18} /></RewardRowIcon>
-                  <div className="rewards-row-title">
-                    <div className="rewards-balance-card-name">{reward.name}</div>
-                    <div className="rewards-row-meta"><RewardAmount currency={rw.currency} amount={reward.cost} /></div>
-                  </div>
-                  <button className="btn-sm" type="button" disabled={!canAfford} onClick={() => rw.redeem(reward)}>
-                    {t(messages, 'module.rewards.redeem')}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </RewardsPanel>
-      </div>
-    );
-  }
+  const openPraise = (to) => setDialog({ type: 'praise', to });
+  const tabs = [
+    ['overview', t(messages, 'module.rewards.tab_overview'), waiting.count],
+    ['wishes', t(messages, 'module.rewards.tab_wishes'), 0],
+    ['history', t(messages, 'module.rewards.tab_history'), 0],
+  ];
 
   return (
     <div className="rewards-page">
-      <RewardsPageHeader messages={messages} currency={rw.currency} />
+      <header className="list-header rewards-header">
+        <h1>{t(messages, 'module.rewards.name')}</h1>
+        <div className="rewards-header-actions">
+          {isAdult ? (
+            <button type="button" className="rewards-currency-chip" onClick={() => setDialog({ type: 'stars' })} aria-label={t(messages, 'module.rewards.stars_title')}>
+              <CurrencyIcon icon={rw.currency?.icon} /> {starsName} <Settings2 size={14} aria-hidden="true" />
+            </button>
+          ) : (
+            <span className="rewards-currency-chip"><CurrencyIcon icon={rw.currency?.icon} /> {starsName}</span>
+          )}
+          <button type="button" className="list-header-action" onClick={() => openPraise(null)}>
+            <HandHeart size={17} aria-hidden="true" /> {t(messages, 'module.rewards.praise')}
+          </button>
+        </div>
+      </header>
 
-      <div className="rewards-tabs" role="group" aria-label={t(messages, 'module.rewards.name')}>
-        {['overview', 'catalog'].map((key) => (
+      <div className="rewards-tabs" role="tablist" aria-label={t(messages, 'module.rewards.name')}>
+        {tabs.map(([key, label, badge]) => (
           <button
             key={key}
             type="button"
+            role="tab"
+            aria-selected={tab === key}
             className={`rewards-tab${tab === key ? ' active' : ''}`}
             onClick={() => setTab(key)}
-            aria-pressed={tab === key}
           >
-            {t(messages, `module.rewards.tab_${key}`)}
-            {key === 'overview' && rw.pendingCount > 0 && <span className="rewards-tab-badge">{rw.pendingCount}</span>}
+            {label}
+            {badge > 0 && <span className="rewards-tab-badge" aria-label={t(messages, 'module.rewards.waiting_count').replace('{count}', badge)}>{badge}</span>}
           </button>
         ))}
       </div>
 
       {tab === 'overview' && (
-        <div className="rewards-grid">
-          <RewardsPanel title={t(messages, 'module.rewards.balances_title')} className="rewards-panel-wide">
-            <div className="rewards-balances">
-              {rw.balances.map((balance, index) => {
-                const member = members.find((item) => item.user_id === balance.user_id);
-                // Children see how far it is to their next reward (Tribu 2.0, F3).
-                const goal = member?.is_adult === false ? nextGoal(Number(balance.balance) || 0, rw.catalog || []) : null;
-                return (
-                  <div key={balance.user_id} className="rewards-balance-card">
-                    <MemberAvatar member={member || { display_name: balance.display_name }} index={index} size={30} />
-                    <div className="rewards-balance-card-body">
-                      <div className="rewards-balance-card-name">{balance.display_name}</div>
-                      <div className="rewards-balance-card-value"><RewardAmount currency={rw.currency} amount={balance.balance} /></div>
-                      {goal && (
-                        <div className="rewards-balance-goal" style={{ '--person-color': getMemberColor(member, members.indexOf(member)) }}>
-                          <span className="family-progress" aria-hidden="true"><span style={{ width: `${Math.round(goal.progress * 100)}%` }} /></span>
-                          <small>
-                            {goal.reached
-                              ? t(messages, 'family.goal_reached').replace('{reward}', goal.name)
-                              : t(messages, 'family.goal').replace('{count}', goal.cost - (Number(balance.balance) || 0)).replace('{reward}', goal.name)}
-                          </small>
-                        </div>
-                      )}
-                    </div>
-                    {balance.pending > 0 && (
-                      <span className="rewards-balance-pending">{t(messages, 'module.rewards.pending').replace('{count}', balance.pending)}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </RewardsPanel>
-
-          <RewardsPanel title={t(messages, 'module.rewards.earn_quick')} className="rewards-quick-award">
-            <form onSubmit={handleEarn} className="rewards-earn-form">
-              <select className="form-input rewards-earn-select" value={earnUserId} onChange={(e) => setEarnUserId(e.target.value)} required>
-                <option value="">{t(messages, 'module.rewards.earn_member')}</option>
-                {members.map((member) => <option key={member.user_id} value={member.user_id}>{member.display_name}</option>)}
-              </select>
-              <input className="form-input rewards-earn-amount" type="number" min={1} value={earnAmount} onChange={(e) => setEarnAmount(Number(e.target.value))} aria-label={t(messages, 'module.rewards.earn_amount')} />
-              <input className="form-input rewards-earn-note" value={earnNote} onChange={(e) => setEarnNote(e.target.value)} placeholder={t(messages, 'module.rewards.earn_note')} />
-              <button className="btn-sm rewards-submit-btn" type="submit">
-                <Plus size={14} aria-hidden="true" /> {t(messages, 'module.rewards.earn_tokens')}
-              </button>
-            </form>
-          </RewardsPanel>
-
-          {rewardTasks.length > 0 && (
-            <RewardsPanel title={t(messages, 'module.rewards.tasks_with_reward')} className="rewards-panel-wide">
-              <div className="rewards-list">
-                {rewardTasks.map((task) => {
-                  const assignee = members.find((member) => member.user_id === task.assigned_to_user_id);
-                  const isConfirming = confirmingTask?.id === task.id;
-                  return (
-                    <div key={task.id} className="rewards-task-confirm">
-                      <div className={`rewards-row rewards-row-task${isConfirming ? ' rewards-row-top' : ''}`}>
-                        <button
-                          className="btn-ghost rewards-action rewards-action-task"
-                          type="button"
-                          onClick={() => {
-                            setConfirmingTask(isConfirming ? null : task);
-                            setConfirmAmount(task.token_reward_amount);
-                          }}
-                          aria-label={`${t(messages, 'module.rewards.earn_tokens')}: ${task.title}`}
-                        >
-                          <CheckSquare size={16} aria-hidden="true" />
-                        </button>
-                        <span className="rewards-row-title">{task.title}</span>
-                        {assignee && <span className="rewards-row-meta">{assignee.display_name}</span>}
-                        <RewardAmount currency={rw.currency} amount={task.token_reward_amount} sign="+" />
-                      </div>
-                      {isConfirming && (
-                        <div className="rewards-row rewards-row-bottom">
-                          <span className="rewards-row-meta">{assignee?.display_name || ''}</span>
-                          <input type="number" className="form-input rewards-earn-amount" min={1} value={confirmAmount} onChange={(e) => setConfirmAmount(Number(e.target.value))} aria-label={t(messages, 'module.rewards.earn_amount')} />
-                          <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} />
-                          <button className="btn-sm rewards-action rewards-action-confirm" type="button" onClick={handleEarnForTask} aria-label={t(messages, 'module.rewards.confirm')}><Check size={14} aria-hidden="true" /></button>
-                          <button className="btn-ghost rewards-action rewards-action-reject" type="button" onClick={() => setConfirmingTask(null)} aria-label={t(messages, 'module.rewards.reject')}><X size={14} aria-hidden="true" /></button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </RewardsPanel>
-          )}
-
-          {rw.pendingTxns.length > 0 && (
-            <RewardsPanel title={`${t(messages, 'module.rewards.txn_pending')} (${rw.pendingCount})`} className="rewards-panel-wide">
-              <div className="rewards-list">
-                {rw.pendingTxns.map((transaction) => {
-                  const memberName = members.find((member) => member.user_id === transaction.user_id)?.display_name || '';
-                  return (
-                    <div key={transaction.id} className="rewards-row rewards-row-pending">
-                      <RewardRowIcon tone="pending"><Award size={16} /></RewardRowIcon>
-                      <span className="rewards-row-title">
-                        {memberName}: <RewardAmount currency={rw.currency} amount={transaction.amount} sign={transaction.kind === 'earn' ? '+' : '-'} />
-                        {transaction.note && <span className="rewards-row-note"> {transaction.note}</span>}
-                      </span>
-                      <button className="btn-ghost rewards-action rewards-action-confirm" type="button" onClick={() => rw.confirmTxn(transaction.id)} aria-label={t(messages, 'module.rewards.confirm')}><Check size={16} aria-hidden="true" /></button>
-                      <button className="btn-ghost rewards-action rewards-action-reject" type="button" onClick={() => rw.rejectTxn(transaction.id)} aria-label={t(messages, 'module.rewards.reject')}><X size={16} aria-hidden="true" /></button>
-                    </div>
-                  );
-                })}
-              </div>
-            </RewardsPanel>
-          )}
-
-          <div className="rewards-history-link">
-            <button className="btn-ghost" type="button" onClick={() => setTab('history')}>
-              <Clock size={13} aria-hidden="true" />
-              {t(messages, 'module.rewards.history_link')}
-            </button>
-          </div>
-        </div>
+        <Overview
+          {...{ rw, messages, members, me, isAdult, tasks, lang, locale, starsName, stars, waiting, memberById, colorOf, indexOf, openPraise, setDialog, setTab }}
+        />
       )}
-
-      {tab === 'catalog' && (
-        <div className="rewards-grid rewards-catalog-management">
-          <RewardsPanel title={t(messages, 'module.rewards.earning_rules')}>
-            {rw.rules.length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rules')}</div>}
-            <div className="rewards-list">
-              {rw.rules.map((rule) => (
-                <div key={rule.id} className="rewards-row rewards-row-earn">
-                  <RewardRowIcon tone="earn"><Star size={16} /></RewardRowIcon>
-                  <span className="rewards-row-title">{rule.name}</span>
-                  <RewardAmount currency={rw.currency} amount={rule.amount} sign="+" />
-                  <button className="btn-ghost rewards-action rewards-action-delete" type="button" onClick={() => rw.deleteRule(rule.id)} aria-label={t(messages, 'aria.delete_item').replace('{name}', rule.name)}><X size={14} aria-hidden="true" /></button>
-                </div>
-              ))}
-            </div>
-            <form onSubmit={async (e) => { e.preventDefault(); await rw.createRule(ruleName, ruleAmount); setRuleName(''); setRuleAmount(1); }} className="rewards-add-form">
-              <input className="form-input rewards-add-name" value={ruleName} onChange={(e) => setRuleName(e.target.value)} placeholder={t(messages, 'module.rewards.rule_name')} required />
-              <input className="form-input rewards-add-amount" type="number" min={1} value={ruleAmount} onChange={(e) => setRuleAmount(Number(e.target.value))} aria-label={t(messages, 'module.rewards.rule_amount')} />
-              <button className="btn-sm rewards-add-btn" type="submit" aria-label={t(messages, 'module.rewards.add_rule')}><Plus size={14} aria-hidden="true" /></button>
-            </form>
-          </RewardsPanel>
-
-          <RewardsPanel title={t(messages, 'module.rewards.catalog')}>
-            {rw.catalog.length === 0 && <div className="rewards-empty">{t(messages, 'module.rewards.no_rewards')}</div>}
-            <div className="rewards-list">
-              {rw.catalog.map((reward) => (
-                <div key={reward.id} className="rewards-row rewards-row-spend">
-                  <RewardRowIcon tone="spend"><Award size={16} /></RewardRowIcon>
-                  <span className="rewards-row-title">{reward.name}</span>
-                  <RewardAmount currency={rw.currency} amount={reward.cost} />
-                  <button className="btn-ghost rewards-action rewards-action-delete" type="button" onClick={() => rw.deleteReward(reward.id)} aria-label={t(messages, 'aria.delete_item').replace('{name}', reward.name)}><X size={14} aria-hidden="true" /></button>
-                </div>
-              ))}
-            </div>
-            <form onSubmit={async (e) => { e.preventDefault(); await rw.createReward(rewardName, rewardCost, rewardIcon || null); setRewardName(''); setRewardCost(5); setRewardIcon(''); }} className="rewards-add-form rewards-add-reward-form">
-              <input className="form-input rewards-add-name" value={rewardName} onChange={(e) => setRewardName(e.target.value)} placeholder={t(messages, 'module.rewards.reward_name')} required />
-              <input className="form-input rewards-add-amount" type="number" min={1} value={rewardCost} onChange={(e) => setRewardCost(Number(e.target.value))} aria-label={t(messages, 'module.rewards.reward_cost')} />
-              <select className="form-input rewards-add-icon" value={rewardIcon} onChange={(e) => setRewardIcon(e.target.value)} aria-label={t(messages, 'module.rewards.reward_icon')}>
-                <option value="">{t(messages, 'module.rewards.reward_icon')}</option>
-                {CURRENCY_PRESETS.map((preset) => (
-                  <option key={preset.icon} value={preset.icon}>{preset.name}</option>
-                ))}
-              </select>
-              <button className="btn-sm rewards-add-btn" type="submit" aria-label={t(messages, 'module.rewards.add_reward')}><Plus size={14} aria-hidden="true" /></button>
-            </form>
-          </RewardsPanel>
-        </div>
+      {tab === 'wishes' && (
+        <Wishes {...{ rw, messages, isAdult, locale, starsName, stars, colorOf, memberById, setDialog }} />
       )}
-
       {tab === 'history' && (
-        <RewardsPanel
-          title={t(messages, 'module.rewards.transactions')}
-          action={(
-            <button className="btn-ghost rewards-history-back" type="button" onClick={() => setTab('overview')}>
-              {t(messages, 'module.rewards.tab_overview')}
-            </button>
-          )}
-        >
-          <div className="rewards-list">
-            {rw.transactions.map((transaction) => {
-              const memberName = members.find((member) => member.user_id === transaction.user_id)?.display_name || '';
-              const date = parseServerInstant(transaction.created_at).toLocaleDateString(lang);
+        <History {...{ rw, messages, members, memberById, indexOf, locale, lang, stars }} />
+      )}
+
+      {dialog?.type === 'praise' && (
+        <PraiseDialog
+          messages={messages}
+          members={members}
+          me={me}
+          canAddStars={isAdult}
+          presets={rw.rules}
+          initialTo={dialog.to}
+          starsName={starsName}
+          currency={rw.currency}
+          onSend={rw.sendPraise}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.type === 'wish' && (
+        <WishDialog
+          messages={messages}
+          kind={dialog.kind}
+          reward={dialog.reward}
+          starsName={starsName}
+          onSave={rw.saveReward}
+          onDelete={rw.deleteReward}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.type === 'give' && (
+        <GiveDialog
+          messages={messages}
+          goal={dialog.goal}
+          balance={rw.myBalance?.balance || 0}
+          starsName={starsName}
+          currency={rw.currency}
+          onGive={rw.giveToGoal}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.type === 'stars' && (
+        <StarsDialog messages={messages} currency={rw.currency} onSave={rw.updateCurrency} onClose={() => setDialog(null)} />
+      )}
+    </div>
+  );
+}
+
+/* ── Overview ─────────────────────────────────────────────── */
+
+function Overview({ rw, messages, members, me, isAdult, tasks, lang, starsName, stars, waiting, memberById, colorOf, indexOf, openPraise, setDialog, setTab }) {
+  const meMember = memberById.get(me?.user_id) || me;
+  const goals = openFamilyGoals(rw.catalog);
+  const earnTasks = (tasks || []).filter((task) => task.status === 'open' && task.token_reward_amount > 0
+    && (isAdult || task.assigned_to_user_id === me?.user_id));
+
+  return (
+    <div className="rewards-overview">
+      <div className={`rewards-top${waiting.count > 0 ? ' with-waiting' : ''}`}>
+        <MyGoal {...{ rw, messages, me: meMember, color: colorOf(meMember), starsName, setTab }} />
+        {waiting.count > 0 && <Waiting {...{ rw, messages, waiting, memberById, indexOf, stars }} />}
+      </div>
+
+      {goals.map((goal) => (
+        <FamilyGoal key={goal.id} {...{ goal, rw, messages, isAdult, stars, memberById, colorOf, setDialog }} />
+      ))}
+      {goals.length === 0 && isAdult && (
+        <button type="button" className="rewards-family-cta" onClick={() => setDialog({ type: 'wish', kind: 'family' })}>
+          <span className="rewards-family-cta-icon"><Users size={20} aria-hidden="true" /></span>
+          <span>
+            <strong>{t(messages, 'module.rewards.family_goal_cta')}</strong>
+            <small>{t(messages, 'module.rewards.family_goal_cta_hint').replace('{currency}', starsName)}</small>
+          </span>
+          <Plus size={18} aria-hidden="true" />
+        </button>
+      )}
+
+      {isAdult && rw.balances.length > 0 && (
+        <section className="rewards-section" aria-labelledby="rewards-family-title">
+          <SectionTitle><span id="rewards-family-title">{t(messages, 'module.rewards.family_title')}</span></SectionTitle>
+          <div className="rewards-members">
+            {rw.balances.map((balance) => {
+              const member = memberById.get(balance.user_id) || { display_name: balance.display_name };
+              const goal = goalFor(balance, rw.catalog);
               return (
-                <div key={transaction.id} className="rewards-row rewards-history-row">
-                  <RewardRowIcon tone={transaction.kind === 'earn' ? 'earn' : 'spend'}>
-                    {transaction.kind === 'earn' ? <ArrowUpCircle size={16} /> : <ArrowDownCircle size={16} />}
-                  </RewardRowIcon>
-                  <span className="rewards-history-date">{date}</span>
-                  <span className="rewards-history-member">{memberName}</span>
-                  <span className="rewards-row-title">
-                    {transaction.note || t(messages, transaction.kind === 'earn' ? 'module.rewards.txn_earn' : 'module.rewards.txn_redeem')}
-                  </span>
-                  <RewardAmount currency={rw.currency} amount={transaction.amount} sign={transaction.kind === 'earn' ? '+' : '-'} />
-                  <span className={`rewards-history-status rewards-history-status-${transaction.status}`}>
-                    {t(messages, `module.rewards.txn_${transaction.status}`)}
-                  </span>
-                </div>
+                <article key={balance.user_id} className="rewards-member" style={{ '--person-color': colorOf(member) }}>
+                  <div className="rewards-member-head">
+                    <MemberAvatar member={member} index={indexOf(member)} size={36} />
+                    <div className="rewards-member-name">
+                      <strong>{member.display_name}</strong>
+                      <span>{stars(balance.balance)}{balance.pending > 0 && <small> · {t(messages, 'module.rewards.pending').replace('{count}', balance.pending)}</small>}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="rewards-icon-btn"
+                      onClick={() => openPraise(balance.user_id)}
+                      aria-label={t(messages, 'module.rewards.praise_member').replace('{name}', firstName(member))}
+                      disabled={balance.user_id === me?.user_id}
+                    >
+                      <HandHeart size={17} aria-hidden="true" />
+                    </button>
+                  </div>
+                  {goal ? (
+                    <div className="rewards-member-goal">
+                      <span className="rewards-member-goal-name"><WishIcon icon={goal.reward.icon} size={14} /> {goal.reward.name}</span>
+                      <Progress value={goal.progress} color={colorOf(member)} label={goal.reward.name} max={goal.cost} now={goal.points} />
+                      <small>{goal.reached ? t(messages, 'module.rewards.goal_reached_short') : t(messages, 'module.rewards.goal_left').replace('{count}', goal.remaining)}</small>
+                    </div>
+                  ) : (
+                    <p className="rewards-member-nogoal">{t(messages, 'module.rewards.no_goal_yet')}</p>
+                  )}
+                </article>
               );
             })}
           </div>
-        </RewardsPanel>
+        </section>
       )}
+
+      <div className="rewards-lower">
+        <PraiseFeed {...{ rw, messages, me, isAdult, lang, memberById, indexOf, stars, openPraise }} />
+        {earnTasks.length > 0 && (
+          <section className="rewards-section rewards-card" aria-labelledby="rewards-earn-title">
+            <SectionTitle><span id="rewards-earn-title">{t(messages, 'module.rewards.earn_title')}</span></SectionTitle>
+            <ul className="rewards-earn-list">
+              {earnTasks.map((task) => {
+                const assignee = memberById.get(task.assigned_to_user_id);
+                return (
+                  <li key={task.id} className="rewards-earn-row">
+                    <CheckSquare size={16} aria-hidden="true" />
+                    <span className="rewards-earn-title">{task.title}</span>
+                    {assignee && isAdult && <MemberAvatar member={assignee} index={indexOf(assignee)} size={22} />}
+                    <span className="rewards-plus">{stars(task.token_reward_amount, '+')}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MyGoal({ rw, messages, me, color, starsName, setTab }) {
+  const balance = rw.myBalance || { balance: 0, pending: 0 };
+  const goal = goalFor(balance, rw.catalog);
+  const asked = goal && rw.transactions.some((txn) => txn.kind === 'redeem' && txn.status === 'pending'
+    && txn.source_reward_id === goal.reward.id && txn.user_id === me?.user_id);
+  return (
+    <section className={`rewards-hero${goal?.reached ? ' reached' : ''}`} style={{ '--person-color': color }} aria-labelledby="rewards-hero-title">
+      <div className="rewards-hero-head">
+        <div>
+          <h2 id="rewards-hero-title" className="rewards-hero-kicker">{t(messages, 'module.rewards.my_stars').replace('{currency}', starsName)}</h2>
+          <div className="rewards-hero-value">
+            <CurrencyIcon icon={rw.currency?.icon} label={starsName} />
+            <span>{balance.balance}</span>
+          </div>
+          {balance.pending > 0 && (
+            <p className="rewards-hero-pending"><Hourglass size={13} aria-hidden="true" /> {t(messages, 'module.rewards.pending').replace('{count}', balance.pending)}</p>
+          )}
+        </div>
+        {goal && <span className="rewards-hero-wish"><WishIcon icon={goal.reward.icon} size={30} /></span>}
+      </div>
+      {goal ? (
+        <div className="rewards-hero-goal">
+          <div className="rewards-hero-goal-line">
+            <span className="rewards-hero-goal-label">{t(messages, 'module.rewards.my_goal')}</span>
+            <strong>{goal.reward.name}</strong>
+            <span className="rewards-hero-count">{Math.min(goal.points, goal.cost)} / {goal.cost}</span>
+          </div>
+          <Progress value={goal.progress} color={color} label={goal.reward.name} max={goal.cost} now={goal.points} />
+          <div className="rewards-hero-foot">
+            {goal.reached ? (
+              asked ? (
+                <span className="rewards-pill waiting"><Hourglass size={13} aria-hidden="true" /> {t(messages, 'module.rewards.waiting_approval')}</span>
+              ) : (
+                <>
+                  <span className="rewards-pill done"><PartyPopper size={13} aria-hidden="true" /> {t(messages, 'module.rewards.goal_reached')}</span>
+                  <button type="button" className="btn-primary rewards-redeem" onClick={() => rw.redeem(goal.reward)}>
+                    <Gift size={15} aria-hidden="true" /> {t(messages, 'module.rewards.redeem')}
+                  </button>
+                </>
+              )
+            ) : (
+              <span className="rewards-hero-left">{t(messages, 'module.rewards.goal_left_long').replace('{count}', goal.remaining).replace('{currency}', starsName)}</span>
+            )}
+            <button type="button" className="btn-ghost rewards-link" onClick={() => setTab('wishes')}>{t(messages, 'module.rewards.change_goal')}</button>
+          </div>
+        </div>
+      ) : (
+        <div className="rewards-hero-empty">
+          <Target size={18} aria-hidden="true" />
+          <span>{t(messages, 'module.rewards.pick_goal')}</span>
+          <button type="button" className="btn-secondary rewards-link-btn" onClick={() => setTab('wishes')}>{t(messages, 'module.rewards.see_wishes')}</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Waiting({ rw, messages, waiting, memberById, indexOf, stars }) {
+  const who = (userId) => memberById.get(userId) || { display_name: '' };
+  const row = (txn, text, actions, icon) => {
+    const member = who(txn.user_id);
+    return (
+      <li key={txn.id} className="rewards-waiting-row">
+        <MemberAvatar member={member} index={indexOf(member)} size={30} />
+        <span className="rewards-waiting-text">
+          {text}
+          <small>{icon}{stars(txn.amount, txn.kind === 'earn' ? '+' : '')}</small>
+        </span>
+        <span className="rewards-waiting-actions">{actions}</span>
+      </li>
+    );
+  };
+  const decide = (txn) => (
+    <>
+      <button type="button" className="rewards-icon-btn yes" onClick={() => rw.confirmTxn(txn.id)} aria-label={t(messages, 'module.rewards.approve')}>
+        <Check size={17} aria-hidden="true" />
+      </button>
+      <button type="button" className="rewards-icon-btn no" onClick={() => rw.rejectTxn(txn.id)} aria-label={t(messages, 'module.rewards.reject')}>
+        <X size={17} aria-hidden="true" />
+      </button>
+    </>
+  );
+  return (
+    <section className="rewards-card rewards-waiting" aria-labelledby="rewards-waiting-title">
+      <SectionTitle><span id="rewards-waiting-title">{t(messages, 'module.rewards.waiting_title')}</span></SectionTitle>
+      <ul className="rewards-waiting-list">
+        {waiting.wishes.map((txn) => row(
+          txn,
+          t(messages, 'module.rewards.waiting_wish').replace('{name}', firstName(who(txn.user_id))).replace('{wish}', txn.note || ''),
+          decide(txn),
+          <Gift size={12} aria-hidden="true" />,
+        ))}
+        {waiting.earnings.map((txn) => row(
+          txn,
+          `${firstName(who(txn.user_id))}: ${txn.note || t(messages, 'module.rewards.txn_earn')}`,
+          decide(txn),
+          null,
+        ))}
+        {waiting.toGive.map((txn) => row(
+          txn,
+          t(messages, 'module.rewards.waiting_give').replace('{name}', firstName(who(txn.user_id))).replace('{wish}', txn.note || ''),
+          <button type="button" className="btn-secondary rewards-given-btn" onClick={() => rw.fulfillTxn(txn.id)}>
+            <Check size={14} aria-hidden="true" /> {t(messages, 'module.rewards.mark_given')}
+          </button>,
+          <Gift size={12} aria-hidden="true" />,
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function FamilyGoal({ goal, rw, messages, isAdult, stars, memberById, colorOf, setDialog, compact = false }) {
+  const state = familyGoalProgress(goal);
+  let offset = 0;
+  return (
+    <section className={`rewards-family-goal${state.reached ? ' reached' : ''}${compact ? ' compact' : ''}`} aria-label={goal.name}>
+      <div className="rewards-family-head">
+        <span className="rewards-family-icon"><WishIcon icon={goal.icon} size={compact ? 22 : 28} /></span>
+        <div className="rewards-family-copy">
+          <span className="rewards-family-kicker"><Users size={13} aria-hidden="true" /> {t(messages, 'module.rewards.family_goal')}</span>
+          <strong>{goal.name}</strong>
+          <span className="rewards-family-count">
+            {t(messages, 'module.rewards.family_goal_count').replace('{progress}', state.progress).replace('{cost}', state.cost)} {stars('')}
+          </span>
+        </div>
+        {isAdult && (
+          <button type="button" className="rewards-icon-btn" onClick={() => setDialog({ type: 'wish', kind: 'family', reward: goal })} aria-label={t(messages, 'module.rewards.edit_family_goal')}>
+            <Pencil size={16} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      <div
+        className="rewards-family-bar"
+        role="progressbar"
+        aria-label={goal.name}
+        aria-valuemin={0}
+        aria-valuemax={state.cost}
+        aria-valuenow={state.progress}
+      >
+        {state.shares.map((share) => {
+          const member = memberById.get(share.user_id);
+          const left = offset;
+          offset += share.fraction;
+          return (
+            <span
+              key={share.user_id}
+              className="rewards-family-share"
+              style={{ left: `${left * 100}%`, width: `${share.fraction * 100}%`, background: colorOf(member) }}
+            />
+          );
+        })}
+      </div>
+      <div className="rewards-family-foot">
+        <ul className="rewards-family-legend">
+          {state.shares.map((share) => {
+            const member = memberById.get(share.user_id);
+            return (
+              <li key={share.user_id} style={{ '--person-color': colorOf(member) }}>
+                <span className="rewards-legend-dot" aria-hidden="true" />
+                {firstName(member)} <strong>{share.amount}</strong>
+              </li>
+            );
+          })}
+        </ul>
+        {state.reached ? (
+          isAdult ? (
+            <button type="button" className="btn-primary rewards-celebrate" onClick={() => rw.achieveGoal(goal)}>
+              <PartyPopper size={15} aria-hidden="true" /> {t(messages, 'module.rewards.celebrate')}
+            </button>
+          ) : (
+            <span className="rewards-pill done"><PartyPopper size={13} aria-hidden="true" /> {t(messages, 'module.rewards.family_goal_full')}</span>
+          )
+        ) : (
+          <button
+            type="button"
+            className="btn-secondary rewards-give-btn"
+            onClick={() => setDialog({ type: 'give', goal })}
+            disabled={!rw.myBalance?.balance}
+          >
+            <Plus size={15} aria-hidden="true" /> {t(messages, 'module.rewards.give_stars')}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PraiseFeed({ rw, messages, me, isAdult, lang, memberById, indexOf, stars, openPraise }) {
+  return (
+    <section className="rewards-section rewards-card rewards-praise" aria-labelledby="rewards-praise-title">
+      <SectionTitle
+        action={(
+          <button type="button" className="btn-ghost rewards-link" onClick={() => openPraise(null)}>
+            <HandHeart size={15} aria-hidden="true" /> {t(messages, 'module.rewards.praise')}
+          </button>
+        )}
+      >
+        <span id="rewards-praise-title">{t(messages, 'module.rewards.praise_feed')}</span>
+      </SectionTitle>
+      {rw.praise.length === 0 ? (
+        <p className="rewards-empty-note">{t(messages, 'module.rewards.praise_empty')}</p>
+      ) : (
+        <ul className="rewards-praise-list">
+          {rw.praise.slice(0, 12).map((item) => {
+            const from = memberById.get(item.from_user_id);
+            const to = memberById.get(item.to_user_id);
+            const canDelete = isAdult || item.from_user_id === me?.user_id;
+            return (
+              <li key={item.id} className="rewards-praise-item">
+                <MemberAvatar member={from || { display_name: '?' }} index={indexOf(from)} size={30} />
+                <div className="rewards-praise-body">
+                  <span className="rewards-praise-meta">
+                    {t(messages, 'module.rewards.praise_line').replace('{from}', firstName(from)).replace('{to}', firstName(to))}
+                    <span aria-hidden="true"> · </span>
+                    <time dateTime={item.created_at}>{serverTimeAgo(item.created_at, lang)}</time>
+                  </span>
+                  <p className="rewards-praise-bubble">{item.message}</p>
+                </div>
+                <span className={`rewards-praise-tag${item.amount > 0 ? ' stars' : ''}`}>
+                  {item.amount > 0 ? stars(item.amount, '+') : <Heart size={15} aria-label={t(messages, 'module.rewards.praise_no_stars')} />}
+                </span>
+                {canDelete && (
+                  <button type="button" className="rewards-icon-btn subtle" onClick={() => rw.deletePraise(item)} aria-label={t(messages, 'module.rewards.praise_delete')}>
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/* ── Wishes ───────────────────────────────────────────────── */
+
+function Wishes({ rw, messages, isAdult, locale, starsName, stars, colorOf, memberById, setDialog }) {
+  const balance = rw.myBalance || { balance: 0 };
+  const wishes = isAdult
+    ? rw.catalog.filter((reward) => reward.kind !== 'family').sort((a, b) => a.cost - b.cost)
+    : personalWishes(rw.catalog);
+  const goals = openFamilyGoals(rw.catalog);
+  const achieved = achievedFamilyGoals(rw.catalog);
+  const asked = new Set(rw.transactions
+    .filter((txn) => txn.kind === 'redeem' && txn.status === 'pending' && txn.user_id === rw.myBalance?.user_id)
+    .map((txn) => txn.source_reward_id));
+  const [presetName, setPresetName] = useState('');
+  const [presetAmount, setPresetAmount] = useState(0);
+
+  return (
+    <div className="rewards-wishes">
+      <section className="rewards-section" aria-labelledby="rewards-goals-title">
+        <SectionTitle
+          action={isAdult && (
+            <button type="button" className="btn-secondary rewards-add" onClick={() => setDialog({ type: 'wish', kind: 'family' })}>
+              <Plus size={15} aria-hidden="true" /> {t(messages, 'module.rewards.add_family_goal')}
+            </button>
+          )}
+        >
+          <span id="rewards-goals-title">{t(messages, 'module.rewards.family_goals')}</span>
+        </SectionTitle>
+        {goals.length === 0 && <p className="rewards-empty-note">{t(messages, 'module.rewards.family_goals_empty')}</p>}
+        <div className="rewards-family-grid">
+          {goals.map((goal) => (
+            <FamilyGoal key={goal.id} compact {...{ goal, rw, messages, isAdult, stars, memberById, colorOf, setDialog }} />
+          ))}
+        </div>
+        {achieved.length > 0 && (
+          <ul className="rewards-achieved">
+            {achieved.map((goal) => (
+              <li key={goal.id}>
+                <PartyPopper size={14} aria-hidden="true" />
+                <strong>{goal.name}</strong>
+                <span>{t(messages, 'module.rewards.achieved_on').replace('{date}', parseServerInstant(goal.achieved_at).toLocaleDateString(locale, { day: 'numeric', month: 'long' }))}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rewards-section" aria-labelledby="rewards-wishlist-title">
+        <SectionTitle
+          action={isAdult && (
+            <button type="button" className="btn-secondary rewards-add" onClick={() => setDialog({ type: 'wish', kind: 'personal' })}>
+              <Plus size={15} aria-hidden="true" /> {t(messages, 'module.rewards.add_wish')}
+            </button>
+          )}
+        >
+          <span id="rewards-wishlist-title">{t(messages, 'module.rewards.wishes')}</span>
+        </SectionTitle>
+        {wishes.length === 0 && <p className="rewards-empty-note">{t(messages, isAdult ? 'module.rewards.wishes_empty_adult' : 'module.rewards.wishes_empty')}</p>}
+        <div className="rewards-wish-grid">
+          {wishes.map((wish) => {
+            const mine = balance.goal_reward_id === wish.id;
+            const paused = wish.is_active === false;
+            const progress = Math.min(1, (balance.balance || 0) / wish.cost);
+            const canRedeem = !paused && (balance.balance || 0) >= wish.cost && !asked.has(wish.id);
+            return (
+              <article key={wish.id} className={`rewards-wish${mine ? ' mine' : ''}${paused ? ' paused' : ''}`}>
+                <div className="rewards-wish-top">
+                  <span className="rewards-wish-icon"><WishIcon icon={wish.icon} size={24} /></span>
+                  {mine && <span className="rewards-pill goal"><Target size={12} aria-hidden="true" /> {t(messages, 'module.rewards.my_goal')}</span>}
+                  {paused && <span className="rewards-pill">{t(messages, 'module.rewards.paused')}</span>}
+                  {isAdult && (
+                    <button type="button" className="rewards-icon-btn subtle" onClick={() => setDialog({ type: 'wish', kind: 'personal', reward: wish })} aria-label={t(messages, 'module.rewards.edit_wish')}>
+                      <Pencil size={15} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+                <strong className="rewards-wish-name">{wish.name}</strong>
+                <span className="rewards-wish-cost">{stars(wish.cost)}</span>
+                {!paused && <Progress value={progress} label={wish.name} max={wish.cost} now={Math.min(wish.cost, balance.balance || 0)} />}
+                {!paused && (
+                  <div className="rewards-wish-actions">
+                    <button
+                      type="button"
+                      className={`btn-ghost rewards-goal-toggle${mine ? ' active' : ''}`}
+                      aria-pressed={mine}
+                      onClick={() => rw.setGoal(mine ? null : wish.id)}
+                    >
+                      <Target size={14} aria-hidden="true" /> {t(messages, mine ? 'module.rewards.is_goal' : 'module.rewards.set_goal')}
+                    </button>
+                    {asked.has(wish.id) ? (
+                      <span className="rewards-pill waiting"><Hourglass size={12} aria-hidden="true" /> {t(messages, 'module.rewards.waiting_approval')}</span>
+                    ) : (
+                      <button type="button" className="btn-secondary rewards-redeem-btn" disabled={!canRedeem} onClick={() => rw.redeem(wish)}>
+                        <Gift size={14} aria-hidden="true" /> {t(messages, 'module.rewards.redeem')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {isAdult && (
+        <section className="rewards-section rewards-card" aria-labelledby="rewards-presets-title">
+          <SectionTitle><span id="rewards-presets-title">{t(messages, 'module.rewards.presets_title')}</span></SectionTitle>
+          <p className="rewards-section-hint">{t(messages, 'module.rewards.presets_hint')}</p>
+          <ul className="rewards-preset-list">
+            {rw.rules.map((rule) => (
+              <li key={rule.id} className="rewards-preset-chip">
+                <span>{rule.name}</span>
+                {rule.amount > 0 ? <small>{stars(rule.amount, '+')}</small> : <Heart size={13} aria-hidden="true" />}
+                <button type="button" onClick={() => rw.deleteRule(rule.id)} aria-label={t(messages, 'aria.delete_item').replace('{name}', rule.name)}>
+                  <X size={13} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <form
+            className="rewards-preset-form"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!presetName.trim()) return;
+              if (await rw.createRule(presetName.trim(), presetAmount)) { setPresetName(''); setPresetAmount(0); }
+            }}
+          >
+            <input
+              className="form-input"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              placeholder={t(messages, 'module.rewards.preset_placeholder')}
+              aria-label={t(messages, 'module.rewards.preset_name')}
+              maxLength={100}
+            />
+            <label className="rewards-preset-amount">
+              <Star size={14} aria-hidden="true" />
+              <input
+                type="number"
+                min={0}
+                max={20}
+                value={presetAmount}
+                onChange={(e) => setPresetAmount(Math.max(0, Math.min(20, parseInt(e.target.value, 10) || 0)))}
+                aria-label={starsName}
+              />
+            </label>
+            <button type="submit" className="btn-secondary" disabled={!presetName.trim()}>
+              <Plus size={15} aria-hidden="true" /> {t(messages, 'module.rewards.preset_add')}
+            </button>
+          </form>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/* ── History ──────────────────────────────────────────────── */
+
+function History({ rw, messages, memberById, indexOf, locale, stars }) {
+  const days = groupByDay(rw.transactions, parseServerInstant);
+  const today = new Date();
+  const dayLabel = (date) => {
+    const diff = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - new Date(date.getFullYear(), date.getMonth(), date.getDate())) / 86400000);
+    if (diff === 0) return t(messages, 'module.rewards.today');
+    if (diff === 1) return t(messages, 'module.rewards.yesterday');
+    return date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+  const kindIcon = { earn: <Star size={15} />, redeem: <Gift size={15} />, give: <Users size={15} /> };
+  const status = (txn) => {
+    if (txn.status === 'pending') return ['waiting', t(messages, 'module.rewards.txn_pending')];
+    if (txn.status === 'rejected') return ['rejected', t(messages, 'module.rewards.txn_rejected')];
+    if (txn.kind === 'redeem') return txn.fulfilled_at ? ['done', t(messages, 'module.rewards.txn_given')] : ['approved', t(messages, 'module.rewards.txn_approved')];
+    return null;
+  };
+  if (days.length === 0) {
+    return <p className="rewards-empty-note rewards-card">{t(messages, 'module.rewards.history_empty')}</p>;
+  }
+  return (
+    <div className="rewards-history">
+      {days.map((day) => (
+        <section key={day.date.toISOString()} className="rewards-history-day">
+          <h2 className="rewards-section-title">{dayLabel(day.date)}</h2>
+          <ul className="rewards-card rewards-history-list">
+            {day.items.map((txn) => {
+              const member = memberById.get(txn.user_id) || { display_name: '' };
+              const pill = status(txn);
+              const fallback = { earn: 'module.rewards.txn_earn', redeem: 'module.rewards.txn_redeem', give: 'module.rewards.txn_give' }[txn.kind];
+              return (
+                <li key={txn.id} className={`rewards-history-row kind-${txn.kind}`}>
+                  <span className="rewards-history-icon" aria-hidden="true">{kindIcon[txn.kind] || <Star size={15} />}</span>
+                  <MemberAvatar member={member} index={indexOf(member)} size={24} />
+                  <span className="rewards-history-text">
+                    <strong>{txn.note || t(messages, fallback)}</strong>
+                    <small>{member.display_name}{txn.kind === 'give' ? ` · ${t(messages, 'module.rewards.txn_give')}` : ''}</small>
+                  </span>
+                  {pill && <span className={`rewards-pill ${pill[0]}`}>{pill[1]}</span>}
+                  <span className={`rewards-history-amount${txn.kind === 'earn' ? ' plus' : ''}`}>{stars(txn.amount, transactionSign(txn))}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

@@ -34,8 +34,10 @@ describe('server timestamp helpers', () => {
 
   it('uses UTC-aware parsing for relative server timestamps', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-04-30T14:40:00Z'));
-    expect(serverTimeAgo('2026-04-30T14:35:00', 'en')).toBe('5m ago');
+    expect(serverTimeAgo('2026-04-30T14:35:00', 'en')).toBe('5 min. ago');
     expect(serverTimeAgo('2026-04-30T14:35:00', 'de')).toBe('vor 5 Min.');
+    // Every language, not just English and German.
+    expect(serverTimeAgo('2026-04-29T14:35:00', 'fr')).toBe('hier');
     jest.useRealTimers();
   });
 });

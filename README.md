@@ -82,7 +82,7 @@ The README keeps one current visual proof asset: the Shared Home Display above. 
 | Share responsibility | Tasks, assignees, priorities, due dates, recurrence, templates |
 | Shop and cook | Shopping lists, recipes, meal plans, ingredient handoff |
 | Remember people and dates | Contacts, birthdays, gifts, profile details |
-| Motivate routines | Rewards, earning rules, reward catalog, child progress |
+| Motivate routines | Stars from tasks and praise, personal wishes and family goals everyone saves for, praise without stars |
 | Find things fast | Global search across household data |
 | Put it on a shared screen | Pairable Shared Home Display with read-only display tokens |
 | Keep phones connected | CalDAV/CardDAV sync for calendars and contacts, plus opt-in VTODO task sync |

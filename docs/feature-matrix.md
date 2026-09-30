@@ -17,7 +17,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | School timetables | School schedule planning | Timetable views for school routines. |
 | Templates | Repeatable household plans | Reusable task and routine templates. |
 | Gifts | Gift planning | Gift ideas and planning around family dates. |
-| Rewards | Family motivation | Token economy, reward catalog, earning rules, and progress. |
+| Rewards | Family motivation | Stars from tasks and praise (grown-ups collect too), a wish each person saves for, family goals everyone puts stars into, praise with or without stars, and wishes approved and marked as given. |
 | Notifications | In-app, browser push, and external destinations | Household activity, overdue tasks, upcoming events, and Apprise-backed human channels for reminders plus opt-in shopping activity with encrypted destination URLs and private-host guardrails. |
 | Activity | Household timeline | Recent changes and quick context. |
 | Search | Global search | Fast lookup across core household data. |

@@ -292,7 +292,10 @@ def _award_reward_once(db: Session, task: Task, actor: User) -> None:
         return
     currency = db.query(RewardCurrency).filter(RewardCurrency.family_id == task.family_id).first()
     if currency is None:
-        return
+        # Stars need no setup; the empty name reads as the reader's word.
+        currency = RewardCurrency(family_id=task.family_id, name="", icon="star")
+        db.add(currency)
+        db.flush()
     auto_confirm = not task.token_require_confirmation
     db.add(TokenTransaction(
         family_id=task.family_id,

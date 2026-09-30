@@ -722,10 +722,11 @@ def _rewards(db: Session, family_id: int, memberships: list[Membership], refs: d
     currency = db.query(RewardCurrency).filter(RewardCurrency.family_id == family_id).first()
     if not currency:
         return None
-    costs = sorted(
-        (reward.cost, reward.name)
-        for reward in db.query(Reward).filter(Reward.family_id == family_id, Reward.is_active.is_(True)).all()
-    )
+    wishes = db.query(Reward).filter(
+        Reward.family_id == family_id, Reward.is_active.is_(True), Reward.kind == "personal",
+    ).all()
+    chosen = {reward.id: (reward.cost, reward.name) for reward in wishes}
+    costs = sorted(chosen.values())
     members: list[DisplayRewardMember] = []
     for membership in memberships:
         ref = refs.get(membership.user_id)
@@ -735,7 +736,10 @@ def _rewards(db: Session, family_id: int, memberships: list[Membership], refs: d
         # Children always appear; adults only once they actually collect.
         if membership.is_adult and balance <= 0:
             continue
-        goal = next(((cost, name) for cost, name in costs if cost > balance), costs[-1] if costs else None)
+        # The wish they chose, else the cheapest one still out of reach.
+        goal = chosen.get(membership.reward_goal_id) or next(
+            ((cost, name) for cost, name in costs if cost > balance), costs[-1] if costs else None,
+        )
         members.append(DisplayRewardMember(
             member_ref=ref,
             balance=balance,

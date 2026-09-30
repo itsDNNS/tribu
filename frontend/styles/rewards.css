@@ -1,0 +1,266 @@
+/* ═══════════════════════════════════════════
+   REWARDS: goals, family goals and praise.
+   Warm paper cards like Family and Today; each person keeps their colour,
+   stars are amber, family goals sky, wishes amethyst.
+   ═══════════════════════════════════════════ */
+.rewards-page { width: min(100%, 1040px); margin: 0 auto; display: grid; gap: 16px; --person-color: var(--amethyst); }
+.rewards-page > * { min-width: 0; }
+.rewards-header { flex-wrap: wrap; gap: 12px; }
+.rewards-header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rewards-currency-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-paper); color: var(--text-secondary); font: inherit; font-size: 0.85rem; font-weight: 700; }
+button.rewards-currency-chip { cursor: pointer; }
+button.rewards-currency-chip:hover { color: var(--text-primary); border-color: color-mix(in srgb, var(--accent-amber) 40%, var(--border-subtle)); }
+.rewards-currency-chip svg:first-child { color: var(--accent-amber); }
+
+.rewards-tabs { display: inline-flex; width: fit-content; max-width: 100%; gap: 4px; padding: 4px; overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: 13px; background: color-mix(in srgb, var(--surface-soft) 70%, transparent); scrollbar-width: none; }
+.rewards-tabs::-webkit-scrollbar { display: none; }
+.rewards-tab { min-height: 40px; display: inline-flex; align-items: center; gap: 7px; padding: 0 16px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.85rem; font-weight: 800; white-space: nowrap; cursor: pointer; }
+.rewards-tab.active { background: var(--surface-paper); border-color: var(--border-subtle); color: var(--text-primary); box-shadow: var(--shadow-soft); }
+.rewards-tab-badge { min-width: 20px; height: 20px; display: inline-grid; place-items: center; padding: 0 6px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--accent-rose) 18%, var(--surface-paper)); color: var(--accent-rose); font-size: 0.7rem; font-weight: 850; }
+
+.rewards-card { padding: 16px 18px; border: 1px solid var(--border-subtle); border-radius: 18px; background: var(--surface-paper); box-shadow: var(--shadow-soft); }
+.rewards-section { display: grid; gap: 10px; min-width: 0; }
+.rewards-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
+.rewards-section-title { margin: 0; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); }
+.rewards-section-hint { margin: -4px 0 0; color: var(--text-secondary); font-size: 0.86rem; }
+.rewards-empty-note { margin: 0; padding: 18px; border: 1px dashed var(--border-subtle); border-radius: 14px; color: var(--text-muted); text-align: center; font-size: 0.9rem; }
+.rewards-link { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; font-size: 0.84rem; font-weight: 700; color: var(--amethyst); }
+
+.rewards-stars { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rewards-stars svg { color: var(--accent-amber); flex: none; }
+.rewards-wish-emoji { font-size: 1.2em; line-height: 1; }
+
+.rewards-bar { position: relative; display: block; height: 10px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--text-primary) 8%, transparent); overflow: hidden; }
+.rewards-bar-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--bar-color, var(--amethyst)), color-mix(in srgb, var(--bar-color, var(--amethyst)) 55%, var(--accent-amber))); transition: width 0.7s var(--ease-out-expo); }
+
+.rewards-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: var(--radius-pill); background: var(--surface-soft); color: var(--text-secondary); font-size: 0.74rem; font-weight: 800; white-space: nowrap; }
+.rewards-pill.done { background: color-mix(in srgb, var(--success) 15%, var(--surface-paper)); color: var(--success-text, var(--success)); }
+.rewards-pill.waiting { background: color-mix(in srgb, var(--accent-amber) 16%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-amber) 70%, var(--text-primary)); }
+.rewards-pill.goal { background: color-mix(in srgb, var(--amethyst) 14%, var(--surface-paper)); color: var(--amethyst); }
+.rewards-pill.approved { background: color-mix(in srgb, var(--accent-sky) 16%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-sky) 70%, var(--text-primary)); }
+.rewards-pill.rejected { background: color-mix(in srgb, var(--danger) 12%, var(--surface-paper)); color: var(--danger); }
+
+.rewards-icon-btn { width: 40px; height: 40px; flex: none; display: inline-grid; place-items: center; border: 1px solid var(--border-subtle); border-radius: 50%; background: var(--surface-paper); color: var(--text-secondary); cursor: pointer; }
+.rewards-icon-btn:hover:not(:disabled) { color: var(--text-primary); background: var(--surface-soft); }
+.rewards-icon-btn:disabled { opacity: 0.35; cursor: default; }
+.rewards-icon-btn.yes { color: var(--success); background: color-mix(in srgb, var(--success) 10%, var(--surface-paper)); border-color: color-mix(in srgb, var(--success) 30%, var(--border-subtle)); }
+.rewards-icon-btn.no { color: var(--danger); }
+.rewards-icon-btn.subtle { width: 34px; height: 34px; border-color: transparent; background: transparent; color: var(--text-muted); }
+
+/* Overview: my stars and goal, and what waits for a grown-up */
+.rewards-overview, .rewards-wishes { display: grid; gap: 18px; }
+.rewards-top { display: grid; gap: 16px; }
+@media (min-width: 900px) { .rewards-top.with-waiting { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: stretch; } }
+
+.rewards-hero { position: relative; overflow: hidden; display: grid; gap: 18px; align-content: start; padding: 22px 24px; border: 1px solid color-mix(in srgb, var(--person-color) 22%, var(--border-subtle)); border-radius: 24px; background: linear-gradient(135deg, color-mix(in srgb, var(--person-color) 13%, var(--surface-paper)) 0%, var(--surface-paper) 62%); box-shadow: var(--shadow-md); }
+.rewards-hero::after { content: ''; position: absolute; right: -60px; top: -70px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent-amber) 22%, transparent), transparent 70%); pointer-events: none; }
+.rewards-hero.reached { border-color: color-mix(in srgb, var(--accent-amber) 45%, var(--border-subtle)); }
+.rewards-hero-head { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.rewards-hero-kicker { margin: 0; font-size: 0.76rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-secondary); }
+.rewards-hero-value { display: inline-flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 3.1rem; line-height: 1; font-weight: 850; letter-spacing: -0.03em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.rewards-hero-value svg { width: 0.8em; height: 0.8em; color: var(--accent-amber); fill: color-mix(in srgb, var(--accent-amber) 30%, transparent); }
+.rewards-hero-pending { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0 0; color: color-mix(in srgb, var(--accent-amber) 70%, var(--text-primary)); font-size: 0.82rem; font-weight: 700; }
+.rewards-hero-wish { width: 64px; height: 64px; flex: none; display: grid; place-items: center; border-radius: 20px; background: var(--surface-paper); color: var(--person-color); box-shadow: 0 10px 24px -14px var(--person-color), var(--shadow-soft); }
+.rewards-hero-goal { position: relative; z-index: 1; display: grid; gap: 10px; }
+.rewards-hero-goal-line { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.rewards-hero-goal-label { font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--person-color); }
+.rewards-hero-goal-line strong { font-size: 1.15rem; font-weight: 780; color: var(--text-primary); }
+.rewards-hero-count { margin-left: auto; font-size: 0.88rem; font-weight: 750; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rewards-hero .rewards-bar { height: 14px; }
+.rewards-hero-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rewards-hero-left { color: var(--text-secondary); font-size: 0.9rem; font-weight: 600; }
+.rewards-hero-foot .rewards-link { margin-left: auto; }
+.rewards-redeem { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 16px; }
+.rewards-hero-empty { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 16px; border: 1px dashed color-mix(in srgb, var(--person-color) 35%, var(--border-subtle)); border-radius: 16px; color: var(--text-secondary); font-weight: 600; }
+.rewards-hero-empty svg { color: var(--person-color); }
+.rewards-hero-empty span { flex: 1; min-width: 180px; }
+.rewards-link-btn { min-height: 40px; padding: 0 14px; font-size: 0.85rem; font-weight: 700; }
+
+.rewards-waiting { display: grid; gap: 8px; align-content: start; }
+.rewards-waiting-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rewards-waiting-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 56px; padding: 6px 0; }
+.rewards-waiting-row + .rewards-waiting-row { border-top: 1px solid var(--border-subtle); }
+.rewards-waiting-text { display: grid; gap: 2px; font-size: 0.9rem; font-weight: 650; color: var(--text-primary); overflow-wrap: anywhere; }
+.rewards-waiting-text small { display: inline-flex; align-items: center; gap: 5px; color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; }
+.rewards-waiting-actions { display: flex; gap: 6px; }
+.rewards-given-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; font-size: 0.84rem; font-weight: 700; }
+
+/* Family goals: everyone's stars in one bar, each in their colour */
+.rewards-family-goal { display: grid; gap: 14px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--accent-sky) 26%, var(--border-subtle)); border-radius: 22px; background: linear-gradient(120deg, color-mix(in srgb, var(--accent-sky) 11%, var(--surface-paper)) 0%, var(--surface-paper) 70%); box-shadow: var(--shadow-soft); }
+.rewards-family-goal.reached { border-color: color-mix(in srgb, var(--success) 40%, var(--border-subtle)); background: linear-gradient(120deg, color-mix(in srgb, var(--success) 12%, var(--surface-paper)) 0%, var(--surface-paper) 70%); }
+.rewards-family-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; }
+.rewards-family-icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 18px; background: var(--surface-paper); color: color-mix(in srgb, var(--accent-sky) 80%, var(--text-primary)); box-shadow: var(--shadow-soft); }
+.rewards-family-goal.compact .rewards-family-icon { width: 46px; height: 46px; border-radius: 15px; }
+.rewards-family-copy { display: grid; gap: 2px; min-width: 0; }
+.rewards-family-kicker { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: color-mix(in srgb, var(--accent-sky) 75%, var(--text-primary)); }
+.rewards-family-copy strong { font-size: 1.12rem; font-weight: 780; color: var(--text-primary); overflow-wrap: anywhere; }
+.rewards-family-count { display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); font-size: 0.86rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.rewards-family-bar { position: relative; height: 16px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--text-primary) 8%, transparent); overflow: hidden; }
+.rewards-family-share { position: absolute; top: 0; bottom: 0; box-shadow: inset -2px 0 0 color-mix(in srgb, var(--surface-paper) 80%, transparent); transition: width 0.7s var(--ease-out-expo), left 0.7s var(--ease-out-expo); }
+.rewards-family-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rewards-family-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--text-secondary); font-size: 0.84rem; }
+.rewards-family-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.rewards-family-legend strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.rewards-legend-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--person-color); }
+.rewards-give-btn, .rewards-celebrate, .rewards-add { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; font-size: 0.86rem; font-weight: 700; }
+.rewards-family-cta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 16px 18px; border: 1.5px dashed color-mix(in srgb, var(--accent-sky) 45%, var(--border-subtle)); border-radius: 20px; background: color-mix(in srgb, var(--accent-sky) 5%, transparent); color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+.rewards-family-cta:hover { background: color-mix(in srgb, var(--accent-sky) 10%, transparent); }
+.rewards-family-cta-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: var(--surface-paper); color: color-mix(in srgb, var(--accent-sky) 80%, var(--text-primary)); }
+.rewards-family-cta span:nth-child(2) { display: grid; gap: 2px; }
+.rewards-family-cta small { color: var(--text-secondary); font-size: 0.84rem; }
+.rewards-family-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); }
+.rewards-achieved { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rewards-achieved li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--text-secondary); font-size: 0.88rem; }
+.rewards-achieved svg { color: var(--success); }
+.rewards-achieved strong { color: var(--text-primary); }
+
+/* The family, one card per person in their colour */
+.rewards-members { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.rewards-member { min-width: 0; display: grid; gap: 10px; align-content: start; padding: 14px 14px 14px 16px; border: 1px solid var(--border-subtle); border-left: 4px solid var(--person-color); border-radius: 16px; background: var(--surface-paper); box-shadow: var(--shadow-soft); }
+.rewards-member-head { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.rewards-member-name { display: grid; gap: 1px; min-width: 0; }
+.rewards-member-name strong { font-size: 0.98rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rewards-member-name > span { color: var(--text-primary); font-size: 0.9rem; }
+.rewards-member-name small { color: var(--text-muted); font-weight: 600; }
+.rewards-member-goal { display: grid; gap: 6px; min-width: 0; }
+.rewards-member-goal .rewards-bar { height: 8px; }
+.rewards-member-goal-name { display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); font-size: 0.86rem; font-weight: 650; overflow-wrap: anywhere; }
+.rewards-member-goal-name svg { color: var(--person-color); flex: none; }
+.rewards-member-goal small, .rewards-member-nogoal { margin: 0; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; }
+
+/* Praise and ways to earn */
+.rewards-lower { display: grid; gap: 18px; }
+@media (min-width: 900px) { .rewards-lower:has(> :nth-child(2)) { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; } }
+.rewards-praise-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rewards-praise-item { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto; align-items: start; gap: 10px; }
+.rewards-praise-body { display: grid; gap: 4px; min-width: 0; }
+.rewards-praise-meta { color: var(--text-muted); font-size: 0.78rem; font-weight: 650; }
+.rewards-praise-bubble { margin: 0; padding: 9px 13px; border-radius: 4px 16px 16px 16px; background: color-mix(in srgb, var(--accent-rose) 8%, var(--surface-soft)); color: var(--text-primary); font-size: 0.93rem; line-height: 1.4; overflow-wrap: anywhere; }
+.rewards-praise-tag { align-self: center; display: inline-flex; align-items: center; min-height: 28px; padding: 0 9px; border-radius: var(--radius-pill); color: var(--accent-rose); font-size: 0.82rem; }
+.rewards-praise-tag.stars { background: color-mix(in srgb, var(--accent-amber) 14%, var(--surface-paper)); color: var(--text-primary); }
+.rewards-praise-item .rewards-icon-btn.subtle { align-self: center; opacity: 0; }
+.rewards-praise-item:hover .rewards-icon-btn.subtle, .rewards-praise-item .rewards-icon-btn.subtle:focus-visible { opacity: 1; }
+@media (hover: none) { .rewards-praise-item .rewards-icon-btn.subtle { opacity: 0.7; } }
+.rewards-earn-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.rewards-earn-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 46px; color: var(--text-muted); }
+.rewards-earn-row + .rewards-earn-row { border-top: 1px solid var(--border-subtle); }
+.rewards-earn-title { color: var(--text-primary); font-size: 0.92rem; overflow-wrap: anywhere; }
+.rewards-plus { color: var(--text-primary); font-size: 0.88rem; }
+
+/* Wishes */
+.rewards-wish-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.rewards-wish { display: grid; gap: 8px; align-content: start; padding: 16px; border: 1px solid var(--border-subtle); border-radius: 18px; background: var(--surface-paper); box-shadow: var(--shadow-soft); }
+.rewards-wish.mine { border: 2px solid color-mix(in srgb, var(--amethyst) 55%, var(--border-subtle)); padding: 15px; background: linear-gradient(160deg, color-mix(in srgb, var(--amethyst) 9%, var(--surface-paper)), var(--surface-paper) 60%); }
+.rewards-wish.paused { opacity: 0.6; }
+.rewards-wish-top { display: flex; align-items: center; gap: 8px; min-height: 48px; }
+.rewards-wish-top .rewards-icon-btn { margin-left: auto; }
+.rewards-wish-icon { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 16px; background: color-mix(in srgb, var(--amethyst) 11%, var(--surface-paper)); color: var(--amethyst); }
+.rewards-wish-name { font-size: 1rem; font-weight: 750; color: var(--text-primary); overflow-wrap: anywhere; }
+.rewards-wish-cost { color: var(--text-primary); font-size: 0.92rem; }
+.rewards-wish .rewards-bar { height: 7px; }
+.rewards-wish-actions { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.rewards-goal-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); }
+.rewards-goal-toggle.active { color: var(--amethyst); }
+.rewards-redeem-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; font-size: 0.84rem; font-weight: 700; }
+.rewards-redeem-btn:disabled { opacity: 0.45; cursor: default; }
+.rewards-preset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.rewards-preset-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 4px 0 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--surface-soft) 60%, var(--surface-paper)); font-size: 0.86rem; font-weight: 650; color: var(--text-primary); }
+.rewards-preset-chip > svg { color: var(--accent-rose); }
+.rewards-preset-chip small { font-size: 0.8rem; }
+.rewards-preset-chip button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); cursor: pointer; }
+.rewards-preset-chip button:hover { color: var(--danger); background: var(--surface-paper); }
+.rewards-preset-form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+.rewards-preset-form .btn-secondary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; font-size: 0.86rem; font-weight: 700; }
+.rewards-preset-amount { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-paper); color: var(--accent-amber); }
+.rewards-preset-amount input { width: 48px; min-height: 42px; border: 0; background: transparent; color: var(--text-primary); font: inherit; font-weight: 700; text-align: center; outline: none; }
+
+/* History */
+.rewards-history { display: grid; gap: 18px; }
+.rewards-history-day { display: grid; gap: 8px; }
+.rewards-history-list { list-style: none; margin: 0; padding: 6px 16px; display: grid; }
+.rewards-history-row { display: grid; grid-template-columns: 32px 24px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 58px; }
+.rewards-history-row + .rewards-history-row { border-top: 1px solid var(--border-subtle); }
+.rewards-history-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--accent-amber) 14%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-amber) 80%, var(--text-primary)); }
+.kind-redeem .rewards-history-icon { background: color-mix(in srgb, var(--amethyst) 12%, var(--surface-paper)); color: var(--amethyst); }
+.kind-give .rewards-history-icon { background: color-mix(in srgb, var(--accent-sky) 14%, var(--surface-paper)); color: color-mix(in srgb, var(--accent-sky) 80%, var(--text-primary)); }
+.rewards-history-text { display: grid; gap: 1px; min-width: 0; }
+.rewards-history-text strong { font-size: 0.92rem; font-weight: 650; color: var(--text-primary); overflow-wrap: anywhere; }
+.rewards-history-text small { color: var(--text-muted); font-size: 0.78rem; }
+.rewards-history-amount { color: var(--text-secondary); font-size: 0.9rem; }
+.rewards-history-amount.plus { color: var(--text-primary); }
+
+/* Dialogs */
+.rewards-dialog { width: min(92vw, 520px); max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 24px; border: 1px solid var(--border-subtle); border-radius: 20px; background: var(--surface-paper); box-shadow: var(--shadow-lg); }
+.rewards-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rewards-dialog-title { margin: 0; font-size: 1.12rem; font-weight: 820; color: var(--text-primary); }
+.rewards-dialog-close { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.rewards-dialog-close:hover { background: var(--surface-soft); color: var(--text-primary); }
+.rewards-dialog-form { display: flex; flex-direction: column; gap: 16px; }
+.rewards-dialog-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rewards-dialog-actions .rewards-delete-trigger, .rewards-dialog-actions .rewards-danger { margin-right: auto; }
+.rewards-danger { display: inline-flex; align-items: center; gap: 6px; color: var(--danger); border-color: var(--danger); }
+.rewards-dialog-copy { margin: 0; color: var(--text-secondary); line-height: 1.5; }
+.rewards-field { display: grid; gap: 8px; margin: 0 0 14px; padding: 0; border: 0; min-width: 0; }
+.rewards-field legend, .rewards-field > label, .rewards-field-label { padding: 0; margin-bottom: 8px; font-size: 0.85rem; font-weight: 650; color: var(--text-primary); }
+.rewards-field .form-input { width: 100%; }
+.rewards-field-hint { color: var(--text-muted); font-size: 0.8rem; }
+.rewards-people { display: flex; flex-wrap: wrap; gap: 8px; }
+.rewards-person { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px 0 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-paper); color: var(--text-primary); font: inherit; font-size: 0.9rem; font-weight: 650; cursor: pointer; }
+.rewards-person.selected { border-color: var(--amethyst); background: color-mix(in srgb, var(--amethyst) 10%, var(--surface-paper)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amethyst) 25%, transparent); }
+.rewards-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.rewards-preset { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--surface-soft) 60%, var(--surface-paper)); color: var(--text-secondary); font: inherit; font-size: 0.84rem; font-weight: 650; cursor: pointer; }
+.rewards-preset:hover { color: var(--text-primary); }
+.rewards-preset small { color: color-mix(in srgb, var(--accent-amber) 75%, var(--text-primary)); font-weight: 800; }
+.rewards-stars-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rewards-stars-hint { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 0.86rem; font-weight: 600; }
+.rewards-stars-hint svg { color: var(--accent-rose); }
+.rewards-stars-hint svg.lucide-star, .rewards-stars-hint svg:not(.lucide-heart) { color: var(--accent-amber); }
+.rewards-stepper { display: inline-flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-paper); overflow: hidden; }
+.rewards-stepper button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.rewards-stepper button:hover:not(:disabled) { background: var(--surface-soft); color: var(--text-primary); }
+.rewards-stepper button:disabled { opacity: 0.35; cursor: default; }
+.rewards-stepper input { width: 56px; height: 44px; border: 0; border-inline: 1px solid var(--border-subtle); background: transparent; color: var(--text-primary); font: inherit; font-size: 1rem; font-weight: 750; text-align: center; -moz-appearance: textfield; }
+.rewards-stepper input::-webkit-outer-spin-button, .rewards-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.rewards-give-all { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.rewards-give-all svg { color: var(--accent-amber); }
+.rewards-icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
+.rewards-icon-choice { height: 46px; display: grid; place-items: center; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-paper); color: var(--text-secondary); cursor: pointer; }
+.rewards-icon-choice:hover { color: var(--text-primary); background: var(--surface-soft); }
+.rewards-icon-choice.selected { border-color: var(--amethyst); background: color-mix(in srgb, var(--amethyst) 12%, var(--surface-paper)); color: var(--amethyst); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amethyst) 22%, transparent); }
+.rewards-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; color: var(--text-primary); }
+.rewards-check input { width: 20px; height: 20px; accent-color: var(--amethyst); }
+
+@media (max-width: 768px) {
+  .rewards-page { width: 100%; gap: 14px; padding-bottom: calc(106px + env(safe-area-inset-bottom)); }
+  .rewards-tabs { width: 100%; }
+  .rewards-tab { flex: 1 0 auto; justify-content: center; }
+  .rewards-hero { padding: 18px; border-radius: 20px; }
+  .rewards-hero-value { font-size: 2.6rem; }
+  .rewards-hero-wish { width: 54px; height: 54px; border-radius: 16px; }
+  .rewards-family-goal { padding: 16px; }
+  .rewards-family-icon { width: 46px; height: 46px; border-radius: 15px; }
+  .rewards-history-list { padding: 4px 12px; }
+  .rewards-history-row { grid-template-columns: 32px minmax(0, 1fr) auto; }
+  .rewards-history-row .rewards-history-text { grid-column: 2; }
+  .rewards-history-row > :nth-child(2) { display: none; }
+  .rewards-history-row .rewards-pill { grid-column: 2; justify-self: start; grid-row: 2; margin-top: -8px; margin-bottom: 8px; }
+  .rewards-preset-form { grid-template-columns: minmax(0, 1fr) auto; }
+  .rewards-preset-form .btn-secondary { grid-column: 1 / -1; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rewards-bar-fill, .rewards-family-share { transition: none; }
+}
+@media (max-width: 768px) {
+  .rewards-dialog { padding: 0; gap: 0; }
+  .rewards-dialog-header { padding: 14px 12px 6px 16px; }
+}
+
+/* The rewards card on Today */
+.rewards-progress-bar { height: 8px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--text-primary) 8%, transparent); overflow: hidden; }
+.rewards-progress-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--amethyst), var(--accent-amber)); transition: width 0.4s var(--ease-out-expo); }
+.rewards-child-copy { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.rewards-widget-pending { margin-bottom: 10px; }
+.rewards-widget-family { display: grid; grid-template-columns: auto minmax(0, auto) minmax(60px, 1fr) auto; align-items: center; gap: 8px; margin-top: 10px; padding: 9px 11px; border: 1px solid color-mix(in srgb, var(--accent-sky) 26%, var(--border-subtle)); border-radius: 11px; background: color-mix(in srgb, var(--accent-sky) 8%, var(--surface-paper)); font-size: 0.8rem; }
+.rewards-widget-family > svg { color: color-mix(in srgb, var(--accent-sky) 80%, var(--text-primary)); }
+.rewards-widget-family-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-weight: 720; }
+.rewards-widget-family-count { color: var(--text-secondary); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }

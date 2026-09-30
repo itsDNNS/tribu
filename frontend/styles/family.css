@@ -187,11 +187,6 @@
 }
 .list-header .list-header-action:hover { filter: brightness(1.06); }
 
-/* Rewards: a child's way to the next reward below their balance (F3). */
-.rewards-balance-card-body { min-width: 0; flex: 1; }
-.rewards-balance-goal { display: grid; gap: var(--space-1); margin-top: var(--space-2); }
-.rewards-balance-goal small { color: var(--color-text-muted); font-size: var(--type-label-size); }
-
 /* Areas a family uses (R4): settings and the setup wizard. */
 .area-switches { list-style: none; margin: 0; padding: 0; display: grid; }
 .area-switch {

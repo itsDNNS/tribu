@@ -36,13 +36,15 @@ function upcomingEvents(day, nowTime) {
   return [...timed, ...allDay];
 }
 
-// The cheapest reward still out of reach, or the dearest one once all are.
-export function nextGoal(points, rewards) {
+// The wish someone chose, else the cheapest one still out of reach (or
+// the dearest once all are). Family goals are saved for together, not here.
+export function nextGoal(points, rewards, goalId = null) {
   const active = rewards
-    .filter((reward) => reward && reward.is_active !== false && Number(reward.cost) > 0)
+    .filter((reward) => reward && reward.is_active !== false && reward.kind !== 'family' && Number(reward.cost) > 0)
     .sort((a, b) => Number(a.cost) - Number(b.cost) || String(a.name).localeCompare(String(b.name)));
   if (!active.length) return null;
-  const target = active.find((reward) => Number(reward.cost) > points) || active[active.length - 1];
+  const target = active.find((reward) => reward.id === goalId)
+    || active.find((reward) => Number(reward.cost) > points) || active[active.length - 1];
   const cost = Number(target.cost);
   return { name: target.name, cost, progress: Math.min(1, points / cost), reached: points >= cost };
 }
@@ -89,7 +91,9 @@ export function buildFamily({
       later: Math.max(0, upcoming.length - 1),
       openTasks,
       points,
-      goal: points !== null && member.is_adult === false ? nextGoal(points, rewards) : null,
+      // Children always have a way to go; grown-ups once they chose a wish.
+      goal: points !== null && (member.is_adult === false || balance?.goal_reward_id)
+        ? nextGoal(points, rewards, balance?.goal_reward_id) : null,
     };
   });
 
