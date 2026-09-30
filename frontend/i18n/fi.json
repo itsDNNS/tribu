@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV voi muuttaa vain otsikkoa, muistiinpanoja, määräpäivää tai -aikaa, prioriteettia ja valmistumista. Perhe, vastuuhenkilö, palkinnot, luoja, tunnisteet ja toistuvuus pysyvät Tribussa.",
   "phone_sync_task_unknown_fields": "Turvalliset VTODO-lisäkentät ja hälytykset säilyvät. Pelkkä määräpäivä ei näytä keskiyötä.",
   "phone_sync_task_recurrence": "Toistuvuuden hallitsee Tribu. RRULEa ei hyväksytä eikä lähetetä; jokainen seuraava esiintymä näkyy omana tehtävänään.",
-  "phone_sync_limit_incremental": "Synkronointitokeneita ei ole vielä kunnioitettu; asiakkaat palaavat täyden päivityksen jokaiseen konfliktiin. Suorituskyky, ei oikeellisuus.",
+  "phone_sync_limit_event_fields": "Tapahtumat säilyttävät kalenterisovelluksen lisäämät hälytykset, linkit ja muut tiedot. Tribu näyttää niistä otsikon, ajan, paikan, muistiinpanot ja toiston.",
   "phone_sync_limit_fields": "Tribu mallintaa vain nimen, sähköpostiosoitteen, puhelinnumeron ja syntymäpäivän yhteystietoa kohti. Kaikki ylimääräiset kentät (ORG, ADR, muistiinpanot jne.) edestakaisin, mutta ne eivät näy Tribu-käyttöliittymässä.",
   "phone_sync_coexist_heading": "Tribu:n käyttö Applen, Googlen tai Outlookin kanssa",
   "phone_sync_coexist_intro": "Tribu on erillinen kalenteritili, ei synkronointisilta. Se toimii rinnakkain olemassa olevien tiliesi kanssa, joten jokainen tapahtuma omistaa täsmälleen yksi niistä – valitse se, josta haluat muokata.",

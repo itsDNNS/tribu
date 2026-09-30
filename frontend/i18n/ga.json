@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "Ní féidir le DAV ach teideal, nótaí, dáta nó am dlite, tosaíocht agus críochnú a athrú. Fanann teaghlach, sannadh, luaíochtaí, cruthaitheoir, aitheantóirí agus atarlú in Tribu amháin.",
   "phone_sync_task_unknown_fields": "Caomhnaítear réimsí breise sábháilte VTODO agus aláraim. Ní thaispeánann dáta dlite gan am meán oíche.",
   "phone_sync_task_recurrence": "Bainistíonn Tribu atarlú. Ní ghlactar ná ní astaítear RRULE; feictear gach tarlú eile mar thasc ar leith.",
-  "phone_sync_limit_incremental": "Ní thugtar onóir fós do chomharthaí sioncronaithe; titeann cliaint ar ais chuig athnuachan iomlán ar gach coinbhleacht. Feidhmíocht, ní cruinneas.",
+  "phone_sync_limit_event_fields": "Coinníonn imeachtaí na foláirimh, na naisc agus na sonraí eile a chuireann aip féilire leo. Taispeánann Tribu an teideal, an t-am, an áit, na nótaí agus an athrá.",
   "phone_sync_limit_fields": "Tribu samhlacha amháin ainm, ríomhphost, guthán, agus lá breithe gach teagmhála. Aon réimsí breise (ORG, ADR, nótaí, etc.) turas cruinn slán ach níl siad le feiceáil san Chomhéadain Tribu.",
   "phone_sync_coexist_heading": "Ag baint úsáide as Tribu taobh le Apple, Google, nó Outlook",
   "phone_sync_coexist_intro": "Is cuntas féilire ar leith é Tribu, ní droichead sioncronaithe. Ritheann sé taobh le taobh le do chuntais reatha agus mar sin tá gach imeacht faoi úinéireacht duine amháin acu go díreach - roghnaigh an ceann is mian leat a chur in eagar.",

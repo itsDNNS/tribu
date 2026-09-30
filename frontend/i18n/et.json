@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV saab muuta ainult pealkirja, märkmeid, tähtaega, prioriteeti ja lõpetatust. Pere, vastutaja, preemiad, looja, ID-d ja kordumine jäävad ainult Tribusse.",
   "phone_sync_task_unknown_fields": "Turvalised VTODO lisaväljad ja alarmid säilivad. Ainult kuupäevaga tähtaeg ei kuva keskööd.",
   "phone_sync_task_recurrence": "Kordumist haldab Tribu. RRULE-i ei võeta vastu ega väljastata; iga järgmine kord on eraldi ülesanne.",
-  "phone_sync_limit_incremental": "Sünkroonimismärke pole veel austatud; kliendid saavad iga konflikti korral täieliku värskenduse. Toimivus, mitte korrektsus.",
+  "phone_sync_limit_event_fields": "Sündmused säilitavad kalendrirakenduse lisatud meeldetuletused, lingid ja muud andmed. Tribu näitab pealkirja, aega, kohta, märkmeid ja kordumist.",
   "phone_sync_limit_fields": "Tribu modelleerib ainult ühe kontakti nime, e-posti aadressi, telefoni ja sünnipäeva. Kõik lisaväljad (ORG, ADR, märkmed jne) on edasi-tagasi terved, kuid neid ei kuvata kasutajaliideses Tribu.",
   "phone_sync_coexist_heading": "Tribu kasutamine koos Apple'i, Google'i või Outlookiga",
   "phone_sync_coexist_intro": "Tribu on eraldi kalendrikonto, mitte sünkroonimissild. See töötab kõrvuti teie olemasolevate kontodega, nii et iga sündmus kuulub täpselt ühele neist – valige see, mida soovite muuta.",

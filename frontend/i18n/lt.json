@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV gali keisti tik pavadinimą, pastabas, terminą, prioritetą ir užbaigimą. Šeima, vykdytojas, atlygiai, kūrėjas, ID ir kartojimas lieka tik Tribu.",
   "phone_sync_task_unknown_fields": "Saugūs papildomi VTODO laukai ir signalai išsaugomi. Terminas tik su data nerodo vidurnakčio.",
   "phone_sync_task_recurrence": "Kartojimą valdo Tribu. RRULE nepriimamas ir nesiunčiamas; kiekvienas kitas pasikartojimas yra atskira užduotis.",
-  "phone_sync_limit_incremental": "Sinchronizavimo žetonai dar nepaisyti; Klientai grįžta į visišką atnaujinimą kiekvieno konflikto metu. Našumas, o ne teisingumas.",
+  "phone_sync_limit_event_fields": "Įvykiai išlaiko priminimus, nuorodas ir kitą informaciją, kurią prideda kalendoriaus programa. Tribu rodo pavadinimą, laiką, vietą, pastabas ir kartojimą.",
   "phone_sync_limit_fields": "Tribu modeliuoja tik vieno kontakto vardą, el. pašto adresą, telefoną ir gimimo datą. Visi papildomi laukai (ORG, ADR, pastabos ir kt.) nepažeisti, bet nerodomi Tribu vartotojo sąsajoje.",
   "phone_sync_coexist_heading": "Tribu naudojimas kartu su Apple, Google ar Outlook",
   "phone_sync_coexist_intro": "Tribu yra atskira kalendoriaus paskyra, o ne sinchronizavimo tiltas. Jis veikia kartu su esamomis paskyromis, todėl kiekvienas įvykis priklauso būtent vienai iš jų – pasirinkite tą, kurią norite redaguoti.",

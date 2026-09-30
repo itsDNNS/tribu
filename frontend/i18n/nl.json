@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV kan alleen titel, notities, vervaldatum of -tijd, prioriteit en voltooiing wijzigen. Gezin, toegewezene, beloningen, maker, ID's en herhaling blijven uitsluitend in Tribu.",
   "phone_sync_task_unknown_fields": "Veilige extra VTODO-velden en alarmen blijven behouden. Een vervaldatum zonder tijd toont geen middernacht.",
   "phone_sync_task_recurrence": "Herhaling wordt door Tribu beheerd. RRULE wordt niet geaccepteerd of verzonden; elk volgend moment verschijnt als aparte taak.",
-  "phone_sync_limit_incremental": "Synchronisatietokens worden nog niet gehonoreerd; klanten vallen bij elk conflict terug op een volledige vernieuwing. Prestatie, niet correctheid.",
+  "phone_sync_limit_event_fields": "Afspraken behouden meldingen, links en andere details die een agenda-app toevoegt. Tribu toont de titel, tijd, plaats, notities en herhaling.",
   "phone_sync_limit_fields": "Tribu modelleert alleen naam, e-mailadres, telefoonnummer en verjaardag per contact. Eventuele extra velden (ORG, ADR, notities, etc.) zijn intact, maar verschijnen niet in de gebruikersinterface van Tribu.",
   "phone_sync_coexist_heading": "Tribu gebruiken naast Apple, Google of Outlook",
   "phone_sync_coexist_intro": "Tribu is een afzonderlijk agenda-account, geen synchronisatiebrug. Het werkt zij aan zij met uw bestaande accounts, zodat elk evenement eigendom is van precies één van hen. Kies degene waaruit u wilt bewerken.",

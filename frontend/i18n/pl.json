@@ -114,7 +114,7 @@
   "phone_sync_task_fields": "DAV może zmieniać tylko tytuł, notatki, termin, priorytet i ukończenie. Rodzina, wykonawca, nagrody, twórca, identyfikatory i cykliczność pozostają wyłącznie w Tribu.",
   "phone_sync_task_unknown_fields": "Bezpieczne dodatkowe pola VTODO i alarmy są zachowywane. Termin bez godziny nie wyświetla północy.",
   "phone_sync_task_recurrence": "Cyklicznością zarządza Tribu. RRULE nie jest przyjmowane ani wysyłane; każde kolejne wystąpienie jest osobnym zadaniem.",
-  "phone_sync_limit_incremental": "Tokeny synchronizacji nie są jeszcze honorowane; klienci wracają do pełnego odświeżenia przy każdym konflikcie. To kwestia wydajności, nie poprawności.",
+  "phone_sync_limit_event_fields": "Wydarzenia zachowują przypomnienia, linki i inne szczegóły dodane przez aplikację kalendarza. Tribu pokazuje ich tytuł, czas, miejsce, notatki i powtarzanie.",
   "phone_sync_limit_fields": "Tribu modeluje dla kontaktu tylko imię i nazwisko, email, telefon oraz urodziny. Dodatkowe pola (ORG, ADR, notatki itd.) przechodzą w obie strony bez zmian, ale nie pojawiają się w interfejsie Tribu.",
   "phone_sync_coexist_heading": "Używanie Tribu obok Apple, Google lub Outlooka",
   "phone_sync_coexist_intro": "Tribu to oddzielne konto kalendarza, a nie most synchronizacji. Działa równolegle z istniejącymi kontami, więc każde wydarzenie należy dokładnie do jednego z nich — wybierz, z którego chcesz je edytować.",

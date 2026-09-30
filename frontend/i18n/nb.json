@@ -115,7 +115,7 @@
   "phone_sync_task_fields": "DAV kan bare endre tittel, notater, forfallsdato eller -tid, prioritet og fullføring. Familie, ansvarlig, belønninger, oppretter, ID-er og gjentakelse forblir i Tribu.",
   "phone_sync_task_unknown_fields": "Trygge ekstra VTODO-felt og alarmer bevares. En forfallsdato uten klokkeslett viser ikke midnatt.",
   "phone_sync_task_recurrence": "Gjentakelser styres av Tribu. RRULE godtas eller sendes ikke; hver neste forekomst vises som en egen oppgave.",
-  "phone_sync_limit_incremental": "Synkroniseringstokener er ikke hedret ennå; klienter faller tilbake til en full oppdatering på hver konflikt. Ytelse, ikke korrekthet.",
+  "phone_sync_limit_event_fields": "Hendelser beholder påminnelser, lenker og andre detaljer som en kalenderapp legger til. Tribu viser tittel, tid, sted, notater og gjentakelse.",
   "phone_sync_limit_fields": "Tribu modellerer bare navn, e-post, telefon og fødselsdag per kontakt. Eventuelle ekstra felt (ORG, ADR, notater, etc.) tur-retur intakte, men vises ikke i Tribu-grensesnittet.",
   "phone_sync_coexist_heading": "Bruker Tribu sammen med Apple, Google eller Outlook",
   "phone_sync_coexist_intro": "Tribu er en egen kalenderkonto, ikke en synkroniseringsbro. Den kjører side ved side med de eksisterende kontoene dine, så hvert arrangement eies av nøyaktig én av dem – velg den du vil redigere fra.",

@@ -85,7 +85,17 @@ def events_to_ics(
     cal.add("x-wr-calname", calendar_name)
 
     for ev in events:
-        vevent = Event()
+        # Start from what a DAV client last wrote so its alarms, URL and
+        # the like come back; Tribu's own fields replace the rest.
+        vevent = _vevent_from_raw(getattr(ev, "raw_vevent", None))
+        category = getattr(ev, "category", None)
+        for name in _MODELED_VEVENT_PROPERTIES:
+            if name == "CATEGORIES" and not (isinstance(category, str) and category.strip()):
+                continue
+            while vevent.get(name) is not None:
+                del vevent[name]
+        for name in [key for key in vevent.keys() if str(key).upper().startswith("X-TRIBU-")]:
+            del vevent[name]
         # Honor a client-chosen UID from CalDAV PUTs when present so the
         # next GET returns exactly the UID the client stored.
         uid = getattr(ev, "ical_uid", None) or f"tribu-event-{ev.id}@tribu.local"
@@ -167,6 +177,7 @@ def ics_to_event_dicts(
     source_type: str = "import",
     source_name: str | None = None,
     source_url: str | None = None,
+    keep_raw: bool = False,
 ) -> tuple[list[dict], list[dict]]:
     """Parse an ICS string and return (valid_events, errors).
 
@@ -346,6 +357,8 @@ def ics_to_event_dicts(
             "last_synced_at": imported_at,
             "sync_status": "ok",
         }
+        if keep_raw:
+            event_dict["raw_vevent"] = _raw_vevent(component)
 
         if ical_uid is None:
             valid_events.append(event_dict)
@@ -518,6 +531,52 @@ def _tribu_recurrence(rrule, dtstart, starts_at: datetime) -> Optional[tuple[str
     if 1 <= position <= 5 and position == weekday_position(source_date):
         return f"{prefix}_weekday", None
     return None
+
+
+# Written from the Tribu row on every export; a client's own values for
+# these never come back. CATEGORIES only when Tribu has a category.
+_MODELED_VEVENT_PROPERTIES = (
+    "UID",
+    "DTSTAMP",
+    "SUMMARY",
+    "DESCRIPTION",
+    "LOCATION",
+    "DTSTART",
+    "DTEND",
+    "DURATION",
+    "RRULE",
+    "RDATE",
+    "EXDATE",
+    "RECURRENCE-ID",
+    "ATTENDEE",
+    "ORGANIZER",
+    "CATEGORIES",
+    "LAST-MODIFIED",
+)
+
+# A client's VEVENT larger than this is not kept (inline attachments).
+MAX_RAW_VEVENT_BYTES = 64 * 1024
+
+
+def _raw_vevent(component) -> Optional[str]:
+    """The VEVENT a client wrote, without Tribu's reserved properties."""
+    raw = Event.from_ical(component.to_ical())
+    for name in [key for key in raw.keys() if str(key).upper().startswith("X-TRIBU-")]:
+        del raw[name]
+    text = raw.to_ical().decode("utf-8")
+    return text if len(text.encode("utf-8")) <= MAX_RAW_VEVENT_BYTES else None
+
+
+def _vevent_from_raw(raw: Optional[str]) -> Event:
+    if raw:
+        try:
+            parsed = Event.from_ical(raw)
+            if parsed.name == "VEVENT":
+                return parsed
+        except Exception:  # noqa: BLE001
+            # Unreadable stored data never breaks a read; Tribu's fields remain.
+            pass
+    return Event()
 
 
 def _all_day_end(start: date, ends_at) -> date:
