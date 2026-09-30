@@ -666,7 +666,9 @@ class AddressBookCollection(BaseCollection):
     def get_meta(self, key: Optional[str] = None):
         meta: dict = {
             "tag": "VADDRESSBOOK",
-            "D:displayname": f"Tribu · {self._family_name} contacts",
+            # The contacts app says what it is; the name stays free of
+            # any one language.
+            "D:displayname": f"Tribu · {self._family_name}",
             "CR:addressbook-description": "Tribu shared family address book",
         }
         if key is None:
@@ -971,6 +973,7 @@ def _families_for(user: User) -> list[tuple[int, str]]:
 _MUTABLE_EVENT_FIELDS = (
     "title",
     "description",
+    "location",
     "starts_at",
     "ends_at",
     "all_day",

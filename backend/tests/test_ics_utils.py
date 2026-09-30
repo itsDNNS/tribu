@@ -460,3 +460,85 @@ class TestIcsToEventDicts:
         biweekly = next(e for e in valid if e["title"] == "Biweekly")
         assert biweekly["recurrence"] == "biweekly"
         assert biweekly["recurrence_end"] is not None
+
+
+# --- What phones and desktop clients send over CalDAV ---
+
+def _vcal(body: str) -> str:
+    return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n" + body + "END:VCALENDAR\r\n"
+
+
+class TestClientRoundTrip:
+    def test_multi_day_all_day_event_keeps_its_days(self):
+        ics = _vcal(
+            "BEGIN:VEVENT\r\nUID:weekend\r\nDTSTAMP:20260101T000000Z\r\n"
+            "DTSTART;VALUE=DATE:20261010\r\nDTEND;VALUE=DATE:20261012\r\n"
+            "SUMMARY:Weekend away\r\nEND:VEVENT\r\n"
+        )
+        valid, _ = ics_to_event_dicts(ics, 1, 1)
+        assert valid[0]["all_day"] is True
+        # Midnight after the last day, as Tribu's calendar reads spans.
+        assert valid[0]["ends_at"] == datetime(2026, 10, 12)
+        out = events_to_ics([make_event(all_day=True, starts_at=datetime(2026, 10, 10), ends_at=valid[0]["ends_at"])])
+        assert "DTEND;VALUE=DATE:20261012" in out
+
+    def test_one_day_all_day_event_keeps_no_end(self):
+        ics = _vcal(
+            "BEGIN:VEVENT\r\nUID:day\r\nDTSTAMP:20260101T000000Z\r\n"
+            "DTSTART;VALUE=DATE:20261010\r\nDTEND;VALUE=DATE:20261011\r\n"
+            "SUMMARY:One day\r\nEND:VEVENT\r\n"
+        )
+        valid, _ = ics_to_event_dicts(ics, 1, 1)
+        assert valid[0]["ends_at"] is None
+
+    def test_all_day_end_from_the_editor_is_the_last_day(self):
+        # The web editor stores the last day with a time of day.
+        ev = make_event(all_day=True, starts_at=datetime(2026, 10, 10), ends_at=datetime(2026, 10, 13, 15, 0))
+        assert "DTEND;VALUE=DATE:20261014" in events_to_ics([ev])
+
+    def test_duration_gives_the_end(self):
+        ics = _vcal(
+            "BEGIN:VEVENT\r\nUID:dentist\r\nDTSTAMP:20260101T000000Z\r\n"
+            "DTSTART:20261020T090000\r\nDURATION:PT90M\r\n"
+            "SUMMARY:Dentist\r\nEND:VEVENT\r\n"
+        )
+        valid, _ = ics_to_event_dicts(ics, 1, 1)
+        assert valid[0]["ends_at"] == datetime(2026, 10, 20, 10, 30)
+
+    def test_count_ends_the_series_on_its_last_occurrence(self):
+        ics = _vcal(
+            "BEGIN:VEVENT\r\nUID:course\r\nDTSTAMP:20260101T000000Z\r\n"
+            "DTSTART:20261005T170000\r\nDTEND:20261005T180000\r\n"
+            "RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=6\r\n"
+            "SUMMARY:Swimming course\r\nEND:VEVENT\r\n"
+        )
+        valid, errors = ics_to_event_dicts(ics, 1, 1)
+        assert errors == []
+        assert valid[0]["recurrence"] == "weekly"
+        assert valid[0]["recurrence_end"] == datetime(2026, 11, 9, 17, 0)
+
+    def test_timed_series_writes_exdate_and_until_with_a_time(self):
+        ev = make_event(
+            starts_at=datetime(2026, 10, 5, 17, 0),
+            ends_at=datetime(2026, 10, 5, 18, 0),
+            recurrence="weekly",
+            recurrence_end=datetime(2026, 11, 9, 17, 0),
+            excluded_dates=["2026-10-19"],
+        )
+        out = events_to_ics([ev])
+        assert "EXDATE:20261019T170000" in out
+        assert "UNTIL=20261109T235959" in out
+
+    def test_all_day_series_keeps_date_exdate_and_until(self):
+        ev = make_event(
+            all_day=True,
+            starts_at=datetime(2026, 10, 5),
+            ends_at=None,
+            recurrence="weekly",
+            recurrence_end=datetime(2026, 11, 9),
+            excluded_dates=["2026-10-19"],
+        )
+        out = events_to_ics([ev])
+        assert "EXDATE;VALUE=DATE:20261019" in out
+        assert "UNTIL=20261109" in out
+        assert "UNTIL=20261109T" not in out

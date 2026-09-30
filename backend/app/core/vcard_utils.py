@@ -43,15 +43,10 @@ def contact_channel_values(contact: Contact) -> tuple[list[str], list[str]]:
     emails: list[str] = []
     phones: list[str] = []
 
-    raw = getattr(contact, "raw_vcard", None)
-    if raw:
-        try:
-            card = vobject.readOne(raw)
-        except Exception:
-            card = None
-        if card is not None:
-            emails = _all_values(card, "email")
-            phones = _all_values(card, "tel")
+    card = _synced_card(contact)
+    if card is not None:
+        emails = _all_values(card, "email")
+        phones = _all_values(card, "tel")
 
     if getattr(contact, "email", None):
         emails = _merge_primary_value(contact.email, emails)
@@ -62,10 +57,9 @@ def contact_channel_values(contact: Contact) -> tuple[list[str], list[str]]:
 
 
 def _normalize_uid_and_rev(raw: str, contact: Contact) -> str:
-    """Make sure the stored UID/REV match the ORM row even after edits."""
-    try:
-        card = vobject.readOne(raw)
-    except Exception:
+    """The stored VCARD with the ORM row's UID, REV and edits applied."""
+    card = _synced_card(contact)
+    if card is None:
         return _render_vcard(contact)
     uid = getattr(contact, "vcard_uid", None) or f"tribu-contact-{contact.id}@tribu.local"
     if hasattr(card, "uid"):
@@ -80,6 +74,83 @@ def _normalize_uid_and_rev(raw: str, contact: Contact) -> str:
         else:
             card.add("rev").value = rev_value
     return card.serialize()
+
+
+def _synced_card(contact: Contact):
+    """The stored VCARD with what Tribu edits applied on top.
+
+    Tribu models the name, the first EMAIL and TEL and the birthday; the
+    rest of a VCARD a phone uploaded stays as it came. A change made in
+    Tribu replaces the value it was read from, so the phone gets it on the
+    next sync and the old value does not linger as a second one.
+    """
+    raw = getattr(contact, "raw_vcard", None)
+    if not raw:
+        return None
+    try:
+        card = vobject.readOne(raw)
+    except Exception:
+        return None
+    if card is None:
+        return None
+
+    full_name = (getattr(contact, "full_name", None) or "").strip()
+    if full_name:
+        fn = getattr(card, "fn", None)
+        if fn is None:
+            card.add("fn").value = full_name
+        elif (fn.value or "").strip() != full_name:
+            fn.value = full_name
+            family, given = _split_name(full_name)
+            if hasattr(card, "n"):
+                card.n.value = vobject.vcard.Name(family=family, given=given)
+    _sync_primary(card, "email", getattr(contact, "email", None))
+    _sync_primary(card, "tel", getattr(contact, "phone", None))
+    _sync_bday(card, getattr(contact, "birthday_month", None), getattr(contact, "birthday_day", None))
+    return card
+
+
+def _sync_primary(card, name: str, value: Optional[str]) -> None:
+    """Make the first EMAIL/TEL match Tribu's value, keeping its TYPEs."""
+    props = card.contents.get(name, [])
+    value = (value or "").strip()
+    if not value:
+        if props:
+            card.remove(props[0])
+        return
+    first = props[0] if props else None
+    current = first.value[0] if first is not None and isinstance(first.value, list) else getattr(first, "value", None)
+    if isinstance(current, str) and current.strip() == value:
+        return
+    for other in props[1:]:
+        if isinstance(other.value, str) and other.value.strip() == value:
+            card.remove(other)
+    if first is None:
+        prop = card.add(name)
+        prop.value = value
+        prop.type_param = "INTERNET" if name == "email" else "CELL"
+    else:
+        first.value = value
+
+
+def _sync_bday(card, month: Optional[int], day: Optional[int]) -> None:
+    prop = getattr(card, "bday", None)
+    if not (month and day):
+        if prop is not None:
+            card.remove(prop)
+        return
+    if prop is not None and _parse_bday(str(prop.value)) == (month, day):
+        return
+    year = None
+    if prop is not None:
+        digits = str(prop.value).strip().replace("-", "")
+        if len(digits) >= 8 and not str(prop.value).startswith("--"):
+            year = digits[:4]
+    value = f"{year}-{month:02d}-{day:02d}" if year else f"--{month:02d}-{day:02d}"
+    if prop is None:
+        card.add("bday").value = value
+    else:
+        prop.value = value
 
 
 def _render_vcard(c: Contact) -> str:
