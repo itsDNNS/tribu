@@ -96,6 +96,8 @@ class Membership(Base):
     is_adult = Column(Boolean, nullable=False, default=False)
     color = Column(String, nullable=True)
     date_of_birth = Column(Date, nullable=True)
+    # The wish this member saves stars for.
+    reward_goal_id = Column(Integer, ForeignKey("rewards.id", ondelete="SET NULL"), nullable=True)
 
     user = relationship("User", back_populates="memberships")
     family = relationship("Family", back_populates="memberships")
@@ -1032,6 +1034,10 @@ class Reward(Base):
     cost = Column(Integer, nullable=False)
     icon = Column(String(10), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
+    # "personal": bought from one's own stars; "family": everyone puts in.
+    kind = Column(String(10), nullable=False, default="personal", server_default="personal")
+    # When the family reached and celebrated a family goal.
+    achieved_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     family = relationship("Family")
@@ -1054,6 +1060,8 @@ class TokenTransaction(Base):
     source_rule_id = Column(Integer, ForeignKey("earning_rules.id", ondelete="SET NULL"), nullable=True)
     confirmed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     confirmed_at = Column(DateTime, nullable=True)
+    # An approved wish that was actually given.
+    fulfilled_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     family = relationship("Family")
@@ -1062,6 +1070,21 @@ class TokenTransaction(Base):
     confirmed_by = relationship("User", foreign_keys=[confirmed_by_user_id])
     source_task = relationship("Task", foreign_keys=[source_task_id])
     source_reward = relationship("Reward", foreign_keys=[source_reward_id])
+
+
+class Praise(Base):
+    """A thank-you from one member to another, with or without stars."""
+
+    __tablename__ = "praises"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    from_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    to_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    message = Column(String(200), nullable=False)
+    amount = Column(Integer, nullable=False, default=0, server_default="0")
+    transaction_id = Column(Integer, ForeignKey("token_transactions.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
 # ── Gift List ─────────────────────────────────────────────

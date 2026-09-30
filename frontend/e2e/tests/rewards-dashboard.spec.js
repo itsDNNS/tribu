@@ -55,6 +55,7 @@ test.describe('Rewards dashboard widget', () => {
       if (path === '/rewards/catalog') return json(route, []);
       if (path === '/rewards/rules') return json(route, []);
       if (path === '/rewards/transactions') return json(route, { items: [] });
+      if (path === '/rewards/praise') return json(route, []);
 
       return json(route, {});
     });
@@ -67,7 +68,7 @@ test.describe('Rewards dashboard widget', () => {
     await expect(rewardsCard).not.toContainText('view_all');
   });
 
-  test('demo rewards view uses the refreshed panel layout', async ({ page }) => {
+  test('demo rewards: goals, a family goal and praise without stars', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.getByRole('button', { name: /try demo/i }).first().click();
     await page.locator('#main-content').waitFor({ state: 'attached', timeout: 90000 });
@@ -75,11 +76,23 @@ test.describe('Rewards dashboard widget', () => {
     await navigateTo(page, 'Rewards');
 
     await expect(page.locator('.rewards-page')).toBeVisible({ timeout: 30000 });
-    await expect(page.getByRole('heading', { name: /Rewards|Belohnungen/ })).toBeVisible();
-    await expect(page.getByText(/Family balances|Familien-Guthaben/)).toBeVisible();
-    await expect(page.getByText(/Quick award|Schnell vergeben/)).toBeVisible();
-    await expect(page.locator('.rewards-panel').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Rewards', level: 1 })).toBeVisible();
+    await expect(page.locator('.rewards-hero')).toContainText('My Stars');
+    await expect(page.getByRole('region', { name: 'Zoo trip' })).toContainText('28 of 40');
+    await expect(page.getByRole('region', { name: 'Waiting for you' })).toBeVisible();
     await expect(page.locator('body')).not.toContainText('module.rewards');
+
+    // A plain thank-you: no stars needed.
+    await page.locator('.list-header-action').click();
+    const dialog = page.getByRole('dialog', { name: 'Praise someone' });
+    await dialog.getByRole('radio').first().click();
+    await dialog.getByLabel('What for?').fill('Thanks for the help');
+    await dialog.getByRole('button', { name: 'Send praise' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('.rewards-praise-list')).toContainText('Thanks for the help');
+
+    await page.getByRole('tab', { name: 'Wishes' }).click();
+    await expect(page.getByRole('heading', { name: 'Family goals' })).toBeVisible();
 
     const hasHorizontalOverflow = await page.evaluate(() => (
       document.body.scrollWidth > window.innerWidth

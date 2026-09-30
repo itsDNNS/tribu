@@ -445,3 +445,43 @@ def test_shopping_categories_migration_folds_translations_and_adds_switch(tmp_pa
     with sqlite3.connect(db_path) as conn:
         columns = {row[1] for row in conn.execute("PRAGMA table_info(families)")}
         assert "shopping_categories" not in columns
+
+
+def test_rewards_goals_migration_localizes_preset_names_and_downgrades(tmp_path, monkeypatch):
+    db_path = tmp_path / "rewards-goals.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0072_contacts_carry_birthdays")
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'One'), (2, 'Two')")
+        conn.execute(
+            "INSERT INTO reward_currencies (id, family_id, name, icon, created_at) VALUES "
+            "(1, 1, 'Stars', 'star', '2026-01-01 10:00:00'), (2, 2, 'Taler', 'gem', '2026-01-01 10:00:00')"
+        )
+        conn.execute(
+            "INSERT INTO rewards (id, family_id, currency_id, name, cost, is_active, created_at) "
+            "VALUES (1, 1, 1, 'Cinema', 5, 1, '2026-01-01 10:00:00')"
+        )
+        conn.commit()
+
+    command.upgrade(config, "0073_rewards_goals_and_praise")
+    with sqlite3.connect(db_path) as conn:
+        names = conn.execute("SELECT id, name FROM reward_currencies ORDER BY id").fetchall()
+        kinds = conn.execute("SELECT kind, achieved_at FROM rewards").fetchall()
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        membership_columns = {row[1] for row in conn.execute("PRAGMA table_info(memberships)")}
+    assert names == [(1, ""), (2, "Taler")]
+    assert kinds == [("personal", None)]
+    assert "praises" in tables
+    assert "reward_goal_id" in membership_columns
+
+    command.downgrade(config, "0072_contacts_carry_birthdays")
+    with sqlite3.connect(db_path) as conn:
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        membership_columns = {row[1] for row in conn.execute("PRAGMA table_info(memberships)")}
+    assert "praises" not in tables
+    assert "reward_goal_id" not in membership_columns
+

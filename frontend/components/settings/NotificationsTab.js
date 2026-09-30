@@ -11,6 +11,7 @@ const PUSH_CATEGORY_DEFAULTS = {
   task_due: true,
   birthdays: true,
   meal_reminders: true,
+  rewards: true,
   event_assignments: false,
   shopping_changes: false,
   meal_plan_changes: false,
@@ -35,6 +36,7 @@ const PUSH_CATEGORY_GROUPS = [
     titleKey: 'push_group_family',
     rows: [
       ['birthdays', 'push_category_birthdays', 'push_category_birthdays_desc'],
+      ['rewards', 'push_category_rewards', 'push_category_rewards_desc'],
       ['family_changes', 'push_category_family_changes', 'push_category_family_changes_desc'],
     ],
   },

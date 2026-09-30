@@ -1314,7 +1314,7 @@ button.ui-date-label:hover {
     align-items: flex-end;
     padding: 0;
   }
-  :is(.gift-dialog, .recipe-dialog, .contact-modal-panel) {
+  :is(.gift-dialog, .recipe-dialog, .contact-modal-panel, .rewards-dialog) {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -1326,11 +1326,12 @@ button.ui-date-label:hover {
   :is(
     .gift-dialog-header,
     .recipe-dialog-header,
-    .contact-modal-panel .modal-header
+    .contact-modal-panel .modal-header,
+    .rewards-dialog-header
   ) {
     flex: none;
   }
-  :is(.gift-dialog, .recipe-dialog, .contact-modal-panel) .ui-sheet-form {
+  :is(.gift-dialog, .recipe-dialog, .contact-modal-panel, .rewards-dialog) .ui-sheet-form {
     display: flex;
     flex-direction: column;
     overflow: hidden;

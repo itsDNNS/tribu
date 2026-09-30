@@ -10,6 +10,8 @@ PUSH_CATEGORY_DEFAULTS: dict[str, bool] = {
     "birthdays": True,
     # The evening before a meal, what is not on the list yet (Tribu 2.0, N-2).
     "meal_reminders": True,
+    # Praise received, and wishes waiting for an adult.
+    "rewards": True,
     "event_assignments": False,
     "shopping_changes": False,
     "meal_plan_changes": False,
@@ -28,6 +30,8 @@ NOTIFICATION_TYPE_TO_PUSH_CATEGORY: dict[str, str] = {
     "meal_plan_changed": "meal_plan_changes",
     "family_changed": "family_changes",
     "capture_suggestion": "family_changes",
+    "praise": "rewards",
+    "reward_request": "rewards",
 }
 
 

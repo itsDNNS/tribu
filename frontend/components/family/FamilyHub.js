@@ -5,6 +5,7 @@ import { useCurrentMinute } from '../../hooks/useCurrentMinute';
 import { useRewards } from '../../hooks/useRewards';
 import { apiGetEvents, apiGetGifts } from '../../lib/api';
 import { CurrencyIcon } from '../../lib/currency-icons';
+import { currencyName } from '../../lib/rewards';
 import { buildFamily } from '../../lib/family/buildFamily';
 import { handOff } from '../../lib/handoff';
 import { t, tc } from '../../lib/i18n';
@@ -56,10 +57,10 @@ function Person({ member, index, person, members, ctx }) {
           {(person.openTasks > 0 || (person.points !== null && member.is_adult === false)) && (
             <span className="family-person-meta">
               {person.openTasks > 0 && <span>{tc(messages, 'family.open_tasks', person.openTasks)}</span>}
-              {person.points !== null && currency && member.is_adult === false && (
+              {person.points !== null && currency && (member.is_adult === false || person.points > 0) && (
                 <span className="family-person-points">
                   <CurrencyIcon icon={currency.icon} size={13} />
-                  {person.points} {currency.name}
+                  {person.points} {currencyName(currency, messages)}
                 </span>
               )}
             </span>

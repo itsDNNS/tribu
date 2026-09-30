@@ -1,8 +1,9 @@
-import { Award, ChevronRight, Gift, Trophy, Star } from 'lucide-react';
+import { Award, ChevronRight, Star, Users } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useRewards } from '../hooks/useRewards';
 import { CurrencyIcon } from '../lib/currency-icons';
 import { t } from '../lib/i18n';
+import { currencyName, familyGoalProgress, goalFor, openFamilyGoals, waitingForAdults } from '../lib/rewards';
 import MemberAvatar from './MemberAvatar';
 import { DashboardCardHeading } from './DashboardDetails';
 
@@ -11,7 +12,28 @@ function RewardsCardShell({ messages, setActiveView, children, loading = false }
     <div className={`bento-card bento-rewards bento-card-illustrated rewards-widget-card${loading ? ' rewards-widget-loading' : ''}`}>
       <DashboardCardHeading icon={Star} tone="amber" title={t(messages, 'module.rewards.name')} action={t(messages, 'module.rewards.view_all')} onClick={() => setActiveView('rewards')} />
       {children}
+    </div>
+  );
+}
 
+function Bar({ value, label, max, now }) {
+  return (
+    <span className="dashboard-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={now}>
+      <span style={{ width: `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%` }} />
+    </span>
+  );
+}
+
+// The family goal everyone saves for, in one line.
+function FamilyGoalLine({ goal, messages }) {
+  if (!goal) return null;
+  const state = familyGoalProgress(goal);
+  return (
+    <div className="rewards-widget-family">
+      <Users size={14} aria-hidden="true" />
+      <span className="rewards-widget-family-name">{goal.name}</span>
+      <Bar value={state.fraction} label={goal.name} max={state.cost} now={state.progress} />
+      <span className="rewards-widget-family-count">{t(messages, 'module.rewards.family_goal_count').replace('{progress}', state.progress).replace('{cost}', state.cost)}</span>
     </div>
   );
 }
@@ -20,7 +42,7 @@ export default function RewardsDashboardWidget() {
   const { messages, isChild, members, setActiveView } = useApp();
   const rw = useRewards();
 
-  if (rw.loading) {
+  if (rw.loading || !rw.currency) {
     return (
       <RewardsCardShell messages={messages} setActiveView={setActiveView} loading>
         <div className="rewards-widget-skeleton">
@@ -31,103 +53,81 @@ export default function RewardsDashboardWidget() {
     );
   }
 
-  if (!rw.currency) {
-    return (
-      <RewardsCardShell messages={messages} setActiveView={setActiveView}>
-        <div className="rewards-widget-empty">
-          <span className="rewards-widget-empty-icon" aria-hidden="true">
-            <Trophy size={18} />
-          </span>
-          <span>{t(messages, 'module.rewards.no_currency')}</span>
-        </div>
-      </RewardsCardShell>
-    );
-  }
+  const name = currencyName(rw.currency, messages);
+  const familyGoal = openFamilyGoals(rw.catalog)[0];
 
   if (isChild) {
-    const activeRewards = rw.catalog.filter((reward) => reward.is_active);
-    const nextReward = activeRewards
-      .filter((reward) => !rw.myBalance || rw.myBalance.balance < reward.cost)
-      .sort((a, b) => a.cost - b.cost)[0] || activeRewards.sort((a, b) => b.cost - a.cost)[0];
-    const progress = nextReward && rw.myBalance
-      ? Math.min(100, Math.round((rw.myBalance.balance / nextReward.cost) * 100))
-      : 0;
-
+    const goal = rw.myBalance ? goalFor(rw.myBalance, rw.catalog, { fallback: true }) : null;
     return (
       <RewardsCardShell messages={messages} setActiveView={setActiveView}>
         {rw.myBalance && (
           <div className="rewards-widget-balance">
             <span className="rewards-widget-balance-value">
-              <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {rw.myBalance.balance}
+              <CurrencyIcon icon={rw.currency.icon} label={name} /> {rw.myBalance.balance}
             </span>
-            <span className="rewards-widget-balance-label">{rw.currency.name}</span>
+            <span className="rewards-widget-balance-label">{name}</span>
           </div>
         )}
-        {nextReward && (
+        {goal && (
           <div className="rewards-widget-goal">
             <div className="rewards-widget-goal-copy">
               <span className="rewards-widget-goal-label">
-                {t(messages, 'module.rewards.progress_toward').replace('{name}', nextReward.name)}
+                {goal.reached
+                  ? t(messages, 'family.goal_reached').replace('{reward}', goal.reward.name)
+                  : t(messages, 'module.rewards.progress_toward').replace('{name}', goal.reward.name)}
               </span>
               <span className="rewards-widget-goal-cost">
-                {nextReward.cost} <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} />
+                {goal.cost} <CurrencyIcon icon={rw.currency.icon} label={name} />
               </span>
             </div>
             <div className="rewards-progress-bar">
-              <span className="rewards-progress-fill" style={{ width: `${progress}%` }} />
+              <span className="rewards-progress-fill" style={{ width: `${Math.round(goal.progress * 100)}%` }} />
             </div>
           </div>
         )}
+        <FamilyGoalLine goal={familyGoal} messages={messages} />
       </RewardsCardShell>
     );
   }
 
-  const childBalances = rw.balances.filter((balance) => {
+  const waiting = waitingForAdults(rw.transactions);
+  // Children always; grown-ups once they collect or chose a wish.
+  const people = rw.balances.filter((balance) => {
     const member = members.find((item) => item.user_id === balance.user_id);
-    return member && !member.is_adult;
+    return member && (!member.is_adult || balance.balance > 0 || balance.goal_reward_id);
   });
-  const totalBalance = childBalances.reduce((sum, balance) => sum + balance.balance, 0);
 
   return (
     <RewardsCardShell messages={messages} setActiveView={setActiveView}>
-      <div className="rewards-widget-summary" aria-label={t(messages, 'module.rewards.balances_title')}>
-        <div className="rewards-widget-total">
-          <span className="rewards-widget-total-value">
-            <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {totalBalance}
-          </span>
-          <span className="rewards-widget-total-label">{rw.currency.name}</span>
-        </div>
-        {rw.pendingCount > 0 && (
-          <button type="button" className="rewards-widget-pending" onClick={() => setActiveView('rewards')}>
-            <Award size={14} aria-hidden="true" />
-            <span>{t(messages, 'module.rewards.widget_pending').replace('{count}', rw.pendingCount)}</span>
-            <ChevronRight size={13} aria-hidden="true" />
-          </button>
-        )}
-      </div>
-      {childBalances.length > 0 ? (
-        <div className="rewards-child-list">
-          {childBalances.slice(0, 3).map((balance, index) => {
-            const member = members.find((item) => item.user_id === balance.user_id);
+      {waiting.count > 0 && (
+        <button type="button" className="rewards-widget-pending" onClick={() => setActiveView('rewards')}>
+          <Award size={14} aria-hidden="true" />
+          <span>{t(messages, 'module.rewards.waiting_count').replace('{count}', waiting.count)}</span>
+          <ChevronRight size={13} aria-hidden="true" />
+        </button>
+      )}
+      {people.length > 0 && (
+        <div className="rewards-child-list" aria-label={t(messages, 'module.rewards.family_title')}>
+          {people.slice(0, 4).map((balance) => {
+            const index = members.findIndex((item) => item.user_id === balance.user_id);
+            const member = members[index];
+            const goal = goalFor(balance, rw.catalog, { fallback: !member?.is_adult });
             return (
               <div key={balance.user_id} className="rewards-child-row">
-                <MemberAvatar member={member || { display_name: balance.display_name }} index={index} size={26} />
-                <span className="rewards-child-copy"><span className="rewards-child-name">{balance.display_name}</span>
-                  {(() => {
-                    const goal = (rw.catalog || []).filter((reward) => reward.is_active && reward.cost > 0 && reward.cost > balance.balance).sort((a, b) => a.cost - b.cost)[0];
-                    return goal ? <span className="dashboard-progress" role="progressbar" aria-label={goal.name} aria-valuemin={0} aria-valuemax={goal.cost} aria-valuenow={Math.max(0, balance.balance)}><span style={{ width: `${Math.max(0, Math.min(100, balance.balance / goal.cost * 100))}%` }} /></span> : null;
-                  })()}
+                <MemberAvatar member={member || { display_name: balance.display_name }} index={Math.max(0, index)} size={26} />
+                <span className="rewards-child-copy">
+                  <span className="rewards-child-name">{balance.display_name}</span>
+                  {goal && <Bar value={goal.progress} label={goal.reward.name} max={goal.cost} now={goal.points} />}
                 </span>
                 <span className="rewards-child-balance">
-                  <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} /> {balance.balance}
+                  <CurrencyIcon icon={rw.currency.icon} label={name} /> {balance.balance}
                 </span>
               </div>
             );
           })}
         </div>
-      ) : (
-        <div className="rewards-widget-empty">{t(messages, 'module.rewards.no_currency')}</div>
       )}
+      <FamilyGoalLine goal={familyGoal} messages={messages} />
     </RewardsCardShell>
   );
 }

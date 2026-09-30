@@ -80,22 +80,16 @@ export async function copyTextToClipboard(value) {
   }
 }
 
+// "vor 5 Min.", "5 min. ago", "il y a 2 j" — in the reader's language.
 export function serverTimeAgo(dateStr, lang) {
-  const now = new Date();
   const date = parseServerInstant(dateStr);
   if (!date || Number.isNaN(date.getTime())) return '';
-  const diff = Math.floor((now - date) / 1000);
-  if (diff < 60) return lang === 'de' ? 'Gerade eben' : 'Just now';
-  if (diff < 3600) {
-    const m = Math.floor(diff / 60);
-    return lang === 'de' ? `vor ${m} Min.` : `${m}m ago`;
-  }
-  if (diff < 86400) {
-    const h = Math.floor(diff / 3600);
-    return lang === 'de' ? `vor ${h} Std.` : `${h}h ago`;
-  }
-  const d = Math.floor(diff / 86400);
-  return lang === 'de' ? `vor ${d} Tag${d > 1 ? 'en' : ''}` : `${d}d ago`;
+  const diff = Math.max(0, Math.floor((Date.now() - date) / 1000));
+  const format = new Intl.RelativeTimeFormat(lang === 'en' ? 'en-US' : (lang || 'en-US'), { numeric: 'auto', style: 'short' });
+  if (diff < 60) return format.format(0, 'second');
+  if (diff < 3600) return format.format(-Math.floor(diff / 60), 'minute');
+  if (diff < 86400) return format.format(-Math.floor(diff / 3600), 'hour');
+  return format.format(-Math.floor(diff / 86400), 'day');
 }
 
 export const timeAgo = serverTimeAgo;

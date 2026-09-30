@@ -770,7 +770,6 @@ export function apiSetMemberBirthdate(familyId, userId, dateOfBirth) {
 }
 
 export function apiGetRewardCurrency(familyId) { return request(`/rewards/currency?family_id=${familyId}`); }
-export function apiCreateRewardCurrency(payload) { return post('/rewards/currency', payload); }
 export function apiGetEarningRules(familyId) { return request(`/rewards/rules?family_id=${familyId}`); }
 export function apiCreateEarningRule(payload) { return post('/rewards/rules', payload); }
 export function apiDeleteEarningRule(id) { return del(`/rewards/rules/${id}`); }
@@ -787,6 +786,21 @@ export function apiRedeemReward(payload) { return post('/rewards/transactions/re
 export function apiConfirmTransaction(id) { return patch(`/rewards/transactions/${id}/confirm`, {}); }
 export function apiRejectTransaction(id) { return patch(`/rewards/transactions/${id}/reject`, {}); }
 export function apiGetRewardBalances(familyId) { return request(`/rewards/balances?family_id=${familyId}`); }
+export function apiUpdateRewardCurrency(id, payload) { return patch(`/rewards/currency/${id}`, payload); }
+export function apiUpdateReward(id, payload) { return patch(`/rewards/catalog/${id}`, payload); }
+export function apiSetRewardGoal(familyId, rewardId) {
+  return request('/rewards/goal', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ family_id: familyId, reward_id: rewardId }),
+  });
+}
+export function apiGiveToFamilyGoal(rewardId, familyId, amount) { return post(`/rewards/goals/${rewardId}/give`, { family_id: familyId, amount }); }
+export function apiAchieveFamilyGoal(rewardId, familyId) { return post(`/rewards/goals/${rewardId}/achieve?family_id=${familyId}`, {}); }
+export function apiFulfillTransaction(id) { return patch(`/rewards/transactions/${id}/fulfill`, {}); }
+export function apiGetPraise(familyId, limit = 30) { return request(`/rewards/praise?family_id=${familyId}&limit=${limit}`); }
+export function apiCreatePraise(payload) { return post('/rewards/praise', payload); }
+export function apiDeletePraise(id) { return del(`/rewards/praise/${id}`); }
 
 // Gifts
 export function apiGetGifts(familyId, { status = null, forUserId = null, occasion = null, includeGifted = true, sort = null } = {}) {

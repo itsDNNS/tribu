@@ -3,35 +3,35 @@ import { Cake, Check, ChevronRight, Lightbulb } from 'lucide-react';
 import { useRewards } from '../../hooks/useRewards';
 import { useSwipeActions } from '../../hooks/useSwipeActions';
 import { CurrencyIcon } from '../../lib/currency-icons';
+import { currencyName, goalFor } from '../../lib/rewards';
 import { t } from '../../lib/i18n';
 import { clock, dayLabel } from '../../lib/today/todayFormat';
 import SwipeReveal, { swipeStyle } from '../SwipeReveal';
 
 const CHEER_MS = 4000;
 
-// The next reward to save for: the cheapest one not yet in reach.
-function nextReward(catalog, balance) {
-  const active = (catalog || []).filter((reward) => reward.is_active && reward.cost > 0);
-  return active.filter((reward) => reward.cost > balance).sort((a, b) => a.cost - b.cost)[0] || null;
-}
-
 function Stars({ rw, messages, onOpen }) {
   if (rw.loading || !rw.currency || !rw.myBalance) return null;
   const balance = rw.myBalance.balance;
-  const goal = nextReward(rw.catalog, balance);
+  // The wish they chose, else the cheapest one still out of reach.
+  const found = goalFor(rw.myBalance, rw.catalog, { fallback: true });
+  const goal = found ? { name: found.reward.name, cost: found.cost, reached: found.reached } : null;
+  const name = currencyName(rw.currency, messages);
   return (
     <button type="button" className="kids-stars" onClick={onOpen}>
       <span className="kids-stars-icon" aria-hidden="true">
-        <CurrencyIcon icon={rw.currency.icon} label={rw.currency.name} />
+        <CurrencyIcon icon={rw.currency.icon} label={name} />
       </span>
       <span className="kids-stars-copy">
         <span className="kids-stars-count">
-          <strong>{balance}</strong> {rw.currency.name}
+          <strong>{balance}</strong> {name}
         </span>
         {goal && (
           <>
             <span className="kids-stars-goal">
-              {t(messages, 'family.goal').replace('{count}', goal.cost - balance).replace('{reward}', goal.name)}
+              {goal.reached
+                ? t(messages, 'family.goal_reached').replace('{reward}', goal.name)
+                : t(messages, 'family.goal').replace('{count}', goal.cost - balance).replace('{reward}', goal.name)}
             </span>
             <span
               className="kids-stars-bar"
@@ -123,7 +123,7 @@ export default function KidsToday({
   const timer = useRef(null);
   useEffect(() => () => clearTimeout(timer.current), []);
   const rw = useRewards();
-  const currencyName = rw.currency?.name || '';
+  const starsName = currencyName(rw.currency, messages);
 
   const onDone = (task, done) => {
     toggleTask(task);
@@ -138,12 +138,12 @@ export default function KidsToday({
     });
     timer.current = setTimeout(() => setCheer(null), CHEER_MS);
   };
-  const ctx = { messages, locale, timeFormat, canComplete, currencyName, currencyIcon: rw.currency?.icon };
+  const ctx = { messages, locale, timeFormat, canComplete, currencyName: starsName, currencyIcon: rw.currency?.icon };
   const today = day.today.filter((item) => item.kind !== 'meal');
   const earned = cheer?.reward > 0
     ? t(messages, cheer.pending ? 'module.kids.earned_pending' : 'module.kids.earned')
       .replace('{amount}', cheer.reward)
-      .replace('{currency}', currencyName)
+      .replace('{currency}', starsName)
     : '';
 
   return (
