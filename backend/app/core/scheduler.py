@@ -33,6 +33,9 @@ DST_TRANSITION_BUFFER = timedelta(hours=3)
 # this many missing ingredients.
 MEAL_REMINDER_HOUR = 17
 MEAL_REMINDER_ITEMS = 4
+# A week before a birthday without a gift, in the morning.
+GIFT_REMINDER_DAYS = 7
+GIFT_REMINDER_HOUR = 9
 
 _scheduler: BackgroundScheduler | None = None
 
@@ -538,6 +541,12 @@ def _check_notifications():
         if now.hour >= MEAL_REMINDER_HOUR:
             deliver_meal_reminders(db, tomorrow=tomorrow, user_families=user_families, deliver=deliver)
 
+        # 4b. A birthday in a week and nobody takes care of a gift yet.
+        if now.hour >= GIFT_REMINDER_HOUR:
+            deliver_gift_reminders(
+                db, on=now.date() + timedelta(days=GIFT_REMINDER_DAYS), user_families=user_families, deliver=deliver,
+            )
+
         # 5. Reminders someone asked to hear about again (Tribu 2.0, N-2)
         snoozed_users = deliver_snoozed_reminders(db, now=utcnow(), local_now=now, get_pref=get_pref)
 
@@ -560,6 +569,47 @@ def _check_notifications():
 
 def _meal_trigger_key(plan_id: int, plan_date) -> str:
     return f"meal:{plan_id}:{plan_date.isoformat()}"
+
+
+def _gift_trigger_key(birthday_id: int, on) -> str:
+    return f"gift:{birthday_id}:{on.isoformat()}"
+
+
+def deliver_gift_reminders(db, *, on, user_families: dict[int, list[int]], deliver) -> None:
+    """A week before a birthday, tells the grown-ups (not the birthday
+    person) when nobody takes care of a gift yet."""
+    from app.core.deps import next_birthday_date
+    from app.modules.gifts_router import birthday_recipient, gift_under_way
+
+    adults = {
+        (member.user_id, member.family_id)
+        for member in db.query(Membership).filter(Membership.is_adult.is_(True)).all()
+    }
+    family_ids = {fid for fids in user_families.values() for fid in fids}
+    if not family_ids:
+        return
+    birthdays = (
+        db.query(FamilyBirthday)
+        .filter(FamilyBirthday.family_id.in_(family_ids), FamilyBirthday.month == on.month)
+        .order_by(FamilyBirthday.id)
+        .all()
+    )
+    for birthday in birthdays:
+        if next_birthday_date(birthday.month, birthday.day, on) != on:
+            continue
+        member, recipient = birthday_recipient(db, birthday)
+        if gift_under_way(db, birthday.family_id, recipient, on):
+            continue
+        for uid, fam_ids in user_families.items():
+            if birthday.family_id not in fam_ids or (uid, birthday.family_id) not in adults or uid == member:
+                continue
+            deliver(
+                uid, birthday.family_id, "gift_reminder",
+                birthday.person_name,
+                lambda lang: reminder_text(lang, "gift_nothing_yet", date=short_date(lang, on)),
+                f"/gifts?occasion=birthday:{on.isoformat()}:{recipient}", "gift_occasion", birthday.id,
+                _gift_trigger_key(birthday.id, on),
+            )
 
 
 def deliver_meal_reminders(db, *, tomorrow, user_families: dict[int, list[int]], deliver) -> None:

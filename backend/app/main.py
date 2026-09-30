@@ -201,7 +201,7 @@ TAG_METADATA = [
     {"name": "sso", "description": "Single Sign-On (OpenID Connect) login flow: public config, authorize redirect, callback."},
     {"name": "nav", "description": "User navigation bar order customization."},
     {"name": "setup", "description": "Initial setup wizard — check status and restore from backup. Only available on empty databases."},
-    {"name": "gifts", "description": "Gift list — track gift ideas, prices, and occasions per family. Adult only."},
+    {"name": "gifts", "description": "Gifts around people and occasions: ideas hidden from the person they are for, wishes, \"I'll take care of it\", budgets and link previews."},
     {"name": "meal_plans", "description": "Weekly meal planning across fixed morning/noon/evening slots. Available to all family members."},
     {"name": "recipes", "description": "Lightweight family recipe library connected to meal planning and shopping lists."},
     {"name": "school_timetables", "description": "Children's weekly school timetables with configurable periods, breaks, classes, and Shared Display projection."},

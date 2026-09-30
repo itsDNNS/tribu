@@ -807,13 +807,38 @@ export function apiCreatePraise(payload) { return post('/rewards/praise', payloa
 export function apiDeletePraise(id) { return del(`/rewards/praise/${id}`); }
 
 // Gifts
-export function apiGetGifts(familyId, { status = null, forUserId = null, occasion = null, includeGifted = true, sort = null } = {}) {
+export function apiGetGifts(familyId, { status = null, forUserId = null, occasion = null, includeGifted = true, sort = null, limit = null } = {}) {
   const params = new URLSearchParams({ family_id: String(familyId), include_gifted: String(includeGifted) });
   if (status) params.set('status', status);
   if (forUserId) params.set('for_user_id', String(forUserId));
   if (occasion) params.set('occasion', occasion);
   if (sort) params.set('sort', sort);
+  if (limit) params.set('limit', String(limit));
   return request(`/gifts?${params.toString()}`);
+}
+
+export function apiGetGiftOccasions(familyId, days = 120) {
+  return request(`/gifts/occasions?family_id=${familyId}&days=${days}`);
+}
+
+export function apiClaimGift(giftId) {
+  return post(`/gifts/${giftId}/claim`, {});
+}
+
+export function apiUnclaimGift(giftId) {
+  return del(`/gifts/${giftId}/claim`);
+}
+
+export function apiSetGiftBudget(payload) {
+  return request('/gifts/budgets', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function apiPreviewGiftLink(familyId, url) {
+  return post('/gifts/preview', { family_id: familyId, url });
 }
 
 export function apiCreateGift(payload) {

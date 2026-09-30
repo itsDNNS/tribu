@@ -114,7 +114,7 @@ describe('NavigationTab', () => {
     mockAppState = baseState({ isChild: true });
     render(<NavigationTab />);
     expect(screen.queryByText('Wochenplan')).not.toBeInTheDocument();
-    expect(screen.queryByText('Geschenke')).not.toBeInTheDocument();
+    expect(screen.getByText('Geschenke')).toBeInTheDocument();
     expect(screen.getByText('Belohnungen')).toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe('NavigationTab', () => {
     render(<NavigationTab />);
     expect(screen.getByText('Essensplan')).toBeInTheDocument();
     expect(screen.queryByText('Rezepte')).not.toBeInTheDocument();
-    expect(screen.queryByText('Geschenke')).not.toBeInTheDocument();
+    expect(screen.getByText('Geschenke')).toBeInTheDocument();
     expect(screen.getByText('Belohnungen')).toBeInTheDocument();
   });
 });

@@ -16,7 +16,7 @@ This page gives visitors and contributors a quick view of what Tribu ships today
 | Recipes | Household recipe library | Recipe cards that open to cook from (ingredients and steps side by side or as tabs, tick-off while cooking, servings scaling), import from a recipe page's schema.org data, and push-to-shopping for what is still missing. |
 | School timetables | School schedule planning | Timetable views for school routines. |
 | Templates | Repeatable household plans | Reusable task and routine templates. |
-| Gifts | Gift planning | Gift ideas and planning around family dates. |
+| Gifts | Gift planning | Ideas hidden from the person they are for, wish lists for everyone including children, "I'll take care of it" so nothing is bought twice, product links with picture and price, and optional budgets per occasion. |
 | Rewards | Family motivation | Stars from tasks and praise (grown-ups collect too), a wish each person saves for, family goals everyone puts stars into, praise with or without stars, and wishes approved and marked as given. |
 | Notifications | In-app, browser push, and external destinations | Household activity, overdue tasks, upcoming events, and Apprise-backed human channels for reminders plus opt-in shopping activity with encrypted destination URLs and private-host guardrails. |
 | Activity | Household timeline | Recent changes and quick context. |

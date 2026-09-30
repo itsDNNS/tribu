@@ -1127,6 +1127,15 @@ class GiftIdea(Base):
     currency = Column(String(3), nullable=False, default="EUR", server_default="EUR")
     gifted_at = Column(DateTime, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # "idea": someone's plan for a person, never shown to that person.
+    # "wish": what the person wishes for; who takes care of it stays hidden.
+    kind = Column(String(10), nullable=False, default="idea", server_default="idea")
+    for_contact_id = Column(Integer, ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
+    # A small picture of the product, kept by Tribu (a data URL).
+    image = Column(Text, nullable=True)
+    # Who takes care of it, so nobody buys the same thing twice.
+    claimed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    claimed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -1147,6 +1156,24 @@ class GiftPriceHistory(Base):
     recorded_at = Column(DateTime, nullable=False, server_default=func.now())
 
     gift = relationship("GiftIdea", back_populates="price_history")
+
+
+class GiftBudget(Base):
+    """An optional budget for one occasion and person (or the whole family)."""
+
+    __tablename__ = "gift_budgets"
+    __table_args__ = (
+        UniqueConstraint("family_id", "occasion", "occasion_date", "recipient_key", name="uq_gift_budget"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    occasion = Column(String(40), nullable=False)
+    occasion_date = Column(Date, nullable=False)
+    # "u:<user id>", "c:<contact id>", "n:<folded name>" or "family".
+    recipient_key = Column(String(160), nullable=False)
+    amount_cents = Column(Integer, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
 # ── Meal Plans ────────────────────────────────────────────

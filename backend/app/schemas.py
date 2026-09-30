@@ -1769,6 +1769,7 @@ class BalancesResponse(BaseModel):
 
 GIFT_STATUSES = ("idea", "ordered", "purchased", "gifted")
 GIFT_OCCASIONS = ("birthday", "christmas", "easter", "other")
+GIFT_KINDS = ("idea", "wish")
 
 
 class GiftPriceHistoryEntry(BaseModel):
@@ -1781,27 +1782,41 @@ class GiftPriceHistoryEntry(BaseModel):
 
 
 class GiftCreate(BaseModel):
-    """Create a new gift idea."""
+    """Create a gift idea or a wish."""
     family_id: int = Field(..., description="Family ID")
+    kind: str = Field(
+        "idea",
+        description=(
+            "idea: a plan for someone, never shown to them (adults only). "
+            "wish: what someone wishes for; everyone may add their own."
+        ),
+    )
     title: str = Field(min_length=1, max_length=200, description="Gift title")
     description: Optional[str] = Field(None, description="Free-text description")
     url: Optional[str] = Field(None, max_length=2000, description="Product link (http/https)")
+    image: Optional[str] = Field(None, description="Product picture as a data URL (from the link preview or a photo)")
     for_user_id: Optional[int] = Field(None, description="Family member this gift is for")
-    for_person_name: Optional[str] = Field(None, max_length=120, description="External recipient (e.g. grandparent)")
+    for_contact_id: Optional[int] = Field(
+        None, description="Contact this gift is for; a contact that is a family member stores the member",
+    )
+    for_person_name: Optional[str] = Field(None, max_length=120, description="Recipient outside Tribu (free text)")
     occasion: Optional[str] = Field(None, max_length=40, description="birthday, christmas, easter, or free-text label")
     occasion_date: Optional[date] = Field(None, description="Target date for the gift")
     status: str = Field("idea", description="idea, ordered, purchased, or gifted")
-    notes: Optional[str] = Field(None, description="Private parent notes")
+    notes: Optional[str] = Field(None, description="Notes for the people buying (hidden from the recipient)")
     current_price_cents: Optional[int] = Field(None, ge=0, description="Current observed price in cents")
     currency: str = Field("EUR", min_length=3, max_length=3, description="ISO 4217 currency code")
 
 
 class GiftUpdate(BaseModel):
     """Update an existing gift idea (partial update)."""
+    kind: Optional[str] = None
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = None
     url: Optional[str] = Field(None, max_length=2000)
+    image: Optional[str] = None
     for_user_id: Optional[int] = None
+    for_contact_id: Optional[int] = None
     for_person_name: Optional[str] = Field(None, max_length=120)
     occasion: Optional[str] = Field(None, max_length=40)
     occasion_date: Optional[date] = None
@@ -1812,16 +1827,23 @@ class GiftUpdate(BaseModel):
 
 
 class GiftResponse(BaseModel):
-    """Gift idea with full details."""
+    """A gift idea or wish as the caller may see it.
+
+    For the recipient's own wishes, who takes care of it, the progress and
+    the notes stay hidden until the gift was given.
+    """
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     family_id: int
+    kind: str = "idea"
     for_user_id: Optional[int]
+    for_contact_id: Optional[int] = None
     for_person_name: Optional[str]
     title: str
     description: Optional[str]
     url: Optional[str]
+    image: Optional[str] = None
     occasion: Optional[str]
     occasion_date: Optional[date]
     status: str
@@ -1829,6 +1851,9 @@ class GiftResponse(BaseModel):
     current_price_cents: Optional[int]
     currency: str
     gifted_at: Optional[datetime]
+    claimed_by_user_id: Optional[int] = None
+    claimed_at: Optional[datetime] = None
+    for_me: bool = Field(False, description="The caller is the recipient (their own wish)")
     created_by_user_id: Optional[int]
     created_at: datetime
     updated_at: datetime
@@ -1845,6 +1870,62 @@ class PaginatedGifts(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class GiftPreviewRequest(BaseModel):
+    """A product link to read."""
+    family_id: int
+    url: str = Field(min_length=1, max_length=2000)
+
+
+class GiftPreviewResponse(BaseModel):
+    """What the product page shows: name, picture, price and shop."""
+    title: Optional[str] = None
+    image: Optional[str] = Field(None, description="Small WebP data URL")
+    price_cents: Optional[int] = None
+    currency: Optional[str] = None
+    site: Optional[str] = None
+
+
+class GiftOccasion(BaseModel):
+    """One coming occasion: a birthday, Christmas or a dated occasion."""
+    key: str = Field(..., description="Stable key: occasion, date and recipient")
+    occasion: str
+    date: date
+    days_until: int
+    recipient_key: str = Field(..., description='"u:<id>", "c:<id>", "n:<name>" or "family"')
+    for_user_id: Optional[int] = None
+    for_contact_id: Optional[int] = None
+    person_name: Optional[str] = None
+    turns: Optional[int] = Field(None, description="Age on a birthday, when the year of birth is known")
+    for_me: bool = False
+    gift_ids: list[int] = Field(default_factory=list)
+    gift_count: int = 0
+    claimed_count: int = Field(0, description="Gifts someone takes care of")
+    purchased_count: int = Field(0, description="Gifts bought or given")
+    wish_count: int = Field(0, description="Open wishes of the person nobody takes care of yet")
+    budget_cents: Optional[int] = None
+    spent_cents: Optional[int] = None
+
+
+class GiftOccasionList(BaseModel):
+    items: list[GiftOccasion]
+
+
+class GiftBudgetSet(BaseModel):
+    """Set or clear the budget for one occasion and person."""
+    family_id: int
+    occasion: str = Field(min_length=1, max_length=40)
+    occasion_date: date
+    recipient_key: str = Field(min_length=1, max_length=160)
+    amount_cents: Optional[int] = Field(None, ge=0, le=100_000_000, description="None clears the budget")
+
+
+class GiftBudgetResponse(BaseModel):
+    occasion: str
+    occasion_date: date
+    recipient_key: str
+    amount_cents: Optional[int]
 
 
 # ── Meal Plans ──────────────────────────────────────────────

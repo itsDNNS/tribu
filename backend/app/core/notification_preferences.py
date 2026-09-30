@@ -22,6 +22,7 @@ NOTIFICATION_TYPE_TO_PUSH_CATEGORY: dict[str, str] = {
     "event_reminder": "calendar_reminders",
     "task_due": "task_due",
     "birthday": "birthdays",
+    "gift_reminder": "birthdays",
     "meal_reminder": "meal_reminders",
     "event_assigned": "event_assignments",
     "shopping_item_added": "shopping_changes",

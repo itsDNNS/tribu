@@ -119,7 +119,7 @@ function BirthdayRow({ birthday, ctx }) {
 export default function FamilyHub() {
   const {
     members = [], tasks = [], birthdays = [], activity = [], familyId, messages, lang, timeFormat,
-    isChild, demoMode, setActiveView, events = [], hiddenAreas = NO_HIDDEN_AREAS,
+    demoMode, setActiveView, events = [], hiddenAreas = NO_HIDDEN_AREAS,
   } = useApp();
   const rewards = useRewards();
   const now = useCurrentMinute();
@@ -127,7 +127,7 @@ export default function FamilyHub() {
   const today = now.toLocaleDateString('en-CA');
   const [dayEvents, setDayEvents] = useState({ key: null, items: [] });
   const [gifts, setGifts] = useState([]);
-  const canGift = !isChild && !demoMode && !hiddenAreas.includes('gifts');
+  const canGift = !hiddenAreas.includes('gifts');
   const withRewards = !hiddenAreas.includes('rewards');
   const key = `${familyId}:${today}`;
 
@@ -144,13 +144,13 @@ export default function FamilyHub() {
   }, [familyId, demoMode, today, key, events]);
 
   useEffect(() => {
-    if (!familyId || !canGift) return undefined;
+    if (!familyId || !canGift || demoMode) return undefined;
     let cancelled = false;
     apiGetGifts(familyId, { includeGifted: false })
       .then((res) => { if (!cancelled && res?.ok) setGifts(res.data?.items || []); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [familyId, canGift]);
+  }, [familyId, canGift, demoMode]);
 
   const hub = useMemo(() => buildFamily({
     now,

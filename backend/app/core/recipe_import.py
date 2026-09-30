@@ -79,7 +79,12 @@ def _charset(content_type: str | None, body: bytes) -> str:
     return _charset_after(content_type or "") or _charset_after(body[:4096].decode("ascii", "ignore")) or "utf-8"
 
 
-def _get(url: str, allow_private_networks: bool) -> tuple[int, dict[str, str], bytes]:
+def _get(
+    url: str,
+    allow_private_networks: bool,
+    accept: str = "text/html,application/xhtml+xml",
+    max_bytes: int = MAX_PAGE_BYTES,
+) -> tuple[int, dict[str, str], bytes]:
     try:
         parsed = _parse_subscription_url(url)
         family, socktype, proto, sockaddr = _route_addrinfo(parsed, allow_private_networks=allow_private_networks)
@@ -91,7 +96,7 @@ def _get(url: str, allow_private_networks: bool) -> tuple[int, dict[str, str], b
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
     path = urllib.parse.urlunparse(("", "", parsed.path or "/", parsed.params, parsed.query, ""))
     headers = {
-        "Accept": "text/html,application/xhtml+xml",
+        "Accept": accept,
         "Accept-Language": "de,en;q=0.8",
         "User-Agent": USER_AGENT,
         "Host": f"{host}:{port}" if parsed.port else host,
@@ -114,8 +119,8 @@ def _get(url: str, allow_private_networks: bool) -> tuple[int, dict[str, str], b
         conn.request("GET", path, headers=headers)
         resp = conn.getresponse()
         response_headers = {key.lower(): value for key, value in resp.getheaders()}
-        body = b"" if 300 <= resp.status < 400 else resp.read(MAX_PAGE_BYTES + 1)
-        if len(body) > MAX_PAGE_BYTES:
+        body = b"" if 300 <= resp.status < 400 else resp.read(max_bytes + 1)
+        if len(body) > max_bytes:
             raise RecipeImportError("too_large", "The page is too large to import")
         return resp.status, response_headers, body
     except RecipeImportError:
@@ -147,6 +152,23 @@ def fetch_page(url: str, *, allow_private_networks: bool | None = None) -> str:
         except LookupError:
             return body.decode("utf-8", errors="replace")
     raise RecipeImportError("unreachable", "The page redirects too often")
+
+
+def fetch_bytes(url: str, *, accept: str, max_bytes: int, allow_private_networks: bool | None = None) -> tuple[str, bytes]:
+    """Any small resource (a product picture) with the same checks as a
+    page: its content type and bytes."""
+    if allow_private_networks is None:
+        allow_private_networks = subscriptions_allow_private_networks()
+    current = url.strip()
+    for _ in range(MAX_REDIRECTS + 1):
+        status, headers, body = _get(current, allow_private_networks, accept=accept, max_bytes=max_bytes)
+        if 300 <= status < 400 and headers.get("location"):
+            current = urllib.parse.urljoin(current, headers["location"])
+            continue
+        if status >= 400:
+            raise RecipeImportError("unreachable", "The resource could not be loaded")
+        return headers.get("content-type", ""), body
+    raise RecipeImportError("unreachable", "The resource redirects too often")
 
 
 # ── Reading schema.org Recipe data ────────────────────

@@ -113,6 +113,12 @@ GIFT_RECIPIENT_CONFLICT = "GIFT_RECIPIENT_CONFLICT"
 INVALID_GIFT_STATUS = "INVALID_GIFT_STATUS"
 INVALID_GIFT_URL = "INVALID_GIFT_URL"
 INVALID_GIFT_SORT = "INVALID_GIFT_SORT"
+INVALID_GIFT_KIND = "INVALID_GIFT_KIND"
+GIFT_CONTACT_NOT_FOUND = "GIFT_CONTACT_NOT_FOUND"
+GIFT_NOT_ALLOWED = "GIFT_NOT_ALLOWED"
+GIFT_ALREADY_CLAIMED = "GIFT_ALREADY_CLAIMED"
+GIFT_PREVIEW_UNREACHABLE = "GIFT_PREVIEW_UNREACHABLE"
+GIFT_PREVIEW_NOT_ALLOWED = "GIFT_PREVIEW_NOT_ALLOWED"
 
 # ── Meal Plans ───────────────────────────────────────────────
 MEAL_PLAN_NOT_FOUND = "MEAL_PLAN_NOT_FOUND"
@@ -256,10 +262,16 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     BIRTHDAY_FROM_PROFILE: "This birthday comes from a family member's profile; change it there",
     GIFT_NOT_FOUND: "Gift not found",
     GIFT_RECIPIENT_NOT_FAMILY_MEMBER: "Gift recipient is not a family member",
-    GIFT_RECIPIENT_CONFLICT: "Provide either a family member or an external recipient name, not both",
+    GIFT_RECIPIENT_CONFLICT: "Choose one recipient: a family member, a contact or a name",
     INVALID_GIFT_STATUS: "Invalid gift status: {status}",
     INVALID_GIFT_URL: "Gift URL must start with http:// or https://",
     INVALID_GIFT_SORT: "Invalid gift sort: {sort}",
+    INVALID_GIFT_KIND: "Invalid gift kind: {kind}",
+    GIFT_CONTACT_NOT_FOUND: "This contact is not in the family",
+    GIFT_NOT_ALLOWED: "You cannot change this gift",
+    GIFT_ALREADY_CLAIMED: "Someone else already takes care of this gift",
+    GIFT_PREVIEW_UNREACHABLE: "The product page could not be loaded",
+    GIFT_PREVIEW_NOT_ALLOWED: "This address cannot be read",
     MEAL_PLAN_NOT_FOUND: "Meal plan entry not found",
     INVALID_MEAL_SLOT: "Invalid meal slot: {slot}",
     INVALID_MEAL_RANGE: "End date must be on or after start date",

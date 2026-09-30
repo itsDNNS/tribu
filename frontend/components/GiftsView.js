@@ -1,634 +1,390 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Sparkles, ExternalLink, Edit2, Trash2, Package, ShoppingBag, Gift as GiftIcon, Plus, Users } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Cake, ChevronRight, Gift, Heart, Lightbulb, Lock, Plus } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { useToast } from '../contexts/ToastContext';
-import { announce } from '../lib/announce';
-import * as api from '../lib/api';
+import { useGifts } from '../hooks/useGifts';
+import { localeForLang } from '../lib/dates';
 import { peekHandOff, takeHandOff } from '../lib/handoff';
-import { errorText } from '../lib/helpers';
-import { createEmptyGiftForm, GIFT_OCCASIONS, GIFT_SORT_OPTIONS, GIFT_STATUSES } from '../lib/gifts';
-import { t } from '../lib/i18n';
-import MemberAvatar from './MemberAvatar';
+import { t, tc } from '../lib/i18n';
+import { getMemberColor } from '../lib/member-colors';
+import { buildPeople, canDeleteGift, daysBetween, isoDate, recipientKey, recipientLinks, startOfToday } from '../lib/gifts';
 import ConfirmDialog from './ConfirmDialog';
-import GiftDialog from './GiftDialog';
+import GiftDialog, { BudgetDialog } from './gifts/GiftDialog';
+import { GiftCard, OccasionCard, PersonAvatar, occasionLabel, relativeDays } from './gifts/parts';
+import { SectionTitle } from './rewards/parts';
 
-const STATUS_ICON = {
-  idea: Sparkles,
-  ordered: ShoppingBag,
-  purchased: Package,
-  gifted: GiftIcon,
-};
-
-const EXAMPLE_OCCASIONS = GIFT_OCCASIONS.filter((o) => o !== 'other');
-
-const BIRTHDAY_LOOKAHEAD_DAYS = 90;
-const MAX_BIRTHDAY_CHIPS = 6;
-
-function priceToCents(value) {
-  if (value === '' || value === null || value === undefined) return null;
-  const num = Number(String(value).replace(',', '.'));
-  if (!Number.isFinite(num) || num < 0) return null;
-  return Math.round(num * 100);
-}
-
-function nextBirthdayOccurrence(month, day) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const thisYear = new Date(today.getFullYear(), month - 1, day);
-  const target = thisYear >= today ? thisYear : new Date(today.getFullYear() + 1, month - 1, day);
-  const mm = String(target.getMonth() + 1).padStart(2, '0');
-  const dd = String(target.getDate()).padStart(2, '0');
-  const iso = `${target.getFullYear()}-${mm}-${dd}`;
-  const daysUntil = Math.round((target.getTime() - today.getTime()) / 86400000);
-  return { iso, daysUntil };
-}
-
-function computeUpcomingBirthdays(birthdays, days) {
-  if (!Array.isArray(birthdays) || birthdays.length === 0) return [];
-  return birthdays
-    .map((b) => ({ ...b, ...nextBirthdayOccurrence(b.month, b.day) }))
-    .filter((b) => b.daysUntil <= days)
-    .sort((a, b) => a.daysUntil - b.daysUntil)
-    .slice(0, MAX_BIRTHDAY_CHIPS);
-}
-
-function recipientKey(gift) {
-  if (gift.for_user_id != null) return `u:${gift.for_user_id}`;
-  if (gift.for_person_name) return `n:${gift.for_person_name.toLowerCase()}`;
-  return 'none';
-}
-
-function groupByRecipient(gifts, members, messages) {
-  const map = new Map();
-  for (const gift of gifts) {
-    const key = recipientKey(gift);
-    if (!map.has(key)) {
-      let label;
-      let avatarMember = null;
-      let memberIndex = 0;
-      if (gift.for_user_id != null) {
-        const m = members.find((mem) => mem.user_id === gift.for_user_id);
-        if (m) {
-          avatarMember = m;
-          memberIndex = members.indexOf(m);
-          label = m.display_name;
-        } else {
-          label = t(messages, 'module.gifts.recipient_unknown');
-        }
-      } else if (gift.for_person_name) {
-        label = gift.for_person_name;
-      } else {
-        label = t(messages, 'module.gifts.recipient_unassigned');
-      }
-      map.set(key, { key, label, gifts: [], avatarMember, memberIndex });
-    }
-    map.get(key).gifts.push(gift);
-  }
-  return Array.from(map.values()).sort((a, b) => {
-    if (a.key === 'none') return 1;
-    if (b.key === 'none') return -1;
-    return a.label.localeCompare(b.label);
-  });
-}
-
-function formatPrice(cents, currency) {
-  if (cents == null) return '';
-  try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'EUR' }).format(cents / 100);
-  } catch {
-    return `${(cents / 100).toFixed(2)} ${currency || 'EUR'}`;
-  }
-}
-
-function statusLabel(messages, status) {
-  return t(messages, `module.gifts.status.${status}`);
-}
-
-function occasionLabel(messages, occasion) {
-  if (!occasion) return '';
-  return t(messages, `module.gifts.occasion.${occasion}`, occasion);
-}
-
-function GiftCard({ gift, members, messages, onEdit, onDelete, onStatusChange }) {
-  const recipient = gift.for_user_id ? members.find((m) => m.user_id === gift.for_user_id) : null;
-  const recipientIdx = recipient ? members.indexOf(recipient) : 0;
-  const StatusIcon = STATUS_ICON[gift.status] || Sparkles;
-
-  return (
-    <div className={`gift-card gift-status-${gift.status}`}>
-      <span className="gift-card-visual" aria-hidden="true">
-        <StatusIcon size={22} />
-      </span>
-      <div className="gift-card-header">
-        <div className="gift-card-title-row">
-          <h3 className="gift-card-title">{gift.title}</h3>
-        </div>
-        <div className="gift-card-actions">
-          <button
-            type="button"
-            className="gift-card-action"
-            onClick={() => onEdit(gift)}
-            aria-label={t(messages, 'module.gifts.edit_aria').replace('{title}', gift.title)}
-          >
-            <Edit2 size={14} />
-          </button>
-          <button
-            type="button"
-            className="gift-card-action gift-card-action-danger"
-            onClick={() => onDelete(gift)}
-            aria-label={t(messages, 'module.gifts.delete_aria').replace('{title}', gift.title)}
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-
-      {gift.description && <p className="gift-card-description">{gift.description}</p>}
-
-      <div className="gift-card-meta">
-        {recipient && (
-          <span className="gift-card-recipient">
-            <MemberAvatar member={recipient} index={recipientIdx} size={20} />
-            <span>{recipient.display_name}</span>
-          </span>
-        )}
-        {!recipient && gift.for_person_name && (
-          <span className="gift-card-recipient-text">{gift.for_person_name}</span>
-        )}
-        {gift.occasion && (
-          <span className="gift-card-occasion">{occasionLabel(messages, gift.occasion)}</span>
-        )}
-        {gift.occasion_date && (
-          <span className="gift-card-date">{gift.occasion_date}</span>
-        )}
-        {gift.current_price_cents != null && (
-          <span className="gift-card-price">{formatPrice(gift.current_price_cents, gift.currency)}</span>
-        )}
-      </div>
-
-      {gift.url && (
-        <a className="gift-card-link" href={gift.url} target="_blank" rel="noopener noreferrer">
-          <ExternalLink size={12} aria-hidden="true" />
-          {t(messages, 'module.gifts.open_link')}
-        </a>
-      )}
-
-      {gift.notes && <p className="gift-card-notes">{gift.notes}</p>}
-
-      <div className="gift-card-footer">
-        <div
-          className="gift-status-seg"
-          role="group"
-          aria-label={t(messages, 'module.gifts.status_aria')}
-        >
-          {GIFT_STATUSES.map((s) => {
-            const Icon = STATUS_ICON[s] || Sparkles;
-            const active = gift.status === s;
-            return (
-              <button
-                key={s}
-                type="button"
-                className="gift-status-seg-btn"
-                data-status={s}
-                aria-pressed={active}
-                aria-label={statusLabel(messages, s)}
-                onClick={() => { if (!active) onStatusChange(gift.id, s); }}
-                title={statusLabel(messages, s)}
-              >
-                <Icon size={12} aria-hidden="true" />
-                <span className="gift-status-seg-label" aria-hidden="true">{statusLabel(messages, s)}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
+/**
+ * Gifts around people and occasions. Everyone in the family takes part:
+ * ideas stay hidden from the person they are for, wishes are visible to
+ * all, and "I'll take care of it" keeps two people from buying the same.
+ */
 export default function GiftsView() {
-  const { familyId, members, messages, isChild, demoMode, birthdays } = useApp();
-  const { success: toastSuccess, error: toastError } = useToast();
-  const [gifts, setGifts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [recipientFilter, setRecipientFilter] = useState('');
-  const [includeGifted, setIncludeGifted] = useState(false);
-  const [sortOrder, setSortOrder] = useState('created_desc');
-  const [form, setForm] = useState(() => createEmptyGiftForm());
-  const [editingId, setEditingId] = useState(null);
-  const [confirmAction, setConfirmAction] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [groupByRecipientEnabled, setGroupByRecipientEnabled] = useState(false);
+  const { messages, members = [], contacts = [], birthdays = [], me, lang } = useApp();
+  const gifts = useGifts();
+  const locale = localeForLang(lang);
+  const [tab, setTab] = useState('occasions');
+  const [personKey, setPersonKey] = useState(null);
+  const [dialog, setDialog] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const today = startOfToday();
+  const meId = me?.user_id;
+  const { isAdult } = gifts;
 
-  const loadGifts = useCallback(async (fid = familyId) => {
-    if (!fid || demoMode || isChild) {
-      setGifts([]);
-      return;
-    }
-    setLoading(true);
-    const { ok, data } = await api.apiGetGifts(fid, {
-      status: statusFilter || null,
-      forUserId: /^\d+$/.test(recipientFilter) ? Number(recipientFilter) : null,
-      includeGifted,
-      sort: sortOrder,
-    });
-    if (ok && data?.items) setGifts(data.items);
-    setLoading(false);
-  }, [familyId, demoMode, isChild, statusFilter, recipientFilter, includeGifted, sortOrder]);
-
-  useEffect(() => {
-    loadGifts();
-  }, [loadGifts]);
-
-  // "n:<name>" filters by someone outside the family, such as Grandpa.
-  const filteredGifts = useMemo(() => {
-    if (!recipientFilter.startsWith('n:')) return gifts;
-    const name = recipientFilter.slice(2);
-    return gifts.filter((gift) => (gift.for_person_name || '').trim().toLocaleLowerCase() === name);
-  }, [gifts, recipientFilter]);
-
-  const resetForm = useCallback(() => {
-    setForm(createEmptyGiftForm());
-    setEditingId(null);
-  }, []);
-
-  const populateForm = useCallback((gift) => {
-    setEditingId(gift.id);
-    setForm({
-      title: gift.title || '',
-      description: gift.description || '',
-      url: gift.url || '',
-      for_user_id: gift.for_user_id ? String(gift.for_user_id) : '',
-      for_person_name: gift.for_person_name || '',
-      occasion: gift.occasion || '',
-      occasion_date: gift.occasion_date || '',
-      status: gift.status || 'idea',
-      notes: gift.notes || '',
-      price_eur: gift.current_price_cents != null ? (gift.current_price_cents / 100).toFixed(2) : '',
-    });
-  }, []);
-
-  async function submitGift(e) {
-    e.preventDefault();
-    if (demoMode) {
-      toastError(t(messages, 'module.gifts.demo_blocked'));
-      return false;
-    }
-    const payload = {
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      url: form.url.trim() || null,
-      for_user_id: form.for_user_id ? Number(form.for_user_id) : null,
-      for_person_name: form.for_person_name.trim() || null,
-      occasion: form.occasion || null,
-      occasion_date: form.occasion_date || null,
-      status: form.status,
-      notes: form.notes.trim() || null,
-      current_price_cents: priceToCents(form.price_eur),
-    };
-
-    if (editingId) {
-      const { ok, data } = await api.apiUpdateGift(editingId, payload);
-      if (!ok) {
-        toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-        return false;
-      }
-      toastSuccess(t(messages, 'module.gifts.updated'));
-      announce(t(messages, 'module.gifts.updated'));
-    } else {
-      const { ok, data } = await api.apiCreateGift({ family_id: Number(familyId), ...payload });
-      if (!ok) {
-        toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-        return false;
-      }
-      toastSuccess(t(messages, 'module.gifts.created'));
-      announce(t(messages, 'module.gifts.created'));
-    }
-    resetForm();
-    await loadGifts();
-    return true;
-  }
-
-  async function updateStatus(giftId, status) {
-    const { ok, data } = await api.apiUpdateGift(giftId, { status });
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      return;
-    }
-    await loadGifts();
-  }
-
-  async function deleteGift(giftId) {
-    const { ok, data } = await api.apiDeleteGift(giftId);
-    if (!ok) {
-      toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      return;
-    }
-    toastSuccess(t(messages, 'module.gifts.deleted'));
-    announce(t(messages, 'module.gifts.deleted'));
-    await loadGifts();
-  }
-
-  const g = {
-    gifts: filteredGifts,
-    loading,
-    statusFilter, setStatusFilter,
-    recipientFilter, setRecipientFilter,
-    includeGifted, setIncludeGifted,
-    sortOrder, setSortOrder,
-    form, setForm,
-    editingId,
-    submitGift,
-    updateStatus,
-    deleteGift,
-    populateForm,
-    resetForm,
-    reload: loadGifts,
+  const links = useMemo(() => recipientLinks(contacts, members), [contacts, members]);
+  const memberById = useMemo(() => new Map(members.map((member) => [member.user_id, member])), [members]);
+  const contactById = useMemo(() => new Map(contacts.map((contact) => [contact.id, contact])), [contacts]);
+  const indexOf = (member) => Math.max(0, members.indexOf(member));
+  const colorOfKey = (key) => {
+    const member = key?.startsWith('u:') ? memberById.get(Number(key.slice(2))) : null;
+    return member ? getMemberColor(member, indexOf(member)) : 'var(--accent-amber)';
+  };
+  const nameOfKey = (key) => {
+    if (!key) return '';
+    if (key.startsWith('u:')) return memberById.get(Number(key.slice(2)))?.display_name || '';
+    if (key.startsWith('c:')) return contactById.get(Number(key.slice(2)))?.full_name || '';
+    return '';
+  };
+  const recipientOf = (gift) => {
+    const key = recipientKey(gift, links);
+    if (!key) return null;
+    const member = key.startsWith('u:') ? memberById.get(Number(key.slice(2))) : null;
+    return { member, index: member ? indexOf(member) : 0, name: member?.display_name || nameOfKey(key) || gift.for_person_name || '' };
   };
 
-  // The family hub opens someone's gift ideas or a new idea for them.
+  const people = useMemo(
+    () => buildPeople({ gifts: gifts.gifts, members, birthdays, contacts, meId, today }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gifts.gifts, members, birthdays, contacts, meId],
+  );
+
+  function openAdd({ kind = 'idea', occasion = null, recipient = '', name = '', date = '', occasionName = '' } = {}) {
+    const initial = { kind };
+    if (occasionName) initial.occasion = occasionName;
+    if (occasion) {
+      initial.occasion = occasion.occasion;
+      initial.occasion_date = occasion.date;
+      if (occasion.recipient_key?.startsWith('u:') || occasion.recipient_key?.startsWith('c:')) initial.recipient = occasion.recipient_key;
+      else if (occasion.recipient_key?.startsWith('n:')) {
+        initial.recipient = 'name';
+        initial.for_person_name = occasion.person_name || '';
+      }
+    }
+    if (recipient) initial.recipient = recipient;
+    if (name) {
+      initial.recipient = 'name';
+      initial.for_person_name = name;
+    }
+    if (date) initial.occasion_date = date;
+    if (kind === 'wish' && (!isAdult || !initial.recipient)) initial.recipient = `u:${meId}`;
+    if (kind === 'idea' && initial.recipient === `u:${meId}`) initial.kind = 'wish';
+    setDialog({ type: 'gift', initial });
+  }
+
+  // The family hub opens someone's gifts or a new idea for their birthday.
   const [focus] = useState(() => peekHandOff('gifts_focus') || null);
   useEffect(() => {
     takeHandOff('gifts_focus');
     if (!focus) return;
+    const key = focus.memberId ? `u:${focus.memberId}` : `n:${String(focus.name || '').trim().toLocaleLowerCase()}`;
     if (focus.add) {
-      setEditingId(null);
-      setForm({
-        ...createEmptyGiftForm(),
-        for_user_id: focus.memberId ? String(focus.memberId) : '',
-        for_person_name: focus.memberId ? '' : focus.name || '',
-        occasion: 'birthday',
-        occasion_date: focus.date || '',
+      openAdd({
+        kind: focus.memberId === meId ? 'wish' : 'idea',
+        recipient: focus.memberId ? key : '',
+        name: focus.memberId ? '' : focus.name,
+        date: focus.date,
+        occasionName: focus.date ? 'birthday' : '',
       });
-      setDialogOpen(true);
+    } else if (focus.memberId === meId) {
+      setTab('mine');
     } else {
-      setRecipientFilter(focus.memberId ? String(focus.memberId) : `n:${(focus.name || '').trim().toLocaleLowerCase()}`);
+      setTab('people');
+      setPersonKey(key);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus]);
 
-  const upcomingBirthdays = useMemo(
-    () => computeUpcomingBirthdays(birthdays, BIRTHDAY_LOOKAHEAD_DAYS),
-    [birthdays],
-  );
+  const askDelete = (gift) => setConfirm({
+    title: t(messages, gift.kind === 'wish' ? 'module.gifts.delete_wish_title' : 'module.gifts.delete_title'),
+    message: t(messages, 'module.gifts.delete_confirm').replace('{title}', gift.title),
+    action: async () => {
+      const ok = await gifts.remove(gift);
+      setConfirm(null);
+      if (ok) setDialog(null);
+    },
+  });
 
-  if (isChild || demoMode) {
-    const label = isChild ? 'module.gifts.adult_only' : 'module.gifts.demo_blocked';
-    return (
-      <div className="gift-page">
-        <header className="list-header">
-          <h1>{t(messages, 'module.gifts.name')}</h1>
-        </header>
-        <div className="gift-empty-rich gift-empty-panel">
-          <span className="gift-empty-icon-wrap">
-            <Sparkles size={32} aria-hidden="true" />
-          </span>
-          <p>{t(messages, label)}</p>
-        </div>
-      </div>
-    );
-  }
+  const ctx = {
+    messages, locale, meId, isAdult, memberById, indexOf, gifts, giftsById: gifts.giftsById,
+    colorOfKey, nameOfKey, recipientOf,
+    onEdit: (gift) => setDialog({ type: 'gift', gift }),
+    onDelete: askDelete,
+    onAdd: openAdd,
+    onBudget: (occasion) => setDialog({ type: 'budget', occasion }),
+  };
 
-  function openAddDialog() {
-    g.resetForm();
-    setDialogOpen(true);
-  }
-
-  function openAddDialogWithOccasion(occasion) {
-    g.resetForm();
-    g.setForm((prev) => ({ ...prev, occasion }));
-    setDialogOpen(true);
-  }
-
-  function prefillFromBirthday(birthday) {
-    g.setForm((prev) => ({
-      ...prev,
-      for_user_id: '',
-      for_person_name: birthday.person_name,
-      occasion: 'birthday',
-      occasion_date: birthday.iso,
-    }));
-  }
-
-  function openEditDialog(gift) {
-    g.populateForm(gift);
-    setDialogOpen(true);
-  }
-
-  function closeDialog() {
-    setDialogOpen(false);
-    g.resetForm();
-  }
-
-  async function handleSubmit(e) {
-    const ok = await g.submitGift(e);
-    if (ok) setDialogOpen(false);
-  }
-
-  const hasFilters = !!g.statusFilter || !!g.recipientFilter || g.includeGifted;
-
-  function clearFilters() {
-    g.setStatusFilter('');
-    g.setRecipientFilter('');
-    g.setIncludeGifted(false);
-  }
+  const openWishCount = gifts.myWishes.filter((gift) => gift.status !== 'gifted').length;
+  const tabs = [
+    ['occasions', t(messages, 'module.gifts.tab_occasions'), 0],
+    ['people', t(messages, 'module.gifts.tab_people'), 0],
+    ['mine', t(messages, 'module.gifts.tab_mine'), openWishCount],
+  ];
 
   return (
-    <div className="gift-page">
-      {confirmAction && (
+    <div className="gifts-page">
+      <header className="list-header gifts-header">
+        <h1>{t(messages, 'module.gifts.name')}</h1>
+        <div className="gifts-header-actions">
+          <button type="button" className="btn-secondary gifts-header-btn" onClick={() => openAdd({ kind: 'wish' })}>
+            <Heart size={16} aria-hidden="true" /> {t(messages, 'module.gifts.add_wish')}
+          </button>
+          <button type="button" className="list-header-action" onClick={() => openAdd({ kind: 'idea' })}>
+            <Plus size={17} aria-hidden="true" /> {t(messages, 'module.gifts.add_idea')}
+          </button>
+        </div>
+      </header>
+
+      <div className="rewards-tabs" role="tablist" aria-label={t(messages, 'module.gifts.name')}>
+        {tabs.map(([key, label, badge]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={tab === key}
+            className={`rewards-tab${tab === key ? ' active' : ''}`}
+            onClick={() => { setTab(key); if (key !== 'people') setPersonKey(null); }}
+          >
+            {label}
+            {badge > 0 && <span className="gifts-tab-count">{badge}</span>}
+          </button>
+        ))}
+      </div>
+
+      {gifts.loading ? (
+        <section className="rewards-card">
+          <div className="skeleton skeleton-text rewards-widget-skeleton-line" />
+          <div className="skeleton skeleton-text rewards-widget-skeleton-line short" />
+        </section>
+      ) : (
+        <>
+          {tab === 'occasions' && <Occasions occasions={gifts.occasions} ctx={ctx} />}
+          {tab === 'people' && (
+            personKey
+              ? <PersonPage person={people.find((item) => item.key === personKey)} personKey={personKey} ctx={ctx} onBack={() => setPersonKey(null)} today={today} />
+              : <People people={people} ctx={ctx} onOpen={setPersonKey} today={today} />
+          )}
+          {tab === 'mine' && <MyWishes wishes={gifts.myWishes} ctx={ctx} />}
+        </>
+      )}
+
+      {dialog?.type === 'gift' && (
+        <GiftDialog
+          messages={messages}
+          members={members}
+          contacts={contacts}
+          birthdays={birthdays}
+          me={me}
+          isAdult={isAdult}
+          gift={dialog.gift}
+          initial={dialog.initial}
+          onSave={gifts.save}
+          onDelete={dialog.gift && canDeleteGift(dialog.gift, meId, isAdult) ? askDelete : null}
+          onPreview={gifts.preview}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.type === 'budget' && (
+        <BudgetDialog
+          messages={messages}
+          occasion={dialog.occasion}
+          title={dialog.occasion.recipient_key === 'family'
+            ? occasionLabel(messages, dialog.occasion.occasion)
+            : (nameOfKey(dialog.occasion.recipient_key) || dialog.occasion.person_name || '')}
+          onSave={gifts.setBudget}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {confirm && (
         <ConfirmDialog
-          title={confirmAction.title}
-          message={confirmAction.message}
-          confirmDanger={confirmAction.danger}
-          onConfirm={confirmAction.action}
-          onCancel={() => setConfirmAction(null)}
+          title={confirm.title}
+          message={confirm.message}
+          confirmDanger
+          onConfirm={confirm.action}
+          onCancel={() => setConfirm(null)}
           messages={messages}
         />
       )}
+    </div>
+  );
+}
 
-      <GiftDialog
-        open={dialogOpen}
-        onClose={closeDialog}
-        messages={messages}
-        members={members}
-        form={g.form}
-        setForm={g.setForm}
-        onSubmit={handleSubmit}
-        isEditing={g.editingId != null}
-        upcomingBirthdays={upcomingBirthdays}
-        onPickBirthday={prefillFromBirthday}
-      />
+/* ── Occasions ─────────────────────────────────────────────── */
 
-      <header className="list-header">
-        <h1>{t(messages, 'module.gifts.name')}</h1>
-        <button type="button" className="list-header-action gift-add-btn" onClick={openAddDialog}>
-          <Plus size={16} aria-hidden="true" />
-          {t(messages, 'module.gifts.add')}
+function Occasions({ occasions, ctx }) {
+  const { messages, onAdd } = ctx;
+  if (occasions.length === 0) {
+    return (
+      <div className="gifts-empty">
+        <span className="gifts-empty-icon"><Gift size={30} aria-hidden="true" /></span>
+        <h2>{t(messages, 'module.gifts.occasions_empty_title')}</h2>
+        <p>{t(messages, 'module.gifts.occasions_empty')}</p>
+        <button type="button" className="btn-primary gifts-add-small" onClick={() => onAdd({ kind: 'idea' })}>
+          <Plus size={15} aria-hidden="true" /> {t(messages, 'module.gifts.add_idea')}
         </button>
-      </header>
+      </div>
+    );
+  }
+  const [next, ...rest] = occasions;
+  return (
+    <div className="gifts-occasions">
+      <OccasionCard occasion={next} ctx={ctx} featured />
+      {rest.length > 0 && (
+        <section className="rewards-section" aria-labelledby="gifts-later-title">
+          <SectionTitle><span id="gifts-later-title">{t(messages, 'module.gifts.later')}</span></SectionTitle>
+          <div className="gifts-occasion-grid">
+            {rest.map((occasion) => <OccasionCard key={occasion.key} occasion={occasion} ctx={ctx} />)}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
 
-      <section className="gift-toolbar" aria-label={t(messages, 'module.gifts.filter_status')}>
-        <div className="gift-status-tabs" role="group" aria-label={t(messages, 'module.gifts.filter_status')}>
+/* ── People ────────────────────────────────────────────────── */
+
+function People({ people, ctx, onOpen, today }) {
+  const { messages, locale, indexOf, colorOfKey } = ctx;
+  if (people.length === 0) {
+    return <p className="rewards-empty-note">{t(messages, 'module.gifts.people_empty')}</p>;
+  }
+  return (
+    <div className="gifts-people">
+      {people.map((person) => {
+        const name = person.key === 'none' ? t(messages, 'module.gifts.no_recipient') : person.name;
+        const open = person.ideas.length + person.wishes.length;
+        return (
           <button
+            key={person.key}
             type="button"
-            className={`gift-status-tab${g.statusFilter === '' ? ' active' : ''}`}
-            onClick={() => g.setStatusFilter('')}
+            className="gifts-person"
+            style={{ '--person-color': colorOfKey(person.key) }}
+            onClick={() => onOpen(person.key)}
           >
-            {t(messages, 'module.gifts.filter_all_statuses')}
+            <PersonAvatar member={person.member} name={name} index={person.member ? indexOf(person.member) : 0} size={44} />
+            <span className="gifts-person-copy">
+              <strong>{name}</strong>
+              {person.nextBirthday && (
+                <small><Cake size={12} aria-hidden="true" /> {relativeDays(daysBetween(today, person.nextBirthday), locale)}</small>
+              )}
+              <span className="gifts-person-counts">
+                {person.wishes.length > 0 && <span className="wish"><Heart size={12} aria-hidden="true" /> {person.wishes.length}</span>}
+                {person.ideas.length > 0 && <span className="idea"><Lightbulb size={12} aria-hidden="true" /> {person.ideas.length}</span>}
+                {open === 0 && <span className="none">{t(messages, 'module.gifts.nothing_planned')}</span>}
+              </span>
+            </span>
+            <ChevronRight size={18} className="gifts-person-chevron" aria-hidden="true" />
           </button>
-          {GIFT_STATUSES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={`gift-status-tab gift-status-tab-${s}${g.statusFilter === s ? ' active' : ''}`}
-              onClick={() => g.setStatusFilter(s)}
-            >
-              {statusLabel(messages, s)}
-            </button>
-          ))}
+        );
+      })}
+    </div>
+  );
+}
+
+function PersonPage({ person, personKey, ctx, onBack, today }) {
+  const { messages, locale, memberById, indexOf, colorOfKey, nameOfKey, onAdd, isAdult } = ctx;
+  const member = personKey.startsWith('u:') ? memberById.get(Number(personKey.slice(2))) : null;
+  const name = person?.name || member?.display_name || nameOfKey(personKey) || '';
+  const entry = person || { ideas: [], wishes: [], gifted: [], nextBirthday: null };
+  const first = name.split(' ')[0];
+  const addFor = (kind) => {
+    const date = entry.nextBirthday ? isoDate(entry.nextBirthday) : '';
+    if (personKey.startsWith('n:')) onAdd({ kind, name, date });
+    else onAdd({ kind, recipient: personKey === 'none' ? '' : personKey, date });
+  };
+  return (
+    <div className="gifts-person-page" style={{ '--person-color': colorOfKey(personKey) }}>
+      <button type="button" className="btn-ghost gifts-back" onClick={onBack}>
+        <ArrowLeft size={16} aria-hidden="true" /> {t(messages, 'module.gifts.all_people')}
+      </button>
+      <section className="gifts-person-hero">
+        <PersonAvatar member={member} name={name} index={member ? indexOf(member) : 0} size={64} />
+        <div className="gifts-person-hero-copy">
+          <h2>{personKey === 'none' ? t(messages, 'module.gifts.no_recipient') : name}</h2>
+          {entry.nextBirthday && (
+            <p><Cake size={14} aria-hidden="true" /> {t(messages, 'module.gifts.birthday_on')
+              .replace('{date}', entry.nextBirthday.toLocaleDateString(locale, { day: 'numeric', month: 'long' }))
+              .replace('{when}', relativeDays(daysBetween(today, entry.nextBirthday), locale))}</p>
+          )}
+          <p className="gifts-person-secret"><Lock size={13} aria-hidden="true" /> {t(messages, 'module.gifts.person_secret').replace('{name}', first)}</p>
         </div>
-        <div className="gift-filters">
-          <select
-            className="form-input"
-            value={g.recipientFilter}
-            onChange={(e) => g.setRecipientFilter(e.target.value)}
-            aria-label={t(messages, 'module.gifts.filter_recipient')}
-          >
-            <option value="">{t(messages, 'module.gifts.filter_all_recipients')}</option>
-            {members.map((m) => (
-              <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-            ))}
-            {g.recipientFilter.startsWith('n:') && (
-              <option value={g.recipientFilter}>{focus?.name || g.recipientFilter.slice(2)}</option>
-            )}
-          </select>
-          <select
-            className="form-input"
-            value={g.sortOrder}
-            onChange={(e) => g.setSortOrder(e.target.value)}
-            aria-label={t(messages, 'module.gifts.sort_aria')}
-          >
-            {GIFT_SORT_OPTIONS.map((s) => (
-              <option key={s} value={s}>{t(messages, `module.gifts.sort.${s}`)}</option>
-            ))}
-          </select>
-          <label className="gift-filter-toggle">
-            <input
-              type="checkbox"
-              checked={g.includeGifted}
-              onChange={(e) => g.setIncludeGifted(e.target.checked)}
-            />
-            {t(messages, 'module.gifts.filter_include_gifted')}
-          </label>
-          <label className="gift-filter-toggle">
-            <input
-              type="checkbox"
-              checked={groupByRecipientEnabled}
-              onChange={(e) => setGroupByRecipientEnabled(e.target.checked)}
-            />
-            <Users size={14} aria-hidden="true" />
-            {t(messages, 'module.gifts.group_by_recipient')}
-          </label>
+        <div className="gifts-person-hero-actions">
+          {personKey !== 'none' && isAdult && (
+            <button type="button" className="btn-secondary gifts-add-small" onClick={() => addFor('wish')}>
+              <Heart size={15} aria-hidden="true" /> {t(messages, 'module.gifts.add_wish_for')}
+            </button>
+          )}
+          <button type="button" className="btn-primary gifts-add-small" onClick={() => addFor('idea')}>
+            <Plus size={15} aria-hidden="true" /> {t(messages, 'module.gifts.add_idea')}
+          </button>
         </div>
       </section>
 
-      {g.loading && <p className="gift-loading">{t(messages, 'module.gifts.loading')}</p>}
-      {!g.loading && g.gifts.length === 0 && (hasFilters ? (
-        <div className="gift-empty-filtered gift-empty-panel">
-          <Sparkles size={24} aria-hidden="true" />
-          <p>{t(messages, 'module.gifts.empty_filtered')}</p>
-          <button type="button" className="gift-empty-filtered-btn" onClick={clearFilters}>
-            {t(messages, 'module.gifts.clear_filters')}
-          </button>
-        </div>
-      ) : (
-        <div className="gift-empty-rich gift-empty-panel">
-          <span className="gift-empty-icon-wrap">
-            <GiftIcon size={36} aria-hidden="true" />
-          </span>
-          <h2 className="gift-empty-title">{t(messages, 'module.gifts.empty_title')}</h2>
-          <p className="gift-empty-body">{t(messages, 'module.gifts.empty_body')}</p>
-          <button type="button" className="btn btn-primary gift-empty-cta" onClick={openAddDialog}>
-            <Plus size={16} aria-hidden="true" />
-            {t(messages, 'module.gifts.add')}
-          </button>
-          <p className="gift-empty-chip-hint">{t(messages, 'module.gifts.empty_chip_hint')}</p>
-          <div className="gift-empty-chips">
-            {EXAMPLE_OCCASIONS.map((occ) => (
-              <button
-                key={occ}
-                type="button"
-                className="gift-empty-chip"
-                onClick={() => openAddDialogWithOccasion(occ)}
-              >
-                {occasionLabel(messages, occ)}
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
+      <section className="rewards-section" aria-labelledby="gifts-person-wishes">
+        <SectionTitle><span id="gifts-person-wishes">{t(messages, 'module.gifts.wishes_of').replace('{name}', first)}</span></SectionTitle>
+        {entry.wishes.length === 0
+          ? <p className="rewards-empty-note">{t(messages, 'module.gifts.no_wishes').replace('{name}', first)}</p>
+          : <div className="gifts-grid">{entry.wishes.map((gift) => <GiftCard key={gift.id} gift={gift} ctx={ctx} />)}</div>}
+      </section>
 
-      {!g.loading && g.gifts.length > 0 && (
-        groupByRecipientEnabled ? (
-          groupByRecipient(g.gifts, members, messages).map((group) => (
-            <section key={group.key} className="gift-group">
-              <header className="gift-group-header">
-                {group.avatarMember && (
-                  <MemberAvatar member={group.avatarMember} index={group.memberIndex} size={20} />
-                )}
-                <span>{group.label}</span>
-                <span className="gift-group-count">{group.gifts.length}</span>
-              </header>
-              <div className="gift-grid">
-                {group.gifts.map((gift) => (
-                  <GiftCard
-                    key={gift.id}
-                    gift={gift}
-                    members={members}
-                    messages={messages}
-                    onEdit={openEditDialog}
-                    onStatusChange={g.updateStatus}
-                    onDelete={(target) =>
-                      setConfirmAction({
-                        title: t(messages, 'module.gifts.delete_title'),
-                        message: t(messages, 'module.gifts.delete_confirm').replace('{title}', target.title),
-                        danger: true,
-                        action: async () => {
-                          await g.deleteGift(target.id);
-                          setConfirmAction(null);
-                        },
-                      })
-                    }
-                  />
-                ))}
-              </div>
-            </section>
-          ))
-        ) : (
-          <div className="gift-grid">
-            {g.gifts.map((gift) => (
-              <GiftCard
-                key={gift.id}
-                gift={gift}
-                members={members}
-                messages={messages}
-                onEdit={openEditDialog}
-                onStatusChange={g.updateStatus}
-                onDelete={(target) =>
-                  setConfirmAction({
-                    title: t(messages, 'module.gifts.delete_title'),
-                    message: t(messages, 'module.gifts.delete_confirm').replace('{title}', target.title),
-                    danger: true,
-                    action: async () => {
-                      await g.deleteGift(target.id);
-                      setConfirmAction(null);
-                    },
-                  })
-                }
-              />
+      <section className="rewards-section" aria-labelledby="gifts-person-ideas">
+        <SectionTitle><span id="gifts-person-ideas">{t(messages, 'module.gifts.ideas')}</span></SectionTitle>
+        {entry.ideas.length === 0
+          ? <p className="rewards-empty-note">{t(messages, 'module.gifts.no_ideas')}</p>
+          : <div className="gifts-grid">{entry.ideas.map((gift) => <GiftCard key={gift.id} gift={gift} ctx={ctx} />)}</div>}
+      </section>
+
+      {entry.gifted.length > 0 && (
+        <section className="rewards-section" aria-labelledby="gifts-person-given">
+          <SectionTitle><span id="gifts-person-given">{t(messages, 'module.gifts.already_given')}</span></SectionTitle>
+          <ul className="gifts-given">
+            {entry.gifted.map((gift) => (
+              <li key={gift.id}>
+                <Gift size={14} aria-hidden="true" />
+                <strong>{gift.title}</strong>
+                {gift.occasion && <span>{occasionLabel(messages, gift.occasion)}{gift.occasion_date ? ` ${gift.occasion_date.slice(0, 4)}` : ''}</span>}
+              </li>
             ))}
-          </div>
-        )
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/* ── My wishes ─────────────────────────────────────────────── */
+
+function MyWishes({ wishes, ctx }) {
+  const { messages, onAdd } = ctx;
+  const open = wishes.filter((gift) => gift.status !== 'gifted');
+  const received = wishes.filter((gift) => gift.status === 'gifted');
+  return (
+    <div className="gifts-mine">
+      <section className="gifts-mine-intro">
+        <span className="gifts-mine-icon"><Heart size={26} aria-hidden="true" /></span>
+        <div>
+          <h2>{t(messages, 'module.gifts.mine_title')}</h2>
+          <p>{t(messages, 'module.gifts.mine_hint')}</p>
+        </div>
+        <button type="button" className="btn-primary gifts-add-small" onClick={() => onAdd({ kind: 'wish' })}>
+          <Plus size={15} aria-hidden="true" /> {t(messages, 'module.gifts.add_wish')}
+        </button>
+      </section>
+      {open.length === 0
+        ? <p className="rewards-empty-note">{t(messages, 'module.gifts.mine_empty')}</p>
+        : <div className="gifts-grid">{open.map((gift) => <GiftCard key={gift.id} gift={gift} ctx={ctx} />)}</div>}
+      {received.length > 0 && (
+        <section className="rewards-section" aria-labelledby="gifts-received-title">
+          <SectionTitle><span id="gifts-received-title">{tc(messages, 'module.gifts.received', received.length)}</span></SectionTitle>
+          <div className="gifts-grid">{received.map((gift) => <GiftCard key={gift.id} gift={gift} ctx={ctx} />)}</div>
+        </section>
       )}
     </div>
   );
