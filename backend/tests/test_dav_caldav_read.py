@@ -275,6 +275,25 @@ class TestCalDAVRead:
         assert get.status_code == 200, get.text
         assert "From DAV" in get.text
 
+    def test_put_keeps_the_location_a_phone_sets(self, app_under_test, seeded):
+        token, family_id = seeded
+        client = TestClient(app_under_test)
+        headers = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/calendar"}
+        ics = (
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
+            "BEGIN:VEVENT\r\nUID:with-location@example.com\r\n"
+            "DTSTAMP:20260101T000000Z\r\n"
+            "DTSTART:20260602T120000\r\nDTEND:20260602T130000\r\n"
+            "SUMMARY:Swimming\r\nLOCATION:Indoor pool\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        )
+        path = f"/dav/{EMAIL}/cal-{family_id}/with-location.ics"
+        assert client.put(path, headers=headers, content=ics).status_code in (201, 204)
+        assert "LOCATION:Indoor pool" in client.get(path, headers=headers).text
+        # A changed location from the phone replaces the old one.
+        moved = ics.replace("Indoor pool", "Outdoor pool")
+        assert client.put(path, headers=headers, content=moved).status_code in (201, 204)
+        assert "LOCATION:Outdoor pool" in client.get(path, headers=headers).text
+
     def test_put_overwrite_and_delete(self, app_under_test, seeded):
         token, family_id = seeded
         client = TestClient(app_under_test)

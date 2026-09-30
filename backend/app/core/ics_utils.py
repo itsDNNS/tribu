@@ -1,13 +1,14 @@
 """ICS (RFC 5545) import/export utilities for Tribu calendar events."""
 
 import re
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, time, timedelta
 from typing import Mapping, Optional
 
 from app.core.clock import to_local_wall_naive
 from app.core.recurrence import is_last_weekday_of_month, normalize_weekdays, weekday_position
 from app.core.utils import utcnow
 
+from dateutil.rrule import rrulestr
 from icalendar import Calendar, Event, vCalAddress, vText
 
 RECURRENCE_MAP = {
@@ -128,8 +129,7 @@ def events_to_ics(
         if ev.all_day:
             dt_start = ev.starts_at.date() if isinstance(ev.starts_at, datetime) else ev.starts_at
             vevent.add("dtstart", dt_start)
-            dt_end = dt_start + timedelta(days=1)
-            vevent.add("dtend", dt_end)
+            vevent.add("dtend", _all_day_end(dt_start, ev.ends_at))
         else:
             vevent.add("dtstart", ev.starts_at)
             if ev.ends_at:
@@ -143,9 +143,13 @@ def events_to_ics(
             for d_str in ev.excluded_dates:
                 try:
                     exdate = datetime.strptime(d_str, "%Y-%m-%d").date()
-                    vevent.add("exdate", exdate)
                 except (ValueError, TypeError):
-                    pass
+                    continue
+                # EXDATE takes DTSTART's value type (RFC 5545 3.8.5.1);
+                # clients skip a date-only EXDATE on a timed series.
+                if not ev.all_day and isinstance(ev.starts_at, datetime):
+                    exdate = datetime.combine(exdate, ev.starts_at.time())
+                vevent.add("exdate", exdate)
 
         dtstamp = ev.created_at if ev.created_at else utcnow()
         vevent.add("dtstamp", dtstamp)
@@ -239,17 +243,31 @@ def ics_to_event_dicts(
         starts_at = _local_wall_datetime(dtstart_val)
 
         dtend = component.get("dtend")
+        duration = component.get("duration")
         ends_at = None
         if dtend:
             dtend_val = dtend.dt
             if all_day:
-                pass  # All-day events: DTEND is exclusive, we don't store ends_at for all-day
+                # DTEND is exclusive. A one-day event keeps no end; a longer
+                # one ends at midnight after its last day, as Tribu's
+                # calendar reads all-day spans.
+                if isinstance(dtend_val, date) and not isinstance(dtend_val, datetime):
+                    if dtend_val > dtstart_val + timedelta(days=1):
+                        ends_at = datetime(dtend_val.year, dtend_val.month, dtend_val.day)
             else:
                 if isinstance(dtend_val, datetime):
                     if dtend_val.tzinfo:
                         ends_at = to_local_wall_naive(dtend_val)
                     else:
                         ends_at = dtend_val
+        elif duration is not None and isinstance(duration.dt, timedelta) and duration.dt > timedelta(0):
+            # DURATION instead of DTEND (Thunderbird and others).
+            if all_day:
+                if duration.dt > timedelta(days=1):
+                    last = dtstart_val + timedelta(days=duration.dt.days)
+                    ends_at = datetime(last.year, last.month, last.day)
+            else:
+                ends_at = starts_at + duration.dt
 
         recurrence = None
         recurrence_end = None
@@ -278,11 +296,15 @@ def ics_to_event_dicts(
                 elif isinstance(until_val, date):
                     recurrence_end = datetime(until_val.year, until_val.month, until_val.day)
 
-            if rrule.get("count"):
-                errors.append({
-                    "index": index, "summary": summary,
-                    "error": "RRULE COUNT not supported, imported without recurrence end",
-                })
+            if rrule.get("count") and not until_list:
+                # "Six times" ends on the sixth occurrence instead of
+                # running on forever.
+                recurrence_end = _count_end(rrule, dtstart_val)
+                if recurrence_end is None:
+                    errors.append({
+                        "index": index, "summary": summary,
+                        "error": "RRULE COUNT could not be read, imported without recurrence end",
+                    })
 
         excluded_dates = []
         exdates = component.get("exdate")
@@ -413,6 +435,10 @@ def _rrule(ev) -> dict:
         rrule["byday"] = f"-1{weekday}"
     if ev.recurrence_end:
         until = ev.recurrence_end.date() if isinstance(ev.recurrence_end, datetime) else ev.recurrence_end
+        # UNTIL takes DTSTART's value type (RFC 5545 3.3.10); a timed
+        # series runs through the whole last day.
+        if not ev.all_day and isinstance(start, datetime):
+            until = datetime.combine(until, time(23, 59, 59))
         rrule["until"] = until
     return rrule
 
@@ -492,6 +518,33 @@ def _tribu_recurrence(rrule, dtstart, starts_at: datetime) -> Optional[tuple[str
     if 1 <= position <= 5 and position == weekday_position(source_date):
         return f"{prefix}_weekday", None
     return None
+
+
+def _all_day_end(start: date, ends_at) -> date:
+    """The exclusive DTEND of an all-day event: the day after its last day.
+
+    Tribu keeps longer all-day events with ``ends_at`` either at midnight
+    after the last day (from DAV) or on the last day itself (from the
+    editor); one-day events have no end.
+    """
+    if isinstance(ends_at, datetime):
+        end = ends_at.date() if ends_at.time() == time(0) else ends_at.date() + timedelta(days=1)
+        if end > start + timedelta(days=1):
+            return end
+    return start + timedelta(days=1)
+
+
+def _count_end(rrule, dtstart) -> Optional[datetime]:
+    """The start of the last occurrence of an RRULE with COUNT."""
+    try:
+        start = dtstart if isinstance(dtstart, datetime) else datetime(dtstart.year, dtstart.month, dtstart.day)
+        rule = rrulestr(rrule.to_ical().decode(), dtstart=start)
+        occurrences = list(rule)
+    except (ValueError, TypeError):
+        return None
+    if not occurrences:
+        return None
+    return _local_wall_datetime(occurrences[-1])
 
 
 def _local_wall_datetime(value) -> datetime:
