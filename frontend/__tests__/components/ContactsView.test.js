@@ -1,10 +1,20 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ContactsView from '../../components/ContactsView';
 import { buildMessages } from '../../lib/i18n';
+import * as api from '../../lib/api';
+import { handOff } from '../../lib/viewHandoff';
 
 jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({ success: jest.fn(), error: jest.fn() }),
+}));
+jest.mock('../../lib/api', () => ({
+  apiGetContactDuplicates: jest.fn(),
+  apiMergeContacts: jest.fn(),
+  apiDismissContactDuplicates: jest.fn(),
+  apiCreateContact: jest.fn(),
+  apiUpdateContact: jest.fn(),
+  apiDeleteContact: jest.fn(),
 }));
 
 let mockAppState = {};
@@ -13,7 +23,11 @@ jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockAppState,
 }));
 
+const today = new Date();
+const inDays = (days) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
+
 function setup(overrides = {}) {
+  const soon = inDays(3);
   mockAppState = {
     messages: buildMessages('en'),
     demoMode: false,
@@ -24,34 +38,87 @@ function setup(overrides = {}) {
       { user_id: 12, display_name: 'Mia', is_adult: false, date_of_birth: '2017-05-20', color: '#8b5cf6' },
     ],
     contacts: [
-      { id: 1, full_name: 'Ava Brown', email: 'ava@example.com', phone: '', birthday_month: 5, birthday_day: 18 },
+      {
+        id: 1, full_name: 'Ava Brown', email: 'ava@example.com', phone: '+49 170 1234567',
+        phone_values: ['+49 170 1234567', '+49 30 555'], birthday_month: soon.getMonth() + 1, birthday_day: soon.getDate(),
+        birthday_year: 1990, organization: 'Clinic', addresses: ['Main St 1, 10115 Berlin'], note: 'Mornings only', synced: true,
+      },
+      { id: 2, full_name: 'Grandma Ilse', birthday_month: 6, birthday_day: 3, birthday_year: null },
+      { id: 3, full_name: 'Ava B.', phone: '0170 1234567' },
     ],
     setContacts: jest.fn(),
     familyId: 7,
     loadContacts: jest.fn(),
     loadBirthdays: jest.fn(),
     loadDashboard: jest.fn(),
-    birthdays: [
-      { id: 2, person_name: 'Grandma', month: 6, day: 3, year: null },
-    ],
-    setBirthdays: jest.fn(),
     ...overrides,
   };
   return render(<ContactsView />);
 }
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  api.apiGetContactDuplicates.mockResolvedValue({ ok: true, data: [] });
+});
+
 describe('ContactsView', () => {
-  it('renders the redesigned contacts shell and birthday tab', () => {
+  it('shows coming birthdays, contacts and a chosen contact in one place', () => {
+    setup();
+    const upcoming = screen.getByRole('region', { name: 'Coming birthdays' });
+    expect(upcoming).toHaveTextContent('Ava Brown');
+    expect(upcoming).toHaveTextContent('in 3 days');
+    expect(upcoming).toHaveTextContent(`turns ${today.getFullYear() - 1990 + (inDays(3).getFullYear() - today.getFullYear())}`);
+    expect(upcoming).toHaveTextContent('Mia');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Grandma Ilse/ })[0]);
+    expect(screen.getByRole('heading', { name: 'Grandma Ilse', level: 2 })).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /^Ava Brown/ }).at(-1));
+    expect(screen.getByRole('heading', { name: 'Ava Brown', level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Call' })).toHaveAttribute('href', 'tel:+491701234567');
+    expect(screen.getByRole('link', { name: '+49 30 555' })).toBeInTheDocument();
+    expect(screen.getByText('Main St 1, 10115 Berlin')).toBeInTheDocument();
+    expect(screen.getByText('Mornings only')).toBeInTheDocument();
+    expect(screen.getByText('From phone sync')).toBeInTheDocument();
+  });
+
+  it('searches by name and by phone digits', () => {
     const { container } = setup();
+    const list = within(container.querySelector('.contacts-list-pane'));
+    const search = screen.getByRole('searchbox', { name: 'Search contacts' });
+    fireEvent.change(search, { target: { value: 'ilse' } });
+    expect(list.queryByRole('button', { name: /^Ava Brown/ })).not.toBeInTheDocument();
+    expect(list.getByRole('button', { name: /Grandma Ilse/ })).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: '1234567' } });
+    expect(list.getAllByRole('button', { name: /^Ava/ })).toHaveLength(2);
+  });
 
-    expect(container.querySelector('.contacts-page')).toBeInTheDocument();
-    expect(screen.getByText('Ava Brown')).toBeInTheDocument();
-    expect(screen.getByText('ava@example.com')).toBeInTheDocument();
+  it('lists birthdays by month with members, opened from a handoff', () => {
+    handOff('tribu_contacts_tab', 'birthdays');
+    const { container } = setup();
+    expect(screen.getByRole('button', { name: 'Birthdays' })).toHaveAttribute('aria-pressed', 'true');
+    const list = within(container.querySelector('.contacts-list-pane'));
+    expect(list.getByText('Mia')).toBeInTheDocument();
+    expect(list.getByRole('heading', { name: 'May' })).toBeInTheDocument();
+    expect(list.queryByText('Ava B.')).not.toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: /Birthdays/i }));
+  it('merges duplicates after picking the one to keep', async () => {
+    api.apiGetContactDuplicates.mockResolvedValue({ ok: true, data: [{ contact_ids: [1, 3], reasons: ['phone'] }] });
+    api.apiMergeContacts.mockResolvedValue({ ok: true, data: { id: 1 } });
+    setup();
+    fireEvent.click(await screen.findByRole('button', { name: 'Review' }));
+    const dialog = screen.getByRole('dialog', { name: 'Duplicate contacts' });
+    expect(dialog).toHaveTextContent('Same number');
+    // The richer contact is picked to keep.
+    expect(screen.getAllByRole('radio')[0]).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+    await waitFor(() => expect(api.apiMergeContacts).toHaveBeenCalledWith(7, 1, [3]));
+  });
 
-    expect(screen.getByText('Grandma')).toBeInTheDocument();
-    expect(screen.getByText('Mia')).toBeInTheDocument();
-    expect(container.querySelector('.birthday-card-member')).toBeInTheDocument();
+  it('children only read', () => {
+    setup({ isChild: true });
+    expect(screen.queryByRole('button', { name: 'Add contact' })).not.toBeInTheDocument();
+    expect(api.apiGetContactDuplicates).not.toHaveBeenCalled();
   });
 });

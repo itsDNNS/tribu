@@ -262,6 +262,18 @@ export function apiDeleteContact(contactId) {
   return del(`/contacts/${contactId}`);
 }
 
+export function apiGetContactDuplicates(familyId) {
+  return request(`/contacts/duplicates?family_id=${familyId}`);
+}
+
+export function apiMergeContacts(family_id, keep_id, merge_ids) {
+  return post('/contacts/merge', { family_id, keep_id, merge_ids });
+}
+
+export function apiDismissContactDuplicates(family_id, contact_ids) {
+  return post('/contacts/duplicates/dismiss', { family_id, contact_ids });
+}
+
 export function apiImportContactsCsv(family_id, csv_text) {
   return post('/contacts/import-csv', { family_id, csv_text });
 }

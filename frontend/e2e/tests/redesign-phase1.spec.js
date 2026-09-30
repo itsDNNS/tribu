@@ -24,7 +24,7 @@ test.describe('Phase 1 redesign views', () => {
 
     await navigateTo(page, 'Contacts');
     await expect(page.locator('.contacts-page')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.contacts-tab-toggle')).toBeVisible();
+    await expect(page.locator('.contacts-filter')).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     await navigateTo(page, 'School timetables');

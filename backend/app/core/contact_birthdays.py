@@ -13,7 +13,15 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
+from app.core.clock import utcnow
 from app.models import FamilyBirthday
+
+MIN_BIRTH_YEAR = 1900
+
+
+def valid_birth_year(year: int | None) -> bool:
+    """A year of birth Tribu accepts: from 1900 up to next year."""
+    return year is None or MIN_BIRTH_YEAR <= year <= utcnow().year + 1
 
 
 def sync_contact_birthday(
@@ -23,6 +31,7 @@ def sync_contact_birthday(
     person_name: str,
     month: int | None,
     day: int | None,
+    year: int | None = None,
 ) -> None:
     """Reconcile the synced birthday row for one contact.
 
@@ -31,9 +40,7 @@ def sync_contact_birthday(
     stored on the row as the human-readable label; it is *not* used to
     locate the row.
 
-    The ``year`` column is intentionally not touched here: contacts do
-    not carry a year, and a year the user set manually on the synced row
-    must survive edits/renames on the contact.
+    The contact is the source of truth, including the year of birth.
     """
     if contact_id is None:
         return
@@ -52,6 +59,7 @@ def sync_contact_birthday(
             existing.person_name = person_name
             existing.month = month
             existing.day = day
+            existing.year = year
             return
         db.add(FamilyBirthday(
             family_id=family_id,
@@ -59,6 +67,7 @@ def sync_contact_birthday(
             person_name=person_name,
             month=month,
             day=day,
+            year=year,
         ))
         return
 
