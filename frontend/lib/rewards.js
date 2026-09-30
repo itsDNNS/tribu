@@ -22,20 +22,22 @@ export function isFamilyGoal(reward) {
 }
 
 /** Personal wishes one can save for, cheapest first. */
+const asList = (value) => (Array.isArray(value) ? value : []);
+
 export function personalWishes(catalog = []) {
-  return catalog
+  return asList(catalog)
     .filter((reward) => reward && !isFamilyGoal(reward) && reward.is_active !== false)
     .sort((a, b) => a.cost - b.cost || String(a.name).localeCompare(String(b.name)));
 }
 
 /** Family goals still being saved for. */
 export function openFamilyGoals(catalog = []) {
-  return catalog.filter((reward) => isFamilyGoal(reward) && !reward.achieved_at && reward.is_active !== false);
+  return asList(catalog).filter((reward) => isFamilyGoal(reward) && !reward.achieved_at && reward.is_active !== false);
 }
 
 /** Family goals already reached and celebrated, newest first. */
 export function achievedFamilyGoals(catalog = []) {
-  return catalog
+  return asList(catalog)
     .filter((reward) => isFamilyGoal(reward) && reward.achieved_at)
     .sort((a, b) => String(b.achieved_at).localeCompare(String(a.achieved_at)));
 }
@@ -80,6 +82,7 @@ export function familyGoalProgress(reward) {
  * and approved wishes not given yet.
  */
 export function waitingForAdults(transactions = []) {
+  transactions = asList(transactions);
   const wishes = transactions.filter((txn) => txn.kind === 'redeem' && txn.status === 'pending');
   const earnings = transactions.filter((txn) => txn.kind === 'earn' && txn.status === 'pending');
   const toGive = transactions.filter((txn) => txn.kind === 'redeem' && txn.status === 'confirmed' && !txn.fulfilled_at);
@@ -89,7 +92,7 @@ export function waitingForAdults(transactions = []) {
 /** Transactions by calendar day, newest day first. */
 export function groupByDay(transactions = [], parse = (value) => new Date(value)) {
   const groups = new Map();
-  for (const txn of transactions) {
+  for (const txn of asList(transactions)) {
     const date = parse(txn.created_at);
     const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
     if (!groups.has(key)) groups.set(key, { date, items: [] });

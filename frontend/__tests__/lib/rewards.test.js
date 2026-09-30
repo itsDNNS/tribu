@@ -60,3 +60,12 @@ describe('rewards helpers', () => {
     expect(groups.map((g) => g.items.map((i) => i.id))).toEqual([[1, 2], [3]]);
   });
 });
+
+describe('rewards helpers with odd answers', () => {
+  it('treat anything but a list as empty', () => {
+    expect(personalWishes({})).toEqual([]);
+    expect(openFamilyGoals(null)).toEqual([]);
+    expect(waitingForAdults({}).count).toBe(0);
+    expect(goalFor({ balance: 3 }, {}, { fallback: true })).toBeNull();
+  });
+});

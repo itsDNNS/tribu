@@ -125,12 +125,14 @@ export function useRewards() {
       api.apiGetRewardTransactions(familyId, null, 50, 0),
       api.apiGetPraise(familyId),
     ].map((load) => load.catch(() => failed)));
-    if (cRes.ok) setCurrency(cRes.data);
-    if (bRes.ok) setBalances(bRes.data?.balances || []);
-    if (catRes.ok) setCatalog(catRes.data);
-    if (rRes.ok) setRules(rRes.data);
-    if (tRes.ok) setTransactions(tRes.data?.items || []);
-    if (pRes.ok) setPraise(Array.isArray(pRes.data) ? pRes.data : []);
+    // Lists stay lists even when a server answers with something else.
+    const list = (value) => (Array.isArray(value) ? value : []);
+    if (cRes.ok && cRes.data?.id) setCurrency(cRes.data);
+    if (bRes.ok) setBalances(list(bRes.data?.balances));
+    if (catRes.ok) setCatalog(list(catRes.data));
+    if (rRes.ok) setRules(list(rRes.data));
+    if (tRes.ok) setTransactions(list(tRes.data?.items));
+    if (pRes.ok) setPraise(list(pRes.data));
     setLoading(false);
   }, [familyId, demoMode, members, me, lang]);
 
