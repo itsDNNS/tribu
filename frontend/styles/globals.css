@@ -369,40 +369,6 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .glow-amber { box-shadow: 0 0 0 1px rgba(212, 162, 79, 0.12), 0 8px 28px -18px rgba(212, 162, 79, 0.24); }
 .glow-emerald { box-shadow: 0 0 0 1px rgba(133, 168, 135, 0.12), 0 8px 28px -18px rgba(133, 168, 135, 0.24); }
 
-/* ═══════════════════════════════════════════
-   LANDING PAGE
-   ═══════════════════════════════════════════ */
-.landing-page { min-height: 100vh; position: relative; z-index: 2; overflow-x: hidden; }
-
-/* Hero */
-.landing-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 70vh; padding: 80px var(--space-lg) var(--space-2xl); animation: authEnter 0.8s var(--ease-out-expo) both; }
-.landing-hero h1 { font-size: 3.5rem; font-weight: 700; letter-spacing: -0.03em; background: var(--grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-top: var(--space-sm); }
-.landing-hero-subtitle { color: var(--text-secondary); font-size: 1.15rem; font-weight: 300; margin-top: var(--space-xs); max-width: 400px; }
-.landing-hero-ctas { display: flex; gap: var(--space-md); margin-top: var(--space-xl); align-items: center; flex-wrap: wrap; justify-content: center; }
-.landing-hero-ctas .btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; font-size: 1rem; }
-.landing-hero-ctas .btn-ghost { padding: 14px 24px; font-size: 0.95rem; text-decoration: none; }
-
-/* Features */
-.landing-features { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-lg); max-width: 680px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg); }
-.landing-feature-card { padding: var(--space-xl); text-align: center; animation: featureEnter 0.6s var(--ease-out-expo) both; }
-.landing-feature-icon { width: 48px; height: 48px; border-radius: 14px; background: var(--grad-primary); display: inline-flex; align-items: center; justify-content: center; color: white; margin-bottom: var(--space-md); }
-.landing-feature-card h3 { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-xs); }
-.landing-feature-card p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
-@keyframes featureEnter { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Trust Badges */
-.landing-trust { display: flex; gap: var(--space-md); justify-content: center; padding: var(--space-lg) var(--space-lg) var(--space-2xl); flex-wrap: wrap; animation: authEnter 0.8s var(--ease-out-expo) 0.4s both; }
-.landing-trust-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-pill); color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; }
-
-/* Auth Section */
-.landing-auth { max-width: 440px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg); scroll-margin-top: var(--space-xl); }
-
-/* Footer */
-.landing-footer { text-align: center; padding: var(--space-xl) var(--space-lg); color: var(--text-muted); font-size: 0.82rem; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--glass-border); margin-top: var(--space-lg); }
-.landing-footer-link { color: var(--text-secondary); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: color 0.2s; }
-.landing-footer-link:hover { color: var(--amethyst); }
-.landing-footer-dot { color: var(--text-muted); }
-
 /* Auth (shared with landing + invite + setup) */
 .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; z-index: 2; padding: var(--space-lg); }
 .auth-container { width: 100%; max-width: 440px; animation: authEnter 0.8s var(--ease-out-expo) both; }
@@ -1973,16 +1939,6 @@ button.contact-row:hover { background: var(--surface-soft); }
     max-width: 100%;
     min-width: 0;
   }
-}
-
-/* Landing page responsive */
-@media (max-width: 640px) {
-  .landing-hero { min-height: 60vh; padding: 72px var(--space-md) var(--space-xl); }
-  .landing-hero h1 { font-size: 2.5rem; }
-  .landing-hero-subtitle { font-size: 1rem; }
-  .landing-features { grid-template-columns: 1fr; max-width: 400px; padding: var(--space-xl) var(--space-md); }
-  .landing-trust { flex-direction: column; align-items: center; }
-  .landing-auth { padding: var(--space-xl) var(--space-md); }
 }
 
 /* ─── Settings: Data ─── */
@@ -5581,84 +5537,6 @@ button.contact-row:hover { background: var(--surface-soft); }
     linear-gradient(180deg, #fff8ef 0%, #f4eadc 100%);
 }
 
-.landing-welcome-mat {
-  min-height: 42vh;
-  padding-top: clamp(3.5rem, 6vw, 5.5rem);
-  padding-bottom: var(--space-md);
-}
-
-.landing-welcome-mat h1 {
-  color: var(--text-primary);
-  background: none;
-  -webkit-text-fill-color: currentColor;
-  letter-spacing: -0.045em;
-}
-
-.landing-hero-subtitle {
-  max-width: 34rem;
-  color: var(--text-secondary);
-  font-weight: 400;
-}
-
-.landing-page .auth-logo--warm {
-  color: var(--amethyst);
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-}
-.landing-page .auth-logo--warm::after { display: none; }
-
-.landing-paper-stack {
-  position: relative;
-  width: min(260px, 70vw);
-  height: 64px;
-  margin: -0.25rem auto var(--space-md);
-  pointer-events: none;
-}
-.landing-paper-card {
-  position: absolute;
-  left: 50%;
-  top: 20px;
-  width: 142px;
-  height: 42px;
-  border-radius: 14px;
-  border: 1px solid var(--border-subtle);
-  background: var(--surface-paper);
-  box-shadow: var(--shadow-sm);
-}
-.landing-paper-card--calendar {
-  transform: translateX(-92%) rotate(-6deg);
-  border-top: 5px solid var(--accent-sky);
-}
-.landing-paper-card--tasks {
-  transform: translateX(-50%) translateY(-8px);
-  border-top: 5px solid var(--accent-sage);
-  z-index: 2;
-}
-.landing-paper-card--shopping {
-  transform: translateX(-8%) rotate(5deg);
-  border-top: 5px solid var(--accent-amber);
-}
-
-.landing-features {
-  display: none;
-}
-.landing-feature-card {
-  background: var(--surface-paper);
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-}
-.landing-feature-icon {
-  color: var(--text-on-primary);
-  background: var(--color-accent-fill);
-  box-shadow: none;
-}
-.landing-feature-card--calendar .landing-feature-icon { background: var(--accent-sky); }
-.landing-feature-card--tasks .landing-feature-icon { background: var(--accent-sage); }
-.landing-feature-card--shopping .landing-feature-icon { background: var(--accent-amber); }
-.landing-feature-card--notifications .landing-feature-icon { background: var(--accent-rose); }
-
-.landing-trust-badge,
 .auth-card--warm {
   background: var(--surface-paper);
   border: 1px solid var(--border-subtle);
@@ -5666,10 +5544,6 @@ button.contact-row:hover { background: var(--surface-soft); }
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   padding: clamp(1rem, 1.35vw, 1.45rem);
-}
-.landing-trust { padding: var(--space-sm) var(--space-lg) var(--space-lg); }
-.landing-auth { padding-top: var(--space-md); }
-.auth-card--warm {
   border-radius: var(--radius-xl);
 }
 .auth-card--warm .auth-tabs {
@@ -5682,12 +5556,6 @@ button.contact-row:hover { background: var(--surface-soft); }
 }
 .auth-card--warm .auth-divider {
   color: var(--text-muted);
-}
-
-@media (max-width: 640px) {
-  .landing-features { grid-template-columns: 1fr; }
-  .landing-paper-stack { height: 72px; }
-  .landing-paper-card { width: 140px; height: 46px; }
 }
 
 /* Calendar redesign: warm single-surface month view inspired by the Today mockup. */

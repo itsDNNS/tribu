@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Users, Play, Globe, CalendarDays, CheckSquare, ShoppingCart, Bell, Server, Lock, KeyRound } from 'lucide-react';
+import { Cake, Eye, EyeOff, Globe, KeyRound, Lock, Play, Server, ShoppingCart, Users, Utensils } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
+import { localeForLang } from '../lib/dates';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
@@ -39,6 +40,51 @@ function ssoErrorMessage(tag, messages) {
   return t(messages, key);
 }
 
+// A made-up day in Tribu, drawn like the Today view, so the first page
+// shows what the app is rather than empty cards.
+function WelcomePreview({ messages, lang }) {
+  const today = new Date().toLocaleDateString(localeForLang(lang), { weekday: 'long', day: 'numeric', month: 'long' });
+  const rows = [
+    { time: '15:00', mark: <span className="welcome-dot welcome-dot--plum" />, title: t(messages, 'welcome.sample.dentist'), who: ['M', 'member-2'] },
+    { time: '16:30', mark: <span className="welcome-dot welcome-dot--sky" />, title: t(messages, 'welcome.sample.football'), who: ['L', 'member-7'] },
+    { time: t(messages, 'module.meal_plans.slot.evening'), mark: <Utensils size={15} />, title: t(messages, 'welcome.sample.dinner') },
+    { time: '', mark: <span className="welcome-check" />, title: t(messages, 'welcome.sample.task'), who: ['L', 'member-7'] },
+  ];
+  return (
+    <div className="welcome-preview" aria-hidden="true">
+      <div className="welcome-preview-day">
+        <div className="welcome-preview-head">
+          <span>{t(messages, 'module.today.title')}</span>
+          <strong>{today}</strong>
+        </div>
+        <ul>
+          {rows.map((row) => (
+            <li key={row.title} className="welcome-preview-row">
+              <span className="welcome-preview-time">{row.time}</span>
+              <span className="welcome-preview-mark">{row.mark}</span>
+              <span className="welcome-preview-title">{row.title}</span>
+              {row.who && <span className="welcome-preview-who" style={{ background: `var(--${row.who[1]})` }}>{row.who[0]}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="welcome-preview-notes">
+        <div className="welcome-preview-note welcome-preview-note--shopping">
+          <ShoppingCart size={16} />
+          <span>{t(messages, 'module.today.shopping_hint').replace('{count}', 4)}</span>
+        </div>
+        <div className="welcome-preview-note welcome-preview-note--birthday">
+          <Cake size={16} />
+          <span>
+            {t(messages, 'module.today.birthday').replace('{name}', t(messages, 'welcome.sample.grandma'))}
+            <small>{t(messages, 'module.birthdays.days_until').replace('{days}', 2)}</small>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AuthPage() {
   const { messages, setLoggedIn, enterDemo, lang, setLang, availableLanguages } = useApp();
   const { error: toastError } = useToast();
@@ -48,6 +94,7 @@ export default function AuthPage() {
   const [displayName, setDisplayName] = useState('');
   const [familyName, setFamilyName] = useState('');
   const [authMode, setAuthMode] = useState('login');
+  const [showPassword, setShowPassword] = useState(false);
   const [msg, setMsg] = useState('');
   const [sso, setSso] = useState({ enabled: false, ready: false, button_label: '', password_login_disabled: false });
   const [ssoError, setSsoError] = useState('');
@@ -93,15 +140,36 @@ export default function AuthPage() {
     setLoggedIn(true);
   }
 
-  const features = [
-    { icon: CalendarDays, title: t(messages, 'landing.feat_calendar'), desc: t(messages, 'landing.feat_calendar_desc'), tone: 'calendar' },
-    { icon: CheckSquare, title: t(messages, 'landing.feat_tasks'), desc: t(messages, 'landing.feat_tasks_desc'), tone: 'tasks' },
-    { icon: ShoppingCart, title: t(messages, 'landing.feat_shopping'), desc: t(messages, 'landing.feat_shopping_desc'), tone: 'shopping' },
-    { icon: Bell, title: t(messages, 'landing.feat_notifications'), desc: t(messages, 'landing.feat_notifications_desc'), tone: 'notifications' },
-  ];
+  const passwordInput = (id, autoComplete) => (
+    <div className="welcome-password">
+      <input
+        id={id}
+        className="form-input"
+        type={showPassword ? 'text' : 'password'}
+        placeholder={t(messages, 'password')}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        autoComplete={autoComplete}
+        required
+        minLength={8}
+        maxLength={128}
+      />
+      <button
+        type="button"
+        className="welcome-password-toggle"
+        onClick={() => setShowPassword((value) => !value)}
+        aria-label={t(messages, showPassword ? 'auth.hide_password' : 'auth.show_password')}
+        aria-pressed={showPassword}
+      >
+        {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+      </button>
+    </div>
+  );
+
+  const passwordOnly = sso.ready && sso.password_login_disabled;
 
   return (
-    <div className="landing-page">
+    <div className="welcome-page landing-page">
       <div className="setup-lang-toggle">
         <Globe size={14} />
         <select
@@ -115,170 +183,137 @@ export default function AuthPage() {
         </select>
       </div>
 
-      {/* Hero */}
-      <section className="landing-hero landing-welcome-mat">
-        <div className="auth-logo auth-logo--warm">
-          <Users size={32} aria-hidden="true" />
-        </div>
-        <div className="landing-paper-stack" aria-hidden="true">
-          <span className="landing-paper-card landing-paper-card--calendar" />
-          <span className="landing-paper-card landing-paper-card--tasks" />
-          <span className="landing-paper-card landing-paper-card--shopping" />
-        </div>
-        <h1>{t(messages, 'landing.hero_title')}</h1>
-        <p className="landing-hero-subtitle">{t(messages, 'landing.hero_subtitle')}</p>
-        <div className="landing-hero-ctas">
-          <button className="btn-primary" type="button" onClick={enterDemo}>
-            <Play size={16} aria-hidden="true" />
-            {t(messages, 'landing.cta_demo')}
-          </button>
-          <a className="btn-ghost" href="#auth">
-            {t(messages, 'landing.cta_login')} ↓
-          </a>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="landing-features">
-        {features.map((f, i) => (
-          <div key={i} className={`landing-feature-card landing-feature-card--${f.tone}`} style={{ animationDelay: `${i * 0.1}s` }}>
-            <div className="landing-feature-icon">
-              <f.icon size={24} aria-hidden="true" />
-            </div>
-            <h3>{f.title}</h3>
-            <p>{f.desc}</p>
+      <main className="welcome-layout">
+        <header className="welcome-intro">
+          <div className="welcome-brand">
+            <span className="welcome-logo" aria-hidden="true"><Users size={22} /></span>
+            <span className="welcome-wordmark">{t(messages, 'landing.hero_title')}</span>
           </div>
-        ))}
-      </section>
+          <h1 className="welcome-title">{t(messages, 'landing.hero_subtitle')}</h1>
+          <p className="welcome-lead">{t(messages, 'landing.footer_tagline')}</p>
+        </header>
 
-      {/* Trust Badges */}
-      <section className="landing-trust">
-        <div className="landing-trust-badge">
-          <Server size={16} aria-hidden="true" />
-          {t(messages, 'landing.trust_selfhosted')}
-        </div>
-        <div className="landing-trust-badge">
-          <Lock size={16} aria-hidden="true" />
-          {t(messages, 'landing.trust_privacy')}
-        </div>
-        <div className="landing-trust-badge">
-          <Users size={16} aria-hidden="true" />
-          {t(messages, 'landing.trust_families')}
-        </div>
-      </section>
+        <section className="welcome-auth" id="auth" aria-label={t(messages, 'aria.auth_mode')}>
+          <div className="auth-card auth-card--warm welcome-card">
+            {!passwordOnly && (
+              <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
+                <button
+                  className={`auth-tab${authMode === 'login' ? ' active' : ''}`}
+                  onClick={() => setAuthMode('login')}
+                  role="tab"
+                  id="tab-login"
+                  aria-selected={authMode === 'login'}
+                  aria-controls="panel-login"
+                >
+                  {t(messages, 'auth_login')}
+                </button>
+                <button
+                  className={`auth-tab${authMode === 'register' ? ' active' : ''}`}
+                  onClick={() => setAuthMode('register')}
+                  role="tab"
+                  id="tab-register"
+                  aria-selected={authMode === 'register'}
+                  aria-controls="panel-register"
+                >
+                  {t(messages, 'auth_register')}
+                </button>
+              </div>
+            )}
 
-      {/* Auth Section */}
-      <section className="landing-auth" id="auth">
-        <div className="auth-card auth-card--warm">
-          {!(sso.ready && sso.password_login_disabled) && (
-            <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
-              <button
-                className={`auth-tab${authMode === 'login' ? ' active' : ''}`}
-                onClick={() => setAuthMode('login')}
-                role="tab"
-                id="tab-login"
-                aria-selected={authMode === 'login'}
-                aria-controls="panel-login"
-              >
-                {t(messages, 'auth_login')}
-              </button>
-              <button
-                className={`auth-tab${authMode === 'register' ? ' active' : ''}`}
-                onClick={() => setAuthMode('register')}
-                role="tab"
-                id="tab-register"
-                aria-selected={authMode === 'register'}
-                aria-controls="panel-register"
-              >
-                {t(messages, 'auth_register')}
-              </button>
-            </div>
-          )}
+            {sso.ready && (
+              <div className="sso-login-box">
+                <a
+                  className="btn-primary sso-login-btn"
+                  href="/auth/oidc/login"
+                  data-testid="sso-login-button"
+                >
+                  <KeyRound size={15} aria-hidden="true" />
+                  {sso.button_label || t(messages, 'login')}
+                </a>
+                {sso.password_login_disabled && (
+                  <p className="sso-password-disabled-hint" style={{ marginTop: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {t(messages, 'sso.password_disabled_hint')}
+                  </p>
+                )}
+              </div>
+            )}
 
-          {sso.ready && (
-            <div className="sso-login-box">
-              <a
-                className="btn-primary sso-login-btn"
-                href="/auth/oidc/login"
-                data-testid="sso-login-button"
-              >
-                <KeyRound size={15} aria-hidden="true" />
-                {sso.button_label || t(messages, 'login')}
-              </a>
-              {sso.password_login_disabled && (
-                <p className="sso-password-disabled-hint" style={{ marginTop: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {t(messages, 'sso.password_disabled_hint')}
-                </p>
-              )}
-            </div>
-          )}
+            {sso.ready && !passwordOnly && (
+              <div className="auth-divider">{t(messages, 'auth.or')}</div>
+            )}
 
-          {sso.ready && !(sso.ready && sso.password_login_disabled) && (
-            <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
-          )}
+            {ssoError && (
+              <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{ssoError}</p>
+            )}
 
-          {ssoError && (
-            <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{ssoError}</p>
-          )}
+            {!passwordOnly && (authMode === 'login' ? (
+              <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
+                <form onSubmit={login} className="auth-form">
+                  <div className="form-field">
+                    <label htmlFor="login-email">{t(messages, 'email')}</label>
+                    <input id="login-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="login-password">{t(messages, 'password')}</label>
+                    {passwordInput('login-password', 'current-password')}
+                  </div>
+                  <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
+                </form>
+              </div>
+            ) : (
+              <div role="tabpanel" id="panel-register" aria-labelledby="tab-register">
+                <form onSubmit={register} className="auth-form">
+                  <div className="form-field">
+                    <label htmlFor="register-email">{t(messages, 'email')}</label>
+                    <input id="register-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="register-password">{t(messages, 'password')}</label>
+                    {passwordInput('register-password', 'new-password')}
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="register-name">{t(messages, 'your_name')}</label>
+                    <input id="register-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" required />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="register-family">{t(messages, 'family_name')}</label>
+                    <input id="register-family" className="form-input" type="text" placeholder={t(messages, 'setup_family_placeholder')} value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
+                  </div>
+                  <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
+                </form>
+              </div>
+            ))}
 
-          {!(sso.ready && sso.password_login_disabled) && (authMode === 'login' ? (
-            <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
-              <form onSubmit={login} className="auth-form">
-                <div className="form-field">
-                  <label htmlFor="login-email">{t(messages, 'email')}</label>
-                  <input id="login-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                </div>
-                <div className="form-field">
-                  <label htmlFor="login-password">{t(messages, 'password')}</label>
-                  <input id="login-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
-                </div>
-                <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
-              </form>
-            </div>
-          ) : (
-            <div role="tabpanel" id="panel-register" aria-labelledby="tab-register">
-              <form onSubmit={register} className="auth-form">
-                <div className="form-field">
-                  <label htmlFor="register-email">{t(messages, 'email')}</label>
-                  <input id="register-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                </div>
-                <div className="form-field">
-                  <label htmlFor="register-password">{t(messages, 'password')}</label>
-                  <input id="register-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
-                  <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
-                </div>
-                <div className="form-field">
-                  <label htmlFor="register-name">{t(messages, 'your_name')}</label>
-                  <input id="register-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
-                </div>
-                <div className="form-field">
-                  <label htmlFor="register-family">{t(messages, 'family_name')}</label>
-                  <input id="register-family" className="form-input" type="text" placeholder={t(messages, 'setup_family_placeholder')} value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
-                </div>
-                <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
-              </form>
-            </div>
-          ))}
+            {msg && <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
 
-          {msg && <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
+            <div className="auth-divider">{t(messages, 'auth.or')}</div>
 
-          <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
+            <button className="btn-secondary welcome-demo" type="button" onClick={enterDemo}>
+              <Play size={15} aria-hidden="true" />
+              {t(messages, 'demo_try')}
+            </button>
+          </div>
+        </section>
 
-          <button className="btn-demo" type="button" onClick={enterDemo}>
-            <Play size={15} aria-hidden="true" />
-            {t(messages, 'demo_try')}
-          </button>
-        </div>
-      </section>
+        <section className="welcome-showcase" aria-label={t(messages, 'welcome.preview_label')}>
+          <p className="welcome-showcase-label">{t(messages, 'welcome.preview_label')}</p>
+          <WelcomePreview messages={messages} lang={lang} />
+          <ul className="welcome-trust">
+            <li><Server size={15} aria-hidden="true" />{t(messages, 'landing.trust_selfhosted')}</li>
+            <li><Lock size={15} aria-hidden="true" />{t(messages, 'landing.trust_privacy')}</li>
+            <li><Users size={15} aria-hidden="true" />{t(messages, 'landing.trust_families')}</li>
+          </ul>
+        </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="landing-footer">
-        <a href="https://github.com/itsDNNS/tribu" target="_blank" rel="noopener noreferrer" className="landing-footer-link">
+      <footer className="welcome-footer">
+        <a href="https://github.com/itsDNNS/tribu" target="_blank" rel="noopener noreferrer" className="welcome-footer-link">
           <GithubMark size={14} />
           GitHub
         </a>
-        <span className="landing-footer-dot">·</span>
-        <span>{t(messages, 'landing.footer_tagline')}</span>
+        <span aria-hidden="true">·</span>
+        <span>{t(messages, 'auth_selfhosted')}</span>
       </footer>
     </div>
   );

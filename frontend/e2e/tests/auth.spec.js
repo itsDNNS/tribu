@@ -57,4 +57,21 @@ test.describe('Authentication', () => {
       page.locator('.auth-card p[role="alert"]').filter({ hasText: 'Invalid credentials' }),
     ).toBeVisible({ timeout: 10000 });
   });
+
+  test('the password can be shown, and phones see the form first', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.locator('#tab-login').waitFor({ timeout: 10000 });
+
+    await expect(page.locator('#panel-login button[type="submit"]')).toBeInViewport();
+    await expect(page.getByRole('button', { name: /try demo/i })).toHaveCount(1);
+
+    const password = page.locator('#login-password');
+    await password.fill('Secret123');
+    await expect(password).toHaveAttribute('type', 'password');
+    await page.getByRole('button', { name: 'Show password' }).click();
+    await expect(password).toHaveAttribute('type', 'text');
+    await page.getByRole('button', { name: 'Hide password' }).click();
+    await expect(password).toHaveAttribute('type', 'password');
+  });
 });

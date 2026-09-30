@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // AppContext mock — AuthPage destructures several values; only the
@@ -47,7 +47,7 @@ describe('AuthPage OIDC integration', () => {
   });
 
 
-  it('renders the warm welcome-mat shell without glass/glow landing classes', async () => {
+  it('shows the sign-in card beside a preview of a day, with one demo button', async () => {
     const api = require('../../lib/api');
     api.apiGetOidcPublicConfig.mockResolvedValue({
       ok: true,
@@ -57,11 +57,30 @@ describe('AuthPage OIDC integration', () => {
     const { container } = render(<AuthPage />);
     await waitFor(() => expect(api.apiGetOidcPublicConfig).toHaveBeenCalled());
 
-    expect(container.querySelector('.landing-welcome-mat')).toBeInTheDocument();
-    expect(container.querySelector('.landing-paper-stack')).toBeInTheDocument();
-    expect(container.querySelector('.auth-card--warm')).toBeInTheDocument();
+    expect(container.querySelector('.welcome-intro')).toBeInTheDocument();
+    expect(container.querySelector('.welcome-auth .auth-card--warm')).toBeInTheDocument();
+    expect(container.querySelector('.welcome-preview')).toBeInTheDocument();
+    expect(container.querySelector('.landing-paper-stack')).not.toBeInTheDocument();
     expect(container.querySelector('.landing-page .glass')).not.toBeInTheDocument();
     expect(container.querySelector('.landing-page [class*="glow-"]')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /demo_try|try demo/i })).toHaveLength(1);
+  });
+
+  it('shows and hides the password', async () => {
+    const api = require('../../lib/api');
+    api.apiGetOidcPublicConfig.mockResolvedValue({
+      ok: true,
+      data: { enabled: false, ready: false, button_label: '', password_login_disabled: false },
+    });
+    render(<AuthPage />);
+    await waitFor(() => expect(api.apiGetOidcPublicConfig).toHaveBeenCalled());
+
+    const input = document.getElementById('login-password');
+    expect(input).toHaveAttribute('type', 'password');
+    const toggle = screen.getByRole('button', { name: /show_password|show password/i });
+    fireEvent.click(toggle);
+    expect(input).toHaveAttribute('type', 'text');
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('does not render the SSO button when public-config says not ready', async () => {
