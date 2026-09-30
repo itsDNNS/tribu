@@ -106,7 +106,12 @@ def _synced_card(contact: Contact):
                 card.n.value = vobject.vcard.Name(family=family, given=given)
     _sync_primary(card, "email", getattr(contact, "email", None))
     _sync_primary(card, "tel", getattr(contact, "phone", None))
-    _sync_bday(card, getattr(contact, "birthday_month", None), getattr(contact, "birthday_day", None))
+    _sync_bday(
+        card,
+        getattr(contact, "birthday_month", None),
+        getattr(contact, "birthday_day", None),
+        getattr(contact, "birthday_year", None),
+    )
     return card
 
 
@@ -133,24 +138,70 @@ def _sync_primary(card, name: str, value: Optional[str]) -> None:
         first.value = value
 
 
-def _sync_bday(card, month: Optional[int], day: Optional[int]) -> None:
+def _sync_bday(card, month: Optional[int], day: Optional[int], year: Optional[int] = None) -> None:
     prop = getattr(card, "bday", None)
     if not (month and day):
         if prop is not None:
             card.remove(prop)
         return
-    if prop is not None and _parse_bday(str(prop.value)) == (month, day):
+    if prop is not None and _parse_bday(str(prop.value)) == (month, day) and _bday_year(prop) == year:
         return
-    year = None
-    if prop is not None:
-        digits = str(prop.value).strip().replace("-", "")
-        if len(digits) >= 8 and not str(prop.value).startswith("--"):
-            year = digits[:4]
-    value = f"{year}-{month:02d}-{day:02d}" if year else f"--{month:02d}-{day:02d}"
+    if year:
+        value = f"{year:04d}-{month:02d}-{day:02d}"
+        if prop is not None and "X-APPLE-OMIT-YEAR" in prop.params:
+            del prop.params["X-APPLE-OMIT-YEAR"]
+    elif prop is not None and "X-APPLE-OMIT-YEAR" in prop.params:
+        # Apple keeps a placeholder year for birthdays without one.
+        placeholder = str(prop.params["X-APPLE-OMIT-YEAR"][0])
+        value = f"{placeholder}-{month:02d}-{day:02d}"
+    else:
+        value = f"--{month:02d}-{day:02d}"
     if prop is None:
         card.add("bday").value = value
     else:
         prop.value = value
+
+
+def _bday_year(prop) -> Optional[int]:
+    """The year of a BDAY, or None for ``--MM-DD`` and Apple's placeholder."""
+    raw = str(prop.value).strip()
+    if raw.startswith("--"):
+        return None
+    digits = raw.replace("-", "")
+    if len(digits) < 8 or not digits[:4].isdigit():
+        return None
+    year = int(digits[:4])
+    omit = prop.params.get("X-APPLE-OMIT-YEAR") if hasattr(prop, "params") else None
+    if omit and str(omit[0]) == digits[:4]:
+        return None
+    return year if 1900 <= year <= 2100 else None
+
+
+def contact_extras(contact: Contact) -> dict:
+    """What a phone stored beyond Tribu's fields, for the detail view:
+    organization, addresses and note."""
+    extras = {"organization": None, "addresses": [], "note": None}
+    card = _synced_card(contact)
+    if card is None:
+        return extras
+    org = getattr(card, "org", None)
+    if org is not None:
+        parts = org.value if isinstance(org.value, list) else [org.value]
+        extras["organization"] = ", ".join(p.strip() for p in parts if isinstance(p, str) and p.strip()) or None
+    for adr in card.contents.get("adr", []):
+        value = adr.value
+        lines = [
+            " ".join(filter(None, [str(getattr(value, "street", "") or "").strip()])),
+            " ".join(filter(None, [str(getattr(value, "code", "") or "").strip(), str(getattr(value, "city", "") or "").strip()])),
+            str(getattr(value, "country", "") or "").strip(),
+        ]
+        text = ", ".join(line for line in lines if line)
+        if text:
+            extras["addresses"].append(text)
+    note = getattr(card, "note", None)
+    if note is not None and isinstance(note.value, str) and note.value.strip():
+        extras["note"] = note.value.strip()
+    return extras
 
 
 def _render_vcard(c: Contact) -> str:
@@ -171,7 +222,9 @@ def _render_vcard(c: Contact) -> str:
     if c.phone:
         lines.append(f"TEL;TYPE=CELL:{_escape(c.phone)}")
     if c.birthday_month and c.birthday_day:
-        lines.append(f"BDAY:--{c.birthday_month:02d}-{c.birthday_day:02d}")
+        year = getattr(c, "birthday_year", None)
+        prefix = f"{year:04d}" if year else "-"
+        lines.append(f"BDAY:{prefix}-{c.birthday_month:02d}-{c.birthday_day:02d}")
 
     mtime = getattr(c, "updated_at", None) or c.created_at
     if mtime is not None:
@@ -215,9 +268,12 @@ def vcard_to_contact_dict(vcard_text: str, family_id: int) -> Tuple[Optional[dic
     phone = _first_value(card, "tel")
     birthday_month: Optional[int] = None
     birthday_day: Optional[int] = None
+    birthday_year: Optional[int] = None
     bday_prop = getattr(card, "bday", None)
     if bday_prop is not None:
         birthday_month, birthday_day = _parse_bday(str(bday_prop.value))
+        if birthday_month:
+            birthday_year = _bday_year(bday_prop)
 
     return (
         {
@@ -227,6 +283,7 @@ def vcard_to_contact_dict(vcard_text: str, family_id: int) -> Tuple[Optional[dic
             "phone": phone,
             "birthday_month": birthday_month,
             "birthday_day": birthday_day,
+            "birthday_year": birthday_year,
             "raw_vcard": vcard_text,
         },
         None,

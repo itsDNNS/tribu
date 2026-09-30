@@ -263,11 +263,7 @@
   border: 2px dashed rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .contact-card { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
-[data-theme="light"] .birthday-card { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 [data-theme="light"] .contacts-empty { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
-[data-theme="light"] .contacts-tab-toggle { background: rgba(0, 0, 0, 0.03); }
-[data-theme="light"] .contacts-tab-btn.active { background: var(--void-elevated); }
 [data-theme="light"] .contact-modal-panel { background: var(--void-surface); border-color: rgba(0, 0, 0, 0.06); }
 
 [data-theme="light"] .theme-item-inactive {
@@ -823,11 +819,6 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .task-assignee-mini { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 600; color: white; flex-shrink: 0; }
 
 /* ─── Birthdays ─── */
-.birthday-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
-.birthday-info { flex: 1; }
-.birthday-name { font-weight: 500; font-size: 0.88rem; }
-.birthday-date { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); }
-.birthday-countdown { font-family: var(--font-mono); font-size: 0.72rem; padding: 3px 8px; border-radius: var(--radius-pill); font-weight: 500; }
 
 /* ─── Rewards Widget ─── */
 .rewards-widget-card { min-height: 100%; }
@@ -1279,22 +1270,6 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
    ═══════════════════════════════════════════ */
 .contacts-page { width: min(100%, 1040px); margin: 0 auto; display: grid; gap: 12px; }
 .contacts-add-btn { font-size: 0.85rem; }
-.contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 10px; }
-.contacts-section-letter { grid-column: 1 / -1; font-size: 0.74rem; font-weight: 780; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 2px 0; }
-.contact-card { min-height: 76px; padding: 12px; display: flex; align-items: center; gap: 12px; transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease; background: var(--surface-paper); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-soft); }
-.contact-card:hover { border-color: color-mix(in srgb, var(--amethyst) 18%, var(--border-subtle)); background: color-mix(in srgb, var(--surface-soft) 40%, var(--surface-paper)); transform: translateY(-1px); }
-.contact-avatar { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.1rem; color: white; flex-shrink: 0; }
-.contact-info { flex: 1; min-width: 0; }
-.contact-name { color: var(--text-primary); font-weight: 780; font-size: 0.95rem; }
-.contact-detail { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; }
-.contact-birthday { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
-.contact-card-clickable { cursor: pointer; }
-.contact-card-clickable:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
-.contacts-tab-toggle { display: inline-flex; width: fit-content; max-width: 100%; overflow-x: auto; background: color-mix(in srgb, var(--surface-soft) 70%, transparent); border: 1px solid var(--border-subtle); border-radius: 13px; padding: 4px; gap: 4px; margin-bottom: 0; scrollbar-width: none; }
-.contacts-tab-toggle::-webkit-scrollbar { display: none; }
-.contacts-tab-btn { padding: 7px 14px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 800; border-radius: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; min-height: 38px; white-space: nowrap; }
-.contacts-tab-btn:hover { color: var(--text-primary); }
-.contacts-tab-btn.active { background: var(--surface-paper); color: var(--text-primary); border-color: var(--border-subtle); box-shadow: var(--shadow-soft); }
 .contact-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); }
 .contact-modal-panel { padding: var(--space-xl); max-width: 440px; width: 90%; background: var(--void-surface); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg); }
@@ -1310,25 +1285,91 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
 .contact-delete-btn { color: var(--text-muted); }
 .contact-delete-btn:hover { color: var(--danger); border-color: var(--danger); }
 
-/* ═══════════════════════════════════════════
-   BIRTHDAYS
-   ═══════════════════════════════════════════ */
-.birthdays-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 10px; }
-.birthdays-section-month { grid-column: 1 / -1; font-size: 0.78rem; font-weight: 780; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 2px 0; }
-.birthday-card { padding: 12px; display: flex; align-items: center; gap: 12px; transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease; background: var(--surface-paper); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-soft); }
-.birthday-card:hover { border-color: color-mix(in srgb, var(--accent-rose) 18%, var(--border-subtle)); background: color-mix(in srgb, var(--surface-soft) 40%, var(--surface-paper)); transform: translateY(-1px); }
-.birthday-card .birthday-avatar { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.1rem; color: white; flex-shrink: 0; }
-.birthday-card .birthday-info { flex: 1; min-width: 0; }
-.birthday-card .birthday-name { color: var(--text-primary); font-weight: 780; font-size: 0.95rem; }
-.birthday-age { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; margin-left: 4px; }
-.birthday-member-tag { color: var(--amethyst); font-weight: 500; font-size: 0.75rem; margin-left: 4px; text-transform: lowercase; letter-spacing: 0.02em; }
-.birthday-card-member { cursor: default; }
+/* Contacts with their birthdays: coming birthdays, then a list next to
+   the chosen contact on wide screens, one after the other on phones. */
+.contacts-page { width: min(100%, 1120px); }
+.contacts-page > * { min-width: 0; }
+.contacts-section-title { margin: 0 0 8px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.contacts-upcoming-list { list-style: none; margin: 0; padding: 0 0 4px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(168px, 1fr); gap: 10px; overflow-x: auto; scrollbar-width: none; }
+.contacts-upcoming-list::-webkit-scrollbar { display: none; }
+.contacts-upcoming-card { width: 100%; height: 100%; display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 8px 10px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-paper); box-shadow: var(--shadow-soft); color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+.contacts-upcoming-card.member { cursor: default; }
+button.contacts-upcoming-card:hover { border-color: color-mix(in srgb, var(--amethyst) 24%, var(--border-subtle)); }
+.contacts-upcoming-text { grid-column: 1 / -1; min-width: 0; display: grid; gap: 2px; }
+.contacts-upcoming-name { font-weight: 780; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contacts-upcoming-date { font-size: 0.8rem; color: var(--text-secondary); }
+.contacts-upcoming-when { grid-row: 1; grid-column: 2; justify-self: end; align-self: center; font-size: 0.76rem; font-weight: 700; padding: 3px 9px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--amethyst) 10%, transparent); color: var(--text-secondary); white-space: nowrap; }
+.contacts-upcoming-when.today { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success-text, var(--success)); }
+.contacts-duplicates-banner { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--warning) 12%, var(--surface-paper)); border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border-subtle)); color: var(--text-primary); font-weight: 650; }
+.contacts-duplicates-banner span { flex: 1; }
+.contacts-layout { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 1000px) {
+  .contacts-layout { grid-template-columns: minmax(300px, 380px) 1fr; }
+  .contacts-detail-pane-wrap { position: sticky; top: 16px; }
+  .contact-detail-back { display: none; }
+}
+@media (max-width: 999px) {
+  .contacts-page.has-selection .contacts-list-pane,
+  .contacts-page.has-selection .contacts-upcoming,
+  .contacts-page.has-selection .contacts-duplicates-banner,
+  .contacts-page:not(.has-selection) .contacts-detail-pane-wrap { display: none; }
+}
+.contacts-list-pane { display: grid; gap: 10px; min-width: 0; }
+.contacts-toolbar { display: grid; gap: 8px; }
+.contacts-search { display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 44px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-paper); color: var(--text-muted); }
+.contacts-search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text-primary); font: inherit; outline: none; }
+.contacts-search:focus-within { border-color: var(--amethyst); box-shadow: 0 0 0 3px color-mix(in srgb, var(--amethyst) 18%, transparent); }
+.contacts-filter { display: flex; gap: 6px; }
+.contacts-filter-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-paper); color: var(--text-secondary); font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+.contacts-filter-chip.active { background: color-mix(in srgb, var(--amethyst) 14%, var(--surface-paper)); border-color: color-mix(in srgb, var(--amethyst) 40%, var(--border-subtle)); color: var(--text-primary); }
+.contacts-section-letter { margin: 4px 4px 4px; font-size: 0.74rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.contacts-list { list-style: none; margin: 0; padding: 4px; display: grid; gap: 2px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-paper); box-shadow: var(--shadow-soft); }
+.contact-row { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 8px; border: 0; border-radius: 10px; background: transparent; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+.contact-row.member { cursor: default; }
+button.contact-row:hover { background: var(--surface-soft); }
+.contact-row.selected { background: color-mix(in srgb, var(--amethyst) 12%, var(--surface-paper)); }
+.contact-row:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 1px; }
+.contact-list-avatar { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 0.85rem; font-weight: 750; }
+.contact-row-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.contact-row-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contact-row-sub { font-size: 0.8rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contact-row-tag { font-size: 0.72rem; font-weight: 700; color: var(--amethyst); }
+.contact-row-icon { flex: none; color: var(--text-muted); }
+.contacts-no-match, .contacts-select-hint { margin: 0; padding: 24px 12px; text-align: center; color: var(--text-muted); }
+.contacts-select-hint { border: 1px dashed var(--border-subtle); border-radius: 16px; }
+.contact-detail-pane { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--border-subtle); border-radius: 18px; background: var(--surface-paper); box-shadow: var(--shadow-soft); }
+.contact-detail-back { justify-self: start; }
+.contact-detail-head { display: flex; align-items: center; gap: 14px; }
+.contact-detail-avatar { flex: none; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 1.35rem; font-weight: 780; }
+.contact-detail-title { min-width: 0; display: grid; gap: 3px; }
+.contact-detail-title h2 { margin: 0; font-size: 1.35rem; line-height: 1.2; color: var(--text-primary); overflow-wrap: anywhere; }
+.contact-detail-org { margin: 0; color: var(--text-secondary); }
+.contact-detail-source { display: inline-flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--text-muted); }
+.contact-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.contact-detail-actions .btn-secondary { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 14px; font-size: 0.88rem; font-weight: 650; color: var(--text-primary); text-decoration: none; }
+.contacts-duplicates-banner .btn-secondary { padding: 6px 14px; font-size: 0.85rem; }
+.contact-detail-fields { margin: 0; display: grid; gap: 14px; }
+.contact-detail-field { display: grid; gap: 4px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
+.contact-detail-field dt { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.contact-detail-field dd { margin: 0; overflow-wrap: anywhere; }
+.contact-detail-field a { color: var(--text-primary); text-decoration: none; }
+.contact-detail-field a:hover { text-decoration: underline; }
+.contact-detail-note { color: var(--text-secondary); }
+.contact-detail-multiline { white-space: pre-line; }
+.contact-birthday-row { display: grid; grid-template-columns: 0.8fr 1.4fr 1fr; gap: var(--space-sm); }
+.contact-duplicates-panel { max-width: 560px; }
+.contact-duplicates-hint { margin: 0 0 10px; color: var(--text-secondary); }
+.contact-duplicates-reasons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.contact-duplicates-reason { padding: 3px 10px; border-radius: var(--radius-pill); background: var(--surface-soft); font-size: 0.78rem; font-weight: 700; }
+.contact-duplicates-list { display: grid; gap: 8px; margin-bottom: 12px; }
+.contact-duplicate-option { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 14px; cursor: pointer; }
+.contact-duplicate-option.selected { border-color: var(--amethyst); background: color-mix(in srgb, var(--amethyst) 8%, var(--surface-paper)); }
+.contact-duplicate-option input { margin-top: 10px; accent-color: var(--amethyst); }
+.contact-duplicate-text { flex: 1; min-width: 0; display: grid; gap: 2px; font-size: 0.86rem; color: var(--text-secondary); overflow-wrap: anywhere; }
+.contact-duplicate-text strong { color: var(--text-primary); font-size: 0.95rem; }
+.contact-duplicate-source { font-size: 0.76rem; color: var(--text-muted); }
+.contact-duplicate-keep { flex: none; font-size: 0.74rem; font-weight: 800; color: var(--amethyst); }
 .contacts-empty-hint { margin-top: var(--space-md); font-size: 0.82rem; color: var(--text-muted); max-width: 440px; line-height: 1.5; }
-.birthday-card .birthday-date { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; }
-.birthday-card-clickable { cursor: pointer; }
-.birthday-card-clickable:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
-.birthday-countdown { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; padding: 4px 10px; border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.08); }
-.birthday-today { color: var(--success); background: rgba(16, 185, 129, 0.1); font-weight: 600; }
 .contacts-empty { padding: var(--space-xl); text-align: center; grid-column: 1 / -1; color: var(--text-muted); background: var(--surface-paper); border: 1px dashed var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-soft); }
 .contacts-empty-text { font-size: 0.95rem; }
 .contacts-empty-actions { display: flex; gap: var(--space-sm); justify-content: center; margin-top: var(--space-md); }
@@ -1721,7 +1762,6 @@ a.store-search-option { display: flex; flex-direction: column; align-items: flex
   .task-form-grid { grid-template-columns: 1fr; }
   .calendar-controls { flex-wrap: wrap; }
   .calendar-view-toggle { margin-left: 0; }
-  .contacts-grid { grid-template-columns: 1fr; }
   .shopping-layout { grid-template-columns: 1fr; gap: var(--space-sm); }
   .shopping-lists-panel { order: 1; flex-direction: row; overflow-x: auto; padding-bottom: var(--space-sm); scrollbar-width: none; }
   .shopping-items-panel { order: 2; }

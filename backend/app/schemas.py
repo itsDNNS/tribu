@@ -970,9 +970,10 @@ class ContactCreate(BaseModel):
     phone: Optional[str] = Field(None, description="Phone number")
     birthday_month: Optional[int] = Field(None, description="Birthday month (1-12)")
     birthday_day: Optional[int] = Field(None, description="Birthday day (1-31)")
+    birthday_year: Optional[int] = Field(None, description="Year of birth (optional, shows the age)")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"family_id": 1, "full_name": "Julia Schmidt", "email": "julia@example.com", "phone": "+49 170 1234567", "birthday_month": 3, "birthday_day": 15}]
+        "examples": [{"family_id": 1, "full_name": "Julia Schmidt", "email": "julia@example.com", "phone": "+49 170 1234567", "birthday_month": 3, "birthday_day": 15, "birthday_year": 1985}]
     })
 
 
@@ -989,6 +990,11 @@ class ContactResponse(BaseModel):
     phone_values: list[str] = Field(default_factory=list, description="All known phone numbers")
     birthday_month: Optional[int] = Field(None, description="Birthday month (1-12)")
     birthday_day: Optional[int] = Field(None, description="Birthday day (1-31)")
+    birthday_year: Optional[int] = Field(None, description="Year of birth (null if unknown)")
+    organization: Optional[str] = Field(None, description="Organization a phone stored (read-only)")
+    addresses: list[str] = Field(default_factory=list, description="Addresses a phone stored (read-only)")
+    note: Optional[str] = Field(None, description="Note a phone stored (read-only)")
+    synced: bool = Field(False, description="Whether the contact comes from phone sync (CardDAV)")
 
 
 class ContactUpdate(BaseModel):
@@ -998,12 +1004,32 @@ class ContactUpdate(BaseModel):
     phone: Optional[str] = Field(None, description="Phone number")
     birthday_month: Optional[int] = Field(None, description="Birthday month (1-12)")
     birthday_day: Optional[int] = Field(None, description="Birthday day (1-31)")
+    birthday_year: Optional[int] = Field(None, description="Year of birth; send explicitly null to clear")
+
+
+class ContactDuplicateGroup(BaseModel):
+    """Contacts that look like the same person."""
+    contact_ids: list[int] = Field(..., description="The contacts, oldest first")
+    reasons: list[str] = Field(..., description="What they share: email, phone and/or name")
+
+
+class ContactMerge(BaseModel):
+    """Fold contacts into one."""
+    family_id: int = Field(..., description="Family ID")
+    keep_id: int = Field(..., description="The contact that stays")
+    merge_ids: list[int] = Field(..., min_length=1, description="Contacts folded into it and deleted")
+
+
+class ContactDuplicateDismiss(BaseModel):
+    """Mark contacts as different people."""
+    family_id: int = Field(..., description="Family ID")
+    contact_ids: list[int] = Field(..., min_length=2, description="Contacts that are not the same person")
 
 
 class ContactsCsvImport(BaseModel):
     """Import contacts from CSV text."""
     family_id: int = Field(..., description="Target family ID")
-    csv_text: str = Field(..., description="CSV content (columns: full_name, email, phone, birthday_month, birthday_day)")
+    csv_text: str = Field(..., description="CSV content (columns: full_name, email, phone, birthday_month, birthday_day, optional birthday_year)")
 
 
 # ---------------------------------------------------------------------------

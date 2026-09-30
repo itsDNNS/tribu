@@ -224,7 +224,9 @@ export default function DataTab() {
     if (!ok) return setContactsMsg(t(messages, 'module.contacts.import_error') || 'Import failed');
     setCsvText('');
     await Promise.all([loadContacts(), loadDashboard()]);
-    setContactsMsg(`${t(messages, 'module.contacts.import_success')} ${data.created}`);
+    // People already in Tribu are completed, not added twice.
+    const merged = data.merged ? ` · ${t(messages, 'module.contacts.import_merged').replace('{count}', data.merged)}` : '';
+    setContactsMsg(`${t(messages, 'module.contacts.import_success')} ${data.created}${merged}`);
     if (data.row_errors?.length) setRowErrors(data.row_errors);
   }
 

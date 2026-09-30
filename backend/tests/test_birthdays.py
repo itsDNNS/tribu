@@ -289,7 +289,8 @@ def test_contact_birthday_date_change_updates_same_row_in_place():
 
 
 def test_manual_birthday_survives_matching_contact_create_and_delete():
-    """A manual birthday that happens to match a contact must remain safe."""
+    """A birthday added on its own becomes a contact; another contact with
+    the same name and date is a different person and leaves it alone."""
     token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
     client = TestClient(app)
 
@@ -299,7 +300,8 @@ def test_manual_birthday_survives_matching_contact_create_and_delete():
         headers=_auth_headers(token),
     ).json()
     manual_id = manual["id"]
-    assert manual["contact_id"] is None
+    manual_contact = manual["contact_id"]
+    assert manual_contact is not None
 
     contact = client.post(
         "/contacts",
@@ -313,7 +315,7 @@ def test_manual_birthday_survives_matching_contact_create_and_delete():
     ).json()
     by_id = {r["id"]: r for r in rows}
     assert manual_id in by_id
-    assert by_id[manual_id]["contact_id"] is None
+    assert by_id[manual_id]["contact_id"] == manual_contact
     assert by_id[manual_id]["year"] == 1980
     synced = [r for r in rows if r["contact_id"] == contact_id]
     assert len(synced) == 1

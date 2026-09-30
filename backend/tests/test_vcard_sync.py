@@ -82,3 +82,24 @@ def test_email_added_in_tribu_joins_the_card():
     raw = IPHONE_CARD.replace("EMAIL;type=INTERNET;type=WORK;type=pref:praxis@example.com\r\n", "")
     card = served(contact(raw_vcard=raw, email="new@example.com"))
     assert card.email.value == "new@example.com"
+
+
+def test_year_of_birth_goes_into_the_card():
+    card = served(contact(birthday_year=1990))
+    assert card.bday.value == "1990-07-07"
+    assert "X-APPLE-OMIT-YEAR" not in card.bday.params
+
+
+def test_year_is_read_from_a_card_but_not_apples_placeholder():
+    from app.core.vcard_utils import vcard_to_contact_dict
+
+    fields, _ = vcard_to_contact_dict(IPHONE_CARD, 1)
+    assert fields["birthday_year"] is None
+    with_year = IPHONE_CARD.replace("BDAY;X-APPLE-OMIT-YEAR=1604:1604-07-07", "BDAY:1985-07-07")
+    fields, _ = vcard_to_contact_dict(with_year, 1)
+    assert (fields["birthday_month"], fields["birthday_day"], fields["birthday_year"]) == (7, 7, 1985)
+
+
+def test_tribu_contact_without_a_card_renders_the_year():
+    card = served(contact(raw_vcard=None, birthday_year=1948))
+    assert card.bday.value == "1948-07-07"

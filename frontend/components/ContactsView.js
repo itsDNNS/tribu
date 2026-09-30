@@ -1,122 +1,33 @@
-import { useState, useEffect, useRef, Fragment } from 'react';
-import { createPortal } from 'react-dom';
-import { Plus, UserPlus, X, Trash2, Cake } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Cake, Copy, Plus, Search, UserPlus } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
-import { useBirthdays, birthdayAge, buildBirthdayList } from '../hooks/useBirthdays';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
+import { localeForLang } from '../lib/dates';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import { useHandoff } from '../lib/viewHandoff';
+import ContactDetail from './contacts/ContactDetail';
+import ContactFormModal, { draftFrom, draftPayload, emptyDraft } from './contacts/ContactFormModal';
+import DuplicatesDialog from './contacts/DuplicatesDialog';
+import {
+  avatarColor,
+  birthdayDate,
+  birthdayPeople,
+  channels,
+  groupByLetter,
+  groupByMonth,
+  initials,
+  matchesQuery,
+  monthName,
+  turningAge,
+  upcoming,
+} from './contacts/contactUtils';
 
-const AVATAR_COLORS = [
-  'var(--member-1)', 'var(--member-2)', 'var(--member-3)', 'var(--member-4)',
-  'var(--success)', 'var(--sapphire)', 'var(--warning)',
-];
-
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
-
-const MONTH_NAMES = {
-  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-  de: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'],
-};
-
-function daysUntilBirthday(month, day) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  let next = new Date(now.getFullYear(), month - 1, day);
-  if (next < today) next = new Date(now.getFullYear() + 1, month - 1, day);
-  return Math.round((next - today) / (1000 * 60 * 60 * 24));
-}
-
-function contactDetails(contact) {
-  const emailValues = Array.isArray(contact.email_values) && contact.email_values.length > 0
-    ? contact.email_values
-    : contact.email ? [contact.email] : [];
-  const phoneValues = Array.isArray(contact.phone_values) && contact.phone_values.length > 0
-    ? contact.phone_values
-    : contact.phone ? [contact.phone] : [];
-  return [...emailValues, ...phoneValues];
-}
-
-function DeleteButton({ onDelete, label, messages }) {
-  const [confirming, setConfirming] = useState(false);
-
-  if (confirming) {
-    return (
-      <div className="modal-delete-confirm">
-        <button type="button" className="btn-ghost modal-delete-danger" onClick={onDelete}>
-          <Trash2 size={14} /> {label}
-        </button>
-        <button type="button" className="btn-ghost" onClick={() => setConfirming(false)}>
-          {t(messages, 'cancel')}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <button type="button" className="btn-ghost contact-delete-btn modal-delete-trigger" onClick={() => setConfirming(true)} aria-label={t(messages, 'delete')}>
-      <Trash2 size={14} />
-    </button>
-  );
-}
-
-function FormModal({ id, title, onClose, onSubmit, saveKey, deleteButton, messages, children }) {
-  const overlayRef = useRef(null);
-  const panelRef = useRef(null);
-  const firstInputRef = useRef(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-
-  useEffect(() => {
-    firstInputRef.current?.focus();
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') { onCloseRef.current(); return; }
-      if (e.key === 'Tab' && panelRef.current) {
-        const focusable = panelRef.current.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return createPortal(
-    <div ref={overlayRef} className="contact-modal-overlay" onClick={(e) => e.target === overlayRef.current && onClose()}>
-      <div ref={panelRef} className="contact-modal-panel" role="dialog" aria-modal="true" aria-labelledby={id}>
-        <div className="modal-header">
-          <h2 id={id} className="modal-title">{title}</h2>
-          <button type="button" onClick={onClose} className="btn-ghost modal-close" aria-label={t(messages, 'close')}>
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={onSubmit} className="modal-form ui-sheet-form"><div className="ui-sheet-body">
-          {typeof children === 'function' ? children(firstInputRef) : children}
-          </div><div className="modal-actions ui-sheet-actions">
-            {deleteButton}
-            <button type="button" className="btn-ghost" onClick={onClose}>{t(messages, 'cancel')}</button>
-            <button type="submit" className="btn-primary">{t(messages, saveKey)}</button>
-          </div>
-        </form>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
+// Contacts and their birthdays in one place (#512 follow-up): coming
+// birthdays on top, then everyone, or everyone with a birthday by month.
+// Wide screens show the list and the chosen contact side by side.
 export default function ContactsView() {
   const {
     contacts,
@@ -133,403 +44,332 @@ export default function ContactsView() {
     members,
   } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
-  const birthdaysHook = useBirthdays();
+  const locale = localeForLang(lang);
   const canEdit = !isChild;
-  // The weekly plan opens birthdays directly.
+  // Today and the week at a glance open the birthdays directly.
   const wantedTab = useHandoff('tribu_contacts_tab');
-  const [activeTab, setActiveTab] = useState(() => (wantedTab === 'birthdays' ? 'birthdays' : 'contacts'));
-  const [showForm, setShowForm] = useState(false);
-  const [editingContact, setEditingContact] = useState(null);
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [contactBirthdayMonth, setContactBirthdayMonth] = useState('');
-  const [contactBirthdayDay, setContactBirthdayDay] = useState('');
+  const [filter, setFilter] = useState(() => (wantedTab === 'birthdays' ? 'birthdays' : 'all'));
+  const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState(null);
+  const [form, setForm] = useState(null);
+  const [draft, setDraft] = useState(emptyDraft);
+  const [duplicates, setDuplicates] = useState([]);
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  function resetForm() {
-    setContactName('');
-    setContactEmail('');
-    setContactPhone('');
-    setContactBirthdayMonth('');
-    setContactBirthdayDay('');
-    setEditingContact(null);
-    setShowForm(false);
-  }
+  const loadDuplicates = useCallback(async () => {
+    if (demoMode || !canEdit || !familyId) return;
+    const { ok, data } = await api.apiGetContactDuplicates(Number(familyId));
+    if (ok && Array.isArray(data)) setDuplicates(data);
+  }, [demoMode, canEdit, familyId]);
+
+  useEffect(() => { loadDuplicates(); }, [loadDuplicates, contacts]);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([loadContacts(), loadBirthdays(), loadDashboard()]);
+  }, [loadContacts, loadBirthdays, loadDashboard]);
+
+  const visible = useMemo(() => (contacts || []).filter((contact) => matchesQuery(contact, query)), [contacts, query]);
+  const people = useMemo(() => birthdayPeople({ contacts: contacts || [], members: members || [] }), [contacts, members]);
+  const coming = useMemo(() => upcoming(people), [people]);
+  const selected = (contacts || []).find((contact) => contact.id === selectedId) || null;
 
   function openCreate() {
-    resetForm();
-    setShowForm(true);
+    setDraft(emptyDraft());
+    setForm({ editing: null });
   }
 
   function openEdit(contact) {
-    setEditingContact(contact);
-    setContactName(contact.full_name || '');
-    setContactEmail(contact.email || '');
-    setContactPhone(contact.phone || '');
-    setContactBirthdayMonth(contact.birthday_month ? String(contact.birthday_month) : '');
-    setContactBirthdayDay(contact.birthday_day ? String(contact.birthday_day) : '');
-    setShowForm(true);
+    setDraft(draftFrom(contact));
+    setForm({ editing: contact });
   }
 
-  async function createContact(e) {
-    e.preventDefault();
-    if (!contactName.trim()) {
-      toastError(t(messages, 'module.contacts.name_required'));
-      return;
-    }
-    const payload = {
-      family_id: Number(familyId),
-      full_name: contactName.trim(),
-      email: contactEmail.trim() || null,
-      phone: contactPhone.trim() || null,
-      birthday_month: contactBirthdayMonth ? Number(contactBirthdayMonth) : null,
-      birthday_day: contactBirthdayDay ? Number(contactBirthdayDay) : null,
-    };
+  async function save(event) {
+    event.preventDefault();
+    const { payload, error } = draftPayload(draft);
+    if (error) return toastError(t(messages, error));
+    const editing = form?.editing;
     if (demoMode) {
-      const newContact = { id: Date.now(), ...payload };
-      setContacts((prev) => [...prev, newContact].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'de')));
+      if (editing) setContacts((prev) => prev.map((c) => (c.id === editing.id ? { ...c, ...payload } : c)));
+      else setContacts((prev) => [...prev, { id: Date.now(), family_id: Number(familyId), ...payload }]);
     } else {
-      const { ok, data } = await api.apiCreateContact(payload);
+      const { ok, data } = editing
+        ? await api.apiUpdateContact(editing.id, payload)
+        : await api.apiCreateContact({ family_id: Number(familyId), ...payload });
       if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      await loadContacts();
-      await loadBirthdays();
-      await loadDashboard();
+      await refresh();
+      if (!editing && data?.id) setSelectedId(data.id);
     }
-    resetForm();
-    const msg = t(messages, 'module.contacts.created');
+    setForm(null);
+    const msg = t(messages, editing ? 'module.contacts.updated' : 'module.contacts.created');
     toastSuccess(msg);
     announce(msg);
   }
 
-  async function updateContact(e) {
-    e.preventDefault();
-    if (!editingContact) return;
-    if (!contactName.trim()) {
-      toastError(t(messages, 'module.contacts.name_required'));
-      return;
-    }
-    const payload = {
-      full_name: contactName.trim(),
-      email: contactEmail.trim() || null,
-      phone: contactPhone.trim() || null,
-      birthday_month: contactBirthdayMonth ? Number(contactBirthdayMonth) : null,
-      birthday_day: contactBirthdayDay ? Number(contactBirthdayDay) : null,
-    };
-    if (demoMode) {
-      setContacts((prev) =>
-        prev.map((c) => c.id === editingContact.id ? { ...c, ...payload } : c)
-          .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'de'))
-      );
-    } else {
-      const { ok, data } = await api.apiUpdateContact(editingContact.id, payload);
-      if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
-      await loadContacts();
-      await loadBirthdays();
-      await loadDashboard();
-    }
-    resetForm();
-    const msg = t(messages, 'module.contacts.updated');
-    toastSuccess(msg);
-    announce(msg);
-  }
-
-  async function deleteContact(contact) {
+  async function remove() {
+    const contact = form?.editing;
+    if (!contact) return;
     if (demoMode) {
       setContacts((prev) => prev.filter((c) => c.id !== contact.id));
     } else {
       const { ok } = await api.apiDeleteContact(contact.id);
       if (!ok) return toastError(t(messages, 'toast.error'));
-      await loadContacts();
-      await loadBirthdays();
-      await loadDashboard();
+      await refresh();
     }
-    resetForm();
+    setForm(null);
+    if (selectedId === contact.id) setSelectedId(null);
     const msg = t(messages, 'module.contacts.deleted');
     toastSuccess(msg);
     announce(msg);
   }
 
-  const contactsHook = {
-    contacts,
-    showForm, setShowForm,
-    editingContact,
-    contactName, setContactName,
-    contactEmail, setContactEmail,
-    contactPhone, setContactPhone,
-    contactBirthdayMonth, setContactBirthdayMonth,
-    contactBirthdayDay, setContactBirthdayDay,
-    openCreate, openEdit, resetForm,
-    createContact, updateContact, deleteContact,
-  };
-
-  const monthNames = MONTH_NAMES[lang] || MONTH_NAMES.en;
-
-  // Merge standalone birthdays with family members who have a stored
-  // date_of_birth so both surface in the Birthdays tab, then group by
-  // month for the section headers.
-  const allBirthdays = buildBirthdayList({ birthdays: birthdaysHook.birthdays, members });
-  const grouped = new Map();
-  for (const b of allBirthdays) {
-    if (!grouped.has(b.month)) grouped.set(b.month, []);
-    grouped.get(b.month).push(b);
+  async function merge(keepId, mergeIds) {
+    setBusy(true);
+    const { ok, data } = await api.apiMergeContacts(Number(familyId), keepId, mergeIds);
+    setBusy(false);
+    if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+    await refresh();
+    setSelectedId(keepId);
+    const msg = t(messages, 'module.contacts.merged');
+    toastSuccess(msg);
+    announce(msg);
   }
 
+  async function dismiss(group) {
+    setBusy(true);
+    const { ok } = await api.apiDismissContactDuplicates(Number(familyId), group.contact_ids);
+    setBusy(false);
+    if (!ok) return toastError(t(messages, 'toast.error'));
+    setDuplicates((prev) => prev.filter((g) => g !== group));
+  }
+
+  // On phones the chosen contact replaces the list; start at its top.
+  useEffect(() => {
+    if (selectedId != null && typeof window !== 'undefined' && window.matchMedia?.('(max-width: 999px)').matches) {
+      window.scrollTo({ top: 0 });
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (showDuplicates && duplicates.length === 0) setShowDuplicates(false);
+  }, [showDuplicates, duplicates.length]);
+
+  const birthdayList = filter === 'birthdays'
+    ? groupByMonth(people.filter((person) => (person.contact ? matchesQuery(person.contact, query) : matchesQuery({ full_name: person.name }, query))))
+    : [];
+
+  const renderRow = (contact, extra) => {
+    const { emails, phones } = channels(contact);
+    const sub = phones[0] || emails[0] || contact.organization || '';
+    return (
+      <li key={contact.id}>
+        <button
+          type="button"
+          className={`contact-row${contact.id === selectedId ? ' selected' : ''}`}
+          aria-current={contact.id === selectedId ? 'true' : undefined}
+          onClick={() => setSelectedId(contact.id)}
+        >
+          <span className="contact-list-avatar" style={{ background: avatarColor(contact.full_name) }} aria-hidden="true">
+            {initials(contact.full_name)}
+          </span>
+          <span className="contact-row-text">
+            <span className="contact-row-name">{contact.full_name}</span>
+            {(extra || sub) && <span className="contact-row-sub">{extra || sub}</span>}
+          </span>
+          {!extra && contact.birthday_month && contact.birthday_day && (
+            <Cake size={14} className="contact-row-icon" aria-label={t(messages, 'module.contacts.form.birthday')} />
+          )}
+        </button>
+      </li>
+    );
+  };
+
   return (
-    <div className="contacts-page">
-      <header className="list-header">
+    <div className={`contacts-page${selected ? ' has-selection' : ''}`}>
+      <header className="list-header contacts-header">
         <h1>{t(messages, 'contacts')}</h1>
         {canEdit && (
-          <button
-            type="button"
-            className="list-header-action contacts-add-btn"
-            onClick={activeTab === 'contacts' ? contactsHook.openCreate : birthdaysHook.openCreate}
-          >
-            <Plus size={16} aria-hidden="true" /> {t(messages, activeTab === 'contacts' ? 'module.contacts.add' : 'module.birthdays.add')}
+          <button type="button" className="list-header-action contacts-add-btn" onClick={openCreate}>
+            <Plus size={16} aria-hidden="true" /> {t(messages, 'module.contacts.add')}
           </button>
         )}
       </header>
 
-      <div className="contacts-tab-toggle">
-        <button
-          className={`contacts-tab-btn${activeTab === 'contacts' ? ' active' : ''}`}
-          onClick={() => setActiveTab('contacts')}
-        >
-          {t(messages, 'contacts_tab_contacts')}
-        </button>
-        <button
-          className={`contacts-tab-btn${activeTab === 'birthdays' ? ' active' : ''}`}
-          onClick={() => setActiveTab('birthdays')}
-        >
-          <Cake size={14} /> {t(messages, 'contacts_tab_birthdays')}
-        </button>
-      </div>
+      {coming.length > 0 && (
+        <section className="contacts-upcoming" aria-labelledby="contacts-upcoming-title">
+          <h2 id="contacts-upcoming-title" className="contacts-section-title">{t(messages, 'module.contacts.upcoming')}</h2>
+          <ul className="contacts-upcoming-list">
+            {coming.map((person) => {
+              const turns = turningAge(person.year, person.month, person.day);
+              const content = (
+                <>
+                  <span className="contact-list-avatar" style={{ background: person.color || avatarColor(person.name) }} aria-hidden="true">
+                    {initials(person.name)}
+                  </span>
+                  <span className="contacts-upcoming-text">
+                    <span className="contacts-upcoming-name">{person.name}</span>
+                    <span className="contacts-upcoming-date">
+                      {birthdayDate(person.month, person.day, locale)}
+                      {turns !== null && ` · ${t(messages, 'module.contacts.turns').replace('{age}', turns)}`}
+                    </span>
+                  </span>
+                  <span className={`contacts-upcoming-when${person.days === 0 ? ' today' : ''}`}>
+                    {person.days === 0 ? t(messages, 'module.birthdays.today') : t(messages, 'module.birthdays.days_until').replace('{days}', person.days)}
+                  </span>
+                </>
+              );
+              return (
+                <li key={person.key}>
+                  {person.contact ? (
+                    <button type="button" className="contacts-upcoming-card" onClick={() => { setFilter('all'); setSelectedId(person.contact.id); }}>
+                      {content}
+                    </button>
+                  ) : (
+                    <div className="contacts-upcoming-card member" title={t(messages, 'module.birthdays.member_tag')}>{content}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
-      {activeTab === 'contacts' ? (
-        <div className="contacts-grid">
-          {contactsHook.contacts.length > 0 ? (
-            Array.from(
-              [...contactsHook.contacts].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'de')).reduce((map, c) => {
-                const letter = (c.full_name || '?')[0].toUpperCase();
-                if (!map.has(letter)) map.set(letter, []);
-                map.get(letter).push(c);
-                return map;
-              }, new Map())
-            ).map(([letter, group]) => (
-              <Fragment key={letter}>
-                <div className="contacts-section-letter">{letter}</div>
-                {group.map((c) => {
-                  const initials = (c.full_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-                  const details = contactDetails(c);
-                  return (
-                    <div
-                      key={c.id}
-                      className={`contact-card${canEdit ? ' contact-card-clickable' : ''}`}
-                      onClick={canEdit ? () => contactsHook.openEdit(c) : undefined}
-                      role={canEdit ? 'button' : undefined}
-                      tabIndex={canEdit ? 0 : undefined}
-                      onKeyDown={canEdit ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); contactsHook.openEdit(c); } } : undefined}
-                    >
-                      <div className="contact-avatar" style={{ background: getAvatarColor(c.full_name) }}>
-                        {initials}
-                      </div>
-                      <div className="contact-info">
-                        <div className="contact-name">{c.full_name}</div>
-                        {details.map((detail) => (
-                          <div key={detail} className="contact-detail">{detail}</div>
-                        ))}
-                        {c.birthday_month && c.birthday_day && (
-                          <div className="contact-birthday">
-                            <Cake size={12} aria-hidden="true" /> {c.birthday_day}.{c.birthday_month}.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </Fragment>
-            ))
-          ) : (
-            <div className="contacts-empty">
-              <div className="contacts-empty-text">{t(messages, 'module.contacts.no_contacts')}</div>
-              {!demoMode && !isChild && (
-                <div className="contacts-empty-actions">
-                  <button className="btn-primary" onClick={contactsHook.openCreate}>
-                    <Plus size={15} /> {t(messages, 'module.contacts.add')}
-                  </button>
-                  <button className="btn-ghost" onClick={() => setActiveView('settings')}>
-                    <UserPlus size={15} /> {t(messages, 'module.contacts.import_cta')}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+      {canEdit && duplicates.length > 0 && (
+        <div className="contacts-duplicates-banner" role="status">
+          <Copy size={16} aria-hidden="true" />
+          <span>{t(messages, 'module.contacts.duplicates').replace('{count}', duplicates.length)}</span>
+          <button type="button" className="btn-secondary" onClick={() => setShowDuplicates(true)}>
+            {t(messages, 'module.contacts.review')}
+          </button>
         </div>
-      ) : (
-        <div className="birthdays-grid">
-          {allBirthdays.length > 0 ? (
-            Array.from(grouped).map(([month, items]) => (
-              <Fragment key={month}>
-                <div className="birthdays-section-month">{monthNames[month - 1]}</div>
-                {items.map((b) => {
-                  const days = daysUntilBirthday(b.month, b.day);
-                  const initials = (b.person_name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-                  const dateStr = `${String(b.day).padStart(2, '0')}.${String(b.month).padStart(2, '0')}.`;
-                  const age = birthdayAge(b);
-                  // Member birthdays come from Membership.date_of_birth and
-                  // are edited in Account settings / Admin, not here. We
-                  // render them the same way but without the click handler.
-                  const clickable = canEdit && !b._isMember;
-                  const avatarColor = b._isMember && b._memberColor
-                    ? b._memberColor
-                    : getAvatarColor(b.person_name);
-                  return (
-                    <div
-                      key={b.id}
-                      className={`birthday-card${clickable ? ' birthday-card-clickable' : ''}${b._isMember ? ' birthday-card-member' : ''}`}
-                      onClick={clickable ? () => birthdaysHook.openEdit(b) : undefined}
-                      role={clickable ? 'button' : undefined}
-                      tabIndex={clickable ? 0 : undefined}
-                      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); birthdaysHook.openEdit(b); } } : undefined}
-                    >
-                      <div className="birthday-avatar" style={{ background: avatarColor }}>
-                        {initials}
-                      </div>
-                      <div className="birthday-info">
-                        <div className="birthday-name">
-                          {b.person_name}
-                          {b._isMember && <span className="birthday-member-tag"> · {t(messages, 'module.birthdays.member_tag')}</span>}
-                          {age !== null && <span className="birthday-age"> · {t(messages, 'module.birthdays.age_years').replace('{age}', age)}</span>}
+      )}
+
+      <div className="contacts-layout">
+        <div className="contacts-list-pane">
+          <div className="contacts-toolbar">
+            <label className="contacts-search">
+              <Search size={15} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t(messages, 'module.contacts.search')}
+                aria-label={t(messages, 'module.contacts.search')}
+              />
+            </label>
+            <div className="contacts-filter" role="group" aria-label={t(messages, 'contacts')}>
+              {[['all', 'contacts_tab_contacts'], ['birthdays', 'contacts_tab_birthdays']].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`contacts-filter-chip${filter === key ? ' active' : ''}`}
+                  aria-pressed={filter === key}
+                  onClick={() => setFilter(key)}
+                >
+                  {key === 'birthdays' && <Cake size={14} aria-hidden="true" />}
+                  {t(messages, label)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filter === 'all' ? (
+            visible.length > 0 ? (
+              groupByLetter(visible, locale).map(([letter, group]) => (
+                <section key={letter} className="contacts-group" aria-label={letter}>
+                  <h3 className="contacts-section-letter">{letter}</h3>
+                  <ul className="contacts-list">{group.map((contact) => renderRow(contact))}</ul>
+                </section>
+              ))
+            ) : (contacts || []).length > 0 ? (
+              <p className="contacts-empty-text contacts-no-match">{t(messages, 'module.contacts.no_match')}</p>
+            ) : (
+              <div className="contacts-empty">
+                <div className="contacts-empty-text">{t(messages, 'module.contacts.no_contacts')}</div>
+                {!demoMode && canEdit && (
+                  <div className="contacts-empty-actions">
+                    <button type="button" className="btn-primary" onClick={openCreate}>
+                      <Plus size={15} /> {t(messages, 'module.contacts.add')}
+                    </button>
+                    <button type="button" className="btn-ghost" onClick={() => setActiveView('settings')}>
+                      <UserPlus size={15} /> {t(messages, 'module.contacts.import_cta')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          ) : birthdayList.length > 0 ? (
+            birthdayList.map(([month, group]) => (
+              <section key={month} className="contacts-group" aria-label={monthName(month, locale)}>
+                <h3 className="contacts-section-letter">{monthName(month, locale)}</h3>
+                <ul className="contacts-list">
+                  {group.map((person) => {
+                    const when = `${birthdayDate(person.month, person.day, locale)}${person.year ? ` ${person.year}` : ''}`;
+                    return person.contact ? renderRow(person.contact, when) : (
+                      <li key={person.key}>
+                        <div className="contact-row member">
+                          <span className="contact-list-avatar" style={{ background: person.color || avatarColor(person.name) }} aria-hidden="true">
+                            {initials(person.name)}
+                          </span>
+                          <span className="contact-row-text">
+                            <span className="contact-row-name">{person.name} <span className="contact-row-tag">{t(messages, 'module.birthdays.member_tag')}</span></span>
+                            <span className="contact-row-sub">{when}</span>
+                          </span>
                         </div>
-                        <div className="birthday-date"><Cake size={12} aria-hidden="true" /> {dateStr}</div>
-                      </div>
-                      <div className={`birthday-countdown${days === 0 ? ' birthday-today' : ''}`}>
-                        {days === 0
-                          ? t(messages, 'module.birthdays.today')
-                          : t(messages, 'module.birthdays.days_until').replace('{days}', days)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </Fragment>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
             ))
           ) : (
             <div className="contacts-empty">
               <div className="contacts-empty-text">{t(messages, 'module.birthdays.no_birthdays')}</div>
-              {!demoMode && !isChild && (
-                <>
-                  <div className="contacts-empty-actions">
-                    <button className="btn-primary" onClick={birthdaysHook.openCreate}>
-                      <Plus size={15} /> {t(messages, 'module.birthdays.add')}
-                    </button>
-                  </div>
-                  <div className="contacts-empty-hint">
-                    {t(messages, 'module.birthdays.member_hint')}
-                  </div>
-                </>
-              )}
+              <div className="contacts-empty-hint">{t(messages, 'module.birthdays.member_hint')}</div>
             </div>
           )}
         </div>
+
+        <div className="contacts-detail-pane-wrap">
+          {selected ? (
+            <ContactDetail
+              contact={selected}
+              messages={messages}
+              locale={locale}
+              canEdit={canEdit}
+              onEdit={openEdit}
+              onBack={() => setSelectedId(null)}
+            />
+          ) : (
+            <p className="contacts-select-hint">{t(messages, 'module.contacts.select_hint')}</p>
+          )}
+        </div>
+      </div>
+
+      {form && (
+        <ContactFormModal
+          editing={form.editing}
+          draft={draft}
+          setDraft={setDraft}
+          onSubmit={save}
+          onDelete={remove}
+          onClose={() => setForm(null)}
+          messages={messages}
+          locale={locale}
+        />
       )}
 
-      {contactsHook.showForm && (
-        <FormModal
-          id="contact-form-title"
-          title={t(messages, contactsHook.editingContact ? 'module.contacts.edit' : 'module.contacts.add')}
-          onClose={contactsHook.resetForm}
-          onSubmit={contactsHook.editingContact ? contactsHook.updateContact : contactsHook.createContact}
-          isEditing={!!contactsHook.editingContact}
-          saveKey="module.contacts.save"
-          deleteButton={contactsHook.editingContact && (
-            <DeleteButton onDelete={() => contactsHook.deleteContact(contactsHook.editingContact)} label={t(messages, 'module.contacts.delete')} messages={messages} />
-          )}
+      {showDuplicates && (
+        <DuplicatesDialog
+          groups={duplicates}
+          contacts={contacts || []}
           messages={messages}
-        >
-          {(firstInputRef) => (
-            <>
-              <div className="form-field">
-                <label htmlFor="contact-name">{t(messages, 'module.contacts.form.name')} *</label>
-                <input ref={firstInputRef} id="contact-name" className="form-input" value={contactsHook.contactName} onChange={(e) => contactsHook.setContactName(e.target.value)} required autoComplete="name" />
-              </div>
-              <div className="form-field">
-                <label htmlFor="contact-email">{t(messages, 'module.contacts.form.email')}</label>
-                <input id="contact-email" type="email" className="form-input" value={contactsHook.contactEmail} onChange={(e) => contactsHook.setContactEmail(e.target.value)} autoComplete="email" />
-              </div>
-              <div className="form-field">
-                <label htmlFor="contact-phone">{t(messages, 'module.contacts.form.phone')}</label>
-                <input id="contact-phone" type="tel" className="form-input" value={contactsHook.contactPhone} onChange={(e) => contactsHook.setContactPhone(e.target.value)} autoComplete="tel" />
-              </div>
-              <div className="form-field">
-                <label>{t(messages, 'module.contacts.form.birthday')}</label>
-                <div className="modal-date-row">
-                  <select className="form-input" value={contactsHook.contactBirthdayMonth} onChange={(e) => contactsHook.setContactBirthdayMonth(e.target.value)} aria-label={t(messages, 'module.contacts.form.month')}>
-                    <option value="">{t(messages, 'module.contacts.form.month')}</option>
-                    {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  <select className="form-input" value={contactsHook.contactBirthdayDay} onChange={(e) => contactsHook.setContactBirthdayDay(e.target.value)} aria-label={t(messages, 'module.contacts.form.day')}>
-                    <option value="">{t(messages, 'module.contacts.form.day')}</option>
-                    {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-              </div>
-            </>
-          )}
-        </FormModal>
-      )}
-
-      {birthdaysHook.showForm && (
-        <FormModal
-          id="birthday-form-title"
-          title={t(messages, birthdaysHook.editingBirthday ? 'module.birthdays.edit' : 'module.birthdays.add')}
-          onClose={birthdaysHook.resetForm}
-          onSubmit={birthdaysHook.editingBirthday ? birthdaysHook.updateBirthday : birthdaysHook.createBirthday}
-          isEditing={!!birthdaysHook.editingBirthday}
-          saveKey="module.birthdays.save"
-          deleteButton={birthdaysHook.editingBirthday && (
-            <DeleteButton onDelete={() => birthdaysHook.deleteBirthday(birthdaysHook.editingBirthday)} label={t(messages, 'module.birthdays.delete')} messages={messages} />
-          )}
-          messages={messages}
-        >
-          {(firstInputRef) => {
-            const monthNames = MONTH_NAMES[lang] || MONTH_NAMES.en;
-            return (
-              <>
-                <div className="form-field">
-                  <label htmlFor="birthday-name">{t(messages, 'module.birthdays.form.name')} *</label>
-                  <input ref={firstInputRef} id="birthday-name" className="form-input" value={birthdaysHook.personName} onChange={(e) => birthdaysHook.setPersonName(e.target.value)} required autoComplete="name" />
-                </div>
-                <div className="form-field">
-                  <label>{t(messages, 'module.birthdays.form.date')} *</label>
-                  <div className="modal-date-row">
-                    <select className="form-input" value={birthdaysHook.birthdayMonth} onChange={(e) => birthdaysHook.setBirthdayMonth(e.target.value)} aria-label={t(messages, 'module.birthdays.form.month')} required>
-                      <option value="">{t(messages, 'module.birthdays.form.month')}</option>
-                      {MONTHS.map((m) => <option key={m} value={m}>{monthNames[m - 1]}</option>)}
-                    </select>
-                    <select className="form-input" value={birthdaysHook.birthdayDay} onChange={(e) => birthdaysHook.setBirthdayDay(e.target.value)} aria-label={t(messages, 'module.birthdays.form.day')} required>
-                      <option value="">{t(messages, 'module.birthdays.form.day')}</option>
-                      {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="form-field">
-                  <label htmlFor="birthday-year">{t(messages, 'module.birthdays.form.year')}</label>
-                  <input
-                    id="birthday-year"
-                    className="form-input"
-                    type="number"
-                    inputMode="numeric"
-                    min={1900}
-                    step={1}
-                    placeholder="1985"
-                    value={birthdaysHook.birthdayYear}
-                    onChange={(e) => birthdaysHook.setBirthdayYear(e.target.value)}
-                  />
-                  <span className="set-field-hint">{t(messages, 'module.birthdays.form.year_hint')}</span>
-                </div>
-              </>
-            );
-          }}
-        </FormModal>
+          locale={locale}
+          busy={busy}
+          onMerge={merge}
+          onDismiss={dismiss}
+          onClose={() => setShowDuplicates(false)}
+        />
       )}
     </div>
   );

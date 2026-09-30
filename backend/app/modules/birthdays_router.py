@@ -7,11 +7,22 @@ from app.core.deps import current_user, ensure_family_membership
 from app.core.scopes import require_scope
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
-from app.models import FamilyBirthday, User
+from app.core.contact_birthdays import sync_contact_birthday
+from app.models import Contact, FamilyBirthday, User
 from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, BirthdayCreate, BirthdayUpdate, BirthdayResponse
 from app.core.errors import error_detail, BIRTHDAY_NOT_FOUND, INVALID_MONTH, INVALID_DAY, INVALID_YEAR
 
 router = APIRouter(prefix="/birthdays", tags=["birthdays"], responses={**AUTH_RESPONSES})
+
+# Birthdays belong to contacts: adding one here adds a contact with that
+# name and date, and changes go to the contact, so the list below keeps
+# following the contacts (see migration 0072).
+
+
+def _contact_for(db: Session, birthday: FamilyBirthday):
+    if birthday.contact_id is None:
+        return None
+    return db.query(Contact).filter(Contact.id == birthday.contact_id).first()
 
 _MIN_BIRTHDAY_YEAR = 1900
 
@@ -45,7 +56,7 @@ def list_birthdays(
     "",
     response_model=BirthdayResponse,
     summary="Create a birthday",
-    description="Add a birthday entry for a person in the family. Scope: `birthdays:write`.",
+    description="Add a birthday for a person: creates a contact with that name and date, which the birthday list follows. Scope: `birthdays:write`.",
     response_description="The created birthday entry",
 )
 def create_birthday(
@@ -62,14 +73,18 @@ def create_birthday(
         raise HTTPException(status_code=400, detail=error_detail(INVALID_DAY))
     _validate_year(payload.year)
 
-    birthday = FamilyBirthday(
+    contact = Contact(
         family_id=payload.family_id,
-        person_name=payload.person_name,
-        month=payload.month,
-        day=payload.day,
-        year=payload.year,
+        full_name=payload.person_name,
+        birthday_month=payload.month,
+        birthday_day=payload.day,
+        birthday_year=payload.year,
     )
-    db.add(birthday)
+    db.add(contact)
+    db.flush()
+    sync_contact_birthday(db, contact.family_id, contact.id, contact.full_name, payload.month, payload.day, payload.year)
+    db.flush()
+    birthday = db.query(FamilyBirthday).filter(FamilyBirthday.contact_id == contact.id).one()
     db.commit()
     db.refresh(birthday)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
@@ -119,6 +134,13 @@ def update_birthday(
         _validate_year(payload.year)
         birthday.year = payload.year
 
+    contact = _contact_for(db, birthday)
+    if contact is not None:
+        contact.full_name = birthday.person_name
+        contact.birthday_month = birthday.month
+        contact.birthday_day = birthday.day
+        contact.birthday_year = birthday.year
+
     db.commit()
     db.refresh(birthday)
     cache.invalidate_pattern(f"tribu:dashboard:{birthday.family_id}:*")
@@ -144,6 +166,12 @@ def delete_birthday(
     ensure_family_membership(db, user.id, birthday.family_id)
 
     family_id = birthday.family_id
+    contact = _contact_for(db, birthday)
+    if contact is not None:
+        # The person stays a contact; only the birthday goes.
+        contact.birthday_month = None
+        contact.birthday_day = None
+        contact.birthday_year = None
     db.delete(birthday)
     db.commit()
     cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")

@@ -6,20 +6,49 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import cache
-from app.core.contact_birthdays import delete_synced_birthday_for_contact, sync_contact_birthday
+from app.core.contact_birthdays import delete_synced_birthday_for_contact, sync_contact_birthday, valid_birth_year
+from app.core.contact_duplicates import fill_missing, find_duplicate_groups, find_match, merge_contacts
 from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
-from app.core.vcard_utils import contact_channel_values
+from app.core.vcard_utils import contact_channel_values, contact_extras
 from app.core.vcf_utils import contacts_to_vcf
 from app.database import get_db
-from app.models import Contact, User
-from app.schemas import AUTH_RESPONSES, CRUD_RESPONSES, ContactCreate, ContactResponse, ContactUpdate, ContactsCsvImport
-from app.core.errors import error_detail, CONTACT_NOT_FOUND, CSV_MISSING_COLUMN
+from app.models import Contact, ContactDuplicateDismissal, User
+from app.schemas import (
+    AUTH_RESPONSES,
+    CRUD_RESPONSES,
+    ContactCreate,
+    ContactDuplicateDismiss,
+    ContactDuplicateGroup,
+    ContactMerge,
+    ContactResponse,
+    ContactUpdate,
+    ContactsCsvImport,
+)
+from app.core.errors import error_detail, CONTACT_NOT_FOUND, CSV_MISSING_COLUMN, INVALID_YEAR
 
 router = APIRouter(prefix="/contacts", tags=["contacts"], responses={**AUTH_RESPONSES})
 
+def _check_year(year) -> None:
+    if not valid_birth_year(year):
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_YEAR))
+
+
+def _sync_birthday(db: Session, contact: Contact) -> None:
+    sync_contact_birthday(
+        db,
+        contact.family_id,
+        contact.id,
+        contact.full_name,
+        contact.birthday_month,
+        contact.birthday_day,
+        contact.birthday_year,
+    )
+
+
 def serialize_contact(contact: Contact) -> ContactResponse:
     email_values, phone_values = contact_channel_values(contact)
+    extras = contact_extras(contact)
     return ContactResponse(
         id=contact.id,
         family_id=contact.family_id,
@@ -30,6 +59,11 @@ def serialize_contact(contact: Contact) -> ContactResponse:
         phone_values=phone_values,
         birthday_month=contact.birthday_month,
         birthday_day=contact.birthday_day,
+        birthday_year=contact.birthday_year,
+        organization=extras["organization"],
+        addresses=extras["addresses"],
+        note=extras["note"],
+        synced=bool(contact.dav_href),
     )
 
 
@@ -65,6 +99,7 @@ def create_contact(
     _scope=require_scope("contacts:write"),
 ):
     ensure_adult(db, user.id, payload.family_id)
+    _check_year(payload.birthday_year)
 
     contact = Contact(
         family_id=payload.family_id,
@@ -73,18 +108,12 @@ def create_contact(
         phone=payload.phone,
         birthday_month=payload.birthday_month,
         birthday_day=payload.birthday_day,
+        birthday_year=payload.birthday_year if payload.birthday_month and payload.birthday_day else None,
     )
     db.add(contact)
     # Flush so the synced birthday row can reference contact.id.
     db.flush()
-    sync_contact_birthday(
-        db,
-        contact.family_id,
-        contact.id,
-        contact.full_name,
-        contact.birthday_month,
-        contact.birthday_day,
-    )
+    _sync_birthday(db, contact)
     db.commit()
     db.refresh(contact)
     cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
@@ -112,17 +141,13 @@ def update_contact(
     ensure_adult(db, user.id, contact.family_id)
 
     update_data = payload.model_dump(exclude_unset=True)
+    _check_year(update_data.get("birthday_year"))
     for key, value in update_data.items():
         setattr(contact, key, value)
+    if not (contact.birthday_month and contact.birthday_day):
+        contact.birthday_year = None
 
-    sync_contact_birthday(
-        db,
-        contact.family_id,
-        contact.id,
-        contact.full_name,
-        contact.birthday_month,
-        contact.birthday_day,
-    )
+    _sync_birthday(db, contact)
 
     db.commit()
     db.refresh(contact)
@@ -195,9 +220,9 @@ def export_contacts_csv(
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["full_name", "email", "phone", "birthday_month", "birthday_day"])
+    writer.writerow(["full_name", "email", "phone", "birthday_month", "birthday_day", "birthday_year"])
     for c in contacts:
-        writer.writerow([c.full_name, c.email or "", c.phone or "", c.birthday_month or "", c.birthday_day or ""])
+        writer.writerow([c.full_name, c.email or "", c.phone or "", c.birthday_month or "", c.birthday_day or "", c.birthday_year or ""])
 
     return Response(
         content=output.getvalue(),
@@ -209,7 +234,7 @@ def export_contacts_csv(
 @router.post(
     "/import-csv",
     summary="Import contacts from CSV",
-    description="Parse CSV text and create contacts (max 500 rows). Auto-creates birthday entries. Adult only. Scope: `contacts:write`.",
+    description="Parse CSV text and create contacts (max 500 rows). A row for a person already in Tribu (same email or phone, or same name) completes that contact instead of adding a second one. Auto-creates birthday entries. Adult only. Scope: `contacts:write`.",
     response_description="Import result with created/skipped counts and row errors",
 )
 def import_contacts_csv(
@@ -227,12 +252,13 @@ def import_contacts_csv(
 
     MAX_ROWS = 500
     created = 0
+    merged = 0
     skipped = 0
     row_errors = []
     row_num = 1
     for row in reader:
         row_num += 1
-        if created + skipped >= MAX_ROWS:
+        if created + merged + skipped >= MAX_ROWS:
             break
         name = (row.get("full_name") or "").strip()
         errors_for_row = []
@@ -265,30 +291,120 @@ def import_contacts_csv(
             errors_for_row.append(f"Invalid email: {email_raw}")
         email = email_raw if "@" in email_raw else None
 
+        try:
+            year = int(row["birthday_year"]) if row.get("birthday_year") else None
+        except (ValueError, TypeError):
+            year = None
+            errors_for_row.append(f"Invalid birthday_year: {row.get('birthday_year')}")
+        if year is not None and not (valid_birth_year(year) and month and day):
+            errors_for_row.append(f"birthday_year out of range: {year}")
+            year = None
+
         if errors_for_row:
             row_errors.append({"row": row_num, "name": name, "errors": errors_for_row})
+
+        phone = (row.get("phone") or "").strip() or None
+        # The same person already in Tribu (same email or phone, or the
+        # same name without a different one) is completed, not doubled.
+        existing = find_match(db, payload.family_id, full_name=name, email=email, phone=phone)
+        if existing is not None:
+            if fill_missing(existing, email=email, phone=phone, month=month, day=day, year=year):
+                _sync_birthday(db, existing)
+            merged += 1
+            continue
 
         contact = Contact(
             family_id=payload.family_id,
             full_name=name,
             email=email,
-            phone=(row.get("phone") or "").strip() or None,
+            phone=phone,
             birthday_month=month,
             birthday_day=day,
+            birthday_year=year,
         )
         db.add(contact)
         db.flush()
-        sync_contact_birthday(
-            db,
-            contact.family_id,
-            contact.id,
-            contact.full_name,
-            contact.birthday_month,
-            contact.birthday_day,
-        )
+        _sync_birthday(db, contact)
         created += 1
 
     db.commit()
-    if created:
+    if created or merged:
         cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
-    return {"status": "ok", "created": created, "skipped": skipped, "row_errors": row_errors}
+    return {"status": "ok", "created": created, "merged": merged, "skipped": skipped, "row_errors": row_errors}
+
+
+def _family_contacts(db: Session, family_id: int, ids) -> list[Contact]:
+    wanted = set(ids)
+    rows = db.query(Contact).filter(Contact.family_id == family_id, Contact.id.in_(wanted)).all()
+    if len(rows) != len(wanted):
+        raise HTTPException(status_code=404, detail=error_detail(CONTACT_NOT_FOUND))
+    return rows
+
+
+@router.get(
+    "/duplicates",
+    response_model=list[ContactDuplicateGroup],
+    summary="Possible duplicate contacts",
+    description="Groups of contacts that look like the same person: a shared email address or phone number, or the same name. Pairs marked as different people are left out. Scope: `contacts:read`.",
+    response_description="Groups of contact IDs with what they share",
+)
+def list_duplicates(
+    family_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("contacts:read"),
+):
+    ensure_family_membership(db, user.id, family_id)
+    return find_duplicate_groups(db, family_id)
+
+
+@router.post(
+    "/merge",
+    response_model=ContactResponse,
+    responses={**CRUD_RESPONSES},
+    summary="Merge contacts",
+    description="Fold contacts into one: the kept contact gets the others' email addresses, phone numbers, addresses, notes and birthday where it lacks them, and the others are deleted. Phones pick up both changes on their next sync. Adult only. Scope: `contacts:write`.",
+    response_description="The merged contact",
+)
+def merge(
+    payload: ContactMerge,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("contacts:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+    others = [cid for cid in dict.fromkeys(payload.merge_ids) if cid != payload.keep_id]
+    rows = {c.id: c for c in _family_contacts(db, payload.family_id, [payload.keep_id, *others])}
+    keep = merge_contacts(db, rows[payload.keep_id], [rows[cid] for cid in others])
+    db.commit()
+    db.refresh(keep)
+    cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
+    return serialize_contact(keep)
+
+
+@router.post(
+    "/duplicates/dismiss",
+    responses={**CRUD_RESPONSES},
+    summary="Mark contacts as different people",
+    description="Stop suggesting these contacts as duplicates of each other. Adult only. Scope: `contacts:write`.",
+    response_description="Confirmation",
+)
+def dismiss_duplicates(
+    payload: ContactDuplicateDismiss,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("contacts:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+    ids = sorted(set(payload.contact_ids))
+    _family_contacts(db, payload.family_id, ids)
+    existing = {
+        (row.first_contact_id, row.second_contact_id)
+        for row in db.query(ContactDuplicateDismissal).filter(ContactDuplicateDismissal.family_id == payload.family_id)
+    }
+    for index, first in enumerate(ids):
+        for second in ids[index + 1:]:
+            if (first, second) not in existing:
+                db.add(ContactDuplicateDismissal(family_id=payload.family_id, first_contact_id=first, second_contact_id=second))
+    db.commit()
+    return {"status": "ok"}

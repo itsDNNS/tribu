@@ -349,6 +349,9 @@ class Contact(Base):
     phone = Column(String, nullable=True)
     birthday_month = Column(Integer, nullable=True)
     birthday_day = Column(Integer, nullable=True)
+    # The year of birth when known; shows the age. Birthdays are part of
+    # the contact, and family_birthdays follows it for the calendar.
+    birthday_year = Column(Integer, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(
         DateTime,
@@ -378,6 +381,23 @@ class Contact(Base):
         back_populates="contact",
         uselist=False,
         passive_deletes=True,
+    )
+
+
+class ContactDuplicateDismissal(Base):
+    """Two contacts someone marked as different people, so they are not
+    suggested as duplicates again."""
+
+    __tablename__ = "contact_duplicate_dismissals"
+
+    id = Column(Integer, primary_key=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    first_contact_id = Column(Integer, ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False)
+    second_contact_id = Column(Integer, ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("first_contact_id", "second_contact_id", name="uq_contact_duplicate_dismissals_pair"),
     )
 
 

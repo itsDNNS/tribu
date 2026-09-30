@@ -619,6 +619,7 @@ _MUTABLE_CONTACT_FIELDS = (
     "phone",
     "birthday_month",
     "birthday_day",
+    "birthday_year",
 )
 
 
@@ -759,6 +760,7 @@ class AddressBookCollection(BaseCollection):
                 row.full_name,
                 row.birthday_month,
                 row.birthday_day,
+                row.birthday_year,
             )
             try:
                 db.commit()
