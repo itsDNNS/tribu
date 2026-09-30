@@ -21,6 +21,7 @@ import '../styles/family.css';
 import '../styles/shell.css';
 import '../styles/admin.css';
 import '../styles/display.css';
+import '../styles/welcome.css';
 
 // Routes that MUST NOT mount the global app bootstrap (AppProvider,
 // ToastProvider, PWABanners). AppProvider hits /auth/me, /families/me,

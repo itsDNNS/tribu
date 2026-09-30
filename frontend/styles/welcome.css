@@ -1,0 +1,98 @@
+/* ═══════════════════════════════════════════
+   WELCOME: the logged-out page. The sign-in card beside a made-up day in
+   Tribu on wide screens; on phones the card comes right after the name.
+   ═══════════════════════════════════════════ */
+.welcome-page { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; position: relative; z-index: 2; overflow-x: hidden; }
+
+.welcome-layout {
+  flex: 1;
+  width: min(100% - 32px, 1120px);
+  margin: 0 auto;
+  padding: 64px 0 24px;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "intro" "auth" "showcase";
+}
+@media (min-width: 600px) and (max-width: 959px) {
+  .welcome-layout { width: min(100% - 48px, 480px); padding-top: 80px; }
+}
+@media (min-width: 960px) {
+  .welcome-layout {
+    grid-template-columns: minmax(0, 1fr) 420px;
+    grid-template-areas: "intro auth" "showcase auth";
+    grid-template-rows: auto 1fr;
+    column-gap: 72px;
+    row-gap: 32px;
+    align-content: center;
+    padding: 88px 0 32px;
+  }
+  .welcome-auth { align-self: center; }
+}
+
+/* Name and promise */
+.welcome-intro { grid-area: intro; min-width: 0; animation: authEnter 0.6s var(--ease-out-expo) both; }
+.welcome-brand { display: flex; align-items: center; gap: 10px; }
+.welcome-logo { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--color-accent-fill); color: var(--text-on-primary); box-shadow: var(--shadow-sm); }
+.welcome-wordmark { font-size: 1.35rem; font-weight: 750; letter-spacing: -0.02em; color: var(--text-primary); }
+.welcome-title { margin: 16px 0 0; max-width: 18ch; font-size: 1.4rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); }
+.welcome-lead { display: none; margin: 14px 0 0; max-width: 36ch; font-size: 1.08rem; line-height: 1.5; color: var(--text-secondary); }
+@media (min-width: 960px) {
+  .welcome-title { margin-top: 28px; font-size: 2.75rem; line-height: 1.1; letter-spacing: -0.035em; }
+  .welcome-lead { display: block; }
+}
+
+/* Sign in */
+.welcome-auth { grid-area: auth; min-width: 0; scroll-margin-top: 24px; animation: authEnter 0.6s var(--ease-out-expo) 0.08s both; }
+.welcome-card.auth-card--warm { padding: 24px; border-radius: 24px; box-shadow: var(--shadow-md); }
+.welcome-card .auth-form { gap: 14px; }
+.welcome-card .form-field label { font-size: 0.85rem; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text-primary); }
+.welcome-card .auth-form .btn-primary { margin-top: 4px; min-height: 48px; }
+.welcome-password { position: relative; }
+.welcome-password .form-input { padding-right: 52px; }
+.welcome-password-toggle { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.welcome-password-toggle:hover { color: var(--text-primary); background: var(--surface-soft); }
+.welcome-password-toggle:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 0; }
+.welcome-card .auth-divider { margin-top: 18px; }
+.welcome-demo { width: 100%; min-height: 46px; margin-top: 14px; padding: 10px 16px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--text-primary); font-weight: 600; background: var(--surface-paper); border-color: var(--border-subtle); }
+.welcome-demo:hover { background: var(--surface-soft); }
+
+/* A day in Tribu */
+.welcome-showcase { grid-area: showcase; min-width: 0; display: grid; gap: 12px; align-content: start; animation: authEnter 0.6s var(--ease-out-expo) 0.16s both; }
+.welcome-showcase-label { margin: 12px 0 0; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+@media (min-width: 960px) { .welcome-showcase-label { display: none; } }
+.welcome-preview { display: grid; gap: 12px; max-width: 540px; }
+.welcome-preview-day { border: 1px solid var(--border-subtle); border-radius: 20px; background: var(--surface-paper); box-shadow: var(--shadow-md); overflow: hidden; }
+.welcome-preview-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 14px 18px 12px; border-bottom: 1px solid var(--border-subtle); }
+.welcome-preview-head span { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--amethyst); }
+.welcome-preview-head strong { font-size: 0.98rem; font-weight: 700; color: var(--text-primary); }
+.welcome-preview-day ul { list-style: none; margin: 0; padding: 0; }
+.welcome-preview-row { display: grid; grid-template-columns: 64px 20px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; min-height: 50px; padding: 6px 18px; }
+.welcome-preview-row + .welcome-preview-row { border-top: 1px solid var(--border-subtle); }
+.welcome-preview-time { font-size: 0.82rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.welcome-preview-mark { display: grid; place-items: center; color: var(--text-muted); }
+.welcome-dot { width: 10px; height: 10px; border-radius: 50%; }
+.welcome-dot--plum { background: var(--member-1); }
+.welcome-dot--sky { background: var(--accent-sky); }
+.welcome-check { width: 16px; height: 16px; border: 2px solid var(--text-muted); border-radius: 5px; }
+.welcome-preview-title { font-size: 0.95rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.welcome-preview-who { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 0.7rem; font-weight: 750; }
+.welcome-preview-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.welcome-preview-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-paper); box-shadow: var(--shadow-sm); font-size: 0.88rem; line-height: 1.35; color: var(--text-primary); }
+.welcome-preview-note svg { flex: none; margin-top: 1px; }
+.welcome-preview-note span { display: grid; gap: 2px; }
+.welcome-preview-note small { font-size: 0.8rem; color: var(--text-secondary); }
+.welcome-preview-note--shopping svg { color: var(--accent-amber); }
+.welcome-preview-note--birthday svg { color: var(--accent-rose); }
+
+.welcome-trust { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; }
+.welcome-trust li { display: inline-flex; align-items: center; gap: 6px; }
+.welcome-trust svg { color: var(--text-muted); }
+
+.welcome-footer { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 20px 16px 28px; color: var(--text-muted); font-size: 0.82rem; }
+.welcome-footer-link { display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); text-decoration: none; }
+.welcome-footer-link:hover { color: var(--amethyst); }
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-intro, .welcome-auth, .welcome-showcase { animation: none; }
+}
