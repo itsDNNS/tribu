@@ -42,6 +42,7 @@ export default function ContactsView() {
     isChild,
     lang,
     members,
+    loadMembers,
   } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const locale = localeForLang(lang);
@@ -137,10 +138,23 @@ export default function ContactsView() {
 
   async function dismiss(group) {
     setBusy(true);
-    const { ok } = await api.apiDismissContactDuplicates(Number(familyId), group.contact_ids);
+    const { ok } = await api.apiDismissContactDuplicates(Number(familyId), group.contact_ids, group.member_user_id || null);
     setBusy(false);
     if (!ok) return toastError(t(messages, 'toast.error'));
     setDuplicates((prev) => prev.filter((g) => g !== group));
+  }
+
+  // "This contact is Hannelore": one person, with the member's birthday.
+  async function link(contactId, memberUserId) {
+    setBusy(true);
+    const { ok, data } = await api.apiLinkContactMember(contactId, Number(familyId), memberUserId);
+    setBusy(false);
+    if (!ok) return toastError(errorText(data?.detail, t(messages, 'toast.error'), messages));
+    await Promise.all([refresh(), loadMembers?.()]);
+    await loadDuplicates();
+    const msg = t(messages, memberUserId ? 'module.contacts.toast_linked' : 'module.contacts.toast_unlinked');
+    toastSuccess(msg);
+    announce(msg);
   }
 
   // On phones the chosen contact replaces the list; start at its top.
@@ -173,7 +187,10 @@ export default function ContactsView() {
             {initials(contact.full_name)}
           </span>
           <span className="contact-row-text">
-            <span className="contact-row-name">{contact.full_name}</span>
+            <span className="contact-row-name">
+              {contact.full_name}
+              {contact.member_user_id && <span className="contact-row-tag"> {t(messages, 'module.birthdays.member_tag')}</span>}
+            </span>
             {(extra || sub) && <span className="contact-row-sub">{extra || sub}</span>}
           </span>
           {!extra && contact.birthday_month && contact.birthday_day && (
@@ -337,6 +354,8 @@ export default function ContactsView() {
               messages={messages}
               locale={locale}
               canEdit={canEdit}
+              member={(members || []).find((m) => m.user_id === selected.member_user_id) || null}
+              onUnlink={() => link(selected.id, null)}
               onEdit={openEdit}
               onBack={() => setSelectedId(null)}
             />
@@ -363,6 +382,8 @@ export default function ContactsView() {
         <DuplicatesDialog
           groups={duplicates}
           contacts={contacts || []}
+          members={members || []}
+          onLink={link}
           messages={messages}
           locale={locale}
           busy={busy}

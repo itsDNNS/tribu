@@ -10,6 +10,11 @@ someone marked as different people are left alone.
 Merging keeps one contact, adds the other's addresses, numbers, notes and
 birthday to it, and deletes the other; phones pick both changes up on their
 next sync.
+
+A contact can also be a family member: the phone sends "Hannelore Müller"
+and Hannelore is in Tribu. A first name alone says little, so a contact is
+suggested for a member when they share an email address, the whole name, or
+the first name and the birthday.
 """
 
 from __future__ import annotations
@@ -24,7 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.core.contact_birthdays import delete_synced_birthday_for_contact, sync_contact_birthday
 from app.core.vcard_utils import _split_name, _synced_card, contact_channel_values
-from app.models import Contact, ContactDuplicateDismissal
+from app.models import Contact, ContactDuplicateDismissal, ContactMemberDismissal, Membership, User
 
 _PHONE_DIGITS = 9
 
@@ -34,6 +39,13 @@ def normalize_name(name: Optional[str]) -> str:
     text = "".join(ch for ch in text if not unicodedata.combining(ch)).casefold()
     words = re.findall(r"[a-z0-9]+", text.replace("ß", "ss"))
     return " ".join(sorted(words))
+
+
+def name_tokens(name: Optional[str]) -> list[str]:
+    """The words of a name in their order, folded like ``normalize_name``."""
+    text = unicodedata.normalize("NFKD", name or "")
+    text = "".join(ch for ch in text if not unicodedata.combining(ch)).casefold()
+    return re.findall(r"[a-z0-9]+", text.replace("ß", "ss"))
 
 
 def normalize_phone(phone: Optional[str]) -> Optional[str]:
@@ -113,6 +125,57 @@ def find_duplicate_groups(db: Session, family_id: int) -> list[dict]:
     return result
 
 
+def find_member_matches(db: Session, family_id: int) -> list[dict]:
+    """Contacts that look like a family member, with why.
+
+    Members someone already linked a contact to, and pairs marked as
+    different people, are left out.
+    """
+    contacts = db.query(Contact).filter(Contact.family_id == family_id).order_by(Contact.id).all()
+    linked = {contact.member_user_id for contact in contacts if contact.member_user_id}
+    dismissed = {
+        (row.contact_id, row.member_user_id)
+        for row in db.query(ContactMemberDismissal).filter(ContactMemberDismissal.family_id == family_id)
+    }
+    members = (
+        db.query(Membership, User)
+        .join(User, User.id == Membership.user_id)
+        .filter(Membership.family_id == family_id)
+        .order_by(Membership.user_id)
+        .all()
+    )
+    result = []
+    for membership, user in members:
+        if user.id in linked:
+            continue
+        email = normalize_email(user.email)
+        words = name_tokens(user.display_name)
+        full = normalize_name(user.display_name)
+        born = membership.date_of_birth
+        for contact in contacts:
+            if contact.member_user_id or (contact.id, user.id) in dismissed:
+                continue
+            keys = contact_keys(contact)
+            same_birthday = bool(
+                born
+                and contact.birthday_month == born.month
+                and contact.birthday_day == born.day
+                and (not contact.birthday_year or contact.birthday_year == born.year)
+            )
+            reasons: set[str] = set()
+            if email and email in keys["email"]:
+                reasons.add("email")
+            if len(full.split()) >= 2 and full == normalize_name(contact.full_name):
+                reasons.add("name")
+            elif words and words[0] in name_tokens(contact.full_name) and same_birthday:
+                reasons.update({"first_name", "birthday"})
+            if reasons and same_birthday:
+                reasons.add("birthday")
+            if reasons:
+                result.append({"contact_ids": [contact.id], "member_user_id": user.id, "reasons": sorted(reasons)})
+    return result
+
+
 def find_match(db: Session, family_id: int, *, full_name: str, email: Optional[str], phone: Optional[str]) -> Optional[Contact]:
     """An existing contact that is clearly the same person, for imports.
 
@@ -158,6 +221,8 @@ def merge_contacts(db: Session, keep: Contact, others: Iterable[Contact]) -> Con
     """Fold ``others`` into ``keep`` and delete them."""
     card = _synced_card(keep)
     for other in others:
+        if other.member_user_id and not keep.member_user_id:
+            keep.member_user_id = other.member_user_id
         fill_missing(
             keep,
             email=other.email,
@@ -175,6 +240,7 @@ def merge_contacts(db: Session, keep: Contact, others: Iterable[Contact]) -> Con
         db.delete(other)
     if card is not None:
         keep.raw_vcard = card.serialize()
+    db.flush()
     sync_contact_birthday(
         db, keep.family_id, keep.id, keep.full_name, keep.birthday_month, keep.birthday_day, keep.birthday_year
     )

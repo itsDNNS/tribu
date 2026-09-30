@@ -1759,6 +1759,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Seul un souhait accepté peut être marqué comme donné",
   "error.PRAISE_NOT_FOUND": "Félicitation introuvable",
   "error.PRAISE_SELF": "Impossible de se féliciter soi-même",
+  "error.BIRTHDAY_FROM_PROFILE": "Cet anniversaire vient du profil d’un membre de la famille. Modifiez-le là-bas.",
   "module.shopping.show_overview": "Afficher les catégories",
   "module.shopping.hide_overview": "Masquer les catégories",
   "module.shopping.undo": "Annuler",
@@ -2198,5 +2199,14 @@
   "module.contacts.select_hint": "Choisissez un contact pour tout voir à son sujet.",
   "module.contacts.back": "Tous les contacts",
   "module.contacts.no_match": "Aucun contact ne correspond.",
-  "module.contacts.import_merged": "Existants complétés : {count}"
+  "module.contacts.import_merged": "Existants complétés : {count}",
+  "module.contacts.reason_first_name": "Même prénom",
+  "module.contacts.reason_birthday": "Même anniversaire",
+  "module.contacts.member_title": "Est-ce quelqu’un de la famille ?",
+  "module.contacts.member_hint": "« {contact} » ressemble à {member} de votre famille. Liés, Tribu les montre comme une seule personne avec un seul anniversaire.",
+  "module.contacts.member_link": "Lier",
+  "module.contacts.member_linked": "Membre de la famille : {name}",
+  "module.contacts.member_unlink": "Délier",
+  "module.contacts.toast_linked": "Contact lié",
+  "module.contacts.toast_unlinked": "Lien supprimé"
 }

@@ -1780,6 +1780,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Nur ein freigegebener Wunsch kann als übergeben markiert werden",
   "error.PRAISE_NOT_FOUND": "Lob nicht gefunden",
   "error.PRAISE_SELF": "Sich selbst loben geht nicht",
+  "error.BIRTHDAY_FROM_PROFILE": "Dieser Geburtstag kommt aus dem Profil eines Familienmitglieds. Ändere ihn dort.",
   "module.shopping.show_overview": "Kategorieübersicht anzeigen",
   "module.shopping.hide_overview": "Kategorieübersicht ausblenden",
   "module.shopping.undo": "Rückgängig",
@@ -2196,5 +2197,14 @@
   "module.contacts.select_hint": "Wähle einen Kontakt, um alles über ihn zu sehen.",
   "module.contacts.back": "Alle Kontakte",
   "module.contacts.no_match": "Kein Kontakt passt.",
-  "module.contacts.import_merged": "Vorhandene ergänzt: {count}"
+  "module.contacts.import_merged": "Vorhandene ergänzt: {count}",
+  "module.contacts.reason_first_name": "Gleicher Vorname",
+  "module.contacts.reason_birthday": "Gleicher Geburtstag",
+  "module.contacts.member_title": "Gehört das zur Familie?",
+  "module.contacts.member_hint": "„{contact}“ sieht aus wie {member} aus eurer Familie. Verknüpft zeigt Tribu beide als eine Person mit einem Geburtstag.",
+  "module.contacts.member_link": "Verknüpfen",
+  "module.contacts.member_linked": "Familienmitglied: {name}",
+  "module.contacts.member_unlink": "Verknüpfung lösen",
+  "module.contacts.toast_linked": "Kontakt verknüpft",
+  "module.contacts.toast_unlinked": "Verknüpfung gelöst"
 }

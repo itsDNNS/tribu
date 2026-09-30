@@ -6,6 +6,11 @@ contact updates the existing row in place; two contacts with the same
 name each own their own row; deleting one contact only affects its own
 linked row. Manual birthdays keep ``contact_id = NULL`` and are
 unaffected by contact flows.
+
+Family members have their row too (``member_user_id``), from their
+profile's date of birth. A contact that is a family member
+(``Contact.member_user_id``) gives up its own row while the member has a
+birthday, so the person shows once.
 """
 from __future__ import annotations
 
@@ -14,7 +19,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
-from app.models import FamilyBirthday
+from app.models import Contact, FamilyBirthday, Membership, User
 
 MIN_BIRTH_YEAR = 1900
 
@@ -54,6 +59,12 @@ def sync_contact_birthday(
         .first()
     )
 
+    if _member_has_birthday(db, family_id, contact_id):
+        # The member's own birthday stands for the contact.
+        if existing:
+            db.delete(existing)
+        return
+
     if month and day and person_name:
         if existing:
             existing.person_name = person_name
@@ -73,6 +84,67 @@ def sync_contact_birthday(
 
     if existing:
         db.delete(existing)
+
+
+def _member_has_birthday(db: Session, family_id: int, contact_id: int) -> bool:
+    member_id = db.query(Contact.member_user_id).filter(Contact.id == contact_id).scalar()
+    if not member_id:
+        return False
+    return (
+        db.query(Membership.id)
+        .filter(
+            Membership.family_id == family_id,
+            Membership.user_id == member_id,
+            Membership.date_of_birth.isnot(None),
+        )
+        .first()
+        is not None
+    )
+
+
+def member_display_name(user: User) -> str:
+    return (user.display_name or "").strip() or (user.email or "").split("@")[0]
+
+
+def sync_member_birthday(db: Session, family_id: int, user_id: int) -> None:
+    """Keep a member's row in the list in step with their profile, and the
+    rows of contacts that are this member."""
+    membership = (
+        db.query(Membership)
+        .filter(Membership.family_id == family_id, Membership.user_id == user_id)
+        .first()
+    )
+    existing = (
+        db.query(FamilyBirthday)
+        .filter(FamilyBirthday.family_id == family_id, FamilyBirthday.member_user_id == user_id)
+        .first()
+    )
+    born = membership.date_of_birth if membership else None
+    if born is None:
+        if existing:
+            db.delete(existing)
+    else:
+        user = db.query(User).filter(User.id == user_id).first()
+        name = member_display_name(user) if user else ""
+        if existing:
+            existing.person_name = name
+            existing.month, existing.day, existing.year = born.month, born.day, born.year
+        else:
+            db.add(FamilyBirthday(
+                family_id=family_id,
+                member_user_id=user_id,
+                person_name=name,
+                month=born.month,
+                day=born.day,
+                year=born.year,
+            ))
+    db.flush()
+    # Contacts that are this member give up or take back their own row.
+    for contact in db.query(Contact).filter(Contact.family_id == family_id, Contact.member_user_id == user_id):
+        sync_contact_birthday(
+            db, family_id, contact.id, contact.full_name,
+            contact.birthday_month, contact.birthday_day, contact.birthday_year,
+        )
 
 
 def delete_synced_birthday_for_contact(

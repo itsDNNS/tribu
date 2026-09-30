@@ -485,3 +485,39 @@ def test_rewards_goals_migration_localizes_preset_names_and_downgrades(tmp_path,
     assert "praises" not in tables
     assert "reward_goal_id" not in membership_columns
 
+
+def test_member_birthdays_migration_fills_the_list_and_downgrades(tmp_path, monkeypatch):
+    db_path = tmp_path / "member-birthdays.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0073_rewards_goals_and_praise")
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'One')")
+        conn.execute(
+            "INSERT INTO users (id, email, password_hash, display_name) VALUES "
+            "(1, 'h@example.com', 'x', 'Hannelore'), (2, 'k@example.com', 'x', '')"
+        )
+        conn.execute(
+            "INSERT INTO memberships (user_id, family_id, role, is_adult, date_of_birth) VALUES "
+            "(1, 1, 'member', 1, '1950-03-14'), (2, 1, 'member', 0, NULL)"
+        )
+        conn.commit()
+
+    command.upgrade(config, "0074_member_birthdays_links")
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT person_name, month, day, year, member_user_id, contact_id FROM family_birthdays"
+        ).fetchall()
+        contact_columns = {row[1] for row in conn.execute("PRAGMA table_info(contacts)")}
+    assert rows == [("Hannelore", 3, 14, 1950, 1, None)]
+    assert "member_user_id" in contact_columns
+
+    command.downgrade(config, "0073_rewards_goals_and_praise")
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM family_birthdays").fetchone()[0] == 0
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    assert "contact_member_dismissals" not in tables
+

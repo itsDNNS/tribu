@@ -995,6 +995,7 @@ class ContactResponse(BaseModel):
     addresses: list[str] = Field(default_factory=list, description="Addresses a phone stored (read-only)")
     note: Optional[str] = Field(None, description="Note a phone stored (read-only)")
     synced: bool = Field(False, description="Whether the contact comes from phone sync (CardDAV)")
+    member_user_id: Optional[int] = Field(None, description="The family member this contact is, if linked")
 
 
 class ContactUpdate(BaseModel):
@@ -1010,7 +1011,8 @@ class ContactUpdate(BaseModel):
 class ContactDuplicateGroup(BaseModel):
     """Contacts that look like the same person."""
     contact_ids: list[int] = Field(..., description="The contacts, oldest first")
-    reasons: list[str] = Field(..., description="What they share: email, phone and/or name")
+    reasons: list[str] = Field(..., description="What they share: email, phone, name, first_name and/or birthday")
+    member_user_id: Optional[int] = Field(None, description="Set when the contact looks like this family member")
 
 
 class ContactMerge(BaseModel):
@@ -1021,9 +1023,16 @@ class ContactMerge(BaseModel):
 
 
 class ContactDuplicateDismiss(BaseModel):
-    """Mark contacts as different people."""
+    """Mark contacts, or a contact and a family member, as different people."""
     family_id: int = Field(..., description="Family ID")
-    contact_ids: list[int] = Field(..., min_length=2, description="Contacts that are not the same person")
+    contact_ids: list[int] = Field(..., min_length=1, description="Contacts that are not the same person")
+    member_user_id: Optional[int] = Field(None, description="A family member the contacts are not")
+
+
+class ContactMemberLink(BaseModel):
+    """Say which family member a contact is, or none."""
+    family_id: int = Field(..., description="Family ID")
+    member_user_id: Optional[int] = Field(None, description="The member, or null to unlink")
 
 
 class ContactsCsvImport(BaseModel):
@@ -1070,6 +1079,10 @@ class BirthdayResponse(BaseModel):
     contact_id: Optional[int] = Field(
         None,
         description="Contact this birthday is synced from; null for manual entries",
+    )
+    member_user_id: Optional[int] = Field(
+        None,
+        description="Family member whose profile this birthday comes from",
     )
 
 

@@ -1756,6 +1756,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Μόνο μια εγκεκριμένη ευχή μπορεί να σημειωθεί ως δοσμένη",
   "error.PRAISE_NOT_FOUND": "Ο έπαινος δεν βρέθηκε",
   "error.PRAISE_SELF": "Δεν μπορείς να επαινέσεις τον εαυτό σου",
+  "error.BIRTHDAY_FROM_PROFILE": "Αυτά τα γενέθλια προέρχονται από το προφίλ ενός μέλους της οικογένειας. Άλλαξέ τα εκεί.",
   "module.shopping.show_overview": "Εμφάνιση επισκόπησης κατηγοριών",
   "module.shopping.hide_overview": "Απόκρυψη επισκόπησης κατηγοριών",
   "module.shopping.undo": "Αναίρεση",
@@ -2191,5 +2192,14 @@
   "module.contacts.select_hint": "Επιλέξτε μια επαφή για να δείτε τα πάντα γι’ αυτήν.",
   "module.contacts.back": "Όλες οι επαφές",
   "module.contacts.no_match": "Καμία επαφή δεν ταιριάζει.",
-  "module.contacts.import_merged": "Συμπληρώθηκαν υπάρχουσες: {count}"
+  "module.contacts.import_merged": "Συμπληρώθηκαν υπάρχουσες: {count}",
+  "module.contacts.reason_first_name": "Ίδιο όνομα",
+  "module.contacts.reason_birthday": "Ίδια γενέθλια",
+  "module.contacts.member_title": "Είναι κάποιος από την οικογένεια;",
+  "module.contacts.member_hint": "Η επαφή «{contact}» μοιάζει με {member} από την οικογένειά σας. Συνδεδεμένοι, το Tribu τους δείχνει ως ένα άτομο με μία ημερομηνία γενεθλίων.",
+  "module.contacts.member_link": "Σύνδεση",
+  "module.contacts.member_linked": "Μέλος της οικογένειας: {name}",
+  "module.contacts.member_unlink": "Αποσύνδεση",
+  "module.contacts.toast_linked": "Η επαφή συνδέθηκε",
+  "module.contacts.toast_unlinked": "Η σύνδεση αφαιρέθηκε"
 }

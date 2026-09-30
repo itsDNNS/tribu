@@ -1754,6 +1754,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Ní féidir ach mian cheadaithe a mharcáil mar tugtha",
   "error.PRAISE_NOT_FOUND": "Níor aimsíodh an moladh",
   "error.PRAISE_SELF": "Ní féidir leat tú féin a mholadh",
+  "error.BIRTHDAY_FROM_PROFILE": "Tagann an breithlá seo ó phróifíl ball teaghlaigh. Athraigh ansin é.",
   "module.shopping.show_overview": "Taispeáin forbhreathnú na gcatagóirí",
   "module.shopping.hide_overview": "Folaigh forbhreathnú na gcatagóirí",
   "module.shopping.undo": "Cealaigh",
@@ -2187,5 +2188,14 @@
   "module.contacts.select_hint": "Roghnaigh teagmhálaí chun gach rud faoi a fheiceáil.",
   "module.contacts.back": "Gach teagmhálaí",
   "module.contacts.no_match": "Níl aon teagmhálaí ag teacht leis.",
-  "module.contacts.import_merged": "Cinn a bhí ann comhlánaithe: {count}"
+  "module.contacts.import_merged": "Cinn a bhí ann comhlánaithe: {count}",
+  "module.contacts.reason_first_name": "An chéad ainm céanna",
+  "module.contacts.reason_birthday": "An breithlá céanna",
+  "module.contacts.member_title": "An duine den teaghlach é seo?",
+  "module.contacts.member_hint": "Is cosúil gurb é „{contact}“ {member} ó bhur dteaghlach. Nuair a nasctar iad, taispeánann Tribu iad mar dhuine amháin le breithlá amháin.",
+  "module.contacts.member_link": "Nasc",
+  "module.contacts.member_linked": "Ball teaghlaigh: {name}",
+  "module.contacts.member_unlink": "Díscaoil",
+  "module.contacts.toast_linked": "Teagmhálaí nasctha",
+  "module.contacts.toast_unlinked": "Nasc bainte"
 }

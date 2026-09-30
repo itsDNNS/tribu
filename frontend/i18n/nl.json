@@ -1758,6 +1758,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Alleen een goedgekeurde wens kan als gegeven worden gemarkeerd",
   "error.PRAISE_NOT_FOUND": "Compliment niet gevonden",
   "error.PRAISE_SELF": "Je kunt jezelf geen compliment geven",
+  "error.BIRTHDAY_FROM_PROFILE": "Deze verjaardag komt uit het profiel van een gezinslid. Pas hem daar aan.",
   "module.shopping.show_overview": "Categorieoverzicht tonen",
   "module.shopping.hide_overview": "Categorieoverzicht verbergen",
   "module.shopping.undo": "Ongedaan maken",
@@ -2197,5 +2198,14 @@
   "module.contacts.select_hint": "Kies een contact om alles erover te zien.",
   "module.contacts.back": "Alle contacten",
   "module.contacts.no_match": "Geen contact past.",
-  "module.contacts.import_merged": "Bestaande aangevuld: {count}"
+  "module.contacts.import_merged": "Bestaande aangevuld: {count}",
+  "module.contacts.reason_first_name": "Zelfde voornaam",
+  "module.contacts.reason_birthday": "Zelfde verjaardag",
+  "module.contacts.member_title": "Is dit iemand uit het gezin?",
+  "module.contacts.member_hint": "‘{contact}’ lijkt op {member} uit jullie gezin. Gekoppeld toont Tribu ze als één persoon met één verjaardag.",
+  "module.contacts.member_link": "Koppelen",
+  "module.contacts.member_linked": "Gezinslid: {name}",
+  "module.contacts.member_unlink": "Ontkoppelen",
+  "module.contacts.toast_linked": "Contact gekoppeld",
+  "module.contacts.toast_unlinked": "Koppeling verwijderd"
 }

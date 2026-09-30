@@ -1754,6 +1754,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Jako předané lze označit jen schválené přání",
   "error.PRAISE_NOT_FOUND": "Pochvala nenalezena",
   "error.PRAISE_SELF": "Sám sebe pochválit nejde",
+  "error.BIRTHDAY_FROM_PROFILE": "Tyto narozeniny pocházejí z profilu člena rodiny. Změňte je tam.",
   "module.shopping.show_overview": "Zobrazit přehled kategorií",
   "module.shopping.hide_overview": "Skrýt přehled kategorií",
   "module.shopping.undo": "Zpět",
@@ -2189,5 +2190,14 @@
   "module.contacts.select_hint": "Vyberte kontakt a uvidíte o něm vše.",
   "module.contacts.back": "Všechny kontakty",
   "module.contacts.no_match": "Žádný kontakt neodpovídá.",
-  "module.contacts.import_merged": "Doplněno existujících: {count}"
+  "module.contacts.import_merged": "Doplněno existujících: {count}",
+  "module.contacts.reason_first_name": "Stejné jméno",
+  "module.contacts.reason_birthday": "Stejné narozeniny",
+  "module.contacts.member_title": "Je to někdo z rodiny?",
+  "module.contacts.member_hint": "„{contact}“ vypadá jako {member} z vaší rodiny. Po propojení je Tribu ukáže jako jednu osobu s jedněmi narozeninami.",
+  "module.contacts.member_link": "Propojit",
+  "module.contacts.member_linked": "Člen rodiny: {name}",
+  "module.contacts.member_unlink": "Zrušit propojení",
+  "module.contacts.toast_linked": "Kontakt propojen",
+  "module.contacts.toast_unlinked": "Propojení zrušeno"
 }

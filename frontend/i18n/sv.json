@@ -1759,6 +1759,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Bara en godkänd önskning kan markeras som given",
   "error.PRAISE_NOT_FOUND": "Berömmet hittades inte",
   "error.PRAISE_SELF": "Du kan inte berömma dig själv",
+  "error.BIRTHDAY_FROM_PROFILE": "Den här födelsedagen kommer från en familjemedlems profil. Ändra den där.",
   "module.shopping.show_overview": "Visa kategoriöversikt",
   "module.shopping.hide_overview": "Dölj kategoriöversikt",
   "module.shopping.undo": "Ångra",
@@ -2197,5 +2198,14 @@
   "module.contacts.select_hint": "Välj en kontakt för att se allt om den.",
   "module.contacts.back": "Alla kontakter",
   "module.contacts.no_match": "Ingen kontakt matchar.",
-  "module.contacts.import_merged": "Befintliga kompletterade: {count}"
+  "module.contacts.import_merged": "Befintliga kompletterade: {count}",
+  "module.contacts.reason_first_name": "Samma förnamn",
+  "module.contacts.reason_birthday": "Samma födelsedag",
+  "module.contacts.member_title": "Är det någon i familjen?",
+  "module.contacts.member_hint": "”{contact}” ser ut som {member} i er familj. Länkade visar Tribu dem som en person med en födelsedag.",
+  "module.contacts.member_link": "Länka",
+  "module.contacts.member_linked": "Familjemedlem: {name}",
+  "module.contacts.member_unlink": "Ta bort länk",
+  "module.contacts.toast_linked": "Kontakten länkad",
+  "module.contacts.toast_unlinked": "Länken borttagen"
 }

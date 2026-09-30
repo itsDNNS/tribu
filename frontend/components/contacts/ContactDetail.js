@@ -1,9 +1,9 @@
-import { ArrowLeft, Cake, Mail, MapPin, Pencil, Phone, RefreshCw, StickyNote } from 'lucide-react';
+import { ArrowLeft, Cake, Mail, MapPin, Pencil, Phone, RefreshCw, StickyNote, Unlink, Users } from 'lucide-react';
 import { t } from '../../lib/i18n';
 import { avatarColor, birthdayDate, channels, daysUntil, initials, turningAge } from './contactUtils';
 
 // Everything about one contact, with calling and writing one tap away.
-export default function ContactDetail({ contact, messages, locale, canEdit, onEdit, onBack }) {
+export default function ContactDetail({ contact, messages, locale, canEdit, onEdit, onBack, member = null, onUnlink }) {
   const { emails, phones } = channels(contact);
   const hasBirthday = contact.birthday_month && contact.birthday_day;
   const days = hasBirthday ? daysUntil(contact.birthday_month, contact.birthday_day) : null;
@@ -25,6 +25,16 @@ export default function ContactDetail({ contact, messages, locale, canEdit, onEd
           {contact.organization && <p className="contact-detail-org">{contact.organization}</p>}
           {contact.synced && (
             <span className="contact-detail-source"><RefreshCw size={12} aria-hidden="true" /> {t(messages, 'module.contacts.synced')}</span>
+          )}
+          {member && (
+            <span className="contact-detail-member">
+              <Users size={12} aria-hidden="true" /> {t(messages, 'module.contacts.member_linked').replace('{name}', member.display_name)}
+              {canEdit && onUnlink && (
+                <button type="button" className="btn-ghost contact-detail-unlink" onClick={onUnlink}>
+                  <Unlink size={12} aria-hidden="true" /> {t(messages, 'module.contacts.member_unlink')}
+                </button>
+              )}
+            </span>
           )}
         </div>
       </header>

@@ -1,31 +1,35 @@
 import csv
 import io
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import cache
-from app.core.contact_birthdays import delete_synced_birthday_for_contact, sync_contact_birthday, valid_birth_year
-from app.core.contact_duplicates import fill_missing, find_duplicate_groups, find_match, merge_contacts
+from app.core.contact_birthdays import (
+    delete_synced_birthday_for_contact, sync_contact_birthday, sync_member_birthday, valid_birth_year,
+)
+from app.core.contact_duplicates import fill_missing, find_duplicate_groups, find_match, find_member_matches, merge_contacts
 from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership
 from app.core.scopes import require_scope
 from app.core.vcard_utils import contact_channel_values, contact_extras
 from app.core.vcf_utils import contacts_to_vcf
 from app.database import get_db
-from app.models import Contact, ContactDuplicateDismissal, User
+from app.models import Contact, ContactDuplicateDismissal, ContactMemberDismissal, Membership, User
 from app.schemas import (
     AUTH_RESPONSES,
     CRUD_RESPONSES,
     ContactCreate,
     ContactDuplicateDismiss,
     ContactDuplicateGroup,
+    ContactMemberLink,
     ContactMerge,
     ContactResponse,
     ContactUpdate,
     ContactsCsvImport,
 )
-from app.core.errors import error_detail, CONTACT_NOT_FOUND, CSV_MISSING_COLUMN, INVALID_YEAR
+from app.core.errors import error_detail, CONTACT_NOT_FOUND, CSV_MISSING_COLUMN, INVALID_YEAR, MEMBER_NOT_FOUND
 
 router = APIRouter(prefix="/contacts", tags=["contacts"], responses={**AUTH_RESPONSES})
 
@@ -64,6 +68,7 @@ def serialize_contact(contact: Contact) -> ContactResponse:
         addresses=extras["addresses"],
         note=extras["note"],
         synced=bool(contact.dav_href),
+        member_user_id=contact.member_user_id,
     )
 
 
@@ -345,7 +350,7 @@ def _family_contacts(db: Session, family_id: int, ids) -> list[Contact]:
     "/duplicates",
     response_model=list[ContactDuplicateGroup],
     summary="Possible duplicate contacts",
-    description="Groups of contacts that look like the same person: a shared email address or phone number, or the same name. Pairs marked as different people are left out. Scope: `contacts:read`.",
+    description="Groups of contacts that look like the same person: a shared email address or phone number, or the same name. Also contacts that look like a family member (`member_user_id`): a shared email address, the whole name, or the first name and the birthday. Pairs marked as different people are left out. Scope: `contacts:read`.",
     response_description="Groups of contact IDs with what they share",
 )
 def list_duplicates(
@@ -355,7 +360,7 @@ def list_duplicates(
     _scope=require_scope("contacts:read"),
 ):
     ensure_family_membership(db, user.id, family_id)
-    return find_duplicate_groups(db, family_id)
+    return find_duplicate_groups(db, family_id) + find_member_matches(db, family_id)
 
 
 @router.post(
@@ -398,6 +403,22 @@ def dismiss_duplicates(
     ensure_adult(db, user.id, payload.family_id)
     ids = sorted(set(payload.contact_ids))
     _family_contacts(db, payload.family_id, ids)
+    if payload.member_user_id is not None:
+        _family_member(db, payload.family_id, payload.member_user_id)
+        known = {
+            row.contact_id
+            for row in db.query(ContactMemberDismissal).filter(
+                ContactMemberDismissal.member_user_id == payload.member_user_id,
+                ContactMemberDismissal.contact_id.in_(ids),
+            )
+        }
+        for contact_id in ids:
+            if contact_id not in known:
+                db.add(ContactMemberDismissal(
+                    family_id=payload.family_id, contact_id=contact_id, member_user_id=payload.member_user_id,
+                ))
+        db.commit()
+        return {"status": "ok"}
     existing = {
         (row.first_contact_id, row.second_contact_id)
         for row in db.query(ContactDuplicateDismissal).filter(ContactDuplicateDismissal.family_id == payload.family_id)
@@ -408,3 +429,51 @@ def dismiss_duplicates(
                 db.add(ContactDuplicateDismissal(family_id=payload.family_id, first_contact_id=first, second_contact_id=second))
     db.commit()
     return {"status": "ok"}
+
+
+def _family_member(db: Session, family_id: int, user_id: int) -> Membership:
+    membership = db.query(Membership).filter(
+        Membership.family_id == family_id, Membership.user_id == user_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
+    return membership
+
+
+@router.post(
+    "/{contact_id}/member",
+    response_model=ContactResponse,
+    responses={**CRUD_RESPONSES},
+    summary="Link a contact to a family member",
+    description="Say which family member a contact is (the phone's \"Hannelore Müller\" for member \"Hannelore\"), or null to unlink. The member's birthday then stands for both; a member without one takes the contact's when it has a year. Adult only. Scope: `contacts:write`.",
+    response_description="The contact",
+)
+def link_member(
+    contact_id: int,
+    payload: ContactMemberLink,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("contacts:write"),
+):
+    ensure_adult(db, user.id, payload.family_id)
+    contact = _family_contacts(db, payload.family_id, [contact_id])[0]
+    if payload.member_user_id is not None:
+        membership = _family_member(db, payload.family_id, payload.member_user_id)
+        if (
+            membership.date_of_birth is None
+            and contact.birthday_month and contact.birthday_day and contact.birthday_year
+        ):
+            try:
+                membership.date_of_birth = date(contact.birthday_year, contact.birthday_month, contact.birthday_day)
+            except ValueError:
+                pass
+    contact.member_user_id = payload.member_user_id
+    db.flush()
+    if payload.member_user_id is not None:
+        sync_member_birthday(db, payload.family_id, payload.member_user_id)
+    _sync_birthday(db, contact)
+    db.commit()
+    db.refresh(contact)
+    cache.invalidate(f"tribu:members:{payload.family_id}")
+    cache.invalidate_pattern(f"tribu:dashboard:{payload.family_id}:*")
+    return serialize_contact(contact)

@@ -1754,6 +1754,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Kaip įteiktą galima pažymėti tik patvirtintą norą",
   "error.PRAISE_NOT_FOUND": "Pagyrimas nerastas",
   "error.PRAISE_SELF": "Negali pagirti savęs",
+  "error.BIRTHDAY_FROM_PROFILE": "Šis gimtadienis ateina iš šeimos nario profilio. Pakeisk jį ten.",
   "module.shopping.show_overview": "Rodyti kategorijų apžvalgą",
   "module.shopping.hide_overview": "Slėpti kategorijų apžvalgą",
   "module.shopping.undo": "Atšaukti",
@@ -2187,5 +2188,14 @@
   "module.contacts.select_hint": "Pasirinkite kontaktą, kad pamatytumėte viską apie jį.",
   "module.contacts.back": "Visi kontaktai",
   "module.contacts.no_match": "Nė vienas kontaktas neatitinka.",
-  "module.contacts.import_merged": "Papildyti esami: {count}"
+  "module.contacts.import_merged": "Papildyti esami: {count}",
+  "module.contacts.reason_first_name": "Tas pats vardas",
+  "module.contacts.reason_birthday": "Tas pats gimtadienis",
+  "module.contacts.member_title": "Ar tai kažkas iš šeimos?",
+  "module.contacts.member_hint": "„{contact}“ panašus į {member} iš jūsų šeimos. Susieti Tribu rodo juos kaip vieną asmenį su vienu gimtadieniu.",
+  "module.contacts.member_link": "Susieti",
+  "module.contacts.member_linked": "Šeimos narys: {name}",
+  "module.contacts.member_unlink": "Atsieti",
+  "module.contacts.toast_linked": "Kontaktas susietas",
+  "module.contacts.toast_unlinked": "Susiejimas panaikintas"
 }

@@ -1755,6 +1755,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Samo odobrena želja može se označiti kao predana",
   "error.PRAISE_NOT_FOUND": "Pohvala nije pronađena",
   "error.PRAISE_SELF": "Ne možeš pohvaliti sebe",
+  "error.BIRTHDAY_FROM_PROFILE": "Ovaj rođendan dolazi iz profila člana obitelji. Promijeni ga ondje.",
   "module.shopping.show_overview": "Prikaži pregled kategorija",
   "module.shopping.hide_overview": "Sakrij pregled kategorija",
   "module.shopping.undo": "Poništi",
@@ -2189,5 +2190,14 @@
   "module.contacts.select_hint": "Odaberite kontakt da biste vidjeli sve o njemu.",
   "module.contacts.back": "Svi kontakti",
   "module.contacts.no_match": "Nijedan kontakt ne odgovara.",
-  "module.contacts.import_merged": "Dopunjeni postojeći: {count}"
+  "module.contacts.import_merged": "Dopunjeni postojeći: {count}",
+  "module.contacts.reason_first_name": "Isto ime",
+  "module.contacts.reason_birthday": "Isti rođendan",
+  "module.contacts.member_title": "Je li ovo netko iz obitelji?",
+  "module.contacts.member_hint": "„{contact}” izgleda kao {member} iz vaše obitelji. Povezane Tribu prikazuje kao jednu osobu s jednim rođendanom.",
+  "module.contacts.member_link": "Poveži",
+  "module.contacts.member_linked": "Član obitelji: {name}",
+  "module.contacts.member_unlink": "Prekini vezu",
+  "module.contacts.toast_linked": "Kontakt povezan",
+  "module.contacts.toast_unlinked": "Veza prekinuta"
 }

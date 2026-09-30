@@ -1754,6 +1754,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Ako odovzdané možno označiť len schválené želanie",
   "error.PRAISE_NOT_FOUND": "Pochvala sa nenašla",
   "error.PRAISE_SELF": "Sám seba pochváliť nejde",
+  "error.BIRTHDAY_FROM_PROFILE": "Tieto narodeniny pochádzajú z profilu člena rodiny. Zmeňte ich tam.",
   "module.shopping.show_overview": "Zobraziť prehľad kategórií",
   "module.shopping.hide_overview": "Skryť prehľad kategórií",
   "module.shopping.undo": "Späť",
@@ -2189,5 +2190,14 @@
   "module.contacts.select_hint": "Vyberte kontakt a uvidíte o ňom všetko.",
   "module.contacts.back": "Všetky kontakty",
   "module.contacts.no_match": "Žiadny kontakt nezodpovedá.",
-  "module.contacts.import_merged": "Doplnené existujúce: {count}"
+  "module.contacts.import_merged": "Doplnené existujúce: {count}",
+  "module.contacts.reason_first_name": "Rovnaké meno",
+  "module.contacts.reason_birthday": "Rovnaké narodeniny",
+  "module.contacts.member_title": "Je to niekto z rodiny?",
+  "module.contacts.member_hint": "„{contact}“ vyzerá ako {member} z vašej rodiny. Po prepojení ich Tribu ukáže ako jednu osobu s jedným dátumom narodenín.",
+  "module.contacts.member_link": "Prepojiť",
+  "module.contacts.member_linked": "Člen rodiny: {name}",
+  "module.contacts.member_unlink": "Zrušiť prepojenie",
+  "module.contacts.toast_linked": "Kontakt prepojený",
+  "module.contacts.toast_unlinked": "Prepojenie zrušené"
 }

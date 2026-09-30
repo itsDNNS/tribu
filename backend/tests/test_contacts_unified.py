@@ -112,7 +112,7 @@ def test_duplicates_are_found_by_email_phone_and_name(api):
     c = _contact(client, family_id, full_name="Weber, Sophie", email="sophie@example.com")
     _contact(client, family_id, full_name="Tom Becker", email="tom@example.com")
     groups = client.get("/contacts/duplicates", params={"family_id": family_id}).json()
-    assert groups == [{"contact_ids": [a["id"], b["id"], c["id"]], "reasons": ["name", "phone"]}]
+    assert groups == [{"contact_ids": [a["id"], b["id"], c["id"]], "reasons": ["name", "phone"], "member_user_id": None}]
 
     client.post("/contacts/duplicates/dismiss", json={"family_id": family_id, "contact_ids": [a["id"], b["id"], c["id"]]})
     assert client.get("/contacts/duplicates", params={"family_id": family_id}).json() == []

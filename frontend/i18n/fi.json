@@ -1757,6 +1757,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Vain hyväksytyn toiveen voi merkitä annetuksi",
   "error.PRAISE_NOT_FOUND": "Kehua ei löytynyt",
   "error.PRAISE_SELF": "Et voi kehua itseäsi",
+  "error.BIRTHDAY_FROM_PROFILE": "Tämä syntymäpäivä tulee perheenjäsenen profiilista. Muuta se siellä.",
   "module.shopping.show_overview": "Näytä kategoriayhteenveto",
   "module.shopping.hide_overview": "Piilota kategoriayhteenveto",
   "module.shopping.undo": "Kumoa",
@@ -2191,5 +2192,14 @@
   "module.contacts.select_hint": "Valitse yhteystieto nähdäksesi kaiken siitä.",
   "module.contacts.back": "Kaikki yhteystiedot",
   "module.contacts.no_match": "Mikään yhteystieto ei täsmää.",
-  "module.contacts.import_merged": "Olemassa olevia täydennetty: {count}"
+  "module.contacts.import_merged": "Olemassa olevia täydennetty: {count}",
+  "module.contacts.reason_first_name": "Sama etunimi",
+  "module.contacts.reason_birthday": "Sama syntymäpäivä",
+  "module.contacts.member_title": "Onko tämä joku perheestä?",
+  "module.contacts.member_hint": "”{contact}” näyttää olevan {member} perheestänne. Yhdistettyinä Tribu näyttää heidät yhtenä henkilönä, jolla on yksi syntymäpäivä.",
+  "module.contacts.member_link": "Yhdistä",
+  "module.contacts.member_linked": "Perheenjäsen: {name}",
+  "module.contacts.member_unlink": "Poista yhdistys",
+  "module.contacts.toast_linked": "Yhteystieto yhdistetty",
+  "module.contacts.toast_unlinked": "Yhdistys poistettu"
 }

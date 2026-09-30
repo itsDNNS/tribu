@@ -1781,6 +1781,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Only an approved wish can be marked as given",
   "error.PRAISE_NOT_FOUND": "Praise not found",
   "error.PRAISE_SELF": "You cannot praise yourself",
+  "error.BIRTHDAY_FROM_PROFILE": "This birthday comes from a family member's profile. Change it there.",
   "module.shopping.show_overview": "Show category overview",
   "module.shopping.hide_overview": "Hide category overview",
   "module.shopping.undo": "Undo",
@@ -2198,5 +2199,14 @@
   "module.contacts.select_hint": "Pick a contact to see everything about them.",
   "module.contacts.back": "All contacts",
   "module.contacts.no_match": "No contact matches.",
-  "module.contacts.import_merged": "Completed existing: {count}"
+  "module.contacts.import_merged": "Completed existing: {count}",
+  "module.contacts.reason_first_name": "Same first name",
+  "module.contacts.reason_birthday": "Same birthday",
+  "module.contacts.member_title": "Is this someone from the family?",
+  "module.contacts.member_hint": "“{contact}” looks like {member} from your family. Linked, Tribu shows them as one person with one birthday.",
+  "module.contacts.member_link": "Link",
+  "module.contacts.member_linked": "Family member: {name}",
+  "module.contacts.member_unlink": "Unlink",
+  "module.contacts.toast_linked": "Contact linked",
+  "module.contacts.toast_unlinked": "Link removed"
 }

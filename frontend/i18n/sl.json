@@ -1754,6 +1754,7 @@
   "error.REWARD_TRANSACTION_NOT_APPROVED": "Kot izročeno lahko označite samo odobreno željo",
   "error.PRAISE_NOT_FOUND": "Pohvala ni najdena",
   "error.PRAISE_SELF": "Sebe ne moreš pohvaliti",
+  "error.BIRTHDAY_FROM_PROFILE": "Ta rojstni dan izhaja iz profila družinskega člana. Spremeni ga tam.",
   "module.shopping.show_overview": "Prikaži pregled kategorij",
   "module.shopping.hide_overview": "Skrij pregled kategorij",
   "module.shopping.undo": "Razveljavi",
@@ -2189,5 +2190,14 @@
   "module.contacts.select_hint": "Izberite stik, da vidite vse o njem.",
   "module.contacts.back": "Vsi stiki",
   "module.contacts.no_match": "Noben stik se ne ujema.",
-  "module.contacts.import_merged": "Dopolnjeni obstoječi: {count}"
+  "module.contacts.import_merged": "Dopolnjeni obstoječi: {count}",
+  "module.contacts.reason_first_name": "Isto ime",
+  "module.contacts.reason_birthday": "Isti rojstni dan",
+  "module.contacts.member_title": "Je to nekdo iz družine?",
+  "module.contacts.member_hint": "»{contact}« je videti kot {member} iz vaše družine. Povezana ju Tribu prikaže kot eno osebo z enim rojstnim dnem.",
+  "module.contacts.member_link": "Poveži",
+  "module.contacts.member_linked": "Družinski član: {name}",
+  "module.contacts.member_unlink": "Prekini povezavo",
+  "module.contacts.toast_linked": "Stik povezan",
+  "module.contacts.toast_unlinked": "Povezava prekinjena"
 }
