@@ -277,7 +277,7 @@ function People({ people, ctx, onOpen, today }) {
               <span className="gifts-person-counts">
                 {person.wishes.length > 0 && <span className="wish"><Heart size={12} aria-hidden="true" /> {person.wishes.length}</span>}
                 {person.ideas.length > 0 && <span className="idea"><Lightbulb size={12} aria-hidden="true" /> {person.ideas.length}</span>}
-                {open === 0 && <span className="none">{t(messages, 'module.gifts.nothing_planned')}</span>}
+                {open === 0 && <span className="none">{t(messages, 'module.gifts.nothing_yet')}</span>}
               </span>
             </span>
             <ChevronRight size={18} className="gifts-person-chevron" aria-hidden="true" />

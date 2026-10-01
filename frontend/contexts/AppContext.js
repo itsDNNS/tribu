@@ -122,7 +122,7 @@ export function AppProvider({ children }) {
 
   const loadContacts = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetContacts(fid);
-    if (ok) setContacts(data);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setContacts(data);
   }, []);
 
   const loadBirthdays = useCallback(async (fid) => {
@@ -147,7 +147,7 @@ export function AppProvider({ children }) {
 
   const loadQuickCaptureInbox = useCallback(async (fid) => {
     const { ok, data } = await api.apiGetQuickCaptureInbox(fid, 10, 0);
-    if (ok) setQuickCaptureInbox(Array.isArray(data?.items) ? data.items : []);
+    if (ok && String(activeFamilyRef.current) === String(fid)) setQuickCaptureInbox(Array.isArray(data?.items) ? data.items : []);
   }, []);
 
   const loadNotifications = useCallback(async () => {

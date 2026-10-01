@@ -57,7 +57,6 @@ const messages = {
   cancel: 'Cancel',
   remove_member: 'Remove member',
   remove_member_confirm: 'Remove this member?',
-  admin_demoted: 'Demoted',
   avatar_too_large: 'Avatar too large',
   password_was_reset: 'Password reset',
   member_created: 'Member created',
