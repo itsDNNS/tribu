@@ -193,6 +193,35 @@ describe('i18n bundled locale files', () => {
       }
     }
   });
+
+  // t() shows the key itself when a text is missing, in every language.
+  // Literal keys in the source must therefore exist in English.
+  it('knows every literal key the app asks for', () => {
+    const english = fileLocaleBundles.en;
+    const sourceFiles = [];
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== 'generated') walk(full);
+        } else if (/\.jsx?$/.test(entry.name)) {
+          sourceFiles.push(full);
+        }
+      }
+    };
+    ['components', 'contexts', 'hooks', 'lib', 'pages'].forEach((dir) => walk(path.join(process.cwd(), dir)));
+    const missing = [];
+    for (const file of sourceFiles) {
+      const source = fs.readFileSync(file, 'utf8');
+      for (const match of source.matchAll(/\btc?\(\s*[\w.]+\s*,\s*(['"])([^'"\n]+)\1/g)) {
+        if (!Object.prototype.hasOwnProperty.call(english, match[2])) {
+          missing.push(`${path.relative(process.cwd(), file)}: ${match[2]}`);
+        }
+      }
+    }
+    expect(sourceFiles.length).toBeGreaterThan(50);
+    expect(missing).toEqual([]);
+  });
 });
 
 describe('listLanguages()', () => {
