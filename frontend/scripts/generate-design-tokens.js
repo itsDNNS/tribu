@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // Writes styles/tokens.css from design/tokens.json, the one source of the
-// Tribu design tokens (see docs/tribu-2-design.md). The Flutter app
-// generates its Dart tokens from a copy of the same file.
+// Tribu design tokens (see the Design and Frontend Guidelines page in the
+// Wiki). Other clients generate their tokens from a copy of the same file.
 //
 //   node scripts/generate-design-tokens.js           write styles/tokens.css
 //   node scripts/generate-design-tokens.js --check   fail when it is stale

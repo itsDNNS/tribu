@@ -119,7 +119,7 @@
 :is([data-theme="dark"],[data-theme="midnight-glass"]) :is(.shop-page,.shop-dialog){--ink:var(--text-primary);--text:var(--text-secondary);--muted:var(--text-muted)}
 @media(max-width:680px){.app-shell:has(.shopping-trip) .main-content{padding:8px 12px 22px}.shopping-trip.shop-page{padding-bottom:10px}}
 
-/* Tribu 2.0 (docs/tribu-2-design.md): compact rows are the default, a calm
+/* Tribu 2.0: compact rows are the default, a calm
    header, the category label like the task groups. */
 .shop-page .shop-list-header { margin: 0 0 var(--space-4); }
 .shop-page .shop-category-title {

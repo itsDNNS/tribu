@@ -24,7 +24,7 @@ function backupDocsHref(runbook) {
   if (runbook === 'self_hosting_backup_restore') {
     return 'https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore';
   }
-  return 'https://github.com/itsDNNS/tribu/blob/main/docs/self-hosting.md';
+  return 'https://github.com/itsDNNS/tribu/wiki/Self-Hosting';
 }
 
 export default function BackupSection() {

@@ -2,11 +2,12 @@ import re
 from pathlib import Path
 
 
+ROOT = Path(__file__).resolve().parents[1]
 STABLE_RELEASE_TAG_RE = re.compile(r'^v([0-9]{4}-[0-9]{2}-[0-9]{2}(\.[0-9]+)?|[0-9]+\.[0-9]+\.[0-9]+)$')
 
 
 def read_workflow() -> str:
-    return Path('.github/workflows/docker.yml').read_text()
+    return (ROOT / '.github/workflows/docker.yml').read_text()
 
 
 def test_docker_workflow_uses_component_matrix_without_repeated_shared_steps():
@@ -48,7 +49,7 @@ def test_stable_release_tag_detection_covers_date_patch_tags():
 
 
 def test_backend_image_receives_app_version_build_arg_only():
-    dockerfile = Path('backend/Dockerfile').read_text()
+    dockerfile = (ROOT / 'backend/Dockerfile').read_text()
     workflow = read_workflow()
 
     assert 'ARG APP_VERSION=dev' in dockerfile
@@ -101,3 +102,10 @@ def test_docker_publish_waits_for_backend_and_frontend_tests():
     assert 'frontend-tests:' in workflow
     assert 'npm test -- --runInBand' in workflow
     assert 'needs: [backend-tests, frontend-tests]' in workflow
+
+
+def test_reused_backend_test_workflow_runs_repository_contract_tests():
+    backend_tests = (ROOT / '.github/workflows/backend-tests.yml').read_text()
+
+    assert 'workflow_call:' in backend_tests
+    assert '        run: python -m pytest tests -q\n' in backend_tests

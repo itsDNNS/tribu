@@ -1,6 +1,6 @@
 import { parseDate } from './helpers';
 
-// The task list of Tribu 2.0 (docs/tribu-2-design.md): open tasks grouped by
+// The task list of Tribu 2.0: open tasks grouped by
 // when they are due, then what is done.
 
 export const TASK_GROUPS = ['overdue', 'today', 'upcoming', 'no_date', 'done'];

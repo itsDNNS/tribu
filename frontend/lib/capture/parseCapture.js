@@ -1,7 +1,7 @@
 // Reads what a family member types into the capture field ("Morgen 15 Uhr
 // Zahnarzt Max", "2 kg Äpfel", "Müll rausbringen jeden Dienstag") and
 // suggests what to create. Rule based and on the device, in German and
-// English (docs/tribu-2-design.md). The Flutter app has the same rules in
+// English. The Flutter app has the same rules in
 // lib/features/capture/capture_parser.dart and checks them against the
 // shared cases in lib/capture/captureCases.json.
 

@@ -25,8 +25,7 @@ Add screenshots or short recordings for meaningful UI changes.
 - [ ] no docs changes needed
 - [ ] README
 - [ ] CONTRIBUTING.md
-- [ ] docs/self-hosting.md
-- [ ] wiki
+- [ ] wiki (name the pages to update)
 - [ ] SECURITY.md
 
 ## Follow-up notes

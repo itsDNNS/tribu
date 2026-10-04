@@ -10,9 +10,9 @@ README = ROOT / "README.md"
 CONTRIBUTING = ROOT / "CONTRIBUTING.md"
 DOCS_INDEX = ROOT / "docs" / "index.html"
 OG_IMAGE = ROOT / "docs" / "assets" / "og-image.png"
-FEATURE_MATRIX = ROOT / "docs" / "feature-matrix.md"
-PUBLIC_COPY_CHECKLIST = ROOT / "docs" / "public-copy-review-checklist.md"
 SECURITY = ROOT / "SECURITY.md"
+PR_TEMPLATE = ROOT / ".github" / "pull_request_template.md"
+BACKUP_SECTION = ROOT / "frontend" / "components" / "admin" / "BackupSection.js"
 EN_MESSAGES = ROOT / "frontend" / "i18n" / "en.json"
 LOCALE_DIR = ROOT / "frontend" / "i18n"
 COMPOSE = ROOT / "docker" / "docker-compose.yml"
@@ -114,37 +114,8 @@ def test_readme_local_references_exist():
         assert (ROOT / ref).exists(), f"missing README local reference: {ref}"
 
 
-def test_feature_matrix_keeps_status_sections_and_tables():
-    matrix = FEATURE_MATRIX.read_text(encoding="utf-8")
-    for heading in (
-        "## Shipped",
-        "## Planned or under evaluation",
-        "## Intentionally out of scope for now",
-    ):
-        assert heading in matrix
-    assert "| Area | Capability | Notes |" in matrix
-    assert "| Area | Direction to evaluate | Guardrails |" in matrix
-
-
-def test_public_copy_review_expectations_are_documented_not_hardcoded_as_copy_tests():
-    checklist = PUBLIC_COPY_CHECKLIST.read_text(encoding="utf-8")
-    contributing = CONTRIBUTING.read_text(encoding="utf-8")
-
-    assert "docs/public-copy-review-checklist.md" in contributing
-    for section in (
-        "## Contract tests keep",
-        "## Human copy review checks",
-        "## Claims that need evidence",
-        "## Release checklist",
-    ):
-        assert section in checklist
-
-    assert "Do not turn normal wording preferences into exact-string tests" in checklist
-    assert "Required metadata, file links, and asset paths stay automated" in checklist
-
-
 def test_public_github_docs_avoid_process_leakage_and_em_dashes():
-    public_docs = [README, CONTRIBUTING, SECURITY, DOCS_INDEX, *sorted((ROOT / "docs").glob("*.md"))]
+    public_docs = [README, CONTRIBUTING, SECURITY, PR_TEMPLATE, DOCS_INDEX]
     public_text = "\n".join(path.read_text(encoding="utf-8") for path in public_docs).lower()
 
     for forbidden in ("review gate", "reviewed the commit", "no discrete regression"):
@@ -162,7 +133,7 @@ def test_landing_page_keeps_objective_security_and_phone_sync_caveats():
 def test_backup_restore_guidance_uses_supported_public_docs():
     readme = README.read_text(encoding="utf-8")
     security = SECURITY.read_text(encoding="utf-8")
-    admin_backup = (ROOT / "frontend" / "components" / "admin" / "BackupSection.js").read_text(encoding="utf-8")
+    admin_backup = BACKUP_SECTION.read_text(encoding="utf-8")
 
     for script in LEGACY_BACKUP_SCRIPTS:
         assert not script.exists(), f"legacy backup helper remains tracked: {script.relative_to(ROOT)}"
@@ -172,9 +143,14 @@ def test_backup_restore_guidance_uses_supported_public_docs():
     assert supported_url in security
     assert supported_url in admin_backup
 
+    admin_links = re.findall(r"'(https://[^']+)'", admin_backup)
+    assert admin_links
+    for link in admin_links:
+        assert link.startswith("https://github.com/itsDNNS/tribu/wiki/"), f"admin backup help must link the Wiki: {link}"
+
     checked_text = "\n".join(
         path.read_text(encoding="utf-8")
-        for path in (README, SECURITY, ROOT / "docs" / "self-hosting.md", ROOT / "frontend" / "components" / "admin" / "BackupSection.js")
+        for path in (README, SECURITY, CONTRIBUTING, BACKUP_SECTION)
     )
     assert "scripts/backup.sh" not in checked_text
     assert "scripts/restore.sh" not in checked_text

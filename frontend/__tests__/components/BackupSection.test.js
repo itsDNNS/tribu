@@ -243,4 +243,12 @@ describe('BackupSection confidence panel', () => {
     expect(screen.queryByText('future_database')).not.toBeInTheDocument();
     expect(screen.queryByText('future_domain')).not.toBeInTheDocument();
   });
+
+  test('links an unknown restore runbook to the Self-Hosting guide in the wiki', async () => {
+    setupMocks({ restore_runbook: 'future_runbook' });
+
+    render(<BackupSection />);
+
+    expect(await screen.findByRole('link', { name: 'Open backup docs' })).toHaveAttribute('href', 'https://github.com/itsDNNS/tribu/wiki/Self-Hosting');
+  });
 });

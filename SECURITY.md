@@ -39,10 +39,10 @@ Never use default or placeholder values for these secrets.
 2. If exposing Tribu to the internet, put it behind a reverse proxy (nginx, Caddy, Traefik) with TLS
 3. Keep Docker images up to date for security patches
 
-## Defensive Review Checklist
+## Defensive Review
 
-Feature work that touches authentication, integrations, exports, backups, self-hosted deployment, or shared-device surfaces should use the [Defensive review checklist](docs/defensive-review-checklist.md).
-It gives maintainers a public-safe boundary checklist, links existing coverage, and explains when to create narrow follow-up issues.
+Feature work that touches authentication, integrations, exports, backups, self-hosted deployment, or shared-device surfaces should include the defensive review described in [CONTRIBUTING.md](CONTRIBUTING.md#defensive-review).
+It lists the boundaries to check and explains when to create narrow, public-safe follow-up issues.
 
 ## Production Deployment Checklist
 
