@@ -1,4 +1,4 @@
-// Today (Tribu 2.0, docs/tribu-2-design.md): one chronological list of the
+// Today (Tribu 2.0): one chronological list of the
 // day, the overdue tasks folded away and a line per day for the week ahead.
 // The Flutter app's lib/features/today/today_model.dart follows the same
 // rules and shared cases (todayCases.json).

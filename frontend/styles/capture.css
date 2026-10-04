@@ -1,4 +1,4 @@
-/* The capture sheet of Tribu 2.0 (docs/tribu-2-design.md): one field,
+/* The capture sheet of Tribu 2.0: one field,
    the entries it recognised, then the forms. Built on the design tokens. */
 
 .capture { display: grid; gap: var(--space-3); }

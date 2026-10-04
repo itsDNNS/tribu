@@ -250,7 +250,6 @@ Use the [GitHub Wiki](https://github.com/itsDNNS/tribu/wiki) as the primary docu
 | Back up and restore | [Backup & Restore](https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore) |
 | Shared display | [Shared Home Display](https://github.com/itsDNNS/tribu/wiki/Shared-Home-Display) |
 | Home Assistant | [Home Assistant](https://github.com/itsDNNS/tribu/wiki/Home-Assistant) |
-| Native app release readiness | [App repository release gate](https://github.com/itsDNNS/tribu-app/issues/14) and [backend/web ownership note](docs/native-app-release-readiness.md) |
 | Contribute | [Contributing](CONTRIBUTING.md) |
 | Security reports | [Security Policy](SECURITY.md) |
 | Releases | [Releases](https://github.com/itsDNNS/tribu/releases) |

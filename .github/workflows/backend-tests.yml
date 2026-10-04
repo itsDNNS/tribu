@@ -38,6 +38,10 @@ jobs:
       - name: Run backend tests
         run: PYTHONPATH=backend python -m pytest backend/tests -q
 
+      # Docs layout, workflow gates, and public examples (root tests/).
+      - name: Run repository contract tests
+        run: python -m pytest tests -q
+
   endpoint-budgets-postgres:
     runs-on: ubuntu-latest
     timeout-minutes: 15

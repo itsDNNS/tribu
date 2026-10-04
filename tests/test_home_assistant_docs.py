@@ -1,7 +1,8 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DOC = ROOT / "docs" / "home-assistant.md"
+README = ROOT / "README.md"
+WIKI_GUIDE = "https://github.com/itsDNNS/tribu/wiki/Home-Assistant"
 PACKAGE = ROOT / "integrations" / "home-assistant" / "tribu_package.yaml"
 DASHBOARD = ROOT / "integrations" / "home-assistant" / "dashboard-card.yaml"
 
@@ -28,24 +29,14 @@ def test_home_assistant_package_and_dashboard_define_required_entities_and_actio
     assert "event_type" in package
 
 
-def test_home_assistant_docs_are_wiki_pointer_with_required_sections():
-    doc = DOC.read_text()
-
-    assert "https://github.com/itsDNNS/tribu/wiki/Home-Assistant" in doc
-    assert "compatibility pointer for existing links" in doc
-    for section in (
-        "## Tribu scopes used by the package",
-        "## Dashboard example",
-        "## Privacy boundaries",
-        "## Troubleshooting",
-    ):
-        assert section in doc
+def test_home_assistant_guide_is_the_wiki_page():
+    assert WIKI_GUIDE in README.read_text(encoding="utf-8")
 
 
 def test_home_assistant_examples_use_secret_placeholders_not_real_tokens():
     combined = "\n".join(
         path.read_text()
-        for path in (DOC, PACKAGE, DASHBOARD)
+        for path in (PACKAGE, DASHBOARD)
     )
 
     assert "tribu_pat_" not in combined

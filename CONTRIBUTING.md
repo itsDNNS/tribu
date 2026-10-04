@@ -4,16 +4,14 @@ Thanks for your interest in contributing to Tribu.
 
 This file is the fastest repo-local guide for contributors. Use it to understand how to propose work, run the app locally, verify changes, and decide where code should live.
 
-For contributor workflow inside the repository, treat this file as the canonical source. Use the wiki for deeper architecture, roadmap, changelog, and plugin reference material.
+For contributor workflow inside the repository, treat this file as the canonical source. All other documentation lives in the [GitHub Wiki](https://github.com/itsDNNS/tribu/wiki):
 
 - [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture)
+- [Design and Frontend Guidelines](https://github.com/itsDNNS/tribu/wiki/Design-and-Frontend-Guidelines)
 - [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest)
 - [Roadmap](https://github.com/itsDNNS/tribu/wiki/Roadmap)
-- [Self-Hosting Guide](docs/self-hosting.md)
+- [Self-Hosting Guide](https://github.com/itsDNNS/tribu/wiki/Self-Hosting)
 - [Security Policy](SECURITY.md)
-- [Design System](DESIGN.md)
-- [Defensive Review Checklist](docs/defensive-review-checklist.md)
-- [Public Copy Review Checklist](docs/public-copy-review-checklist.md)
 
 ## Before you start
 
@@ -58,9 +56,10 @@ tribu/
 ├── backend/              # FastAPI app, models, routers, tests, migrations
 ├── frontend/             # Next.js app, components, hooks, tests, e2e
 ├── docker/               # Compose stack and env template
-├── docs/                 # Repo-local documentation and assets
-├── scripts/              # Backup and restore helpers
-├── DESIGN.md             # Visual identity and UI system source of truth
+├── docs/                 # Product page (GitHub Pages) and its images
+├── integrations/         # Home Assistant package and dashboard card
+├── scripts/              # Local end-to-end test runners
+├── tests/                # Repository contract tests (docs, workflows, public surfaces)
 ├── README.md             # Public product-facing entry page
 ├── CONTRIBUTING.md       # Repo-local contributor guide
 └── SECURITY.md           # Security disclosure policy
@@ -177,6 +176,14 @@ pytest
 
 If your change touches authentication, DAV, invitations, admin flows, or data integrity, prefer adding or updating backend tests near the affected area.
 
+### Repository contracts
+
+The root `tests/` folder checks the public surfaces: workflow gates, Docker examples, the product page, Home Assistant examples, and the documentation layout. Run it from the repository root after changing docs, workflows, or public examples:
+
+```bash
+python3 -m pytest tests -q
+```
+
 ## Where changes should go
 
 ### Product and feature changes
@@ -189,12 +196,20 @@ If your change touches authentication, DAV, invitations, admin flows, or data in
 
 ### Docs and positioning
 
-- visual identity and UI system guidance: `DESIGN.md`
+The [GitHub Wiki](https://github.com/itsDNNS/tribu/wiki) is the single home for user, operator, and developer documentation. The repository keeps only these Markdown files:
+
 - public first impression and product story: `README.md`
 - contributor workflow: `CONTRIBUTING.md`
-- self-hosting and operations: `docs/self-hosting.md`
 - security disclosure process: `SECURITY.md`
-- deeper architecture, roadmap, changelog, and plugin details: wiki pages linked from the README
+- pull request template: `.github/pull_request_template.md`
+
+Everything else goes to the matching Wiki page, for example:
+
+- self-hosting and operations: [Self-Hosting](https://github.com/itsDNNS/tribu/wiki/Self-Hosting)
+- visual system, design tokens, and layout rules: [Design and Frontend Guidelines](https://github.com/itsDNNS/tribu/wiki/Design-and-Frontend-Guidelines)
+- architecture, roadmap, changelog, and plugin details: [Architecture](https://github.com/itsDNNS/tribu/wiki/Architecture), [Roadmap](https://github.com/itsDNNS/tribu/wiki/Roadmap), [Changelog](https://github.com/itsDNNS/tribu/wiki/Changelog), [Plugin Manifest](https://github.com/itsDNNS/tribu/wiki/Plugin-Manifest)
+
+Do not add new Markdown docs or notes to the repository. `docs/` holds only the product page and its images.
 
 ## PR expectations
 
@@ -216,9 +231,41 @@ Recommended PR structure:
 
 ## Documentation updates are part of the job
 
-When you change setup steps, developer workflow, behavior, architecture assumptions, or user-facing flows, update the relevant docs in the same PR.
+When you change setup steps, developer workflow, behavior, architecture assumptions, or user-facing flows, update the relevant docs in the same PR. Wiki changes cannot be part of a code PR, so name the Wiki pages that need an update in the PR description.
 
-Do not leave the README, self-hosting guide, and contributor docs drifting apart.
+Do not leave the README, the Wiki, and contributor docs drifting apart.
+
+## Defensive review
+
+Add a short **Defensive review** section to PRs that touch login, sessions, invitations, OIDC, tokens, admin or adult/child boundaries, the Shared Home Display, webhooks and other integrations, server-side fetches, backup, restore, import, export, diagnostics, or self-hosted defaults. Check that:
+
+- the backend enforces the boundary; hiding something in the UI is not enough
+- family-scoped queries filter by `family_id` and verify membership or the display device
+- payloads, logs, and error messages carry only the fields they need, without emails, tokens, secrets, stack traces, or private deployment details
+- display devices keep their own identity and never fall back to a user session
+- server-side fetches allow only http and https, check every address and redirect against the private-network setting, and cap size and time
+- docs, fixtures, and examples use placeholders, never reusable secrets
+
+```markdown
+## Defensive review
+- Auth/session boundary: checked, no new user-session behavior.
+- Family/device scope: backend queries remain scoped by `family_id` or display token.
+- Sensitive data: no emails, tokens, secrets, or private deployment details added to payloads, logs, or docs.
+- Follow-ups: none / #123 for the separately scoped gap.
+```
+
+When the review finds a gap, open one small, public-safe follow-up issue per gap instead of growing the PR. Do not put exploit steps, tokens, logs, or unvalidated vulnerability claims in public issues.
+
+## Public copy
+
+README, product page, Wiki, and release text are public. Keep them sober and specific:
+
+- describe only what the current release does, backed by source, tests, or current screenshots
+- use placeholders for hosts, tokens, and secrets; screenshots use synthetic family data
+- do not mention private repositories, private hosts, or internal tooling
+- avoid unsupported superlatives, absolute privacy claims, and em dashes
+
+Automated tests cover objective contracts such as metadata, links, assets, and Docker examples. Wording is reviewed by a person, not pinned in tests.
 
 ## Security
 

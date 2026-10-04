@@ -23,7 +23,7 @@ import {
 export const PINNED_NAV_KEYS = new Set(['settings', 'admin']);
 export const ACCOUNT_NAV_KEYS = ['settings', 'admin'];
 
-// Tribu 2.0 (docs/tribu-2-design.md): four areas of daily life. The phone's
+// Tribu 2.0: four areas of daily life. The phone's
 // tab bar shows them around the "+" button; a group opens the page used
 // last, and the pages of a group switch with the chips below the header.
 export const NAV_GROUPS = [
