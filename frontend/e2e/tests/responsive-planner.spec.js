@@ -148,6 +148,37 @@ test("selected date, family colors, responsive form state and saved details", as
     api.events.find((e) => e.title === "Bleibt beim Drehen").starts_at,
   ).toContain("2026-09-21");
 });
+test("calendar details and edit form keep a usable scroll area on narrow screens", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  await page
+    .locator(".ui-event-content")
+    .filter({ hasText: "Demo-Termin C" })
+    .click();
+  const dialog = page.locator(".tribu-calendar-dialog");
+  const body = dialog.locator(".tc-modal-body");
+  const expectUsableBody = async () => {
+    await expect
+      .poll(() =>
+        body.evaluate(
+          (element) =>
+            element.getBoundingClientRect().height / window.innerHeight,
+        ),
+      )
+      .toBeGreaterThan(0.3);
+  };
+  await expectUsableBody();
+  await dialog.getByRole("button", { name: "Bearbeiten" }).click();
+  await expectUsableBody();
+  const notes = dialog.getByRole("textbox", { name: "Notizen" });
+  await notes.scrollIntoViewIfNeeded();
+  await expect(notes).toBeInViewport();
+  expect(await body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expectUsableBody();
+});
 test("agenda requests more dates; mobile shell exposes quick capture and navigation", async ({
   page,
 }) => {

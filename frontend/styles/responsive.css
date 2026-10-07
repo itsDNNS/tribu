@@ -1159,6 +1159,8 @@ button.ui-date-label:hover {
     margin: 0;
     width: 100%;
     max-width: none;
+    /* Give the flex body actual space to scroll, including in Safari. */
+    height: min(90dvh, calc(var(--ui-viewport-height, 100dvh) - 12px));
     max-height: calc(var(--ui-viewport-height, 100dvh) - 12px);
     border-radius: 20px 20px 0 0;
     overflow: hidden;
