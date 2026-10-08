@@ -278,7 +278,7 @@ def _send_with_apprise(url: str, payload: dict[str, Any]) -> bool:
     if not notifier.add(url):
         return False
     connect_timeout, read_timeout = _apprise_timeout_pair()
-    for server in notifier.servers:
+    for server in notifier.services:
         if hasattr(server, "socket_connect_timeout"):
             server.socket_connect_timeout = connect_timeout
         if hasattr(server, "socket_read_timeout"):
