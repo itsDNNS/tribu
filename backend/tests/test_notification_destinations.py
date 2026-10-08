@@ -401,7 +401,7 @@ def test_apprise_send_revalidates_dns_resolution_at_notify_time(monkeypatch):
 
     class FakeApprise:
         def __init__(self):
-            self.servers = [FakeServer()]
+            self.services = [FakeServer()]
 
         def add(self, _url):
             return True
@@ -427,6 +427,28 @@ def test_apprise_send_revalidates_dns_resolution_at_notify_time(monkeypatch):
             "gotify://rebind.example/secret-token",
             {"title": "Test", "body": "Body", "link": None},
         )
+
+
+def test_apprise_send_applies_timeouts_to_real_apprise_services(monkeypatch):
+    import apprise
+
+    from app.core import notification_destinations as destinations_core
+
+    seen = []
+
+    def fake_notify(self, *, title, body):
+        seen.extend((service.socket_connect_timeout, service.socket_read_timeout) for service in self.services)
+        return True
+
+    monkeypatch.setattr(apprise.Apprise, "notify", fake_notify)
+    monkeypatch.setenv("NOTIFICATION_DESTINATION_CONNECT_TIMEOUT_SECONDS", "1.5")
+    monkeypatch.setenv("NOTIFICATION_DESTINATION_READ_TIMEOUT_SECONDS", "2.5")
+
+    assert destinations_core._send_with_apprise(
+        "json://example.com/hook",
+        {"title": "Test", "body": "Body", "link": None},
+    )
+    assert seen == [(1.5, 2.5)]
 
 
 def test_private_destination_host_can_be_enabled_with_explicit_allowlist(monkeypatch):
