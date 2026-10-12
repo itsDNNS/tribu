@@ -341,6 +341,8 @@ class Duty(Base):
     title = Column(String(240), nullable=False)
     # Local wall time the duty is due; None means the whole day.
     due_time = Column(Time, nullable=True)
+    # Monday of a week A when people alternate every other week; None means every week alike.
+    alternate_from = Column(Date, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
@@ -358,6 +360,8 @@ class DutySlot(Base):
     duty_id = Column(Integer, ForeignKey("duties.id", ondelete="CASCADE"), nullable=False, index=True)
     weekday = Column(Integer, nullable=False)  # 0 = Monday
     assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # Who does it in week B of a duty that alternates.
+    alternate_assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     duty = relationship("Duty", back_populates="slots")
 

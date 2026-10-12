@@ -53,4 +53,30 @@ test.describe('Weekly duties', () => {
     await navigateTo(page, 'Tasks');
     await expect(todayTask).toHaveCount(1, { timeout: 10000 });
   });
+
+  test('a duty can take turns every other week', async ({ authedPage: page, testUser }) => {
+    await openDuties(page);
+    await page.getByRole('button', { name: 'New duty' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New duty' });
+    await dialog.getByLabel('What needs doing').fill('Cook dinner');
+    await dialog.getByRole('checkbox', { name: 'Take turns every other week' }).check();
+    await expect(dialog.getByLabel('This week is')).toHaveValue('a');
+    for (const day of WEEKDAYS) {
+      await dialog.getByRole('checkbox', { name: day }).check();
+      await dialog.getByLabel(`Who does it on ${day} (Week A)`).selectOption({ label: testUser.displayName });
+    }
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toHaveCount(0);
+
+    await expect(page.getByRole('region', { name: 'All duties' })).toContainText(`${testUser.displayName}/Nobody`);
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+    await expect(page.getByRole('button', { name: `Change Cook dinner on ${today}` })).toContainText(testUser.displayName);
+
+    // Next week is week B, where nobody is set.
+    await page.getByRole('button', { name: 'Next week' }).click();
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const sameDayNextWeek = nextWeek.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+    await expect(page.getByRole('button', { name: `Change Cook dinner on ${sameDayNextWeek}` })).toContainText('Nobody');
+  });
 });

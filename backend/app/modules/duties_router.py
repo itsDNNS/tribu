@@ -49,12 +49,17 @@ def _validate_assignees(db: Session, family_id: int, user_ids) -> None:
         raise HTTPException(status_code=400, detail=error_detail(ASSIGNEE_NOT_FAMILY_MEMBER))
 
 
+def _slot_people(slots) -> list:
+    return [uid for slot in slots for uid in (slot.assigned_to_user_id, slot.alternate_assigned_to_user_id)]
+
+
 def _response(duty: Duty, today: date) -> DutyResponse:
     return DutyResponse(
         id=duty.id,
         family_id=duty.family_id,
         title=duty.title,
         due_time=duty.due_time,
+        alternate_from=duty.alternate_from,
         slots=duty.slots,
         exceptions=[exc for exc in duty.exceptions if exc.date >= today],
     )
@@ -158,13 +163,14 @@ def create_duty(
     _scope=require_scope("tasks:write"),
 ):
     ensure_adult(db, user.id, payload.family_id)
-    _validate_assignees(db, payload.family_id, [slot.assigned_to_user_id for slot in payload.slots])
+    _validate_assignees(db, payload.family_id, _slot_people(payload.slots))
     duty = Duty(
         family_id=payload.family_id,
         title=payload.title.strip(),
         due_time=payload.due_time,
+        alternate_from=payload.alternate_from,
         created_by_user_id=user.id,
-        slots=[DutySlot(weekday=slot.weekday, assigned_to_user_id=slot.assigned_to_user_id) for slot in payload.slots],
+        slots=[DutySlot(**slot.model_dump()) for slot in payload.slots],
     )
     db.add(duty)
     return _save_and_sync(db, duty)
@@ -194,21 +200,25 @@ def update_duty(
     if "due_time" in changes and changes["due_time"] != duty.due_time:
         duty.due_time = changes["due_time"]
         update.add(DUE)
+    if "alternate_from" in changes and changes["alternate_from"] != duty.alternate_from:
+        duty.alternate_from = changes["alternate_from"]
+        update.add(PEOPLE)
     if payload.slots is not None:
         update.add(PEOPLE)
-        _validate_assignees(db, duty.family_id, [slot.assigned_to_user_id for slot in payload.slots])
+        _validate_assignees(db, duty.family_id, _slot_people(payload.slots))
         # Update rows in place: replacing them would insert before deleting
         # and trip the unique weekday per duty.
         existing = {slot.weekday: slot for slot in duty.slots}
-        wanted = {slot.weekday: slot.assigned_to_user_id for slot in payload.slots}
+        wanted = {slot.weekday: slot for slot in payload.slots}
         for weekday, slot in existing.items():
             if weekday in wanted:
-                slot.assigned_to_user_id = wanted[weekday]
+                slot.assigned_to_user_id = wanted[weekday].assigned_to_user_id
+                slot.alternate_assigned_to_user_id = wanted[weekday].alternate_assigned_to_user_id
             else:
                 duty.slots.remove(slot)
-        for weekday, assignee in wanted.items():
+        for weekday, slot in wanted.items():
             if weekday not in existing:
-                duty.slots.append(DutySlot(weekday=weekday, assigned_to_user_id=assignee))
+                duty.slots.append(DutySlot(**slot.model_dump()))
     return _save_and_sync(db, duty, update)
 
 
@@ -260,7 +270,7 @@ def put_exception(
     _check_date(duty, day)
     _validate_assignees(db, duty.family_id, [payload.assigned_to_user_id])
     exc = next((exc for exc in duty.exceptions if exc.date == day), None)
-    default = next(slot.assigned_to_user_id for slot in duty.slots if slot.weekday == day.weekday())
+    default = occurrences(duty, day, 1)[0].default_assignee_id
     if not payload.skipped and payload.assigned_to_user_id == default:
         # The default person on that date is no exception.
         if exc is not None:

@@ -10,7 +10,7 @@ from sqlalchemy import or_
 from app.core import cache
 from app.core.backup import create_backup, enforce_retention
 from app.core.clock import app_timezone, local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
-from app.core.duties import sync_all_duties
+from app.core.duties import sync_all_duties, week_summary
 from app.core.push import send_push_for_user
 from app.core.notification_actions import reminder_push_actions
 from app.core.reminder_text import reminder_text, short_date, user_language
@@ -38,6 +38,10 @@ MEAL_REMINDER_ITEMS = 4
 # A week before a birthday without a gift, in the morning.
 GIFT_REMINDER_DAYS = 7
 GIFT_REMINDER_HOUR = 9
+# On Sunday evening the grown-ups get the coming week's duties to look over;
+# until Monday noon it can still go out after quiet hours.
+DUTY_PREVIEW_HOUR = 18
+DUTY_PREVIEW_LAST_HOUR_MONDAY = 12
 
 _scheduler: BackgroundScheduler | None = None
 
@@ -292,6 +296,8 @@ def _check_notifications():
                 return
             # Texts in the recipient's language (#535).
             lang = language_of(uid)
+            if callable(title):
+                title = title(lang)
             if callable(body):
                 body = body(lang)
 
@@ -549,6 +555,12 @@ def _check_notifications():
                 db, on=now.date() + timedelta(days=GIFT_REMINDER_DAYS), user_families=user_families, deliver=deliver,
             )
 
+        # 4c. Sunday evening: the coming week's duties (discussion #586).
+        if now.weekday() == 6 and now.hour >= DUTY_PREVIEW_HOUR:
+            deliver_duty_previews(db, monday=now.date() + timedelta(days=1), user_families=user_families, deliver=deliver)
+        elif now.weekday() == 0 and now.hour < DUTY_PREVIEW_LAST_HOUR_MONDAY:
+            deliver_duty_previews(db, monday=now.date(), user_families=user_families, deliver=deliver)
+
         # 5. Reminders someone asked to hear about again (Tribu 2.0, N-2)
         snoozed_users = deliver_snoozed_reminders(db, now=utcnow(), local_now=now, get_pref=get_pref)
 
@@ -611,6 +623,30 @@ def deliver_gift_reminders(db, *, on, user_families: dict[int, list[int]], deliv
                 lambda lang: reminder_text(lang, "gift_nothing_yet", date=short_date(lang, on)),
                 f"/gifts?occasion=birthday:{on.isoformat()}:{recipient}", "gift_occasion", birthday.id,
                 _gift_trigger_key(birthday.id, on),
+            )
+
+
+def deliver_duty_previews(db, *, monday, user_families: dict[int, list[int]], deliver) -> None:
+    """Tells each grown-up how many of the coming week's duties are theirs."""
+    adults = {
+        (member.user_id, member.family_id)
+        for member in db.query(Membership).filter(Membership.is_adult.is_(True)).all()
+    }
+    family_ids = sorted({fid for fids in user_families.values() for fid in fids})
+    for family_id in family_ids:
+        week = week_summary(db, family_id, monday)
+        if not week:
+            continue
+        for uid, fam_ids in user_families.items():
+            if family_id not in fam_ids or (uid, family_id) not in adults:
+                continue
+            mine = sum(1 for occ in week if occ.assignee_id == uid)
+            deliver(
+                uid, family_id, "duty_week",
+                lambda lang: reminder_text(lang, "duty_week_title"),
+                lambda lang, mine=mine, total=len(week): reminder_text(lang, "duty_week_body", mine=mine, total=total),
+                "/duties", "duty_week", family_id,
+                f"duty_week:{family_id}:{monday.isoformat()}",
             )
 
 
