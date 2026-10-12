@@ -627,7 +627,7 @@ def deliver_gift_reminders(db, *, on, user_families: dict[int, list[int]], deliv
 
 
 def deliver_duty_previews(db, *, monday, user_families: dict[int, list[int]], deliver) -> None:
-    """Tells each grown-up how many of the coming week's duties are theirs."""
+    """Tells each grown-up with duties in the coming week how many are theirs."""
     adults = {
         (member.user_id, member.family_id)
         for member in db.query(Membership).filter(Membership.is_adult.is_(True)).all()
@@ -641,6 +641,8 @@ def deliver_duty_previews(db, *, monday, user_families: dict[int, list[int]], de
             if family_id not in fam_ids or (uid, family_id) not in adults:
                 continue
             mine = sum(1 for occ in week if occ.assignee_id == uid)
+            if not mine:
+                continue
             deliver(
                 uid, family_id, "duty_week",
                 lambda lang: reminder_text(lang, "duty_week_title"),
