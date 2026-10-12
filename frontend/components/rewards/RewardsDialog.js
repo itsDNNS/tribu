@@ -25,7 +25,7 @@ export default function RewardsDialog({ id, title, closeLabel, onClose, onSubmit
         </div>
         <form
           className="rewards-dialog-form ui-sheet-form"
-          onSubmit={(e) => { e.preventDefault(); onSubmit?.(); }}
+          onSubmit={(e) => { e.preventDefault(); onSubmit?.(e); }}
         >
           <div className="ui-sheet-body">{children}</div>
           <div className="rewards-dialog-actions ui-sheet-actions">{actions}</div>
