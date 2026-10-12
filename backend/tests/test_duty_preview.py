@@ -152,8 +152,7 @@ def test_alternating_weeks_count_in_the_heads_up(monkeypatch):
         db.commit()
 
     by_user = {call["uid"]: call["body"] for call in _run(monkeypatch, SUNDAY_EVENING)}
-    assert by_user[people["anna"]] == "Für dich: 0 von 4"
-    assert by_user[people["ben"]] == "For you: 4 of 4"
+    assert by_user == {people["ben"]: "For you: 4 of 4"}, "Anna has nothing next week, so she hears nothing"
 
 
 def test_a_grown_up_in_two_families_hears_from_each_with_duties(monkeypatch):
