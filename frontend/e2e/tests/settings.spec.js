@@ -18,6 +18,14 @@ async function openAccountSettings(page) {
   return birthdateInput;
 }
 
+// Leave the field the way a user does. Chromium 156 ignores a scripted
+// blur() on a focused date input under mobile emulation, so locator.blur()
+// would leave focus in place and never commit.
+async function leaveField(page, input) {
+  await page.locator('.profile-name').click();
+  await expect(input).not.toBeFocused();
+}
+
 async function openPhoneSyncSettings(page) {
   await navigateTo(page, 'Settings');
 
@@ -55,7 +63,7 @@ test.describe('Settings', () => {
       && response.url().includes('/birthdate')
       && response.ok()
     ));
-    await birthdateInput.blur();
+    await leaveField(page, birthdateInput);
     await saveBirthdate;
     await expect(birthdateInput).toHaveValue('1990-05-12');
 
@@ -69,7 +77,7 @@ test.describe('Settings', () => {
       && response.url().includes('/birthdate')
       && response.ok()
     ));
-    await reloadedBirthdateInput.blur();
+    await leaveField(page, reloadedBirthdateInput);
     await clearBirthdate;
     await expect(reloadedBirthdateInput).toHaveValue('');
   });
