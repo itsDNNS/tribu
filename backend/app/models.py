@@ -83,6 +83,7 @@ class Family(Base):
     webhook_endpoints = relationship("WebhookEndpoint", back_populates="family", cascade="all, delete-orphan")
     notification_destinations = relationship("NotificationDestination", back_populates="family", cascade="all, delete-orphan")
     school_timetables = relationship("SchoolTimetable", back_populates="family", cascade="all, delete-orphan")
+    duties = relationship("Duty", back_populates="family", cascade="all, delete-orphan")
 
 
 class Membership(Base):
@@ -313,13 +314,67 @@ class Task(Base):
     vtodo_uid = Column(String(200), nullable=True)
     dav_href = Column(String(250), nullable=True)
     raw_vtodo = Column(Text, nullable=True)
+    # The weekly duty and date this task was created for (see app.core.duties).
+    duty_id = Column(Integer, ForeignKey("duties.id", ondelete="SET NULL"), nullable=True)
+    duty_date = Column(Date, nullable=True)
 
     __table_args__ = (
         Index("uq_tasks_family_vtodo_uid", "family_id", "vtodo_uid", unique=True),
         Index("uq_tasks_family_dav_href", "family_id", "dav_href", unique=True),
+        Index("uq_tasks_duty_date", "duty_id", "duty_date", unique=True),
     )
 
     family = relationship("Family", back_populates="tasks")
+
+
+class Duty(Base):
+    """A recurring household duty with a default person per weekday.
+
+    Tasks for the coming days are created from it; DutyException rows
+    change single dates without touching the weekly pattern.
+    """
+
+    __tablename__ = "duties"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(240), nullable=False)
+    # Local wall time the duty is due; None means the whole day.
+    due_time = Column(Time, nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow, server_default=func.now())
+
+    family = relationship("Family", back_populates="duties")
+    slots = relationship("DutySlot", back_populates="duty", cascade="all, delete-orphan", order_by="DutySlot.weekday")
+    exceptions = relationship("DutyException", back_populates="duty", cascade="all, delete-orphan", order_by="DutyException.date")
+
+
+class DutySlot(Base):
+    __tablename__ = "duty_slots"
+    __table_args__ = (UniqueConstraint("duty_id", "weekday", name="uq_duty_slot_weekday"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    duty_id = Column(Integer, ForeignKey("duties.id", ondelete="CASCADE"), nullable=False, index=True)
+    weekday = Column(Integer, nullable=False)  # 0 = Monday
+    assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    duty = relationship("Duty", back_populates="slots")
+
+
+class DutyException(Base):
+    """Someone else takes one date of a duty, or the date is skipped."""
+
+    __tablename__ = "duty_exceptions"
+    __table_args__ = (UniqueConstraint("duty_id", "date", name="uq_duty_exception_date"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    duty_id = Column(Integer, ForeignKey("duties.id", ondelete="CASCADE"), nullable=False, index=True)
+    date = Column(Date, nullable=False)
+    assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    skipped = Column(Boolean, nullable=False, default=False, server_default="false")
+
+    duty = relationship("Duty", back_populates="exceptions")
 
 
 class DavSyncSnapshot(Base):

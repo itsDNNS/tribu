@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload, aliased
 from app.core import cache
 from app.core.contact_birthdays import sync_contact_birthday, sync_member_birthday
 from app.core.deps import current_user, ensure_adult, ensure_family_admin, ensure_family_membership
+from app.core.duties import forget_member
 from app.core.scopes import require_scope
 from app.core.utils import audit_log as _audit, is_instance_admin_user
 from app.database import get_db
@@ -494,6 +495,7 @@ def remove_member(
            details={"display_name": display_name, "role": membership.role})
     db.delete(membership)
     db.flush()
+    forget_member(db, family_id, target_user_id)
     # Their birthday leaves the list; contacts that were them stand alone again.
     db.query(FamilyBirthday).filter(
         FamilyBirthday.family_id == family_id, FamilyBirthday.member_user_id == target_user_id,

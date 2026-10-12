@@ -10,6 +10,7 @@ from sqlalchemy import or_
 from app.core import cache
 from app.core.backup import create_backup, enforce_retention
 from app.core.clock import app_timezone, local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
+from app.core.duties import sync_all_duties
 from app.core.push import send_push_for_user
 from app.core.notification_actions import reminder_push_actions
 from app.core.reminder_text import reminder_text, short_date, user_language
@@ -28,6 +29,7 @@ BACKUP_JOB_ID = "scheduled_backup"
 NOTIFICATION_JOB_ID = "check_notifications"
 CALENDAR_SUBSCRIPTION_REFRESH_JOB_ID = "refresh_calendar_subscriptions"
 BACKUP_SCHEDULE_SYNC_JOB_ID = "sync_backup_schedule"
+DUTY_TASKS_JOB_ID = "create_duty_tasks"
 DST_TRANSITION_BUFFER = timedelta(hours=3)
 # Meal reminders go out from this hour of the evening before, naming at most
 # this many missing ingredients.
@@ -771,6 +773,33 @@ def start_calendar_subscription_refresh_job():
         coalesce=True,
     )
     logger.info("Calendar subscription refresh job started (every 6 hours).")
+
+
+def _create_duty_tasks():
+    db = SessionLocal()
+    try:
+        created = sync_all_duties(db)
+        if created:
+            logger.info("Created %s task(s) from weekly duties.", created)
+    except Exception:
+        db.rollback()
+        logger.exception("Creating tasks from weekly duties failed")
+    finally:
+        db.close()
+
+
+def start_duty_tasks_job():
+    # Hourly is enough: a new date enters the horizon once a day, and changes
+    # to a duty create their tasks right away.
+    _create_duty_tasks()
+    get_scheduler().add_job(
+        _create_duty_tasks,
+        trigger=IntervalTrigger(hours=1),
+        id=DUTY_TASKS_JOB_ID,
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
 
 
 _applied_backup_schedule: tuple[str, int] | None = None

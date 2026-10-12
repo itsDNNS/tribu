@@ -669,6 +669,8 @@ class TaskResponse(BaseModel):
     completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
     token_reward_amount: Optional[int] = Field(None, description="Tokens awarded on completion")
     token_require_confirmation: bool = Field(True, description="Require adult confirmation")
+    duty_id: Optional[int] = Field(None, description="Weekly duty this task was created for")
+    duty_date: Optional[date] = Field(None, description="Date of the weekly duty this task was created for")
 
 
 class PaginatedTasks(BaseModel):
@@ -677,6 +679,97 @@ class PaginatedTasks(BaseModel):
     total: int = Field(..., description="Total number of tasks")
     offset: int = Field(..., description="Current offset")
     limit: int = Field(..., description="Page size")
+
+
+# ---------------------------------------------------------------------------
+# Weekly duties
+# ---------------------------------------------------------------------------
+
+class DutySlotInput(BaseModel):
+    """A weekday a duty happens on and who does it by default."""
+    model_config = ConfigDict(from_attributes=True)
+
+    weekday: int = Field(..., ge=0, le=6, description="Weekday, 0 = Monday to 6 = Sunday")
+    assigned_to_user_id: Optional[int] = Field(None, description="Default person for this weekday; null leaves it unassigned")
+
+
+def _unique_weekdays(slots: Optional[list[DutySlotInput]]) -> Optional[list[DutySlotInput]]:
+    if slots is not None and len({slot.weekday for slot in slots}) != len(slots):
+        raise ValueError("each weekday may appear only once")
+    return slots
+
+
+class DutyCreate(BaseModel):
+    """Create a weekly duty."""
+    family_id: int = Field(..., description="Family ID")
+    title: str = Field(min_length=1, max_length=240, pattern=r".*\S.*", description="Duty title")
+    due_time: Optional[time] = Field(None, description="Local time the duty is due; null means the whole day")
+    slots: list[DutySlotInput] = Field(min_length=1, max_length=7, description="Weekdays with their default person")
+
+    @field_validator("slots")
+    @classmethod
+    def validate_slots(cls, v):
+        return _unique_weekdays(v)
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{"family_id": 1, "title": "Pick up the kids", "due_time": "15:30", "slots": [
+            {"weekday": 0, "assigned_to_user_id": 1}, {"weekday": 1, "assigned_to_user_id": 1},
+            {"weekday": 2, "assigned_to_user_id": 2}, {"weekday": 3, "assigned_to_user_id": 2},
+            {"weekday": 4, "assigned_to_user_id": 2},
+        ]}]
+    })
+
+
+class DutyUpdate(BaseModel):
+    """Change a weekly duty; slots replace the whole weekly pattern."""
+    title: Optional[str] = Field(None, min_length=1, max_length=240, pattern=r".*\S.*", description="Duty title")
+    due_time: Optional[time] = Field(None, description="Local due time; null makes it a whole-day duty, omission preserves it")
+    slots: Optional[list[DutySlotInput]] = Field(None, min_length=1, max_length=7, description="New weekly pattern")
+
+    @field_validator("slots")
+    @classmethod
+    def validate_slots(cls, v):
+        return _unique_weekdays(v)
+
+
+class DutyExceptionInput(BaseModel):
+    """Who takes one date of a duty, or that it is skipped."""
+    assigned_to_user_id: Optional[int] = Field(None, description="Person for this date; null leaves it unassigned")
+    skipped: bool = Field(False, description="Skip this date")
+
+
+class DutyExceptionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    date: Annotated[date, Field(description="Date the exception applies to")]
+    assigned_to_user_id: Optional[int] = Field(None, description="Person for this date")
+    skipped: bool = Field(False, description="Whether the date is skipped")
+
+
+class DutyResponse(BaseModel):
+    """A weekly duty with its pattern and its exceptions from today on."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Duty ID")
+    family_id: int = Field(..., description="Family ID")
+    title: str = Field(..., description="Duty title")
+    due_time: Optional[time] = Field(None, description="Local due time; null means the whole day")
+    slots: list[DutySlotInput] = Field(..., description="Weekdays with their default person")
+    exceptions: list[DutyExceptionResponse] = Field(..., description="Exceptions from today on")
+
+
+class DutyOccurrenceResponse(BaseModel):
+    """One date of a duty with the person who does it."""
+    duty_id: int = Field(..., description="Duty ID")
+    title: str = Field(..., description="Duty title")
+    date: Annotated[date, Field(description="Date")]
+    due_time: Optional[time] = Field(None, description="Local due time; null means the whole day")
+    assigned_to_user_id: Optional[int] = Field(None, description="Person for this date")
+    default_assigned_to_user_id: Optional[int] = Field(None, description="Person from the weekly pattern")
+    skipped: bool = Field(False, description="Whether the date is skipped")
+    is_exception: bool = Field(False, description="Whether this date differs from the weekly pattern")
+    task_id: Optional[int] = Field(None, description="Task created for this date, once it is in range")
+    task_status: Optional[str] = Field(None, description="Status of that task")
 
 
 # ---------------------------------------------------------------------------
