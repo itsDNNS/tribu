@@ -69,9 +69,9 @@ const LABEL_BY_KEY = {
   notifications: 'Benachrichtigungen',
 };
 // Today is a group of one, the family hub leads its group, activity lives
-// in the hub and notifications behind the bell; every other area is sorted
-// within its group.
-const UNSORTED_KEYS = new Set(['dashboard', 'family', 'activity', 'notifications', 'settings', 'admin']);
+// in the hub, weekly duties in tasks and notifications behind the bell;
+// every other area is sorted within its group.
+const UNSORTED_KEYS = new Set(['dashboard', 'family', 'activity', 'duties', 'notifications', 'settings', 'admin']);
 const SORTABLE_KEYS = DEFAULT_NAV_ORDER.filter((k) => !UNSORTED_KEYS.has(k));
 
 describe('NavigationTab', () => {

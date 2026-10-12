@@ -924,6 +924,40 @@ export function apiAddRecipeIngredientsToShopping(recipeId, shoppingListId, ingr
   return post(`/recipes/${recipeId}/add-to-shopping`, body);
 }
 
+// Weekly duties (discussion #586)
+export function apiListDuties(familyId) {
+  return request(`/duties?family_id=${Number(familyId)}`);
+}
+
+export function apiGetDutyWeek(familyId, startIso) {
+  const params = new URLSearchParams({ family_id: String(familyId), start: startIso });
+  return request(`/duties/week?${params.toString()}`);
+}
+
+export function apiCreateDuty(payload) {
+  return post('/duties', payload);
+}
+
+export function apiUpdateDuty(dutyId, payload) {
+  return patch(`/duties/${dutyId}`, payload);
+}
+
+export function apiDeleteDuty(dutyId) {
+  return del(`/duties/${dutyId}`);
+}
+
+export function apiSetDutyDate(dutyId, dateIso, payload) {
+  return request(`/duties/${dutyId}/exceptions/${dateIso}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function apiResetDutyDate(dutyId, dateIso) {
+  return del(`/duties/${dutyId}/exceptions/${dateIso}`);
+}
+
 // School timetables
 export function apiListSchoolTimetables(familyId) {
   const params = new URLSearchParams({ family_id: String(familyId) });
