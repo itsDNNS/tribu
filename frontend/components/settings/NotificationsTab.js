@@ -12,6 +12,7 @@ const PUSH_CATEGORY_DEFAULTS = {
   birthdays: true,
   meal_reminders: true,
   rewards: true,
+  weekly_duties: true,
   event_assignments: false,
   shopping_changes: false,
   meal_plan_changes: false,
@@ -30,6 +31,7 @@ const PUSH_CATEGORY_GROUPS = [
     titleKey: 'push_group_tasks',
     rows: [
       ['task_due', 'push_category_task_due', 'push_category_task_due_desc'],
+      ['weekly_duties', 'push_category_weekly_duties', 'push_category_weekly_duties_desc'],
     ],
   },
   {

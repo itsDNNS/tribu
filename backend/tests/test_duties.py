@@ -474,3 +474,72 @@ def test_leaving_the_family_drops_out_of_duties(clock, family):
     listed = client.get(f"/duties?family_id={family['family_id']}", headers=_auth(family["anna_token"])).json()[0]
     assert {slot["assigned_to_user_id"] for slot in listed["slots"] if slot["weekday"] >= 2} == {None}
     assert _duty_tasks(duty["id"])[date(2026, 12, 9)].assigned_to_user_id is None
+
+
+def _create_alternating(family) -> dict:
+    """Pick up the kids on Monday: Anna in weeks A, Ben in weeks B; this week (from Dec 7) is A."""
+    return _create_pickup(family, alternate_from="2026-12-07", slots=[
+        {"weekday": 0, "assigned_to_user_id": family["anna"], "alternate_assigned_to_user_id": family["ben"]},
+    ])
+
+
+def test_alternating_weeks_take_turns(clock, family):
+    duty = _create_alternating(family)
+    anna = _auth(family["anna_token"])
+    assert _duty_tasks(duty["id"])[date(2026, 12, 7)].assigned_to_user_id == family["anna"]
+
+    week = lambda start: client.get(f"/duties/week?family_id={family['family_id']}&start={start}", headers=anna).json()
+    assert [occ["assigned_to_user_id"] for occ in week("2026-12-14")] == [family["ben"]]
+    assert [occ["assigned_to_user_id"] for occ in week("2026-12-21")] == [family["anna"]]
+
+    clock.now = datetime(2026, 12, 14, 7, 0)
+    _run_job()
+    assert _duty_tasks(duty["id"])[date(2026, 12, 14)].assigned_to_user_id == family["ben"]
+
+    # Ben on Dec 28 (week B) is the usual person there, so no exception; Anna is one.
+    resp = client.put(f"/duties/{duty['id']}/exceptions/2026-12-28", headers=anna, json={"assigned_to_user_id": family["ben"]})
+    assert resp.json()["exceptions"] == []
+    resp = client.put(f"/duties/{duty['id']}/exceptions/2026-12-28", headers=anna, json={"assigned_to_user_id": family["anna"]})
+    assert resp.json()["exceptions"] == [{"date": "2026-12-28", "assigned_to_user_id": family["anna"], "skipped": False}]
+
+
+def test_turning_the_weeks_around_reassigns_open_tasks(clock, family):
+    duty = _create_alternating(family)
+    anna = _auth(family["anna_token"])
+
+    resp = client.patch(f"/duties/{duty['id']}", headers=anna, json={"alternate_from": "2026-11-30"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["alternate_from"] == "2026-11-30"
+    assert _duty_tasks(duty["id"])[date(2026, 12, 7)].assigned_to_user_id == family["ben"]
+
+    resp = client.patch(f"/duties/{duty['id']}", headers=anna, json={"alternate_from": None})
+    assert resp.json()["alternate_from"] is None
+    assert _duty_tasks(duty["id"])[date(2026, 12, 7)].assigned_to_user_id == family["anna"]
+
+    assert client.patch(f"/duties/{duty['id']}", headers=anna, json={"alternate_from": "2026-12-08"}).status_code == 422
+
+
+def test_reassigning_a_week_b_task_to_its_usual_person_leaves_no_exception(clock, family):
+    duty = _create_alternating(family)
+    clock.now = datetime(2026, 12, 14, 7, 0)
+    _run_job()
+    monday = _duty_tasks(duty["id"])[date(2026, 12, 14)]
+    anna = _auth(family["anna_token"])
+
+    client.patch(f"/tasks/{monday.id}", headers=anna, json={"assigned_to_user_id": family["anna"]})
+    client.patch(f"/tasks/{monday.id}", headers=anna, json={"assigned_to_user_id": family["ben"]})
+    db = TestSession()
+    try:
+        assert db.query(DutyException).count() == 0
+    finally:
+        db.close()
+
+
+def test_a_member_who_leaves_drops_out_of_alternate_weeks(clock, family):
+    duty = _create_alternating(family)
+    _keep_ben_in_another_family(family)
+    client.delete(f"/families/{family['family_id']}/members/{family['ben']}", headers=_auth(family["anna_token"]))
+
+    listed = client.get(f"/duties?family_id={family['family_id']}", headers=_auth(family["anna_token"])).json()
+    assert listed[0]["slots"][0]["alternate_assigned_to_user_id"] is None
+    assert listed[0]["slots"][0]["assigned_to_user_id"] == family["anna"]

@@ -151,6 +151,8 @@ describe('i18n bundled locale files', () => {
     'display.stage.participants': ['fr'],
     'display.stage.participants_one': ['fr'],
     'display.stage.routines_open': ['nl'],
+    'module.duties.week_a': ['nl'],
+    'module.duties.week_b': ['nl'],
     'module.school_timetables.day_plan_aria': ['da', 'nb'],
     'module.weekly_plan.shopping_open': ['nl'],
     notification_destinations_send_test: ['da', 'nb'],

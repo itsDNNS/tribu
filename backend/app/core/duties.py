@@ -40,9 +40,17 @@ class Occurrence:
         return datetime.combine(self.date, self.duty.due_time or time(0, 0))
 
 
+def is_week_b(duty: Duty, day: date) -> bool:
+    """Whether ``day`` falls in a week B of a duty that alternates (weeks start on Monday)."""
+    if duty.alternate_from is None:
+        return False
+    monday = day - timedelta(days=day.weekday())
+    return (monday - duty.alternate_from).days // 7 % 2 == 1
+
+
 def occurrences(duty: Duty, start: date, days: int) -> list[Occurrence]:
     """The duty's dates in [start, start + days), with exceptions applied."""
-    slots = {slot.weekday: slot.assigned_to_user_id for slot in duty.slots}
+    slots = {slot.weekday: slot for slot in duty.slots}
     exceptions = {
         exc.date: exc for exc in duty.exceptions if start <= exc.date < start + timedelta(days=days)
     }
@@ -51,7 +59,8 @@ def occurrences(duty: Duty, start: date, days: int) -> list[Occurrence]:
         day = start + timedelta(days=offset)
         if day.weekday() not in slots:
             continue
-        default = slots[day.weekday()]
+        slot = slots[day.weekday()]
+        default = slot.alternate_assigned_to_user_id if is_week_b(duty, day) else slot.assigned_to_user_id
         exc = exceptions.get(day)
         result.append(Occurrence(
             duty=duty,
@@ -157,12 +166,9 @@ def remember_task_change(db: Session, task: Task, *, deleted: bool = False) -> N
         .filter(DutyException.duty_id == task.duty_id, DutyException.date == task.duty_date)
         .first()
     )
-    slot = (
-        db.query(DutySlot)
-        .filter(DutySlot.duty_id == task.duty_id, DutySlot.weekday == task.duty_date.weekday())
-        .first()
-    )
-    if not deleted and slot is not None and slot.assigned_to_user_id == task.assigned_to_user_id:
+    duty = db.get(Duty, task.duty_id)
+    usual = occurrences(duty, task.duty_date, 1)
+    if not deleted and usual and usual[0].default_assignee_id == task.assigned_to_user_id:
         if exc is not None:
             db.delete(exc)
         return
@@ -195,10 +201,24 @@ def forget_member(db: Session, family_id: int, user_id: int) -> None:
     duty_ids = [duty_id for (duty_id,) in db.query(Duty.id).filter(Duty.family_id == family_id)]
     if not duty_ids:
         return
-    for model in (DutySlot, DutyException):
+    for model, column in (
+        (DutySlot, "assigned_to_user_id"),
+        (DutySlot, "alternate_assigned_to_user_id"),
+        (DutyException, "assigned_to_user_id"),
+    ):
         db.query(model).filter(
-            model.duty_id.in_(duty_ids), model.assigned_to_user_id == user_id,
-        ).update({"assigned_to_user_id": None}, synchronize_session=False)
+            model.duty_id.in_(duty_ids), getattr(model, column) == user_id,
+        ).update({column: None}, synchronize_session=False)
     db.query(Task).filter(
         Task.duty_id.in_(duty_ids), Task.status == "open", Task.assigned_to_user_id == user_id,
     ).update({"assigned_to_user_id": None}, synchronize_session=False)
+
+
+def week_summary(db: Session, family_id: int, monday: date) -> list[Occurrence]:
+    """The family's duty dates of the week from ``monday`` that are not skipped."""
+    return [
+        occ
+        for duty in db.query(Duty).filter(Duty.family_id == family_id).order_by(Duty.id)
+        for occ in occurrences(duty, monday, 7)
+        if not occ.skipped
+    ]

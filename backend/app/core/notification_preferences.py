@@ -12,6 +12,8 @@ PUSH_CATEGORY_DEFAULTS: dict[str, bool] = {
     "meal_reminders": True,
     # Praise received, and wishes waiting for an adult.
     "rewards": True,
+    # On Sunday evening, the coming week's duties to look over (discussion #586).
+    "weekly_duties": True,
     "event_assignments": False,
     "shopping_changes": False,
     "meal_plan_changes": False,
@@ -24,6 +26,7 @@ NOTIFICATION_TYPE_TO_PUSH_CATEGORY: dict[str, str] = {
     "birthday": "birthdays",
     "gift_reminder": "birthdays",
     "meal_reminder": "meal_reminders",
+    "duty_week": "weekly_duties",
     "event_assigned": "event_assignments",
     "shopping_item_added": "shopping_changes",
     "shopping_item_checked": "shopping_changes",
