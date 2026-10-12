@@ -27,6 +27,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 
 from app.core.deps import current_user
+from app.core.duties import forget_member
 from app.core.auth_sessions import clear_session_cookies, issue_refresh_session, issue_session_cookies, revoke_refresh_session, rotate_refresh_session, rotate_refresh_token
 from app.core.clock import utcnow_aware
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
@@ -50,6 +51,7 @@ from app.modules.setup_checklist_router import router as setup_checklist_router
 from app.modules.families_router import router as families_router
 from app.modules.contacts_router import router as contacts_router
 from app.modules.tasks_router import router as tasks_router
+from app.modules.duties_router import router as duties_router
 from app.modules.shopping_router import router as shopping_router
 from app.modules.shopping_ws import router as shopping_ws_router
 from app.modules.tokens_router import router as tokens_router
@@ -71,7 +73,7 @@ from app.modules.display_router import admin_router as display_admin_router, dis
 from app.modules.mobile_router import router as mobile_router
 from app.modules.webhooks_router import router as webhooks_router
 from app.modules.notification_destinations_router import router as notification_destinations_router
-from app.core.scheduler import start_backup_schedule_sync_job, start_calendar_subscription_refresh_job, start_notification_job, start_scheduler, shutdown_scheduler
+from app.core.scheduler import start_backup_schedule_sync_job, start_calendar_subscription_refresh_job, start_duty_tasks_job, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import scheduler_leader
 from app.core import ws_broadcast
 from app.schemas import (
@@ -230,6 +232,7 @@ async def lifespan(app: FastAPI):
         start_notification_job()
         start_calendar_subscription_refresh_job()
         start_backup_schedule_sync_job(BACKUP_DB_URL, BACKUP_DIR)
+        start_duty_tasks_job()
 
     # With several workers only one process runs the scheduler (issue #494).
     scheduler_leader.start(run_scheduler, shutdown_scheduler)
@@ -722,6 +725,7 @@ def leave_family(
     fid = payload.family_id
     db.query(CalendarEvent).filter(CalendarEvent.family_id == fid, CalendarEvent.created_by_user_id == user.id).update({"created_by_user_id": None})
     db.query(Task).filter(Task.family_id == fid, Task.assigned_to_user_id == user.id).update({"assigned_to_user_id": None})
+    forget_member(db, fid, user.id)
     db.query(Task).filter(Task.family_id == fid, Task.created_by_user_id == user.id).update({"created_by_user_id": None})
     db.query(ShoppingList).filter(ShoppingList.family_id == fid, ShoppingList.created_by_user_id == user.id).update({"created_by_user_id": None})
     db.query(AuditLog).filter(AuditLog.family_id == fid, AuditLog.admin_user_id == user.id).update({"admin_user_id": None})
@@ -824,6 +828,7 @@ app.include_router(household_templates_router)
 app.include_router(setup_checklist_router)
 app.include_router(contacts_router)
 app.include_router(tasks_router)
+app.include_router(duties_router)
 app.include_router(shopping_router)
 app.include_router(shopping_ws_router)
 app.include_router(tokens_router)

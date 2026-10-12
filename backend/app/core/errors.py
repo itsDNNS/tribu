@@ -42,6 +42,8 @@ INVALID_STATUS = "INVALID_STATUS"
 INVALID_PRIORITY = "INVALID_PRIORITY"
 INVALID_RECURRENCE = "INVALID_RECURRENCE"
 ASSIGNEE_NOT_FAMILY_MEMBER = "ASSIGNEE_NOT_FAMILY_MEMBER"
+DUTY_NOT_FOUND = "DUTY_NOT_FOUND"
+INVALID_DUTY_DATE = "INVALID_DUTY_DATE"
 
 # ── Invitations ───────────────────────────────────────────────
 INVITATION_NOT_FOUND = "INVITATION_NOT_FOUND"
@@ -200,6 +202,8 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     INVALID_PRIORITY: "Invalid priority: {priority}",
     INVALID_RECURRENCE: "Invalid recurrence: {recurrence}",
     ASSIGNEE_NOT_FAMILY_MEMBER: "Assignee is not a family member",
+    DUTY_NOT_FOUND: "Duty not found",
+    INVALID_DUTY_DATE: "The duty does not happen on {date}",
     INVITATION_NOT_FOUND: "Invitation not found",
     INVITATION_INVALID: "Invalid invitation link",
     INVITATION_REVOKED: "Invitation has been revoked",

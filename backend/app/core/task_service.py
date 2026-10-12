@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.activity import record_activity
 from app.core.clock import local_wall_now, to_local_wall_naive, utcnow
+from app.core.duties import remember_task_change
 from app.core.webhooks import dispatch_webhook_event
 from app.models import Membership, RewardCurrency, Task, TokenTransaction, User
 
@@ -359,6 +360,8 @@ def update_task(
             setattr(task, name, normalized[name])
     if task.due_date is None:
         task.due_is_date = False
+    if "assigned_to_user_id" in actual:
+        remember_task_change(db, task)
 
     if "status" in normalized:
         task.status = normalized["status"]
@@ -395,5 +398,6 @@ def delete_task(db: Session, actor: User, task_id: int) -> None:
     if task is None:
         raise TaskNotFoundError()
     _require_adult(db, actor.id, task.family_id)
+    remember_task_change(db, task, deleted=True)
     db.delete(task)
     _commit(db)
