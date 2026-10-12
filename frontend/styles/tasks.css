@@ -275,3 +275,86 @@ button.task-row-main { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .task-row, .task-group-head svg { transition: none; }
 }
+
+/* Weekly duties (discussion #586): the week with who does what, and the duties. */
+.tasks-duties-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-weight: 700;
+  cursor: pointer;
+}
+.tasks-duties-btn:hover { background: var(--color-surface-hover); }
+
+.duty-week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.duty-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-2);
+  background: var(--color-surface-raised);
+}
+.duty-row + .duty-row { border-top: 1px solid var(--color-line); }
+.duty-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+}
+button.duty-row-main { cursor: pointer; }
+button.duty-row-main:hover { background: var(--color-surface-hover); }
+.duty-when {
+  min-width: 4.5em;
+  font-size: var(--type-body-small-size);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+.duty-row-main .task-row-title { flex: 1; min-width: 8em; }
+.duty-skipped { color: var(--color-text-muted); text-decoration: line-through; }
+.duty-person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-body-small-size);
+}
+.duty-person.muted, .duty-pattern { color: var(--color-text-muted); }
+.duty-pattern { flex-basis: 100%; font-size: var(--type-body-small-size); }
+.duty-badge {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  font-size: var(--type-body-small-size);
+  font-weight: 600;
+}
+.duty-current { margin-left: auto; color: var(--color-accent); }
+.duty-day-row {
+  display: grid;
+  grid-template-columns: minmax(8em, 1fr) minmax(0, 1.4fr);
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+.duty-day-toggle { display: inline-flex; align-items: center; gap: var(--space-2); }

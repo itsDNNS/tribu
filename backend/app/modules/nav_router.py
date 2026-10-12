@@ -11,8 +11,8 @@ from app.core.errors import error_detail, INVALID_UI_PREFERENCE, UNKNOWN_NAV_KEY
 
 router = APIRouter(prefix="/nav", tags=["nav"], responses={**AUTH_RESPONSES})
 
-DEFAULT_NAV_ORDER = ["dashboard", "calendar", "weekly_plan", "shopping", "tasks", "activity", "templates", "meal_plans", "school_timetables", "recipes", "family", "rewards", "gifts", "contacts", "notifications", "settings", "admin"]
-KNOWN_KEYS = {"dashboard", "family", "calendar", "weekly_plan", "shopping", "tasks", "activity", "templates", "rewards", "gifts", "meal_plans", "school_timetables", "recipes", "contacts", "notifications", "settings", "admin"}
+DEFAULT_NAV_ORDER = ["dashboard", "calendar", "weekly_plan", "shopping", "tasks", "duties", "activity", "templates", "meal_plans", "school_timetables", "recipes", "family", "rewards", "gifts", "contacts", "notifications", "settings", "admin"]
+KNOWN_KEYS = {"dashboard", "family", "calendar", "weekly_plan", "shopping", "tasks", "duties", "activity", "templates", "rewards", "gifts", "meal_plans", "school_timetables", "recipes", "contacts", "notifications", "settings", "admin"}
 DEFAULT_UI_THEME = "light"
 DEFAULT_UI_LANGUAGE = "en"
 KNOWN_UI_THEMES = {"light", "dark", "midnight-glass"}

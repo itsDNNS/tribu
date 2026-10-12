@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Plus, Check, ChevronDown, CloudOff, MoreHorizontal, Flag, Repeat, Clock, Moon, Sun, CalendarArrowUp, Pencil, Trash2,
+  Plus, Check, ChevronDown, CloudOff, MoreHorizontal, Flag, Repeat, Clock, Moon, Sun, CalendarArrowUp, CalendarClock, Pencil, Trash2,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useTasks } from '../hooks/useTasks';
@@ -39,7 +39,7 @@ function TaskRow({ task, group, members, messages, lang, timeFormat, canEdit, on
   const content = (
     <>
       <span className="task-row-title">{task.title}</span>
-      {(due || high || task.recurrence || task.waiting) && (
+      {(due || high || task.recurrence || task.duty_id || task.waiting) && (
         <span className="task-row-meta">
           {high && (
             <span className="task-row-flag">
@@ -57,6 +57,12 @@ function TaskRow({ task, group, members, messages, lang, timeFormat, canEdit, on
             <span className="task-row-repeat">
               <Repeat size={13} aria-hidden="true" />
               {t(messages, `module.tasks.recurrence.${task.recurrence}`)}
+            </span>
+          )}
+          {task.duty_id && (
+            <span className="task-row-repeat">
+              <CalendarClock size={13} aria-hidden="true" />
+              {t(messages, 'module.duties.badge')}
             </span>
           )}
           {task.waiting && (
@@ -124,7 +130,7 @@ function TaskRow({ task, group, members, messages, lang, timeFormat, canEdit, on
 }
 
 export default function TasksView({ createRequest, onCreateHandled }) {
-  const { members, messages, lang, isChild, timeFormat } = useApp();
+  const { members, messages, lang, isChild, timeFormat, demoMode, setActiveView } = useApp();
   const tk = useTasks();
   const [openGroups, setOpenGroups] = useState({});
   const [actionTask, setActionTask] = useState(null);
@@ -194,6 +200,12 @@ export default function TasksView({ createRequest, onCreateHandled }) {
 
       <header className="list-header">
         <h1>{t(messages, 'module.tasks.name')}</h1>
+        {!demoMode && (
+          <button className="tasks-duties-btn" type="button" onClick={() => setActiveView('duties')}>
+            <CalendarClock size={16} aria-hidden="true" />
+            {t(messages, 'module.duties.name')}
+          </button>
+        )}
         {canEdit && (
           <button className="tasks-new-btn" type="button" onClick={tk.openCreate}>
             <Plus size={16} aria-hidden="true" />

@@ -5,6 +5,7 @@ import {
   BookOpen,
   CalendarDays,
   CheckSquare,
+  CalendarClock,
   ClipboardList,
   Gift,
   GraduationCap,
@@ -35,7 +36,7 @@ export const NAV_GROUPS = [
 
 // Pages without a place in the navigation, opened from another page; they
 // count as that page for the navigation (activity lives in the family hub).
-export const NAV_SUBPAGES = { activity: 'family' };
+export const NAV_SUBPAGES = { activity: 'family', duties: 'tasks' };
 
 export function navKeyOf(key) {
   return NAV_SUBPAGES[key] || key;
@@ -54,6 +55,7 @@ export const NAV_ITEM_META = {
   weekly_plan: { icon: CalendarRange, labelKey: 'module.weekly_plan.title', adultOnly: true },
   shopping: { icon: ShoppingCart, labelKey: 'module.shopping.name' },
   tasks: { icon: CheckSquare, labelKey: 'module.tasks.name' },
+  duties: { icon: CalendarClock, labelKey: 'module.duties.name', hideInDemo: true },
   templates: { icon: ClipboardList, labelKey: 'module.templates.name', adultOnly: true, hideInDemo: true },
   meal_plans: { icon: UtensilsCrossed, labelKey: 'module.meal_plans.name' },
   school_timetables: { icon: GraduationCap, labelKey: 'module.school_timetables.name', hideInDemo: true, adultOnly: true },
