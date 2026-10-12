@@ -1,8 +1,8 @@
-fastapi==0.142.2
+fastapi==0.143.0
 uvicorn[standard]==0.54.0
-pydantic==2.13.5
+pydantic==2.14.0
 email-validator==2.3.0
-sqlalchemy==2.1.2
+sqlalchemy==2.1.4
 psycopg2-binary==2.9.13
 bcrypt==5.0.0
 PyJWT==2.15.1
@@ -14,8 +14,8 @@ apscheduler==3.11.3
 python-multipart==0.0.32
 redis==8.1.0
 pywebpush==2.5.0
-radicale==3.8.1
+radicale==3.8.3
 a2wsgi==1.10.10
-apprise==2.0.0
+apprise==2.0.1
 cryptography==50.0.2
 pillow==12.3.0
