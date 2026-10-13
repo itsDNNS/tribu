@@ -692,6 +692,7 @@ class DutySlotInput(BaseModel):
     weekday: int = Field(..., ge=0, le=6, description="Weekday, 0 = Monday to 6 = Sunday")
     assigned_to_user_id: Optional[int] = Field(None, description="Default person for this weekday; null leaves it unassigned")
     alternate_assigned_to_user_id: Optional[int] = Field(None, description="Person in week B when the duty alternates")
+    due_time: Optional[time] = Field(None, description="Local time on this weekday when it differs from the duty's time")
 
 
 def _unique_weekdays(slots: Optional[list[DutySlotInput]]) -> Optional[list[DutySlotInput]]:

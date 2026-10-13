@@ -1620,6 +1620,8 @@
   "module.duties.this_week_is": "Ovaj tjedan je",
   "module.duties.week_a": "Tjedan A",
   "module.duties.week_b": "Tjedan B",
+  "module.duties.day_time": "Vrijeme: {weekday}",
+  "module.duties.day_time_hint": "Dodirnite vrijeme dana kako biste tom danu dali vlastito vrijeme.",
   "module.templates.name": "Predlošci",
   "module.templates.subtitle": "Višekratni planovi za rutine, zadatke i kupovinu.",
   "module.templates.gallery": "Ugrađena galerija",

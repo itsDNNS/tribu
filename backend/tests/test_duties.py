@@ -543,3 +543,104 @@ def test_a_member_who_leaves_drops_out_of_alternate_weeks(clock, family):
     listed = client.get(f"/duties?family_id={family['family_id']}", headers=_auth(family["anna_token"])).json()
     assert listed[0]["slots"][0]["alternate_assigned_to_user_id"] is None
     assert listed[0]["slots"][0]["assigned_to_user_id"] == family["anna"]
+
+
+def _create_with_wednesday_noon(family, **overrides) -> dict:
+    """Pick up the kids at 15:30, but at 12:00 on Wednesday when school ends at noon."""
+    return _create_pickup(family, slots=[
+        {"weekday": 0, "assigned_to_user_id": family["anna"]},
+        {"weekday": 1, "assigned_to_user_id": family["anna"]},
+        {"weekday": 2, "assigned_to_user_id": family["ben"], "due_time": "12:00"},
+        {"weekday": 3, "assigned_to_user_id": family["ben"]},
+        {"weekday": 4, "assigned_to_user_id": family["ben"]},
+    ], **overrides)
+
+
+def test_a_weekday_can_have_its_own_time(clock, family):
+    duty = _create_with_wednesday_noon(family)
+
+    tasks = _duty_tasks(duty["id"])
+    assert tasks[date(2026, 12, 9)].due_date == datetime(2026, 12, 9, 12, 0)
+    assert tasks[date(2026, 12, 8)].due_date == datetime(2026, 12, 8, 15, 30)
+    assert next(slot for slot in duty["slots"] if slot["weekday"] == 2)["due_time"] == "12:00:00"
+    assert next(slot for slot in duty["slots"] if slot["weekday"] == 1)["due_time"] is None
+
+    week = client.get(
+        f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=_auth(family["anna_token"]),
+    ).json()
+    assert [(occ["date"], occ["due_time"]) for occ in week][1:3] == [("2026-12-08", "15:30:00"), ("2026-12-09", "12:00:00")]
+
+
+def test_a_day_time_counts_even_for_a_whole_day_duty(clock, family):
+    duty = _create_with_wednesday_noon(family, due_time=None)
+    tasks = _duty_tasks(duty["id"])
+    assert (tasks[date(2026, 12, 9)].due_date, tasks[date(2026, 12, 9)].due_is_date) == (datetime(2026, 12, 9, 12, 0), False)
+    assert tasks[date(2026, 12, 8)].due_is_date is True
+
+
+def test_a_day_time_that_already_passed_today_gets_no_task(clock, family):
+    clock.now = datetime(2026, 12, 9, 13, 0)  # Wednesday after noon
+    duty = _create_with_wednesday_noon(family)
+    assert date(2026, 12, 9) not in _duty_tasks(duty["id"])
+    whole_day = _create_with_wednesday_noon(family, title="Lunch money", due_time=None)
+    assert date(2026, 12, 9) not in _duty_tasks(whole_day["id"])
+    assert date(2026, 12, 10) in _duty_tasks(whole_day["id"])
+
+
+def test_changing_a_day_time_moves_only_that_day(clock, family):
+    duty = _create_with_wednesday_noon(family)
+    anna = _auth(family["anna_token"])
+    tasks = _duty_tasks(duty["id"])
+    client.patch(f"/tasks/{tasks[date(2026, 12, 8)].id}", headers=anna, json={"due_date": "2026-12-08T17:00:00"})
+
+    slots = [
+        {"weekday": day, "assigned_to_user_id": family["anna"] if day < 2 else family["ben"],
+         **({"due_time": "12:30"} if day == 2 else {})}
+        for day in range(5)
+    ]
+    resp = client.patch(f"/duties/{duty['id']}", headers=anna, json={"slots": slots})
+    assert resp.status_code == 200, resp.text
+    tasks = _duty_tasks(duty["id"])
+    assert tasks[date(2026, 12, 9)].due_date == datetime(2026, 12, 9, 12, 30)
+    assert tasks[date(2026, 12, 8)].due_date == datetime(2026, 12, 8, 17, 0), "a day someone moved by hand stays"
+
+    # Saving the same times again (say, with another person on Monday) moves nothing.
+    slots[0]["assigned_to_user_id"] = family["ben"]
+    client.patch(f"/duties/{duty['id']}", headers=anna, json={"slots": slots})
+    tasks = _duty_tasks(duty["id"])
+    assert tasks[date(2026, 12, 8)].due_date == datetime(2026, 12, 8, 17, 0)
+    assert tasks[date(2026, 12, 7)].assigned_to_user_id == family["ben"]
+
+    # Clearing the day time falls back to the duty's time.
+    slots[2].pop("due_time")
+    client.patch(f"/duties/{duty['id']}", headers=anna, json={"slots": slots})
+    assert _duty_tasks(duty["id"])[date(2026, 12, 9)].due_date == datetime(2026, 12, 9, 15, 30)
+
+
+def test_a_new_duty_time_leaves_days_with_their_own_time(clock, family):
+    duty = _create_with_wednesday_noon(family)
+    anna = _auth(family["anna_token"])
+    wednesday = _duty_tasks(duty["id"])[date(2026, 12, 9)]
+    client.patch(f"/tasks/{wednesday.id}", headers=anna, json={"due_date": "2026-12-09T11:45:00"})
+
+    client.patch(f"/duties/{duty['id']}", headers=anna, json={"due_time": "16:00"})
+    tasks = _duty_tasks(duty["id"])
+    assert tasks[date(2026, 12, 8)].due_date == datetime(2026, 12, 8, 16, 0)
+    assert tasks[date(2026, 12, 9)].due_date == datetime(2026, 12, 9, 11, 45)
+
+
+def test_a_day_whose_time_stays_the_same_is_not_moved(clock, family):
+    duty = _create_with_wednesday_noon(family)
+    anna = _auth(family["anna_token"])
+    wednesday = _duty_tasks(duty["id"])[date(2026, 12, 9)]
+    client.patch(f"/tasks/{wednesday.id}", headers=anna, json={"due_date": "2026-12-09T11:45:00"})
+
+    # The duty moves to 12:00 and Wednesday drops its own 12:00: Wednesday stays at 12:00.
+    slots = [
+        {"weekday": day, "assigned_to_user_id": family["anna"] if day < 2 else family["ben"]}
+        for day in range(5)
+    ]
+    client.patch(f"/duties/{duty['id']}", headers=anna, json={"due_time": "12:00", "slots": slots})
+    tasks = _duty_tasks(duty["id"])
+    assert tasks[date(2026, 12, 9)].due_date == datetime(2026, 12, 9, 11, 45), "its time did not change, so it stays moved"
+    assert tasks[date(2026, 12, 8)].due_date == datetime(2026, 12, 8, 12, 0)

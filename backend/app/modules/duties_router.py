@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import local_today, local_wall_now
 from app.core.deps import current_user, ensure_adult, ensure_family_membership
-from app.core.duties import DUE, HORIZON_DAYS, PEOPLE, TITLE, dispatch_task_events, occurrences, sync_duty_tasks
+from app.core.duties import HORIZON_DAYS, PEOPLE, TITLE, dispatch_task_events, occurrences, sync_duty_tasks
 from app.core.errors import ASSIGNEE_NOT_FAMILY_MEMBER, DUTY_NOT_FOUND, INVALID_DUTY_DATE, error_detail
 from app.core.scopes import require_scope
 from app.database import get_db
@@ -49,6 +49,11 @@ def _validate_assignees(db: Session, family_id: int, user_ids) -> None:
         raise HTTPException(status_code=400, detail=error_detail(ASSIGNEE_NOT_FAMILY_MEMBER))
 
 
+def _times(duty: Duty) -> dict:
+    """The time that applies on each weekday of the duty."""
+    return {slot.weekday: slot.due_time or duty.due_time for slot in duty.slots}
+
+
 def _slot_people(slots) -> list:
     return [uid for slot in slots for uid in (slot.assigned_to_user_id, slot.alternate_assigned_to_user_id)]
 
@@ -70,10 +75,10 @@ def _check_range(day: date) -> None:
         raise HTTPException(status_code=400, detail=error_detail(INVALID_DUTY_DATE, date=day.isoformat()))
 
 
-def _save_and_sync(db: Session, duty: Duty, update=frozenset()) -> DutyResponse:
+def _save_and_sync(db: Session, duty: Duty, update=frozenset(), due_weekdays=frozenset()) -> DutyResponse:
     db.flush()
     db.refresh(duty)
-    changed = sync_duty_tasks(db, duty, update=frozenset(update))
+    changed = sync_duty_tasks(db, duty, update=frozenset(update), due_weekdays=frozenset(due_weekdays))
     db.commit()
     dispatch_task_events(db, changed)
     db.refresh(duty)
@@ -136,7 +141,7 @@ def list_week(
                 duty_id=duty.id,
                 title=duty.title,
                 date=occ.date,
-                due_time=duty.due_time,
+                due_time=occ.due_time,
                 # Once a task exists it says who does (or did) it.
                 assigned_to_user_id=task.assigned_to_user_id if task else occ.assignee_id,
                 default_assigned_to_user_id=occ.default_assignee_id,
@@ -194,12 +199,12 @@ def update_duty(
     duty = _get_duty(db, duty_id, user, write=True)
     changes = payload.model_dump(exclude_unset=True)
     update = set()
+    times_before = _times(duty)
     if changes.get("title") is not None and changes["title"].strip() != duty.title:
         duty.title = changes["title"].strip()
         update.add(TITLE)
     if "due_time" in changes and changes["due_time"] != duty.due_time:
         duty.due_time = changes["due_time"]
-        update.add(DUE)
     if "alternate_from" in changes and changes["alternate_from"] != duty.alternate_from:
         duty.alternate_from = changes["alternate_from"]
         update.add(PEOPLE)
@@ -214,12 +219,16 @@ def update_duty(
             if weekday in wanted:
                 slot.assigned_to_user_id = wanted[weekday].assigned_to_user_id
                 slot.alternate_assigned_to_user_id = wanted[weekday].alternate_assigned_to_user_id
+                slot.due_time = wanted[weekday].due_time
             else:
                 duty.slots.remove(slot)
         for weekday, slot in wanted.items():
             if weekday not in existing:
                 duty.slots.append(DutySlot(**slot.model_dump()))
-    return _save_and_sync(db, duty, update)
+    # Only days whose time actually changes move; a task moved by hand stays otherwise.
+    times_after = _times(duty)
+    retimed = {weekday for weekday, at in times_after.items() if weekday in times_before and times_before[weekday] != at}
+    return _save_and_sync(db, duty, update, retimed)
 
 
 @router.delete(

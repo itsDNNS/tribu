@@ -1,4 +1,4 @@
-import { alternateFromFor, formatDutyTime, isoDate, isWeekA, orderedWeekdays, weekdayName } from '../../lib/duties';
+import { alternateFromFor, dayTimes, formatDutyTime, isoDate, isWeekA, orderedWeekdays, weekdayName } from '../../lib/duties';
 
 describe('weekly duty helpers', () => {
   it('orders the weekdays from the configured first day', () => {
@@ -40,5 +40,17 @@ describe('alternating weeks', () => {
   it('counts across a change to daylight saving time', () => {
     expect(isWeekA('2027-03-22', new Date(2027, 2, 29, 12))).toBe(false);
     expect(isWeekA('2027-03-22', new Date(2027, 3, 5, 12))).toBe(true);
+  });
+});
+
+describe('day times', () => {
+  it('keeps a time only for open fields that differ from the duty time', () => {
+    const days = { 0: { time: '15:30' }, 2: { time: '12:00' }, 3: { time: '' }, 4: { time: '16:00' } };
+    // Wednesday is open with its own time; Monday is open but equal; Friday was closed with an old value.
+    expect(dayTimes(days, new Set([0, 2, 3]), '15:30')).toEqual({ 0: null, 2: '12:00', 3: null, 4: null });
+  });
+
+  it('keeps a day time when the duty has none', () => {
+    expect(dayTimes({ 2: { time: '12:00' } }, new Set([2]), '')).toEqual({ 2: '12:00' });
   });
 });

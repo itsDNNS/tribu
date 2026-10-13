@@ -1624,6 +1624,8 @@
   "module.duties.this_week_is": "Denne uge er",
   "module.duties.week_a": "Uge A",
   "module.duties.week_b": "Uge B",
+  "module.duties.day_time": "Tidspunkt om {weekday}en",
+  "module.duties.day_time_hint": "Tryk på en dags tidspunkt for at give dagen sit eget tidspunkt.",
   "module.templates.name": "Skabeloner",
   "module.templates.subtitle": "Genanvendelige planer for rutiner, opgaver og indkøb.",
   "module.templates.gallery": "Indbygget galleri",

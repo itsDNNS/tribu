@@ -34,10 +34,12 @@ class Occurrence:
     assignee_id: Optional[int]
     skipped: bool
     is_exception: bool
+    # The weekday's own time, else the duty's; None means the whole day.
+    due_time: Optional[time]
 
     @property
     def due_date(self) -> datetime:
-        return datetime.combine(self.date, self.duty.due_time or time(0, 0))
+        return datetime.combine(self.date, self.due_time or time(0, 0))
 
 
 def is_week_b(duty: Duty, day: date) -> bool:
@@ -69,6 +71,7 @@ def occurrences(duty: Duty, start: date, days: int) -> list[Occurrence]:
             assignee_id=None if exc and exc.skipped else (exc.assigned_to_user_id if exc else default),
             skipped=bool(exc and exc.skipped),
             is_exception=exc is not None,
+            due_time=slot.due_time or duty.due_time,
         ))
     return result
 
@@ -86,14 +89,16 @@ def sync_duty_tasks(
     duty: Duty,
     *,
     update: frozenset[str] = frozenset(),
+    due_weekdays: frozenset[int] = frozenset(),
     now: datetime | None = None,
 ) -> list[tuple[Task, str]]:
     """Create the missing tasks of one duty in the horizon, and rewrite open ones.
 
-    ``update`` names what changed (TITLE, DUE, PEOPLE), so a new title does
-    not move a task someone rescheduled by hand; PEOPLE also removes open
-    tasks of dates that left the pattern or were skipped. The periodic job
-    passes nothing and only creates tasks. Done tasks are never touched.
+    ``update`` names what changed (TITLE, PEOPLE), so a new title does not
+    move a task someone rescheduled by hand; PEOPLE also removes open tasks
+    of dates that left the pattern or were skipped. ``due_weekdays`` are the
+    weekdays whose time changed; only their open tasks move. The periodic
+    job passes nothing and only creates tasks. Done tasks are never touched.
     Returns (task, webhook event) pairs to dispatch after the commit.
     """
     now = now or local_wall_now(utcnow())
@@ -111,12 +116,12 @@ def sync_duty_tasks(
         wanted.add(occ.date)
         values = {
             TITLE: {"title": duty.title},
-            DUE: {"due_date": occ.due_date, "due_is_date": duty.due_time is None},
+            DUE: {"due_date": occ.due_date, "due_is_date": occ.due_time is None},
             PEOPLE: {"assigned_to_user_id": occ.assignee_id if occ.assignee_id in members else None},
         }
         task = tasks.get(occ.date)
         if task is None:
-            if duty.due_time is not None and occ.due_date < now:
+            if occ.due_time is not None and occ.due_date < now:
                 continue
             task = Task(
                 family_id=duty.family_id,
@@ -134,7 +139,8 @@ def sync_duty_tasks(
                 continue
             changed.append((task, "task.created"))
         elif task.status == "open":
-            fields = {name: value for key in update for name, value in values[key].items()}
+            keys = set(update) | ({DUE} if occ.date.weekday() in due_weekdays else set())
+            fields = {name: value for key in keys for name, value in values[key].items()}
             if any(getattr(task, name) != value for name, value in fields.items()):
                 for name, value in fields.items():
                     setattr(task, name, value)

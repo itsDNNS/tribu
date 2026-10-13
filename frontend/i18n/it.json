@@ -1624,6 +1624,8 @@
   "module.duties.this_week_is": "Questa settimana è",
   "module.duties.week_a": "Settimana A",
   "module.duties.week_b": "Settimana B",
+  "module.duties.day_time": "Ora di {weekday}",
+  "module.duties.day_time_hint": "Tocca l'ora di un giorno per dargli un orario tutto suo.",
   "module.templates.name": "Modelli",
   "module.templates.subtitle": "Piani riutilizzabili per routine, attività e acquisti.",
   "module.templates.gallery": "Galleria incorporata",

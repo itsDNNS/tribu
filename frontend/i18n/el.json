@@ -1621,6 +1621,8 @@
   "module.duties.this_week_is": "Αυτή η εβδομάδα είναι",
   "module.duties.week_a": "Εβδομάδα Α",
   "module.duties.week_b": "Εβδομάδα Β",
+  "module.duties.day_time": "Ώρα: {weekday}",
+  "module.duties.day_time_hint": "Πατήστε την ώρα μιας ημέρας για να της δώσετε δική της ώρα.",
   "module.templates.name": "Πρότυπα",
   "module.templates.subtitle": "Επαναχρησιμοποιήσιμα σχέδια για ρουτίνες, εργασίες και αγορές.",
   "module.templates.gallery": "Ενσωματωμένη γκαλερί",

@@ -1619,6 +1619,8 @@
   "module.duties.this_week_is": "Ez a hét",
   "module.duties.week_a": "A hét",
   "module.duties.week_b": "B hét",
+  "module.duties.day_time": "Időpont: {weekday}",
+  "module.duties.day_time_hint": "Koppints egy nap időpontjára, hogy saját időpontot adj neki.",
   "module.templates.name": "Sablonok",
   "module.templates.subtitle": "Újrafelhasználható tervek rutinokhoz, feladatokhoz és vásárláshoz.",
   "module.templates.gallery": "Beépített galéria",

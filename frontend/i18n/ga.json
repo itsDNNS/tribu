@@ -1619,6 +1619,8 @@
   "module.duties.this_week_is": "Is í an tseachtain seo",
   "module.duties.week_a": "Seachtain A",
   "module.duties.week_b": "Seachtain B",
+  "module.duties.day_time": "Am: {weekday}",
+  "module.duties.day_time_hint": "Tapáil am lae chun a am féin a thabhairt don lá sin.",
   "module.templates.name": "Teimpléid",
   "module.templates.subtitle": "Pleananna ath-inúsáidte le haghaidh gnáthaimh, tascanna agus siopadóireacht.",
   "module.templates.gallery": "Gailearaí tógtha",

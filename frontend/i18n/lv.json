@@ -1620,6 +1620,8 @@
   "module.duties.this_week_is": "Šī nedēļa ir",
   "module.duties.week_a": "A nedēļa",
   "module.duties.week_b": "B nedēļa",
+  "module.duties.day_time": "Laiks: {weekday}",
+  "module.duties.day_time_hint": "Pieskarieties dienas laikam, lai tai dienai iestatītu savu laiku.",
   "module.templates.name": "Veidnes",
   "module.templates.subtitle": "Atkārtoti lietojami rutīnas, uzdevumu un iepirkšanās plāni.",
   "module.templates.gallery": "Iebūvēta galerija",

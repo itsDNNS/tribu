@@ -1627,6 +1627,8 @@
   "module.duties.this_week_is": "Săptămâna aceasta este",
   "module.duties.week_a": "Săptămâna A",
   "module.duties.week_b": "Săptămâna B",
+  "module.duties.day_time": "Ora {weekday}",
+  "module.duties.day_time_hint": "Atinge ora unei zile ca să-i dai o oră proprie.",
   "module.templates.name": "Șabloane",
   "module.templates.subtitle": "Planuri reutilizabile pentru rutine, sarcini și cumpărături.",
   "module.templates.gallery": "Galerie incorporata",

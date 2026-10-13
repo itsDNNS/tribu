@@ -1619,6 +1619,8 @@
   "module.duties.this_week_is": "Ta teden je",
   "module.duties.week_a": "Teden A",
   "module.duties.week_b": "Teden B",
+  "module.duties.day_time": "Čas: {weekday}",
+  "module.duties.day_time_hint": "Tapnite čas dneva, da mu določite lasten čas.",
   "module.templates.name": "Predloge",
   "module.templates.subtitle": "Načrti za večkratno uporabo za rutine, opravila in nakupovanje.",
   "module.templates.gallery": "Vgrajena galerija",

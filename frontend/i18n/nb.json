@@ -1624,6 +1624,8 @@
   "module.duties.this_week_is": "Denne uken er",
   "module.duties.week_a": "Uke A",
   "module.duties.week_b": "Uke B",
+  "module.duties.day_time": "Tidspunkt på {weekday}",
+  "module.duties.day_time_hint": "Trykk på en dags tidspunkt for å gi dagen et eget tidspunkt.",
   "module.templates.name": "Maler",
   "module.templates.subtitle": "Gjenbrukbare planer for rutiner, oppgaver og shopping.",
   "module.templates.gallery": "Innebygd galleri",
