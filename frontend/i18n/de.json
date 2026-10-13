@@ -1647,6 +1647,14 @@
   "module.duties.week_b": "Woche B",
   "module.duties.day_time": "Uhrzeit am {weekday}",
   "module.duties.day_time_hint": "Tippe auf die Uhrzeit eines Tages, um ihm eine eigene Uhrzeit zu geben.",
+  "module.duties.pause_named": "{title} pausieren",
+  "module.duties.pause_from": "Von",
+  "module.duties.pause_to": "Bis",
+  "module.duties.pause_hint": "In dieser Zeit entstehen keine Aufgaben, etwa in den Schulferien. Wer für einen einzelnen Tag eingetragen ist, macht es trotzdem.",
+  "module.duties.paused": "Pausiert",
+  "module.duties.end_pause": "Pause {range} beenden",
+  "module.duties.pause_saved": "Pause gespeichert",
+  "module.duties.pause_ended": "Pause beendet",
   "module.templates.name": "Vorlagen",
   "module.templates.subtitle": "Wiederverwendbare Pläne für Routinen, Aufgaben und Einkauf.",
   "module.templates.gallery": "Vorlagen-Galerie",
@@ -2300,5 +2308,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Die Seite des Shops ließ sich nicht laden. Du kannst das Geschenk selbst eintragen.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Diese Adresse lässt sich nicht lesen.",
   "error.DUTY_NOT_FOUND": "Dienst nicht gefunden",
-  "error.INVALID_DUTY_DATE": "Der Dienst findet am {date} nicht statt"
+  "error.INVALID_DUTY_DATE": "Der Dienst findet am {date} nicht statt",
+  "error.INVALID_DUTY_PAUSE": "Eine Pause braucht ein Ende am oder nach dem Beginn, ab heute.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pause nicht gefunden"
 }

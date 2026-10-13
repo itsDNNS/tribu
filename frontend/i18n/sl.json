@@ -1621,6 +1621,14 @@
   "module.duties.week_b": "Teden B",
   "module.duties.day_time": "Čas: {weekday}",
   "module.duties.day_time_hint": "Tapnite čas dneva, da mu določite lasten čas.",
+  "module.duties.pause_named": "Premor: {title}",
+  "module.duties.pause_from": "Od",
+  "module.duties.pause_to": "Do",
+  "module.duties.pause_hint": "V tem času ni nalog, na primer med šolskimi počitnicami. Kdor je vpisan za posamezen dan, to vseeno naredi.",
+  "module.duties.paused": "V premoru",
+  "module.duties.end_pause": "Končaj premor {range}",
+  "module.duties.pause_saved": "Premor shranjen",
+  "module.duties.pause_ended": "Premor končan",
   "module.templates.name": "Predloge",
   "module.templates.subtitle": "Načrti za večkratno uporabo za rutine, opravila in nakupovanje.",
   "module.templates.gallery": "Vgrajena galerija",
@@ -2293,5 +2301,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Strani trgovine ni bilo mogoče naložiti. Darilo lahko vpišeš sam.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Tega naslova ni mogoče prebrati.",
   "error.DUTY_NOT_FOUND": "Obveznosti ni mogoče najti",
-  "error.INVALID_DUTY_DATE": "Obveznost ni na {date}"
+  "error.INVALID_DUTY_DATE": "Obveznost ni na {date}",
+  "error.INVALID_DUTY_PAUSE": "Premor se mora končati na dan začetka ali pozneje, od danes naprej.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Premora ni mogoče najti"
 }

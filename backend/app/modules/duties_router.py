@@ -7,17 +7,25 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import local_today, local_wall_now
 from app.core.deps import current_user, ensure_adult, ensure_family_membership
-from app.core.duties import HORIZON_DAYS, PEOPLE, TITLE, dispatch_task_events, occurrences, sync_duty_tasks
-from app.core.errors import ASSIGNEE_NOT_FAMILY_MEMBER, DUTY_NOT_FOUND, INVALID_DUTY_DATE, error_detail
+from app.core.duties import HORIZON_DAYS, PEOPLE, TITLE, dispatch_task_events, in_pause, occurrences, sync_duty_tasks
+from app.core.errors import (
+    ASSIGNEE_NOT_FAMILY_MEMBER,
+    DUTY_NOT_FOUND,
+    DUTY_PAUSE_NOT_FOUND,
+    INVALID_DUTY_DATE,
+    INVALID_DUTY_PAUSE,
+    error_detail,
+)
 from app.core.scopes import require_scope
 from app.database import get_db
-from app.models import Duty, DutyException, DutySlot, Membership, Task, User
+from app.models import Duty, DutyException, DutyPause, DutySlot, Membership, Task, User
 from app.schemas import (
     AUTH_RESPONSES,
     NOT_FOUND_RESPONSE,
     DutyCreate,
     DutyExceptionInput,
     DutyOccurrenceResponse,
+    DutyPauseInput,
     DutyResponse,
     DutyUpdate,
 )
@@ -67,6 +75,7 @@ def _response(duty: Duty, today: date) -> DutyResponse:
         alternate_from=duty.alternate_from,
         slots=duty.slots,
         exceptions=[exc for exc in duty.exceptions if exc.date >= today],
+        pauses=[pause for pause in duty.pauses if pause.end >= today],
     )
 
 
@@ -146,6 +155,8 @@ def list_week(
                 assigned_to_user_id=task.assigned_to_user_id if task else occ.assignee_id,
                 default_assigned_to_user_id=occ.default_assignee_id,
                 skipped=occ.skipped,
+                # A task that exists (say, done before the pause) shows as it is.
+                paused=occ.paused and task is None,
                 is_exception=occ.is_exception,
                 task_id=task.id if task else None,
                 task_status=task.status if task else None,
@@ -280,8 +291,8 @@ def put_exception(
     _validate_assignees(db, duty.family_id, [payload.assigned_to_user_id])
     exc = next((exc for exc in duty.exceptions if exc.date == day), None)
     default = occurrences(duty, day, 1)[0].default_assignee_id
-    if not payload.skipped and payload.assigned_to_user_id == default:
-        # The default person on that date is no exception.
+    if not payload.skipped and payload.assigned_to_user_id == default and not in_pause(duty, day):
+        # The default person on that date is no exception (unless it ends a pause for that date).
         if exc is not None:
             duty.exceptions.remove(exc)
     else:
@@ -310,4 +321,54 @@ def delete_exception(
 ):
     duty = _get_duty(db, duty_id, user, write=True)
     duty.exceptions = [exc for exc in duty.exceptions if exc.date != day]
+    return _save_and_sync(db, duty, {PEOPLE})
+
+
+@router.post(
+    "/{duty_id}/pauses",
+    response_model=DutyResponse,
+    summary="Pause a duty for a while",
+    description="No tasks are created from `start` to `end` (both included), for example during school holidays; open tasks in that time go. A person set for a single date still does it. Adult only. Scope: `tasks:write`.",
+    response_description="The duty with its pauses",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def create_pause(
+    duty_id: int,
+    payload: DutyPauseInput,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("tasks:write"),
+):
+    duty = _get_duty(db, duty_id, user, write=True)
+    today = local_today()
+    if (
+        payload.end < payload.start
+        or payload.end < today
+        or max(abs((payload.start - today).days), abs((payload.end - today).days)) > MAX_DAYS_AWAY
+    ):
+        raise HTTPException(status_code=400, detail=error_detail(INVALID_DUTY_PAUSE))
+    duty.pauses.append(DutyPause(start=payload.start, end=payload.end))
+    return _save_and_sync(db, duty, {PEOPLE})
+
+
+@router.delete(
+    "/{duty_id}/pauses/{pause_id}",
+    response_model=DutyResponse,
+    summary="End a pause",
+    description="The duty's dates in that time come back. Adult only. Scope: `tasks:write`.",
+    response_description="The duty with its pauses",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def delete_pause(
+    duty_id: int,
+    pause_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("tasks:write"),
+):
+    duty = _get_duty(db, duty_id, user, write=True)
+    pause = next((pause for pause in duty.pauses if pause.id == pause_id), None)
+    if pause is None:
+        raise HTTPException(status_code=404, detail=error_detail(DUTY_PAUSE_NOT_FOUND))
+    duty.pauses.remove(pause)
     return _save_and_sync(db, duty, {PEOPLE})

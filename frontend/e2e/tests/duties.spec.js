@@ -107,4 +107,45 @@ test.describe('Weekly duties', () => {
     await expect(edit.getByLabel('Time on Wednesday')).toHaveValue('12:00');
     await expect(edit.getByRole('button', { name: 'Time on Monday: 15:30' })).toBeVisible();
   });
+
+  test('a duty can pause for a while and come back', async ({ authedPage: page, testUser }) => {
+    await openDuties(page);
+    await page.getByRole('button', { name: 'New duty' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New duty' });
+    await dialog.getByLabel('What needs doing').fill('Feed the cat');
+    for (const day of WEEKDAYS) {
+      await dialog.getByRole('checkbox', { name: day }).check();
+      await dialog.getByLabel(`Who does it on ${day}`).selectOption({ label: testUser.displayName });
+    }
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toHaveCount(0);
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    await page.getByRole('button', { name: 'Pause Feed the cat' }).click();
+    const pause = page.getByRole('dialog', { name: 'Pause Feed the cat' });
+    await pause.getByLabel('From').fill(iso(new Date()));
+    await pause.getByLabel('To').fill(iso(tomorrow));
+    await pause.getByRole('button', { name: 'Save' }).click();
+    await expect(pause).toHaveCount(0);
+
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+    const todayEntry = page.getByRole('button', { name: `Change Feed the cat on ${today}` });
+    await expect(todayEntry).toContainText('Paused');
+    const endPause = page.getByRole('button', { name: /^End pause / });
+    await expect(endPause).toBeVisible();
+
+    await navigateTo(page, 'Tasks');
+    const todayTask = page.getByRole('region', { name: 'Today' }).locator('.task-row-shell', { hasText: 'Feed the cat' });
+    await expect(todayTask).toHaveCount(0, { timeout: 10000 });
+
+    await openDuties(page);
+    await endPause.click();
+    await expect(endPause).toHaveCount(0);
+    await expect(todayEntry).toContainText(testUser.displayName);
+    await navigateTo(page, 'Tasks');
+    await expect(todayTask).toHaveCount(1, { timeout: 10000 });
+  });
 });

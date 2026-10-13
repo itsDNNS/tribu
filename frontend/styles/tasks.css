@@ -350,6 +350,22 @@ button.duty-row-main:hover { background: var(--color-surface-hover); }
   font-weight: 600;
 }
 .duty-current { margin-left: auto; color: var(--color-accent); }
+.duty-pauses { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* The whole pause badge ends the pause; the button keeps a full touch target around it. */
+.duty-pause {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+.duty-pauses .duty-badge { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
+.duty-pause:hover .duty-badge { background: var(--color-surface-hover); }
+.duty-pause-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .duty-day-row {
   display: grid;
   grid-template-columns: minmax(8em, 1fr) minmax(0, 1.4fr) 8.75em;

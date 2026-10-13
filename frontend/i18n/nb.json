@@ -1626,6 +1626,14 @@
   "module.duties.week_b": "Uke B",
   "module.duties.day_time": "Tidspunkt på {weekday}",
   "module.duties.day_time_hint": "Trykk på en dags tidspunkt for å gi dagen et eget tidspunkt.",
+  "module.duties.pause_named": "Sett {title} på pause",
+  "module.duties.pause_from": "Fra",
+  "module.duties.pause_to": "Til",
+  "module.duties.pause_hint": "Ingen oppgaver i denne perioden, for eksempel i skoleferien. Den som er satt opp på en enkelt dag, gjør det likevel.",
+  "module.duties.paused": "På pause",
+  "module.duties.end_pause": "Avslutt pausen {range}",
+  "module.duties.pause_saved": "Pause lagret",
+  "module.duties.pause_ended": "Pause avsluttet",
   "module.templates.name": "Maler",
   "module.templates.subtitle": "Gjenbrukbare planer for rutiner, oppgaver og shopping.",
   "module.templates.gallery": "Innebygd galleri",
@@ -2302,5 +2310,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Butikkens side kunne ikke lastes. Du kan fylle inn gaven selv.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Denne adressen kan ikke leses.",
   "error.DUTY_NOT_FOUND": "Plikten ble ikke funnet",
-  "error.INVALID_DUTY_DATE": "Plikten skjer ikke {date}"
+  "error.INVALID_DUTY_DATE": "Plikten skjer ikke {date}",
+  "error.INVALID_DUTY_PAUSE": "En pause må slutte på eller etter startdagen, fra i dag.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pausen ble ikke funnet"
 }

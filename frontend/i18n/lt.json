@@ -1621,6 +1621,14 @@
   "module.duties.week_b": "B savaitė",
   "module.duties.day_time": "Laikas: {weekday}",
   "module.duties.day_time_hint": "Bakstelėkite dienos laiką, kad tai dienai nustatytumėte atskirą laiką.",
+  "module.duties.pause_named": "Pristabdyti: {title}",
+  "module.duties.pause_from": "Nuo",
+  "module.duties.pause_to": "Iki",
+  "module.duties.pause_hint": "Šiuo laikotarpiu užduočių nėra, pavyzdžiui, mokyklinių atostogų metu. Kas įrašytas atskirai dienai, vis tiek tai daro.",
+  "module.duties.paused": "Pristabdyta",
+  "module.duties.end_pause": "Baigti pertrauką {range}",
+  "module.duties.pause_saved": "Pertrauka išsaugota",
+  "module.duties.pause_ended": "Pertrauka baigta",
   "module.templates.name": "Šablonai",
   "module.templates.subtitle": "Daugkartiniai kasdienybės, užduočių ir apsipirkimo planai.",
   "module.templates.gallery": "Įmontuota galerija",
@@ -2291,5 +2299,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Parduotuvės puslapio įkelti nepavyko. Dovaną gali įrašyti pats.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Šio adreso perskaityti negalima.",
   "error.DUTY_NOT_FOUND": "Pareiga nerasta",
-  "error.INVALID_DUTY_DATE": "Pareigos {date} nėra"
+  "error.INVALID_DUTY_DATE": "Pareigos {date} nėra",
+  "error.INVALID_DUTY_PAUSE": "Pertrauka turi baigtis pradžios dieną arba vėliau, nuo šiandien.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pertrauka nerasta"
 }

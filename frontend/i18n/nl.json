@@ -1625,6 +1625,14 @@
   "module.duties.week_b": "Week B",
   "module.duties.day_time": "Tijd op {weekday}",
   "module.duties.day_time_hint": "Tik op de tijd van een dag om die dag een eigen tijd te geven.",
+  "module.duties.pause_named": "{title} pauzeren",
+  "module.duties.pause_from": "Van",
+  "module.duties.pause_to": "Tot en met",
+  "module.duties.pause_hint": "In deze tijd geen taken, bijvoorbeeld in de schoolvakantie. Wie voor één dag is ingeroosterd, doet het toch.",
+  "module.duties.paused": "Gepauzeerd",
+  "module.duties.end_pause": "Pauze {range} beëindigen",
+  "module.duties.pause_saved": "Pauze opgeslagen",
+  "module.duties.pause_ended": "Pauze beëindigd",
   "module.templates.name": "Sjablonen",
   "module.templates.subtitle": "Herbruikbare plannen voor routines, taken en winkelen.",
   "module.templates.gallery": "Ingebouwde galerij",
@@ -2301,5 +2309,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "De pagina van de winkel kon niet worden geladen. Je kunt het cadeau zelf invullen.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Dit adres kan niet worden gelezen.",
   "error.DUTY_NOT_FOUND": "Weektaak niet gevonden",
-  "error.INVALID_DUTY_DATE": "De weektaak valt niet op {date}"
+  "error.INVALID_DUTY_DATE": "De weektaak valt niet op {date}",
+  "error.INVALID_DUTY_PAUSE": "Een pauze moet op of na de begindatum eindigen, vanaf vandaag.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pauze niet gevonden"
 }

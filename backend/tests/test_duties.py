@@ -644,3 +644,120 @@ def test_a_day_whose_time_stays_the_same_is_not_moved(clock, family):
     tasks = _duty_tasks(duty["id"])
     assert tasks[date(2026, 12, 9)].due_date == datetime(2026, 12, 9, 11, 45), "its time did not change, so it stays moved"
     assert tasks[date(2026, 12, 8)].due_date == datetime(2026, 12, 8, 12, 0)
+
+
+def _pause(duty, family, start, end, token="anna_token"):
+    return client.post(
+        f"/duties/{duty['id']}/pauses", headers=_auth(family[token]), json={"start": start, "end": end},
+    )
+
+
+def test_a_pause_creates_no_tasks_and_shows_in_the_week(clock, family):
+    duty = _create_pickup(family)
+    resp = _pause(duty, family, "2026-12-09", "2026-12-10")
+    assert resp.status_code == 200, resp.text
+    pause = resp.json()["pauses"][0]
+    assert (pause["start"], pause["end"]) == ("2026-12-09", "2026-12-10")
+
+    assert sorted(_duty_tasks(duty["id"])) == [date(2026, 12, 7), date(2026, 12, 8), date(2026, 12, 11)]
+    week = client.get(
+        f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=_auth(family["anna_token"]),
+    ).json()
+    paused = {occ["date"]: occ["paused"] for occ in week}
+    assert paused == {"2026-12-07": False, "2026-12-08": False, "2026-12-09": True, "2026-12-10": True, "2026-12-11": False}
+    assert next(occ for occ in week if occ["date"] == "2026-12-09")["assigned_to_user_id"] is None
+
+
+def test_removing_a_pause_brings_its_tasks_back_and_done_ones_stay(clock, family):
+    duty = _create_pickup(family)
+    anna = _auth(family["anna_token"])
+    monday = _duty_tasks(duty["id"])[date(2026, 12, 7)]
+    client.patch(f"/tasks/{monday.id}", headers=anna, json={"status": "done"})
+
+    pause_id = _pause(duty, family, "2026-12-07", "2026-12-11").json()["pauses"][0]["id"]
+    assert list(_duty_tasks(duty["id"])) == [date(2026, 12, 7)], "the done task stays"
+
+    resp = client.delete(f"/duties/{duty['id']}/pauses/{pause_id}", headers=anna)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["pauses"] == []
+    assert sorted(_duty_tasks(duty["id"])) == [date(2026, 12, d) for d in (7, 8, 9, 10, 11)]
+
+
+def test_a_person_set_for_a_date_wins_over_a_pause(clock, family):
+    duty = _create_pickup(family)
+    anna = _auth(family["anna_token"])
+    client.put(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=anna, json={"assigned_to_user_id": family["anna"]})
+    _pause(duty, family, "2026-12-07", "2026-12-11")
+
+    tasks = _duty_tasks(duty["id"])
+    assert list(tasks) == [date(2026, 12, 9)]
+    assert tasks[date(2026, 12, 9)].assigned_to_user_id == family["anna"]
+
+
+def test_the_job_creates_nothing_in_a_pause(clock, family):
+    duty = _create_pickup(family)
+    _pause(duty, family, "2026-12-14", "2026-12-18")
+    clock.now = datetime(2026, 12, 14, 7, 0)
+    _run_job()
+    assert not [day for day in _duty_tasks(duty["id"]) if date(2026, 12, 14) <= day <= date(2026, 12, 18)]
+
+
+def test_pauses_are_checked_and_only_adults_of_the_family_set_them(clock, family):
+    duty = _create_pickup(family)
+    backwards = _pause(duty, family, "2026-12-20", "2026-12-14")
+    assert backwards.status_code == 400
+    assert backwards.json()["detail"]["code"] == "INVALID_DUTY_PAUSE"
+    assert _pause(duty, family, "2026-11-01", "2026-12-01").status_code == 400, "already over"
+    too_far = _pause(duty, family, "2026-12-14", "2029-01-01")
+    assert (too_far.status_code, too_far.json()["detail"]["code"]) == (400, "INVALID_DUTY_PAUSE"), "too far ahead"
+    assert _pause(duty, family, "2026-12-14", "2026-12-18", token="kid_token").status_code == 403
+    assert _pause(duty, family, "2026-12-14", "2026-12-18", token="stranger_token").status_code == 403
+
+    pause_id = _pause(duty, family, "2026-12-14", "2026-12-18").json()["pauses"][0]["id"]
+    kid = _auth(family["kid_token"])
+    assert client.delete(f"/duties/{duty['id']}/pauses/{pause_id}", headers=kid).status_code == 403
+    other = _create_pickup(family, title="Bins")
+    assert client.delete(f"/duties/{other['id']}/pauses/{pause_id}", headers=_auth(family["anna_token"])).status_code == 404
+
+
+def test_a_pause_that_ended_is_no_longer_listed(clock, family):
+    duty = _create_pickup(family)
+    assert _pause(duty, family, "2026-12-07", "2026-12-08").json()["pauses"] != []
+    clock.now = datetime(2026, 12, 10, 7, 0)
+    listed = client.get(f"/duties?family_id={family['family_id']}", headers=_auth(family["anna_token"])).json()
+    assert listed[0]["pauses"] == []
+
+
+def test_the_usual_person_set_for_a_paused_date_still_does_it(clock, family):
+    duty = _create_pickup(family)
+    _pause(duty, family, "2026-12-07", "2026-12-11")
+
+    resp = client.put(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=_auth(family["anna_token"]), json={"assigned_to_user_id": family["ben"]})
+    assert resp.json()["exceptions"] == [{"date": "2026-12-09", "assigned_to_user_id": family["ben"], "skipped": False}]
+    assert _duty_tasks(duty["id"])[date(2026, 12, 9)].assigned_to_user_id == family["ben"]
+
+
+def test_reassigning_a_paused_date_task_to_the_usual_person_keeps_it(clock, family):
+    duty = _create_pickup(family)
+    anna = _auth(family["anna_token"])
+    _pause(duty, family, "2026-12-07", "2026-12-11")
+    client.put(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=anna, json={"assigned_to_user_id": family["anna"]})
+    wednesday = _duty_tasks(duty["id"])[date(2026, 12, 9)]
+
+    client.patch(f"/tasks/{wednesday.id}", headers=anna, json={"assigned_to_user_id": family["ben"]})
+    client.put(f"/duties/{duty['id']}/exceptions/2026-12-10", headers=anna, json={"skipped": True})  # any later sync
+    tasks = _duty_tasks(duty["id"])
+    assert tasks[date(2026, 12, 9)].assigned_to_user_id == family["ben"]
+
+
+def test_a_done_task_in_a_later_pause_still_shows_who_did_it(clock, family):
+    duty = _create_pickup(family)
+    anna = _auth(family["anna_token"])
+    monday = _duty_tasks(duty["id"])[date(2026, 12, 7)]
+    client.patch(f"/tasks/{monday.id}", headers=anna, json={"status": "done"})
+    clock.now = datetime(2026, 12, 9, 8, 0)
+    _pause(duty, family, "2026-12-01", "2026-12-11")
+
+    week = client.get(f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=anna).json()
+    first = week[0]
+    assert (first["paused"], first["assigned_to_user_id"], first["task_status"]) == (False, family["anna"], "done")

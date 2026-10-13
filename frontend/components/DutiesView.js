@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Pause, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import * as api from '../lib/api';
@@ -11,6 +11,7 @@ import ConfirmDialog from './ConfirmDialog';
 import MemberAvatar from './MemberAvatar';
 import BottomSheet from './responsive/BottomSheet';
 import DutyDialog from './duties/DutyDialog';
+import PauseDialog from './duties/PauseDialog';
 
 function addDays(date, days) {
   const next = new Date(date);
@@ -41,6 +42,7 @@ export default function DutiesView() {
   const [editing, setEditing] = useState(null);
   const [picking, setPicking] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [pausing, setPausing] = useState(null);
   const startIso = isoDate(weekOf);
   const todayIso = isoDate(new Date());
   const shownWeek = useRef(startIso);
@@ -70,6 +72,27 @@ export default function DutiesView() {
     loadTasks();
   };
 
+  // Ending a pause brings its tasks back at once, so it can be undone from the toast.
+  const ending = useRef(false);
+  const endPause = async (duty, pause) => {
+    if (ending.current) return;
+    ending.current = true;
+    const res = await api.apiDeleteDutyPause(duty.id, pause.id);
+    await afterChange(res);
+    // Released only after the list reloaded, so the badge is gone before another tap.
+    ending.current = false;
+    if (!res.ok) return;
+    let undone = false;
+    toastSuccess(t(messages, 'module.duties.pause_ended'), {
+      label: t(messages, 'module.shopping.undo'),
+      onClick: async () => {
+        if (undone) return;
+        undone = true;
+        afterChange(await api.apiCreateDutyPause(duty.id, { start: pause.start, end: pause.end }));
+      },
+    });
+  };
+
   const choose = async (occ, change) => {
     setPicking(null);
     const res = change === 'reset'
@@ -79,6 +102,9 @@ export default function DutiesView() {
   };
 
   const dayLabel = (date) => date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+  const pauseRange = (pause) => [pause.start, pause.end]
+    .map((iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'short' }))
+    .join(' – ');
   const shortDate = (date) => date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   const weekRange = `${shortDate(weekOf)} – ${shortDate(addDays(weekOf, 6))}`;
 
@@ -94,6 +120,14 @@ export default function DutiesView() {
           timeFormat={timeFormat}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); afterChange({ ok: true }, 'module.duties.saved'); }}
+        />
+      )}
+      {pausing && (
+        <PauseDialog
+          duty={pausing}
+          messages={messages}
+          onClose={() => setPausing(null)}
+          onSaved={() => { setPausing(null); afterChange({ ok: true }, 'module.duties.pause_saved'); }}
         />
       )}
       {deleting && (
@@ -130,7 +164,7 @@ export default function DutiesView() {
             ))}
           </div>
           <div className="task-actions-list">
-            {!picking.skipped && (
+            {!picking.skipped && !picking.paused && (
               <button type="button" className="task-action" onClick={() => choose(picking, { skipped: true })}>
                 <X size={18} aria-hidden="true" />
                 {t(messages, 'module.duties.skip_date')}
@@ -190,9 +224,9 @@ export default function DutiesView() {
                     const content = (
                       <>
                         <span className="duty-when">{formatDutyTime(occ.due_time, locale, timeFormat) || t(messages, 'module.duties.whole_day')}</span>
-                        <span className={`task-row-title${occ.skipped ? ' duty-skipped' : ''}`}>{occ.title}</span>
-                        {occ.skipped
-                          ? <span className="duty-badge">{t(messages, 'module.duties.skipped')}</span>
+                        <span className={`task-row-title${occ.skipped || occ.paused ? ' duty-skipped' : ''}`}>{occ.title}</span>
+                        {occ.skipped || occ.paused
+                          ? <span className="duty-badge">{t(messages, occ.skipped ? 'module.duties.skipped' : 'module.duties.paused')}</span>
                           : <Person userId={occ.assigned_to_user_id} members={members} messages={messages} />}
                         {occ.is_exception && !occ.skipped && <span className="duty-badge">{t(messages, 'module.duties.changed')}</span>}
                         {occ.task_status === 'done' && <Check size={16} aria-label={t(messages, 'module.tasks.done')} />}
@@ -242,11 +276,42 @@ export default function DutiesView() {
                         })
                         .join(' · ')}
                     </span>
+                    {duty.pauses?.length > 0 && (
+                      <span className="duty-pauses">
+                        {duty.pauses.map((pause) => {
+                          const range = pauseRange(pause);
+                          // The pause icon stands for "Paused"; screen readers hear the word.
+                          const label = (
+                            <>
+                              <Pause size={13} aria-hidden="true" />
+                              <span className="sr-only">{t(messages, 'module.duties.paused')}</span>
+                              {range}
+                            </>
+                          );
+                          return canEdit ? (
+                            <button
+                              key={pause.id}
+                              type="button"
+                              className="duty-pause"
+                              aria-label={t(messages, 'module.duties.end_pause').replace('{range}', range)}
+                              onClick={() => endPause(duty, pause)}
+                            >
+                              <span className="duty-badge">{label}<X size={13} aria-hidden="true" /></span>
+                            </button>
+                          ) : (
+                            <span key={pause.id} className="duty-badge">{label}</span>
+                          );
+                        })}
+                      </span>
+                    )}
                   </div>
                   {canEdit && (
                     <>
                       <button type="button" className="btn btn-ghost" aria-label={t(messages, 'module.duties.edit_named').replace('{title}', duty.title)} onClick={() => setEditing(duty)}>
                         <Pencil size={16} aria-hidden="true" />
+                      </button>
+                      <button type="button" className="btn btn-ghost" aria-label={t(messages, 'module.duties.pause_named').replace('{title}', duty.title)} onClick={() => setPausing(duty)}>
+                        <Pause size={16} aria-hidden="true" />
                       </button>
                       <button type="button" className="btn btn-ghost" aria-label={t(messages, 'module.duties.delete_named').replace('{title}', duty.title)} onClick={() => setDeleting(duty)}>
                         <Trash2 size={16} aria-hidden="true" />
