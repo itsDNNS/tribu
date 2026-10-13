@@ -1629,6 +1629,14 @@
   "module.duties.week_b": "Săptămâna B",
   "module.duties.day_time": "Ora {weekday}",
   "module.duties.day_time_hint": "Atinge ora unei zile ca să-i dai o oră proprie.",
+  "module.duties.pause_named": "Pune pe pauză {title}",
+  "module.duties.pause_from": "De la",
+  "module.duties.pause_to": "Până la",
+  "module.duties.pause_hint": "Fără sarcini în această perioadă, de exemplu în vacanța școlară. Cine e trecut pentru o singură zi o face oricum.",
+  "module.duties.paused": "Pe pauză",
+  "module.duties.end_pause": "Încheie pauza {range}",
+  "module.duties.pause_saved": "Pauză salvată",
+  "module.duties.pause_ended": "Pauză încheiată",
   "module.templates.name": "Șabloane",
   "module.templates.subtitle": "Planuri reutilizabile pentru rutine, sarcini și cumpărături.",
   "module.templates.gallery": "Galerie incorporata",
@@ -2301,5 +2309,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Pagina magazinului nu a putut fi încărcată. Poți completa cadoul manual.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Această adresă nu poate fi citită.",
   "error.DUTY_NOT_FOUND": "Sarcina nu a fost găsită",
-  "error.INVALID_DUTY_DATE": "Sarcina nu are loc pe {date}"
+  "error.INVALID_DUTY_DATE": "Sarcina nu are loc pe {date}",
+  "error.INVALID_DUTY_PAUSE": "O pauză trebuie să se termine în ziua de început sau după, de azi înainte.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pauza nu a fost găsită"
 }

@@ -1626,6 +1626,14 @@
   "module.duties.week_b": "Semaine B",
   "module.duties.day_time": "Heure le {weekday}",
   "module.duties.day_time_hint": "Touche l'heure d'un jour pour lui donner sa propre heure.",
+  "module.duties.pause_named": "Mettre en pause {title}",
+  "module.duties.pause_from": "Du",
+  "module.duties.pause_to": "Au",
+  "module.duties.pause_hint": "Aucune tâche pendant cette période, par exemple pendant les vacances scolaires. La personne prévue pour un jour précis s'en charge quand même.",
+  "module.duties.paused": "En pause",
+  "module.duties.end_pause": "Terminer la pause {range}",
+  "module.duties.pause_saved": "Pause enregistrée",
+  "module.duties.pause_ended": "Pause terminée",
   "module.templates.name": "Modèles",
   "module.templates.subtitle": "Plans réutilisables pour les routines, les tâches et les courses.",
   "module.templates.gallery": "Galerie intégrée",
@@ -2302,5 +2310,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "La page de la boutique n’a pas pu être chargée. Tu peux saisir le cadeau toi-même.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Cette adresse ne peut pas être lue.",
   "error.DUTY_NOT_FOUND": "Tâche récurrente introuvable",
-  "error.INVALID_DUTY_DATE": "La tâche n'a pas lieu le {date}"
+  "error.INVALID_DUTY_DATE": "La tâche n'a pas lieu le {date}",
+  "error.INVALID_DUTY_PAUSE": "Une pause doit finir le jour de son début ou après, à partir d'aujourd'hui.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pause introuvable"
 }

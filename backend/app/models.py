@@ -350,6 +350,7 @@ class Duty(Base):
     family = relationship("Family", back_populates="duties")
     slots = relationship("DutySlot", back_populates="duty", cascade="all, delete-orphan", order_by="DutySlot.weekday")
     exceptions = relationship("DutyException", back_populates="duty", cascade="all, delete-orphan", order_by="DutyException.date")
+    pauses = relationship("DutyPause", back_populates="duty", cascade="all, delete-orphan", order_by="DutyPause.start")
 
 
 class DutySlot(Base):
@@ -381,6 +382,19 @@ class DutyException(Base):
     skipped = Column(Boolean, nullable=False, default=False, server_default="false")
 
     duty = relationship("Duty", back_populates="exceptions")
+
+
+class DutyPause(Base):
+    """A time without the duty, for example school holidays (both days included)."""
+
+    __tablename__ = "duty_pauses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    duty_id = Column(Integer, ForeignKey("duties.id", ondelete="CASCADE"), nullable=False, index=True)
+    start = Column(Date, nullable=False)
+    end = Column(Date, nullable=False)
+
+    duty = relationship("Duty", back_populates="pauses")
 
 
 class DavSyncSnapshot(Base):

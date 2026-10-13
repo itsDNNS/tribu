@@ -766,6 +766,20 @@ class DutyExceptionResponse(BaseModel):
     skipped: bool = Field(False, description="Whether the date is skipped")
 
 
+class DutyPauseInput(BaseModel):
+    """A time without the duty, both days included."""
+    start: date = Field(..., description="First day of the pause")
+    end: date = Field(..., description="Last day of the pause")
+
+
+class DutyPauseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Pause ID")
+    start: date = Field(..., description="First day of the pause")
+    end: date = Field(..., description="Last day of the pause")
+
+
 class DutyResponse(BaseModel):
     """A weekly duty with its pattern and its exceptions from today on."""
     model_config = ConfigDict(from_attributes=True)
@@ -777,6 +791,7 @@ class DutyResponse(BaseModel):
     alternate_from: Optional[date] = Field(None, description="Monday of a week A when people alternate every other week")
     slots: list[DutySlotInput] = Field(..., description="Weekdays with their default person")
     exceptions: list[DutyExceptionResponse] = Field(..., description="Exceptions from today on")
+    pauses: list[DutyPauseResponse] = Field(default_factory=list, description="Pauses that have not ended yet")
 
 
 class DutyOccurrenceResponse(BaseModel):
@@ -788,6 +803,7 @@ class DutyOccurrenceResponse(BaseModel):
     assigned_to_user_id: Optional[int] = Field(None, description="Person for this date")
     default_assigned_to_user_id: Optional[int] = Field(None, description="Person from the weekly pattern")
     skipped: bool = Field(False, description="Whether the date is skipped")
+    paused: bool = Field(False, description="Whether the date falls in a pause of the duty")
     is_exception: bool = Field(False, description="Whether this date differs from the weekly pattern")
     task_id: Optional[int] = Field(None, description="Task created for this date, once it is in range")
     task_status: Optional[str] = Field(None, description="Status of that task")

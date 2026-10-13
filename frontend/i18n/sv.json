@@ -1626,6 +1626,14 @@
   "module.duties.week_b": "Vecka B",
   "module.duties.day_time": "Tid på {weekday}",
   "module.duties.day_time_hint": "Tryck på en dags tid för att ge dagen en egen tid.",
+  "module.duties.pause_named": "Pausa {title}",
+  "module.duties.pause_from": "Från",
+  "module.duties.pause_to": "Till",
+  "module.duties.pause_hint": "Inga uppgifter under den här tiden, till exempel på skollovet. Den som är satt på en enskild dag gör det ändå.",
+  "module.duties.paused": "Pausad",
+  "module.duties.end_pause": "Avsluta pausen {range}",
+  "module.duties.pause_saved": "Pausen sparad",
+  "module.duties.pause_ended": "Pausen avslutad",
   "module.templates.name": "Mallar",
   "module.templates.subtitle": "Återanvändbara planer för rutiner, uppgifter och shopping.",
   "module.templates.gallery": "Inbyggt galleri",
@@ -2301,5 +2309,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Butikens sida kunde inte laddas. Du kan fylla i presenten själv.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Den här adressen kan inte läsas.",
   "error.DUTY_NOT_FOUND": "Sysslan hittades inte",
-  "error.INVALID_DUTY_DATE": "Sysslan infaller inte den {date}"
+  "error.INVALID_DUTY_DATE": "Sysslan infaller inte den {date}",
+  "error.INVALID_DUTY_PAUSE": "En paus måste sluta samma dag som den börjar eller senare, från i dag.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pausen hittades inte"
 }

@@ -1624,6 +1624,14 @@
   "module.duties.week_b": "Viikko B",
   "module.duties.day_time": "Aika: {weekday}",
   "module.duties.day_time_hint": "Napauta päivän aikaa antaaksesi päivälle oman ajan.",
+  "module.duties.pause_named": "Keskeytä: {title}",
+  "module.duties.pause_from": "Alkaen",
+  "module.duties.pause_to": "Asti",
+  "module.duties.pause_hint": "Tänä aikana ei tehtäviä, esimerkiksi koulujen loma-aikana. Yksittäiselle päivälle merkitty henkilö hoitaa sen silti.",
+  "module.duties.paused": "Tauolla",
+  "module.duties.end_pause": "Lopeta tauko {range}",
+  "module.duties.pause_saved": "Tauko tallennettu",
+  "module.duties.pause_ended": "Tauko lopetettu",
   "module.templates.name": "Mallit",
   "module.templates.subtitle": "Uudelleen käytettävät suunnitelmat rutiineja, tehtäviä ja ostoksia varten.",
   "module.templates.gallery": "Sisäänrakennettu galleria",
@@ -2295,5 +2303,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Kaupan sivua ei voitu ladata. Voit täyttää lahjan itse.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Tätä osoitetta ei voi lukea.",
   "error.DUTY_NOT_FOUND": "Viikkotehtävää ei löytynyt",
-  "error.INVALID_DUTY_DATE": "Viikkotehtävää ei ole {date}"
+  "error.INVALID_DUTY_DATE": "Viikkotehtävää ei ole {date}",
+  "error.INVALID_DUTY_PAUSE": "Tauon on päätyttävä alkupäivänä tai sen jälkeen, tästä päivästä alkaen.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Taukoa ei löytynyt"
 }

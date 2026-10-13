@@ -1621,6 +1621,14 @@
   "module.duties.week_b": "Seachtain B",
   "module.duties.day_time": "Am: {weekday}",
   "module.duties.day_time_hint": "Tapáil am lae chun a am féin a thabhairt don lá sin.",
+  "module.duties.pause_named": "Cuir {title} ar sos",
+  "module.duties.pause_from": "Ó",
+  "module.duties.pause_to": "Go",
+  "module.duties.pause_hint": "Gan tascanna le linn an ama seo, mar shampla le linn laethanta saoire scoile. Déanann an duine atá leagtha síos do lá ar leith é mar sin féin.",
+  "module.duties.paused": "Ar sos",
+  "module.duties.end_pause": "Cuir deireadh leis an sos {range}",
+  "module.duties.pause_saved": "Sos sábháilte",
+  "module.duties.pause_ended": "Sos críochnaithe",
   "module.templates.name": "Teimpléid",
   "module.templates.subtitle": "Pleananna ath-inúsáidte le haghaidh gnáthaimh, tascanna agus siopadóireacht.",
   "module.templates.gallery": "Gailearaí tógtha",
@@ -2291,5 +2299,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Níorbh fhéidir leathanach an tsiopa a lódáil. Is féidir leat an bronntanas a líonadh tú féin.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Ní féidir an seoladh seo a léamh.",
   "error.DUTY_NOT_FOUND": "Níor aimsíodh an dualgas",
-  "error.INVALID_DUTY_DATE": "Níl an dualgas ar siúl ar {date}"
+  "error.INVALID_DUTY_DATE": "Níl an dualgas ar siúl ar {date}",
+  "error.INVALID_DUTY_PAUSE": "Caithfidh sos críochnú ar lá a thosaithe nó ina dhiaidh, ón lá inniu ar aghaidh.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Níor aimsíodh an sos"
 }

@@ -1626,6 +1626,14 @@
   "module.duties.week_b": "Uge B",
   "module.duties.day_time": "Tidspunkt om {weekday}en",
   "module.duties.day_time_hint": "Tryk på en dags tidspunkt for at give dagen sit eget tidspunkt.",
+  "module.duties.pause_named": "Sæt {title} på pause",
+  "module.duties.pause_from": "Fra",
+  "module.duties.pause_to": "Til",
+  "module.duties.pause_hint": "Ingen opgaver i denne periode, for eksempel i skoleferien. Den, der er sat på en enkelt dag, gør det alligevel.",
+  "module.duties.paused": "På pause",
+  "module.duties.end_pause": "Afslut pausen {range}",
+  "module.duties.pause_saved": "Pause gemt",
+  "module.duties.pause_ended": "Pause afsluttet",
   "module.templates.name": "Skabeloner",
   "module.templates.subtitle": "Genanvendelige planer for rutiner, opgaver og indkøb.",
   "module.templates.gallery": "Indbygget galleri",
@@ -2302,5 +2310,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Butikkens side kunne ikke indlæses. Du kan selv udfylde gaven.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Denne adresse kan ikke læses.",
   "error.DUTY_NOT_FOUND": "Pligten blev ikke fundet",
-  "error.INVALID_DUTY_DATE": "Pligten finder ikke sted den {date}"
+  "error.INVALID_DUTY_DATE": "Pligten finder ikke sted den {date}",
+  "error.INVALID_DUTY_PAUSE": "En pause skal slutte på eller efter startdagen, fra i dag.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pausen blev ikke fundet"
 }

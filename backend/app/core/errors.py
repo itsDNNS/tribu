@@ -44,6 +44,8 @@ INVALID_RECURRENCE = "INVALID_RECURRENCE"
 ASSIGNEE_NOT_FAMILY_MEMBER = "ASSIGNEE_NOT_FAMILY_MEMBER"
 DUTY_NOT_FOUND = "DUTY_NOT_FOUND"
 INVALID_DUTY_DATE = "INVALID_DUTY_DATE"
+INVALID_DUTY_PAUSE = "INVALID_DUTY_PAUSE"
+DUTY_PAUSE_NOT_FOUND = "DUTY_PAUSE_NOT_FOUND"
 
 # ── Invitations ───────────────────────────────────────────────
 INVITATION_NOT_FOUND = "INVITATION_NOT_FOUND"
@@ -204,6 +206,8 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ASSIGNEE_NOT_FAMILY_MEMBER: "Assignee is not a family member",
     DUTY_NOT_FOUND: "Duty not found",
     INVALID_DUTY_DATE: "The duty does not happen on {date}",
+    INVALID_DUTY_PAUSE: "A pause needs an end on or after its start, from today on",
+    DUTY_PAUSE_NOT_FOUND: "Pause not found",
     INVITATION_NOT_FOUND: "Invitation not found",
     INVITATION_INVALID: "Invalid invitation link",
     INVITATION_REVOKED: "Invitation has been revoked",

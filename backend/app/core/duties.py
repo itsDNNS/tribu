@@ -34,6 +34,8 @@ class Occurrence:
     assignee_id: Optional[int]
     skipped: bool
     is_exception: bool
+    # In a pause of the duty and not given to someone for this date.
+    paused: bool
     # The weekday's own time, else the duty's; None means the whole day.
     due_time: Optional[time]
 
@@ -50,6 +52,10 @@ def is_week_b(duty: Duty, day: date) -> bool:
     return (monday - duty.alternate_from).days // 7 % 2 == 1
 
 
+def in_pause(duty: Duty, day: date) -> bool:
+    return any(pause.start <= day <= pause.end for pause in duty.pauses)
+
+
 def occurrences(duty: Duty, start: date, days: int) -> list[Occurrence]:
     """The duty's dates in [start, start + days), with exceptions applied."""
     slots = {slot.weekday: slot for slot in duty.slots}
@@ -64,12 +70,15 @@ def occurrences(duty: Duty, start: date, days: int) -> list[Occurrence]:
         slot = slots[day.weekday()]
         default = slot.alternate_assigned_to_user_id if is_week_b(duty, day) else slot.assigned_to_user_id
         exc = exceptions.get(day)
+        # A person set for the date wins over a pause.
+        paused = not (exc and not exc.skipped) and in_pause(duty, day)
         result.append(Occurrence(
             duty=duty,
             date=day,
             default_assignee_id=default,
-            assignee_id=None if exc and exc.skipped else (exc.assigned_to_user_id if exc else default),
+            assignee_id=None if paused or (exc and exc.skipped) else (exc.assigned_to_user_id if exc else default),
             skipped=bool(exc and exc.skipped),
+            paused=paused,
             is_exception=exc is not None,
             due_time=slot.due_time or duty.due_time,
         ))
@@ -111,7 +120,7 @@ def sync_duty_tasks(
     changed: list[tuple[Task, str]] = []
     wanted = set()
     for occ in occurrences(duty, today, HORIZON_DAYS):
-        if occ.skipped:
+        if occ.skipped or occ.paused:
             continue
         wanted.add(occ.date)
         values = {
@@ -174,7 +183,8 @@ def remember_task_change(db: Session, task: Task, *, deleted: bool = False) -> N
     )
     duty = db.get(Duty, task.duty_id)
     usual = occurrences(duty, task.duty_date, 1)
-    if not deleted and usual and usual[0].default_assignee_id == task.assigned_to_user_id:
+    # Inside a pause even the usual person needs the exception, or the date stays paused.
+    if not deleted and usual and usual[0].default_assignee_id == task.assigned_to_user_id and not in_pause(duty, task.duty_date):
         if exc is not None:
             db.delete(exc)
         return
@@ -221,10 +231,10 @@ def forget_member(db: Session, family_id: int, user_id: int) -> None:
 
 
 def week_summary(db: Session, family_id: int, monday: date) -> list[Occurrence]:
-    """The family's duty dates of the week from ``monday`` that are not skipped."""
+    """The family's duty dates of the week from ``monday`` that are not skipped or paused."""
     return [
         occ
         for duty in db.query(Duty).filter(Duty.family_id == family_id).order_by(Duty.id)
         for occ in occurrences(duty, monday, 7)
-        if not occ.skipped
+        if not occ.skipped and not occ.paused
     ]

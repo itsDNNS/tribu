@@ -1622,6 +1622,14 @@
   "module.duties.week_b": "Tjedan B",
   "module.duties.day_time": "Vrijeme: {weekday}",
   "module.duties.day_time_hint": "Dodirnite vrijeme dana kako biste tom danu dali vlastito vrijeme.",
+  "module.duties.pause_named": "Pauziraj: {title}",
+  "module.duties.pause_from": "Od",
+  "module.duties.pause_to": "Do",
+  "module.duties.pause_hint": "U tom razdoblju nema zadataka, na primjer tijekom školskih praznika. Tko je upisan za pojedini dan, ipak to radi.",
+  "module.duties.paused": "Pauzirano",
+  "module.duties.end_pause": "Završi pauzu {range}",
+  "module.duties.pause_saved": "Pauza spremljena",
+  "module.duties.pause_ended": "Pauza završena",
   "module.templates.name": "Predlošci",
   "module.templates.subtitle": "Višekratni planovi za rutine, zadatke i kupovinu.",
   "module.templates.gallery": "Ugrađena galerija",
@@ -2293,5 +2301,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Stranicu trgovine nije moguće učitati. Poklon možeš upisati sam.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Ovu adresu nije moguće pročitati.",
   "error.DUTY_NOT_FOUND": "Obveza nije pronađena",
-  "error.INVALID_DUTY_DATE": "Obveza nije na {date}"
+  "error.INVALID_DUTY_DATE": "Obveza nije na {date}",
+  "error.INVALID_DUTY_PAUSE": "Pauza mora završiti na dan početka ili kasnije, od danas.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pauza nije pronađena"
 }

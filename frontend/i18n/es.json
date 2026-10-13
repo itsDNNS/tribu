@@ -1626,6 +1626,14 @@
   "module.duties.week_b": "Semana B",
   "module.duties.day_time": "Hora el {weekday}",
   "module.duties.day_time_hint": "Toca la hora de un día para darle una hora propia.",
+  "module.duties.pause_named": "Pausar {title}",
+  "module.duties.pause_from": "Desde",
+  "module.duties.pause_to": "Hasta",
+  "module.duties.pause_hint": "Sin tareas durante este tiempo, por ejemplo en vacaciones escolares. Quien esté puesto para un día concreto lo sigue haciendo.",
+  "module.duties.paused": "En pausa",
+  "module.duties.end_pause": "Terminar la pausa {range}",
+  "module.duties.pause_saved": "Pausa guardada",
+  "module.duties.pause_ended": "Pausa terminada",
   "module.templates.name": "Plantillas",
   "module.templates.subtitle": "Planes reutilizables para rutinas, tareas y compras.",
   "module.templates.gallery": "Galería integrada",
@@ -2302,5 +2310,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "No se pudo cargar la página de la tienda. Puedes añadir el regalo tú mismo.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Esta dirección no se puede leer.",
   "error.DUTY_NOT_FOUND": "Turno no encontrado",
-  "error.INVALID_DUTY_DATE": "El turno no tiene lugar el {date}"
+  "error.INVALID_DUTY_DATE": "El turno no tiene lugar el {date}",
+  "error.INVALID_DUTY_PAUSE": "Una pausa necesita un final igual o posterior al inicio, a partir de hoy.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pausa no encontrada"
 }

@@ -958,6 +958,14 @@ export function apiResetDutyDate(dutyId, dateIso) {
   return del(`/duties/${dutyId}/exceptions/${dateIso}`);
 }
 
+export function apiCreateDutyPause(dutyId, payload) {
+  return post(`/duties/${dutyId}/pauses`, payload);
+}
+
+export function apiDeleteDutyPause(dutyId, pauseId) {
+  return del(`/duties/${dutyId}/pauses/${pauseId}`);
+}
+
 // School timetables
 export function apiListSchoolTimetables(familyId) {
   const params = new URLSearchParams({ family_id: String(familyId) });

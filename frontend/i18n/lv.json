@@ -1622,6 +1622,14 @@
   "module.duties.week_b": "B nedēļa",
   "module.duties.day_time": "Laiks: {weekday}",
   "module.duties.day_time_hint": "Pieskarieties dienas laikam, lai tai dienai iestatītu savu laiku.",
+  "module.duties.pause_named": "Apturēt: {title}",
+  "module.duties.pause_from": "No",
+  "module.duties.pause_to": "Līdz",
+  "module.duties.pause_hint": "Šajā laikā uzdevumi netiek veidoti, piemēram, skolas brīvlaikā. Kas ierakstīts uz atsevišķu dienu, to tomēr dara.",
+  "module.duties.paused": "Apturēts",
+  "module.duties.end_pause": "Beigt pauzi {range}",
+  "module.duties.pause_saved": "Pauze saglabāta",
+  "module.duties.pause_ended": "Pauze beigta",
   "module.templates.name": "Veidnes",
   "module.templates.subtitle": "Atkārtoti lietojami rutīnas, uzdevumu un iepirkšanās plāni.",
   "module.templates.gallery": "Iebūvēta galerija",
@@ -2293,5 +2301,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Veikala lapu neizdevās ielādēt. Dāvanu vari ierakstīt pats.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Šo adresi nevar nolasīt.",
   "error.DUTY_NOT_FOUND": "Pienākums nav atrasts",
-  "error.INVALID_DUTY_DATE": "Pienākums nav {date}"
+  "error.INVALID_DUTY_DATE": "Pienākums nav {date}",
+  "error.INVALID_DUTY_PAUSE": "Pauzei jābeidzas sākuma dienā vai vēlāk, sākot no šodienas.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pauze nav atrasta"
 }

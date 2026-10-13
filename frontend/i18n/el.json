@@ -1623,6 +1623,14 @@
   "module.duties.week_b": "Εβδομάδα Β",
   "module.duties.day_time": "Ώρα: {weekday}",
   "module.duties.day_time_hint": "Πατήστε την ώρα μιας ημέρας για να της δώσετε δική της ώρα.",
+  "module.duties.pause_named": "Παύση: {title}",
+  "module.duties.pause_from": "Από",
+  "module.duties.pause_to": "Έως",
+  "module.duties.pause_hint": "Χωρίς καθήκοντα σε αυτό το διάστημα, για παράδειγμα στις σχολικές διακοπές. Όποιος έχει οριστεί για μια συγκεκριμένη ημέρα το κάνει κανονικά.",
+  "module.duties.paused": "Σε παύση",
+  "module.duties.end_pause": "Λήξη παύσης {range}",
+  "module.duties.pause_saved": "Η παύση αποθηκεύτηκε",
+  "module.duties.pause_ended": "Η παύση έληξε",
   "module.templates.name": "Πρότυπα",
   "module.templates.subtitle": "Επαναχρησιμοποιήσιμα σχέδια για ρουτίνες, εργασίες και αγορές.",
   "module.templates.gallery": "Ενσωματωμένη γκαλερί",
@@ -2295,5 +2303,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Η σελίδα του καταστήματος δεν φόρτωσε. Μπορείς να συμπληρώσεις το δώρο μόνος σου.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Αυτή η διεύθυνση δεν μπορεί να διαβαστεί.",
   "error.DUTY_NOT_FOUND": "Η υποχρέωση δεν βρέθηκε",
-  "error.INVALID_DUTY_DATE": "Η υποχρέωση δεν γίνεται στις {date}"
+  "error.INVALID_DUTY_DATE": "Η υποχρέωση δεν γίνεται στις {date}",
+  "error.INVALID_DUTY_PAUSE": "Μια παύση πρέπει να λήγει την ημέρα έναρξης ή αργότερα, από σήμερα.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Η παύση δεν βρέθηκε"
 }

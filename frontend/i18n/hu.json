@@ -1621,6 +1621,14 @@
   "module.duties.week_b": "B hét",
   "module.duties.day_time": "Időpont: {weekday}",
   "module.duties.day_time_hint": "Koppints egy nap időpontjára, hogy saját időpontot adj neki.",
+  "module.duties.pause_named": "{title} szüneteltetése",
+  "module.duties.pause_from": "Ettől",
+  "module.duties.pause_to": "Eddig",
+  "module.duties.pause_hint": "Ebben az időszakban nem jönnek létre feladatok, például a szünidőben. Aki egy adott napra be van írva, mégis megcsinálja.",
+  "module.duties.paused": "Szünetel",
+  "module.duties.end_pause": "Szünet befejezése: {range}",
+  "module.duties.pause_saved": "Szünet mentve",
+  "module.duties.pause_ended": "Szünet befejezve",
   "module.templates.name": "Sablonok",
   "module.templates.subtitle": "Újrafelhasználható tervek rutinokhoz, feladatokhoz és vásárláshoz.",
   "module.templates.gallery": "Beépített galéria",
@@ -2291,5 +2299,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "A bolt oldalát nem sikerült betölteni. Az ajándékot kézzel is kitöltheted.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Ez a cím nem olvasható be.",
   "error.DUTY_NOT_FOUND": "A teendő nem található",
-  "error.INVALID_DUTY_DATE": "A teendő nem esik erre a napra: {date}"
+  "error.INVALID_DUTY_DATE": "A teendő nem esik erre a napra: {date}",
+  "error.INVALID_DUTY_PAUSE": "A szünetnek a kezdőnapon vagy utána kell végződnie, mától.",
+  "error.DUTY_PAUSE_NOT_FOUND": "A szünet nem található"
 }

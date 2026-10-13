@@ -1648,6 +1648,14 @@
   "module.duties.week_b": "Week B",
   "module.duties.day_time": "Time on {weekday}",
   "module.duties.day_time_hint": "Tap a day's time to give that day a time of its own.",
+  "module.duties.pause_named": "Pause {title}",
+  "module.duties.pause_from": "From",
+  "module.duties.pause_to": "To",
+  "module.duties.pause_hint": "No tasks during this time, for example in school holidays. A person set for a single date still does it.",
+  "module.duties.paused": "Paused",
+  "module.duties.end_pause": "End pause {range}",
+  "module.duties.pause_saved": "Pause saved",
+  "module.duties.pause_ended": "Pause ended",
   "module.templates.name": "Templates",
   "module.templates.subtitle": "Reusable plans for routines, tasks, and shopping.",
   "module.templates.gallery": "Built-in gallery",
@@ -2302,5 +2310,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "The shop's page could not be loaded. You can fill in the gift yourself.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "This address cannot be read.",
   "error.DUTY_NOT_FOUND": "Duty not found",
-  "error.INVALID_DUTY_DATE": "The duty does not happen on {date}"
+  "error.INVALID_DUTY_DATE": "The duty does not happen on {date}",
+  "error.INVALID_DUTY_PAUSE": "A pause needs an end on or after its start, from today on.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pause not found"
 }

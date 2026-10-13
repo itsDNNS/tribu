@@ -1624,6 +1624,14 @@
   "module.duties.week_b": "B-nädal",
   "module.duties.day_time": "Kellaaeg: {weekday}",
   "module.duties.day_time_hint": "Puuduta päeva kellaaega, et anda sellele päevale oma kellaaeg.",
+  "module.duties.pause_named": "Peata: {title}",
+  "module.duties.pause_from": "Alates",
+  "module.duties.pause_to": "Kuni",
+  "module.duties.pause_hint": "Sel ajal ülesandeid ei teki, näiteks koolivaheajal. Kes on konkreetseks päevaks määratud, teeb selle siiski.",
+  "module.duties.paused": "Peatatud",
+  "module.duties.end_pause": "Lõpeta paus {range}",
+  "module.duties.pause_saved": "Paus salvestatud",
+  "module.duties.pause_ended": "Paus lõpetatud",
   "module.templates.name": "Mallid",
   "module.templates.subtitle": "Korduvkasutatavad plaanid rutiinide, ülesannete ja ostude jaoks.",
   "module.templates.gallery": "Sisseehitatud galerii",
@@ -2295,5 +2303,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Poe lehte ei õnnestunud laadida. Saad kingituse ise kirja panna.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Seda aadressi ei saa lugeda.",
   "error.DUTY_NOT_FOUND": "Kohustust ei leitud",
-  "error.INVALID_DUTY_DATE": "Kohustust pole {date}"
+  "error.INVALID_DUTY_DATE": "Kohustust pole {date}",
+  "error.INVALID_DUTY_PAUSE": "Paus peab lõppema alguspäeval või hiljem, alates tänasest.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pausi ei leitud"
 }

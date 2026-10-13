@@ -1625,6 +1625,14 @@
   "module.duties.week_b": "Седмица Б",
   "module.duties.day_time": "Час: {weekday}",
   "module.duties.day_time_hint": "Докоснете часа на ден, за да му зададете собствен час.",
+  "module.duties.pause_named": "Пауза: {title}",
+  "module.duties.pause_from": "От",
+  "module.duties.pause_to": "До",
+  "module.duties.pause_hint": "През това време не се създават задачи, например през ваканцията. Който е определен за отделен ден, пак го прави.",
+  "module.duties.paused": "На пауза",
+  "module.duties.end_pause": "Край на паузата {range}",
+  "module.duties.pause_saved": "Паузата е запазена",
+  "module.duties.pause_ended": "Паузата е приключена",
   "module.templates.name": "Шаблони",
   "module.templates.subtitle": "Планове за многократна употреба за рутини, задачи и пазаруване.",
   "module.templates.gallery": "Вградена галерия",
@@ -2297,5 +2305,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Страницата на магазина не можа да се зареди. Можеш да попълниш подаръка сам.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Този адрес не може да бъде прочетен.",
   "error.DUTY_NOT_FOUND": "Задължението не е намерено",
-  "error.INVALID_DUTY_DATE": "Задължението не се пада на {date}"
+  "error.INVALID_DUTY_DATE": "Задължението не се пада на {date}",
+  "error.INVALID_DUTY_PAUSE": "Паузата трябва да свършва в деня на началото или след него, от днес нататък.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Паузата не е намерена"
 }

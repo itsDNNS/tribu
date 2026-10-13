@@ -1626,6 +1626,14 @@
   "module.duties.week_b": "Settimana B",
   "module.duties.day_time": "Ora di {weekday}",
   "module.duties.day_time_hint": "Tocca l'ora di un giorno per dargli un orario tutto suo.",
+  "module.duties.pause_named": "Metti in pausa {title}",
+  "module.duties.pause_from": "Dal",
+  "module.duties.pause_to": "Al",
+  "module.duties.pause_hint": "Nessun compito in questo periodo, ad esempio durante le vacanze scolastiche. Chi è indicato per un singolo giorno lo fa comunque.",
+  "module.duties.paused": "In pausa",
+  "module.duties.end_pause": "Termina la pausa {range}",
+  "module.duties.pause_saved": "Pausa salvata",
+  "module.duties.pause_ended": "Pausa terminata",
   "module.templates.name": "Modelli",
   "module.templates.subtitle": "Piani riutilizzabili per routine, attività e acquisti.",
   "module.templates.gallery": "Galleria incorporata",
@@ -2302,5 +2310,7 @@
   "error.GIFT_PREVIEW_UNREACHABLE": "Impossibile caricare la pagina del negozio. Puoi inserire il regalo a mano.",
   "error.GIFT_PREVIEW_NOT_ALLOWED": "Questo indirizzo non può essere letto.",
   "error.DUTY_NOT_FOUND": "Turno non trovato",
-  "error.INVALID_DUTY_DATE": "Il turno non c'è il {date}"
+  "error.INVALID_DUTY_DATE": "Il turno non c'è il {date}",
+  "error.INVALID_DUTY_PAUSE": "Una pausa deve finire nel giorno d'inizio o dopo, da oggi in poi.",
+  "error.DUTY_PAUSE_NOT_FOUND": "Pausa non trovata"
 }

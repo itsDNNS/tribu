@@ -175,3 +175,16 @@ def test_a_grown_up_in_two_families_hears_from_each_with_duties(monkeypatch):
     with TestSession() as db:
         families = {n.family_id for n in db.query(Notification).filter(Notification.user_id == people["ben"])}
         assert busy_id in families and len(families) == 2
+
+
+def test_paused_dates_do_not_count_in_the_heads_up(monkeypatch):
+    from app.models import DutyPause
+
+    people = _seed()
+    with TestSession() as db:
+        duty = db.query(Duty).one()
+        db.add(DutyPause(duty_id=duty.id, start=date(2026, 12, 14), end=date(2026, 12, 15)))
+        db.commit()
+
+    by_user = {call["uid"]: call["body"] for call in _run(monkeypatch, SUNDAY_EVENING)}
+    assert by_user == {people["ben"]: "For you: 2 of 2"}, "Anna's Monday and Tuesday are paused"
