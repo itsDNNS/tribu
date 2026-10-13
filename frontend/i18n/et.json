@@ -1622,6 +1622,8 @@
   "module.duties.this_week_is": "See nädal on",
   "module.duties.week_a": "A-nädal",
   "module.duties.week_b": "B-nädal",
+  "module.duties.day_time": "Kellaaeg: {weekday}",
+  "module.duties.day_time_hint": "Puuduta päeva kellaaega, et anda sellele päevale oma kellaaeg.",
   "module.templates.name": "Mallid",
   "module.templates.subtitle": "Korduvkasutatavad plaanid rutiinide, ülesannete ja ostude jaoks.",
   "module.templates.gallery": "Sisseehitatud galerii",

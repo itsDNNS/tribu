@@ -17,6 +17,15 @@ export function isoDate(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+// The own time of each day to save: only from a day's open time field, and
+// only when it differs from the duty's time (a closed field keeps no value).
+export function dayTimes(days, openWeekdays, dutyTime) {
+  return Object.fromEntries(Object.entries(days).map(([weekday, day]) => {
+    const own = openWeekdays.has(Number(weekday)) && day.time && day.time !== dutyTime ? day.time : null;
+    return [weekday, own];
+  }));
+}
+
 // "15:30:00" from the API as the user's clock shows it.
 export function formatDutyTime(value, locale, timeFormat = '24h') {
   if (!value) return null;

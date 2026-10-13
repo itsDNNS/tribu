@@ -1619,6 +1619,8 @@
   "module.duties.this_week_is": "Tento týždeň je",
   "module.duties.week_a": "Týždeň A",
   "module.duties.week_b": "Týždeň B",
+  "module.duties.day_time": "Čas: {weekday}",
+  "module.duties.day_time_hint": "Ťuknutím na čas dňa mu nastavíte vlastný čas.",
   "module.templates.name": "Šablóny",
   "module.templates.subtitle": "Opätovne použiteľné plány pre rutiny, úlohy a nakupovanie.",
   "module.templates.gallery": "Vstavaná galéria",

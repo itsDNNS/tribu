@@ -1624,6 +1624,8 @@
   "module.duties.this_week_is": "Cette semaine est",
   "module.duties.week_a": "Semaine A",
   "module.duties.week_b": "Semaine B",
+  "module.duties.day_time": "Heure le {weekday}",
+  "module.duties.day_time_hint": "Touche l'heure d'un jour pour lui donner sa propre heure.",
   "module.templates.name": "Modèles",
   "module.templates.subtitle": "Plans réutilisables pour les routines, les tâches et les courses.",
   "module.templates.gallery": "Galerie intégrée",

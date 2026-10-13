@@ -1623,6 +1623,8 @@
   "module.duties.this_week_is": "Тази седмица е",
   "module.duties.week_a": "Седмица А",
   "module.duties.week_b": "Седмица Б",
+  "module.duties.day_time": "Час: {weekday}",
+  "module.duties.day_time_hint": "Докоснете часа на ден, за да му зададете собствен час.",
   "module.templates.name": "Шаблони",
   "module.templates.subtitle": "Планове за многократна употреба за рутини, задачи и пазаруване.",
   "module.templates.gallery": "Вградена галерия",

@@ -1645,6 +1645,8 @@
   "module.duties.this_week_is": "Diese Woche ist",
   "module.duties.week_a": "Woche A",
   "module.duties.week_b": "Woche B",
+  "module.duties.day_time": "Uhrzeit am {weekday}",
+  "module.duties.day_time_hint": "Tippe auf die Uhrzeit eines Tages, um ihm eine eigene Uhrzeit zu geben.",
   "module.templates.name": "Vorlagen",
   "module.templates.subtitle": "Wiederverwendbare Pläne für Routinen, Aufgaben und Einkauf.",
   "module.templates.gallery": "Vorlagen-Galerie",

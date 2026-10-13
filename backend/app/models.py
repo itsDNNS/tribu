@@ -362,6 +362,8 @@ class DutySlot(Base):
     assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     # Who does it in week B of a duty that alternates.
     alternate_assigned_to_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # Local time on this weekday when it differs from the duty's time.
+    due_time = Column(Time, nullable=True)
 
     duty = relationship("Duty", back_populates="slots")
 

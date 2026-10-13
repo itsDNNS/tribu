@@ -352,11 +352,38 @@ button.duty-row-main:hover { background: var(--color-surface-hover); }
 .duty-current { margin-left: auto; color: var(--color-accent); }
 .duty-day-row {
   display: grid;
-  grid-template-columns: minmax(8em, 1fr) minmax(0, 1.4fr);
+  grid-template-columns: minmax(8em, 1fr) minmax(0, 1.4fr) 8.75em;
   align-items: center;
   gap: var(--space-2);
   min-height: 44px;
 }
 .duty-day-toggle { display: inline-flex; align-items: center; gap: var(--space-2); }
-.duty-day-row.duty-alternate { grid-template-columns: minmax(7em, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+.duty-day-row.duty-alternate { grid-template-columns: minmax(7em, 1fr) minmax(0, 1fr) minmax(0, 1fr) 8.75em; }
+/* A day's time: its usual time as a quiet button, or its own time field. */
+.duty-day-time-usual {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-body-small-size);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.duty-day-time-usual:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.duty-day-time { min-width: 0; }
+/* On phones a day's time moves under the weekday, where it has room. */
+@media (max-width: 768px) {
+  .duty-day-row { grid-template-columns: minmax(7em, 1fr) minmax(0, 1.4fr); }
+  .duty-day-row.duty-alternate { grid-template-columns: minmax(6.5em, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .duty-day-row > .duty-day-time-usual,
+  .duty-day-row > .duty-day-time.form-input { grid-column: 1 / -1; justify-self: start; width: 8.75em; }
+  .duty-day-row > .duty-day-time-header { display: none; }
+}
 .duty-this-week { display: grid; gap: var(--space-1); }

@@ -1622,6 +1622,8 @@
   "module.duties.this_week_is": "Tämä viikko on",
   "module.duties.week_a": "Viikko A",
   "module.duties.week_b": "Viikko B",
+  "module.duties.day_time": "Aika: {weekday}",
+  "module.duties.day_time_hint": "Napauta päivän aikaa antaaksesi päivälle oman ajan.",
   "module.templates.name": "Mallit",
   "module.templates.subtitle": "Uudelleen käytettävät suunnitelmat rutiineja, tehtäviä ja ostoksia varten.",
   "module.templates.gallery": "Sisäänrakennettu galleria",

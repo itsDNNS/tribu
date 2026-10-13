@@ -1646,6 +1646,8 @@
   "module.duties.this_week_is": "This week is",
   "module.duties.week_a": "Week A",
   "module.duties.week_b": "Week B",
+  "module.duties.day_time": "Time on {weekday}",
+  "module.duties.day_time_hint": "Tap a day's time to give that day a time of its own.",
   "module.templates.name": "Templates",
   "module.templates.subtitle": "Reusable plans for routines, tasks, and shopping.",
   "module.templates.gallery": "Built-in gallery",

@@ -1619,6 +1619,8 @@
   "module.duties.this_week_is": "Ši savaitė yra",
   "module.duties.week_a": "A savaitė",
   "module.duties.week_b": "B savaitė",
+  "module.duties.day_time": "Laikas: {weekday}",
+  "module.duties.day_time_hint": "Bakstelėkite dienos laiką, kad tai dienai nustatytumėte atskirą laiką.",
   "module.templates.name": "Šablonai",
   "module.templates.subtitle": "Daugkartiniai kasdienybės, užduočių ir apsipirkimo planai.",
   "module.templates.gallery": "Įmontuota galerija",

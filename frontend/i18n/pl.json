@@ -1620,6 +1620,8 @@
   "module.duties.this_week_is": "Ten tydzień to",
   "module.duties.week_a": "Tydzień A",
   "module.duties.week_b": "Tydzień B",
+  "module.duties.day_time": "Godzina: {weekday}",
+  "module.duties.day_time_hint": "Dotknij godziny dnia, aby nadać mu własną godzinę.",
   "module.templates.name": "Szablony",
   "module.templates.subtitle": "Plany wielokrotnego użytku dla rutyn, zadań i zakupów.",
   "module.templates.gallery": "Wbudowana galeria",

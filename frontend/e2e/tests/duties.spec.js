@@ -79,4 +79,32 @@ test.describe('Weekly duties', () => {
     const sameDayNextWeek = nextWeek.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
     await expect(page.getByRole('button', { name: `Change Cook dinner on ${sameDayNextWeek}` })).toContainText('Nobody');
   });
+
+  test('a weekday can have its own time', async ({ authedPage: page, testUser }) => {
+    await openDuties(page);
+    await page.getByRole('button', { name: 'New duty' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New duty' });
+    await dialog.getByLabel('What needs doing').fill('School pickup');
+    await dialog.getByLabel('Time', { exact: true }).fill('15:30');
+    for (const day of ['Monday', 'Wednesday']) {
+      await dialog.getByRole('checkbox', { name: day }).check();
+      await dialog.getByLabel(`Who does it on ${day}`).selectOption({ label: testUser.displayName });
+    }
+    await dialog.getByRole('button', { name: 'Time on Wednesday: 15:30' }).click();
+    await dialog.getByLabel('Time on Wednesday').fill('12:00');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toHaveCount(0);
+
+    await expect(page.getByRole('region', { name: 'All duties' })).toContainText(`Mon ${testUser.displayName} · Wed 12:00 ${testUser.displayName}`);
+    // Next week's Wednesday is ahead on any day this test runs.
+    await page.getByRole('button', { name: 'Next week' }).click();
+    const wednesday = page.getByRole('button', { name: /^Change School pickup on Wednesday/ });
+    await expect(wednesday).toContainText('12:00');
+
+    // Opening the duty again shows the Wednesday time and the usual time for Monday.
+    await page.getByRole('button', { name: 'Edit School pickup' }).click();
+    const edit = page.getByRole('dialog', { name: 'Edit duty' });
+    await expect(edit.getByLabel('Time on Wednesday')).toHaveValue('12:00');
+    await expect(edit.getByRole('button', { name: 'Time on Monday: 15:30' })).toBeVisible();
+  });
 });

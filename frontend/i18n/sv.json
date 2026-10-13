@@ -1624,6 +1624,8 @@
   "module.duties.this_week_is": "Den här veckan är",
   "module.duties.week_a": "Vecka A",
   "module.duties.week_b": "Vecka B",
+  "module.duties.day_time": "Tid på {weekday}",
+  "module.duties.day_time_hint": "Tryck på en dags tid för att ge dagen en egen tid.",
   "module.templates.name": "Mallar",
   "module.templates.subtitle": "Återanvändbara planer för rutiner, uppgifter och shopping.",
   "module.templates.gallery": "Inbyggt galleri",

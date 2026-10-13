@@ -1623,6 +1623,8 @@
   "module.duties.this_week_is": "Deze week is",
   "module.duties.week_a": "Week A",
   "module.duties.week_b": "Week B",
+  "module.duties.day_time": "Tijd op {weekday}",
+  "module.duties.day_time_hint": "Tik op de tijd van een dag om die dag een eigen tijd te geven.",
   "module.templates.name": "Sjablonen",
   "module.templates.subtitle": "Herbruikbare plannen voor routines, taken en winkelen.",
   "module.templates.gallery": "Ingebouwde galerij",
