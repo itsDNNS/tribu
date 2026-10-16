@@ -98,6 +98,8 @@ export default function AuthPage() {
   const [msg, setMsg] = useState('');
   const [sso, setSso] = useState({ enabled: false, ready: false, button_label: '', password_login_disabled: false });
   const [ssoError, setSsoError] = useState('');
+  const [mfaToken, setMfaToken] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
 
   useEffect(() => {
     api.apiGetOidcPublicConfig().then(({ ok, data }) => {
@@ -129,6 +131,25 @@ export default function AuthPage() {
     setMsg('');
     const { ok, data } = await api.apiLogin(email, password);
     if (!ok) { setMsg(errorText(data?.detail, t(messages, 'toast.login_failed'), messages)); toastError(errorText(data?.detail, t(messages, 'toast.login_failed'), messages)); return; }
+    if (data?.status === 'mfa_required') {
+      setMfaToken(data.mfa_token);
+      setMfaCode('');
+      return;
+    }
+    setLoggedIn(true);
+  }
+
+  async function verifyMfa(e) {
+    e.preventDefault();
+    setMsg('');
+    const { ok, data } = await api.apiLoginMfa(mfaToken, mfaCode);
+    if (!ok) {
+      const text = errorText(data?.detail, t(messages, 'toast.login_failed'), messages);
+      setMsg(text);
+      toastError(text);
+      if (data?.detail?.code === 'MFA_CHALLENGE_INVALID') setMfaToken('');
+      return;
+    }
     setLoggedIn(true);
   }
 
@@ -246,7 +267,20 @@ export default function AuthPage() {
               <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{ssoError}</p>
             )}
 
-            {!passwordOnly && (authMode === 'login' ? (
+            {!passwordOnly && (authMode === 'login' ? (mfaToken ? (
+              <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
+                <form onSubmit={verifyMfa} className="auth-form" data-testid="mfa-login-form">
+                  <p>{t(messages, 'auth.mfa_desc')}</p>
+                  <div className="form-field">
+                    <label htmlFor="login-mfa-code">{t(messages, 'two_step.code_or_recovery')}</label>
+                    <input id="login-mfa-code" className="form-input" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} autoComplete="one-time-code" spellCheck={false} maxLength={32} required autoFocus />
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'auth.mfa_recovery_hint')}</small>
+                  </div>
+                  <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
+                  <button className="btn-secondary" type="button" onClick={() => { setMfaToken(''); setMsg(''); }}>{t(messages, 'auth.mfa_back')}</button>
+                </form>
+              </div>
+            ) : (
               <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
                 <form onSubmit={login} className="auth-form">
                   <div className="form-field">
@@ -260,7 +294,7 @@ export default function AuthPage() {
                   <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
                 </form>
               </div>
-            ) : (
+            )) : (
               <div role="tabpanel" id="panel-register" aria-labelledby="tab-register">
                 <form onSubmit={register} className="auth-form">
                   <div className="form-field">

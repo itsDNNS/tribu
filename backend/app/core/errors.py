@@ -8,6 +8,14 @@ UNAUTHENTICATED = "UNAUTHENTICATED"
 USER_NOT_FOUND = "USER_NOT_FOUND"
 INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
 OLD_PASSWORD_INCORRECT = "OLD_PASSWORD_INCORRECT"
+MFA_REQUIRED = "MFA_REQUIRED"
+MFA_CODE_INVALID = "MFA_CODE_INVALID"
+MFA_CHALLENGE_INVALID = "MFA_CHALLENGE_INVALID"
+MFA_TOO_MANY_ATTEMPTS = "MFA_TOO_MANY_ATTEMPTS"
+MFA_ALREADY_ENABLED = "MFA_ALREADY_ENABLED"
+MFA_NOT_ENABLED = "MFA_NOT_ENABLED"
+MFA_SETUP_EXPIRED = "MFA_SETUP_EXPIRED"
+PASSWORD_INCORRECT = "PASSWORD_INCORRECT"
 
 # ── Authorization ─────────────────────────────────────────────
 NO_FAMILY_ACCESS = "NO_FAMILY_ACCESS"
@@ -29,6 +37,7 @@ CANNOT_CHANGE_OWN_ADULT = "CANNOT_CHANGE_OWN_ADULT"
 CANNOT_REMOVE_SELF = "CANNOT_REMOVE_SELF"
 CANNOT_MODIFY_INSTANCE_ADMIN = "CANNOT_MODIFY_INSTANCE_ADMIN"
 CANNOT_RESET_OWN_PASSWORD = "CANNOT_RESET_OWN_PASSWORD"
+CANNOT_RESET_OWN_MFA = "CANNOT_RESET_OWN_MFA"
 LAST_ADMIN = "LAST_ADMIN"
 INVALID_CONFIRMATION = "INVALID_CONFIRMATION"
 COLOR_NOT_ALLOWED = "COLOR_NOT_ALLOWED"
@@ -180,6 +189,14 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     USER_NOT_FOUND: "User not found",
     INVALID_CREDENTIALS: "Invalid credentials",
     OLD_PASSWORD_INCORRECT: "Old password is incorrect",
+    MFA_REQUIRED: "Enter the code from your authenticator app",
+    MFA_CODE_INVALID: "The code is not valid",
+    MFA_CHALLENGE_INVALID: "The sign-in took too long. Please sign in again.",
+    MFA_TOO_MANY_ATTEMPTS: "Too many wrong codes. Please wait 15 minutes and try again.",
+    MFA_ALREADY_ENABLED: "Two-step sign-in is already turned on",
+    MFA_NOT_ENABLED: "Two-step sign-in is not turned on",
+    MFA_SETUP_EXPIRED: "The setup took too long. Please start again.",
+    PASSWORD_INCORRECT: "Password is incorrect",
     NO_FAMILY_ACCESS: "No access to this family",
     ADULT_REQUIRED: "Adult permission required",
     ADMIN_REQUIRED: "Admin role required",
@@ -197,6 +214,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     LAST_ADMIN: "Cannot leave: you are the only admin. Transfer admin role first",
     INVALID_CONFIRMATION: "Type DELETE to confirm account deletion",
     CANNOT_RESET_OWN_PASSWORD: "Cannot reset your own password here",
+    CANNOT_RESET_OWN_MFA: "Turn your own two-step sign-in off in your settings",
     COLOR_NOT_ALLOWED: "Color not in allowed palette",
     COLOR_ALREADY_TAKEN: "Color already taken by another member",
     TASK_NOT_FOUND: "Task not found",

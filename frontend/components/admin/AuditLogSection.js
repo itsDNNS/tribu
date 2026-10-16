@@ -10,6 +10,7 @@ const ACTION_KEYS = {
   member_created: 'audit_action_member_created',
   member_removed: 'audit_action_member_removed',
   password_reset: 'audit_action_password_reset',
+  mfa_reset: 'audit_action_mfa_reset',
   role_changed: 'audit_action_role_changed',
   adult_changed: 'audit_action_adult_changed',
   invite_created: 'audit_action_invite_created',

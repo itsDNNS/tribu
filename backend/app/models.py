@@ -1,7 +1,7 @@
 
 from app.core.clock import utcnow, utcnow_aware
 
-from sqlalchemy import CheckConstraint, Column, Date, Float, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
+from sqlalchemy import BigInteger, CheckConstraint, Column, Date, Float, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -25,11 +25,27 @@ class User(Base):
     must_change_password = Column(Boolean, nullable=False, default=False, server_default="false")
     has_completed_onboarding = Column(Boolean, nullable=False, default=False, server_default="false")
     session_invalidated_at = Column(DateTime(timezone=True), nullable=True)
+    # Second login step (app.core.mfa); the secret is only set once a code confirmed it.
+    totp_secret = Column(String(64), nullable=True)
+    mfa_enabled_at = Column(DateTime(timezone=True), nullable=True)
+    totp_last_step = Column(BigInteger, nullable=True)
+    mfa_failed_attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    mfa_last_failed_at = Column(DateTime(timezone=True), nullable=True)
 
     memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
     personal_access_tokens = relationship("PersonalAccessToken", back_populates="user", cascade="all, delete-orphan")
     oidc_identities = relationship("OIDCIdentity", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+    mfa_recovery_codes = relationship("MfaRecoveryCode", cascade="all, delete-orphan")
+
+
+class MfaRecoveryCode(Base):
+    """A single-use code that replaces the authenticator app once."""
+    __tablename__ = "mfa_recovery_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    code_lookup = Column(String(64), nullable=False)
 
 
 class UserSession(Base):

@@ -1358,6 +1358,12 @@ button.contact-row:hover { background: var(--surface-soft); }
 .set-password-form { display: grid; gap: var(--space-md); max-width: 420px; }
 .set-password-form .btn-primary { justify-self: start; }
 .set-password-error { font-size: 0.82rem; color: var(--danger); padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); }
+.two-step-state { margin-left: auto; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; color: var(--text-muted); border: 1px solid var(--border-subtle); text-transform: none; }
+.two-step-state.on { color: var(--success); border-color: currentColor; }
+.two-step-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.two-step-secret { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; color: var(--text-primary); overflow-wrap: anywhere; }
+.two-step-codes { list-style: none; margin: 0; padding: var(--space-md); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px var(--space-md); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; }
+.two-step-check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); }
 .set-danger-section { border-color: var(--error, #ef4444); }
 .set-danger-title { color: var(--error, #ef4444); }
 .set-danger-block { margin-bottom: var(--space-lg); }

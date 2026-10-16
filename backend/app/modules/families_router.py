@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session, joinedload, aliased
 
-from app.core import cache
+from app.core import cache, mfa
 from app.core.contact_birthdays import sync_contact_birthday, sync_member_birthday
 from app.core.deps import current_user, ensure_adult, ensure_family_admin, ensure_family_membership
 from app.core.duties import forget_member
@@ -12,7 +12,7 @@ from app.database import get_db
 from app.models import AuditLog, Contact, Family, FamilyBirthday, Membership, User
 from app.schemas import AUTH_RESPONSES, CONFLICT_RESPONSE, NOT_FOUND_RESPONSE, AuditLogEntry, CreateMemberRequest, CreateMemberResponse, FamilyAreasResponse, FamilyAreasUpdate, FamilyMemberResponse, FamilyShoppingCategoriesResponse, FamilyShoppingCategoriesUpdate, FamilySummary, MemberAdultUpdate, MemberBirthdateUpdate, MemberColorUpdate, MemberRoleUpdate, PaginatedAuditLog, ProfileImageUpdate, ResetPasswordResponse
 from app.security import generate_temp_password, hash_password
-from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, USER_NOT_FOUND, UNKNOWN_AREAS, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN, PROFILE_IMAGE_UNREADABLE
+from app.core.errors import error_detail, NOT_A_MEMBER, COLOR_NOT_ALLOWED, COLOR_ALREADY_TAKEN, INVALID_ROLE, ONLY_ADULTS_ADMIN, EMAIL_ALREADY_EXISTS, MEMBER_NOT_FOUND, CANNOT_CHANGE_OWN_ADULT, CANNOT_DEMOTE_SELF, CANNOT_RESET_OWN_PASSWORD, CANNOT_RESET_OWN_MFA, MFA_NOT_ENABLED, USER_NOT_FOUND, UNKNOWN_AREAS, CANNOT_REMOVE_SELF, CANNOT_MODIFY_INSTANCE_ADMIN, PROFILE_IMAGE_UNREADABLE
 from app.core.avatars import AvatarError, set_profile_image
 
 router = APIRouter(prefix="/families", tags=["families"], responses={**AUTH_RESPONSES})
@@ -458,6 +458,48 @@ def reset_member_password(
         user_id=target_user.id,
         temporary_password=temp_password,
     )
+
+
+@router.post(
+    "/{family_id}/members/{target_user_id}/reset-mfa",
+    summary="Reset member two-step sign-in",
+    description=(
+        "Turn two-step sign-in off for a family member who lost their authenticator app and recovery codes. "
+        "They sign in with their password again and can set it up anew. Cannot reset your own. "
+        "Admin role required. Scope: `families:write`."
+    ),
+    response_description="Two-step sign-in turned off",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def reset_member_mfa(
+    family_id: int,
+    target_user_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("families:write"),
+):
+    ensure_family_admin(db, user.id, family_id)
+
+    if target_user_id == user.id:
+        raise HTTPException(status_code=400, detail=error_detail(CANNOT_RESET_OWN_MFA))
+
+    membership = db.query(Membership).filter(
+        Membership.family_id == family_id,
+        Membership.user_id == target_user_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail=error_detail(MEMBER_NOT_FOUND))
+
+    target_user = db.query(User).filter(User.id == target_user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail=error_detail(USER_NOT_FOUND))
+    if not mfa.mfa_enabled(target_user):
+        raise HTTPException(status_code=400, detail=error_detail(MFA_NOT_ENABLED))
+
+    mfa.disable_mfa(db, target_user)
+    _audit(db, family_id, user.id, "mfa_reset", target_user_id=target_user_id)
+    db.commit()
+    return {"status": "ok", "user_id": target_user_id}
 
 
 @router.delete(

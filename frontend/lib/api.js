@@ -1,5 +1,8 @@
 const API = '/api';
 
+// A 401 from these is the answer itself, not an expired session.
+const NO_REFRESH_PATHS = new Set(['/auth/refresh', '/auth/login', '/auth/login/mfa', '/auth/logout']);
+
 let refreshInFlight = null;
 let logoutInFlight = false;
 
@@ -21,7 +24,7 @@ async function request(path, options = {}, allowRefresh = true) {
   let data;
   try { data = await res.json(); } catch { data = null; }
 
-  if (res.status === 401 && allowRefresh && !logoutInFlight && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
+  if (res.status === 401 && allowRefresh && !logoutInFlight && !NO_REFRESH_PATHS.has(path)) {
     await refreshSession();
     if (!logoutInFlight) return request(path, options, false);
   }
@@ -32,7 +35,7 @@ async function request(path, options = {}, allowRefresh = true) {
 async function rawRequest(path, options = {}, allowRefresh = true) {
   const res = await fetch(`${API}${path}`, { credentials: 'include', ...options });
 
-  if (res.status === 401 && allowRefresh && !logoutInFlight && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
+  if (res.status === 401 && allowRefresh && !logoutInFlight && !NO_REFRESH_PATHS.has(path)) {
     await refreshSession();
     if (!logoutInFlight) return rawRequest(path, options, false);
   }
@@ -75,6 +78,10 @@ export function apiLogin(email, password) {
   return post('/auth/login', { email, password });
 }
 
+export function apiLoginMfa(mfa_token, code) {
+  return post('/auth/login/mfa', { mfa_token, code });
+}
+
 export function apiRegister(email, password, display_name, family_name) {
   return post('/auth/register', { email, password, display_name, family_name });
 }
@@ -99,6 +106,22 @@ export function apiUpdateProfileImage(profile_image) {
 
 export function apiChangePassword(old_password, new_password) {
   return patch('/auth/me/password', { old_password, new_password });
+}
+
+export function apiGetMfaStatus() {
+  return request('/auth/me/mfa');
+}
+
+export function apiStartMfaSetup(password) {
+  return post('/auth/me/mfa/setup', { password });
+}
+
+export function apiConfirmMfa(setup_token, code) {
+  return post('/auth/me/mfa/confirm', { setup_token, code });
+}
+
+export function apiDisableMfa(password, code) {
+  return post('/auth/me/mfa/disable', { password, code });
 }
 
 export function apiCompleteOnboarding() {
@@ -136,6 +159,10 @@ export function apiCreateMember(familyId, payload) {
 
 export function apiResetMemberPassword(familyId, userId) {
   return post(`/families/${familyId}/members/${userId}/reset-password`);
+}
+
+export function apiResetMemberMfa(familyId, userId) {
+  return post(`/families/${familyId}/members/${userId}/reset-mfa`);
 }
 
 export function apiRemoveMember(familyId, userId) {
