@@ -13,6 +13,7 @@ We will acknowledge reports within 48 hours and provide a timeline for fixes.
 | Password storage | bcrypt (legacy PBKDF2-SHA256 hashes are verified and auto-rehashed on login) |
 | Password policy | Minimum 8 characters with at least 1 uppercase letter and 1 digit (enforced via Pydantic schema validation) |
 | Authentication | httpOnly cookie (JWT HS256), Bearer token fallback for API testing |
+| Two-step sign-in | Optional authenticator app codes (TOTP, RFC 6238) for password logins, 10 single-use recovery codes stored as hashes, 5 wrong codes pause the second step for 15 minutes. A family admin can reset it for a member; `python -m app.reset_mfa <email>` in the backend container resets it for anyone. Single sign-on accounts use the identity provider's MFA. |
 | Rate limiting | 10/min for registration, 20/min for login (slowapi) |
 | CORS | Restricted to `localhost`, `127.0.0.1`, and `192.168.x.x` via regex |
 | Data isolation | All queries filtered by `family_id` with membership verification |

@@ -19,6 +19,10 @@ jest.mock('../../components/settings/SecuritySection', () => function SecuritySe
   return <section aria-label="Security panel">Security panel</section>;
 });
 
+jest.mock('../../components/settings/TwoStepSection', () => function TwoStepSection() {
+  return null;
+});
+
 jest.mock('../../lib/api', () => ({
   apiDeleteAccount: jest.fn(),
   apiLeaveFamily: jest.fn(),

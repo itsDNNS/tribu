@@ -90,6 +90,48 @@ class MobileLoginResponse(BaseModel):
     must_change_password: bool = Field(False, description="True if user must change their temporary password")
 
 
+class MfaLoginRequest(BaseModel):
+    """Finish a sign-in with the second step."""
+    mfa_token: str = Field(..., max_length=2048, description="Challenge token returned by the password step")
+    code: str = Field(..., min_length=6, max_length=32, description="6-digit authenticator code or a recovery code")
+
+
+class MfaStatusResponse(BaseModel):
+    """Two-step sign-in state of the current user."""
+    enabled: bool = Field(..., description="True if sign-in asks for an authenticator code")
+    available: bool = Field(..., description="False for accounts without a local password (single sign-on only)")
+    recovery_codes_remaining: int = Field(0, description="Unused recovery codes")
+
+
+class MfaPasswordRequest(BaseModel):
+    """Confirm the current password before starting the setup."""
+    password: str = Field(..., max_length=128, description="Current password")
+
+
+class MfaSetupResponse(BaseModel):
+    """Secret for the authenticator app, valid until confirmed or expired."""
+    secret: str = Field(..., description="Base32 secret for manual entry")
+    otpauth_uri: str = Field(..., description="otpauth:// URI to show as a QR code")
+    setup_token: str = Field(..., description="Pass back with the first code to turn two-step sign-in on")
+
+
+class MfaConfirmRequest(BaseModel):
+    """Turn two-step sign-in on with the first code from the app."""
+    setup_token: str = Field(..., max_length=2048, description="Token from the setup step")
+    code: str = Field(..., min_length=6, max_length=16, description="6-digit authenticator code")
+
+
+class MfaRecoveryCodesResponse(BaseModel):
+    """Single-use recovery codes, shown only once."""
+    recovery_codes: list[str] = Field(..., description="Recovery codes")
+
+
+class MfaDisableRequest(BaseModel):
+    """Turn two-step sign-in off."""
+    password: str = Field(..., max_length=128, description="Current password")
+    code: str = Field(..., min_length=6, max_length=32, description="6-digit authenticator code or a recovery code")
+
+
 class OIDCMobileExchangeRequest(BaseModel):
     """Exchange a short-lived native OIDC callback code for bearer tokens."""
     code: str = Field(..., min_length=20, description="Short-lived code returned to the native app callback URL")

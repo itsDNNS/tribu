@@ -7,6 +7,7 @@ import { t } from '../../lib/i18n';
 import { COLOR_PALETTE } from '../../lib/member-colors';
 import * as api from '../../lib/api';
 import SecuritySection from './SecuritySection';
+import TwoStepSection from './TwoStepSection';
 
 const MIN_BIRTHDATE = '1900-01-01';
 
@@ -178,6 +179,7 @@ export default function AccountTab() {
 
       {/* Security */}
       <SecuritySection />
+      <TwoStepSection />
 
       {/* Danger Zone */}
       <div className="settings-section set-danger-section">

@@ -34,10 +34,11 @@ from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.core.errors import (
     error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT,
     LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED,
-    OPEN_REGISTRATION_DISABLED, SETUP_RESTORE_TOKEN_REQUIRED,
+    OPEN_REGISTRATION_DISABLED, SETUP_RESTORE_TOKEN_REQUIRED, MFA_REQUIRED,
     SETUP_RESTORE_TOKEN_INVALID, SETUP_RESTORE_UPLOAD_TOO_LARGE, PROFILE_IMAGE_UNREADABLE,
 )
 from app.core.avatars import AvatarError, set_profile_image
+from app.core import mfa
 from app.core import oidc as oidc_core
 from app.database import get_db, SessionLocal
 from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User, UserSession
@@ -61,6 +62,7 @@ from app.modules.notifications_router import router as notifications_router
 from app.modules.nav_router import router as nav_router
 from app.modules.invitations_router import router as invitations_router, public_router as invitations_public_router, settings_router as invitations_settings_router
 from app.modules.oidc_auth_router import router as oidc_auth_router
+from app.modules.mfa_router import router as mfa_router
 from app.modules.oidc_router import router as oidc_admin_router
 from app.modules.setup_router import router as setup_router
 from app.modules.search_router import router as search_router
@@ -462,6 +464,8 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     description=(
         "Authenticate with email and password. "
         "Sets an httpOnly JWT cookie on success. "
+        "With two-step sign-in turned on, returns `status: mfa_required` and an `mfa_token` "
+        "for `POST /auth/login/mfa` instead. "
         "Rate limited to 20 requests per minute. No authentication required."
     ),
     responses={401: {"model": ErrorResponse, "description": "Invalid credentials"}},
@@ -476,6 +480,9 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
 
+    if mfa.mfa_enabled(user):
+        return JSONResponse(content={"status": "mfa_required", "mfa_token": mfa.create_login_challenge(user)})
+
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
     issue_session_cookies(response, db, user)
     db.commit()
@@ -489,6 +496,8 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     description=(
         "Authenticate a native mobile client with email and password. "
         "Returns a bearer token for Authorization header use instead of browser cookies. "
+        "With two-step sign-in turned on, fails with 401 `MFA_REQUIRED` whose `params.mfa_token` "
+        "goes to `POST /auth/mobile-login/mfa`. "
         "Rate limited to 20 requests per minute. No authentication required."
     ),
     response_model=MobileLoginResponse,
@@ -503,6 +512,10 @@ def mobile_login(request: Request, payload: LoginRequest, db: Session = Depends(
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
+
+    if mfa.mfa_enabled(user):
+        # An error rather than a new success shape, so older apps that expect tokens fail clearly.
+        raise HTTPException(status_code=401, detail=error_detail(MFA_REQUIRED, mfa_token=mfa.create_login_challenge(user)))
 
     refresh_token = issue_refresh_session(db, user)
     db.commit()
@@ -841,6 +854,7 @@ app.include_router(invitations_public_router)
 app.include_router(invitations_settings_router)
 app.include_router(oidc_admin_router)
 app.include_router(oidc_auth_router)
+app.include_router(mfa_router)
 app.include_router(setup_router)
 app.include_router(search_router)
 app.include_router(rewards_router)

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ImagePlus, KeyRound, Trash2 } from "lucide-react";
+import { ImagePlus, KeyRound, ShieldOff, Trash2 } from "lucide-react";
 import { useApp } from "../../contexts/AppContext";
+import { useToast } from "../../contexts/ToastContext";
 import * as api from "../../lib/api";
 import { errorText } from "../../lib/helpers";
 import { t } from "../../lib/i18n";
@@ -15,6 +16,7 @@ export default function MemberEditor({
   onPassword,
 }) {
   const { familyId, members, me, messages, demoMode } = useApp();
+  const { success: toastSuccess } = useToast();
   const member = members.find((m) => m.user_id === memberId);
   const creating = memberId === null;
   const own = memberId === me?.user_id;
@@ -95,7 +97,10 @@ export default function MemberEditor({
     try {
       if (dangerAction === "remove")
         await request(api.apiRemoveMember(familyId, memberId));
-      else {
+      else if (dangerAction === "reset_mfa") {
+        await request(api.apiResetMemberMfa(familyId, memberId));
+        toastSuccess(t(messages, "mfa_reset_done"));
+      } else {
         const data = await request(
           api.apiResetMemberPassword(familyId, memberId),
         );
@@ -269,6 +274,14 @@ export default function MemberEditor({
               </button>
               <button
                 type="button"
+                className="fam-button"
+                onClick={() => setDangerAction("reset_mfa")}
+              >
+                <ShieldOff size={14} />
+                {t(messages, "reset_mfa")}
+              </button>
+              <button
+                type="button"
                 className="fam-button danger"
                 onClick={() => setDangerAction("remove")}
               >
@@ -286,7 +299,11 @@ export default function MemberEditor({
               <p>
                 {dangerAction === "remove"
                   ? t(messages, "remove_member_confirm")
-                  : copy("reset_confirm")}
+                  : copy(
+                      dangerAction === "reset_mfa"
+                        ? "reset_mfa_confirm"
+                        : "reset_confirm",
+                    )}
               </p>
               <button
                 type="button"
