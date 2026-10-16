@@ -25,6 +25,8 @@ jest.mock('../../lib/i18n', () => ({
 
 jest.mock('../../lib/helpers', () => ({
   errorText: (detail, fallback) => detail?.code || fallback,
+  copyTextToClipboard: jest.fn().mockResolvedValue(true),
+  downloadBlob: jest.fn(),
 }));
 
 const SETUP = { secret: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', otpauth_uri: 'otpauth://totp/Tribu:a?secret=ABC', setup_token: 'setup-token' };
@@ -60,6 +62,11 @@ describe('TwoStepSection', () => {
     expect(await screen.findByTestId('display-pairing-qr')).toBeInTheDocument();
     expect(screen.getByText('ABCD EFGH IJKL MNOP QRST UVWX YZ23 4567')).toBeInTheDocument();
     expect(api.apiStartMfaSetup).toHaveBeenCalledWith('Secure1Pass');
+    // On the phone itself there is nothing to scan: the key goes straight to the authenticator.
+    expect(screen.getByRole('link', { name: 'two_step.open_app' })).toHaveAttribute('href', SETUP.otpauth_uri);
+    const helpers = require('../../lib/helpers');
+    fireEvent.click(screen.getByRole('button', { name: 'two_step.copy_key' }));
+    await waitFor(() => expect(helpers.copyTextToClipboard).toHaveBeenCalledWith(SETUP.secret));
 
     fireEvent.change(screen.getByLabelText('two_step.code_label'), { target: { value: '000000' } });
     fireEvent.click(screen.getByRole('button', { name: 'two_step.confirm' }));
@@ -70,6 +77,10 @@ describe('TwoStepSection', () => {
 
     expect(await screen.findByTestId('two-step-recovery-codes')).toHaveTextContent('aaaaa-bbbbb');
     expect(api.apiConfirmMfa).toHaveBeenLastCalledWith('setup-token', '123456');
+    fireEvent.click(screen.getByRole('button', { name: 'two_step.copy_codes' }));
+    await waitFor(() => expect(helpers.copyTextToClipboard).toHaveBeenLastCalledWith('aaaaa-bbbbb\nccccc-ddddd'));
+    fireEvent.click(screen.getByRole('button', { name: 'two_step.download' }));
+    expect(helpers.downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'tribu-recovery-codes.txt');
     const done = screen.getByRole('button', { name: 'two_step.done' });
     expect(done).toBeDisabled();
 

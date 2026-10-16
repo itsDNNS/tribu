@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { errorText } from '../../lib/helpers';
+import { copyTextToClipboard, downloadBlob, errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import DisplayPairingQr from '../admin/DisplayPairingQr';
@@ -93,13 +93,11 @@ export default function TwoStepSection() {
   };
 
   function downloadCodes() {
-    const blob = new Blob([`${recoveryCodes.join('\n')}\n`], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'tribu-recovery-codes.txt';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([`${recoveryCodes.join('\n')}\n`], { type: 'text/plain' }), 'tribu-recovery-codes.txt');
+  }
+
+  async function copy(value) {
+    if (await copyTextToClipboard(value)) toastSuccess(t(messages, 'token_copied'));
   }
 
   const passwordField = (
@@ -185,6 +183,11 @@ export default function TwoStepSection() {
           <p className="set-field-hint">
             {t(messages, 'two_step.manual')} <code className="two-step-secret">{setup.secret.match(/.{1,4}/g).join(' ')}</code>
           </p>
+          {/* Setting up in the installed app on the same phone: nothing to scan, so hand the key to the authenticator directly. */}
+          <div className="two-step-actions">
+            <a className="btn-secondary" href={setup.otpauth_uri}>{t(messages, 'two_step.open_app')}</a>
+            <button type="button" className="btn-secondary" onClick={() => copy(setup.secret)}>{t(messages, 'two_step.copy_key')}</button>
+          </div>
           {codeField('two_step.code_label')}
           {error && <div className="set-password-error" role="alert">{error}</div>}
           <div className="two-step-actions">
@@ -203,6 +206,7 @@ export default function TwoStepSection() {
           </ul>
           <div className="two-step-actions">
             <button type="button" className="btn-secondary" onClick={downloadCodes}>{t(messages, 'two_step.download')}</button>
+            <button type="button" className="btn-secondary" onClick={() => copy(recoveryCodes.join('\n'))}>{t(messages, 'two_step.copy_codes')}</button>
           </div>
           <label className="two-step-check">
             <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />
