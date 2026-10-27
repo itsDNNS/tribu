@@ -86,6 +86,7 @@ The README keeps one current visual proof asset: the Shared Home Display above. 
 | Find things fast | Global search across household data |
 | Put it on a shared screen | Pairable Shared Home Display with read-only display tokens |
 | Keep phones connected | CalDAV/CardDAV sync for calendars and contacts, plus opt-in VTODO task sync |
+| Take it everywhere | Installable web app for phones, tablets, and foldables like iPhone Duo, Galaxy Z Fold, and Pixel Fold; folding or unfolding keeps your place |
 | Automate the household | Home Assistant package, webhooks, scoped API tokens |
 | Run it yourself | Docker Compose, GHCR images, backup docs, reverse proxy docs, MIT license |
 | Use it in your language | 24 UI languages |

@@ -65,16 +65,22 @@ describe('AppProvider bootstrap', () => {
     api.connectNotificationStream.mockReturnValue({ close: jest.fn() });
   });
 
-  test('treats the 768px CSS breakpoint as mobile runtime state', async () => {
-    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 768 });
-
-    render(
-      <AppProvider>
-        <Probe />
-      </AppProvider>,
-    );
-
-    await waitFor(() => expect(screen.getByTestId('is-mobile')).toHaveTextContent('mobile'));
+  test('follows the 768px CSS breakpoint even when innerWidth is stale after folding', async () => {
+    const listeners = [];
+    const mobileQuery = { matches: true, addEventListener: (_type, fn) => listeners.push(fn), removeEventListener: jest.fn() };
+    const original = window.matchMedia;
+    window.matchMedia = jest.fn((media) => (media === '(max-width: 768px)' ? mobileQuery : { matches: false }));
+    // Unfolding an iPhone Duo: the shell CSS is already wide while innerWidth still reports the cover display.
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 382 });
+    try {
+      render(<AppProvider><Probe /></AppProvider>);
+      await waitFor(() => expect(screen.getByTestId('is-mobile')).toHaveTextContent('mobile'));
+      mobileQuery.matches = false;
+      act(() => listeners.forEach((fn) => fn()));
+      await waitFor(() => expect(screen.getByTestId('is-mobile')).toHaveTextContent('desktop'));
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   test('applies dark theme through data-theme without exposing a generated ui object', async () => {

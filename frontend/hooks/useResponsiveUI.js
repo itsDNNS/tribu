@@ -20,6 +20,9 @@ export function usePlannerLayout() {
   return { ref, compact };
 }
 
+// Only a focused field opens the on-screen keyboard; folding or rotating also shrinks the visual viewport for a moment.
+const isEditing = () => !!document.activeElement?.matches?.('input, textarea, select, [contenteditable="true"]');
+
 export function useVisualViewport() {
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -34,7 +37,7 @@ export function useVisualViewport() {
       );
       document.body.classList.toggle(
         'ui-keyboard',
-        innerHeight - (viewport?.height || innerHeight) > 130,
+        isEditing() && innerHeight - (viewport?.height || innerHeight) > 130,
       );
     };
     sync();
