@@ -342,10 +342,6 @@ export function AppProvider({ children }) {
     };
     window.addEventListener('popstate', onPopState);
 
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    onResize();
-    window.addEventListener('resize', onResize);
-
     api.apiGetMe().then(async ({ ok, data: meData }) => {
       if (ok && meData) {
         setMe(meData);
@@ -359,7 +355,6 @@ export function AppProvider({ children }) {
     });
 
     return () => {
-      window.removeEventListener('resize', onResize);
       window.removeEventListener('popstate', onPopState);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -380,6 +375,16 @@ export function AppProvider({ children }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', resolvedTheme);
   }, [resolvedTheme]);
+
+  useEffect(() => {
+    // Same query as the CSS shell: while a foldable folds, iOS can fire the last resize with a stale innerWidth.
+    const query = window.matchMedia?.('(max-width: 768px)');
+    if (!query) return undefined;
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
 
   useEffect(() => {
     const query = window.matchMedia?.('(prefers-color-scheme: dark)');

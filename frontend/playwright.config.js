@@ -42,5 +42,11 @@ module.exports = defineConfig({
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 7'] },
     },
+    {
+      // Foldables run Safari on iPhone Duo, so the fold sequences also run in WebKit.
+      name: 'Desktop WebKit',
+      testMatch: /foldables\.spec\.js/,
+      use: { ...devices['Desktop Safari'] },
+    },
   ],
 });
