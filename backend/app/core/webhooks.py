@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
 import urllib.error
 import urllib.request
@@ -11,7 +12,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from sqlalchemy.orm import Session
 
-from app.core.calendar_subscriptions import IcsSubscriptionError, validate_http_url_route
+from app.core.calendar_subscriptions import IcsSubscriptionError, hostname_from_url, validate_http_url_route
 from app.core.utils import utcnow
 from app.models import WebhookDelivery, WebhookEndpoint
 
@@ -80,8 +81,15 @@ def _webhook_network_error_name(exc: BaseException) -> str:
     return exc.__class__.__name__
 
 
+def _webhook_allowed_hosts() -> set[str]:
+    raw = os.getenv("WEBHOOK_ALLOWED_HOSTS", "")
+    return {part.strip().lower().strip("[]") for part in raw.split(",") if part.strip()}
+
+
 def _post_webhook_json(url: str, *, payload: dict[str, Any], headers: dict[str, str]) -> int:
-    safe_url = validate_http_url_route(url, allow_private_networks=False)
+    # Only hosts the operator lists may resolve to private addresses, such as Home Assistant on the same network.
+    allow_private = hostname_from_url(url) in _webhook_allowed_hosts()
+    safe_url = validate_http_url_route(url, allow_private_networks=allow_private)
     request = urllib.request.Request(
         safe_url,
         data=json.dumps(payload).encode("utf-8"),
