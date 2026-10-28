@@ -474,3 +474,42 @@ def test_webhook_delivery_blocks_private_network_targets(monkeypatch):
     assert body["status"] == "failed"
     assert body["delivery"]["error"] == "NetworkTargetNotAllowed"
     assert called["opened"] is False
+
+
+def test_webhook_delivery_reaches_private_hosts_only_when_listed(monkeypatch):
+    import socket
+
+    from app.core import calendar_subscriptions
+    from app.core import webhooks as webhooks_core
+    from app.core.calendar_subscriptions import IcsSubscriptionError
+
+    opened = []
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class FakeOpener:
+        def open(self, request, *, timeout):
+            opened.append(request.full_url)
+            return FakeResponse()
+
+    def lan_dns(host, port, *args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.168.1.50", port))]
+
+    monkeypatch.setattr(calendar_subscriptions.socket, "getaddrinfo", lan_dns)
+    monkeypatch.setattr(webhooks_core, "_WEBHOOK_OPENER", FakeOpener())
+    monkeypatch.setenv("WEBHOOK_ALLOWED_HOSTS", " HomeAssistant.lan , 10.0.0.9")
+
+    status = webhooks_core._post_webhook_json("https://homeassistant.lan/api/webhook/abc", payload={}, headers={})
+    assert status == 200
+    assert opened == ["https://homeassistant.lan/api/webhook/abc"]
+
+    with pytest.raises(IcsSubscriptionError):
+        webhooks_core._post_webhook_json("https://router.lan/admin", payload={}, headers={})
+    assert len(opened) == 1

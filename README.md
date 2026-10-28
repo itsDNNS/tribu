@@ -191,6 +191,7 @@ Set `TZ` when you want family calendar times, task due dates, reminder windows, 
 | `CORS_ALLOW_LAN_ORIGINS` | Optional `true` to allow `192.168.x.x` browser origins when you deliberately expose the backend on a LAN. |
 | `TRUSTED_PROXY_CIDRS` | Optional comma-separated proxy CIDRs whose `X-Forwarded-For` header may be used for login/register rate-limit keys. Leave unset unless a trusted reverse proxy sits in front of the backend. |
 | `SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS` | Optional `true` to let ICS calendar subscriptions fetch private/LAN feed URLs such as a self-hosted calendar server. Leave `false` unless you trust the feed targets. |
+| `WEBHOOK_ALLOWED_HOSTS` | Optional comma-separated hosts on your network that webhooks may reach, for example `homeassistant.lan,192.168.1.50`. List each host exactly as it appears in the webhook URL. Other private or local addresses stay blocked. |
 
 Generate the values and write them into `.env`:
 
