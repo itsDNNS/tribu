@@ -104,7 +104,7 @@ def _collection_family(segment: str) -> tuple[str | None, int | None]:
 
 
 class Rights(BaseRights):
-    def authorization(self, user: str, path: str) -> str:  # noqa: D401
+    def authorization(self, user: str, user_groups: set, path: str) -> str:  # noqa: D401
         if not user:
             return ""
         ctx_user = getattr(_context, "user", None)
