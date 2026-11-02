@@ -865,7 +865,11 @@ def _sync_report(client, path, auth, token=""):
         "REPORT", path, headers={**auth, "Depth": "1", "Content-Type": "application/xml"}, content=body
     )
     responses = re.findall(r"<response><href>([^<]*)</href>(.*?)</response>", resp.text, re.S)
-    changes = {href.rsplit("/", 1)[-1]: ("gone" if "404" in rest else "changed") for href, rest in responses}
+    # A removed member carries its own 404 status instead of a propstat; an ETag may contain "404" too.
+    changes = {
+        href.rsplit("/", 1)[-1]: ("gone" if rest.startswith("<status>HTTP/1.1 404") else "changed")
+        for href, rest in responses
+    }
     new_token = re.search(r"<sync-token>([^<]*)</sync-token>", resp.text)
     return resp.status_code, changes, new_token.group(1) if new_token else None
 
