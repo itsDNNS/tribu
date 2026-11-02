@@ -9,7 +9,7 @@ def teardown_function():
 
 def _auth(scopes, path, family_ids=(1,)):
     remember_scopes(USER, 1, set(scopes), set(family_ids))
-    return Rights({}).authorization(USER, path)
+    return Rights({}).authorization(USER, set(), path)
 
 
 def test_calendar_scope_only_authorizes_calendar_collection():
