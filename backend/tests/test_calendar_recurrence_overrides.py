@@ -12,6 +12,7 @@ from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
+from icalendar import Calendar
 from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
@@ -211,7 +212,8 @@ class TestParser:
         ics = events_to_ics(rows)
 
         assert ics.count(f"UID:{SERIES_UID}") == 2
-        assert "RECURRENCE-ID:20261015T184500" in ics
+        changed = next(component for component in Calendar.from_ical(ics).walk("VEVENT") if component.get("RECURRENCE-ID"))
+        assert changed["RECURRENCE-ID"].dt.strftime("%Y%m%dT%H%M%S") == "20261015T184500"
 
 
 class TestSubscriptionImport:
@@ -765,7 +767,9 @@ class TestThisAndFuture:
 
         ics = events_to_ics(rows)
 
-        assert "RECURRENCE-ID;RANGE=THISANDFUTURE:20261026T180000" in ics
+        changed = next(component for component in Calendar.from_ical(ics).walk("VEVENT") if component.get("RECURRENCE-ID"))
+        assert changed["RECURRENCE-ID"].dt.strftime("%Y%m%dT%H%M%S") == "20261026T180000"
+        assert changed["RECURRENCE-ID"].params["RANGE"] == "THISANDFUTURE"
         assert ics.count("RRULE:") == 1
         assert ics.count("EXDATE") == 1
 

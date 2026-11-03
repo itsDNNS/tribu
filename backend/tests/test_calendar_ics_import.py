@@ -331,3 +331,6 @@ class TestExportMemberProjection:
         assert resp.status_code == 200, resp.text
         assert f"mailto:user-{user_id}@tribu.invalid" in resp.text
         assert "cal@example.com" not in resp.text
+        assert "BEGIN:VTIMEZONE" in resp.text
+        assert "TZID:Europe/Berlin" in resp.text
+        assert "DTSTART;TZID=Europe/Berlin:" in resp.text
