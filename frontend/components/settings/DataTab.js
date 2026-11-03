@@ -301,26 +301,24 @@ export default function DataTab() {
                 <p className="set-data-muted-info">{t(messages, 'module.calendar.managed_subscriptions_empty')}</p>
               )}
               {calendarSubscriptions.map((subscription) => (
-                <div key={subscription.id} className="set-data-block">
-                  <div className="set-data-flex-row">
-                    <div className="set-data-flex-grow">
-                      <strong>{subscription.name}</strong>
-                      <div><code>{subscription.source_url}</code></div>
-                      <p className="set-data-muted-info">
-                        {subscriptionStatusLabel(subscription)} · {formatSubscriptionCounts(subscription)}
-                        {subscription.last_sync_error ? ` · ${subscription.last_sync_error}` : ''}
-                      </p>
-                      {subscription.sync_history?.length > 0 && (
-                        <details>
-                          <summary>{t(messages, 'module.calendar.subscription_history')}</summary>
-                          <ul className="set-data-warning-list">
-                            {subscription.sync_history.map((sync) => (
-                              <li key={sync.id}>{sync.status}: {sync.created}/{sync.updated}/{sync.skipped}{sync.error_summary ? ` · ${sync.error_summary}` : ''}</li>
-                            ))}
-                          </ul>
-                        </details>
-                      )}
-                    </div>
+                <div key={subscription.id} className="set-data-block set-data-managed-feed">
+                  <strong>{subscription.name}</strong>
+                  <div className="set-data-managed-feed-url"><code>{subscription.source_url}</code></div>
+                  <p className="set-data-muted-info">
+                    {subscriptionStatusLabel(subscription)} · {formatSubscriptionCounts(subscription)}
+                    {subscription.last_sync_error ? ` · ${subscription.last_sync_error}` : ''}
+                  </p>
+                  {subscription.sync_history?.length > 0 && (
+                    <details>
+                      <summary>{t(messages, 'module.calendar.subscription_history')}</summary>
+                      <ul className="set-data-warning-list">
+                        {subscription.sync_history.map((sync) => (
+                          <li key={sync.id}>{sync.status}: {sync.created}/{sync.updated}/{sync.skipped}{sync.error_summary ? ` · ${sync.error_summary}` : ''}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                  <div className="set-data-managed-feed-actions">
                     <button className="btn-ghost set-data-no-shrink" type="button" disabled={subscriptionBusyId === subscription.id} onClick={() => handleRefreshManagedSubscription(subscription.id)}>
                       <RefreshCw size={14} /> {t(messages, 'module.calendar.subscription_refresh')}
                     </button>

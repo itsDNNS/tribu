@@ -1868,6 +1868,9 @@ button.contact-row:hover { background: var(--surface-soft); }
 .set-data-flex-row { display: flex; gap: var(--space-sm); align-items: center; }
 .set-data-flex-grow { flex: 1; }
 .set-data-no-shrink { flex-shrink: 0; }
+.set-data-managed-feed { min-width: 0; overflow-wrap: anywhere; }
+.set-data-managed-feed-url { overflow-wrap: anywhere; }
+.set-data-managed-feed-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-sm); }
 .set-data-hints-btn { font-size: 0.85rem; }
 .set-data-hints-content { margin-top: var(--space-sm); display: grid; gap: var(--space-md); font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
 .set-data-hint-para { margin: 4px 0 0; }
