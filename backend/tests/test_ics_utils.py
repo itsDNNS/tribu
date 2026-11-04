@@ -64,6 +64,37 @@ class TestEventsToIcs:
         finally:
             app_timezone.cache_clear()
 
+    def test_utc_alias_writes_utc_times_without_a_timezone_definition(self, monkeypatch):
+        from app.core.clock import app_timezone
+
+        monkeypatch.setenv("TZ", "Etc/UTC")
+        app_timezone.cache_clear()
+        try:
+            ics = events_to_ics([make_event()])
+            assert "DTSTART:20260310T140000Z" in ics
+            assert "BEGIN:VTIMEZONE" not in ics
+        finally:
+            app_timezone.cache_clear()
+
+    def test_unknown_client_tzid_does_not_break_the_export(self):
+        raw = "BEGIN:VEVENT\r\nX-CLIENT-START;TZID=Custom/Nowhere:20260310T140000\r\nEND:VEVENT\r\n"
+        ics = events_to_ics([make_event(raw_vevent=raw)])
+        assert "X-CLIENT-START;TZID=Custom/Nowhere:20260310T140000" in ics
+        assert "TZID:Custom/Nowhere" not in ics
+
+    def test_timezone_definitions_have_a_stable_order(self, monkeypatch):
+        from app.core.clock import app_timezone
+
+        monkeypatch.setenv("TZ", "Europe/Berlin")
+        app_timezone.cache_clear()
+        try:
+            raw = "BEGIN:VEVENT\r\nX-CLIENT-START;TZID=America/New_York:20260310T140000\r\nEND:VEVENT\r\n"
+            calendar = Calendar.from_ical(events_to_ics([make_event(raw_vevent=raw)]))
+            assert [str(tz["TZID"]) for tz in calendar.walk("VTIMEZONE")] == ["America/New_York", "Europe/Berlin"]
+            assert calendar.get_missing_tzids() == set()
+        finally:
+            app_timezone.cache_clear()
+
     def test_all_day_event(self):
         ev = make_event(
             all_day=True,

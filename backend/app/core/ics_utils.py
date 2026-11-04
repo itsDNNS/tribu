@@ -74,12 +74,12 @@ def _local_ical_datetime(value: datetime) -> datetime:
 
 
 @lru_cache(maxsize=8)
-def _vtimezone(tzid: str) -> Timezone:
+def _vtimezone(tzid: str) -> Optional[Timezone]:
     # Include a generous transition window for indefinitely recurring events.
-    return Timezone.from_tzinfo(
-        app_timezone(tzid), tzid=tzid,
-        first_date=date(2000, 1, 1), last_date=date(2100, 1, 1),
-    )
+    try:
+        return Timezone.from_tzid(tzid, first_date=date(2000, 1, 1), last_date=date(2100, 1, 1))
+    except ValueError:
+        return None  # a TZID from a client's own properties that no timezone database knows
 
 
 def events_to_ics(
@@ -182,9 +182,9 @@ def events_to_ics(
 
         cal.add_component(vevent)
 
-    if any(not ev.all_day for ev in events) and app_timezone().key != "UTC":
-        # Referenced timezone definitions precede the VEVENTs in the feed.
-        cal.subcomponents.insert(0, deepcopy(_vtimezone(app_timezone().key)))
+    # Referenced timezone definitions precede the VEVENTs, sorted so CalDAV ETags stay stable.
+    timezones = [_vtimezone(tzid) for tzid in sorted(cal.get_missing_tzids())]
+    cal.subcomponents[:0] = [deepcopy(timezone) for timezone in timezones if timezone is not None]
 
     return cal.to_ical().decode("utf-8")
 
