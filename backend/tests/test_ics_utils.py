@@ -1,6 +1,7 @@
 """Tests for ICS import/export utilities."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from types import SimpleNamespace
 
 from icalendar import Calendar
@@ -39,6 +40,29 @@ class TestEventsToIcs:
         assert "SUMMARY:Team Meeting" in ics
         assert "tribu-event-1@tribu.local" in ics
         assert "END:VCALENDAR" in ics
+
+    def test_timed_events_include_timezone_and_daylight_rules(self, monkeypatch):
+        from app.core.clock import app_timezone
+
+        monkeypatch.setenv("TZ", "Europe/Berlin")
+        app_timezone.cache_clear()
+        try:
+            winter = make_event(id=1, starts_at=datetime(2026, 1, 15, 7), ends_at=datetime(2026, 1, 15, 8))
+            summer = make_event(id=2, starts_at=datetime(2026, 7, 15, 7), ends_at=datetime(2026, 7, 15, 8))
+            ics = events_to_ics([winter, summer])
+            calendar = Calendar.from_ical(ics)
+            events = [component for component in calendar.walk("VEVENT")]
+
+            assert ics.count("BEGIN:VTIMEZONE") == 1
+            assert "TZID:Europe/Berlin" in ics
+            assert ics.count("DTSTART;TZID=Europe/Berlin:2026") == 2
+            assert calendar.get_missing_tzids() == set()
+            assert events[0].decoded("dtstart").utcoffset() == timedelta(hours=1)
+            assert events[1].decoded("dtstart").utcoffset() == timedelta(hours=2)
+            assert events[0].decoded("dtstart").astimezone(ZoneInfo("UTC")).hour == 6
+            assert events[1].decoded("dtstart").astimezone(ZoneInfo("UTC")).hour == 5
+        finally:
+            app_timezone.cache_clear()
 
     def test_all_day_event(self):
         ev = make_event(
@@ -517,7 +541,11 @@ class TestClientRoundTrip:
         assert valid[0]["recurrence"] == "weekly"
         assert valid[0]["recurrence_end"] == datetime(2026, 11, 9, 17, 0)
 
-    def test_timed_series_writes_exdate_and_until_with_a_time(self):
+    def test_timed_series_writes_exdate_and_until_with_a_time(self, monkeypatch):
+        from app.core.clock import app_timezone
+
+        monkeypatch.setenv("TZ", "Europe/Berlin")
+        app_timezone.cache_clear()
         ev = make_event(
             starts_at=datetime(2026, 10, 5, 17, 0),
             ends_at=datetime(2026, 10, 5, 18, 0),
@@ -525,9 +553,12 @@ class TestClientRoundTrip:
             recurrence_end=datetime(2026, 11, 9, 17, 0),
             excluded_dates=["2026-10-19"],
         )
-        out = events_to_ics([ev])
-        assert "EXDATE:20261019T170000" in out
-        assert "UNTIL=20261109T235959" in out
+        try:
+            out = events_to_ics([ev])
+            assert "EXDATE;TZID=Europe/Berlin:20261019T170000" in out
+            assert "UNTIL=20261109T225959Z" in out
+        finally:
+            app_timezone.cache_clear()
 
     def test_all_day_series_keeps_date_exdate_and_until(self):
         ev = make_event(

@@ -1,15 +1,17 @@
 """ICS (RFC 5545) import/export utilities for Tribu calendar events."""
 
 import re
-from datetime import datetime, date, time, timedelta
+from copy import deepcopy
+from datetime import UTC, datetime, date, time, timedelta
+from functools import lru_cache
 from typing import Mapping, Optional
 
-from app.core.clock import to_local_wall_naive
+from app.core.clock import app_timezone, to_local_wall_naive, to_utc_aware
 from app.core.recurrence import is_last_weekday_of_month, normalize_weekdays, weekday_position
 from app.core.utils import utcnow
 
 from dateutil.rrule import rrulestr
-from icalendar import Calendar, Event, vCalAddress, vText
+from icalendar import Calendar, Event, Timezone, vCalAddress, vText
 
 RECURRENCE_MAP = {
     "daily": "DAILY",
@@ -66,6 +68,20 @@ def _member_attendee(user_id: int, display_name: str) -> vCalAddress:
     return address
 
 
+def _local_ical_datetime(value: datetime) -> datetime:
+    """Give a stored wall-clock time its configured IANA timezone."""
+    return to_local_wall_naive(value).replace(tzinfo=app_timezone())
+
+
+@lru_cache(maxsize=8)
+def _vtimezone(tzid: str) -> Timezone:
+    # Include a generous transition window for indefinitely recurring events.
+    return Timezone.from_tzinfo(
+        app_timezone(tzid), tzid=tzid,
+        first_date=date(2000, 1, 1), last_date=date(2100, 1, 1),
+    )
+
+
 def events_to_ics(
     events,
     calendar_name="Tribu",
@@ -105,7 +121,7 @@ def events_to_ics(
             # A changed occurrence that repeats changes all following ones.
             vevent.add(
                 "recurrence-id",
-                recurrence_id.date() if ev.all_day else recurrence_id,
+                recurrence_id.date() if ev.all_day else _local_ical_datetime(recurrence_id),
                 parameters={"RANGE": "THISANDFUTURE"} if ev.recurrence else None,
             )
         vevent.add("summary", ev.title)
@@ -141,9 +157,9 @@ def events_to_ics(
             vevent.add("dtstart", dt_start)
             vevent.add("dtend", _all_day_end(dt_start, ev.ends_at))
         else:
-            vevent.add("dtstart", ev.starts_at)
+            vevent.add("dtstart", _local_ical_datetime(ev.starts_at))
             if ev.ends_at:
-                vevent.add("dtend", ev.ends_at)
+                vevent.add("dtend", _local_ical_datetime(ev.ends_at))
 
         # A changed occurrence follows the series' RRULE and EXDATEs.
         if ev.recurrence and ev.recurrence in RECURRENCE_MAP and recurrence_id is None:
@@ -158,13 +174,17 @@ def events_to_ics(
                 # EXDATE takes DTSTART's value type (RFC 5545 3.8.5.1);
                 # clients skip a date-only EXDATE on a timed series.
                 if not ev.all_day and isinstance(ev.starts_at, datetime):
-                    exdate = datetime.combine(exdate, ev.starts_at.time())
+                    exdate = _local_ical_datetime(datetime.combine(exdate, ev.starts_at.time()))
                 vevent.add("exdate", exdate)
 
         dtstamp = ev.created_at if ev.created_at else utcnow()
-        vevent.add("dtstamp", dtstamp)
+        vevent.add("dtstamp", to_utc_aware(dtstamp))
 
         cal.add_component(vevent)
+
+    if any(not ev.all_day for ev in events) and app_timezone().key != "UTC":
+        # Referenced timezone definitions precede the VEVENTs in the feed.
+        cal.subcomponents.insert(0, deepcopy(_vtimezone(app_timezone().key)))
 
     return cal.to_ical().decode("utf-8")
 
@@ -451,7 +471,7 @@ def _rrule(ev) -> dict:
         # UNTIL takes DTSTART's value type (RFC 5545 3.3.10); a timed
         # series runs through the whole last day.
         if not ev.all_day and isinstance(start, datetime):
-            until = datetime.combine(until, time(23, 59, 59))
+            until = _local_ical_datetime(datetime.combine(until, time(23, 59, 59))).astimezone(UTC)
         rrule["until"] = until
     return rrule
 

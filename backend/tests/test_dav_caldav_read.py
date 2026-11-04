@@ -16,6 +16,7 @@ import tempfile
 
 import pytest
 from fastapi.testclient import TestClient
+from icalendar import Calendar
 
 from app.database import Base, SessionLocal, engine
 from app.models import CalendarEvent, Family, Membership, PersonalAccessToken, User
@@ -786,7 +787,8 @@ class TestCalDAVChangedOccurrences:
         get = client.get(f"/dav/{EMAIL}/cal-{family_id}/choir.ics", headers=auth)
         assert get.status_code == 200, get.text
         assert get.text.count("BEGIN:VEVENT") == 2
-        assert "RECURRENCE-ID:20260812T180000" in get.text
+        changed = next(component for component in Calendar.from_ical(get.text).walk("VEVENT") if component.get("RECURRENCE-ID"))
+        assert changed["RECURRENCE-ID"].dt.strftime("%Y%m%dT%H%M%S") == "20260812T180000"
         listing = _propfind(client, f"/dav/{EMAIL}/cal-{family_id}/", headers=auth, depth="1")
         assert listing.text.count("choir.ics") == 1
         assert f"tribu-event-{rows[1].id}.ics" not in listing.text
@@ -828,7 +830,9 @@ class TestCalDAVChangedOccurrences:
             ("Choir (Thursdays)", "weekly", [3, 5]),
         ]
         get = client.get(f"/dav/{EMAIL}/cal-{family_id}/choir.ics", headers={"Authorization": _basic(EMAIL, token)})
-        assert "RECURRENCE-ID;RANGE=THISANDFUTURE:20260819T180000" in get.text
+        changed = next(component for component in Calendar.from_ical(get.text).walk("VEVENT") if component.get("RECURRENCE-ID"))
+        assert changed["RECURRENCE-ID"].dt.strftime("%Y%m%dT%H%M%S") == "20260819T180000"
+        assert changed["RECURRENCE-ID"].params["RANGE"] == "THISANDFUTURE"
         assert get.text.count("RRULE:") == 1
 
     def test_changed_occurrence_uid_cannot_hijack_another_resource(self, app_under_test, seeded):
