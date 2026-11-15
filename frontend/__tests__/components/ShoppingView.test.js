@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within, act } from '@testing-librar
 import '@testing-library/jest-dom';
 import ShoppingView from '../../components/ShoppingView';
 import { buildMessages } from '../../lib/i18n';
+import { UNDO_WINDOW_MS } from '../../lib/undo';
 let mockApp, mockShopping;
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockApp
@@ -416,7 +417,7 @@ test.each([[[]], [[{
     name: 'Online suchen'
   })).toBeNull();
 });
-test('store picker encodes names, protects the opener, contains focus and restores it on Escape', async () => {
+test('store picker encodes names, protects the opener and restores focus on Escape', async () => {
   setup({
     storeLinks: [{
       id: 1,
@@ -438,16 +439,10 @@ test('store picker encodes names, protects the opener, contains focus and restor
   expect(link).toHaveAttribute('target', '_blank');
   expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   expect(link).toHaveFocus();
-  fireEvent.keyDown(link, {
-    key: 'Tab',
-    shiftKey: true
-  });
-  expect(dialog().getByRole('button', {
-    name: 'Abbrechen'
-  })).toHaveFocus();
-  fireEvent.keyDown(document, {
-    key: 'Escape'
-  });
+  // Escape: the native modal dialog fires cancel.
+  fireEvent(screen.getByRole('dialog'), new Event('cancel', {
+    cancelable: true
+  }));
   expect(screen.queryByRole('dialog')).toBeNull();
   await waitFor(() => expect(details).toHaveFocus());
 });
@@ -1004,12 +999,12 @@ test('deleting a product can be undone and only then reaches the server', async 
     const undo = mockToastSuccess.mock.calls.at(-1)[1];
     act(() => undo.onClick());
     expect(screen.getByRole('checkbox', { name: /^Äpfel,/ })).toBeVisible();
-    act(() => { jest.advanceTimersByTime(12000); });
+    act(() => { jest.advanceTimersByTime(UNDO_WINDOW_MS * 2); });
     expect(mockShopping.deleteItem).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Details zu Äpfel' }));
     fireEvent.click(dialog().getByRole('button', { name: /Löschen/ }));
-    await act(async () => { jest.advanceTimersByTime(6000); });
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
     expect(mockShopping.deleteItem).toHaveBeenCalledWith(apple.id);
   } finally {
     jest.useRealTimers();

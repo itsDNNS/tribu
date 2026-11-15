@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { t } from '../../lib/i18n';
+import ModalDialog from '../ModalDialog';
 
 const SWIPE_CLOSE_DISTANCE = 90;
 
@@ -14,20 +15,11 @@ export default function BottomSheet({ title, messages, onClose, className = '', 
   closeRef.current = onClose;
 
   useEffect(() => {
-    const dialog = ref.current;
-    const previous = document.activeElement;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    dialog.showModal();
+    const dialog = ref.current.closest('dialog');
     // Keep the opening height while content changes so the sheet does not jump under the keyboard.
     if (keepHeight && dialog.offsetHeight) dialog.style.minHeight = `${dialog.offsetHeight}px`;
     // Focus the close button instead of a text field so the keyboard stays closed.
     dialog.querySelector('.ui-bottom-sheet-close')?.focus();
-    return () => {
-      dialog.close();
-      document.body.style.overflow = overflow;
-      if (previous?.isConnected) previous.focus({ preventScroll: true });
-    };
   }, [keepHeight]);
 
   const dragStart = (e) => {
@@ -47,22 +39,13 @@ export default function BottomSheet({ title, messages, onClose, className = '', 
   };
 
   return (
-    <dialog
-      ref={ref}
+    <ModalDialog
       className={`ui-bottom-sheet ${className}`}
       aria-labelledby={titleId}
       style={dragOffset ? { transform: `translateY(${dragOffset}px)`, transition: 'none' } : undefined}
-      onCancel={(e) => {
-        e.preventDefault();
-        closeRef.current();
-      }}
-      onClick={(e) => {
-        if (e.target !== e.currentTarget) return;
-        const r = e.currentTarget.getBoundingClientRect();
-        if (e.clientY < r.top || e.clientX < r.left || e.clientX > r.right) closeRef.current();
-      }}
+      onClose={onClose}
     >
-      <header className="ui-bottom-sheet-head" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
+      <header ref={ref} className="ui-bottom-sheet-head" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
         <span className="ui-bottom-sheet-grab" aria-hidden="true" />
         <h2 id={titleId}>{title}</h2>
         <button type="button" className="ui-bottom-sheet-close" aria-label={t(messages, 'close')} onClick={onClose}>
@@ -70,6 +53,6 @@ export default function BottomSheet({ title, messages, onClose, className = '', 
         </button>
       </header>
       <div className="ui-bottom-sheet-body">{children}</div>
-    </dialog>
+    </ModalDialog>
   );
 }

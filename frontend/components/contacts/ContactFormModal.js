@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { t } from '../../lib/i18n';
 import { monthName } from './contactUtils';
+import ModalDialog from '../ModalDialog';
+import { inBody } from '../inBody';
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -61,33 +62,11 @@ function DeleteButton({ onDelete, label, messages }) {
 }
 
 export default function ContactFormModal({ editing, draft, setDraft, onSubmit, onDelete, onClose, messages, locale }) {
-  const overlayRef = useRef(null);
-  const panelRef = useRef(null);
   const firstInputRef = useRef(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const change = (key) => (event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }));
 
-  useEffect(() => {
-    firstInputRef.current?.focus();
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') { onCloseRef.current(); return; }
-      if (e.key === 'Tab' && panelRef.current) {
-        const focusable = panelRef.current.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  return createPortal(
-    <div ref={overlayRef} className="contact-modal-overlay" onClick={(e) => e.target === overlayRef.current && onClose()}>
-      <div ref={panelRef} className="contact-modal-panel" role="dialog" aria-modal="true" aria-labelledby="contact-form-title">
+  return inBody(
+    <ModalDialog className="ui-modal contact-modal-panel" aria-labelledby="contact-form-title" onClose={onClose} initialFocusRef={firstInputRef}>
         <div className="modal-header">
           <h2 id="contact-form-title" className="modal-title">{t(messages, editing ? 'module.contacts.edit' : 'module.contacts.add')}</h2>
           <button type="button" onClick={onClose} className="btn-ghost modal-close" aria-label={t(messages, 'close')}>
@@ -139,8 +118,6 @@ export default function ContactFormModal({ editing, draft, setDraft, onSubmit, o
             <button type="submit" className="btn-primary">{t(messages, 'module.contacts.save')}</button>
           </div>
         </form>
-      </div>
-    </div>,
-    document.body,
+    </ModalDialog>,
   );
 }

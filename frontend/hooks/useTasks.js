@@ -3,7 +3,6 @@ import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { errorText, toIsoOrNull } from '../lib/helpers';
 import { t } from '../lib/i18n';
-import { announce } from '../lib/announce';
 import { localeForLang, weekStartIndex } from '../lib/dates';
 import { postponeTarget } from '../lib/taskGroups';
 import { nextDueDate } from '../lib/tasks/nextDue';
@@ -133,7 +132,6 @@ export function useTasks() {
         ? prev.filter((item) => item.id !== task.id)
         : prev.map((item) => (item.id === task.id ? { ...item, status: 'done' } : item))));
       toastSuccess(doneMessage, { label: t(messages, 'module.shopping.undo'), onClick: () => setTasks(before) });
-      announce(doneMessage);
       return;
     }
     setOverride(task.id, kind === 'delete' ? 'deleted' : 'done');
@@ -149,7 +147,6 @@ export function useTasks() {
         setOverride(task.id, null);
       },
     });
-    announce(doneMessage);
   }
 
   async function toggleTask(task) {
@@ -197,7 +194,6 @@ export function useTasks() {
     const message = t(messages, 'module.tasks.postponed')
       .replace('{when}', t(messages, `module.tasks.postpone_${option}`));
     toastSuccess(message, { label: t(messages, 'module.shopping.undo'), onClick: () => saveDue(task, before) });
-    announce(message);
   }
 
   function openCreate() {
@@ -240,7 +236,6 @@ export function useTasks() {
     closeEdit();
     const msg = t(messages, 'module.tasks.created');
     toastSuccess(msg);
-    announce(msg);
   }
 
   async function updateTask(e) {
@@ -270,7 +265,6 @@ export function useTasks() {
     if (stillSameTask) setEditForm(EMPTY_EDIT_FORM);
     const msg = t(messages, 'module.tasks.updated');
     toastSuccess(msg);
-    announce(msg);
   }
 
   return {

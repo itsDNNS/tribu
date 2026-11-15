@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { isImeComposing } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
+import ModalDialog from './ModalDialog';
 
 const MODULE_META = {
   calendar: { icon: Calendar, label: 'module.calendar.name', view: 'calendar' },
@@ -28,9 +29,6 @@ export default function SearchOverlay({ open, onClose, initialQuery = '', areas 
   const reqIdRef = useRef(0);
 
   useEffect(() => {
-    if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
     if (!open) {
       setQuery('');
       setResults(null);
@@ -71,10 +69,6 @@ export default function SearchOverlay({ open, onClose, initialQuery = '', areas 
     onClose();
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') onClose();
-  };
-
   if (!open) return null;
 
   const needle = normalize(query.trim());
@@ -83,8 +77,7 @@ export default function SearchOverlay({ open, onClose, initialQuery = '', areas 
   const noResults = results && Object.keys(results).length === 0 && query.length >= 2 && foundAreas.length === 0;
 
   return (
-    <div className="search-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
-      <div className="search-panel" role="dialog" aria-modal="true" aria-label={t(messages, 'search.placeholder')} onClick={(e) => e.stopPropagation()}>
+    <ModalDialog className="ui-modal search-panel" aria-label={t(messages, 'search.placeholder')} onClose={onClose} guardInput={false} initialFocusRef={inputRef}>
         <div className="search-header">
           <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
@@ -150,7 +143,6 @@ export default function SearchOverlay({ open, onClose, initialQuery = '', areas 
             );
           })}
         </div>
-      </div>
-    </div>
+    </ModalDialog>
   );
 }

@@ -49,7 +49,7 @@ test.describe('Today', () => {
       await expect(page.locator('.app-header-title')).toContainText(testUser.displayName.split(' ')[0]);
     }
     await page.locator('.app-header').getByRole('button', { name: /Search/i }).click();
-    await expect(page.locator('.search-overlay')).toBeVisible();
+    await expect(page.locator('.search-panel')).toBeVisible();
     await expect(page.getByPlaceholder(/Search|suchen/i)).toBeFocused();
   });
 

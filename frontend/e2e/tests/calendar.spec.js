@@ -266,15 +266,17 @@ test('restores day focus and page scrolling after changing dialog views', async 
     await expect(
       page.getByLabel('What is happening?', { exact: true }),
     ).toBeFocused();
-    expect(await page.evaluate(() => document.body.style.overflow)).toBe(
-      'hidden',
-    );
+    // Scroll stays contained by CSS; hiding the body overflow would shift the layout.
+    expect(
+      await page
+        .getByRole('dialog')
+        .evaluate((dialog) => getComputedStyle(dialog).overscrollBehaviorY),
+    ).toBe('contain');
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(trigger).toBeFocused();
-    expect(await page.evaluate(() => document.body.style.overflow)).not.toBe(
-      'hidden',
-    );
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
   } finally {
     await cleanup(apiCtx, [source?.id]);
   }

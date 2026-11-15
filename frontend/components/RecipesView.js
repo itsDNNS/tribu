@@ -14,8 +14,6 @@ import {
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
-import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
-import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 import { errorText, isImeComposing } from '../lib/helpers';
 import { t, tc } from '../lib/i18n';
@@ -23,6 +21,7 @@ import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient,
 import ConfirmDialog from './ConfirmDialog';
 import RecipeDetail from './recipes/RecipeDetail';
 import { inBody } from './inBody';
+import ModalDialog from './ModalDialog';
 import { useHandoff } from '../lib/viewHandoff';
 
 
@@ -154,7 +153,6 @@ function RecipeDialog({
   ingredientHints = [],
   onImport,
 }) {
-  const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   // Reading a recipe from a web page (discussion #511).
@@ -179,8 +177,6 @@ function RecipeDialog({
   }
   const datalistId = useId();
   const titleId = 'recipe-dialog-title';
-
-  useDialogFocusTrap({ open, containerRef: dialogRef, initialFocusRef: firstFieldRef, onClose });
 
   if (!open) return null;
 
@@ -217,15 +213,13 @@ function RecipeDialog({
   }
 
   return inBody(
-    <div className="cal-dialog-backdrop" onClick={submitting ? undefined : onClose}>
-      <div
-        ref={dialogRef}
-        className="recipe-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <ModalDialog
+      className="ui-modal recipe-dialog"
+      aria-labelledby={titleId}
+      busy={submitting}
+      onClose={onClose}
+      initialFocusRef={firstFieldRef}
+    >
         <div className="recipe-dialog-header">
           <h2 id={titleId} className="recipe-dialog-title">
             {isEditing ? t(messages, 'module.recipes.edit_title') : t(messages, 'module.recipes.add_title')}
@@ -408,8 +402,7 @@ function RecipeDialog({
             </div>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalDialog>
   );
 }
 
@@ -469,7 +462,6 @@ export default function RecipesView() {
       return { ok: false };
     }
     toastSuccess(t(messages, 'module.recipes.created'));
-    announce(t(messages, 'module.recipes.created'));
     await loadRecipes();
     return { ok: true, data };
   }
@@ -482,7 +474,6 @@ export default function RecipesView() {
       return { ok: false };
     }
     toastSuccess(t(messages, 'module.recipes.updated'));
-    announce(t(messages, 'module.recipes.updated'));
     await loadRecipes();
     return { ok: true, data };
   }
@@ -504,7 +495,6 @@ export default function RecipesView() {
       return false;
     }
     toastSuccess(t(messages, 'module.recipes.deleted'));
-    announce(t(messages, 'module.recipes.deleted'));
     await loadRecipes();
     return true;
   }
@@ -521,7 +511,6 @@ export default function RecipesView() {
       : t(messages, 'module.recipes.pushed_many');
     const msg = template.replace('{count}', String(added));
     toastSuccess(msg);
-    announce(msg);
     await loadShoppingLists?.();
     return { ok: true, added };
   }

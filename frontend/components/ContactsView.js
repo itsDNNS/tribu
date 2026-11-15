@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Cake, Copy, Plus, Search, UserPlus } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
-import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 import { localeForLang } from '../lib/dates';
 import { errorText } from '../lib/helpers';
@@ -104,7 +103,6 @@ export default function ContactsView() {
     setForm(null);
     const msg = t(messages, editing ? 'module.contacts.updated' : 'module.contacts.created');
     toastSuccess(msg);
-    announce(msg);
   }
 
   async function remove() {
@@ -121,7 +119,6 @@ export default function ContactsView() {
     if (selectedId === contact.id) setSelectedId(null);
     const msg = t(messages, 'module.contacts.deleted');
     toastSuccess(msg);
-    announce(msg);
   }
 
   async function merge(keepId, mergeIds) {
@@ -133,7 +130,6 @@ export default function ContactsView() {
     setSelectedId(keepId);
     const msg = t(messages, 'module.contacts.merged');
     toastSuccess(msg);
-    announce(msg);
   }
 
   async function dismiss(group) {
@@ -154,7 +150,6 @@ export default function ContactsView() {
     await loadDuplicates();
     const msg = t(messages, memberUserId ? 'module.contacts.toast_linked' : 'module.contacts.toast_unlinked');
     toastSuccess(msg);
-    announce(msg);
   }
 
   // On phones the chosen contact replaces the list; start at its top.

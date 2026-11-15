@@ -5,7 +5,7 @@ import {
   dateKey,
 } from './responsive/PlannerUI';
 import { eventOccursOn } from '../lib/calendar-dates';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   CalendarDays,
   ChevronLeft,
@@ -297,6 +297,23 @@ function WeeklyPlanItem({ meta, title, accent = 'neutral', onOpen, extra = null 
   );
 }
 
+// The "+" menu opens in the top layer, away from its day. Anchor positioning is not
+// available in every supported browser yet, so place it under its button and on screen.
+function placeAddMenu(event) {
+  if (event.newState !== 'open') return;
+  const menu = event.currentTarget;
+  const trigger = menu.previousElementSibling.getBoundingClientRect();
+  const gap = 6;
+  const edge = 8;
+  const fitsBelow = trigger.bottom + gap + menu.offsetHeight <= window.innerHeight - edge;
+  menu.style.top = `${fitsBelow ? trigger.bottom + gap : Math.max(edge, trigger.top - gap - menu.offsetHeight)}px`;
+  menu.style.left = `${Math.max(edge, Math.min(trigger.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - edge))}px`;
+  // Fixed on screen, it would drift away from its day while the page scrolls.
+  window.addEventListener('scroll', () => {
+    if (menu.isConnected && menu.matches(':popover-open')) menu.hidePopover();
+  }, { once: true, capture: true });
+}
+
 export default function WeeklyPlanView({
   initialDate,
   initialMeals = null,
@@ -320,6 +337,7 @@ export default function WeeklyPlanView({
   const locale = lang === 'de' ? 'de-DE' : 'en-US';
   const [anchor, setAnchor] = useState(initialDate || new Date());
   const { ref: plannerRef, compact } = usePlannerLayout();
+  const addMenuId = useId();
   const [presentation, setPresentation] = useState('day');
   const [meals, setMeals] = useState(initialMeals || []);
   const [weeklyEvents, setWeeklyEvents] = useState(initialEvents || events);
@@ -550,17 +568,23 @@ export default function WeeklyPlanView({
           <strong className="week-day-date">{date.toLocaleDateString(locale, { day: 'numeric', month: wide ? 'long' : 'numeric' })}</strong>
           {key === todayKey && wide && <span className="week-day-today">{t(messages, 'nav.group.today')}</span>}
           {adders.length > 0 && (
-            <details className="week-day-add">
-              <summary aria-label={t(messages, 'module.weekly_plan.add_to_day').replace('{day}', long)} title={t(messages, 'module.weekly_plan.add_to_day').replace('{day}', long)}>
+            <div className="week-day-add">
+              <button
+                type="button"
+                className="week-day-add-trigger"
+                popoverTarget={`${addMenuId}-${key}${wide ? '-wide' : ''}`}
+                aria-label={t(messages, 'module.weekly_plan.add_to_day').replace('{day}', long)}
+                title={t(messages, 'module.weekly_plan.add_to_day').replace('{day}', long)}
+              >
                 <Plus size={15} aria-hidden="true" />
-              </summary>
-              <div className="week-day-add-menu">
+              </button>
+              <div id={`${addMenuId}-${key}${wide ? '-wide' : ''}`} className="week-day-add-menu" popover="auto" onToggle={placeAddMenu}>
                 {adders.map(([kind, Icon, labelKey, run]) => (
                   <button
                     key={kind}
                     type="button"
                     onClick={(event) => {
-                      event.currentTarget.closest('details').open = false;
+                      event.currentTarget.parentElement.hidePopover?.();
                       run();
                     }}
                   >
@@ -568,7 +592,7 @@ export default function WeeklyPlanView({
                   </button>
                 ))}
               </div>
-            </details>
+            </div>
           )}
         </header>
         {items.length ? (

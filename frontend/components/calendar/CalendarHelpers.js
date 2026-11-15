@@ -1,11 +1,9 @@
-import { useEffect, useRef } from 'react';
 import { Cake, Copy, Download, MapPin, Pencil, Repeat, Rss, Trash2 } from 'lucide-react';
 import { prettyDate } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { getMemberColor } from '../../lib/member-colors';
 import { getCalendarEventIcon } from '../../lib/calendar-icons';
 import AssignedBadges from '../AssignedBadges';
-import { inBody } from '../inBody';
 
 export const RECURRENCE_OPTIONS = [
   { value: '', key: 'module.calendar.no_repeat' },
@@ -27,48 +25,6 @@ export function mapsLinksForLocation(location) {
     google: `https://www.google.com/maps/search/?api=1&query=${query}`,
     openStreetMap: `https://www.openstreetmap.org/search?query=${query}`,
   };
-}
-
-export function DeleteRecurringDialog({ event, messages, onDeleteThis, onDeleteAll, onCancel }) {
-  const firstBtnRef = useRef(null);
-
-  useEffect(() => {
-    firstBtnRef.current?.focus();
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') onCancel();
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel]);
-
-  return inBody(
-    <div
-      className="cal-dialog-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-recurring-title"
-    >
-      <div className="cal-dialog">
-        <div id="delete-recurring-title" className="cal-dialog-title">
-          {t(messages, 'module.calendar.delete_recurring_question')}
-        </div>
-        <div className="cal-dialog-subtitle">
-          {event.title}
-        </div>
-        <div className="cal-dialog-actions">
-          <button ref={firstBtnRef} className="btn-sm" onClick={onDeleteThis}>
-            {t(messages, 'module.calendar.delete_this_only')}
-          </button>
-          <button className="btn-sm cal-dialog-delete-all" onClick={onDeleteAll}>
-            {t(messages, 'module.calendar.delete_all')}
-          </button>
-          <button className="btn-sm cal-dialog-cancel" onClick={onCancel}>
-            {t(messages, 'cancel')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function AssignChips({ members, assignedTo, setAssignedTo, messages }) {

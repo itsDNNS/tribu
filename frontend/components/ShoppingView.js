@@ -55,7 +55,6 @@ export default function ShoppingView(props) {
   } = useApp();
   const sh = useShopping();
   const today = useCurrentMinute().toLocaleDateString('en-CA');
-  const productOpener = useRef(null);
   const toast = useToast();
   const [prefs, setPrefs] = useState(DEFAULT_PREFS),
     // Today's "Start shopping" opens the list in shopping mode.
@@ -271,7 +270,7 @@ export default function ShoppingView(props) {
       favoriteNames,
     });
   };
-  const edit = item => { productOpener.current = document.activeElement; show('product', item); };
+  const edit = item => show('product', item);
   async function run(action, after = close) {
     if (busy || scope.current !== currentScope) return;
     setBusy(true);
@@ -477,6 +476,6 @@ export default function ShoppingView(props) {
         })}>{tr("module.shopping.visual.ausgewahlte_zutaten_hinzufugen")}</button></>}
  {error && <p className="shop-error" role="alert">{error}</p>}
  </ShoppingDialog>}
- {storeItem && <StoreSearchMenu restoreFocusTo={productOpener.current} item={storeItem} stores={stores} messages={messages} onClose={() => setStoreItem(null)} />}
+ {storeItem && <StoreSearchMenu item={storeItem} stores={stores} messages={messages} onClose={() => setStoreItem(null)} />}
  </div>;
 }

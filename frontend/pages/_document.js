@@ -1,14 +1,22 @@
 import { Html, Head, Main, NextScript } from 'next/document';
 
-// Marks installed apps before the first paint (data-display-mode), so the
-// layout does not jump once React starts.
-const DISPLAY_MODE_BOOTSTRAP = `
+// Runs before the first paint, so neither the layout nor the colors jump once
+// React starts: marks installed apps (data-display-mode) and applies the
+// stored appearance (data-theme, color-scheme). Keep it static text.
+const PRE_PAINT_BOOTSTRAP = `
 (() => {
+  const root = document.documentElement;
   try {
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       window.navigator.standalone === true;
-    document.documentElement.dataset.displayMode = isStandalone ? 'standalone' : 'browser';
+    root.dataset.displayMode = isStandalone ? 'standalone' : 'browser';
+  } catch {}
+  try {
+    const stored = window.localStorage.getItem('tribu_theme');
+    const fixed = stored === 'light' || stored === 'dark' || stored === 'midnight-glass';
+    root.dataset.theme = fixed ? stored : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.querySelector('meta[name="color-scheme"]').content = !fixed ? 'light dark' : stored === 'light' ? 'light' : 'dark';
   } catch {}
 })();
 `;
@@ -26,7 +34,8 @@ export default function Document({ __NEXT_DATA__: nextData }) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        {!isDisplay && <script dangerouslySetInnerHTML={{ __html: DISPLAY_MODE_BOOTSTRAP }} />}
+        {!isDisplay && <meta name="color-scheme" content="light dark" />}
+        {!isDisplay && <script dangerouslySetInnerHTML={{ __html: PRE_PAINT_BOOTSTRAP }} />}
       </Head>
       <body>
         <Main />

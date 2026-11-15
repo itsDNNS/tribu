@@ -370,7 +370,6 @@ export function useCalendar() {
       }
       const msg = t(messages, 'toast.event_created');
       toastSuccess(msg);
-      announce(msg);
       return true;
     } finally {
       creatingRef.current = false;
@@ -480,7 +479,6 @@ export function useCalendar() {
     setDeleteConfirm(null);
     const msg = t(messages, 'toast.event_deleted');
     toastSuccess(msg);
-    announce(msg);
     return true;
   }
 

@@ -8,8 +8,8 @@ const { selectShoppingList } = require('../helpers/shopping');
 // network is back. A short dropout shows no offline banner.
 test.use({ serviceWorkers: 'block' });
 
-// The undo window (hooks/useTasks.js) before a completion is sent.
-const UNDO_WINDOW_MS = 6000;
+// The undo window (lib/undo.js) before a completion is sent.
+const UNDO_WINDOW_MS = 10000;
 
 test('a shopping check-off waits for the network', async ({ authedPage: page, apiCtx }) => {
   const familyId = await getFamilyId(apiCtx);

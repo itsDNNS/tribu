@@ -3,7 +3,6 @@ import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { errorText } from '../lib/helpers';
 import { t } from '../lib/i18n';
-import { announce } from '../lib/announce';
 import { createEmptyMealForm } from '../lib/meal-plans';
 import { startOfWeek, weekStartsOn } from '../lib/dates';
 import * as api from '../lib/api';
@@ -148,7 +147,6 @@ export function useMealPlans({ initialDate = null } = {}) {
       };
       setMealPlans((prev) => [...prev, data]);
       toastSuccess(t(messages, 'module.meal_plans.created'));
-      announce(t(messages, 'module.meal_plans.created'));
       return { ok: true, data };
     }
     const { ok, data, status } = await api.apiCreateMealPlan({ family_id: Number(familyId), ...payload });
@@ -158,7 +156,6 @@ export function useMealPlans({ initialDate = null } = {}) {
       return { ok: false, status };
     }
     toastSuccess(t(messages, 'module.meal_plans.created'));
-    announce(t(messages, 'module.meal_plans.created'));
     await Promise.all([load(), loadIngredientHints()]);
     return { ok: true, data };
   }
@@ -175,7 +172,6 @@ export function useMealPlans({ initialDate = null } = {}) {
       const updated = { ...current, ...payload, updated_at: new Date().toISOString() };
       setMealPlans((prev) => prev.map((meal) => (meal.id === planId ? updated : meal)));
       toastSuccess(t(messages, 'module.meal_plans.updated'));
-      announce(t(messages, 'module.meal_plans.updated'));
       return { ok: true, data: updated };
     }
     const { ok, data, status } = await api.apiUpdateMealPlan(planId, payload);
@@ -185,7 +181,6 @@ export function useMealPlans({ initialDate = null } = {}) {
       return { ok: false, status };
     }
     toastSuccess(t(messages, 'module.meal_plans.updated'));
-    announce(t(messages, 'module.meal_plans.updated'));
     await Promise.all([load(), loadIngredientHints()]);
     return { ok: true, data };
   }
@@ -194,7 +189,6 @@ export function useMealPlans({ initialDate = null } = {}) {
     if (demoMode) {
       setMealPlans((prev) => prev.filter((meal) => meal.id !== planId));
       toastSuccess(t(messages, 'module.meal_plans.deleted'));
-      announce(t(messages, 'module.meal_plans.deleted'));
       return true;
     }
     const { ok, data } = await api.apiDeleteMealPlan(planId);
@@ -203,7 +197,6 @@ export function useMealPlans({ initialDate = null } = {}) {
       return false;
     }
     toastSuccess(t(messages, 'module.meal_plans.deleted'));
-    announce(t(messages, 'module.meal_plans.deleted'));
     await load();
     return true;
   }
@@ -248,7 +241,6 @@ export function useMealPlans({ initialDate = null } = {}) {
       : t(messages, 'module.meal_plans.pushed_many');
     const msg = template.replace('{count}', String(added));
     toastSuccess(msg);
-    announce(msg);
     return { ok: true, added };
   }
 
@@ -269,7 +261,6 @@ export function useMealPlans({ initialDate = null } = {}) {
       : t(messages, 'module.meal_plans.pushed_many');
     const msg = template.replace('{count}', String(added));
     toastSuccess(msg);
-    announce(msg);
     return { ok: true, added };
   }
 

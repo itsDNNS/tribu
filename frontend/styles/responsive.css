@@ -1192,11 +1192,8 @@ button.ui-date-label:hover {
   .tribu-calendar-dialog .tc-form-grid > * {
     min-width: 0;
   }
-  .cal-dialog-backdrop:has(.meal-dialog) {
-    align-items: flex-end;
-    padding: 0;
-  }
   .meal-dialog {
+    margin: auto 0 0;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -1311,12 +1308,8 @@ button.ui-date-label:hover {
   display: contents;
 }
 @media (max-width: 768px) {
-  .cal-dialog-backdrop,
-  .contact-modal-overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
   :is(.recipe-dialog, .contact-modal-panel, .rewards-dialog) {
+    margin: auto 0 0;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -1363,6 +1356,7 @@ button.ui-date-label:hover {
     max-width: 100%;
   }
   .cal-dialog {
+    margin: auto 0 0;
     width: 100%;
     max-width: none;
     border-radius: 20px 20px 0 0;

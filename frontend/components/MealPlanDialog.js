@@ -2,8 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { BookOpen, History, Star, X, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { t } from '../lib/i18n';
 import { createEmptyMealIngredient, MEAL_SLOTS } from '../lib/meal-plans';
-import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 import { inBody } from './inBody';
+import ModalDialog from './ModalDialog';
 
 function slotLabel(messages, slot) {
   return t(messages, `module.meal_plans.slot.${slot}`);
@@ -24,7 +24,6 @@ export default function MealPlanDialog({
   recipes = [],
   suggestions = [],
 }) {
-  const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [pushing, setPushing] = useState(false);
@@ -38,8 +37,6 @@ export default function MealPlanDialog({
       setSelectedListId(String(shoppingLists[0].id));
     }
   }, [open, shoppingLists, selectedListId]);
-
-  useDialogFocusTrap({ open, containerRef: dialogRef, initialFocusRef: firstFieldRef, onClose });
 
   if (!open) return null;
 
@@ -99,15 +96,13 @@ export default function MealPlanDialog({
   }
 
   return inBody(
-    <div className="cal-dialog-backdrop" onClick={submitting ? undefined : onClose}>
-      <div
-        ref={dialogRef}
-        className="meal-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <ModalDialog
+      className="ui-modal meal-dialog"
+      aria-labelledby={titleId}
+      busy={submitting}
+      onClose={onClose}
+      initialFocusRef={firstFieldRef}
+    >
         <div className="meal-dialog-header">
           <h2 id={titleId} className="meal-dialog-title">
             {isEditing
@@ -335,7 +330,6 @@ export default function MealPlanDialog({
             </div>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalDialog>
   );
 }

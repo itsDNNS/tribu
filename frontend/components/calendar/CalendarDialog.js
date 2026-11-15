@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { CalendarDays, X } from 'lucide-react';
 import { t } from '../../lib/i18n';
+import ModalDialog from '../ModalDialog';
 
 export default function CalendarDialog({
   title,
@@ -14,34 +15,23 @@ export default function CalendarDialog({
   className = '',
 }) {
   const ref = useRef(null);
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
   useEffect(() => {
-    const dialog = ref.current;
-    const previous = document.activeElement;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    dialog.showModal();
     // Skip regions marked data-no-autofocus (e.g. long settings forms) so the dialog opens at the top.
-    [...dialog.querySelectorAll('input:not([type=hidden]),textarea')]
+    [...ref.current.querySelectorAll('input:not([type=hidden]),textarea')]
       .find((field) => !field.closest('[data-no-autofocus]'))
       ?.focus();
-    return () => {
-      dialog.close();
-      document.body.style.overflow = overflow;
-      if (previous?.isConnected) previous.focus({ preventScroll: true });
-    };
   }, []);
   return (
-    <dialog
-      ref={ref}
+    <ModalDialog
       className={`tribu-calendar-dialog ${className}`}
       aria-labelledby="calendar-dialog-title"
       aria-busy={busy || undefined}
+      busy={busy}
+      onClose={onClose}
       onKeyDown={(e) => {
-        if (e.key !== 'Tab') return;
+        if (e.key !== 'Tab' || !e.currentTarget.contains(e.target)) return;
         const focusable = [
-          ...ref.current.querySelectorAll(
+          ...e.currentTarget.querySelectorAll(
             'button,input,select,textarea,a[href],[tabindex]',
           ),
         ].filter(
@@ -61,21 +51,6 @@ export default function CalendarDialog({
           e.preventDefault();
           first.focus();
         }
-      }}
-      onCancel={(e) => {
-        e.preventDefault();
-        if (!busy) closeRef.current();
-      }}
-      onClick={(e) => {
-        if (e.target !== e.currentTarget || busy) return;
-        const r = e.currentTarget.getBoundingClientRect();
-        if (
-          e.clientX < r.left ||
-          e.clientX > r.right ||
-          e.clientY < r.top ||
-          e.clientY > r.bottom
-        )
-          closeRef.current();
       }}
     >
       <header className="tc-modal-header">
@@ -100,8 +75,8 @@ export default function CalendarDialog({
           <X size={16} />
         </button>
       </header>
-      <div className="tc-modal-body">{children}</div>
+      <div ref={ref} className="tc-modal-body">{children}</div>
       {actions && <footer className="tc-modal-actions">{actions}</footer>}
-    </dialog>
+    </ModalDialog>
   );
 }
