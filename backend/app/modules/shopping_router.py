@@ -1,6 +1,7 @@
 from datetime import timedelta
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -70,19 +71,32 @@ from app.core.errors import (
     SHOPPING_CATEGORY_BUILTIN,
     SHOPPING_CATEGORY_NOT_FOUND,
 )
-from app.core.avatars import AvatarError, normalize_photo
+from app.core.avatars import AvatarError, normalize_photo, product_thumbnail
 
 router = APIRouter(prefix="/shopping", tags=["shopping"], responses={**AUTH_RESPONSES})
 
 
-def _stored_photo(photo: str | None) -> str | None:
-    """Product photos are stored bounded and without metadata (issue #496)."""
+def _set_photo(item: ShoppingItem, photo: str | None) -> None:
+    """Product photos are stored bounded and without metadata (issue #496), with a thumbnail for lists."""
     if not photo:
-        return None
+        item.photo = item.photo_thumbnail = None
+        return
     try:
-        return normalize_photo(photo)
+        item.photo = normalize_photo(photo)
+        item.photo_thumbnail = product_thumbnail(item.photo)
     except AvatarError:
         raise HTTPException(status_code=422, detail=error_detail(IMAGE_UNREADABLE))
+
+
+PhotoSize = Literal["full", "thumbnail"]
+PHOTOS_QUERY = Query("full", description="`thumbnail` leaves `photo` empty when `photo_thumbnail` is set, for lists that only show the small picture")
+
+
+def _item_response(item: ShoppingItem, photos: PhotoSize) -> ShoppingItemResponse:
+    response = ShoppingItemResponse.model_validate(item)
+    if photos == "thumbnail" and item.photo_thumbnail:
+        response.photo = None
+    return response
 
 
 def _clean_optional_text(value: str | None) -> str | None:
@@ -873,6 +887,7 @@ def delete_list(
 def get_items(
     list_id: int,
     include_archived: bool = False,
+    photos: PhotoSize = PHOTOS_QUERY,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
     _scope=require_scope("shopping:read"),
@@ -888,7 +903,7 @@ def get_items(
         .order_by(ShoppingItem.checked, ShoppingItem.checked_at.desc().nullslast(), ShoppingItem.created_at, ShoppingItem.id)
         .all()
     )
-    return items
+    return [_item_response(item, photos) for item in items]
 
 
 @router.post(
@@ -922,9 +937,11 @@ def add_item(
     except InvalidShoppingItemName:
         raise HTTPException(status_code=422, detail="Shopping item name cannot be blank")
     item = transition.item
-    for field in ("notes", "photo", "priority"):
+    for field in ("notes", "priority"):
         if field in payload.model_fields_set:
-            setattr(item, field, _stored_photo(payload.photo) if field == "photo" else getattr(payload, field))
+            setattr(item, field, getattr(payload, field))
+    if "photo" in payload.model_fields_set:
+        _set_photo(item, payload.photo)
     if transition.action == "created":
         record_activity(
             db,
@@ -986,6 +1003,7 @@ def add_item(
 def update_item(
     item_id: int,
     payload: ShoppingItemUpdate,
+    photos: PhotoSize = PHOTOS_QUERY,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
     _scope=require_scope("shopping:write"),
@@ -1019,9 +1037,11 @@ def update_item(
         if not changed:
             raise HTTPException(status_code=409, detail="Shopping item changed; reload before trying again")
 
-    for field in ("notes", "photo", "priority"):
+    for field in ("notes", "priority"):
         if field in fields:
-            setattr(item, field, _stored_photo(payload.photo) if field == "photo" else getattr(payload, field))
+            setattr(item, field, getattr(payload, field))
+    if "photo" in fields:
+        _set_photo(item, payload.photo)
     if payload.checked is False:
         item.archived = False
 
@@ -1132,7 +1152,7 @@ def update_item(
         source_id=item.id,
         action=item_action,
     )
-    return item
+    return _item_response(item, photos)
 
 
 @router.delete(

@@ -376,6 +376,51 @@ def test_product_photos_are_stored_bounded_and_without_metadata():
     assert rejected.json()["detail"]["code"] == "IMAGE_UNREADABLE"
 
 
+def test_lists_can_ask_for_photo_thumbnails_only(monkeypatch):
+    token, family_id, user_id = _seed_member(suffix="photo-thumbs")
+    list_id = _seed_list(family_id, "Thumbs", user_id)
+    plain = _seed_item(list_id, "Bread")
+    events = []
+    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: events.append(args))
+    created = client.post(f"/shopping/lists/{list_id}/items", headers=_auth(token), json={"name": "Cheese", "photo": _photo(1800, 1200, "JPEG")})
+    assert created.status_code == 200, created.text
+    item_id = created.json()["id"]
+    thumbnail = _decoded(created.json()["photo_thumbnail"])
+    assert thumbnail.format == "WEBP" and thumbnail.size == (128, 128)
+    # Live updates keep the full shape, so every client can use them.
+    assert events[0][3]["item"]["photo"] == created.json()["photo"]
+    assert events[0][3]["item"]["photo_thumbnail"] == created.json()["photo_thumbnail"]
+
+    # Without the opt-in the response stays as before, plus the thumbnail.
+    full = client.get(f"/shopping/lists/{list_id}/items", headers=_auth(token)).json()
+    cheese = next(item for item in full if item["id"] == item_id)
+    assert cheese["photo"] == created.json()["photo"]
+    assert cheese["photo_thumbnail"] == created.json()["photo_thumbnail"]
+
+    small = client.get(f"/shopping/lists/{list_id}/items?photos=thumbnail&include_archived=true", headers=_auth(token))
+    assert small.status_code == 200, small.text
+    by_id = {item["id"]: item for item in small.json()}
+    assert by_id[item_id]["photo"] is None
+    assert by_id[item_id]["photo_thumbnail"] == created.json()["photo_thumbnail"]
+    assert by_id[plain]["photo"] is None and by_id[plain]["photo_thumbnail"] is None
+
+    toggled = client.patch(f"/shopping/items/{item_id}?photos=thumbnail", headers=_auth(token), json={"checked": True})
+    assert toggled.status_code == 200, toggled.text
+    assert toggled.json()["photo"] is None and toggled.json()["photo_thumbnail"] == created.json()["photo_thumbnail"]
+    assert client.patch(f"/shopping/items/{item_id}?photos=huge", headers=_auth(token), json={"checked": False}).status_code == 422
+
+    # A photo without a thumbnail (unreadable during the migration) is still sent.
+    db = TestSession()
+    db.query(ShoppingItem).filter(ShoppingItem.id == item_id).update({ShoppingItem.photo_thumbnail: None})
+    db.commit()
+    db.close()
+    fallback = client.get(f"/shopping/lists/{list_id}/items?photos=thumbnail&include_archived=true", headers=_auth(token)).json()
+    assert next(item for item in fallback if item["id"] == item_id)["photo"] == created.json()["photo"]
+
+    cleared = client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"photo": None})
+    assert cleared.json()["photo"] is None and cleared.json()["photo_thumbnail"] is None
+
+
 # Visual-shopping persistence and authorization contracts.
 def test_product_details_archive_and_restore_preserve_metadata(monkeypatch):
     token, family_id, user_id = _seed_member(suffix="visual")

@@ -525,6 +525,39 @@ test('clearing notes and the photo sends explicit null in one edit', async () =>
     notes: null
   })));
 });
+test('lists show the photo thumbnail and editing other details keeps the stored photo', async () => {
+  const thumbnail = 'data:image/webp;base64,UklGRg==';
+  const item = {
+    ...apple,
+    photo: null,
+    photo_thumbnail: thumbnail
+  };
+  setup({
+    items: [item],
+    uncheckedItems: [item]
+  });
+  const tile = screen.getByRole('checkbox', {
+    name: /^Äpfel,/
+  });
+  expect(tile.querySelector('img')).toHaveAttribute('src', thumbnail);
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Details zu Äpfel'
+  }));
+  expect(dialog().getByAltText('Produktfoto')).toHaveAttribute('src', thumbnail);
+  fireEvent.change(dialog().getByLabelText('Details für die Familie'), {
+    target: {
+      value: 'Boskop'
+    }
+  });
+  fireEvent.click(dialog().getByRole('button', {
+    name: 'Speichern',
+    exact: true
+  }));
+  await waitFor(() => expect(mockShopping.editItem).toHaveBeenCalledWith(1, expect.objectContaining({
+    notes: 'Boskop'
+  })));
+  expect(mockShopping.editItem.mock.calls[0][1]).not.toHaveProperty('photo');
+});
 test.each([['image/gif', 1], ['image/png', 6 * 1024 * 1024]])('photo rejects %s with %s bytes before uploading', async (type, size) => {
   setup();
   fireEvent.click(screen.getByRole('button', {

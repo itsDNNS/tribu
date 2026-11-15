@@ -362,6 +362,40 @@ def test_normalize_stored_photos_migration_bounds_and_strips_images(tmp_path, mo
     assert still_broken == broken
 
 
+def test_shopping_photo_thumbnails_migration_backfills_and_downgrades(tmp_path, monkeypatch):
+    import base64
+    import io
+    from PIL import Image
+    db_path = tmp_path / "photo-thumbnails.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    command.upgrade(config, "0080_user_mfa")
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (1024, 683), "#3b82f6").save(buffer, format="WEBP")
+    photo = "data:image/webp;base64," + base64.b64encode(buffer.getvalue()).decode()
+    broken = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 50).decode()
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'F')")
+        conn.execute("INSERT INTO shopping_lists (id, family_id, name) VALUES (1, 1, 'L')")
+        conn.executemany("INSERT INTO shopping_items (id, list_id, name, photo) VALUES (?, 1, ?, ?)",
+                         [(1, "Cheese", photo), (2, "Broken", broken), (3, "Bread", None)])
+    command.upgrade(config, "0081_shopping_photo_thumbnails")
+    with sqlite3.connect(db_path) as conn:
+        rows = dict(conn.execute("SELECT id, photo_thumbnail FROM shopping_items").fetchall())
+        assert conn.execute("SELECT photo FROM shopping_items WHERE id = 1").fetchone()[0] == photo
+    thumbnail = Image.open(io.BytesIO(base64.b64decode(rows[1].split(",", 1)[1])))
+    assert thumbnail.format == "WEBP" and thumbnail.size == (128, 128)
+    assert rows[2] is None and rows[3] is None
+
+    command.downgrade(config, "0080_user_mfa")
+    with sqlite3.connect(db_path) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(shopping_items)")}
+        assert conn.execute("SELECT photo FROM shopping_items WHERE id = 1").fetchone()[0] == photo
+    assert "photo_thumbnail" not in columns
+
+
 def test_shopping_model_defaults_match_migration_for_legacy_inserts():
     from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session

@@ -407,8 +407,9 @@ export function apiDeleteShoppingList(listId) {
   return del(`/shopping/lists/${listId}`);
 }
 
+// Lists show small tiles, so items come with the photo thumbnail only.
 export function apiGetShoppingItems(listId, includeArchived = false) {
-  return request(`/shopping/lists/${listId}/items${includeArchived ? "?include_archived=true" : ""}`);
+  return request(`/shopping/lists/${listId}/items?photos=thumbnail${includeArchived ? "&include_archived=true" : ""}`);
 }
 
 export function apiAddShoppingItem(listId, payload) {
@@ -416,7 +417,7 @@ export function apiAddShoppingItem(listId, payload) {
 }
 
 export function apiUpdateShoppingItem(itemId, payload) {
-  return patch(`/shopping/items/${itemId}`, payload);
+  return patch(`/shopping/items/${itemId}?photos=thumbnail`, payload);
 }
 
 export function apiDeleteShoppingItem(itemId) {
