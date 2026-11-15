@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { errorText } from '../../lib/helpers';
+import { errorField, errorText, meetsPasswordRule } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
@@ -14,13 +14,39 @@ export default function SecuritySection() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [invalidField, setInvalidField] = useState('');
+  const id = useId();
+  const fieldId = (field) => `${id}-${field}`;
+
+  // Show the error; one tied to a field also marks that field and focuses it.
+  function fail(text, field = '') {
+    setError(text);
+    setInvalidField(field);
+    if (field) document.getElementById(fieldId(field))?.focus();
+  }
+
+  // The field's hint, plus the form error while that error is about this field.
+  const describedBy = (field, hint) => [hint && fieldId('hint'), invalidField === field && fieldId('error')].filter(Boolean).join(' ') || undefined;
+
+  const fieldProps = (field, value, setValue, hint = false) => ({
+    id: fieldId(field),
+    value,
+    onChange: (e) => { setValue(e.target.value); if (invalidField === field) setInvalidField(''); },
+    'aria-invalid': invalidField === field,
+    'aria-describedby': describedBy(field, hint),
+  });
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    setInvalidField('');
 
     if (newPassword !== confirmPassword) {
-      setError(t(messages, 'password_mismatch'));
+      fail(t(messages, 'password_mismatch'), 'confirm_password');
+      return;
+    }
+    if (!meetsPasswordRule(newPassword)) {
+      fail(t(messages, 'password_hint'), 'new_password');
       return;
     }
 
@@ -43,7 +69,7 @@ export default function SecuritySection() {
     const { ok, data } = result;
     if (!ok) {
       const msg = errorText(data?.detail, t(messages, 'toast.password_change_failed'), messages);
-      setError(msg);
+      fail(msg, errorField(data?.detail));
       toastError(msg);
       return;
     }
@@ -62,42 +88,39 @@ export default function SecuritySection() {
       <p className="set-section-desc">{t(messages, 'security_desc')}</p>
       <form onSubmit={handleSubmit} className="set-password-form">
         <div className="set-field-group">
-          <label className="set-label">{t(messages, 'old_password')}</label>
+          <label className="set-label" htmlFor={fieldId('old_password')}>{t(messages, 'old_password')}</label>
           <input
             className="form-input"
             type="password"
-            value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
+            {...fieldProps('old_password', oldPassword, setOldPassword)}
             autoComplete="current-password"
             required
           />
         </div>
         <div className="set-field-group">
-          <label className="set-label">{t(messages, 'new_password')}</label>
+          <label className="set-label" htmlFor={fieldId('new_password')}>{t(messages, 'new_password')}</label>
           <input
             className="form-input"
             type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            {...fieldProps('new_password', newPassword, setNewPassword, true)}
             autoComplete="new-password"
             minLength={8}
             required
           />
-          <span className="set-field-hint">{t(messages, 'password_hint')}</span>
+          <span id={fieldId('hint')} className="set-field-hint">{t(messages, 'password_hint')}</span>
         </div>
         <div className="set-field-group">
-          <label className="set-label">{t(messages, 'confirm_password')}</label>
+          <label className="set-label" htmlFor={fieldId('confirm_password')}>{t(messages, 'confirm_password')}</label>
           <input
             className="form-input"
             type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            {...fieldProps('confirm_password', confirmPassword, setConfirmPassword)}
             autoComplete="new-password"
             minLength={8}
             required
           />
         </div>
-        {error && <div className="set-password-error">{error}</div>}
+        {error && <div id={fieldId('error')} className="set-password-error">{error}</div>}
         <button type="submit" className="btn-primary" disabled={disabled}>
           {t(messages, 'change_password')}
         </button>

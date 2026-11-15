@@ -114,3 +114,23 @@ export function errorText(detail, fallback, messages) {
   if (typeof detail === 'object' && detail.message) return detail.message;
   try { return JSON.stringify(detail); } catch { return fallback; }
 }
+
+// The form field a failed account request is about, so the form can mark it aria-invalid.
+export function errorField(detail) {
+  if (detail?.code === 'EMAIL_ALREADY_EXISTS') return 'email';
+  if (detail?.code === 'OLD_PASSWORD_INCORRECT') return 'old_password';
+  if (Array.isArray(detail)) return detail[0]?.loc?.at(-1) || '';
+  return '';
+}
+
+// The backend password rule (schemas.py) besides the length minLength already checks:
+// an uppercase A-Z and a digit. Python's \d matches any Unicode digit, as \p{Nd} does.
+export function meetsPasswordRule(value) {
+  return /[A-Z]/.test(value) && /\p{Nd}/u.test(value);
+}
+
+// Enter and arrow keys confirm or pick IME candidates while composing; keyCode 229
+// catches Safari, which reports the confirming keydown after composition ended.
+export function isImeComposing(event) {
+  return Boolean((event.nativeEvent || event).isComposing) || event.keyCode === 229;
+}

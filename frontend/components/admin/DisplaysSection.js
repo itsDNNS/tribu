@@ -323,8 +323,9 @@ export default function DisplaysSection() {
                   <p>{t(messages, 'display_create_hint')}</p>
                 </div>
                 <div className="form-field">
-                  <label>{t(messages, 'display_name_label')}</label>
+                  <label htmlFor="display-create-name">{t(messages, 'display_name_label')}</label>
                   <input
+                    id="display-create-name"
                     className="form-input"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}

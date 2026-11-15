@@ -4,7 +4,7 @@ import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
-import { COLOR_PALETTE } from '../../lib/member-colors';
+import { COLOR_PALETTE, colorName } from '../../lib/member-colors';
 import * as api from '../../lib/api';
 import SecuritySection from './SecuritySection';
 import TwoStepSection from './TwoStepSection';
@@ -106,10 +106,10 @@ export default function AccountTab() {
           </div>
         </div>
         <div className="set-field-group">
-          <label className="set-label">
+          <label className="set-label" htmlFor="account-profile-image">
             {t(messages, 'profile_image')}
           </label>
-          <input type="file" accept="image/*" onChange={onProfileImage} className="set-file-input" />
+          <input id="account-profile-image" type="file" accept="image/*" onChange={onProfileImage} className="set-file-input" />
         </div>
         <div className="set-field-group">
           <label className="set-label" htmlFor="account-birthdate">
@@ -134,10 +134,10 @@ export default function AccountTab() {
           />
         </div>
         <div className="set-field-group">
-          <label className="set-label">
+          <label className="set-label" id="account-color-label">
             {t(messages, 'personal_color')}
           </label>
-          <div className="set-color-grid">
+          <div className="set-color-grid" role="group" aria-labelledby="account-color-label">
             {COLOR_PALETTE.map((c) => {
               const owner = members.find((m) => m.color === c && m.user_id !== me?.user_id);
               const isMine = myColor === c;
@@ -147,6 +147,8 @@ export default function AccountTab() {
                   key={c}
                   type="button"
                   className="set-color-swatch"
+                  aria-label={colorName(c, messages)}
+                  aria-pressed={isMine}
                   disabled={taken || colorSaving}
                   title={taken ? t(messages, 'color_taken_by').replace('{name}', owner.display_name) : undefined}
                   onClick={async () => {
@@ -254,10 +256,11 @@ export default function AccountTab() {
             </button>
           ) : (
             <div>
-              <p className="set-danger-confirm">
+              <label className="set-danger-confirm" htmlFor="account-delete-confirm">
                 {t(messages, 'delete_account_confirm')}
-              </p>
+              </label>
               <input
+                id="account-delete-confirm"
                 type="text"
                 className="form-input set-delete-input"
                 placeholder={t(messages, 'delete_account_placeholder')}

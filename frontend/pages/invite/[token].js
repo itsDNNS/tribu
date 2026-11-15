@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { Users, ShieldCheck, AlertCircle, Globe, KeyRound, Sparkles } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { errorText } from '../../lib/helpers';
+import { errorField, errorText, meetsPasswordRule } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import { apiGetInviteInfo, apiRegisterWithInvite, apiGetOidcPublicConfig } from '../../lib/api';
 
@@ -17,6 +17,7 @@ export default function InvitePage() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [msg, setMsg] = useState('');
+  const [invalidField, setInvalidField] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sso, setSso] = useState({ enabled: false, ready: false, button_label: '', password_login_disabled: false });
 
@@ -33,9 +34,24 @@ export default function InvitePage() {
     });
   }, [router.isReady, token]);
 
+  // Show an error under the form; one tied to a field also marks that field and focuses it.
+  function fail(text, field = '') {
+    setMsg(text);
+    setInvalidField(field);
+    if (field) document.getElementById(field)?.focus();
+  }
+
+  // The field's hint, plus the form error while that error is about this field.
+  const describedBy = (id, hintId) => [hintId, invalidField === id && 'invite-error'].filter(Boolean).join(' ') || undefined;
+
   async function handleRegister(e) {
     e.preventDefault();
     setMsg('');
+    setInvalidField('');
+    if (!meetsPasswordRule(password)) {
+      fail(t(messages, 'password_hint'), 'invite-password');
+      return;
+    }
     setSubmitting(true);
     const { ok, data } = await apiRegisterWithInvite({
       token,
@@ -44,7 +60,10 @@ export default function InvitePage() {
       display_name: displayName,
     });
     setSubmitting(false);
-    if (!ok) return setMsg(errorText(data?.detail, t(messages, 'toast.registration_failed'), messages));
+    if (!ok) {
+      const field = { email: 'invite-email', password: 'invite-password' }[errorField(data?.detail)];
+      return fail(errorText(data?.detail, t(messages, 'toast.registration_failed'), messages), field);
+    }
     setLoggedIn(true);
     router.push('/');
   }
@@ -52,12 +71,12 @@ export default function InvitePage() {
   if (loading) {
     return (
       <div className="auth-page">
-        <div className="auth-container">
+        <main id="main-content" className="auth-container">
           <div className="auth-brand">
             <div className="auth-logo"><Users size={32} color="white" aria-hidden="true" /></div>
             <h1>Tribu</h1>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -65,7 +84,7 @@ export default function InvitePage() {
   if (!info || !info.valid) {
     return (
       <div className="auth-page">
-        <div className="auth-container">
+        <main id="main-content" className="auth-container">
           <div className="auth-brand">
             <div className="auth-logo"><Users size={32} color="white" aria-hidden="true" /></div>
             <h1>Tribu</h1>
@@ -77,7 +96,7 @@ export default function InvitePage() {
               {t(messages, 'invite_page_back')}
             </a>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -96,7 +115,7 @@ export default function InvitePage() {
           ))}
         </select>
       </div>
-      <div className="auth-container">
+      <main id="main-content" className="auth-container">
         <div className="auth-brand">
           <div className="auth-logo"><Users size={32} color="white" aria-hidden="true" /></div>
           <h1>Tribu</h1>
@@ -163,16 +182,16 @@ export default function InvitePage() {
           <form onSubmit={handleRegister} className="auth-form">
             <div className="form-field">
               <label htmlFor="invite-email">{t(messages, 'email')}</label>
-              <input id="invite-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input id="invite-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => { setEmail(e.target.value); if (invalidField === 'invite-email') setInvalidField(''); }} autoComplete="username" required aria-invalid={invalidField === 'invite-email'} aria-describedby={describedBy('invite-email')} />
             </div>
             <div className="form-field">
               <label htmlFor="invite-password">{t(messages, 'password')}</label>
-              <input id="invite-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
-              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
+              <input id="invite-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => { setPassword(e.target.value); if (invalidField === 'invite-password') setInvalidField(''); }} autoComplete="new-password" required minLength={8} maxLength={128} aria-invalid={invalidField === 'invite-password'} aria-describedby={describedBy('invite-password', 'invite-password-hint')} />
+              <small id="invite-password-hint" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
             </div>
             <div className="form-field">
               <label htmlFor="invite-name">{t(messages, 'your_name')}</label>
-              <input id="invite-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+              <input id="invite-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" required />
             </div>
             <button className="btn-primary" type="submit" disabled={submitting}>
               {t(messages, 'invite_page_register')}
@@ -182,14 +201,14 @@ export default function InvitePage() {
 
           <div className="auth-divider">{t(messages, 'auth_selfhosted')}</div>
 
-          {msg && <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
+          {msg && <p id="invite-error" role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
         </div>
 
         <div className="auth-footer">
           <ShieldCheck size={14} aria-hidden="true" />
           {t(messages, 'auth_footer')}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

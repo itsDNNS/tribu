@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Database, Rss, Download, Upload, ChevronUp, ChevronDown, Plus, Copy, Check, RefreshCw, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -8,6 +8,7 @@ import * as api from '../../lib/api';
 
 export default function DataTab() {
   const { messages, familyId, loadContacts, loadDashboard } = useApp();
+  const id = useId();
   const { error: toastError } = useToast();
 
   // Data management state
@@ -255,8 +256,9 @@ export default function DataTab() {
           </div>
           <div className="settings-subsection">
             <form onSubmit={handleSubscribeIcs} className="quick-add-form">
-              <label className="set-data-form-hint">{t(messages, 'module.calendar.subscription_hint')}</label>
+              <label className="set-data-form-hint" htmlFor={`${id}-ics-url`}>{t(messages, 'module.calendar.subscription_hint')}</label>
               <input
+                id={`${id}-ics-url`}
                 className="form-input"
                 type="url"
                 value={icsSubUrl}
@@ -269,6 +271,7 @@ export default function DataTab() {
                 value={icsSubName}
                 onChange={(e) => setIcsSubName(e.target.value)}
                 placeholder={t(messages, 'module.calendar.subscription_name_placeholder')}
+                aria-label={t(messages, 'module.calendar.subscription_name_placeholder')}
               />
               <div className="set-data-btn-row">
                 <button className="btn-ghost" type="button" disabled={!icsSubUrl.trim()} onClick={handlePreviewSubscribeIcs}>
@@ -348,9 +351,10 @@ export default function DataTab() {
                 </div>
               )}
               <form onSubmit={handleImportIcs} className="quick-add-form">
-                <label className="set-data-form-hint">{t(messages, 'module.calendar.import_hint')}</label>
-                <input type="file" accept=".ics" onChange={handleIcsFile} className="form-input set-data-file-input" />
+                <label className="set-data-form-hint" id={`${id}-ics-import`} htmlFor={`${id}-ics-file`}>{t(messages, 'module.calendar.import_hint')}</label>
+                <input id={`${id}-ics-file`} type="file" accept=".ics" onChange={handleIcsFile} className="form-input set-data-file-input" />
                 <textarea
+                  aria-labelledby={`${id}-ics-import`}
                   className="form-input set-data-textarea-ics"
                   value={icsText}
                   onChange={(e) => setIcsText(e.target.value)}
@@ -401,8 +405,9 @@ export default function DataTab() {
                 </div>
               )}
               <form onSubmit={handleImportCsv} className="quick-add-form">
-                <label className="set-data-form-hint">{t(messages, 'contacts_csv_hint')}</label>
+                <label className="set-data-form-hint" htmlFor={`${id}-csv`}>{t(messages, 'contacts_csv_hint')}</label>
                 <textarea
+                  id={`${id}-csv`}
                   className="form-input set-data-textarea-csv"
                   value={csvText}
                   onChange={(e) => setCsvText(e.target.value)}

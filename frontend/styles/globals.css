@@ -320,6 +320,14 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
   top: var(--space-md);
 }
 
+/* iOS Safari zooms the page into a focused text control under 16px, so touch
+   devices get at least 1rem there; desktop keeps the compact sizes. */
+@media (pointer: coarse) {
+  :root :is(input:not([type=checkbox], [type=radio], [type=range], [type=color], [type=file]), select, textarea) {
+    font-size: max(1rem, 1em) !important;
+  }
+}
+
 /* Screen-reader only */
 .sr-only {
   position: absolute;
@@ -385,6 +393,7 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 .form-field .form-input { width: 100%; }
 .form-input { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 14px 16px; font-family: inherit; font-size: 0.95rem; color: var(--text-primary); transition: all 0.2s; min-height: 44px; }
 .form-input::placeholder { color: var(--text-muted); }
+.form-input[aria-invalid="true"] { border-color: var(--danger); }
 .form-input:focus-visible { border-color: var(--amethyst); box-shadow: 0 0 0 3px var(--amethyst-glow); background: rgba(124, 58, 237, 0.04); outline: 2px solid var(--amethyst); outline-offset: 2px; }
 /* <option> styling is only partially honoured across browsers, but
    setting background and color gives Chrome/Edge a matching popup to
@@ -1370,7 +1379,7 @@ button.contact-row:hover { background: var(--surface-soft); }
 .set-danger-block { margin-bottom: var(--space-lg); }
 .set-danger-heading { font-size: 0.88rem; font-weight: 600; }
 .set-danger-desc { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: var(--space-sm); }
-.set-danger-confirm { font-size: 0.85rem; color: var(--error, #ef4444); margin-bottom: var(--space-sm); }
+.set-danger-confirm { display: block; font-size: 0.85rem; color: var(--error, #ef4444); margin-bottom: var(--space-sm); }
 .set-btn-row { display: flex; gap: var(--space-sm); }
 .btn-outline-danger { color: var(--error, #ef4444); border-color: var(--error, #ef4444); }
 .set-danger-section .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; }

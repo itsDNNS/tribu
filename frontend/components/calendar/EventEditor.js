@@ -14,6 +14,7 @@ import {
   weekdayLabel,
 } from '../../lib/calendar-recurrence';
 import { calendarEventStyle } from '../../lib/calendar-colors';
+import { colorName } from '../../lib/member-colors';
 
 export const CALENDAR_COLORS = [
   '#79529e',
@@ -256,7 +257,7 @@ export default function EventEditor({
                 <button
                   type="button"
                   key={c}
-                  aria-label={c}
+                  aria-label={colorName(c, messages)}
                   aria-pressed={color === c}
                   style={{ '--swatch': c }}
                   onClick={() => setColor(c)}

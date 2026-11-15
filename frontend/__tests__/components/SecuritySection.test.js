@@ -22,14 +22,14 @@ jest.mock('../../lib/i18n', () => ({
 }));
 
 jest.mock('../../lib/helpers', () => ({
+  ...jest.requireActual('../../lib/helpers'),
   errorText: (_detail, fallback) => fallback,
 }));
 
-function fillForm({ oldPw = 'old1', newPw = 'newpass1', confirm = 'newpass1' } = {}) {
-  const inputs = document.querySelectorAll('input[type="password"]');
-  fireEvent.change(inputs[0], { target: { value: oldPw } });
-  fireEvent.change(inputs[1], { target: { value: newPw } });
-  fireEvent.change(inputs[2], { target: { value: confirm } });
+function fillForm({ oldPw = 'old1', newPw = 'Newpass1', confirm = 'Newpass1' } = {}) {
+  fireEvent.change(screen.getByLabelText('old_password'), { target: { value: oldPw } });
+  fireEvent.change(screen.getByLabelText('new_password'), { target: { value: newPw } });
+  fireEvent.change(screen.getByLabelText('confirm_password'), { target: { value: confirm } });
 }
 
 describe('SecuritySection', () => {
@@ -47,7 +47,7 @@ describe('SecuritySection', () => {
   it('blocks submit and shows password_mismatch when new and confirm differ', async () => {
     const api = require('../../lib/api');
     render(<SecuritySection />);
-    fillForm({ oldPw: 'old1', newPw: 'newpass1', confirm: 'different1' });
+    fillForm({ oldPw: 'old1', newPw: 'Newpass1', confirm: 'Different1' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 
@@ -60,12 +60,12 @@ describe('SecuritySection', () => {
     api.apiChangePassword.mockResolvedValueOnce({ ok: true, data: {} });
 
     render(<SecuritySection />);
-    fillForm({ oldPw: 'currentpw', newPw: 'fresh1234', confirm: 'fresh1234' });
+    fillForm({ oldPw: 'currentpw', newPw: 'Fresh1234', confirm: 'Fresh1234' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 
     await waitFor(() => {
-      expect(api.apiChangePassword).toHaveBeenCalledWith('currentpw', 'fresh1234');
+      expect(api.apiChangePassword).toHaveBeenCalledWith('currentpw', 'Fresh1234');
     });
     expect(mockToastSuccess).toHaveBeenCalledWith('password_changed');
   });
@@ -78,12 +78,36 @@ describe('SecuritySection', () => {
     });
 
     render(<SecuritySection />);
-    fillForm({ oldPw: 'wrongpw', newPw: 'fresh1234', confirm: 'fresh1234' });
+    fillForm({ oldPw: 'wrongpw', newPw: 'Fresh1234', confirm: 'Fresh1234' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 
     expect(await screen.findByText('toast.password_change_failed')).toBeInTheDocument();
     expect(mockToastError).toHaveBeenCalledWith('toast.password_change_failed');
+    const oldField = screen.getByLabelText('old_password');
+    expect(oldField).toHaveAttribute('aria-invalid', 'true');
+    expect(oldField).toHaveAccessibleDescription('toast.password_change_failed');
+    expect(oldField).toHaveFocus();
+    expect(screen.getByLabelText('new_password')).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it('checks the uppercase and digit rule before sending the request', async () => {
+    const api = require('../../lib/api');
+    render(<SecuritySection />);
+    fillForm({ oldPw: 'currentpw', newPw: 'lowercase1', confirm: 'lowercase1' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
+
+    const newField = screen.getByLabelText('new_password');
+    expect(await screen.findByText('password_hint', { selector: '.set-password-error' })).toBeInTheDocument();
+    expect(newField).toHaveAttribute('aria-invalid', 'true');
+    expect(newField).toHaveAccessibleDescription('password_hint password_hint');
+    expect(newField).toHaveFocus();
+    expect(api.apiChangePassword).not.toHaveBeenCalled();
+
+    fireEvent.change(newField, { target: { value: 'Uppercase1' } });
+    expect(newField).toHaveAttribute('aria-invalid', 'false');
+    expect(newField).toHaveAccessibleDescription('password_hint');
   });
 
   it('recovers from a thrown network error (offline / CORS) with a visible error and a usable form', async () => {
@@ -91,7 +115,7 @@ describe('SecuritySection', () => {
     api.apiChangePassword.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     render(<SecuritySection />);
-    fillForm({ oldPw: 'a', newPw: 'b1234567', confirm: 'b1234567' });
+    fillForm({ oldPw: 'a', newPw: 'B1234567', confirm: 'B1234567' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 
@@ -107,7 +131,7 @@ describe('SecuritySection', () => {
 
     render(<SecuritySection />);
     const inputs = document.querySelectorAll('input[type="password"]');
-    fillForm({ oldPw: 'a', newPw: 'b1234567', confirm: 'b1234567' });
+    fillForm({ oldPw: 'a', newPw: 'B1234567', confirm: 'B1234567' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 

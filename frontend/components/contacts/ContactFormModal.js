@@ -98,15 +98,15 @@ export default function ContactFormModal({ editing, draft, setDraft, onSubmit, o
           <div className="ui-sheet-body">
             <div className="form-field">
               <label htmlFor="contact-name">{t(messages, 'module.contacts.form.name')} *</label>
-              <input ref={firstInputRef} id="contact-name" className="form-input" value={draft.full_name} onChange={change('full_name')} required autoComplete="name" />
+              <input ref={firstInputRef} id="contact-name" className="form-input" value={draft.full_name} onChange={change('full_name')} required autoComplete="off" />
             </div>
             <div className="form-field">
               <label htmlFor="contact-phone">{t(messages, 'module.contacts.form.phone')}</label>
-              <input id="contact-phone" type="tel" className="form-input" value={draft.phone} onChange={change('phone')} autoComplete="tel" />
+              <input id="contact-phone" type="tel" className="form-input" value={draft.phone} onChange={change('phone')} autoComplete="off" />
             </div>
             <div className="form-field">
               <label htmlFor="contact-email">{t(messages, 'module.contacts.form.email')}</label>
-              <input id="contact-email" type="email" className="form-input" value={draft.email} onChange={change('email')} autoComplete="email" />
+              <input id="contact-email" type="email" className="form-input" value={draft.email} onChange={change('email')} autoComplete="off" />
             </div>
             <div className="form-field">
               <label id="contact-birthday-label">{t(messages, 'module.contacts.form.birthday')}</label>

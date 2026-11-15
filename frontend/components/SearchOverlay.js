@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Calendar, CheckSquare, ShoppingCart, Users, Cake, Search, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { isImeComposing } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
@@ -96,7 +97,7 @@ export default function SearchOverlay({ open, onClose, initialQuery = '', areas 
             autoComplete="off"
             aria-label={t(messages, 'search.placeholder')}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && foundAreas.length === 1 && !hasResults) handleResultClick(foundAreas[0].key);
+              if (e.key === 'Enter' && !isImeComposing(e) && foundAreas.length === 1 && !hasResults) handleResultClick(foundAreas[0].key);
             }}
           />
           <button className="search-close" onClick={onClose} aria-label={t(messages, 'close')}>

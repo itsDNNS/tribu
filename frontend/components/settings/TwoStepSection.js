@@ -115,7 +115,8 @@ export default function TwoStepSection() {
     </div>
   );
 
-  const codeField = (labelKey) => (
+  // Setup takes only the app's digits; turning it off also accepts recovery codes with letters.
+  const codeField = (labelKey, digitsOnly = false) => (
     <div className="set-field-group">
       <label className="set-label" htmlFor="two-step-code">{t(messages, labelKey)}</label>
       <input
@@ -123,6 +124,7 @@ export default function TwoStepSection() {
         className="form-input"
         value={code}
         onChange={(e) => setCode(e.target.value)}
+        inputMode={digitsOnly ? 'numeric' : undefined}
         autoComplete="one-time-code"
         spellCheck={false}
         maxLength={32}
@@ -188,7 +190,7 @@ export default function TwoStepSection() {
             <a className="btn-secondary" href={setup.otpauth_uri}>{t(messages, 'two_step.open_app')}</a>
             <button type="button" className="btn-secondary" onClick={() => copy(setup.secret)}>{t(messages, 'two_step.copy_key')}</button>
           </div>
-          {codeField('two_step.code_label')}
+          {codeField('two_step.code_label', true)}
           {error && <div className="set-password-error" role="alert">{error}</div>}
           <div className="two-step-actions">
             <button type="submit" className="btn-primary" disabled={busy || !code}>{t(messages, 'two_step.confirm')}</button>

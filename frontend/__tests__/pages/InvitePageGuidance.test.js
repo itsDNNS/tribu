@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 jest.mock('next/router', () => ({
@@ -21,7 +21,7 @@ jest.mock('../../contexts/AppContext', () => ({
 jest.mock('../../lib/i18n', () => ({
   t: (_m, k) => (k === 'invite_page_next_step_join' ? 'You will be added to {family} automatically' : k),
 }));
-jest.mock('../../lib/helpers', () => ({ errorText: (_d, f) => f }));
+jest.mock('../../lib/helpers', () => ({ ...jest.requireActual('../../lib/helpers'), errorText: (d, f) => d?.code || f }));
 
 jest.mock('../../lib/api', () => ({
   apiGetInviteInfo: jest.fn(),
@@ -121,5 +121,54 @@ describe('InvitePage onboarding guidance', () => {
       expect(document.querySelector('input[type="password"]')).toBeInTheDocument();
     });
     expect(screen.getByTestId('invite-next-card')).toBeInTheDocument();
+  });
+
+  it('labels the sign-up fields for autofill and checks the password rule before sending', async () => {
+    const api = require('../../lib/api');
+    api.apiGetInviteInfo.mockResolvedValue({
+      ok: true,
+      data: { valid: true, family_name: 'Smith', role_preset: 'member', is_adult_preset: true },
+    });
+    mockSsoOff();
+    render(<InvitePage />);
+
+    const email = await screen.findByLabelText('email');
+    const password = screen.getByLabelText('password');
+    const name = screen.getByLabelText('your_name');
+    expect(email).toHaveAttribute('autocomplete', 'username');
+    expect(password).toHaveAttribute('autocomplete', 'new-password');
+    expect(name).toHaveAttribute('autocomplete', 'name');
+    expect(password).toHaveAccessibleDescription('password_hint');
+
+    fireEvent.change(email, { target: { value: 'tom@example.com' } });
+    fireEvent.change(password, { target: { value: 'welcome12' } });
+    fireEvent.change(name, { target: { value: 'Tom' } });
+    fireEvent.click(screen.getByRole('button', { name: 'invite_page_register' }));
+
+    expect(password).toHaveAttribute('aria-invalid', 'true');
+    expect(password).toHaveFocus();
+    expect(api.apiRegisterWithInvite).not.toHaveBeenCalled();
+  });
+
+  it('marks the email field when the address is already registered', async () => {
+    const api = require('../../lib/api');
+    api.apiGetInviteInfo.mockResolvedValue({
+      ok: true,
+      data: { valid: true, family_name: 'Smith', role_preset: 'member', is_adult_preset: true },
+    });
+    api.apiRegisterWithInvite.mockResolvedValue({ ok: false, data: { detail: { code: 'EMAIL_ALREADY_EXISTS' } } });
+    mockSsoOff();
+    render(<InvitePage />);
+
+    const email = await screen.findByLabelText('email');
+    fireEvent.change(email, { target: { value: 'tom@example.com' } });
+    fireEvent.change(screen.getByLabelText('password'), { target: { value: 'Welcome12' } });
+    fireEvent.change(screen.getByLabelText('your_name'), { target: { value: 'Tom' } });
+    fireEvent.click(screen.getByRole('button', { name: 'invite_page_register' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('EMAIL_ALREADY_EXISTS');
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(email).toHaveAccessibleDescription('EMAIL_ALREADY_EXISTS');
+    expect(screen.getByLabelText('password')).toHaveAttribute('aria-invalid', 'false');
   });
 });

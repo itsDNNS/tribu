@@ -617,7 +617,7 @@ export default function WeeklyPlanView({
   );
 
   return (
-    <main
+    <div
       ref={plannerRef}
       className="weekly-plan-page week-glance print-surface ui-planner"
       data-density={compact ? 'compact' : 'wide'}
@@ -804,6 +804,6 @@ export default function WeeklyPlanView({
           />
         )}
       </div>
-    </main>
+    </div>
   );
 }

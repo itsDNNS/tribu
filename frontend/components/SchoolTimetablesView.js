@@ -511,7 +511,7 @@ export default function SchoolTimetablesView() {
           {current && <TimetableView key={current.id} timetable={current} msg={msg} />}
         </>
       ) : (
-          <main className="school-editor-card">
+          <div className="school-editor-card">
             <div className="school-editor-head">
               <h2>{msg(creating ? 'module.school_timetables.new_title' : 'module.school_timetables.edit_title')}</h2>
               <button type="button" className="btn-ghost" onClick={cancelEdit}>{t(messages, 'cancel')}</button>
@@ -792,7 +792,7 @@ export default function SchoolTimetablesView() {
                 </button>
               )}
             </div>
-          </main>
+          </div>
       )}
     </div>
   );

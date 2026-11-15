@@ -35,3 +35,17 @@ test('category suggestions require text and support keyboard, Escape, blur, touc
   fireEvent.blur(input);
   expect(screen.queryByRole('listbox')).toBeNull();
 });
+
+test('arrow keys and Enter that pick or confirm IME candidates leave the suggestions alone', () => {
+  render(<Input />);
+  const input = screen.getByRole('combobox', { name: 'Category' });
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: 'd' } });
+  fireEvent.keyDown(input, { key: 'ArrowDown', isComposing: true });
+  expect(input).not.toHaveAttribute('aria-activedescendant');
+  fireEvent.keyDown(input, { key: 'ArrowDown' });
+  fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 });
+  expect(input).toHaveValue('d');
+  fireEvent.keyDown(input, { key: 'Enter', keyCode: 13 });
+  expect(input).toHaveValue('Dairy');
+});

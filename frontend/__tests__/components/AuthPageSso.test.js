@@ -29,6 +29,7 @@ jest.mock('../../lib/i18n', () => ({
 }));
 
 jest.mock('../../lib/helpers', () => ({
+  ...jest.requireActual('../../lib/helpers'),
   errorText: (_d, fallback) => fallback,
 }));
 
@@ -116,8 +117,8 @@ describe('AuthPage OIDC integration', () => {
     });
     render(<AuthPage />);
     await screen.findByTestId('sso-login-button');
-    // Tablist role hidden when password login disabled
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    // Sign-in/register switch hidden when password login disabled
+    expect(screen.queryByRole('button', { name: 'auth_register' })).not.toBeInTheDocument();
     // No password inputs rendered
     expect(document.querySelector('input[type="password"]')).not.toBeInTheDocument();
   });
@@ -169,8 +170,8 @@ describe('AuthPage OIDC integration', () => {
     // Password form must still be visible — the flag only bites when
     // OIDC is genuinely ready to serve logins.
     expect(document.querySelector('input[type="password"]')).toBeInTheDocument();
-    // Tabs list still rendered
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    // Sign-in/register switch still rendered
+    expect(screen.getByRole('button', { name: 'auth_login' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('falls back to generic error message for unknown ?sso_error tags', async () => {

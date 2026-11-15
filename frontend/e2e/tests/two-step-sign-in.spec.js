@@ -58,10 +58,10 @@ test.describe('Two-step sign-in', () => {
 
     await page.context().clearCookies();
     await page.goto('/');
-    await page.locator('#tab-login').waitFor({ timeout: 10000 });
+    await page.locator('#login-email').waitFor({ timeout: 10000 });
     await page.locator('#login-email').fill(user.email);
     await page.locator('#login-password').fill(user.password);
-    await page.locator('#panel-login button[type="submit"]').click();
+    await page.locator('form:has(#login-email) button[type="submit"]').click();
 
     const code = page.locator('#login-mfa-code');
     await expect(code).toBeVisible({ timeout: 10000 });

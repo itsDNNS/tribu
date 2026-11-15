@@ -151,6 +151,7 @@ export default function WebhooksTab() {
                 value={form.secret_header_value}
                 onChange={(event) => setForm((current) => ({ ...current, secret_header_value: event.target.value }))}
                 placeholder={msg('webhooks_secret_value_placeholder', 'Secret value')}
+                aria-label={msg('webhooks_secret_value_placeholder', 'Secret value')}
               />
             </div>
           </div>

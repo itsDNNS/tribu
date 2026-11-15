@@ -17,7 +17,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 import { announce } from '../lib/announce';
 import * as api from '../lib/api';
-import { errorText } from '../lib/helpers';
+import { errorText, isImeComposing } from '../lib/helpers';
 import { t, tc } from '../lib/i18n';
 import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient, formatIngredientAmount, recipeDraftToForm, recipeToForm } from '../lib/recipes';
 import ConfirmDialog from './ConfirmDialog';
@@ -255,7 +255,7 @@ function RecipeDialog({
                   placeholder={t(messages, 'module.recipes.import_placeholder')}
                   value={importUrl}
                   onChange={(e) => { setImportUrl(e.target.value); setImported(false); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runImport(); } }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!isImeComposing(e)) runImport(); } }}
                   maxLength={500}
                 />
                 <button

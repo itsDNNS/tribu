@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { Bell, BellRing } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -109,6 +109,7 @@ function pushStatusCopy(messages, pushStatus, pushSupported, pushPermission, pus
 
 export default function NotificationsTab() {
   const { messages, loggedIn, demoMode } = useApp();
+  const id = useId();
   const { success: toastSuccess } = useToast();
   const { pushSupported, pushSubscription, pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushSubscription(loggedIn, demoMode);
 
@@ -215,8 +216,9 @@ export default function NotificationsTab() {
           </label>
 
           <div className="form-field">
-            <label className="set-label">{t(messages, 'notification_reminder_minutes')}</label>
+            <label className="set-label" htmlFor={`${id}-reminder`}>{t(messages, 'notification_reminder_minutes')}</label>
             <select
+              id={`${id}-reminder`}
               className="form-input set-input-narrow"
               value={notifPrefs.reminder_minutes}
               onChange={(e) => setNotifPrefs((p) => ({ ...p, reminder_minutes: Number(e.target.value) }))}
@@ -228,14 +230,14 @@ export default function NotificationsTab() {
           </div>
 
           <div className="form-field">
-            <label className="set-label">{t(messages, 'notification_quiet_hours')}</label>
-            <div className="set-time-row">
+            <label className="set-label" id={`${id}-quiet`}>{t(messages, 'notification_quiet_hours')}</label>
+            <div className="set-time-row" role="group" aria-labelledby={`${id}-quiet`}>
               <input
                 type="time"
                 className="form-input set-input-time"
                 value={notifPrefs.quiet_start}
                 onChange={(e) => setNotifPrefs((p) => ({ ...p, quiet_start: e.target.value }))}
-                placeholder={t(messages, 'notification_quiet_start')}
+                aria-label={t(messages, 'notification_quiet_start')}
               />
               <span className="set-separator">&ndash;</span>
               <input
@@ -243,7 +245,7 @@ export default function NotificationsTab() {
                 className="form-input set-input-time"
                 value={notifPrefs.quiet_end}
                 onChange={(e) => setNotifPrefs((p) => ({ ...p, quiet_end: e.target.value }))}
-                placeholder={t(messages, 'notification_quiet_end')}
+                aria-label={t(messages, 'notification_quiet_end')}
               />
             </div>
           </div>

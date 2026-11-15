@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -14,6 +14,7 @@ export default function ApiTokensTab() {
   const scopeModuleKeys = isAdmin ? [...SCOPE_MODULE_KEYS_BASE, 'admin'] : SCOPE_MODULE_KEYS_BASE;
 
   const [tokens, setTokens] = useState([]);
+  const id = useId();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newScopes, setNewScopes] = useState(['*']);
@@ -162,8 +163,9 @@ export default function ApiTokensTab() {
           <form onSubmit={handleCreateToken} className="set-token-create-form">
             <div className="settings-subsection set-token-form-grid">
               <div className="form-field">
-                <label>{t(messages, 'token_name')}</label>
+                <label htmlFor={`${id}-name`}>{t(messages, 'token_name')}</label>
                 <input
+                  id={`${id}-name`}
                   className="form-input"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
@@ -173,8 +175,8 @@ export default function ApiTokensTab() {
                 />
               </div>
 
-              <div className="form-field">
-                <label>{t(messages, 'token_scopes')}</label>
+              <div className="form-field" role="group" aria-labelledby={`${id}-scopes`}>
+                <label id={`${id}-scopes`}>{t(messages, 'token_scopes')}</label>
                 <label className="set-token-scope-check">
                   <input type="checkbox" checked={isFullAccess} onChange={e => toggleFullAccess(e.target.checked)} />
                   {t(messages, 'token_full_access')}
@@ -182,8 +184,8 @@ export default function ApiTokensTab() {
                 {!isFullAccess && (
                   <div className="set-token-scope-grid">
                     {scopeModuleKeys.map(mod => (
-                      <div key={mod} className="set-token-scope-module">
-                        <div className="set-token-scope-label">{t(messages, `token_scope_${mod}`)}</div>
+                      <div key={mod} className="set-token-scope-module" role="group" aria-labelledby={`${id}-scope-${mod}`}>
+                        <div id={`${id}-scope-${mod}`} className="set-token-scope-label">{t(messages, `token_scope_${mod}`)}</div>
                         {['read', 'write'].map(action => (
                           <label key={action} className="set-token-scope-action">
                             <input
@@ -201,9 +203,10 @@ export default function ApiTokensTab() {
               </div>
 
               <div className="form-field">
-                <label>{t(messages, 'token_expiry')}</label>
+                <label htmlFor={`${id}-expiry`}>{t(messages, 'token_expiry')}</label>
                 <div className="set-token-expiry-row">
                   <input
+                    id={`${id}-expiry`}
                     className="form-input set-token-expiry-input"
                     type="date"
                     value={newExpiry}
@@ -223,7 +226,7 @@ export default function ApiTokensTab() {
                   <Plus size={14} /> {t(messages, 'create_token')}
                 </button>
                 <button type="button" className="btn-ghost" onClick={() => setShowCreate(false)}>
-                  Cancel
+                  {t(messages, 'cancel')}
                 </button>
               </div>
             </div>

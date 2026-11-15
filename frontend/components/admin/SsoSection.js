@@ -131,8 +131,10 @@ export default function SsoSection() {
 
       <div className="sso-grid">
         <div className="form-field sso-field-span-2">
-          <label>{t(messages, 'sso.preset')}</label>
+          <label htmlFor="sso-preset">{t(messages, 'sso.preset')}</label>
           <select
+            id="sso-preset"
+            aria-describedby="sso-preset-hint"
             className="form-input"
             value={cfg.preset}
             onChange={(e) => update('preset', e.target.value)}
@@ -142,15 +144,16 @@ export default function SsoSection() {
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-          <small className="sso-hint">{t(messages, 'sso.preset_hint')}</small>
+          <small id="sso-preset-hint" className="sso-hint">{t(messages, 'sso.preset_hint')}</small>
           {selectedPreset?.hint && (
             <small className="sso-hint">{selectedPreset.hint}</small>
           )}
         </div>
 
         <div className="form-field sso-field-span-2">
-          <label>{t(messages, 'sso.issuer')}</label>
+          <label htmlFor="sso-issuer">{t(messages, 'sso.issuer')}</label>
           <input
+            id="sso-issuer"
             className="form-input"
             type="url"
             value={cfg.issuer || ''}
@@ -161,8 +164,9 @@ export default function SsoSection() {
         </div>
 
         <div className="form-field">
-          <label>{t(messages, 'sso.client_id')}</label>
+          <label htmlFor="sso-client-id">{t(messages, 'sso.client_id')}</label>
           <input
+            id="sso-client-id"
             className="form-input"
             type="text"
             value={cfg.client_id || ''}
@@ -171,8 +175,9 @@ export default function SsoSection() {
         </div>
 
         <div className="form-field">
-          <label>{t(messages, 'sso.client_secret')}</label>
+          <label htmlFor="sso-client-secret">{t(messages, 'sso.client_secret')}</label>
           <input
+            id="sso-client-secret"
             className="form-input"
             type="password"
             value={secretDraft}
@@ -198,26 +203,30 @@ export default function SsoSection() {
         </div>
 
         <div className="form-field">
-          <label>{t(messages, 'sso.button_label')}</label>
+          <label htmlFor="sso-button-label">{t(messages, 'sso.button_label')}</label>
           <input
+            id="sso-button-label"
+            aria-describedby="sso-button-label-hint"
             className="form-input"
             type="text"
             value={cfg.button_label || ''}
             placeholder={selectedPreset?.button_label || ''}
             onChange={(e) => update('button_label', e.target.value)}
           />
-          <small className="sso-hint">{t(messages, 'sso.button_label_hint')}</small>
+          <small id="sso-button-label-hint" className="sso-hint">{t(messages, 'sso.button_label_hint')}</small>
         </div>
 
         <div className="form-field">
-          <label>{t(messages, 'sso.scopes')}</label>
+          <label htmlFor="sso-scopes">{t(messages, 'sso.scopes')}</label>
           <input
+            id="sso-scopes"
+            aria-describedby="sso-scopes-hint"
             className="form-input"
             type="text"
             value={cfg.scopes || ''}
             onChange={(e) => update('scopes', e.target.value)}
           />
-          <small className="sso-hint">{t(messages, 'sso.scopes_hint')}</small>
+          <small id="sso-scopes-hint" className="sso-hint">{t(messages, 'sso.scopes_hint')}</small>
         </div>
       </div>
 
