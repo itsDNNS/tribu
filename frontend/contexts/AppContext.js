@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
+import { dropDevicePushSubscription } from '../hooks/usePushSubscription';
 import { buildMessages, listLanguages } from '../lib/i18n';
 import { resolveInitialView } from '../lib/navigationState';
 import { notificationLinkView } from '../lib/notificationLinks';
@@ -294,7 +295,10 @@ export function AppProvider({ children }) {
   }, [lang]);
 
   const logout = useCallback(async () => {
-    if (!demoMode) await api.apiLogout();
+    if (!demoMode) {
+      await dropDevicePushSubscription();
+      await api.apiLogout();
+    }
     setDemoMode(false);
     setLoggedIn(false);
     setMe(null);

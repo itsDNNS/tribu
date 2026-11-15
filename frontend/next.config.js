@@ -1,6 +1,17 @@
 /** @type {import('next').NextConfig} */
 const backendUrl = process.env.BACKEND_URL || 'http://backend:8000';
 
+const baseSecurityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'same-origin' },
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+];
+
+const noFramingHeaders = [
+  { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; object-src 'none'; base-uri 'none'" },
+  { key: 'X-Frame-Options', value: 'DENY' },
+];
+
 const nextConfig = {
   // Standalone output emits a self-contained server (.next/standalone)
   // with only the production deps Next traced as reachable. The Docker
@@ -16,6 +27,13 @@ const nextConfig = {
   // Local e2e runs use `next dev`; its indicator covers the mobile bottom
   // navigation and intercepts clicks. Errors are still reported.
   ...(process.env.TRIBU_E2E === '1' ? { devIndicators: false } : {}),
+  async headers() {
+    return [
+      { source: '/:path*', headers: baseSecurityHeaders },
+      // The wall display has no actions worth hijacking and is often embedded in home dashboards.
+      { source: '/((?!display).*)', headers: noFramingHeaders },
+    ];
+  },
   async rewrites() {
     // The e-ink picture lives outside /api so reverse proxies that send /api to the
     // backend still reach it; beforeFiles lets it win over the backend proxy below.
