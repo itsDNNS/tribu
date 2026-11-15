@@ -32,9 +32,9 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core import oidc as oidc_core
-from app.core.auth_sessions import issue_refresh_session, issue_session_cookies
+from app.core.auth_sessions import cookie_secure, issue_refresh_session, issue_session_cookies
 from app.core.clock import utcnow
-from app.core.config import COOKIE_SECURE, REFRESH_COOKIE_MAX_AGE
+from app.core.config import REFRESH_COOKIE_MAX_AGE
 from app.core.errors import (
     OIDC_ID_TOKEN_INVALID,
     OIDC_INVALID_CALLBACK,
@@ -121,13 +121,13 @@ def _unsign_flow(raw: str) -> dict:
     return decoded
 
 
-def _set_flow_cookie(response, token: str) -> None:
+def _set_flow_cookie(request: Request, response, token: str) -> None:
     response.set_cookie(
         FLOW_COOKIE,
         token,
         httponly=True,
         samesite="lax",
-        secure=COOKIE_SECURE,
+        secure=cookie_secure(request),
         max_age=FLOW_TTL_SECONDS,
         path="/auth/oidc",
     )
@@ -280,7 +280,7 @@ def start_login(
     })
 
     response = RedirectResponse(url=authorize_url, status_code=303)
-    _set_flow_cookie(response, flow_cookie)
+    _set_flow_cookie(request, response, flow_cookie)
     return response
 
 
@@ -610,7 +610,7 @@ def callback(
 
     redirect_to = _safe_redirect(flow.get("redirect_to"))
     response = RedirectResponse(url=redirect_to, status_code=303)
-    issue_session_cookies(response, db, user)
+    issue_session_cookies(request, response, db, user)
     db.commit()
     _clear_flow_cookie(response)
     return response

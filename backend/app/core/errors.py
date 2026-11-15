@@ -22,6 +22,7 @@ NO_FAMILY_ACCESS = "NO_FAMILY_ACCESS"
 ADULT_REQUIRED = "ADULT_REQUIRED"
 ADMIN_REQUIRED = "ADMIN_REQUIRED"
 INSUFFICIENT_SCOPE = "INSUFFICIENT_SCOPE"
+CROSS_SITE_REQUEST = "CROSS_SITE_REQUEST"
 
 # ── Registration / Email ──────────────────────────────────────
 EMAIL_ALREADY_EXISTS = "EMAIL_ALREADY_EXISTS"
@@ -257,6 +258,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     RESTORE_IN_PROGRESS: "Restore already in progress",
     RESTORE_FAILED: "Restore failed: {reason}",
     SETUP_RESTORE_TOKEN_REQUIRED: "Setup restore requires SETUP_RESTORE_TOKEN to be configured.",
+    CROSS_SITE_REQUEST: "This request came from another site and was blocked.",
     SETUP_RESTORE_TOKEN_INVALID: "Invalid setup restore token.",
     SETUP_RESTORE_UPLOAD_TOO_LARGE: "Setup restore archive is too large.",
     CONTACT_NOT_FOUND: "Contact not found",

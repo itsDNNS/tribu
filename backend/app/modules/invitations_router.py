@@ -15,7 +15,6 @@ from app.core import cache
 from app.core import oidc as oidc_core
 from app.core.deps import current_user, ensure_family_admin
 from app.core.scopes import require_scope
-from app.core.config import COOKIE_SECURE
 from app.core.auth_sessions import issue_session_cookies
 from app.database import get_db
 from app.models import Family, FamilyInvitation, Membership, User
@@ -264,7 +263,7 @@ def register_with_invite(
            target_user_id=user.id,
            details={"email": user.email, "invite_id": invitation.id})
     response = JSONResponse(content={"status": "ok"})
-    issue_session_cookies(response, db, user)
+    issue_session_cookies(request, response, db, user)
     db.commit()
     # The joiner now belongs to a new family; drop the cached families list so
     # /families/me doesn't keep serving the stale pre-join set for up to 300s

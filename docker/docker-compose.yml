@@ -35,7 +35,7 @@ services:
       DATABASE_URL: postgresql://tribu:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/tribu
       REDIS_URL: redis://valkey:6379/0
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
-      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      SECURE_COOKIES: ${SECURE_COOKIES:-auto}
       BASE_URL: ${BASE_URL:-}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
