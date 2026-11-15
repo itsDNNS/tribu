@@ -3,7 +3,7 @@ import { Cake, Eye, EyeOff, Globe, KeyRound, Lock, Play, Server, ShoppingCart, U
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { localeForLang } from '../lib/dates';
-import { errorText } from '../lib/helpers';
+import { errorField, errorText, meetsPasswordRule } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 
@@ -96,6 +96,7 @@ export default function AuthPage() {
   const [authMode, setAuthMode] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
   const [msg, setMsg] = useState('');
+  const [invalidField, setInvalidField] = useState('');
   const [sso, setSso] = useState({ enabled: false, ready: false, button_label: '', password_login_disabled: false });
   const [ssoError, setSsoError] = useState('');
   const [mfaToken, setMfaToken] = useState('');
@@ -126,9 +127,20 @@ export default function AuthPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
+  // Show an error under the form; one tied to a field also marks that field and focuses it.
+  function fail(text, field = '') {
+    setMsg(text);
+    setInvalidField(field);
+    if (field) document.getElementById(field)?.focus();
+  }
+
+  // The field's hint, plus the form error while that error is about this field.
+  const describedBy = (id, hintId) => [hintId, invalidField === id && 'auth-error'].filter(Boolean).join(' ') || undefined;
+
   async function login(e) {
     e.preventDefault();
     setMsg('');
+    setInvalidField('');
     const { ok, data } = await api.apiLogin(email, password);
     if (!ok) { setMsg(errorText(data?.detail, t(messages, 'toast.login_failed'), messages)); toastError(errorText(data?.detail, t(messages, 'toast.login_failed'), messages)); return; }
     if (data?.status === 'mfa_required') {
@@ -142,12 +154,17 @@ export default function AuthPage() {
   async function verifyMfa(e) {
     e.preventDefault();
     setMsg('');
+    setInvalidField('');
     const { ok, data } = await api.apiLoginMfa(mfaToken, mfaCode);
     if (!ok) {
       const text = errorText(data?.detail, t(messages, 'toast.login_failed'), messages);
-      setMsg(text);
       toastError(text);
-      if (data?.detail?.code === 'MFA_CHALLENGE_INVALID') setMfaToken('');
+      if (data?.detail?.code === 'MFA_CHALLENGE_INVALID') {
+        setMsg(text);
+        setMfaToken('');
+      } else {
+        fail(text, 'login-mfa-code');
+      }
       return;
     }
     setLoggedIn(true);
@@ -156,12 +173,23 @@ export default function AuthPage() {
   async function register(e) {
     e.preventDefault();
     setMsg('');
+    setInvalidField('');
+    if (!meetsPasswordRule(password)) {
+      fail(t(messages, 'password_hint'), 'register-password');
+      return;
+    }
     const { ok, data } = await api.apiRegister(email, password, displayName, familyName);
-    if (!ok) { setMsg(errorText(data?.detail, t(messages, 'toast.registration_failed'), messages)); toastError(errorText(data?.detail, t(messages, 'toast.registration_failed'), messages)); return; }
+    if (!ok) {
+      const text = errorText(data?.detail, t(messages, 'toast.registration_failed'), messages);
+      const field = { email: 'register-email', password: 'register-password' }[errorField(data?.detail)];
+      fail(text, field);
+      toastError(text);
+      return;
+    }
     setLoggedIn(true);
   }
 
-  const passwordInput = (id, autoComplete) => (
+  const passwordInput = (id, autoComplete, hintId) => (
     <div className="welcome-password">
       <input
         id={id}
@@ -169,8 +197,10 @@ export default function AuthPage() {
         type={showPassword ? 'text' : 'password'}
         placeholder={t(messages, 'password')}
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e) => { setPassword(e.target.value); if (invalidField === id) setInvalidField(''); }}
         autoComplete={autoComplete}
+        aria-invalid={invalidField === id}
+        aria-describedby={describedBy(id, hintId)}
         required
         minLength={8}
         maxLength={128}
@@ -204,7 +234,7 @@ export default function AuthPage() {
         </select>
       </div>
 
-      <main className="welcome-layout">
+      <main id="main-content" className="welcome-layout">
         <header className="welcome-intro">
           <div className="welcome-brand">
             <span className="welcome-logo" aria-hidden="true"><Users size={22} /></span>
@@ -217,24 +247,20 @@ export default function AuthPage() {
         <section className="welcome-auth" id="auth" aria-label={t(messages, 'aria.auth_mode')}>
           <div className="auth-card auth-card--warm welcome-card">
             {!passwordOnly && (
-              <div className="auth-tabs" role="tablist" aria-label={t(messages, 'aria.auth_mode')}>
+              <div className="auth-tabs" role="group" aria-label={t(messages, 'aria.auth_mode')}>
                 <button
+                  type="button"
                   className={`auth-tab${authMode === 'login' ? ' active' : ''}`}
                   onClick={() => setAuthMode('login')}
-                  role="tab"
-                  id="tab-login"
-                  aria-selected={authMode === 'login'}
-                  aria-controls="panel-login"
+                  aria-pressed={authMode === 'login'}
                 >
                   {t(messages, 'auth_login')}
                 </button>
                 <button
+                  type="button"
                   className={`auth-tab${authMode === 'register' ? ' active' : ''}`}
                   onClick={() => setAuthMode('register')}
-                  role="tab"
-                  id="tab-register"
-                  aria-selected={authMode === 'register'}
-                  aria-controls="panel-register"
+                  aria-pressed={authMode === 'register'}
                 >
                   {t(messages, 'auth_register')}
                 </button>
@@ -268,58 +294,52 @@ export default function AuthPage() {
             )}
 
             {!passwordOnly && (authMode === 'login' ? (mfaToken ? (
-              <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
-                <form onSubmit={verifyMfa} className="auth-form" data-testid="mfa-login-form">
-                  <p>{t(messages, 'auth.mfa_desc')}</p>
-                  <div className="form-field">
-                    <label htmlFor="login-mfa-code">{t(messages, 'two_step.code_or_recovery')}</label>
-                    <input id="login-mfa-code" className="form-input" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} autoComplete="one-time-code" spellCheck={false} maxLength={32} required autoFocus />
-                    <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'auth.mfa_recovery_hint')}</small>
-                  </div>
-                  <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
-                  <button className="btn-secondary" type="button" onClick={() => { setMfaToken(''); setMsg(''); }}>{t(messages, 'auth.mfa_back')}</button>
-                </form>
-              </div>
+              <form onSubmit={verifyMfa} className="auth-form" data-testid="mfa-login-form">
+                <p>{t(messages, 'auth.mfa_desc')}</p>
+                <div className="form-field">
+                  <label htmlFor="login-mfa-code">{t(messages, 'two_step.code_or_recovery')}</label>
+                  <input id="login-mfa-code" className="form-input" value={mfaCode} onChange={(e) => { setMfaCode(e.target.value); setInvalidField(''); }} autoComplete="one-time-code" spellCheck={false} maxLength={32} required autoFocus aria-invalid={invalidField === 'login-mfa-code'} aria-describedby={describedBy('login-mfa-code', 'login-mfa-hint')} />
+                  <small id="login-mfa-hint" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'auth.mfa_recovery_hint')}</small>
+                </div>
+                <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
+                <button className="btn-secondary" type="button" onClick={() => { setMfaToken(''); setMsg(''); }}>{t(messages, 'auth.mfa_back')}</button>
+              </form>
             ) : (
-              <div role="tabpanel" id="panel-login" aria-labelledby="tab-login">
-                <form onSubmit={login} className="auth-form">
-                  <div className="form-field">
-                    <label htmlFor="login-email">{t(messages, 'email')}</label>
-                    <input id="login-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="login-password">{t(messages, 'password')}</label>
-                    {passwordInput('login-password', 'current-password')}
-                  </div>
-                  <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
-                </form>
-              </div>
+              <form onSubmit={login} className="auth-form">
+                <div className="form-field">
+                  <label htmlFor="login-email">{t(messages, 'email')}</label>
+                  <input id="login-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="login-password">{t(messages, 'password')}</label>
+                  {passwordInput('login-password', 'current-password')}
+                </div>
+                <button className="btn-primary" type="submit">{t(messages, 'login')}</button>
+              </form>
             )) : (
-              <div role="tabpanel" id="panel-register" aria-labelledby="tab-register">
-                <form onSubmit={register} className="auth-form">
-                  <div className="form-field">
-                    <label htmlFor="register-email">{t(messages, 'email')}</label>
-                    <input id="register-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="register-password">{t(messages, 'password')}</label>
-                    {passwordInput('register-password', 'new-password')}
-                    <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="register-name">{t(messages, 'your_name')}</label>
-                    <input id="register-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" required />
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="register-family">{t(messages, 'family_name')}</label>
-                    <input id="register-family" className="form-input" type="text" placeholder={t(messages, 'setup_family_placeholder')} value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
-                  </div>
-                  <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
-                </form>
-              </div>
+              <form onSubmit={register} className="auth-form">
+                <div className="form-field">
+                  <label htmlFor="register-email">{t(messages, 'email')}</label>
+                  <input id="register-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => { setEmail(e.target.value); if (invalidField === 'register-email') setInvalidField(''); }} autoComplete="username" required aria-invalid={invalidField === 'register-email'} aria-describedby={describedBy('register-email')} />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="register-password">{t(messages, 'password')}</label>
+                  {passwordInput('register-password', 'new-password', 'register-password-hint')}
+                  <small id="register-password-hint" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="register-name">{t(messages, 'your_name')}</label>
+                  <input id="register-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" required />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="register-family">{t(messages, 'family_name')}</label>
+                  <input id="register-family" className="form-input" type="text" placeholder={t(messages, 'setup_family_placeholder')} value={familyName} onChange={(e) => setFamilyName(e.target.value)} required />
+                </div>
+                <button className="btn-primary" type="submit">{t(messages, 'register')}</button>
+              </form>
             ))}
 
-            {msg && <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
+            {msg && <p id="auth-error" role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)' }}>{msg}</p>}
 
             <div className="auth-divider">{t(messages, 'auth.or')}</div>
 

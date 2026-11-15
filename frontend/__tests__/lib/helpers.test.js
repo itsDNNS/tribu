@@ -1,4 +1,4 @@
-import { toIsoOrNull, prettyDate, parseDate, parseServerInstant, serverTimeAgo, errorText, copyTextToClipboard } from '../../lib/helpers';
+import { toIsoOrNull, prettyDate, parseDate, parseServerInstant, serverTimeAgo, errorText, copyTextToClipboard, errorField, meetsPasswordRule, isImeComposing } from '../../lib/helpers';
 
 describe('toIsoOrNull', () => {
   it('returns null for falsy values', () => {
@@ -131,5 +131,38 @@ describe('copyTextToClipboard', () => {
     const writeText = jest.fn().mockRejectedValue(new Error('nope'));
     global.navigator = { clipboard: { writeText } };
     await expect(copyTextToClipboard('abc')).resolves.toBe(false);
+  });
+});
+
+describe('errorField', () => {
+  it('maps account errors to the field they are about', () => {
+    expect(errorField({ code: 'EMAIL_ALREADY_EXISTS' })).toBe('email');
+    expect(errorField({ code: 'OLD_PASSWORD_INCORRECT' })).toBe('old_password');
+    expect(errorField([{ loc: ['body', 'new_password'], msg: 'Value error' }])).toBe('new_password');
+  });
+
+  it('returns nothing for errors without a field', () => {
+    expect(errorField({ code: 'INVALID_CREDENTIALS' })).toBe('');
+    expect(errorField('Network error')).toBe('');
+    expect(errorField(undefined)).toBe('');
+  });
+});
+
+describe('meetsPasswordRule', () => {
+  it('needs an uppercase letter and a digit like the backend', () => {
+    expect(meetsPasswordRule('Secure1Pass')).toBe(true);
+    expect(meetsPasswordRule('secure1pass')).toBe(false);
+    expect(meetsPasswordRule('SecurePass')).toBe(false);
+    expect(meetsPasswordRule('Ärger1xyz')).toBe(false);
+    expect(meetsPasswordRule('Secure\u0661pass')).toBe(true);
+  });
+});
+
+describe('isImeComposing', () => {
+  it('detects composition on React and native keyboard events', () => {
+    expect(isImeComposing({ nativeEvent: { isComposing: true }, keyCode: 13 })).toBe(true);
+    expect(isImeComposing({ nativeEvent: { isComposing: false }, keyCode: 229 })).toBe(true);
+    expect(isImeComposing({ isComposing: true, keyCode: 13 })).toBe(true);
+    expect(isImeComposing({ nativeEvent: { isComposing: false }, keyCode: 13 })).toBe(false);
   });
 });

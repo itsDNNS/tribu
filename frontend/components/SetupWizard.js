@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { Users, ShieldCheck, Upload, CheckCircle, Globe, AlertCircle, Play } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { errorText, parseServerInstant } from '../lib/helpers';
+import { errorField, errorText, meetsPasswordRule, parseServerInstant } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 import AreaSwitches from './settings/AreaSwitches';
@@ -25,6 +25,7 @@ export default function SetupWizard() {
   const [step, setStep] = useState(0);
   const [path, setPath] = useState(null); // 'fresh' or 'restore'
   const [msg, setMsg] = useState('');
+  const [invalidField, setInvalidField] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Admin fields
@@ -53,6 +54,7 @@ export default function SetupWizard() {
 
   const nextStep = () => {
     setMsg('');
+    setInvalidField('');
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
 
@@ -83,6 +85,23 @@ export default function SetupWizard() {
     setRestoreMeta(data);
   };
 
+  // Show an error under the step; one tied to a field also marks that field and focuses it.
+  const fail = (text, field = '') => {
+    setMsg(text);
+    setInvalidField(field);
+    if (field) document.getElementById(field)?.focus();
+  };
+
+  // The field's hint, plus the step error while that error is about this field.
+  const describedBy = (id, hintId) => [hintId, invalidField === id && 'setup-error'].filter(Boolean).join(' ') || undefined;
+
+  const submitAdmin = (e) => {
+    e.preventDefault();
+    // The account is only created after the family step, so check the password rule here.
+    if (!meetsPasswordRule(password)) return fail(t(messages, 'password_hint'), 'setup-password');
+    nextStep();
+  };
+
   // --- Register ---
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -90,7 +109,15 @@ export default function SetupWizard() {
     setSubmitting(true);
     const { ok, data } = await api.apiRegister(email, password, displayName, familyName);
     setSubmitting(false);
-    if (!ok) return setMsg(errorText(data?.detail, t(messages, 'setup_admin_failed'), messages));
+    if (!ok) {
+      const text = errorText(data?.detail, t(messages, 'setup_admin_failed'), messages);
+      // Email and password were entered on the previous step, so go back to the field at fault.
+      const field = { email: 'setup-email', password: 'setup-password' }[errorField(data?.detail)];
+      if (field) setStep(steps.indexOf('admin'));
+      setMsg(text);
+      setInvalidField(field || '');
+      return;
+    }
     nextStep();
   };
 
@@ -143,7 +170,7 @@ export default function SetupWizard() {
   return (
     <div className="auth-page">
       {langToggle}
-      <div className="auth-container">
+      <main id="main-content" className="auth-container">
         <div className="auth-brand">
           <div className="auth-logo">
             <Users size={32} color="white" aria-hidden="true" />
@@ -215,15 +242,17 @@ export default function SetupWizard() {
                   {restoreFile.name} ({(restoreFile.size / 1024).toFixed(0)} KB)
                 </p>
               )}
-              <input
-                type="password"
-                value={restoreToken}
-                onChange={(e) => setRestoreToken(e.target.value)}
-                placeholder="Setup restore token"
-                autoComplete="off"
-                className="setup-input"
-                style={{ width: '100%', marginTop: 12 }}
-              />
+              <div className="form-field" style={{ marginTop: 12 }}>
+                <label htmlFor="setup-restore-token">{t(messages, 'setup_restore_token')}</label>
+                <input
+                  id="setup-restore-token"
+                  type="password"
+                  value={restoreToken}
+                  onChange={(e) => setRestoreToken(e.target.value)}
+                  autoComplete="off"
+                  className="form-input"
+                />
+              </div>
               <button
                 className="btn-primary"
                 style={{ width: '100%', marginTop: 16 }}
@@ -262,19 +291,19 @@ export default function SetupWizard() {
               <h2 style={{ textAlign: 'center', margin: '0 0 16px', fontSize: '1.2rem' }}>
                 {t(messages, 'setup_admin_title')}
               </h2>
-              <form onSubmit={(e) => { e.preventDefault(); nextStep(); }} className="auth-form">
+              <form onSubmit={submitAdmin} className="auth-form">
                 <div className="form-field">
                   <label htmlFor="setup-email">{t(messages, 'email')}</label>
-                  <input id="setup-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <input id="setup-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => { setEmail(e.target.value); if (invalidField === 'setup-email') setInvalidField(''); }} autoComplete="username" required aria-invalid={invalidField === 'setup-email'} aria-describedby={describedBy('setup-email')} />
                 </div>
                 <div className="form-field">
                   <label htmlFor="setup-password">{t(messages, 'password')}</label>
-                  <input id="setup-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} maxLength={128} />
-                  <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
+                  <input id="setup-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => { setPassword(e.target.value); if (invalidField === 'setup-password') setInvalidField(''); }} autoComplete="new-password" required minLength={8} maxLength={128} aria-invalid={invalidField === 'setup-password'} aria-describedby={describedBy('setup-password', 'setup-password-hint')} />
+                  <small id="setup-password-hint" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
                 </div>
                 <div className="form-field">
                   <label htmlFor="setup-name">{t(messages, 'your_name')}</label>
-                  <input id="setup-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+                  <input id="setup-name" className="form-input" type="text" placeholder={t(messages, 'name_placeholder')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" required />
                 </div>
                 <button className="btn-primary" type="submit">{t(messages, 'setup_admin_next')}</button>
               </form>
@@ -306,8 +335,8 @@ export default function SetupWizard() {
                 {t(messages, 'setup_prefs_title')}
               </h2>
               <div className="form-field" style={{ marginBottom: 16 }}>
-                <label>{t(messages, 'theme')}</label>
-                <div className="setup-theme-grid">
+                <label id="setup-theme-label">{t(messages, 'theme')}</label>
+                <div className="setup-theme-grid" role="group" aria-labelledby="setup-theme-label">
                   {[{ key: 'system', name: t(messages, 'settings.appearance_system') }, ...availableThemes].map((th) => (
                     <button
                       key={th.key}
@@ -323,8 +352,9 @@ export default function SetupWizard() {
                 </div>
               </div>
               <div className="form-field" style={{ marginBottom: 20 }}>
-                <label>{t(messages, 'language')}</label>
+                <label htmlFor="setup-language">{t(messages, 'language')}</label>
                 <select
+                  id="setup-language"
                   className="form-input"
                   value={lang}
                   onChange={(e) => setLang(e.target.value)}
@@ -363,7 +393,7 @@ export default function SetupWizard() {
           )}
 
           {msg && (
-            <p role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <p id="setup-error" role="alert" style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <AlertCircle size={16} /> {msg}
             </p>
           )}
@@ -373,7 +403,7 @@ export default function SetupWizard() {
           <ShieldCheck size={14} aria-hidden="true" />
           {t(messages, 'auth_footer')}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -183,6 +183,7 @@ export default function MemberEditor({
                 required
                 readOnly={!creating}
                 maxLength={120}
+                autoComplete="off"
               />
             </label>
             <label>
@@ -193,6 +194,7 @@ export default function MemberEditor({
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 readOnly={!creating}
+                autoComplete="off"
               />
             </label>
             <label>

@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { isImeComposing } from '../lib/helpers';
 import { categoryKey, categoryVocabulary } from '../lib/shoppingPresentation';
 
 export default function ShoppingCategoryInput({ value, onChange, categories, label, placeholder }) {
@@ -33,6 +34,7 @@ export default function ShoppingCategoryInput({ value, onChange, categories, lab
         onFocus={() => setOpen(true)}
         onBlur={() => { setOpen(false); setActive(-1); }}
         onKeyDown={(event) => {
+          if (isImeComposing(event)) return;
           if (event.key === 'Escape') {
             event.preventDefault();
             setOpen(false);

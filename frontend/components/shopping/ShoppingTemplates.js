@@ -51,6 +51,7 @@ export function ShoppingTemplateForm({ messages, initialTemplate, onSubmit, onCa
       <input
         className="form-input shopping-template-name-input"
         placeholder={t(messages, 'module.shopping.template_name_placeholder')}
+        aria-label={t(messages, 'name')}
         value={name}
         onChange={(e) => setName(e.target.value)}
         autoFocus
@@ -61,18 +62,21 @@ export function ShoppingTemplateForm({ messages, initialTemplate, onSubmit, onCa
             <input
               className="form-input"
               placeholder={t(messages, 'module.shopping.template_item_name_placeholder')}
+              aria-label={t(messages, 'module.shopping.template_item_name_placeholder')}
               value={item.name}
               onChange={(e) => updateDraftItem(index, 'name', e.target.value)}
             />
             <input
               className="form-input"
               placeholder={t(messages, 'module.shopping.template_item_spec_placeholder')}
+              aria-label={t(messages, 'module.shopping.template_item_spec_placeholder')}
               value={item.spec}
               onChange={(e) => updateDraftItem(index, 'spec', e.target.value)}
             />
             {showCategory && <input
               className="form-input"
               placeholder={t(messages, 'module.shopping.template_item_category_placeholder')}
+              aria-label={t(messages, 'module.shopping.template_item_category_placeholder')}
               value={item.category}
               onChange={(e) => updateDraftItem(index, 'category', e.target.value)}
             />}

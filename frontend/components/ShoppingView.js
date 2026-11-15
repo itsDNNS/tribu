@@ -18,6 +18,7 @@ import OnceHint from './OnceHint';
 import { ShoppingTemplateForm, ShoppingTemplateCard } from './shopping/ShoppingTemplates';
 import { CATEGORIES, GroceryArt, catalogFor, categoryLabel, fold, parseProduct, productKey, groupShoppingItems } from './shopping/catalog';
 import CategoriesSheet from './shopping/CategoriesSheet';
+import { isImeComposing } from '../lib/helpers';
 const ICONS = {
   cart: ShoppingCart,
   heart: Heart,
@@ -375,6 +376,7 @@ export default function ShoppingView(props) {
           setSuggestion(-1);
           setFocused(true);
         }} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onKeyDown={e => {
+          if (isImeComposing(e)) return;
           if (e.key === 'ArrowDown') {
             e.preventDefault();
             setSuggestion(i => Math.min(i + 1, suggestions.length - 1));

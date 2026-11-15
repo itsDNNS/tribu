@@ -169,7 +169,7 @@ describe('Mockup calendar and event overlays', () => {
     await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     openEditor();
     expect(screen.getByRole('button',{name:'Family colors',exact:true})).toHaveAttribute('aria-pressed','false');
-    fireEvent.click(screen.getByRole('button',{name:'#759c5d',exact:true}));
+    fireEvent.click(screen.getByRole('button',{name:'Green',exact:true}));
     fireEvent.click(screen.getByRole('button',{name:'Save',exact:true}));
     await waitFor(()=>expect(api.apiUpdateEvent).toHaveBeenCalledWith(1,expect.objectContaining({color:'#759c5d'})));
   });

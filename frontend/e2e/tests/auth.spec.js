@@ -7,8 +7,8 @@ test.describe('Authentication', () => {
     await page.goto('/');
 
     // Switch to register tab
-    await page.locator('#tab-register').click();
-    await page.locator('#panel-register').waitFor();
+    await page.getByRole('group', { name: 'Authentication mode' }).getByRole('button', { name: 'Sign up' }).click();
+    await page.locator('#register-email').waitFor();
 
     // Fill register form
     await page.locator('#register-email').fill(user.email);
@@ -17,7 +17,7 @@ test.describe('Authentication', () => {
     await page.locator('#register-family').fill(user.familyName);
 
     // Submit
-    await page.locator('#panel-register button[type="submit"]').click();
+    await page.locator('form:has(#register-email) button[type="submit"]').click();
 
     // Should land on dashboard
     await page.locator('#main-content').waitFor({ timeout: 15000 });
@@ -30,16 +30,16 @@ test.describe('Authentication', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Log out', exact: true }).click();
 
     // Should see auth page
-    await expect(page.locator('#tab-login')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#login-email')).toBeVisible({ timeout: 10000 });
   });
 
   test('login with existing user', async ({ page, testUser }) => {
     await page.goto('/');
-    await page.locator('#tab-login').waitFor({ timeout: 10000 });
+    await page.locator('#login-email').waitFor({ timeout: 10000 });
 
     await page.locator('#login-email').fill(testUser.email);
     await page.locator('#login-password').fill(testUser.password);
-    await page.locator('#panel-login button[type="submit"]').click();
+    await page.locator('form:has(#login-email) button[type="submit"]').click();
 
     await page.locator('#main-content').waitFor({ timeout: 15000 });
     await expect(page.locator('#main-content')).toBeVisible();
@@ -47,11 +47,11 @@ test.describe('Authentication', () => {
 
   test('invalid login shows error', async ({ page }) => {
     await page.goto('/');
-    await page.locator('#tab-login').waitFor({ timeout: 10000 });
+    await page.locator('#login-email').waitFor({ timeout: 10000 });
 
     await page.locator('#login-email').fill('wrong@example.com');
     await page.locator('#login-password').fill('Wrong1234');
-    await page.locator('#panel-login button[type="submit"]').click();
+    await page.locator('form:has(#login-email) button[type="submit"]').click();
 
     await expect(
       page.locator('.auth-card p[role="alert"]').filter({ hasText: 'Invalid credentials' }),
@@ -61,9 +61,9 @@ test.describe('Authentication', () => {
   test('the password can be shown, and phones see the form first', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
-    await page.locator('#tab-login').waitFor({ timeout: 10000 });
+    await page.locator('#login-email').waitFor({ timeout: 10000 });
 
-    await expect(page.locator('#panel-login button[type="submit"]')).toBeInViewport();
+    await expect(page.locator('form:has(#login-email) button[type="submit"]')).toBeInViewport();
     await expect(page.getByRole('button', { name: /try demo/i })).toHaveCount(1);
 
     const password = page.locator('#login-password');

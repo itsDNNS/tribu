@@ -266,9 +266,9 @@ button.ui-date-label:hover {
   background: var(--purple);
   color: #fff;
 }
+/* Selection is a hairline on the button so the focus outline stays distinct. */
 .ui-day-cell.selected .ui-day-button {
-  outline: 1px solid var(--purple);
-  outline-offset: 2px;
+  box-shadow: 0 0 0 1px var(--purple);
 }
 .ui-day-cell .calendar-event {
   white-space: normal;
@@ -768,7 +768,7 @@ button.ui-date-label:hover {
   outline: 1px solid var(--purple);
 }
 .ui-planner[data-density='compact'] .ui-day-cell.selected .ui-day-button {
-  outline: none;
+  box-shadow: none;
   background: var(--purple-bg);
 }
 .ui-planner[data-density='compact'] .ui-day-cell.selected .ui-day-number {

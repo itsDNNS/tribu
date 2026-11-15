@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CloudSun, MapPin, Search } from 'lucide-react';
+import { isImeComposing } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 
@@ -82,7 +83,7 @@ export default function DisplayWeatherPanel({ familyId, messages, lang, place, o
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();
-                  search();
+                  if (!isImeComposing(event)) search();
                 }
               }}
               data-testid={`${testIdPrefix}-query`}

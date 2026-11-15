@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Users, CalendarDays, ShoppingCart, CheckSquare, Bell, CheckCircle, Globe, Camera } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
-import { COLOR_PALETTE } from '../lib/member-colors';
+import { COLOR_PALETTE, colorName } from '../lib/member-colors';
 import * as api from '../lib/api';
 
 const STEPS = ['welcome', 'profile', 'tour', 'done'];
@@ -220,28 +220,31 @@ export default function OnboardingWizard() {
                 />
               </div>
               <div className="form-field" style={{ marginBottom: 20 }}>
-                <label>{t(messages, 'onboarding.choose_color')}</label>
-                <div className="onboarding-color-picker">
+                <label id="onboarding-color-label">{t(messages, 'onboarding.choose_color')}</label>
+                <div className="onboarding-color-picker" role="group" aria-labelledby="onboarding-color-label">
                   {COLOR_PALETTE.map((color) => {
                     const taken = takenColors.has(color);
                     return (
                       <button
                         key={color}
+                        type="button"
                         className={`onboarding-color-chip${selectedColor === color ? ' active' : ''}${taken ? ' taken' : ''}`}
                         style={{ background: color }}
                         onClick={() => !taken && setSelectedColor(color)}
                         disabled={taken}
-                        aria-label={color}
-                        title={taken ? t(messages, 'color_taken_by').replace('{name}', members.find((m) => m.color === color)?.display_name || '') : color}
+                        aria-label={colorName(color, messages)}
+                        aria-pressed={selectedColor === color}
+                        title={taken ? t(messages, 'color_taken_by').replace('{name}', members.find((m) => m.color === color)?.display_name || '') : colorName(color, messages)}
                       />
                     );
                   })}
                 </div>
               </div>
               <div className="form-field" style={{ marginBottom: 20 }}>
-                <label>{t(messages, 'onboarding.your_birthday')}</label>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <label id="onboarding-birthday-label">{t(messages, 'onboarding.your_birthday')}</label>
+                <div style={{ display: 'flex', gap: 8 }} role="group" aria-labelledby="onboarding-birthday-label">
                   <select
+                    aria-label={t(messages, 'month')}
                     className="form-input"
                     value={birthdayMonth}
                     onChange={(e) => setBirthdayMonth(e.target.value)}
@@ -253,6 +256,7 @@ export default function OnboardingWizard() {
                     ))}
                   </select>
                   <select
+                    aria-label={t(messages, 'day')}
                     className="form-input"
                     value={Number(birthdayDay) > maxDay ? '' : birthdayDay}
                     onChange={(e) => setBirthdayDay(e.target.value)}

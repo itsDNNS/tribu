@@ -200,7 +200,7 @@ test.describe('Calendar persisted journeys', () => {
         .getByRole('button', { name: me.display_name, exact: true })
         .click();
       await edit(page, 'Color plan');
-      await page.getByRole('button', { name: '#d8a245', exact: true }).click();
+      await page.getByRole('button', { name: 'Yellow', exact: true }).click();
       await save(page);
       await page.reload();
       await open(page);

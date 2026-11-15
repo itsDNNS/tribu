@@ -26,6 +26,7 @@ jest.mock('../../lib/i18n', () => ({
 }));
 
 jest.mock('../../lib/helpers', () => ({
+  ...jest.requireActual('../../lib/helpers'),
   errorText: (detail, fallback) => detail?.code || fallback,
 }));
 
