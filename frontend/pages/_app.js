@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { AppProvider, useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { ToastProvider } from '../contexts/ToastContext';
+import { ModalStackProvider } from '../contexts/ModalStackContext';
 import { ToastContainer } from '../components/Toast';
 import { PWABanners } from '../components/PWABanners';
 import '../styles/tokens.css';
@@ -147,20 +148,22 @@ export default function TribuApp({ Component, pageProps }) {
   return (
     <ErrorBoundary>
       <AppProvider>
-        <ToastProvider>
-          <Head>
-            <title>Tribu</title>
-            <meta name="description" content="Self-hosted family organizer for calendars, tasks, shopping lists, contacts, meal planning, and more." />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-          </Head>
-          <DisplayModeRootFlag />
-          <SkipLink />
-          <div className="mesh-bg" aria-hidden="true" />
-          <div className="grain" aria-hidden="true" />
-          <PWABanners />
-          <Component {...pageProps} />
-          <ToastContainer />
-        </ToastProvider>
+        <ModalStackProvider>
+          <ToastProvider>
+            <Head>
+              <title>Tribu</title>
+              <meta name="description" content="Self-hosted family organizer for calendars, tasks, shopping lists, contacts, meal planning, and more." />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+            </Head>
+            <DisplayModeRootFlag />
+            <SkipLink />
+            <div className="mesh-bg" aria-hidden="true" />
+            <div className="grain" aria-hidden="true" />
+            <PWABanners />
+            <Component {...pageProps} />
+            <ToastContainer />
+          </ToastProvider>
+        </ModalStackProvider>
       </AppProvider>
     </ErrorBoundary>
   );

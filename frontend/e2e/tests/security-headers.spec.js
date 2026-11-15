@@ -23,7 +23,9 @@ test.describe('Security headers', () => {
   });
 
   // CI serves the production build, where the strict script policy applies.
-  test('the app runs without script policy or Trusted Types reports', async ({ page }) => {
+  test('the app runs without script policy or Trusted Types reports', async ({ page, request }) => {
+    const policy = (await request.get('/')).headers()['content-security-policy'] || '';
+    test.skip(policy.includes('unsafe-eval'), 'The development server relaxes the policy and loads chunks without Trusted Types.');
     const reports = [];
     page.on('console', (message) => {
       if (/Content Security Policy|Trusted ?(Types|HTML|Script)/i.test(message.text())) reports.push(message.text());
