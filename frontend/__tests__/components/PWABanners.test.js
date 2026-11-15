@@ -102,6 +102,28 @@ describe('PWABanners', () => {
     expect(waitingWorker.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
   });
 
+  it('reloads on a controller change only when a previous worker controlled the page', async () => {
+    // jsdom cannot mock location.reload; it reports the navigation attempt instead.
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const reloadAttempts = () => consoleError.mock.calls.filter((call) => String(call[0]?.message ?? call[0]).includes('navigation')).length;
+    try {
+      const firstInstall = mockServiceWorker();
+      const { unmount } = render(<PWABanners />);
+      await waitFor(() => expect(firstInstall.register).toHaveBeenCalled());
+      firstInstall.dispatchEvent(new Event('controllerchange'));
+      expect(reloadAttempts()).toBe(0);
+      unmount();
+
+      const update = mockServiceWorker({ waitingWorker: { postMessage: jest.fn() } });
+      render(<PWABanners />);
+      await waitFor(() => expect(update.register).toHaveBeenCalled());
+      update.dispatchEvent(new Event('controllerchange'));
+      expect(reloadAttempts()).toBe(1);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it('shows the captured install prompt only when the app is not installed', async () => {
     const prompt = jest.fn();
     const beforeInstallPrompt = new Event('beforeinstallprompt', { cancelable: true });

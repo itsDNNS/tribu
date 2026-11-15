@@ -10,6 +10,17 @@ function urlBase64ToUint8Array(base64String) {
   return arr;
 }
 
+// Logout ends this device's subscription, so a shared device stops showing the previous user's reminders.
+export async function dropDevicePushSubscription() {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const sub = await reg?.pushManager?.getSubscription();
+    if (!sub) return;
+    await api.apiPushUnsubscribe(sub.endpoint).catch(() => {});
+    await sub.unsubscribe();
+  } catch {}
+}
+
 export default function usePushSubscription(loggedIn, demoMode) {
   const [pushSupported, setPushSupported] = useState(false);
   const [pushSubscription, setPushSubscription] = useState(null);

@@ -110,9 +110,11 @@ export function PWABanners() {
       registration.addEventListener('updatefound', updateFoundHandler);
     }).catch(() => {});
 
+    // The first install claims an uncontrolled page; reloading then would drop what someone is typing.
+    const hadController = Boolean(navigator.serviceWorker.controller);
     let refreshing = false;
     const onControllerChange = () => {
-      if (!refreshing) {
+      if (hadController && !refreshing) {
         refreshing = true;
         window.location.reload();
       }
