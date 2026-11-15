@@ -160,6 +160,8 @@
   "delete": "Eliminar",
   "loading": "Cargando…",
   "dismiss": "Despedir",
+  "view_load_error": "No se ha podido cargar esta página. Comprueba tu conexión e inténtalo de nuevo.",
+  "view_load_retry": "Reintentar",
   "discard_changes_title": "¿Descartar los cambios?",
   "discard_changes_message": "Se perderá lo que habéis introducido.",
   "discard_changes_confirm": "Descartar",

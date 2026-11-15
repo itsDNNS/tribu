@@ -161,6 +161,8 @@
   "delete": "Verwijderen",
   "loading": "Laden…",
   "dismiss": "Negeren",
+  "view_load_error": "Deze pagina kon niet worden geladen. Controleer je verbinding en probeer het opnieuw.",
+  "view_load_retry": "Opnieuw proberen",
   "discard_changes_title": "Wijzigingen verwerpen?",
   "discard_changes_message": "Wat jullie hebben ingevoerd, gaat verloren.",
   "discard_changes_confirm": "Verwerpen",

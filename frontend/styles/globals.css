@@ -1503,6 +1503,8 @@ button.contact-row:hover { background: var(--surface-soft); }
 .skeleton-text.sm { height: 12px; width: 40%; }
 .skeleton-avatar { width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0; }
 .skeleton-card { min-height: 120px; }
+.view-loading { display: grid; gap: 4px; padding-top: 8px; }
+.view-loading[role="alert"] { justify-items: start; gap: 12px; color: var(--text-secondary); }
 
 .loading-spinner {
   width: 36px; height: 36px;

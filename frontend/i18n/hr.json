@@ -161,6 +161,8 @@
   "delete": "Izbriši",
   "loading": "Učitavanje…",
   "dismiss": "Odbaciti",
+  "view_load_error": "Ova stranica nije se mogla učitati. Provjeri vezu i pokušaj ponovno.",
+  "view_load_retry": "Pokušaj ponovno",
   "discard_changes_title": "Odbaciti promjene?",
   "discard_changes_message": "Ono što ste unijeli bit će izgubljeno.",
   "discard_changes_confirm": "Odbaci",

@@ -161,6 +161,8 @@
   "delete": "Radera",
   "loading": "Laddar…",
   "dismiss": "Avvisa",
+  "view_load_error": "Sidan kunde inte läsas in. Kontrollera anslutningen och försök igen.",
+  "view_load_retry": "Försök igen",
   "discard_changes_title": "Slänga ändringarna?",
   "discard_changes_message": "Det ni har skrivit in går förlorat.",
   "discard_changes_confirm": "Släng",

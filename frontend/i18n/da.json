@@ -161,6 +161,8 @@
   "delete": "Slet",
   "loading": "Indlæser…",
   "dismiss": "Afvis",
+  "view_load_error": "Siden kunne ikke indlæses. Tjek din forbindelse, og prøv igen.",
+  "view_load_retry": "Prøv igen",
   "discard_changes_title": "Kassér ændringerne?",
   "discard_changes_message": "Det, I har indtastet, går tabt.",
   "discard_changes_confirm": "Kassér",

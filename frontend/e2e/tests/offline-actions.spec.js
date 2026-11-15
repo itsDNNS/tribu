@@ -68,3 +68,26 @@ test('a task finished offline is sent once the network is back', async ({ authed
     await apiCtx.delete(`/api/tasks/${task.id}`);
   }
 });
+
+test('an area not loaded before going offline offers a retry and opens once back online', async ({ authedPage: page }) => {
+  // Areas load in the background once the browser is idle; here the network drops before that.
+  await page.addInitScript(() => { window.requestIdleCallback = () => 0; });
+  try {
+    await page.reload();
+    await expect(page.locator('#main-content').getByRole('region', { name: 'Today' })).toBeVisible({ timeout: 15000 });
+    // Routing also keeps the browser cache from serving code an earlier test fetched.
+    await page.route(/\/_next\/static\/chunks\//, (route) => route.abort('internetdisconnected'));
+    await page.context().setOffline(true);
+    await navigateTo(page, 'Recipes');
+    const failed = page.locator('#main-content').getByRole('alert');
+    await expect(failed).toContainText('This page could not be loaded.', { timeout: 10000 });
+    await expect(failed.getByRole('button', { name: 'Try again' })).toBeVisible();
+
+    await page.unrouteAll();
+    await page.context().setOffline(false);
+    await expect(failed).toHaveCount(0, { timeout: 15000 });
+    await expect(page.getByRole('button', { name: 'Add recipe' })).toBeVisible({ timeout: 15000 });
+  } finally {
+    await page.context().setOffline(false);
+  }
+});

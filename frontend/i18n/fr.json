@@ -160,6 +160,8 @@
   "delete": "Supprimer",
   "loading": "Chargement…",
   "dismiss": "Ignorer",
+  "view_load_error": "Cette page n’a pas pu être chargée. Vérifiez votre connexion et réessayez.",
+  "view_load_retry": "Réessayer",
   "discard_changes_title": "Abandonner les modifications ?",
   "discard_changes_message": "Ce que vous avez saisi sera perdu.",
   "discard_changes_confirm": "Abandonner",
