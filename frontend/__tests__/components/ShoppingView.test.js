@@ -10,11 +10,13 @@ jest.mock('../../contexts/AppContext', () => ({
 jest.mock('../../hooks/useShopping', () => ({
   useShopping: () => mockShopping
 }));
-const mockToastSuccess = jest.fn();
+const mockToastSuccess = jest.fn(() => 41);
+const mockToastDismiss = jest.fn();
 jest.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({
     success: mockToastSuccess,
-    error: jest.fn()
+    error: jest.fn(),
+    dismiss: mockToastDismiss
   })
 }));
 jest.mock('../../lib/api');
@@ -1052,13 +1054,29 @@ test('a waiting deletion is sent when the page is hidden', () => {
     fireEvent.click(dialog().getByRole('button', { name: /Löschen/ }));
     expect(mockShopping.deleteItem).not.toHaveBeenCalled();
 
+    const undo = mockToastSuccess.mock.calls.at(-1)[1];
     act(() => { window.dispatchEvent(new Event('pagehide')); });
     expect(mockShopping.deleteItem).toHaveBeenCalledWith(apple.id);
+    // Its Undo could no longer take the deletion back, so the toast goes too.
+    expect(mockToastDismiss).toHaveBeenCalledWith(41);
+    act(() => undo.onClick());
+    expect(screen.queryByRole('checkbox', { name: /^Äpfel,/ })).toBeNull();
     act(() => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
     expect(mockShopping.deleteItem).toHaveBeenCalledTimes(1);
   } finally {
     jest.useRealTimers();
   }
+});
+
+test('a deletion that fails after the page was hidden shows the item again', async () => {
+  mockShopping.deleteItem.mockResolvedValueOnce(false);
+  setup();
+  fireEvent.click(screen.getByRole('button', { name: 'Details zu Äpfel' }));
+  fireEvent.click(dialog().getByRole('button', { name: /Löschen/ }));
+  expect(screen.queryByRole('checkbox', { name: /^Äpfel,/ })).toBeNull();
+
+  act(() => { window.dispatchEvent(new Event('pagehide')); });
+  expect(await screen.findByRole('checkbox', { name: /^Äpfel,/ })).toBeVisible();
 });
 
 test('a trip started elsewhere stays on after the first render', () => {

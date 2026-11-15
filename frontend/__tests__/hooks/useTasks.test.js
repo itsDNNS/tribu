@@ -20,9 +20,10 @@ jest.mock('../../contexts/AppContext', () => ({
   useApp: () => mockContext,
 }));
 
-const mockToastSuccess = jest.fn();
+const mockToastSuccess = jest.fn(() => 7);
+const mockToastDismiss = jest.fn();
 jest.mock('../../contexts/ToastContext', () => ({
-  useToast: () => ({ success: mockToastSuccess, error: jest.fn(), info: jest.fn(), toast: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn() }),
+  useToast: () => ({ success: mockToastSuccess, error: jest.fn(), info: jest.fn(), toast: jest.fn(), dismiss: mockToastDismiss, dismissAll: jest.fn() }),
 }));
 
 jest.mock('../../lib/api', () => ({
@@ -118,6 +119,17 @@ describe('useTasks', () => {
       expect(api.apiUpdateTask).toHaveBeenLastCalledWith(1, { status: 'done' });
       expect(mockLoadTasks).toHaveBeenCalled();
       expect(result.current.visibleTasks.find((task) => task.id === 1).waiting).toBeUndefined();
+    });
+
+    it('sends a waiting completion when the page is hidden and drops its Undo', async () => {
+      const api = require('../../lib/api');
+      const { result } = renderHook(() => useTasks());
+
+      await act(async () => { await result.current.toggleTask(mockContext.tasks[0]); });
+      await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+      expect(api.apiUpdateTask).toHaveBeenCalledWith(1, { status: 'done' });
+      // The completion already reached the server, so an Undo would only pretend.
+      expect(mockToastDismiss).toHaveBeenCalledWith(7);
     });
 
     it('sends what is still waiting when the view goes away', async () => {
