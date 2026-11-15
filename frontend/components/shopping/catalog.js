@@ -1,4 +1,5 @@
 import { SHOP_CATALOG, GROCERY_ART } from '../../lib/shoppingCatalog';
+import { trustedHTML } from '../../lib/trustedTypes';
 export const CATEGORIES = ['Obst & Gemüse','Kühlregal','Bäckerei','Vorrat','Getränke','Fleisch & Fisch','Tiefkühl','Haushalt','Sonstiges'];
 export const fold = value => String(value || '').toLocaleLowerCase('de').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ß/g,'ss').trim();
 // Built-in categories keep these labels as their stored value; every client
@@ -25,7 +26,7 @@ export function shopUnits(lang) { return germanReader(lang) ? ['Stück', 'g', 'k
 export function GroceryArt({name, art, className=''}) {
   const key = art && GROCERY_ART[art] ? art : catalogProduct(name)?.art || 'bag';
   // Only the bundled, user-supplied SVG paths enter this markup; never product input.
-  return <svg className={`grocery-art ${className}`} viewBox="0 0 64 64" aria-hidden="true" dangerouslySetInnerHTML={{__html:GROCERY_ART[key]}}/>;
+  return <svg className={`grocery-art ${className}`} viewBox="0 0 64 64" aria-hidden="true" dangerouslySetInnerHTML={{__html:trustedHTML(GROCERY_ART[key])}}/>;
 }
 export function parseProduct(text, lang = 'de') {
   let name = text.trim().replace(/\s+/g,' '), qty=1, unit='', explicit=false;

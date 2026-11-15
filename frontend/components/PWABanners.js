@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, RefreshCw, WifiOff, Wifi } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
+import { trustedScriptURL } from '../lib/trustedTypes';
 
 export const OFFLINE_BANNER_DELAY_MS = 4000;
 
@@ -89,7 +90,7 @@ export function PWABanners() {
     let updateFoundHandler;
     let reg = null;
 
-    navigator.serviceWorker.register('/sw.js').then((registration) => {
+    navigator.serviceWorker.register(trustedScriptURL('/sw.js')).then((registration) => {
       reg = registration;
 
       if (registration.waiting) {

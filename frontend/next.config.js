@@ -1,15 +1,25 @@
 /** @type {import('next').NextConfig} */
 const backendUrl = process.env.BACKEND_URL || 'http://backend:8000';
 
+const { createHash } = require('crypto');
+const { PRE_PAINT_BOOTSTRAP } = require('./lib/prePaintBootstrap');
+
+// Only Tribu's own script files and the one static pre-paint script may run.
+// Production builds use webpack (`npm run build`), whose pages carry no other
+// inline script; Turbopack adds a per-build chunk loader that no fixed hash can allow.
+// `next dev` runs Turbopack with hot reloading, so development allows inline code and eval.
+const prePaintHash = createHash('sha256').update(PRE_PAINT_BOOTSTRAP).digest('base64');
+const scriptSrc = process.env.NODE_ENV === 'production'
+  ? `'self' 'sha256-${prePaintHash}'`
+  : "'self' 'unsafe-inline' 'unsafe-eval'";
+const contentSecurityPolicy = `script-src ${scriptSrc}; object-src 'none'; base-uri 'none'`;
+
 const baseSecurityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'same-origin' },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-];
-
-const noFramingHeaders = [
-  { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; object-src 'none'; base-uri 'none'" },
-  { key: 'X-Frame-Options', value: 'DENY' },
+  // Reported only: Next.js and React render through Trusted Types, Tribu's own sinks use the 'tribu' policy.
+  { key: 'Content-Security-Policy-Report-Only', value: "require-trusted-types-for 'script'" },
 ];
 
 const nextConfig = {
@@ -31,7 +41,14 @@ const nextConfig = {
     return [
       { source: '/:path*', headers: baseSecurityHeaders },
       // The wall display has no actions worth hijacking and is often embedded in home dashboards.
-      { source: '/((?!display).*)', headers: noFramingHeaders },
+      {
+        source: '/((?!display).*)',
+        headers: [
+          { key: 'Content-Security-Policy', value: `${contentSecurityPolicy}; frame-ancestors 'none'` },
+          { key: 'X-Frame-Options', value: 'DENY' },
+        ],
+      },
+      { source: '/display/:path*', headers: [{ key: 'Content-Security-Policy', value: contentSecurityPolicy }] },
     ];
   },
   async rewrites() {

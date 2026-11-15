@@ -25,6 +25,42 @@ describe('next.config security headers', () => {
     }
     for (const path of ['/display', '/display/image.png']) {
       expect(headersFor(rules, path)).not.toContain('X-Frame-Options');
+      expect(headersFor(rules, path)).toContain('Content-Security-Policy');
     }
+  });
+
+  function cspFor(nodeEnv, path) {
+    let config;
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = nodeEnv;
+    try {
+      jest.isolateModules(() => { config = require('../next.config'); });
+    } finally {
+      process.env.NODE_ENV = previous;
+    }
+    return config.headers().then((rules) => rules
+      .filter((rule) => new RegExp(`^${rule.source.replace('/:path*', '(?:/.*)?')}$`).test(path))
+      .flatMap((rule) => rule.headers)
+      .find((header) => header.key === 'Content-Security-Policy').value);
+  }
+
+  it('lets production run only its own scripts and the hashed pre-paint script', async () => {
+    const { createHash } = require('crypto');
+    const { PRE_PAINT_BOOTSTRAP } = require('../lib/prePaintBootstrap');
+    const hash = createHash('sha256').update(PRE_PAINT_BOOTSTRAP).digest('base64');
+
+    const app = await cspFor('production', '/');
+    expect(app).toContain(`script-src 'self' 'sha256-${hash}';`);
+    expect(app).not.toContain('unsafe-inline');
+    expect(app).not.toContain('unsafe-eval');
+    expect(app).toContain("frame-ancestors 'none'");
+
+    const display = await cspFor('production', '/display');
+    expect(display).toContain(`script-src 'self' 'sha256-${hash}';`);
+    expect(display).not.toContain('frame-ancestors');
+  });
+
+  it('relaxes scripts only for the development server', async () => {
+    expect(await cspFor('development', '/')).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'");
   });
 });
