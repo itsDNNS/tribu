@@ -11,8 +11,8 @@
   .icon { font-size: 48px; margin-bottom: 16px; }
   h1 { font-size: 1.3rem; margin-bottom: 8px; }
   p { color: #8b92b0; font-size: 0.9rem; line-height: 1.5; }
-  button { margin-top: 20px; padding: 10px 24px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
-  button:active { opacity: 0.8; }
+  .retry { display: inline-block; margin-top: 20px; padding: 10px 24px; background: #7c3aed; color: white; border-radius: 8px; font-size: 0.9rem; text-decoration: none; }
+  .retry:active { opacity: 0.8; }
 </style>
 </head>
 <body>
@@ -20,7 +20,7 @@
   <div class="icon" aria-hidden="true">&#9729;</div>
   <h1>You're offline</h1>
   <p>Previously visited pages are still available. Check your connection and try again.</p>
-  <button onclick="location.reload()">Try again</button>
+  <a class="retry" href="">Try again</a>
 </div>
 </body>
 </html>

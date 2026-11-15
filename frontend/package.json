@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "node -e \"const fs=require('fs'); require(fs.existsSync('server.js') ? './server.js' : './.next/standalone/server.js')\"",
     "test": "jest",
     "i18n:generate": "node scripts/generate-i18n-index.js",
