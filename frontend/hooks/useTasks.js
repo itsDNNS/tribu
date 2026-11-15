@@ -50,7 +50,7 @@ function payloadFromForm(form) {
 
 export function useTasks() {
   const { tasks, setTasks, familyId, messages, loadTasks, demoMode, weekStart, lang } = useApp();
-  const { success: toastSuccess, error: toastError } = useToast();
+  const { success: toastSuccess, error: toastError, dismiss: dismissToast } = useToast();
 
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [editingTask, setEditingTask] = useState(null);
@@ -78,6 +78,8 @@ export function useTasks() {
     if (!pending) return;
     pendingRef.current.delete(id);
     clearTimeout(pending.timer);
+    // Sent early when the page hides: its Undo could no longer take it back.
+    dismissToast(pending.toastId);
     // Without a network the task stays done (marked as waiting) and is sent
     // once the connection is back (Tribu 2.0, D6).
     let ok = false;
@@ -92,7 +94,7 @@ export function useTasks() {
     if (!ok) toastError(t(messages, 'toast.error'));
     await loadTasks();
     setOverride(id, null);
-  }, [loadTasks, messages, setOverride, toastError]);
+  }, [loadTasks, messages, setOverride, toastError, dismissToast]);
 
   // Leaving the page or the view sends what is still waiting. The ref keeps
   // the listeners stable, so re-renders never send early.
@@ -135,9 +137,9 @@ export function useTasks() {
       return;
     }
     setOverride(task.id, kind === 'delete' ? 'deleted' : 'done');
-    const timer = setTimeout(() => runPendingRef.current(task.id), UNDO_WINDOW_MS);
-    pendingRef.current.set(task.id, { kind, timer });
-    toastSuccess(doneMessage, {
+    const pending = { kind, timer: setTimeout(() => runPendingRef.current(task.id), UNDO_WINDOW_MS) };
+    pendingRef.current.set(task.id, pending);
+    pending.toastId = toastSuccess(doneMessage, {
       label: t(messages, 'module.shopping.undo'),
       onClick: () => {
         const pending = pendingRef.current.get(task.id);

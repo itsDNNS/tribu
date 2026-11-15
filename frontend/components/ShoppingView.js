@@ -179,40 +179,42 @@ export default function ShoppingView(props) {
   // item is gone from the list at once.
   const [removing, setRemoving] = useState({});
   const removeTimers = useRef({});
+  const stopRemoving = id => setRemoving(current => {
+    const next = {...current};
+    delete next[id];
+    return next;
+  });
+  const deleteItemRef = useRef(sh.deleteItem);
+  deleteItemRef.current = sh.deleteItem;
+  const dismissToastRef = useRef(toast.dismiss);
+  dismissToastRef.current = toast.dismiss;
+  // Sends a waiting deletion; a failed one shows the item again.
+  const sendRemoval = id => {
+    const pending = removeTimers.current[id];
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    delete removeTimers.current[id];
+    // Sent early when the page hides: its Undo could no longer take it back.
+    dismissToastRef.current(pending.toastId);
+    Promise.resolve(deleteItemRef.current(Number(id))).catch(() => false).finally(() => stopRemoving(Number(id)));
+  };
   const removeLater = item => {
     setRemoving(current => ({...current, [item.id]: true}));
-    removeTimers.current[item.id] = setTimeout(() => {
-      delete removeTimers.current[item.id];
-      Promise.resolve(sh.deleteItem(item.id)).finally(() => setRemoving(current => {
-        const next = {...current};
-        delete next[item.id];
-        return next;
-      }));
-    }, UNDO_WINDOW_MS);
-    toast.success(t(messages, 'module.shopping.item_deleted').replace('{name}', item.name), {
+    const pending = {timer: setTimeout(() => sendRemoval(item.id), UNDO_WINDOW_MS)};
+    removeTimers.current[item.id] = pending;
+    pending.toastId = toast.success(t(messages, 'module.shopping.item_deleted').replace('{name}', item.name), {
       label: t(messages, 'module.shopping.undo'),
       onClick: () => {
-        clearTimeout(removeTimers.current[item.id]);
+        if (removeTimers.current[item.id] !== pending) return;
+        clearTimeout(pending.timer);
         delete removeTimers.current[item.id];
-        setRemoving(current => {
-          const next = {...current};
-          delete next[item.id];
-          return next;
-        });
+        stopRemoving(item.id);
       },
     });
   };
-  const deleteItemRef = useRef(sh.deleteItem);
-  deleteItemRef.current = sh.deleteItem;
   // Leaving the view or the page sends waiting deletions at once, so closing the tab inside the undo window loses nothing.
   useEffect(() => {
-    const flush = () => {
-      for (const [id, timer] of Object.entries(removeTimers.current)) {
-        clearTimeout(timer);
-        delete removeTimers.current[id];
-        deleteItemRef.current(Number(id));
-      }
-    };
+    const flush = () => Object.keys(removeTimers.current).forEach(sendRemoval);
     const onHide = () => { if (document.visibilityState === 'hidden') flush(); };
     document.addEventListener('visibilitychange', onHide);
     window.addEventListener('pagehide', flush);
