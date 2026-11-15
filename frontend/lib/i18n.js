@@ -1,4 +1,24 @@
-import { languageMeta, localeBundles } from './generated/i18nBundles';
+import en from '../i18n/en.json';
+import { localeLoaders } from './generated/i18nBundles';
+import languages from './i18nLanguages.json';
+
+const localeBundles = { en };
+const pendingLocales = {};
+
+// Loads a language once; buildMessages falls back to English until it is here.
+// A failed download resolves too, so nobody waits forever, and a later call retries.
+export function loadLocale(lang) {
+  if (localeBundles[lang] || !localeLoaders[lang]) return Promise.resolve();
+  pendingLocales[lang] ||= localeLoaders[lang]()
+    .then((module) => { localeBundles[lang] = module.default; })
+    .catch(() => {})
+    .finally(() => { delete pendingLocales[lang]; });
+  return pendingLocales[lang];
+}
+
+export function isLocaleLoaded(lang) {
+  return Boolean(localeBundles[lang]);
+}
 
 export function mergeMessages(localeMessages, fallbackMessages = localeBundles.en) {
   return { ...fallbackMessages, ...localeMessages };
@@ -29,5 +49,5 @@ export function tc(messages, key, count) {
 }
 
 export function listLanguages() {
-  return Object.entries(languageMeta).map(([key, meta]) => ({ key, ...meta }));
+  return languages.map((language) => ({ ...language }));
 }

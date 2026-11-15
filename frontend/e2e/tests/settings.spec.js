@@ -138,6 +138,9 @@ test.describe('Settings', () => {
 
     await language.selectOption('sv');
     await expect(page.getByRole('region', { name: 'Den här enheten' })).toBeVisible();
+    // The chosen language is downloaded on demand and comes back right after a reload.
+    await page.reload();
+    await expect(page.getByRole('region', { name: 'Den här enheten' })).toBeVisible({ timeout: 15000 });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(1);
   });

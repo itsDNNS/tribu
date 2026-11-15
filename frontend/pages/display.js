@@ -5,7 +5,8 @@ import StageDisplay from '../components/display/StageDisplay';
 import TimetableStage from '../components/display/TimetableStage';
 import { normalizeStageConfig, resolveLanguage } from '../components/display/stageModel';
 import { apiDisplayMe, apiDisplayDashboard } from '../lib/api';
-import { buildMessages, listLanguages, t as translate, tc } from '../lib/i18n';
+import { listLanguages, t as translate, tc } from '../lib/i18n';
+import { useLocaleMessages } from '../hooks/useLocaleMessages';
 import { localeForLang } from '../lib/dates';
 
 const TOKEN_STORAGE_KEY = 'tribu_display_token';
@@ -103,12 +104,20 @@ export default function DisplayPage() {
     setDashboard(null);
   }, []);
 
+  const refreshing = useRef(false);
   const refresh = useCallback(async (activeToken) => {
-    if (!activeToken) return;
-    const meRes = await apiDisplayMe(activeToken);
+    // A slow answer must not pile up further requests behind it.
+    if (!activeToken || refreshing.current) return;
+    refreshing.current = true;
+    let meRes;
+    let dashRes;
+    try {
+      [meRes, dashRes] = await Promise.all([apiDisplayMe(activeToken), apiDisplayDashboard(activeToken)]);
+    } finally {
+      refreshing.current = false;
+    }
     if (meRes.status === 401) return unpair(meRes.data?.detail?.code);
     if (!meRes.ok) return markOffline(meRes.status);
-    const dashRes = await apiDisplayDashboard(activeToken);
     if (dashRes.status === 401) return unpair(dashRes.data?.detail?.code);
     if (!dashRes.ok) return markOffline(dashRes.status);
     setMe(meRes.data);
@@ -136,10 +145,16 @@ export default function DisplayPage() {
   useEffect(() => {
     if (token) refresh(token);
   }, [token, refresh]);
+  // Hidden walls (screen off, other tab) skip refreshes and catch up as soon as they show again.
   useEffect(() => {
     if (!token) return undefined;
-    const id = setInterval(() => { refresh(token); }, pollMs);
-    return () => clearInterval(id);
+    const refreshIfVisible = () => { if (document.visibilityState === 'visible') refresh(token); };
+    const id = setInterval(refreshIfVisible, pollMs);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
   }, [token, refresh, pollMs]);
 
   useScreenWakeLock(state === 'ready' && config.mode !== 'eink');
@@ -153,7 +168,9 @@ export default function DisplayPage() {
     () => resolveLanguage(config.language, deviceLanguages, SUPPORTED_LANGUAGES),
     [config.language, deviceLanguages]
   );
-  const messages = useMemo(() => buildMessages(language), [language]);
+  const { messages, ready: localeReady } = useLocaleMessages(language);
+  // Nothing shows until the wall's language is here, so it never starts in English first.
+  const shownState = localeReady ? state : null;
   // With a count, t picks the counted form ("in 2 days").
   const t = useCallback((key, count) => (count === undefined ? translate(messages, key) : tc(messages, key, count)), [messages]);
 
@@ -164,7 +181,7 @@ export default function DisplayPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       </Head>
       <main className="display-root display-root--stage" data-testid="display-root" lang={language}>
-        {state === 'loading' && (
+        {shownState === 'loading' && (
           <div className="display-state" data-testid="display-state-loading" aria-busy="true" aria-label={t('display.state.loading')}>
             <p>{t('display.state.loading')}</p>
             {problem && (
@@ -178,25 +195,25 @@ export default function DisplayPage() {
             )}
           </div>
         )}
-        {state === 'missing' && (
+        {shownState === 'missing' && (
           <div className="display-state" data-testid="display-state-missing">
             <h1>Tribu Display</h1>
             <p>{t('display.state.missing')}</p>
           </div>
         )}
-        {state === 'invalid' && (
+        {shownState === 'invalid' && (
           <div className="display-state" data-testid="display-state-invalid">
             <h1>Tribu Display</h1>
             <p>{t('display.state.invalid')}</p>
           </div>
         )}
-        {state === 'revoked' && (
+        {shownState === 'revoked' && (
           <div className="display-state" data-testid="display-state-revoked">
             <h1>Tribu Display</h1>
             <p>{t('display.state.revoked')}</p>
           </div>
         )}
-        {state === 'ready' && me && dashboard && (
+        {shownState === 'ready' && me && dashboard && (
           config.arrangement === 'timetable'
             ? <TimetableStage me={me} dashboard={dashboard} t={t} locale={localeForLang(language)} offlineSince={offlineSince} />
             : <StageDisplay me={me} dashboard={dashboard} t={t} locale={localeForLang(language)} offlineSince={offlineSince} />

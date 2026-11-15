@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import * as api from '../lib/api';
 import { buildDemoData } from '../lib/demo-data';
 import { dropDevicePushSubscription } from '../hooks/usePushSubscription';
-import { buildMessages, listLanguages } from '../lib/i18n';
+import { listLanguages, loadLocale } from '../lib/i18n';
+import { useLocaleMessages } from '../hooks/useLocaleMessages';
 import { resolveInitialView } from '../lib/navigationState';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { listThemes } from '../lib/themes';
@@ -55,6 +56,8 @@ export function AppProvider({ children }) {
   const [compactDashboard, setCompactDashboard] = useState(false);
   const [showNotificationBadge, setShowNotificationBadge] = useState(true);
   const [lang, setLang] = useState('en');
+  // False until the stored language is loaded, so its speakers never see English first.
+  const [localeReady, setLocaleReady] = useState(false);
   const [weekStart, setWeekStart] = useState('monday');
   const [activeView, setActiveViewRaw] = useState('dashboard');
   const [isMobile, setIsMobile] = useState(false);
@@ -62,7 +65,7 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [timeFormat, setTimeFormat] = useState('24h');
 
-  const messages = useMemo(() => buildMessages(lang), [lang]);
+  const { messages } = useLocaleMessages(lang);
   const availableThemes = useMemo(() => listThemes(), []);
   const availableLanguages = useMemo(() => listLanguages(), []);
 
@@ -318,16 +321,15 @@ export function AppProvider({ children }) {
     setShowNotificationBadge(window.localStorage.getItem('tribu_notification_badge') !== 'false');
     const storedWeekStart = window.localStorage.getItem('tribu_week_start');
     setWeekStart(storedWeekStart === 'sunday' || storedWeekStart === 'monday' ? storedWeekStart : 'monday');
-    const stored = window.localStorage.getItem('tribu_lang');
-    if (stored) {
-      setLang(stored);
-    } else {
+    let initialLang = window.localStorage.getItem('tribu_lang');
+    if (!initialLang) {
       const supported = ['en', 'de'];
       const browserLangs = (navigator.languages || [navigator.language || ''])
         .map(l => l.split('-')[0].toLowerCase());
-      const match = browserLangs.find(l => supported.includes(l));
-      setLang(match || 'en');
+      initialLang = browserLangs.find(l => supported.includes(l)) || 'en';
     }
+    setLang(initialLang);
+    loadLocale(initialLang).then(() => setLocaleReady(true));
     setProfileImage('');
     // Hash takes priority (bookmarkable URLs), then PWA shortcut query URLs, then sessionStorage.
     const VALID_VIEWS = new Set(DEFAULT_NAV_ORDER);
@@ -431,10 +433,13 @@ export function AppProvider({ children }) {
     (async () => {
       setLoading(true);
       try {
-        const { ok: meOk, data: meData } = await api.apiGetMe();
-        if (meOk) {
-          setMe(meData);
-          if (meData.profile_image) setProfileImage(meData.profile_image);
+        // The startup check already loaded the account; a fresh sign-in has not.
+        if (!me) {
+          const { ok: meOk, data: meData } = await api.apiGetMe();
+          if (meOk) {
+            setMe(meData);
+            if (meData.profile_image) setProfileImage(meData.profile_image);
+          }
         }
 
         const { ok: famOk, data: famData } = await api.apiGetMyFamilies();
@@ -574,7 +579,7 @@ export function AppProvider({ children }) {
     theme, setTheme, resolvedTheme,
     lang, setLang: chooseLang,
     weekStart, setWeekStart,
-    messages,
+    messages, localeReady,
     availableThemes,
     availableLanguages,
     activeView, setActiveView, restoreView,

@@ -107,3 +107,90 @@ describe('service worker reminder actions (Tribu 2.0, N-2)', () => {
     expect(sandbox.self.clients.openWindow).not.toHaveBeenCalled();
   });
 });
+
+describe('service worker network routing and build cleanup', () => {
+  const origin = 'https://tribu.example.test';
+
+  function fakeCache(entries) {
+    const store = new Map(Object.entries(entries).map(([path, value]) => [new URL(path, origin).href, value]));
+    const key = (request) => (typeof request === 'string' ? new URL(request, origin).href : request.url);
+    return {
+      store,
+      match: jest.fn(async (request) => store.get(key(request))),
+      put: jest.fn(async (request, response) => { store.set(key(request), response); }),
+      delete: jest.fn(async (request) => store.delete(key(request))),
+      keys: jest.fn(async () => [...store.keys()].map((url) => ({ url }))),
+    };
+  }
+
+  function cached(body, date) {
+    return { headers: new Map([['date', date]]), text: async () => body };
+  }
+
+  function setup(cache) {
+    const sandbox = loadServiceWorker();
+    sandbox.Response = class {
+      constructor(body) { this.body = body; this.headers = new Map(); }
+      async text() { return this.body; }
+    };
+    sandbox.caches.open.mockResolvedValue(cache);
+    sandbox.caches.match.mockImplementation((request) => cache.match(request));
+    return sandbox;
+  }
+
+  async function navigate(sandbox, html, date) {
+    const page = {
+      ok: true,
+      headers: new Map([['content-type', 'text/html; charset=utf-8'], ['date', date]]),
+      clone() { return { headers: this.headers, text: async () => html }; },
+    };
+    sandbox.fetch.mockResolvedValue(page);
+    const waits = [];
+    let responded;
+    const fetchHandler = sandbox.self.addEventListener.mock.calls.find(([name]) => name === 'fetch')[1];
+    fetchHandler({
+      request: { url: `${origin}/`, method: 'GET', mode: 'navigate', headers: new Map() },
+      respondWith: (promise) => { responded = promise; },
+      waitUntil: (promise) => waits.push(promise),
+    });
+    await responded;
+    await Promise.all(waits);
+  }
+
+  it('lets API requests go to the network without the worker', () => {
+    const sandbox = loadServiceWorker();
+    const fetchHandler = sandbox.self.addEventListener.mock.calls.find(([name]) => name === 'fetch')[1];
+    const respondWith = jest.fn();
+    fetchHandler({ request: { url: `${origin}/api/auth/me`, method: 'GET' }, respondWith });
+    expect(respondWith).not.toHaveBeenCalled();
+  });
+
+  it('drops build files of the previous deploy once a page from a new build arrives', async () => {
+    const cache = fakeCache({
+      '/__tribu-build': cached('old-build', 'Mon, 09 Nov 2026 10:00:00 GMT'),
+      '/_next/static/chunks/old.js': cached('', 'Mon, 09 Nov 2026 10:00:00 GMT'),
+      '/_next/static/old-build/_buildManifest.js': cached('', 'Mon, 09 Nov 2026 10:00:00 GMT'),
+      '/_next/static/chunks/new.js': cached('', 'Sun, 15 Nov 2026 12:00:01 GMT'),
+      '/offline.html': cached('', 'Mon, 09 Nov 2026 10:00:00 GMT'),
+    });
+    const sandbox = setup(cache);
+
+    await navigate(sandbox, '<script id="__NEXT_DATA__">{"page":"/","buildId":"new-build"}</script>', 'Sun, 15 Nov 2026 12:00:00 GMT');
+
+    expect([...cache.store.keys()].map((url) => new URL(url).pathname).sort()).toEqual(['/', '/__tribu-build', '/_next/static/chunks/new.js', '/offline.html']);
+    expect(await cache.store.get(`${origin}/__tribu-build`).text()).toBe('new-build');
+  });
+
+  it('keeps build files while the build stays the same', async () => {
+    const cache = fakeCache({
+      '/__tribu-build': cached('same-build', 'Mon, 09 Nov 2026 10:00:00 GMT'),
+      '/_next/static/chunks/app.js': cached('', 'Mon, 09 Nov 2026 10:00:00 GMT'),
+    });
+    const sandbox = setup(cache);
+
+    await navigate(sandbox, '<script id="__NEXT_DATA__">{"buildId":"same-build"}</script>', 'Sun, 15 Nov 2026 12:00:00 GMT');
+
+    expect(cache.delete).not.toHaveBeenCalled();
+    expect(cache.store.has(`${origin}/_next/static/chunks/app.js`)).toBe(true);
+  });
+});

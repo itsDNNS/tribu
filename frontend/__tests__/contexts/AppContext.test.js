@@ -130,6 +130,51 @@ describe('AppProvider bootstrap', () => {
     await waitFor(() => expect(window.localStorage.getItem('tribu_lang')).toBe('de'));
   });
 
+  test('asks for the signed-in account only once at startup', async () => {
+    render(<AppProvider><Probe /></AppProvider>);
+
+    await waitFor(() => expect(screen.getByTestId('family-id')).toHaveTextContent('7'));
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
+    expect(api.apiGetMe).toHaveBeenCalledTimes(1);
+  });
+
+  test('loads the account after a fresh sign-in', async () => {
+    api.apiGetMe.mockResolvedValueOnce({ ok: false, status: 401, data: null });
+    api.apiGetSetupStatus.mockResolvedValue({ ok: true, data: { needs_setup: false } });
+    function SignInProbe() {
+      const { setLoggedIn, me } = useApp();
+      return (
+        <>
+          <button type="button" onClick={() => setLoggedIn(true)}>Sign in</button>
+          <span data-testid="me">{me?.display_name || ''}</span>
+        </>
+      );
+    }
+    render(<AppProvider><SignInProbe /></AppProvider>);
+    await waitFor(() => expect(api.apiGetSetupStatus).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(screen.getByTestId('me')).toHaveTextContent('Tester'));
+    expect(api.apiGetMe).toHaveBeenCalledTimes(2);
+  });
+
+  test('shows the stored language from the first ready render', async () => {
+    window.localStorage.setItem('tribu_lang', 'de');
+    const seen = [];
+    function LanguageProbe() {
+      const { localeReady, messages } = useApp();
+      seen.push({ localeReady, title: messages['module.today.title'] });
+      return <span data-testid="locale-ready">{localeReady ? 'yes' : 'no'}</span>;
+    }
+    render(<AppProvider><LanguageProbe /></AppProvider>);
+
+    await waitFor(() => expect(screen.getByTestId('locale-ready')).toHaveTextContent('yes'));
+    expect(seen[0].localeReady).toBe(false);
+    expect(seen.filter((entry) => entry.localeReady).map((entry) => entry.title)).not.toContain('Today');
+    expect(seen[seen.length - 1].title).toBe('Heute');
+  });
+
   test('restores a valid Sunday week-start preference', async () => {
     window.localStorage.setItem('tribu_week_start', 'sunday');
 
