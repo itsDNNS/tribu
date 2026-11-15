@@ -33,10 +33,12 @@ test.describe('Two-step sign-in', () => {
     await page.locator('#main-content').waitFor({ timeout: 15000 });
 
     await navigateTo(page, 'Settings');
+    // isVisible does not wait, so wait until either the Account entry or the section itself is there.
     const accountItem = page.getByRole('button', { name: 'Account', exact: true });
-    if (await accountItem.isVisible({ timeout: 2000 }).catch(() => false)) await accountItem.click();
-
     const section = page.getByTestId('two-step-section');
+    await expect(accountItem.or(section).first()).toBeVisible({ timeout: 10000 });
+    if (await accountItem.isVisible()) await accountItem.click();
+
     await expect(section.locator('.two-step-state')).toHaveText('Off', { timeout: 10000 });
     await section.getByRole('button', { name: 'Turn on' }).click();
     await section.locator('#two-step-password').fill(user.password);
