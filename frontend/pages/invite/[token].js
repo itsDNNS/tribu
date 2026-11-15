@@ -9,7 +9,7 @@ import { apiGetInviteInfo, apiRegisterWithInvite, apiGetOidcPublicConfig } from 
 export default function InvitePage() {
   const router = useRouter();
   const { token } = router.query;
-  const { messages, setLoggedIn, lang, setLang, availableLanguages } = useApp();
+  const { messages, localeReady, setLoggedIn, lang, setLang, availableLanguages } = useApp();
 
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState(null);
@@ -68,7 +68,7 @@ export default function InvitePage() {
     router.push('/');
   }
 
-  if (loading) {
+  if (loading || !localeReady) {
     return (
       <div className="auth-page">
         <main id="main-content" className="auth-container">

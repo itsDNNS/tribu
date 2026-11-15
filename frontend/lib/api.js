@@ -1062,19 +1062,24 @@ export function apiSearchWeatherLocation(familyId, query, lang) {
   return request(`/families/${familyId}/weather-location/search?${params.toString()}`);
 }
 
+// A hanging request must not hold the wall display until the next refresh.
+const DISPLAY_REQUEST_TIMEOUT_MS = 15 * 1000;
+
 async function displayRequest(path, token) {
   let res;
+  let data = null;
   try {
     res = await fetch(`${API}${path}`, {
       credentials: 'omit',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+      // Older wall tablets without AbortSignal.timeout still load, just without the limit.
+      signal: AbortSignal.timeout?.(DISPLAY_REQUEST_TIMEOUT_MS),
     });
+    data = await res.json();
   } catch {
-    // Network failure: status 0 lets the wall display keep its last data.
-    return { ok: false, status: 0, data: null };
+    // Network failure, timeout or a cut-off answer: status 0 lets the wall display keep its last data.
+    if (!res || res.ok) return { ok: false, status: 0, data: null };
   }
-  let data;
-  try { data = await res.json(); } catch { data = null; }
   return { ok: res.ok, status: res.status, data };
 }
 

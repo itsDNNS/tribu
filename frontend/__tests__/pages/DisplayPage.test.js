@@ -238,6 +238,74 @@ describe('DisplayPage', () => {
     jest.useRealTimers();
   });
 
+  test('asks for identity and day at the same time', async () => {
+    mockRouter.isReady = true;
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_parallel');
+    api.apiDisplayMe.mockReturnValue(new Promise(() => {}));
+    api.apiDisplayDashboard.mockReturnValue(new Promise(() => {}));
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+
+    expect(api.apiDisplayMe).toHaveBeenCalledWith('tribu_display_parallel');
+    expect(api.apiDisplayDashboard).toHaveBeenCalledWith('tribu_display_parallel');
+  });
+
+  test('skips refreshes while hidden and catches up when shown again', async () => {
+    jest.useFakeTimers();
+    let visibility = 'visible';
+    const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState');
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility });
+    try {
+      mockRouter.isReady = true;
+      window.localStorage.setItem('tribu_display_token', 'tribu_display_hidden');
+      api.apiDisplayMe.mockResolvedValue({ ok: true, status: 200, data: sampleMe });
+      api.apiDisplayDashboard.mockResolvedValue({ ok: true, status: 200, data: buildStagePayload() });
+
+      await act(async () => { render(<DisplayPage />); });
+      await flushAsync();
+      await flushAsync();
+      expect(api.apiDisplayMe).toHaveBeenCalledTimes(1);
+
+      visibility = 'hidden';
+      await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+      await act(async () => { jest.advanceTimersByTime(5 * 60 * 1000); });
+      expect(api.apiDisplayMe).toHaveBeenCalledTimes(1);
+
+      visibility = 'visible';
+      await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+      await flushAsync();
+      expect(api.apiDisplayMe).toHaveBeenCalledTimes(2);
+      expect(api.apiDisplayDashboard).toHaveBeenCalledTimes(2);
+    } finally {
+      delete document.visibilityState;
+      if (descriptor) Object.defineProperty(Document.prototype, 'visibilityState', descriptor);
+      jest.useRealTimers();
+    }
+  });
+
+  test('does not start another refresh while one is still waiting for an answer', async () => {
+    jest.useFakeTimers();
+    mockRouter.isReady = true;
+    window.localStorage.setItem('tribu_display_token', 'tribu_display_slow');
+    let answer;
+    api.apiDisplayMe.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    api.apiDisplayDashboard.mockResolvedValue({ ok: true, status: 200, data: buildStagePayload() });
+
+    await act(async () => { render(<DisplayPage />); });
+    await flushAsync();
+    await act(async () => { jest.advanceTimersByTime(45 * 1000); });
+    expect(api.apiDisplayMe).toHaveBeenCalledTimes(1);
+
+    api.apiDisplayMe.mockResolvedValue({ ok: true, status: 200, data: sampleMe });
+    await act(async () => { answer({ ok: true, status: 200, data: sampleMe }); });
+    await flushAsync();
+    expect(screen.getByTestId('display-dashboard')).toBeInTheDocument();
+    await act(async () => { jest.advanceTimersByTime(61 * 1000); });
+    expect(api.apiDisplayMe).toHaveBeenCalledTimes(2);
+    jest.useRealTimers();
+  });
+
   test('a revoked token shows the revoked-state message and keeps the token (so the message persists)', async () => {
     mockRouter.isReady = true;
     window.localStorage.setItem('tribu_display_token', 'tribu_display_revoked');
@@ -252,7 +320,6 @@ describe('DisplayPage', () => {
     await flushAsync();
 
     expect(await screen.findByTestId('display-state-revoked')).toBeInTheDocument();
-    expect(api.apiDisplayDashboard).not.toHaveBeenCalled();
     expect(window.localStorage.getItem('tribu_display_token')).toBe('tribu_display_revoked');
   });
 

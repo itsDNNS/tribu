@@ -11,6 +11,7 @@ import {
   apiGetTasks, apiCreateTask, apiUpdateTask, apiDeleteTask,
   apiGetShoppingStoreLinks, apiCreateShoppingStoreLink, apiUpdateShoppingStoreLink, apiDeleteShoppingStoreLink,
   apiListRecipes, apiCreateRecipe, apiUpdateRecipe, apiDeleteRecipe, apiAddRecipeIngredientsToShopping,
+  apiDisplayDashboard,
 } from '../../lib/api';
 
 beforeEach(() => {
@@ -24,6 +25,29 @@ afterEach(() => jest.restoreAllMocks());
 function lastCall() {
   return global.fetch.mock.calls[global.fetch.mock.calls.length - 1];
 }
+
+describe('Display API', () => {
+  it('gives up on a hanging request so the wall keeps its last data', async () => {
+    global.fetch = jest.fn((_url, { signal }) => new Promise((_resolve, reject) => {
+      signal?.addEventListener('abort', () => reject(signal.reason));
+    }));
+    jest.useFakeTimers();
+    try {
+      const pending = apiDisplayDashboard('tribu_display_x');
+      jest.advanceTimersByTime(15 * 1000);
+      await expect(pending).resolves.toEqual({ ok: false, status: 0, data: null });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('treats a cut-off answer as offline but keeps error statuses', async () => {
+    global.fetch = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.reject(new Error('aborted')) }));
+    await expect(apiDisplayDashboard('tribu_display_x')).resolves.toEqual({ ok: false, status: 0, data: null });
+    global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 401, json: () => Promise.reject(new SyntaxError('not json')) }));
+    await expect(apiDisplayDashboard('tribu_display_x')).resolves.toEqual({ ok: false, status: 401, data: null });
+  });
+});
 
 describe('Shopping store links API', () => {
   it('lists store links for a family', async () => {

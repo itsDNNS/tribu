@@ -343,8 +343,14 @@ body { font-family: var(--font-ui); background: var(--void); color: var(--text-p
 
 /* ─── Mesh Background ─── */
 .mesh-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-.mesh-bg::before { content: ''; position: absolute; width: 800px; height: 800px; top: -200px; right: -200px; background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%); animation: meshDrift1 25s ease-in-out infinite alternate; }
-.mesh-bg::after { content: ''; position: absolute; width: 600px; height: 600px; bottom: -100px; left: -100px; background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%); animation: meshDrift2 30s ease-in-out infinite alternate; }
+.mesh-bg::before { content: ''; position: absolute; width: 800px; height: 800px; top: -200px; right: -200px; background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%); }
+.mesh-bg::after { content: ''; position: absolute; width: 600px; height: 600px; bottom: -100px; left: -100px; background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%); }
+@media (prefers-reduced-motion: no-preference) {
+  .mesh-bg::before { animation: meshDrift1 25s ease-in-out infinite alternate; }
+  .mesh-bg::after { animation: meshDrift2 30s ease-in-out infinite alternate; }
+}
+/* The opaque app shell covers the background completely, so it stops painting behind it. */
+body:has(.app-shell) .mesh-bg { display: none; }
 @keyframes meshDrift1 { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-80px, 60px) scale(1.15); } }
 @keyframes meshDrift2 { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(60px, -40px) scale(1.1); } }
 

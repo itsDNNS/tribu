@@ -2,11 +2,7 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-import {
-  languageMeta,
-  localeBundles as generatedLocaleBundles,
-  supportedLanguageKeys,
-} from '../../lib/generated/i18nBundles';
+import { localeLoaders } from '../../lib/generated/i18nBundles';
 import { buildMessages, listLanguages, mergeMessages, t, tc } from '../../lib/i18n';
 
 const expectedLanguages = [
@@ -100,7 +96,7 @@ describe('i18n bundled locale files', () => {
     expect(Object.keys(fileLocaleBundles).sort()).toEqual(expectedLanguages);
   });
 
-  it('keeps the generated bundle index in sync with locale files and language metadata', () => {
+  it('keeps the generated bundle index in sync with locale files and language metadata', async () => {
     expect(() => {
       execFileSync('npm', ['run', 'i18n:check', '--silent'], {
         cwd: process.cwd(),
@@ -109,11 +105,10 @@ describe('i18n bundled locale files', () => {
       });
     }).not.toThrow();
 
-    expect(supportedLanguageKeys).toEqual(listLanguages().map((lang) => lang.key));
-    expect(Object.keys(generatedLocaleBundles).sort()).toEqual(expectedLanguages);
-    expect(Object.keys(languageMeta).sort()).toEqual(expectedLanguages);
-    for (const lang of expectedLanguages) {
-      expect(generatedLocaleBundles[lang]).toEqual(fileLocaleBundles[lang]);
+    // English is bundled with the app; every other language has its own loader.
+    expect(Object.keys(localeLoaders)).toEqual(listLanguages().map((lang) => lang.key).filter((key) => key !== 'en'));
+    for (const lang of Object.keys(localeLoaders)) {
+      expect((await localeLoaders[lang]()).default).toEqual(fileLocaleBundles[lang]);
     }
   });
 
@@ -313,6 +308,55 @@ describe('buildMessages()', () => {
 
   it('falls back to English for unknown language', () => {
     expect(buildMessages('xx')).toEqual(buildMessages('en'));
+  });
+});
+
+describe('loadLocale()', () => {
+  function freshI18n(loaders) {
+    let i18n;
+    jest.isolateModules(() => {
+      if (loaders) jest.doMock('../../lib/generated/i18nBundles', () => ({ localeLoaders: loaders }));
+      i18n = require('../../lib/i18n');
+    });
+    return i18n;
+  }
+
+  afterEach(() => jest.dontMock('../../lib/generated/i18nBundles'));
+
+  it('shows English until a language has loaded', async () => {
+    const i18n = freshI18n();
+    expect(i18n.buildMessages('de')).toEqual(buildMessages('en'));
+    await i18n.loadLocale('de');
+    expect(i18n.buildMessages('de')['module.today.title']).toBe('Heute');
+    expect(i18n.buildMessages('de')._lang).toBe('de');
+  });
+
+  it('loads each language once', async () => {
+    const loader = jest.fn(() => Promise.resolve({ default: { app_name: 'Tribu DE' } }));
+    const i18n = freshI18n({ de: loader });
+    await Promise.all([i18n.loadLocale('de'), i18n.loadLocale('de')]);
+    await i18n.loadLocale('de');
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(i18n.buildMessages('de').app_name).toBe('Tribu DE');
+  });
+
+  it('falls back to English when a language cannot be downloaded and retries later', async () => {
+    const loader = jest.fn()
+      .mockReturnValueOnce(Promise.reject(new Error('ChunkLoadError')))
+      .mockReturnValueOnce(Promise.resolve({ default: { app_name: 'Tribu DE' } }));
+    const i18n = freshI18n({ de: loader });
+    await expect(i18n.loadLocale('de')).resolves.toBeUndefined();
+    expect(i18n.buildMessages('de')._lang).toBe('en');
+    await i18n.loadLocale('de');
+    expect(i18n.buildMessages('de').app_name).toBe('Tribu DE');
+  });
+
+  it('resolves at once for English and unknown languages', async () => {
+    const loader = jest.fn();
+    const i18n = freshI18n({ de: loader });
+    await i18n.loadLocale('en');
+    await i18n.loadLocale('xx');
+    expect(loader).not.toHaveBeenCalled();
   });
 });
 

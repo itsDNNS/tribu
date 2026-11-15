@@ -1,4 +1,6 @@
-const CACHE_NAME = 'tribu-v8';
+const CACHE_NAME = 'tribu-v9';
+// Remembers which build the cached _next/static files belong to; never fetched.
+const BUILD_KEY = '/__tribu-build';
 const STATIC_ASSETS = ['/manifest.json', '/offline.html', '/icons/icon-192.png', '/icons/notification-badge-96.png'];
 
 self.addEventListener('install', (event) => {
@@ -48,17 +50,34 @@ function shouldRuntimeCache(request, url, response) {
   );
 }
 
+// Build files keep their hashed names forever, but every deploy adds new ones. When a
+// page from a new build arrives, drop the files cached before it; the page fetches what it needs.
+async function pruneOldBuild(response) {
+  const buildId = /"buildId":"([^"]+)"/.exec(await response.text())?.[1];
+  if (!buildId) return;
+  const cache = await caches.open(CACHE_NAME);
+  const known = await cache.match(BUILD_KEY);
+  const knownId = known ? await known.text() : null;
+  if (knownId === buildId) return;
+  await cache.put(BUILD_KEY, new Response(buildId));
+  if (knownId === null) return;
+  const servedAt = Date.parse(response.headers.get('date'));
+  const requests = await cache.keys();
+  await Promise.all(requests.map(async (cachedRequest) => {
+    if (!new URL(cachedRequest.url).pathname.startsWith('/_next/static/')) return;
+    const cached = await cache.match(cachedRequest);
+    // Files the new page already fetched while this ran stay.
+    if (Date.parse(cached?.headers.get('date')) >= servedAt) return;
+    await cache.delete(cachedRequest);
+  }));
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Network-first for API calls
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => caches.match(request))
-    );
-    return;
-  }
+  // API answers are never cached, so they go straight to the network without the worker.
+  if (url.pathname.startsWith('/api/')) return;
 
   // Cache-first for hashed static assets (_next/static has content hashes in filenames)
   if (url.pathname.startsWith('/_next/static/')) {
@@ -86,6 +105,9 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
+        if (request.mode === 'navigate' && response.ok && response.headers.get('content-type')?.includes('text/html')) {
+          event.waitUntil(pruneOldBuild(response.clone()));
+        }
         if (shouldRuntimeCache(request, url, response)) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));

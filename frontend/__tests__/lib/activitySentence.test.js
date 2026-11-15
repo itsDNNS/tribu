@@ -4,11 +4,10 @@ import cases from '../../lib/activity/activityCases.json';
 
 describe('activitySentence', () => {
   for (const lang of ['en', 'de']) {
-    const messages = buildMessages(lang);
     it.each(cases.cases.map((c) => [c.entry.action, c.entry.object_type, c]))(
       `phrases %s %s in ${lang}`,
       (_action, _type, c) => {
-        expect(activitySentence(c.entry, messages)).toBe(c[lang]);
+        expect(activitySentence(c.entry, buildMessages(lang))).toBe(c[lang]);
       },
     );
   }

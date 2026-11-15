@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { IMAGE_FORMATS, StageImage, StateImage } from '../../components/display/StageImage';
 import { normalizeStageConfig, parseLocal, resolveLanguage } from '../../components/display/stageModel';
-import { buildMessages, listLanguages, t as translate } from '../../lib/i18n';
+import { buildMessages, listLanguages, loadLocale, t as translate } from '../../lib/i18n';
 import { localeForLang } from '../../lib/dates';
 
 // Served as /display/image.png (see next.config.js) for e-ink frames that fetch a
@@ -46,6 +46,7 @@ function send(res, status, buffer, headers = {}) {
 async function sendState(res, status, state, language, format) {
   const key = `${state}:${language}:${format}`;
   if (!stateImages.has(key)) {
+    await loadLocale(language);
     const messages = buildMessages(language);
     stateImages.set(key, await png(<StateImage title="Tribu Display" text={translate(messages, `display.state.${state}`)} />, IMAGE_FORMATS[format]));
   }
@@ -82,6 +83,7 @@ export default async function handler(req, res) {
   const dashboard = await upstream.json();
   const config = normalizeStageConfig(dashboard.config);
   const language = resolveLanguage(typeof req.query.lang === 'string' ? req.query.lang : config.language, preferredLanguages(req), SUPPORTED_LANGUAGES);
+  await loadLocale(language);
   const messages = buildMessages(language);
   const format = requestedFormat || config.einkFormat;
   const buffer = await png(

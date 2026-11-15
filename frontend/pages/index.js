@@ -4,8 +4,9 @@ import AppShell from '../components/AppShell';
 import SetupWizard from '../components/SetupWizard';
 
 export default function Home() {
-  const { loggedIn, needsSetup, loading } = useApp();
+  const { loggedIn, needsSetup, loading, localeReady } = useApp();
 
+  if (!localeReady) return null;
   if (loggedIn) return <AppShell />;
   if (loading) return null;
   if (needsSetup) return <SetupWizard />;

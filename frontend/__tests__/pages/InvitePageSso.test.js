@@ -11,6 +11,7 @@ jest.mock('next/router', () => ({
 jest.mock('../../contexts/AppContext', () => ({
   useApp: () => ({
     messages: {},
+    localeReady: true,
     setLoggedIn: jest.fn(),
     lang: 'en',
     setLang: jest.fn(),
