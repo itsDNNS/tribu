@@ -770,3 +770,18 @@ test('a check-off without network stays checked, waits and is sent once online',
   expect(result.current.checkedItems.map(item => item.id)).toEqual([1]);
   expect(mockError).not.toHaveBeenCalled();
 });
+test('a demo deletion that waited while another list opened updates the list it came from', async () => {
+  const lists = [
+    { id: 10, item_count: 1, checked_count: 0, items: [{ id: 101, list_id: 10, name: 'Milk', checked: false }] },
+    { id: 20, item_count: 1, checked_count: 0, items: [{ id: 202, list_id: 20, name: 'Bread', checked: false }] },
+  ];
+  mockApp = { ...mockApp, demoMode: true, shoppingLists: lists };
+  const { result } = renderHook(() => useShopping());
+  act(() => result.current.setActiveListId(20));
+  await act(async () => { await result.current.deleteItem(101); });
+
+  const update = mockApp.setShoppingLists.mock.calls.at(-1)[0];
+  const next = update(lists);
+  expect(next.find((list) => list.id === 10)).toEqual(expect.objectContaining({ item_count: 0, items: [] }));
+  expect(next.find((list) => list.id === 20)).toEqual(expect.objectContaining({ item_count: 1 }));
+});
