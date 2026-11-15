@@ -98,6 +98,8 @@ test.describe('Shopping with the backend', () => {
       exact: true
     }).click();
     await expect(tile(page, 'Bread')).toContainText('Whole wheat');
+    // The editor closes once the server answered; the list menu opens only after that.
+    await expect(d).toHaveCount(0);
     await menu(page);
     await page.getByRole('button', {
       name: 'Edit list',

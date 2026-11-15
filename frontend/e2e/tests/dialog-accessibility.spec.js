@@ -59,20 +59,18 @@ test.describe('Dialogs, toasts and theme', () => {
     ));
     const dialog = await openContactForm(page);
     await dialog.getByRole('textbox', { name: /Name/ }).fill('Opa');
-    await page.evaluate(() => {
-      document.querySelector('.toast-container').addEventListener('toggle', (event) => {
-        if (event.newState === 'open') window.__toastsOverModal = Boolean(document.querySelector('dialog:modal'));
-      });
-    });
     await dialog.getByRole('button', { name: 'Save' }).click();
 
     const region = page.getByRole('region', { name: 'Notifications' });
     await expect(region.getByText('Could not save this contact')).toBeVisible();
     await expect(dialog).toBeVisible();
-    // Shown while the dialog was open, the toasts sit above it in the top layer.
-    expect(await region.evaluate((el) => el.matches(':popover-open'))).toBe(true);
-    expect(await page.evaluate(() => window.__toastsOverModal)).toBe(true);
+    // The toasts move into the open dialog, which keeps the rest of the page inert, and show in the top layer.
+    expect(await region.evaluate((el) => el.matches(':popover-open') && Boolean(el.closest('dialog:modal')))).toBe(true);
     await page.screenshot({ path: testInfo.outputPath('toast-over-dialog.png') });
+    // Its dismiss button can be used while the dialog stays open.
+    await region.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(region.getByText('Could not save this contact')).toHaveCount(0);
+    await expect(dialog).toBeVisible();
   });
 
   test('collapsed sidebar buttons keep their names and show the tooltip on focus', async ({ authedPage: page }, testInfo) => {

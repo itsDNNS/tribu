@@ -693,10 +693,13 @@ export function useShopping() {
   async function deleteItem(id) {
     if (!isCurrent() || isChild) return false;
     if (demoMode) {
-      const item = items.find((i) => i.id === id);
+      // A deletion that waited out the undo window can belong to a list the user left meanwhile.
+      const owner = shoppingLists.find((l) => (l.items || []).some((i) => i.id === id));
+      const listId = owner?.id ?? activeListId;
+      const item = items.find((i) => i.id === id) || owner?.items.find((i) => i.id === id);
       setItems((prev) => prev.filter((i) => i.id !== id));
       setShoppingLists((prev) =>
-        prev.map((l) => l.id === activeListId
+        prev.map((l) => l.id === listId
           ? {
               ...l,
               item_count: l.item_count - 1,

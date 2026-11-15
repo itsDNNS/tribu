@@ -1,7 +1,9 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useModalStack } from '../contexts/ModalStackContext';
 import { t } from '../lib/i18n';
 import ConfirmDialog from './ConfirmDialog';
+import { ToastRegion } from './Toast';
 
 function outside(event, dialog) {
   const r = dialog.getBoundingClientRect();
@@ -25,6 +27,8 @@ export default function ModalDialog({ onClose, busy = false, guardInput = true, 
   const pressedOutsideRef = useRef(false);
   const unmountingRef = useRef(false);
   const [asking, setAsking] = useState(false);
+  const modalStack = useModalStack();
+  const id = useId();
   // Read while rendering: an autoFocus field inside takes focus before any effect runs.
   const [opener] = useState(() => (typeof document === 'undefined' ? null : document.activeElement));
 
@@ -42,6 +46,9 @@ export default function ModalDialog({ onClose, busy = false, guardInput = true, 
       if (returnTo?.isConnected) returnTo.focus({ preventScroll: true });
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The innermost open dialog shows the toasts, so their buttons stay usable.
+  useLayoutEffect(() => modalStack?.openModal(id), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismiss = () => {
     if (busyRef.current) return;
@@ -78,6 +85,7 @@ export default function ModalDialog({ onClose, busy = false, guardInput = true, 
         }}
       >
         {children}
+        {modalStack?.topModal === id && <ToastRegion />}
       </dialog>
       {asking && (
         <ConfirmDialog
