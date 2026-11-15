@@ -4,7 +4,8 @@ Uploads are not kept as sent. Tribu stores a source of at most SOURCE_PX with
 the EXIF orientation applied and no metadata (so no camera location), and
 serves square WebP sizes derived from it: a small one for member lists,
 timetables and the shared display, a larger one for the person's own profile.
-Shopping product photos get the same bounded, metadata-free treatment.
+Shopping product photos get the same bounded, metadata-free treatment and a
+small square thumbnail for lists.
 """
 
 import base64
@@ -17,6 +18,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 SMALL_PX = 192  # lists, header, timetables, shared display (2x for ~96 CSS px)
 LARGE_PX = 512  # own profile and editing previews
 SOURCE_PX = 1024  # longest side of stored sources and product photos
+THUMBNAIL_PX = 128  # shopping list tiles (2x for up to 64 CSS px)
 WEBP_QUALITY = 82
 # Avatars never need more; this also bounds decompression bombs well below
 # Pillow's default limit.
@@ -75,6 +77,11 @@ def _bounded(image: Image.Image, max_px: int) -> str:
 def normalize_photo(data_url: str, max_px: int = SOURCE_PX) -> str:
     """A photo as WebP of at most max_px on its longest side, upright and without metadata."""
     return _bounded(_open(data_url), max_px)
+
+
+def product_thumbnail(data_url: str) -> str:
+    """A square WebP of a product photo for shopping list tiles."""
+    return _encode(_open(data_url), THUMBNAIL_PX)
 
 
 def build_avatar_variants(data_url: str) -> AvatarVariants:

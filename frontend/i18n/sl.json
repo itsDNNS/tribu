@@ -161,6 +161,8 @@
   "delete": "Izbriši",
   "loading": "Nalaganje…",
   "dismiss": "Odpusti",
+  "view_load_error": "Te strani ni bilo mogoče naložiti. Preveri povezavo in poskusi znova.",
+  "view_load_retry": "Poskusi znova",
   "discard_changes_title": "Želite zavreči spremembe?",
   "discard_changes_message": "Vneseno bo izgubljeno.",
   "discard_changes_confirm": "Zavrzi",

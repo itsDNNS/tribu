@@ -22,6 +22,8 @@ export default function ProductEditor({
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const parsed = splitSpec(item.spec);
+  // Lists carry only the thumbnail; the stored photo is sent again only when it changes.
+  const shownPhoto = item.photo_thumbnail || item.photo || null;
   const [draft, setDraft] = useState({
     name: item.name || '',
     qty: parsed.qty,
@@ -30,7 +32,7 @@ export default function ProductEditor({
     list_id: item.list_id || activeListId,
     notes: item.notes || parsed.legacy,
     priority: item.priority || 'normal',
-    photo: item.photo || null
+    photo: shownPhoto
   });
   const [customCategory, setCustomCategory] = useState(false);
   const [error, setError] = useState('');
@@ -70,8 +72,10 @@ export default function ProductEditor({
     setBusy(true);
     setError('');
     try {
+      const { photo: picked, ...details } = draft;
       const ok = await onSave({
-        ...draft,
+        ...details,
+        ...(picked !== shownPhoto ? { photo: picked } : {}),
         name: draft.name.trim(),
         spec: `${draft.qty}${draft.unit.trim() ? ' ' + draft.unit.trim() : ''}`,
         notes: draft.notes || null

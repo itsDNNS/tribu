@@ -160,6 +160,8 @@
   "delete": "Excluir",
   "loading": "Carregando…",
   "dismiss": "Liberar",
+  "view_load_error": "Não foi possível carregar esta página. Verifique sua conexão e tente novamente.",
+  "view_load_retry": "Tentar novamente",
   "discard_changes_title": "Descartar as alterações?",
   "discard_changes_message": "O que introduziram será perdido.",
   "discard_changes_confirm": "Descartar",

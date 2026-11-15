@@ -161,6 +161,8 @@
   "delete": "Διαγραφή",
   "loading": "Φόρτωση…",
   "dismiss": "Απόρριψη",
+  "view_load_error": "Δεν ήταν δυνατή η φόρτωση αυτής της σελίδας. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.",
+  "view_load_retry": "Δοκιμάστε ξανά",
   "discard_changes_title": "Απόρριψη αλλαγών;",
   "discard_changes_message": "Όσα καταχωρίσατε θα χαθούν.",
   "discard_changes_confirm": "Απόρριψη",

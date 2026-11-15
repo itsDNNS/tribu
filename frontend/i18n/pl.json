@@ -160,6 +160,8 @@
   "delete": "Usuń",
   "loading": "Wczytywanie…",
   "dismiss": "Odrzuć",
+  "view_load_error": "Nie udało się wczytać tej strony. Sprawdź połączenie i spróbuj ponownie.",
+  "view_load_retry": "Spróbuj ponownie",
   "discard_changes_title": "Odrzucić zmiany?",
   "discard_changes_message": "Wprowadzone dane zostaną utracone.",
   "discard_changes_confirm": "Odrzuć",

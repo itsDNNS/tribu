@@ -511,6 +511,9 @@ test('real backend persists photo/details through atomic move, finish and explic
   });
   // The backend stores product photos as bounded WebP without metadata.
   expect(before[0].photo).toMatch(/^data:image\/webp;base64,/);
+  // The list loads only the small thumbnail.
+  expect(before[0].photo_thumbnail).toMatch(/^data:image\/webp;base64,/);
+  await expect(tile(page, 'Oat drink').locator('img')).toHaveAttribute('src', before[0].photo_thumbnail);
   await tile(page, 'Oat drink').click();
   await menu(page);
   await page.getByRole('dialog').getByRole('button', {
@@ -546,6 +549,18 @@ test('real backend persists photo/details through atomic move, finish and explic
     archived: false,
     checked: false
   });
+  // Saving other details from the thumbnail-only list keeps the stored photo.
+  await page.getByRole('button', {
+    name: 'Details for Oat drink'
+  }).click();
+  await page.getByRole('dialog').getByLabel('Priority').selectOption('normal');
+  await page.getByRole('dialog').getByRole('button', {
+    name: 'Save',
+    exact: true
+  }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const kept = await (await apiCtx.get(`/api/shopping/lists/${target.id}/items`)).json();
+  expect(kept[0]).toMatchObject({priority: 'normal', photo: before[0].photo});
   await page.getByRole('button', {
     name: 'Details for Oat drink'
   }).click();

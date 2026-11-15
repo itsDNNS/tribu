@@ -161,6 +161,8 @@
   "delete": "Smazat",
   "loading": "Načítání…",
   "dismiss": "Odmítnout",
+  "view_load_error": "Tuto stránku se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu.",
+  "view_load_retry": "Zkusit znovu",
   "discard_changes_title": "Zahodit změny?",
   "discard_changes_message": "Co jste zadali, se ztratí.",
   "discard_changes_confirm": "Zahodit",

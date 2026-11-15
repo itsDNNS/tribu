@@ -161,6 +161,8 @@
   "delete": "Șterge",
   "loading": "Se încarcă…",
   "dismiss": "Respingeți",
+  "view_load_error": "Această pagină nu a putut fi încărcată. Verificați conexiunea și încercați din nou.",
+  "view_load_retry": "Încercați din nou",
   "discard_changes_title": "Renunțați la modificări?",
   "discard_changes_message": "Ce ați introdus se va pierde.",
   "discard_changes_confirm": "Renunță",

@@ -161,6 +161,8 @@
   "delete": "Scrios",
   "loading": "Á lódáil…",
   "dismiss": "Díbhe",
+  "view_load_error": "Níorbh fhéidir an leathanach seo a luchtú. Seiceáil do nasc agus bain triail eile as.",
+  "view_load_retry": "Bain triail eile as",
   "discard_changes_title": "Na hathruithe a chaitheamh i leataobh?",
   "discard_changes_message": "Caillfear a bhfuil curtha isteach agaibh.",
   "discard_changes_confirm": "Caith i leataobh",

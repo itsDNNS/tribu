@@ -161,6 +161,8 @@
   "delete": "Törlés",
   "loading": "Betöltés…",
   "dismiss": "Elvetés",
+  "view_load_error": "Ezt az oldalt nem sikerült betölteni. Ellenőrizze a kapcsolatot, és próbálja újra.",
+  "view_load_retry": "Újrapróbálkozás",
   "discard_changes_title": "Elveti a módosításokat?",
   "discard_changes_message": "A beírt adatok elvesznek.",
   "discard_changes_confirm": "Elvetés",

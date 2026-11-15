@@ -182,6 +182,8 @@
   "delete": "Löschen",
   "loading": "Wird geladen…",
   "dismiss": "Ausblenden",
+  "view_load_error": "Diese Seite konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+  "view_load_retry": "Erneut versuchen",
   "discard_changes_title": "Änderungen verwerfen?",
   "discard_changes_message": "Was ihr eingegeben habt, geht verloren.",
   "discard_changes_confirm": "Verwerfen",

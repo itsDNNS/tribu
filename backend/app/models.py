@@ -695,6 +695,8 @@ class ShoppingItem(Base):
     name = Column(String, nullable=False)
     notes = Column(String(500), nullable=True)
     photo = Column(Text, nullable=True)
+    # Square 128 px WebP of the photo; lists show it instead of the full photo.
+    photo_thumbnail = Column(Text, nullable=True)
     priority = Column(String(10), nullable=False, default="normal", server_default="normal")
     archived = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     spec = Column(String, nullable=True)

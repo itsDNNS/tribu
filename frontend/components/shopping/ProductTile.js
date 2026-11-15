@@ -67,7 +67,7 @@ export default function ProductTile({
       document.activeElement?.blur();
       onToggle(item.id, item.checked);
     }}>
- <span className="shop-tile-check">{item.checked && <Check size={12} />}</span>{item.photo ? <img className="shop-product-photo" src={item.photo} alt="" /> : <GroceryArt name={item.name} />}
+ <span className="shop-tile-check">{item.checked && <Check size={12} />}</span>{item.photo_thumbnail || item.photo ? <img className="shop-product-photo" src={item.photo_thumbnail || item.photo} alt="" /> : <GroceryArt name={item.name} />}
  <span className="shop-product-copy"><span className="shop-product-name">{item.name}</span><span className="shop-product-qty">{item.spec || tr("module.shopping.visual.1_stuck")}</span>{waiting ? <span className="shop-product-note shop-waiting"><CloudOff size={11} aria-hidden="true" />{tr('offline.waiting')}</span> : <span className="shop-product-note">{productNote(item, tr)}</span>}</span></button>
  {item.priority === 'urgent' && !item.checked && <span className="shop-urgent">{tr("module.shopping.visual.dringend")}</span>}{onEdit && <button className="shop-tile-menu" aria-label={tr("module.shopping.visual.details_zu_0", [item.name])} onClick={() => onEdit(item)}><MoreVertical size={17} /></button>}</>;
   const className = `shop-tile ${item.checked ? 'done ' : ''}${item.priority === 'urgent' && !item.checked ? 'urgent' : ''}`;

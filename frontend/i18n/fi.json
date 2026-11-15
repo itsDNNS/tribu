@@ -161,6 +161,8 @@
   "delete": "Poista",
   "loading": "Ladataan…",
   "dismiss": "Hylkää",
+  "view_load_error": "Tätä sivua ei voitu ladata. Tarkista yhteys ja yritä uudelleen.",
+  "view_load_retry": "Yritä uudelleen",
   "discard_changes_title": "Hylätäänkö muutokset?",
   "discard_changes_message": "Syöttämänne tiedot menetetään.",
   "discard_changes_confirm": "Hylkää",

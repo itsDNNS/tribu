@@ -161,6 +161,8 @@
   "delete": "Elimina",
   "loading": "Caricamento…",
   "dismiss": "Ignora",
+  "view_load_error": "Impossibile caricare questa pagina. Controlla la connessione e riprova.",
+  "view_load_retry": "Riprova",
   "discard_changes_title": "Scartare le modifiche?",
   "discard_changes_message": "Quello che avete inserito andrà perso.",
   "discard_changes_confirm": "Scarta",

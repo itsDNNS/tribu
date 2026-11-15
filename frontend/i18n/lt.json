@@ -161,6 +161,8 @@
   "delete": "Ištrinti",
   "loading": "Įkeliama…",
   "dismiss": "Atsisakyti",
+  "view_load_error": "Šio puslapio įkelti nepavyko. Patikrinkite ryšį ir bandykite dar kartą.",
+  "view_load_retry": "Bandyti dar kartą",
   "discard_changes_title": "Atmesti pakeitimus?",
   "discard_changes_message": "Tai, ką įvedėte, bus prarasta.",
   "discard_changes_confirm": "Atmesti",

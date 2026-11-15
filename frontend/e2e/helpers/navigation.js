@@ -35,6 +35,8 @@ async function navigateTo(page, viewName) {
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, key);
   await page.waitForURL(new RegExp(`#${key}$`), { timeout: 5000 });
+  // The family and the areas load on demand; wait until the opened area has replaced its placeholder.
+  await page.locator('#main-content [role="status"][aria-busy="true"]').waitFor({ state: 'detached', timeout: 15000 });
 }
 
 module.exports = { navigateTo };

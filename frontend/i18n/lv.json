@@ -161,6 +161,8 @@
   "delete": "Dzēst",
   "loading": "Notiek ielāde…",
   "dismiss": "Atlaist",
+  "view_load_error": "Šo lapu neizdevās ielādēt. Pārbaudiet savienojumu un mēģiniet vēlreiz.",
+  "view_load_retry": "Mēģināt vēlreiz",
   "discard_changes_title": "Atmest izmaiņas?",
   "discard_changes_message": "Ievadītais tiks zaudēts.",
   "discard_changes_confirm": "Atmest",

@@ -10,47 +10,10 @@ import { resolveLaunchAction, resolveSharedText } from '../lib/navigationState';
 import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf, navKeyOf, NO_HIDDEN_AREAS } from '../lib/navigation';
 import AppHeader from './shell/AppHeader';
 import SubNav from './shell/SubNav';
-import TodayView from './today/TodayView';
-import FamilyHub from './family/FamilyHub';
-import ActivityView from './ActivityView';
-import CalendarView from './calendar';
-import ContactsView from './ContactsView';
-import TasksView from './TasksView';
-import DutiesView from './DutiesView';
-import TemplatesView from './TemplatesView';
-import RewardsView from './RewardsView';
-import GiftsView from './GiftsView';
-import MealPlansView from './MealPlansView';
-import SchoolTimetablesView from './SchoolTimetablesView';
-import RecipesView from './RecipesView';
-import ShoppingView from './ShoppingView';
-import SettingsView from './settings';
-import AdminView from './admin';
-import WeeklyPlanView from './WeeklyPlanView';
+import { prefetchViewsWhenIdle, views } from './shell/views';
 import NotificationCenter from './NotificationCenter';
 import ForcePasswordChange from './ForcePasswordChange';
 import OnboardingWizard from './OnboardingWizard';
-
-const views = {
-  dashboard: TodayView,
-  family: FamilyHub,
-  activity: ActivityView,
-  calendar: CalendarView,
-  shopping: ShoppingView,
-  contacts: ContactsView,
-  tasks: TasksView,
-  duties: DutiesView,
-  templates: TemplatesView,
-  rewards: RewardsView,
-  gifts: GiftsView,
-  meal_plans: MealPlansView,
-  school_timetables: SchoolTimetablesView,
-  recipes: RecipesView,
-  notifications: NotificationCenter,
-  settings: SettingsView,
-  admin: AdminView,
-  weekly_plan: WeeklyPlanView,
-};
 
 // While the family loads: the shape of Today, a title and the timeline.
 function TodaySkeleton({ messages }) {
@@ -137,7 +100,8 @@ export default function AppShell() {
     });
     return ()=>cancelAnimationFrame(frame);
   },[activeView,createRequest]);
-  const ActiveComponent = views[activeView] || TodayView;
+  const ActiveComponent = views[activeView] || views.dashboard;
+  useEffect(() => (loading ? undefined : prefetchViewsWhenIdle()), [loading]);
   // Opens a create form in its area, as the "+" sheet does.
   const openCreateForm = (kind) => {
     const route = { event: 'calendar', task: 'tasks', shopping: 'shopping', meal: 'meal_plans' }[kind];

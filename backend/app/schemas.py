@@ -956,6 +956,7 @@ class ShoppingItemResponse(ShoppingProductDetails):
     added_by_user_id: Optional[int] = Field(None, description="User who added the item")
     created_at: datetime = Field(..., description="Creation timestamp")
     source: Optional[str] = Field(None, description="Recipes or meals the item was added for, comma separated")
+    photo_thumbnail: Optional[str] = Field(None, description="Square 128 px WebP data URL of the photo, for lists")
 
 
 class ShoppingTemplateItemBase(BaseModel):

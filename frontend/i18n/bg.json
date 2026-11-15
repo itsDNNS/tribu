@@ -161,6 +161,8 @@
   "delete": "Изтриване",
   "loading": "Зареждане…",
   "dismiss": "Отхвърляне",
+  "view_load_error": "Тази страница не можа да се зареди. Проверете връзката си и опитайте отново.",
+  "view_load_retry": "Опитайте отново",
   "discard_changes_title": "Отхвърляне на промените?",
   "discard_changes_message": "Въведеното от вас ще бъде загубено.",
   "discard_changes_confirm": "Отхвърли",

@@ -161,6 +161,8 @@
   "delete": "Kustuta",
   "loading": "Laadimine…",
   "dismiss": "Loobu",
+  "view_load_error": "Seda lehte ei õnnestunud laadida. Kontrolli ühendust ja proovi uuesti.",
+  "view_load_retry": "Proovi uuesti",
   "discard_changes_title": "Kas loobuda muudatustest?",
   "discard_changes_message": "Sisestatu läheb kaotsi.",
   "discard_changes_confirm": "Loobu",
