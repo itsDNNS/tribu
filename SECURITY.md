@@ -50,9 +50,9 @@ It lists the boundaries to check and explains when to create narrow, public-safe
 Follow these steps before exposing Tribu to the internet:
 
 1. **TLS termination**: Place Tribu behind a reverse proxy (Caddy, nginx, or Traefik) with a valid TLS certificate. Caddy handles this automatically with Let's Encrypt.
-2. **Enable secure cookies**: Set `SECURE_COOKIES=true` in your `.env` file. This adds the `Secure` flag to auth cookies so they are only sent over HTTPS.
+2. **Check secure cookies**: With the default `SECURE_COOKIES=auto`, auth cookies get the `Secure` flag whenever the browser reaches Tribu over HTTPS, including behind a proxy that sends `X-Forwarded-Proto`. Set `SECURE_COOKIES=true` to enforce it regardless of what the proxy reports.
 3. **Generate strong secrets**: Use `openssl rand -hex 32` for `JWT_SECRET` and `openssl rand -hex 16` for `POSTGRES_PASSWORD`. Never reuse secrets across instances.
-4. **Restrict CORS** (optional): The default regex allows all `192.168.x.x` addresses. If your instance is public, consider narrowing this to your specific domain by modifying the `allow_origin_regex` in `backend/app/main.py`.
+4. **Keep direct backend access narrow**: Browsers normally reach the backend through the frontend on the same origin. Only list origins you control in `CORS_ALLOWED_ORIGINS`, and leave `CORS_ALLOW_LAN_ORIGINS` off unless you deliberately serve the backend to `192.168.x.x` browser origins.
 5. **Backups**: Schedule regular PostgreSQL backups and test restore procedures. The [Backup & Restore guide](https://github.com/itsDNNS/tribu/wiki/Backup-&-Restore) documents the supported operations flow.
 6. **Keep images updated**: Rebuild Docker images periodically to pick up security patches in base images and dependencies.
 
@@ -60,8 +60,8 @@ Follow these steps before exposing Tribu to the internet:
 
 | Limitation | Context |
 |------------|---------|
-| No HTTPS in dev | Cookies use `secure=false` for local development. Set `SECURE_COOKIES=true` in `.env` when behind TLS. |
-| No CSRF token | `SameSite=Lax` mitigates common cross-origin form submissions. Reassess if cross-site or embedded use cases are added. |
+| No HTTPS in dev | Cookies follow the request scheme by default, so plain-HTTP development keeps working without the `Secure` flag. |
+| No CSRF token | `SameSite=Lax` plus a Fetch Metadata check: cookie-authenticated requests that another site starts, including other apps on the same host, are rejected. Top-level links, native apps, DAV clients and bearer tokens are not affected; origins in `CORS_ALLOWED_ORIGINS` are trusted. |
 | No email verification | Registration does not require email confirmation. |
 | No account lockout | Failed login attempts are rate-limited but do not lock accounts. |
 

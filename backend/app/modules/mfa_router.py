@@ -194,7 +194,7 @@ def login_mfa(request: Request, payload: MfaLoginRequest, db: Session = Depends(
     user = _challenge_user(db, payload.mfa_token)
     _check_code(db, user, payload.code)
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
-    issue_session_cookies(response, db, user)
+    issue_session_cookies(request, response, db, user)
     db.commit()
     return response
 

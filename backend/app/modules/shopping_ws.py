@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 import jwt
 from sqlalchemy.orm import Session
 
+from app.core.fetch_metadata import is_foreign_cookie_request
 from app.core.ws_manager import manager
 from app.database import get_db
 from app.models import Membership, ShoppingList
@@ -30,6 +31,8 @@ def _auth_and_check(ws: WebSocket, list_id: int, db: Session) -> tuple[int, int]
     Returns (user_id, family_id) or None on failure.
     """
     token = ws.cookies.get("tribu_token")
+    if token and is_foreign_cookie_request("GET", ws.headers, ws.cookies):
+        return None
     if not token:
         authorization = ws.headers.get("authorization", "")
         scheme, _, value = authorization.partition(" ")

@@ -36,7 +36,9 @@ from app.core.errors import (
     LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED,
     OPEN_REGISTRATION_DISABLED, SETUP_RESTORE_TOKEN_REQUIRED, MFA_REQUIRED,
     SETUP_RESTORE_TOKEN_INVALID, SETUP_RESTORE_UPLOAD_TOO_LARGE, PROFILE_IMAGE_UNREADABLE,
+    CROSS_SITE_REQUEST,
 )
+from app.core.fetch_metadata import is_foreign_cookie_request
 from app.core.avatars import AvatarError, set_profile_image
 from app.core import mfa
 from app.core import oidc as oidc_core
@@ -369,6 +371,13 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def cross_site_request_guard(request: Request, call_next):
+    if is_foreign_cookie_request(request.method, request.headers, request.cookies):
+        return JSONResponse(status_code=403, content={"detail": error_detail(CROSS_SITE_REQUEST)})
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def setup_restore_header_guard(request: Request, call_next):
     if request.method == "POST" and request.url.path == "/setup/restore":
         expected = setup_restore_token_configured()
@@ -452,7 +461,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     membership = Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True)
     db.add(membership)
     response = JSONResponse(content={"status": "ok"})
-    issue_session_cookies(response, db, user)
+    issue_session_cookies(request, response, db, user)
     db.commit()
     return response
 
@@ -484,7 +493,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
         return JSONResponse(content={"status": "mfa_required", "mfa_token": mfa.create_login_challenge(user)})
 
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
-    issue_session_cookies(response, db, user)
+    issue_session_cookies(request, response, db, user)
     db.commit()
     return response
 
@@ -598,7 +607,7 @@ def refresh_session(request: Request, db: Session = Depends(get_db)):
         clear_session_cookies(response)
         return response
     response = JSONResponse(content={"status": "ok"})
-    result = rotate_refresh_session(response, db, refresh_token)
+    result = rotate_refresh_session(request, response, db, refresh_token)
     if result != "ok":
         failure = JSONResponse(content={"detail": error_detail(INVALID_CREDENTIALS)}, status_code=401)
         if result == "invalid":

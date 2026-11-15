@@ -157,7 +157,7 @@ services:
       DATABASE_URL: postgresql://tribu:${POSTGRES_PASSWORD}@postgres:5432/tribu
       REDIS_URL: redis://valkey:6379/0
       JWT_SECRET: ${JWT_SECRET}
-      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      SECURE_COOKIES: ${SECURE_COOKIES:-auto}
       JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-24}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
       TZ: ${TZ:-}

@@ -3,15 +3,15 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Literal, cast
 
-from fastapi import Response
+from fastapi import Request, Response
 from sqlalchemy.orm import Session
 
 from app.core.config import (
     COOKIE_MAX_AGE,
     COOKIE_NAME,
-    COOKIE_SECURE,
     REFRESH_COOKIE_MAX_AGE,
     REFRESH_COOKIE_NAME,
+    SECURE_COOKIES,
 )
 from app.core.clock import to_utc_naive, utcnow, utcnow_aware
 from app.models import User, UserSession
@@ -26,17 +26,29 @@ from app.security import (
 REFRESH_COOKIE_PATH = "/"
 
 
-def issue_session_cookies(response: Response, db: Session, user: User) -> None:
+def cookie_secure(request: Request) -> bool:
+    """SECURE_COOKIES=true/false wins; otherwise follow the scheme the browser used."""
+    if SECURE_COOKIES in {"true", "1", "yes", "on"}:
+        return True
+    if SECURE_COOKIES in {"false", "0", "no", "off"}:
+        return False
+    # A proxy chain lists the browser-facing scheme first.
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip().lower()
+    return (forwarded or request.url.scheme) == "https"
+
+
+def issue_session_cookies(request: Request, response: Response, db: Session, user: User) -> None:
     """Create a revocable refresh session and set both auth cookies."""
     access_token = create_access_token(user_id=user.id, email=user.email)
     refresh_token = issue_refresh_session(db, user)
+    secure = cookie_secure(request)
     response.set_cookie(
         COOKIE_NAME, access_token, httponly=True, samesite="lax",
-        secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
+        secure=secure, max_age=COOKIE_MAX_AGE, path="/",
     )
     response.set_cookie(
         REFRESH_COOKIE_NAME, refresh_token, httponly=True, samesite="lax",
-        secure=COOKIE_SECURE, max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
+        secure=secure, max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
     )
 
 
@@ -121,19 +133,20 @@ def rotate_refresh_token(db: Session, refresh_token: str) -> tuple[RefreshRotati
     return "ok", user, next_token
 
 
-def rotate_refresh_session(response: Response, db: Session, refresh_token: str) -> RefreshRotationResult:
+def rotate_refresh_session(request: Request, response: Response, db: Session, refresh_token: str) -> RefreshRotationResult:
     result, user, next_token = rotate_refresh_token(db, refresh_token)
     if result != "ok" or not user or not next_token:
         return result
 
     access_token = create_access_token(user_id=user.id, email=user.email)
+    secure = cookie_secure(request)
     response.set_cookie(
         COOKIE_NAME, access_token, httponly=True, samesite="lax",
-        secure=COOKIE_SECURE, max_age=COOKIE_MAX_AGE, path="/",
+        secure=secure, max_age=COOKIE_MAX_AGE, path="/",
     )
     response.set_cookie(
         REFRESH_COOKIE_NAME, next_token, httponly=True, samesite="lax",
-        secure=COOKIE_SECURE, max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
+        secure=secure, max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
     )
     return "ok"
 

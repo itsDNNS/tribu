@@ -361,8 +361,11 @@ def test_callback_reuses_authorize_redirect_uri(monkeypatch):
     monkeypatch.setattr(oidc_core, "exchange_code_for_tokens", fake_exchange)
     monkeypatch.setattr(oidc_core, "verify_id_token", fake_verify)
 
+    # The proxy terminates TLS, so the Secure flow cookie must come back over https.
+    https_client = TestClient(app, base_url="https://testserver", follow_redirects=False)
+
     # Authorize request goes through the proxied host
-    start = client.get(
+    start = https_client.get(
         "/auth/oidc/login",
         headers={"x-forwarded-host": "first.example.com", "x-forwarded-proto": "https"},
     )
@@ -379,12 +382,11 @@ def test_callback_reuses_authorize_redirect_uri(monkeypatch):
     # Callback arrives with a DIFFERENT forwarded host. Without the
     # pin, redirect_uri would be recomputed to the second host and
     # the token exchange would fail at the IdP.
-    client.get(
+    https_client.get(
         f"/auth/oidc/callback?code=c&state={state}",
         headers={"x-forwarded-host": "second.example.com", "x-forwarded-proto": "https"},
     )
     assert captured["redirect_uri"] == "https://first.example.com/auth/oidc/callback"
-    client.cookies.clear()
 
 
 def test_callback_stamps_last_success_timestamp(monkeypatch):
