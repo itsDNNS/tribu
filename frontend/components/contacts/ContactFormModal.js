@@ -67,57 +67,57 @@ export default function ContactFormModal({ editing, draft, setDraft, onSubmit, o
 
   return inBody(
     <ModalDialog className="ui-modal contact-modal-panel" aria-labelledby="contact-form-title" onClose={onClose} initialFocusRef={firstInputRef}>
-        <div className="modal-header">
-          <h2 id="contact-form-title" className="modal-title">{t(messages, editing ? 'module.contacts.edit' : 'module.contacts.add')}</h2>
-          <button type="button" onClick={onClose} className="btn-ghost modal-close" aria-label={t(messages, 'close')}>
-            <X size={18} />
-          </button>
+      <div className="modal-header">
+        <h2 id="contact-form-title" className="modal-title">{t(messages, editing ? 'module.contacts.edit' : 'module.contacts.add')}</h2>
+        <button type="button" onClick={onClose} className="btn-ghost modal-close" aria-label={t(messages, 'close')}>
+          <X size={18} />
+        </button>
+      </div>
+      <form onSubmit={onSubmit} className="modal-form ui-sheet-form">
+        <div className="ui-sheet-body">
+          <div className="form-field">
+            <label htmlFor="contact-name">{t(messages, 'module.contacts.form.name')} *</label>
+            <input ref={firstInputRef} id="contact-name" className="form-input" value={draft.full_name} onChange={change('full_name')} required autoComplete="off" />
+          </div>
+          <div className="form-field">
+            <label htmlFor="contact-phone">{t(messages, 'module.contacts.form.phone')}</label>
+            <input id="contact-phone" type="tel" className="form-input" value={draft.phone} onChange={change('phone')} autoComplete="off" />
+          </div>
+          <div className="form-field">
+            <label htmlFor="contact-email">{t(messages, 'module.contacts.form.email')}</label>
+            <input id="contact-email" type="email" className="form-input" value={draft.email} onChange={change('email')} autoComplete="off" />
+          </div>
+          <div className="form-field">
+            <label id="contact-birthday-label">{t(messages, 'module.contacts.form.birthday')}</label>
+            <div className="contact-birthday-row" role="group" aria-labelledby="contact-birthday-label">
+              <select className="form-input" value={draft.birthday_day} onChange={change('birthday_day')} aria-label={t(messages, 'module.contacts.form.day')}>
+                <option value="">{t(messages, 'module.contacts.form.day')}</option>
+                {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select className="form-input" value={draft.birthday_month} onChange={change('birthday_month')} aria-label={t(messages, 'module.contacts.form.month')}>
+                <option value="">{t(messages, 'module.contacts.form.month')}</option>
+                {MONTHS.map((m) => <option key={m} value={m}>{monthName(m, locale)}</option>)}
+              </select>
+              <input
+                className="form-input"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="1985"
+                value={draft.birthday_year}
+                onChange={change('birthday_year')}
+                aria-label={t(messages, 'module.birthdays.form.year')}
+                disabled={!draft.birthday_month || !draft.birthday_day}
+              />
+            </div>
+            <span className="set-field-hint">{t(messages, 'module.birthdays.form.year_hint')}</span>
+          </div>
         </div>
-        <form onSubmit={onSubmit} className="modal-form ui-sheet-form">
-          <div className="ui-sheet-body">
-            <div className="form-field">
-              <label htmlFor="contact-name">{t(messages, 'module.contacts.form.name')} *</label>
-              <input ref={firstInputRef} id="contact-name" className="form-input" value={draft.full_name} onChange={change('full_name')} required autoComplete="off" />
-            </div>
-            <div className="form-field">
-              <label htmlFor="contact-phone">{t(messages, 'module.contacts.form.phone')}</label>
-              <input id="contact-phone" type="tel" className="form-input" value={draft.phone} onChange={change('phone')} autoComplete="off" />
-            </div>
-            <div className="form-field">
-              <label htmlFor="contact-email">{t(messages, 'module.contacts.form.email')}</label>
-              <input id="contact-email" type="email" className="form-input" value={draft.email} onChange={change('email')} autoComplete="off" />
-            </div>
-            <div className="form-field">
-              <label id="contact-birthday-label">{t(messages, 'module.contacts.form.birthday')}</label>
-              <div className="contact-birthday-row" role="group" aria-labelledby="contact-birthday-label">
-                <select className="form-input" value={draft.birthday_day} onChange={change('birthday_day')} aria-label={t(messages, 'module.contacts.form.day')}>
-                  <option value="">{t(messages, 'module.contacts.form.day')}</option>
-                  {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-                <select className="form-input" value={draft.birthday_month} onChange={change('birthday_month')} aria-label={t(messages, 'module.contacts.form.month')}>
-                  <option value="">{t(messages, 'module.contacts.form.month')}</option>
-                  {MONTHS.map((m) => <option key={m} value={m}>{monthName(m, locale)}</option>)}
-                </select>
-                <input
-                  className="form-input"
-                  inputMode="numeric"
-                  maxLength={4}
-                  placeholder="1985"
-                  value={draft.birthday_year}
-                  onChange={change('birthday_year')}
-                  aria-label={t(messages, 'module.birthdays.form.year')}
-                  disabled={!draft.birthday_month || !draft.birthday_day}
-                />
-              </div>
-              <span className="set-field-hint">{t(messages, 'module.birthdays.form.year_hint')}</span>
-            </div>
-          </div>
-          <div className="modal-actions ui-sheet-actions">
-            {editing && <DeleteButton onDelete={onDelete} label={t(messages, 'module.contacts.delete')} messages={messages} />}
-            <button type="button" className="btn-ghost" onClick={onClose}>{t(messages, 'cancel')}</button>
-            <button type="submit" className="btn-primary">{t(messages, 'module.contacts.save')}</button>
-          </div>
-        </form>
+        <div className="modal-actions ui-sheet-actions">
+          {editing && <DeleteButton onDelete={onDelete} label={t(messages, 'module.contacts.delete')} messages={messages} />}
+          <button type="button" className="btn-ghost" onClick={onClose}>{t(messages, 'cancel')}</button>
+          <button type="submit" className="btn-primary">{t(messages, 'module.contacts.save')}</button>
+        </div>
+      </form>
     </ModalDialog>,
   );
 }
