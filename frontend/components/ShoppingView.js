@@ -204,12 +204,23 @@ export default function ShoppingView(props) {
   };
   const deleteItemRef = useRef(sh.deleteItem);
   deleteItemRef.current = sh.deleteItem;
-  // Leaving the view sends waiting deletions at once.
-  useEffect(() => () => {
-    for (const [id, timer] of Object.entries(removeTimers.current)) {
-      clearTimeout(timer);
-      deleteItemRef.current(Number(id));
-    }
+  // Leaving the view or the page sends waiting deletions at once, so closing the tab inside the undo window loses nothing.
+  useEffect(() => {
+    const flush = () => {
+      for (const [id, timer] of Object.entries(removeTimers.current)) {
+        clearTimeout(timer);
+        delete removeTimers.current[id];
+        deleteItemRef.current(Number(id));
+      }
+    };
+    const onHide = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
   }, []);
   const open = (sh.uncheckedItems || []).filter(item => !removing[item.id]),
     done = (sh.checkedItems || []).filter(item => !removing[item.id]),

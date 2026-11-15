@@ -1011,6 +1011,23 @@ test('deleting a product can be undone and only then reaches the server', async 
   }
 });
 
+test('a waiting deletion is sent when the page is hidden', () => {
+  jest.useFakeTimers();
+  try {
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Details zu Äpfel' }));
+    fireEvent.click(dialog().getByRole('button', { name: /Löschen/ }));
+    expect(mockShopping.deleteItem).not.toHaveBeenCalled();
+
+    act(() => { window.dispatchEvent(new Event('pagehide')); });
+    expect(mockShopping.deleteItem).toHaveBeenCalledWith(apple.id);
+    act(() => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
+    expect(mockShopping.deleteItem).toHaveBeenCalledTimes(1);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test('a trip started elsewhere stays on after the first render', () => {
   sessionStorage.setItem('tribu_shopping_trip', '1');
   setup();
