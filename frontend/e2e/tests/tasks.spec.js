@@ -3,7 +3,7 @@ const { getFamilyId, seedTask, completeTask } = require('../helpers/api-setup');
 const { navigateTo } = require('../helpers/navigation');
 
 // The undo window (hooks/useTasks.js) before a completion or deletion is sent.
-const UNDO_WINDOW_MS = 6000;
+const UNDO_WINDOW_MS = 10000;
 
 async function openTasks(page, expectedTitle) {
   await navigateTo(page, 'Tasks');

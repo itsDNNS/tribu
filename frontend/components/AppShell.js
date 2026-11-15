@@ -2,6 +2,7 @@ import ResponsiveUI from './responsive/ResponsiveUI';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
+import ModalDialog from './ModalDialog';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
@@ -113,7 +114,6 @@ export default function AppShell() {
   const [searchQuery, setSearchQuery] = useState('');
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const bellBtnRef = useRef(null);
-  const notifPanelRef = useRef(null);
 
   // Ctrl+K / Cmd+K keyboard shortcut for search
   useEffect(() => {
@@ -207,16 +207,6 @@ export default function AppShell() {
     navigate(group.items.some((item) => item.key === last) ? last : group.items[0].key);
   }, [navigate]);
 
-  // Escape closes the notification panel.
-  useEffect(() => {
-    if (!notifPanelOpen) return;
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') closeNotifPanel();
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [notifPanelOpen]);
-
   function closeNotifPanel() {
     setNotifPanelOpen(false);
     bellBtnRef.current?.focus();
@@ -282,8 +272,9 @@ export default function AppShell() {
                     aria-current={navKey === item.key ? 'page' : undefined}
                   >
                     <span className="nav-icon" aria-hidden="true"><item.icon size={20} /></span>
-                    {!collapsed && <span className="nav-label">{item.label}</span>}
-                    {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
+                    {/* Collapsed, the label and count stay as the button's accessible name. */}
+                    <span className={collapsed ? 'sr-only' : 'nav-label'}>{item.label}</span>
+                    {item.badge && <span className={collapsed ? 'sr-only' : 'nav-badge'}>{' '}{item.badge}</span>}
                   </button>
                 ))}
               </section>
@@ -334,26 +325,11 @@ export default function AppShell() {
 
       {/* Notification panel */}
       {notifPanelOpen && (
-        <>
-          <div className="notif-panel-backdrop" onClick={closeNotifPanel} />
-          <div ref={notifPanelRef} className="notif-panel" role="dialog" aria-modal="true" aria-label={t(messages, 'notifications')}
-            onKeyDown={(e) => {
-              if (e.key !== 'Tab' || !notifPanelRef.current) return;
-              const focusable = notifPanelRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-              if (focusable.length === 0) return;
-              const first = focusable[0];
-              const last = focusable[focusable.length - 1];
-              if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-              else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-            }}
-          >
-            <NotificationCenter onClose={closeNotifPanel} />
-          </div>
-        </>
+        <ModalDialog className="ui-modal notif-panel" aria-label={t(messages, 'notifications')} onClose={closeNotifPanel} guardInput={false}>
+          <NotificationCenter onClose={closeNotifPanel} />
+        </ModalDialog>
       )}
 
-      {/* Live region for screen reader announcements */}
-      <div id="a11y-announcer" className="sr-only" aria-live="polite" aria-atomic="true" />
       <SearchOverlay open={searchOpen} areas={[...navGroups.flatMap((group) => group.items), ...accountItems]} initialQuery={searchQuery} onClose={() => { setSearchOpen(false); setSearchQuery(''); }} />
     </div>
   );

@@ -12,6 +12,15 @@ export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopp
 
 const AppContext = createContext(null);
 
+function storedTheme() {
+  if (typeof window === 'undefined') return 'system';
+  try {
+    return window.localStorage.getItem('tribu_theme') || 'system';
+  } catch {
+    return 'system';
+  }
+}
+
 export function useApp() {
   return useContext(AppContext);
 }
@@ -50,8 +59,9 @@ export function AppProvider({ children }) {
   // UI state
   // Appearance of this device: light, dark, midnight-glass or system,
   // which follows the device's light or dark mode (Tribu 2.0, X2).
-  const [theme, setTheme] = useState('light');
-  const [systemDark, setSystemDark] = useState(false);
+  // Read on the first render, as the pre-paint script in _document does, so no other theme flashes.
+  const [theme, setTheme] = useState(storedTheme);
+  const [systemDark, setSystemDark] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-color-scheme: dark)').matches));
   const resolvedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
   const [compactDashboard, setCompactDashboard] = useState(false);
   const [showNotificationBadge, setShowNotificationBadge] = useState(true);
@@ -316,7 +326,6 @@ export function AppProvider({ children }) {
 
   // Init: localStorage, resize, auto-login
   useEffect(() => {
-    setTheme(window.localStorage.getItem('tribu_theme') || 'system');
     setCompactDashboard(window.localStorage.getItem('tribu_compact_dashboard') === 'true');
     setShowNotificationBadge(window.localStorage.getItem('tribu_notification_badge') !== 'false');
     const storedWeekStart = window.localStorage.getItem('tribu_week_start');
@@ -380,7 +389,17 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', resolvedTheme);
-  }, [resolvedTheme]);
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', theme === 'system' ? 'light dark' : resolvedTheme === 'light' ? 'light' : 'dark');
+  }, [theme, resolvedTheme]);
+
+  // Another tab changed the appearance.
+  useEffect(() => {
+    const onStorage = (event) => {
+      if (event.key === 'tribu_theme') setTheme(event.newValue || 'system');
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     // Same query as the CSS shell: while a foldable folds, iOS can fire the last resize with a stale innerWidth.

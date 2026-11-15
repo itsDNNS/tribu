@@ -100,6 +100,25 @@ describe('AppProvider bootstrap', () => {
     expect(window.localStorage.getItem('tribu_theme')).toBe('dark');
   });
 
+  test('starts with the stored appearance and follows changes from other tabs', async () => {
+    window.localStorage.setItem('tribu_theme', 'dark');
+    const states = [];
+    function ThemeSpy() {
+      states.push(useApp().theme);
+      return null;
+    }
+    render(<AppProvider><ThemeSpy /><Probe /></AppProvider>);
+    // No first render with another theme, so nothing repaints after the pre-paint script.
+    expect(states[0]).toBe('dark');
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'tribu_theme', newValue: 'light' }));
+    });
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'));
+    expect(screen.getByTestId('theme')).toHaveTextContent('light');
+  });
+
   test('follows the device when the appearance is system', async () => {
     const listeners = [];
     const query = { matches: true, addEventListener: (_type, fn) => listeners.push(fn), removeEventListener: jest.fn() };

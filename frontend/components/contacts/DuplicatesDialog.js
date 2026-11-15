@@ -1,17 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useState } from 'react';
 import { Link2, Users, X } from 'lucide-react';
 import { t } from '../../lib/i18n';
 import MemberAvatar from '../MemberAvatar';
+import ModalDialog from '../ModalDialog';
+import { inBody } from '../inBody';
 import { avatarColor, birthdayDate, channels, initials } from './contactUtils';
 
 // Goes through the possible duplicates one group at a time: pick the
 // contact to keep and merge, or say they are different people. A contact
 // that looks like a family member can be linked to them instead.
 export default function DuplicatesDialog({ groups, contacts, members: familyList = [], messages, locale, onMerge, onDismiss, onLink, onClose, busy }) {
-  const overlayRef = useRef(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const familyMembers = familyList;
   const byId = new Map(contacts.map((contact) => [contact.id, contact]));
   const group = groups[0];
@@ -29,25 +27,19 @@ export default function DuplicatesDialog({ groups, contacts, members: familyList
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group?.contact_ids.join(',')]);
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onCloseRef.current(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
-
   const member = group?.member_user_id ? familyMembers.find((m) => m.user_id === group.member_user_id) : null;
   if (group && member && groupContacts.length === 1) {
-    return createPortal(
-      <MemberMatch
-        {...{ overlayRef, onClose, messages, locale, group, contact: groupContacts[0], member, index: familyMembers.indexOf(member), onDismiss, onLink, busy }}
-      />,
-      document.body,
+    return inBody(
+      <ModalDialog className="ui-modal contact-modal-panel contact-duplicates-panel" aria-labelledby="contact-member-title" onClose={onClose} busy={busy} guardInput={false}>
+        <MemberMatch
+          {...{ onClose, messages, locale, group, contact: groupContacts[0], member, index: familyMembers.indexOf(member), onDismiss, onLink, busy }}
+        />
+      </ModalDialog>,
     );
   }
   if (!group || groupContacts.length < 2) return null;
-  return createPortal(
-    <div ref={overlayRef} className="contact-modal-overlay" onClick={(e) => e.target === overlayRef.current && onClose()}>
-      <div className="contact-modal-panel contact-duplicates-panel" role="dialog" aria-modal="true" aria-labelledby="contact-duplicates-title">
+  return inBody(
+    <ModalDialog className="ui-modal contact-modal-panel contact-duplicates-panel" aria-labelledby="contact-duplicates-title" onClose={onClose} busy={busy} guardInput={false}>
         <div className="modal-header">
           <h2 id="contact-duplicates-title" className="modal-title">{t(messages, 'module.contacts.merge_title')}</h2>
           <button type="button" onClick={onClose} className="btn-ghost modal-close" aria-label={t(messages, 'close')}>
@@ -94,9 +86,7 @@ export default function DuplicatesDialog({ groups, contacts, members: familyList
             {t(messages, 'module.contacts.merge')}
           </button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </ModalDialog>,
   );
 }
 
@@ -107,14 +97,13 @@ function birthdayOf(member, locale) {
 
 // "Is this contact Hannelore from the family?" Linked, they are one person
 // with one birthday.
-function MemberMatch({ overlayRef, onClose, messages, locale, group, contact, member, index, onDismiss, onLink, busy }) {
+function MemberMatch({ onClose, messages, locale, group, contact, member, index, onDismiss, onLink, busy }) {
   const { emails, phones } = channels(contact);
   const contactBirthday = contact.birthday_month && contact.birthday_day
     ? `${birthdayDate(contact.birthday_month, contact.birthday_day, locale)}${contact.birthday_year ? ` ${contact.birthday_year}` : ''}`
     : '';
   return (
-    <div ref={overlayRef} className="contact-modal-overlay" onClick={(e) => e.target === overlayRef.current && onClose()}>
-      <div className="contact-modal-panel contact-duplicates-panel" role="dialog" aria-modal="true" aria-labelledby="contact-member-title">
+    <>
         <div className="modal-header">
           <h2 id="contact-member-title" className="modal-title">{t(messages, 'module.contacts.member_title')}</h2>
           <button type="button" onClick={onClose} className="btn-ghost modal-close" aria-label={t(messages, 'close')}>
@@ -158,7 +147,6 @@ function MemberMatch({ overlayRef, onClose, messages, locale, group, contact, me
             <Link2 size={15} aria-hidden="true" /> {t(messages, 'module.contacts.member_link')}
           </button>
         </div>
-      </div>
-    </div>
+    </>
   );
 }

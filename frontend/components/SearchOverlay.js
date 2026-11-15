@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { isImeComposing } from '../lib/helpers';
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
+import ModalDialog from './ModalDialog';
 
 const MODULE_META = {
   calendar: { icon: Calendar, label: 'module.calendar.name', view: 'calendar' },
@@ -28,9 +29,6 @@ export default function SearchOverlay({ open, onClose, initialQuery = '', areas 
   const reqIdRef = useRef(0);
 
   useEffect(() => {
-    if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
     if (!open) {
       setQuery('');
       setResults(null);
@@ -71,10 +69,6 @@ export default function SearchOverlay({ open, onClose, initialQuery = '', areas 
     onClose();
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') onClose();
-  };
-
   if (!open) return null;
 
   const needle = normalize(query.trim());
@@ -83,74 +77,72 @@ export default function SearchOverlay({ open, onClose, initialQuery = '', areas 
   const noResults = results && Object.keys(results).length === 0 && query.length >= 2 && foundAreas.length === 0;
 
   return (
-    <div className="search-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
-      <div className="search-panel" role="dialog" aria-modal="true" aria-label={t(messages, 'search.placeholder')} onClick={(e) => e.stopPropagation()}>
-        <div className="search-header">
-          <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          <input
-            ref={inputRef}
-            className="search-input"
-            type="text"
-            placeholder={t(messages, 'search.placeholder')}
-            value={query}
-            onChange={handleInput}
-            autoComplete="off"
-            aria-label={t(messages, 'search.placeholder')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isImeComposing(e) && foundAreas.length === 1 && !hasResults) handleResultClick(foundAreas[0].key);
-            }}
-          />
-          <button className="search-close" onClick={onClose} aria-label={t(messages, 'close')}>
-            <X size={18} />
-          </button>
-        </div>
+    <ModalDialog className="ui-modal search-panel" aria-label={t(messages, 'search.placeholder')} onClose={onClose} guardInput={false} initialFocusRef={inputRef}>
+      <div className="search-header">
+        <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        <input
+          ref={inputRef}
+          className="search-input"
+          type="text"
+          placeholder={t(messages, 'search.placeholder')}
+          value={query}
+          onChange={handleInput}
+          autoComplete="off"
+          aria-label={t(messages, 'search.placeholder')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !isImeComposing(e) && foundAreas.length === 1 && !hasResults) handleResultClick(foundAreas[0].key);
+          }}
+        />
+        <button className="search-close" onClick={onClose} aria-label={t(messages, 'close')}>
+          <X size={18} />
+        </button>
+      </div>
 
-        <div className="search-results">
-          {foundAreas.length > 0 && (
-            <div className="search-group">
+      <div className="search-results">
+        {foundAreas.length > 0 && (
+          <div className="search-group">
+            <div className="search-group-header">
+              <span>{t(messages, 'search.areas')}</span>
+            </div>
+            {foundAreas.map((area) => (
+              <button key={`area-${area.key}`} className="search-result-item" onClick={() => handleResultClick(area.key)}>
+                <area.icon size={16} aria-hidden="true" />
+                <span>{area.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {loading && <div className="search-loading">{t(messages, 'search.searching')}</div>}
+
+        {noResults && !loading && (
+          <div className="search-empty">{t(messages, 'search.no_results').replace('{query}', query)}</div>
+        )}
+
+        {hasResults && !loading && Object.entries(results).map(([module, items]) => {
+          const meta = MODULE_META[module];
+          if (!meta || !items.length) return null;
+          const Icon = meta.icon;
+          return (
+            <div key={module} className="search-group">
               <div className="search-group-header">
-                <span>{t(messages, 'search.areas')}</span>
+                <Icon size={14} />
+                <span>{t(messages, meta.label)}</span>
               </div>
-              {foundAreas.map((area) => (
-                <button key={`area-${area.key}`} className="search-result-item" onClick={() => handleResultClick(area.key)}>
-                  <area.icon size={16} aria-hidden="true" />
-                  <span>{area.label}</span>
+              {items.map((item) => (
+                <button
+                  key={`${module}-${item.id}`}
+                  className="search-result-item"
+                  onClick={() => handleResultClick(meta.view)}
+                >
+                  {item.color && <div className="search-dot" style={{ background: item.color }} />}
+                  <span>{item.title || item.name || item.full_name || item.person_name}</span>
                 </button>
               ))}
             </div>
-          )}
-
-          {loading && <div className="search-loading">{t(messages, 'search.searching')}</div>}
-
-          {noResults && !loading && (
-            <div className="search-empty">{t(messages, 'search.no_results').replace('{query}', query)}</div>
-          )}
-
-          {hasResults && !loading && Object.entries(results).map(([module, items]) => {
-            const meta = MODULE_META[module];
-            if (!meta || !items.length) return null;
-            const Icon = meta.icon;
-            return (
-              <div key={module} className="search-group">
-                <div className="search-group-header">
-                  <Icon size={14} />
-                  <span>{t(messages, meta.label)}</span>
-                </div>
-                {items.map((item) => (
-                  <button
-                    key={`${module}-${item.id}`}
-                    className="search-result-item"
-                    onClick={() => handleResultClick(meta.view)}
-                  >
-                    {item.color && <div className="search-dot" style={{ background: item.color }} />}
-                    <span>{item.title || item.name || item.full_name || item.person_name}</span>
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-        </div>
+          );
+        })}
       </div>
-    </div>
+    </ModalDialog>
   );
 }

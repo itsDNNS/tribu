@@ -364,6 +364,15 @@ describe('AppShell mobile bottom navigation', () => {
     expect(screen.queryByRole('navigation', { name: /Pages in/ })).not.toBeInTheDocument();
   });
 
+  it('keeps names and counts on the collapsed sidebar buttons', () => {
+    mockAppState = baseState({ isMobile: false });
+    render(<AppShell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    const mainNav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(mainNav).getByRole('button', { name: 'Calendar' })).toBeInTheDocument();
+    expect(within(mainNav).getByRole('button', { name: 'Shopping 2' })).toBeInTheDocument();
+  });
+
   it('leaves hidden areas out of the navigation and opens Today instead', () => {
     const setActiveView = jest.fn();
     mockAppState = baseState({ isMobile: false, hiddenAreas: ['recipes', 'gifts'], activeView: 'recipes', setActiveView });

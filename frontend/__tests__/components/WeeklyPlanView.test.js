@@ -259,7 +259,7 @@ describe('Week at a glance', () => {
     const onCreateForm = jest.fn();
     const { unmount } = render(<WeeklyPlanView initialDate={new Date('2026-05-06T12:00:00')} initialEvents={[]} initialMeals={[]} onCreateForm={onCreateForm} />);
     const wednesday = day(/Wednesday, May 6/);
-    expect(wednesday.getByText('', { selector: 'summary[aria-label="Add to Wednesday, May 6"]' })).toBeInTheDocument();
+    expect(wednesday.getByText('', { selector: 'button[aria-label="Add to Wednesday, May 6"]' })).toBeInTheDocument();
     fireEvent.click(wednesday.getByRole('button', { name: 'Event' }));
     expect(onCreateForm).toHaveBeenLastCalledWith('event');
     expect(peekHandoff('tribu_calendar_focus')).toBe(new Date('2026-05-06T14:00').toISOString());

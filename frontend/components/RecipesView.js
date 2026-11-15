@@ -14,8 +14,6 @@ import {
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
-import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
-import { announce } from '../lib/announce';
 import * as api from '../lib/api';
 import { errorText, isImeComposing } from '../lib/helpers';
 import { t, tc } from '../lib/i18n';
@@ -23,6 +21,7 @@ import { buildRecipePayload, createEmptyRecipeForm, createEmptyRecipeIngredient,
 import ConfirmDialog from './ConfirmDialog';
 import RecipeDetail from './recipes/RecipeDetail';
 import { inBody } from './inBody';
+import ModalDialog from './ModalDialog';
 import { useHandoff } from '../lib/viewHandoff';
 
 
@@ -154,7 +153,6 @@ function RecipeDialog({
   ingredientHints = [],
   onImport,
 }) {
-  const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   // Reading a recipe from a web page (discussion #511).
@@ -179,8 +177,6 @@ function RecipeDialog({
   }
   const datalistId = useId();
   const titleId = 'recipe-dialog-title';
-
-  useDialogFocusTrap({ open, containerRef: dialogRef, initialFocusRef: firstFieldRef, onClose });
 
   if (!open) return null;
 
@@ -217,199 +213,196 @@ function RecipeDialog({
   }
 
   return inBody(
-    <div className="cal-dialog-backdrop" onClick={submitting ? undefined : onClose}>
-      <div
-        ref={dialogRef}
-        className="recipe-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="recipe-dialog-header">
-          <h2 id={titleId} className="recipe-dialog-title">
-            {isEditing ? t(messages, 'module.recipes.edit_title') : t(messages, 'module.recipes.add_title')}
-          </h2>
-          <button
-            type="button"
-            className="recipe-dialog-close"
-            onClick={onClose}
-            aria-label={t(messages, 'module.recipes.cancel')}
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
+    <ModalDialog
+      className="ui-modal recipe-dialog"
+      aria-labelledby={titleId}
+      busy={submitting}
+      onClose={onClose}
+      initialFocusRef={firstFieldRef}
+    >
+      <div className="recipe-dialog-header">
+        <h2 id={titleId} className="recipe-dialog-title">
+          {isEditing ? t(messages, 'module.recipes.edit_title') : t(messages, 'module.recipes.add_title')}
+        </h2>
+        <button
+          type="button"
+          className="recipe-dialog-close"
+          onClick={onClose}
+          aria-label={t(messages, 'module.recipes.cancel')}
+        >
+          <X size={18} aria-hidden="true" />
+        </button>
+      </div>
+
+      <form className="recipe-form ui-sheet-form" onSubmit={handleSubmit}><div className="ui-sheet-body">
+        {!isEditing && onImport && (
+          <div className="recipe-import">
+            <label className="recipe-import-label" htmlFor="recipe-import-url">
+              <Link2 size={15} aria-hidden="true" /> {t(messages, 'module.recipes.import_title')}
+            </label>
+            <div className="recipe-import-row">
+              <input
+                id="recipe-import-url"
+                className="form-input"
+                type="url"
+                inputMode="url"
+                placeholder={t(messages, 'module.recipes.import_placeholder')}
+                value={importUrl}
+                onChange={(e) => { setImportUrl(e.target.value); setImported(false); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!isImeComposing(e)) runImport(); } }}
+                maxLength={500}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={importing || !importUrl.trim()}
+                onClick={runImport}
+              >
+                {importing ? t(messages, 'module.recipes.import_loading') : t(messages, 'module.recipes.import_button')}
+              </button>
+            </div>
+            <p className="recipe-import-hint" role="status">
+              {imported ? t(messages, 'module.recipes.import_done') : t(messages, 'module.recipes.import_hint')}
+            </p>
+          </div>
+        )}
+        <div className="recipe-form-grid">
+          <input
+            ref={firstFieldRef}
+            className="form-input recipe-form-title"
+            placeholder={t(messages, 'module.recipes.title_placeholder')}
+            aria-label={t(messages, 'module.recipes.title')}
+            value={form.title}
+            onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+            required
+            maxLength={200}
+          />
+          <input
+            className="form-input"
+            type="number"
+            min="1"
+            max="999"
+            step="1"
+            inputMode="numeric"
+            placeholder={t(messages, 'module.recipes.servings_placeholder')}
+            aria-label={t(messages, 'module.recipes.servings')}
+            value={form.servings}
+            onChange={(e) => setForm((prev) => ({ ...prev, servings: e.target.value }))}
+          />
+          <input
+            className="form-input recipe-form-wide"
+            placeholder={t(messages, 'module.recipes.description_placeholder')}
+            aria-label={t(messages, 'module.recipes.description')}
+            value={form.description}
+            onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+            maxLength={2000}
+          />
+          <input
+            className="form-input recipe-form-wide"
+            type="url"
+            placeholder={t(messages, 'module.recipes.source_url_placeholder')}
+            aria-label={t(messages, 'module.recipes.source_url')}
+            value={form.source_url}
+            onChange={(e) => setForm((prev) => ({ ...prev, source_url: e.target.value }))}
+            maxLength={500}
+          />
+          <input
+            className="form-input recipe-form-wide"
+            placeholder={t(messages, 'module.recipes.tags_placeholder')}
+            aria-label={t(messages, 'module.recipes.tags')}
+            value={form.tagsText}
+            onChange={(e) => setForm((prev) => ({ ...prev, tagsText: e.target.value }))}
+          />
         </div>
 
-        <form className="recipe-form ui-sheet-form" onSubmit={handleSubmit}><div className="ui-sheet-body">
-          {!isEditing && onImport && (
-            <div className="recipe-import">
-              <label className="recipe-import-label" htmlFor="recipe-import-url">
-                <Link2 size={15} aria-hidden="true" /> {t(messages, 'module.recipes.import_title')}
-              </label>
-              <div className="recipe-import-row">
+        <div className="recipe-ingredients">
+          <div className="recipe-ingredients-header">
+            <span className="recipe-section-title">{t(messages, 'module.recipes.ingredients')}</span>
+            <button type="button" className="btn-ghost btn-sm recipe-ingredient-add" onClick={addIngredient}>
+              <Plus size={14} aria-hidden="true" />
+              {t(messages, 'module.recipes.ingredient_add')}
+            </button>
+          </div>
+          {form.ingredients.length === 0 && (
+            <p className="recipe-ingredient-empty">{t(messages, 'module.recipes.ingredient_none')}</p>
+          )}
+          {form.ingredients.length > 0 && (
+            <datalist id={datalistId}>
+              {ingredientHints.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          )}
+          <ul className="recipe-ingredient-list">
+            {form.ingredients.map((row, index) => (
+              <li key={index} className="recipe-ingredient-row">
                 <input
-                  id="recipe-import-url"
-                  className="form-input"
-                  type="url"
-                  inputMode="url"
-                  placeholder={t(messages, 'module.recipes.import_placeholder')}
-                  value={importUrl}
-                  onChange={(e) => { setImportUrl(e.target.value); setImported(false); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!isImeComposing(e)) runImport(); } }}
-                  maxLength={500}
+                  className="form-input recipe-ingredient-name"
+                  list={datalistId}
+                  placeholder={t(messages, 'module.recipes.ingredient_name_placeholder')}
+                  aria-label={t(messages, 'module.recipes.ingredient_name')}
+                  value={row.name}
+                  onChange={(e) => updateIngredient(index, { name: e.target.value })}
+                  maxLength={120}
+                />
+                <input
+                  className="form-input recipe-ingredient-amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  inputMode="decimal"
+                  placeholder="500"
+                  aria-label={t(messages, 'module.recipes.ingredient_amount')}
+                  value={row.amount}
+                  onChange={(e) => updateIngredient(index, { amount: e.target.value })}
+                />
+                <input
+                  className="form-input recipe-ingredient-unit"
+                  placeholder={t(messages, 'module.recipes.ingredient_unit_placeholder')}
+                  aria-label={t(messages, 'module.recipes.ingredient_unit')}
+                  value={row.unit}
+                  onChange={(e) => updateIngredient(index, { unit: e.target.value })}
+                  maxLength={20}
                 />
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  disabled={importing || !importUrl.trim()}
-                  onClick={runImport}
+                  className="btn-ghost recipe-ingredient-remove"
+                  onClick={() => removeIngredient(index)}
+                  aria-label={t(messages, 'module.recipes.ingredient_remove_aria').replace('{name}', row.name || '')}
                 >
-                  {importing ? t(messages, 'module.recipes.import_loading') : t(messages, 'module.recipes.import_button')}
+                  <Trash2 size={14} aria-hidden="true" />
                 </button>
-              </div>
-              <p className="recipe-import-hint" role="status">
-                {imported ? t(messages, 'module.recipes.import_done') : t(messages, 'module.recipes.import_hint')}
-              </p>
-            </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <textarea
+          className="form-input recipe-form-instructions"
+          placeholder={t(messages, 'module.recipes.instructions_placeholder')}
+          aria-label={t(messages, 'module.recipes.instructions')}
+          value={form.instructions}
+          onChange={(e) => setForm((prev) => ({ ...prev, instructions: e.target.value }))}
+        />
+
+        </div><div className="recipe-form-actions ui-sheet-actions">
+          {isEditing && onDelete && (
+            <button type="button" className="btn btn-secondary recipe-dialog-delete" onClick={onDelete}>
+              <Trash2 size={14} aria-hidden="true" />
+              {t(messages, 'module.recipes.delete')}
+            </button>
           )}
-          <div className="recipe-form-grid">
-            <input
-              ref={firstFieldRef}
-              className="form-input recipe-form-title"
-              placeholder={t(messages, 'module.recipes.title_placeholder')}
-              aria-label={t(messages, 'module.recipes.title')}
-              value={form.title}
-              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-              required
-              maxLength={200}
-            />
-            <input
-              className="form-input"
-              type="number"
-              min="1"
-              max="999"
-              step="1"
-              inputMode="numeric"
-              placeholder={t(messages, 'module.recipes.servings_placeholder')}
-              aria-label={t(messages, 'module.recipes.servings')}
-              value={form.servings}
-              onChange={(e) => setForm((prev) => ({ ...prev, servings: e.target.value }))}
-            />
-            <input
-              className="form-input recipe-form-wide"
-              placeholder={t(messages, 'module.recipes.description_placeholder')}
-              aria-label={t(messages, 'module.recipes.description')}
-              value={form.description}
-              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-              maxLength={2000}
-            />
-            <input
-              className="form-input recipe-form-wide"
-              type="url"
-              placeholder={t(messages, 'module.recipes.source_url_placeholder')}
-              aria-label={t(messages, 'module.recipes.source_url')}
-              value={form.source_url}
-              onChange={(e) => setForm((prev) => ({ ...prev, source_url: e.target.value }))}
-              maxLength={500}
-            />
-            <input
-              className="form-input recipe-form-wide"
-              placeholder={t(messages, 'module.recipes.tags_placeholder')}
-              aria-label={t(messages, 'module.recipes.tags')}
-              value={form.tagsText}
-              onChange={(e) => setForm((prev) => ({ ...prev, tagsText: e.target.value }))}
-            />
+          <div className="recipe-form-actions-right">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              {t(messages, 'module.recipes.cancel')}
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {t(messages, 'module.recipes.save')}
+            </button>
           </div>
-
-          <div className="recipe-ingredients">
-            <div className="recipe-ingredients-header">
-              <span className="recipe-section-title">{t(messages, 'module.recipes.ingredients')}</span>
-              <button type="button" className="btn-ghost btn-sm recipe-ingredient-add" onClick={addIngredient}>
-                <Plus size={14} aria-hidden="true" />
-                {t(messages, 'module.recipes.ingredient_add')}
-              </button>
-            </div>
-            {form.ingredients.length === 0 && (
-              <p className="recipe-ingredient-empty">{t(messages, 'module.recipes.ingredient_none')}</p>
-            )}
-            {form.ingredients.length > 0 && (
-              <datalist id={datalistId}>
-                {ingredientHints.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            )}
-            <ul className="recipe-ingredient-list">
-              {form.ingredients.map((row, index) => (
-                <li key={index} className="recipe-ingredient-row">
-                  <input
-                    className="form-input recipe-ingredient-name"
-                    list={datalistId}
-                    placeholder={t(messages, 'module.recipes.ingredient_name_placeholder')}
-                    aria-label={t(messages, 'module.recipes.ingredient_name')}
-                    value={row.name}
-                    onChange={(e) => updateIngredient(index, { name: e.target.value })}
-                    maxLength={120}
-                  />
-                  <input
-                    className="form-input recipe-ingredient-amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    inputMode="decimal"
-                    placeholder="500"
-                    aria-label={t(messages, 'module.recipes.ingredient_amount')}
-                    value={row.amount}
-                    onChange={(e) => updateIngredient(index, { amount: e.target.value })}
-                  />
-                  <input
-                    className="form-input recipe-ingredient-unit"
-                    placeholder={t(messages, 'module.recipes.ingredient_unit_placeholder')}
-                    aria-label={t(messages, 'module.recipes.ingredient_unit')}
-                    value={row.unit}
-                    onChange={(e) => updateIngredient(index, { unit: e.target.value })}
-                    maxLength={20}
-                  />
-                  <button
-                    type="button"
-                    className="btn-ghost recipe-ingredient-remove"
-                    onClick={() => removeIngredient(index)}
-                    aria-label={t(messages, 'module.recipes.ingredient_remove_aria').replace('{name}', row.name || '')}
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <textarea
-            className="form-input recipe-form-instructions"
-            placeholder={t(messages, 'module.recipes.instructions_placeholder')}
-            aria-label={t(messages, 'module.recipes.instructions')}
-            value={form.instructions}
-            onChange={(e) => setForm((prev) => ({ ...prev, instructions: e.target.value }))}
-          />
-
-          </div><div className="recipe-form-actions ui-sheet-actions">
-            {isEditing && onDelete && (
-              <button type="button" className="btn btn-secondary recipe-dialog-delete" onClick={onDelete}>
-                <Trash2 size={14} aria-hidden="true" />
-                {t(messages, 'module.recipes.delete')}
-              </button>
-            )}
-            <div className="recipe-form-actions-right">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                {t(messages, 'module.recipes.cancel')}
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {t(messages, 'module.recipes.save')}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </ModalDialog>
   );
 }
 
@@ -469,7 +462,6 @@ export default function RecipesView() {
       return { ok: false };
     }
     toastSuccess(t(messages, 'module.recipes.created'));
-    announce(t(messages, 'module.recipes.created'));
     await loadRecipes();
     return { ok: true, data };
   }
@@ -482,7 +474,6 @@ export default function RecipesView() {
       return { ok: false };
     }
     toastSuccess(t(messages, 'module.recipes.updated'));
-    announce(t(messages, 'module.recipes.updated'));
     await loadRecipes();
     return { ok: true, data };
   }
@@ -504,7 +495,6 @@ export default function RecipesView() {
       return false;
     }
     toastSuccess(t(messages, 'module.recipes.deleted'));
-    announce(t(messages, 'module.recipes.deleted'));
     await loadRecipes();
     return true;
   }
@@ -521,7 +511,6 @@ export default function RecipesView() {
       : t(messages, 'module.recipes.pushed_many');
     const msg = template.replace('{count}', String(added));
     toastSuccess(msg);
-    announce(msg);
     await loadShoppingLists?.();
     return { ok: true, added };
   }
