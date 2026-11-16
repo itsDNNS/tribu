@@ -1,4 +1,6 @@
-import { isNetworkFailure, OFFLINE_RETRY_MS, sendWhenOnline } from '../../lib/offline';
+import {
+  hasPendingActions, isNetworkFailure, OFFLINE_RETRY_MS, sendWhenOnline,
+} from '../../lib/offline';
 
 function setOnline(value) {
   Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => value });
@@ -29,6 +31,34 @@ describe('offline actions', () => {
 
     await expect(sent).resolves.toEqual({ ok: true });
     expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports an action as pending from its first request until it got through', async () => {
+    let answer;
+    const send = jest.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ ok: true });
+
+    expect(hasPendingActions()).toBe(false);
+    const first = sendWhenOnline(send);
+    expect(hasPendingActions()).toBe(true);
+    answer({ ok: true });
+    await first;
+    expect(hasPendingActions()).toBe(false);
+
+    const second = sendWhenOnline(send);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(hasPendingActions()).toBe(true);
+    window.dispatchEvent(new Event('online'));
+    await second;
+    expect(hasPendingActions()).toBe(false);
+  });
+
+  it('stops counting an action that failed for good', async () => {
+    await expect(sendWhenOnline(jest.fn().mockRejectedValue(new Error('boom')))).rejects.toThrow('boom');
+    expect(hasPendingActions()).toBe(false);
   });
 
   it('tries again after a while when the browser never reports the network', async () => {
