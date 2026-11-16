@@ -37,28 +37,15 @@ jobs:
         working-directory: frontend
         run: npm test -- --runInBand
 
-  build:
-    name: Build ${{ matrix.component }} image
-    needs: [backend-tests, frontend-tests]
+  version:
+    name: Derive image version
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - component: backend
-            image: ghcr.io/${{ github.repository_owner }}/tribu-backend
-            context: ./backend
-            dockerfile: ./backend/Dockerfile
-            cache_scope: backend
-          - component: frontend
-            image: ghcr.io/${{ github.repository_owner }}/tribu-frontend
-            context: ./frontend
-            dockerfile: ./frontend/Dockerfile
-            cache_scope: frontend
-
+    outputs:
+      stable: ${{ steps.release_tag.outputs.stable }}
+      value: ${{ steps.app_version.outputs.value }}
+      date: ${{ steps.app_version.outputs.date }}
+      # Other branches (workflow_dispatch) only check that the images still build.
+      push: ${{ github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -93,6 +80,37 @@ jobs:
           echo "value=${version}" >> "$GITHUB_OUTPUT"
           echo "date=${build_date}" >> "$GITHUB_OUTPUT"
 
+  build:
+    name: Build ${{ matrix.component }} image (${{ matrix.arch }})
+    needs: [backend-tests, frontend-tests, version]
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+        arch: [amd64, arm64]
+        include:
+          - component: backend
+            image: ghcr.io/${{ github.repository_owner }}/tribu-backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+          - component: frontend
+            image: ghcr.io/${{ github.repository_owner }}/tribu-frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
+          # Each platform builds on its own hardware: under QEMU the arm64
+          # frontend build crashed with SIGILL.
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@v7
+
       - name: Prepare component build args
         id: build_args
         shell: bash
@@ -101,17 +119,17 @@ jobs:
             backend)
               {
                 echo 'value<<BUILD_ARGS'
-                echo 'APP_VERSION=${{ steps.app_version.outputs.value }}'
+                echo 'APP_VERSION=${{ needs.version.outputs.value }}'
                 echo 'BUILD_ARGS'
               } >> "$GITHUB_OUTPUT"
               ;;
             frontend)
               {
                 echo 'value<<BUILD_ARGS'
-                echo 'NEXT_PUBLIC_APP_VERSION=${{ steps.app_version.outputs.value }}'
+                echo 'NEXT_PUBLIC_APP_VERSION=${{ needs.version.outputs.value }}'
                 echo 'NEXT_PUBLIC_APP_BUILD_NUMBER=${{ github.run_number }}'
                 echo 'NEXT_PUBLIC_APP_GIT_SHA=${{ github.sha }}'
-                echo 'NEXT_PUBLIC_APP_BUILD_DATE=${{ steps.app_version.outputs.date }}'
+                echo 'NEXT_PUBLIC_APP_BUILD_DATE=${{ needs.version.outputs.date }}'
                 echo 'BUILD_ARGS'
               } >> "$GITHUB_OUTPUT"
               ;;
@@ -121,11 +139,17 @@ jobs:
               ;;
           esac
 
-      - uses: docker/setup-qemu-action@v4
+      # Registry names must be lowercase; the owner is itsDNNS.
+      - name: Normalize image name
+        id: image
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: echo "name=${IMAGE,,}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v4
 
       - uses: docker/login-action@v4
+        if: needs.version.outputs.push == 'true'
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -140,19 +164,81 @@ jobs:
             type=ref,event=tag
             type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
-            type=raw,value=latest,enable=${{ steps.release_tag.outputs.stable == 'true' || github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=latest,enable=${{ needs.version.outputs.stable == 'true' || github.ref_name == github.event.repository.default_branch }}
             # Follows tagged releases only, for installs that prefer them over every merge.
-            type=raw,value=stable,enable=${{ steps.release_tag.outputs.stable == 'true' }}
+            type=raw,value=stable,enable=${{ needs.version.outputs.stable == 'true' }}
             type=ref,event=branch
 
-      - uses: docker/build-push-action@v7
+      # Pushed by digest only; the publish job tags both platforms as one image.
+      - id: build
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{ steps.build_args.outputs.value }}
-          cache-from: type=gha,scope=${{ matrix.cache_scope }}
-          cache-to: type=gha,scope=${{ matrix.cache_scope }},mode=max
+          outputs: type=image,name=${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=${{ needs.version.outputs.push }}
+          cache-from: type=gha,scope=${{ matrix.component }}-${{ matrix.arch }}
+          cache-to: type=gha,scope=${{ matrix.component }}-${{ matrix.arch }},mode=max
+
+      - name: Keep digest and tags for publishing
+        if: needs.version.outputs.push == 'true'
+        run: |
+          mkdir -p /tmp/image
+          echo "${{ steps.build.outputs.digest }}" > "/tmp/image/digest-${{ matrix.arch }}"
+          echo "${{ steps.meta.outputs.tags }}" > /tmp/image/tags
+
+      - uses: actions/upload-artifact@v7
+        if: needs.version.outputs.push == 'true'
+        with:
+          name: image-${{ matrix.component }}-${{ matrix.arch }}
+          path: /tmp/image/*
+          retention-days: 1
+
+  publish:
+    name: Publish ${{ matrix.component }} image
+    needs: [version, build]
+    if: needs.version.outputs.push == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            image: ghcr.io/${{ github.repository_owner }}/tribu-backend
+          - component: frontend
+            image: ghcr.io/${{ github.repository_owner }}/tribu-frontend
+
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: image-${{ matrix.component }}-*
+          merge-multiple: true
+          path: /tmp/image
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag both platforms as one image
+        working-directory: /tmp/image
+        shell: bash
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          image="${IMAGE,,}"
+          args=()
+          while read -r tag; do
+            [[ -n "${tag}" ]] && args+=(-t "${tag}")
+          done < tags
+          for digest_file in digest-*; do
+            args+=("${image}@$(cat "${digest_file}")")
+          done
+          docker buildx imagetools create "${args[@]}"
+          docker buildx imagetools inspect "$(head -n 1 tags)"
