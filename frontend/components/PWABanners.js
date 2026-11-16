@@ -2,9 +2,48 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, RefreshCw, WifiOff, Wifi } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
+import { hasPendingActions } from '../lib/offline';
 import { trustedScriptURL } from '../lib/trustedTypes';
 
 export const OFFLINE_BANNER_DELAY_MS = 4000;
+export const UPDATE_IDLE_MS = 2 * 60 * 1000;
+export const UPDATE_RETRY_MS = 30 * 1000;
+// Asking for the switch while the page was still loading through the old worker left it
+// stuck in Chromium browser tests (about one in five), so nothing switches on its own
+// until the page has loaded and settled.
+export const UPDATE_SETTLE_MS = 2000;
+
+const INTERACTION_EVENTS = ['pointerdown', 'keydown', 'input', 'wheel'];
+const TEXT_ENTRY = 'textarea, select, input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=reset])';
+
+// Text someone typed lives only in the page until it is saved. A field still
+// holding typed text counts as unsaved, even after focus moved away.
+function hasTypedText(typedFields) {
+  for (const field of typedFields) {
+    if (!field.isConnected) {
+      typedFields.delete(field);
+      continue;
+    }
+    const text = field.isContentEditable ? field.textContent : field.value;
+    if (String(text ?? '').trim()) return true;
+  }
+  return false;
+}
+
+// Applying an update reloads the page, so it happens on its own only when nothing
+// can be lost: no open dialog, no focused or typed-in field, online and no check-off
+// still on its way (those live only in this page), and the person is away (app in
+// the background), has not touched the page since it loaded, or left it alone a while.
+export function canReloadSafely(lastInteractionAt, typedFields = new Set(), now = Date.now()) {
+  if (navigator.onLine === false || hasPendingActions()) return false;
+  if (document.querySelector('dialog[open]')) return false;
+  const focused = document.activeElement;
+  if (focused && (focused.isContentEditable || focused.matches?.(TEXT_ENTRY))) return false;
+  if (hasTypedText(typedFields)) return false;
+  return document.visibilityState === 'hidden'
+    || lastInteractionAt === null
+    || now - lastInteractionAt >= UPDATE_IDLE_MS;
+}
 
 export function PWABanners() {
   const { messages } = useApp();
@@ -14,6 +53,7 @@ export function PWABanners() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const waitingWorkerRef = useRef(null);
+  const updateActionRef = useRef(null);
 
   // A short dropout (a tunnel, the lift) should not flash a banner: it
   // appears after a few seconds offline, and "back online" only follows a
@@ -87,53 +127,140 @@ export function PWABanners() {
   useEffect(() => {
     if (!navigator.serviceWorker?.register) return;
 
-    let updateFoundHandler;
+    let disposed = false;
     let reg = null;
+    let updateFoundHandler;
+    const workerListeners = [];
+    let retryTimer = null;
+    let settleTimer = null;
+    let settled = false;
+    let lastInteractionAt = null;
+    const typedFields = new Set();
+    // The first install claims an uncontrolled page; reloading then would drop what someone is typing.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    // Another tab may switch to the new version while this one is busy; this one then reloads later.
+    let reloadPending = false;
+    let updateRequested = false;
+    let refreshing = false;
+
+    const noteInteraction = (event) => {
+      lastInteractionAt = Date.now();
+      const field = event.target;
+      if (event.type === 'input' && (field?.isContentEditable || field?.matches?.(TEXT_ENTRY))) typedFields.add(field);
+    };
+    INTERACTION_EVENTS.forEach((type) => window.addEventListener(type, noteInteraction, { capture: true, passive: true }));
+
+    const reload = () => {
+      if (refreshing) return;
+      refreshing = true;
+      clearInterval(retryTimer);
+      window.location.reload();
+    };
+    const activateWaiting = () => {
+      if (!waitingWorkerRef.current) return false;
+      waitingWorkerRef.current.postMessage({ type: 'SKIP_WAITING' });
+      return true;
+    };
+
+    // Waiting with the banner forever is what made it come back on every visit:
+    // a new worker only takes over by itself once every Tribu window is closed.
+    const tryAutoUpdate = () => {
+      if (disposed || !settled || !canReloadSafely(lastInteractionAt, typedFields)) return false;
+      if (reloadPending) {
+        reload();
+        return true;
+      }
+      return activateWaiting();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') tryAutoUpdate();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // The banner stays as the way to update right away while someone is busy.
+    const offerUpdate = () => {
+      if (disposed || !settled) return;
+      if (tryAutoUpdate()) return;
+      if (!waitingWorkerRef.current && !reloadPending) return;
+      setUpdateAvailable(true);
+      if (!retryTimer) retryTimer = setInterval(tryAutoUpdate, UPDATE_RETRY_MS);
+    };
+
+    const startSettling = () => {
+      settleTimer = setTimeout(() => {
+        settled = true;
+        offerUpdate();
+      }, UPDATE_SETTLE_MS);
+    };
+    if (document.readyState === 'complete') startSettling();
+    else window.addEventListener('load', startSettling, { once: true });
+
+    updateActionRef.current = () => {
+      updateRequested = true;
+      if (reloadPending) reload();
+      else activateWaiting();
+    };
 
     navigator.serviceWorker.register(trustedScriptURL('/sw.js')).then((registration) => {
+      if (disposed) return;
       reg = registration;
 
       if (registration.waiting) {
         waitingWorkerRef.current = registration.waiting;
-        setUpdateAvailable(true);
+        offerUpdate();
       }
 
       updateFoundHandler = () => {
         const newWorker = registration.installing;
         if (!newWorker) return;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+        const onStateChange = () => {
+          if (!disposed && newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             waitingWorkerRef.current = newWorker;
-            setUpdateAvailable(true);
+            offerUpdate();
           }
-        });
+        };
+        newWorker.addEventListener('statechange', onStateChange);
+        workerListeners.push([newWorker, onStateChange]);
       };
       registration.addEventListener('updatefound', updateFoundHandler);
     }).catch(() => {});
 
-    // The first install claims an uncontrolled page; reloading then would drop what someone is typing.
-    const hadController = Boolean(navigator.serviceWorker.controller);
-    let refreshing = false;
     const onControllerChange = () => {
-      if (hadController && !refreshing) {
-        refreshing = true;
-        window.location.reload();
+      waitingWorkerRef.current = null;
+      if (!hadController) {
+        // Nothing to reload into here, so the banner has nothing left to offer.
+        clearInterval(retryTimer);
+        retryTimer = null;
+        setUpdateAvailable(false);
+        return;
       }
+      reloadPending = true;
+      if (updateRequested) {
+        reload();
+        return;
+      }
+      offerUpdate();
     };
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
     return () => {
+      disposed = true;
+      clearInterval(retryTimer);
+      clearTimeout(settleTimer);
+      window.removeEventListener('load', startSettling);
+      updateActionRef.current = null;
+      INTERACTION_EVENTS.forEach((type) => window.removeEventListener(type, noteInteraction, { capture: true }));
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
       if (reg && updateFoundHandler) {
         reg.removeEventListener('updatefound', updateFoundHandler);
       }
+      workerListeners.forEach(([worker, listener]) => worker.removeEventListener('statechange', listener));
     };
   }, []);
 
   const applyUpdate = useCallback(() => {
-    if (waitingWorkerRef.current) {
-      waitingWorkerRef.current.postMessage({ type: 'SKIP_WAITING' });
-    }
+    updateActionRef.current?.();
   }, []);
 
   const installDismissed = useMemo(() => {

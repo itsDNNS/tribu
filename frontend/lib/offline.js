@@ -27,14 +27,26 @@ export function waitForNetwork(retryMs = OFFLINE_RETRY_MS) {
 
 // Runs `send` until it gets an answer. `onWaiting` is called before every
 // wait for the network, so the caller can mark the action as waiting.
+// Until it got through an action exists only in this page, so a reload would drop it.
+let pendingActions = 0;
+
+export function hasPendingActions() {
+  return pendingActions > 0;
+}
+
 export async function sendWhenOnline(send, onWaiting) {
-  for (;;) {
-    try {
-      return await send();
-    } catch (error) {
-      if (!isNetworkFailure(error)) throw error;
-      onWaiting?.();
-      await waitForNetwork();
+  pendingActions += 1;
+  try {
+    for (;;) {
+      try {
+        return await send();
+      } catch (error) {
+        if (!isNetworkFailure(error)) throw error;
+        onWaiting?.();
+        await waitForNetwork();
+      }
     }
+  } finally {
+    pendingActions -= 1;
   }
 }
