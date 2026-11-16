@@ -5,6 +5,29 @@ import { t } from '../lib/i18n';
 import { trustedScriptURL } from '../lib/trustedTypes';
 
 export const OFFLINE_BANNER_DELAY_MS = 4000;
+export const UPDATE_IDLE_MS = 2 * 60 * 1000;
+export const UPDATE_RETRY_MS = 30 * 1000;
+// Asking for the switch while the page was still loading through the old worker left it
+// stuck in Chromium browser tests (about one in five), so the first attempt waits until
+// the page has loaded and settled.
+export const UPDATE_SETTLE_MS = 2000;
+
+const INTERACTION_EVENTS = ['pointerdown', 'keydown', 'input', 'wheel'];
+const TEXT_ENTRY = 'textarea, select, input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=reset])';
+
+// Applying an update reloads the page, so it happens on its own only when nothing
+// can be lost: no open dialog, no focused field, online (check-offs waiting for
+// the network live only in this page), and the person is away (app in the
+// background), has not touched the page since it loaded, or left it alone a while.
+export function canReloadSafely(lastInteractionAt, now = Date.now()) {
+  if (navigator.onLine === false) return false;
+  if (document.querySelector('dialog[open]')) return false;
+  const focused = document.activeElement;
+  if (focused && (focused.isContentEditable || focused.matches?.(TEXT_ENTRY))) return false;
+  return document.visibilityState === 'hidden'
+    || lastInteractionAt === null
+    || now - lastInteractionAt >= UPDATE_IDLE_MS;
+}
 
 export function PWABanners() {
   const { messages } = useApp();
@@ -14,6 +37,7 @@ export function PWABanners() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const waitingWorkerRef = useRef(null);
+  const updateActionRef = useRef(null);
 
   // A short dropout (a tunnel, the lift) should not flash a banner: it
   // appears after a few seconds offline, and "back online" only follows a
@@ -89,13 +113,79 @@ export function PWABanners() {
 
     let updateFoundHandler;
     let reg = null;
+    let retryTimer = null;
+    let settleTimer = null;
+    let offerPending = false;
+    let onLoadOffer = null;
+    let lastInteractionAt = null;
+    // The first install claims an uncontrolled page; reloading then would drop what someone is typing.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    // Another tab may switch to the new version while this one is busy; this one then reloads later.
+    let reloadPending = false;
+    let updateRequested = false;
+    let refreshing = false;
+
+    const noteInteraction = () => { lastInteractionAt = Date.now(); };
+    INTERACTION_EVENTS.forEach((type) => window.addEventListener(type, noteInteraction, { capture: true, passive: true }));
+
+    const reload = () => {
+      if (refreshing) return;
+      refreshing = true;
+      clearInterval(retryTimer);
+      window.location.reload();
+    };
+    const activateWaiting = () => {
+      if (!waitingWorkerRef.current) return false;
+      waitingWorkerRef.current.postMessage({ type: 'SKIP_WAITING' });
+      return true;
+    };
+
+    // Waiting with the banner forever is what made it come back on every visit:
+    // a new worker only takes over by itself once every Tribu window is closed.
+    const tryAutoUpdate = () => {
+      if (!canReloadSafely(lastInteractionAt)) return false;
+      if (reloadPending) {
+        reload();
+        return true;
+      }
+      return activateWaiting();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') tryAutoUpdate();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // The banner stays as the way to update right away while someone is busy.
+    const offerUpdate = () => {
+      if (offerPending) return;
+      offerPending = true;
+      const offer = () => {
+        settleTimer = setTimeout(() => {
+          offerPending = false;
+          if (tryAutoUpdate()) return;
+          setUpdateAvailable(true);
+          if (!retryTimer) retryTimer = setInterval(tryAutoUpdate, UPDATE_RETRY_MS);
+        }, UPDATE_SETTLE_MS);
+      };
+      if (document.readyState === 'complete') offer();
+      else {
+        onLoadOffer = offer;
+        window.addEventListener('load', offer, { once: true });
+      }
+    };
+
+    updateActionRef.current = () => {
+      updateRequested = true;
+      if (reloadPending) reload();
+      else activateWaiting();
+    };
 
     navigator.serviceWorker.register(trustedScriptURL('/sw.js')).then((registration) => {
       reg = registration;
 
       if (registration.waiting) {
         waitingWorkerRef.current = registration.waiting;
-        setUpdateAvailable(true);
+        offerUpdate();
       }
 
       updateFoundHandler = () => {
@@ -104,25 +194,39 @@ export function PWABanners() {
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             waitingWorkerRef.current = newWorker;
-            setUpdateAvailable(true);
+            offerUpdate();
           }
         });
       };
       registration.addEventListener('updatefound', updateFoundHandler);
     }).catch(() => {});
 
-    // The first install claims an uncontrolled page; reloading then would drop what someone is typing.
-    const hadController = Boolean(navigator.serviceWorker.controller);
-    let refreshing = false;
     const onControllerChange = () => {
-      if (hadController && !refreshing) {
-        refreshing = true;
-        window.location.reload();
+      waitingWorkerRef.current = null;
+      if (!hadController) {
+        // Nothing to reload into here, so the banner has nothing left to offer.
+        clearInterval(retryTimer);
+        retryTimer = null;
+        setUpdateAvailable(false);
+        return;
       }
+      reloadPending = true;
+      if (updateRequested || tryAutoUpdate()) {
+        reload();
+        return;
+      }
+      setUpdateAvailable(true);
+      if (!retryTimer) retryTimer = setInterval(tryAutoUpdate, UPDATE_RETRY_MS);
     };
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
     return () => {
+      clearInterval(retryTimer);
+      clearTimeout(settleTimer);
+      if (onLoadOffer) window.removeEventListener('load', onLoadOffer);
+      updateActionRef.current = null;
+      INTERACTION_EVENTS.forEach((type) => window.removeEventListener(type, noteInteraction, { capture: true }));
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
       if (reg && updateFoundHandler) {
         reg.removeEventListener('updatefound', updateFoundHandler);
@@ -131,9 +235,7 @@ export function PWABanners() {
   }, []);
 
   const applyUpdate = useCallback(() => {
-    if (waitingWorkerRef.current) {
-      waitingWorkerRef.current.postMessage({ type: 'SKIP_WAITING' });
-    }
+    updateActionRef.current?.();
   }, []);
 
   const installDismissed = useMemo(() => {
