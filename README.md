@@ -87,7 +87,7 @@ The README keeps one current visual proof asset: the Shared Home Display above. 
 | Put it on a shared screen | Pairable Shared Home Display with read-only display tokens |
 | Keep phones connected | CalDAV/CardDAV sync for calendars and contacts, plus opt-in VTODO task sync |
 | Take it everywhere | Installable web app for phones, tablets, and foldables like iPhone Duo, Galaxy Z Fold, and Pixel Fold; folding or unfolding keeps your place |
-| Automate the household | Home Assistant package, webhooks, scoped API tokens |
+| Automate the household | Home Assistant package, webhooks, scoped API tokens, MCP endpoint for local AI assistants |
 | Run it yourself | Docker Compose, GHCR images, backup docs, reverse proxy docs, MIT license |
 | Use it in your language | 24 UI languages |
 
@@ -113,6 +113,38 @@ A display is a device, not a fake family member. Admins pair a dedicated display
 
 [See the Shared Home Display setup guide](https://github.com/itsDNNS/tribu/wiki/Shared-Home-Display).
 
+## AI assistants (MCP)
+
+Tribu has a built-in [Model Context Protocol](https://modelcontextprotocol.io) endpoint for AI assistants. It is meant first of all for **local AI**: a model running on your own hardware, for example with Ollama, llama.cpp or LM Studio, that reads and updates household data through the same API the app uses. Calendars, tasks, shopping lists and family details then never leave your network.
+
+1. In Tribu, open **Settings -> API Tokens** and create a token for the assistant. Pick only the permissions it needs, for example Tasks and Shopping. The token's permissions decide what the assistant may do; **Full access** also lets it delete data and change admin settings.
+2. Add the endpoint to an MCP client that supports Streamable HTTP and an `Authorization` header. With the default Compose stack the endpoint is `https://<your-tribu>/api/mcp`. If a reverse proxy sends requests straight to the backend, use the backend's `/mcp` path instead. If the client runs in Docker on the same host, use an address that container can reach, not `localhost`.
+3. Use a model that supports tool calling. Smaller local models work best with narrow tokens and focused requests ("today's tasks", "add milk to the shopping list"); long answers are cut and the assistant is told to filter.
+
+**Open WebUI** (v0.6.31 or newer): as an admin, open **Settings -> Integrations**, add a connection under **External Tool Servers**, choose the type **MCP (Streamable HTTP)**, enter the endpoint URL, pick **Bearer** authentication and paste the token into **Key**.
+
+**LM Studio** (0.3.17 or newer): add the server to `mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "tribu": {
+      "url": "https://tribu.example.com/api/mcp",
+      "headers": { "Authorization": "Bearer tribu_pat_your_token" }
+    }
+  }
+}
+```
+
+**Cloud assistants** work too, but then household data is sent to the provider of that assistant. Use them only if that is fine for your family, and with a narrow token. Claude Code, for example:
+
+```bash
+claude mcp add --transport http tribu https://tribu.example.com/api/mcp \
+  --header "Authorization: Bearer tribu_pat_your_token"
+```
+
+The assistant gets four tools: `whoami`, `list_operations`, `describe_operation`, and `call_operation`. Every call goes through the regular API with your token, so family membership, adult and admin roles, token permissions, and rate limits apply unchanged. The endpoint accepts only API tokens, never browser sessions. Sign-in and sessions, passwords, two-step sign-in, API token management, SSO settings, setup and restore, backup downloads, display device pairing, account deletion, and removing family members (which can delete their account) are not available over MCP. Revoke the token under **Settings -> API Tokens** to cut off access.
+
 ## Start in the way that fits you
 
 - **Feel the product first:** open Tribu and click **Try demo** on the login page for realistic sample data.
@@ -120,6 +152,7 @@ A display is a device, not a fake family member. Admins pair a dedicated display
 - **Set up phone sync:** add the CalDAV and CardDAV URLs to iOS, iPadOS, Android, or a DAV-compatible client.
 - **Pair a shared display:** create a display under Admin -> Displays and open the pairing link on the tablet.
 - **Connect Home Assistant:** use the [Home Assistant guide](https://github.com/itsDNNS/tribu/wiki/Home-Assistant) for sensors, quick capture, webhooks, and dashboard examples.
+- **Connect a local AI assistant:** create a scoped API token and add the [MCP endpoint](#ai-assistants-mcp) to Open WebUI, LM Studio or another MCP client.
 
 ## Quick Start
 

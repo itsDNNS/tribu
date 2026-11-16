@@ -245,6 +245,7 @@ Add a short **Defensive review** section to PRs that touch login, sessions, invi
 - display devices keep their own identity and never fall back to a user session
 - server-side fetches allow only http and https, check every address and redirect against the private-network setting, and cap size and time
 - docs, fixtures, and examples use placeholders, never reusable secrets
+- new API routes that use `current_user` and exactly one `require_scope` become callable over MCP automatically; routes that issue credentials, set passwords, or stream without end go on the denylist in `backend/app/core/mcp_catalog.py`
 
 ```markdown
 ## Defensive review
