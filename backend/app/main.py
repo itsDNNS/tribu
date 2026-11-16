@@ -140,6 +140,12 @@ curl -H "Authorization: Bearer tribu_pat_abc123..." \\
      https://your-instance/calendar/events?family_id=1
 ```
 
+## MCP (Model Context Protocol)
+
+MCP clients connect to `/mcp` (Streamable HTTP) with a PAT in the
+`Authorization` header. The token's scopes decide which operations they can list and
+call; every call runs through the regular endpoints. Browser sessions are refused there.
+
 ## Rate Limiting
 
 | Endpoint | Limit |
@@ -876,6 +882,15 @@ app.include_router(display_runtime_router)
 app.include_router(mobile_router)
 app.include_router(webhooks_router)
 app.include_router(notification_destinations_router)
+
+
+# ---------------------------------------------------------------------------
+# MCP (Model Context Protocol) endpoint, PAT only
+# ---------------------------------------------------------------------------
+
+from app.modules.mcp_server import MCP_PATH, create_mcp_endpoint  # noqa: E402
+
+app.add_route(MCP_PATH, create_mcp_endpoint(app, client_key=rate_limit_key), include_in_schema=False)
 
 
 # ---------------------------------------------------------------------------

@@ -19,3 +19,5 @@ a2wsgi==1.10.10
 apprise==2.2.0
 cryptography==50.0.2
 pillow==13.0.0
+mcp==2.3.0
+httpx2==2.16.2

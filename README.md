@@ -87,7 +87,7 @@ The README keeps one current visual proof asset: the Shared Home Display above. 
 | Put it on a shared screen | Pairable Shared Home Display with read-only display tokens |
 | Keep phones connected | CalDAV/CardDAV sync for calendars and contacts, plus opt-in VTODO task sync |
 | Take it everywhere | Installable web app for phones, tablets, and foldables like iPhone Duo, Galaxy Z Fold, and Pixel Fold; folding or unfolding keeps your place |
-| Automate the household | Home Assistant package, webhooks, scoped API tokens |
+| Automate the household | Home Assistant package, webhooks, scoped API tokens, MCP endpoint for AI assistants |
 | Run it yourself | Docker Compose, GHCR images, backup docs, reverse proxy docs, MIT license |
 | Use it in your language | 24 UI languages |
 
@@ -113,6 +113,36 @@ A display is a device, not a fake family member. Admins pair a dedicated display
 
 [See the Shared Home Display setup guide](https://github.com/itsDNNS/tribu/wiki/Shared-Home-Display).
 
+## AI assistants (MCP)
+
+Tribu has a built-in [Model Context Protocol](https://modelcontextprotocol.io) endpoint, so AI assistants such as Claude Code and Claude Desktop can read and update household data through the same API the app uses.
+
+1. In Tribu, open **Settings -> API Tokens** and create a token for the assistant. Pick only the permissions it needs, for example Tasks and Shopping. The token's permissions decide what the assistant may do; **Full access** also lets it delete data and change admin settings.
+2. Add the server to your assistant. With the default Compose stack the endpoint is `https://<your-tribu>/api/mcp`. If a reverse proxy sends requests straight to the backend, use the backend's `/mcp` path instead.
+
+Claude Code:
+
+```bash
+claude mcp add --transport http tribu https://tribu.example.com/api/mcp \
+  --header "Authorization: Bearer tribu_pat_your_token"
+```
+
+Claude Desktop connects through the `mcp-remote` bridge, because its built-in connectors expect an OAuth sign-in that Tribu does not offer. Add this to `claude_desktop_config.json` (Node.js required):
+
+```json
+{
+  "mcpServers": {
+    "tribu": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://tribu.example.com/api/mcp", "--header", "Authorization:${TRIBU_AUTH}"],
+      "env": { "TRIBU_AUTH": "Bearer tribu_pat_your_token" }
+    }
+  }
+}
+```
+
+The assistant gets four tools: `whoami`, `list_operations`, `describe_operation`, and `call_operation`. Every call goes through the regular API with your token, so family membership, adult and admin roles, token permissions, and rate limits apply unchanged. The endpoint accepts only API tokens, never browser sessions. Sign-in and sessions, passwords, two-step sign-in, API token management, SSO settings, setup and restore, backup downloads, display device pairing, account deletion, and removing family members (which can delete their account) are not available over MCP. Revoke the token under **Settings -> API Tokens** to cut off access.
+
 ## Start in the way that fits you
 
 - **Feel the product first:** open Tribu and click **Try demo** on the login page for realistic sample data.
@@ -120,6 +150,7 @@ A display is a device, not a fake family member. Admins pair a dedicated display
 - **Set up phone sync:** add the CalDAV and CardDAV URLs to iOS, iPadOS, Android, or a DAV-compatible client.
 - **Pair a shared display:** create a display under Admin -> Displays and open the pairing link on the tablet.
 - **Connect Home Assistant:** use the [Home Assistant guide](https://github.com/itsDNNS/tribu/wiki/Home-Assistant) for sensors, quick capture, webhooks, and dashboard examples.
+- **Connect an AI assistant:** create a scoped API token and add the [MCP endpoint](#ai-assistants-mcp) to Claude Code or Claude Desktop.
 
 ## Quick Start
 
