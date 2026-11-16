@@ -60,7 +60,8 @@ from app.security import is_pat
 
 MCP_PATH = "/mcp"
 STATE_KEY = "tribu_mcp_caller"
-MAX_RESPONSE_CHARS = 60_000
+# Local models often have small context windows; longer answers are cut with a hint to filter.
+MAX_RESPONSE_CHARS = 24_000
 # Bodies above this size are not parsed at all; only their start is shown.
 MAX_RESPONSE_BYTES = 4 * MAX_RESPONSE_CHARS
 
