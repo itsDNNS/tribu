@@ -8,9 +8,9 @@ import { trustedScriptURL } from '../lib/trustedTypes';
 export const OFFLINE_BANNER_DELAY_MS = 4000;
 export const UPDATE_IDLE_MS = 2 * 60 * 1000;
 export const UPDATE_RETRY_MS = 30 * 1000;
-// Asking for the switch while the page was still loading through the old worker left it
-// stuck in Chromium browser tests (about one in five), so nothing switches on its own
-// until the page has loaded and settled.
+// Nothing switches on its own until the page has loaded and settled, so a page is never
+// reloaded while it is still starting up. (A switch that seemed to get stuck in early
+// browser tests came from Playwright's request interception, not from the browser.)
 export const UPDATE_SETTLE_MS = 2000;
 
 const INTERACTION_EVENTS = ['pointerdown', 'keydown', 'input', 'wheel'];
