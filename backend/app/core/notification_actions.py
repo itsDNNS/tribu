@@ -63,8 +63,13 @@ def create_action_token(
     title: str,
     body: str | None,
     link: str | None,
+    expires_at: datetime | None = None,
 ) -> str | None:
-    """A token for the actions of one reminder, or None when it has none."""
+    """A token for the actions of one reminder, or None when it has none.
+
+    ``expires_at`` (naive UTC) is when the reminder stops being true, such
+    as the start of the event occurrence; a snooze keeps it.
+    """
     actions = reminder_actions(source_type)
     if not actions:
         return None
@@ -83,6 +88,8 @@ def create_action_token(
         "iat": now.timestamp(),
         "exp": now + TOKEN_TTL,
     }
+    if expires_at is not None:
+        payload["end"] = int(expires_at.replace(tzinfo=timezone.utc).timestamp())
     return jwt.encode(payload, _signing_key(), algorithm=JWT_ALG)
 
 
@@ -96,6 +103,7 @@ def reminder_push_actions(
     body: str | None,
     link: str | None,
     language: str,
+    expires_at: datetime | None = None,
 ) -> dict:
     """``send_push_for_user`` options for a reminder's buttons, or none."""
     token = create_action_token(
@@ -107,6 +115,7 @@ def reminder_push_actions(
         title=title,
         body=body,
         link=link,
+        expires_at=expires_at,
     )
     if token is None:
         return {}
@@ -170,6 +179,11 @@ def apply_action(db: Session, token: str, action: str) -> dict:
             body=payload.get("bdy") or None,
             link=payload.get("lnk") or None,
             remind_at=remind_at,
+            expires_at=(
+                datetime.fromtimestamp(payload["end"], timezone.utc).replace(tzinfo=None)
+                if payload.get("end") is not None
+                else None
+            ),
         ))
         db.commit()
         return {"status": "ok", "action": action, "remind_at": remind_at.isoformat()}

@@ -348,6 +348,7 @@ def _check_notifications():
                     # Buttons for the reminder (Tribu 2.0, N-2).
                     action_options = reminder_push_actions(
                         uid, fid, source_type, source_id, ntype, title, push_body, link, lang,
+                        expires_at=expires_at,
                     )
                     if event_starts_at is not None:
                         push_result = send_push_for_user(
@@ -709,8 +710,8 @@ def deliver_meal_reminders(db, *, tomorrow, user_families: dict[int, list[int]],
 def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pref) -> set[int]:
     """Sends the reminders whose snooze has run out, once each.
 
-    Tasks done or deleted in the meantime, removed events and single events
-    that have started are dropped;
+    Tasks done or deleted in the meantime, removed events and reminders for
+    an event occurrence that has started are dropped;
     quiet hours postpone the reminder to a later run.
     """
     notified: set[int] = set()
@@ -727,19 +728,20 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
             if task is None or task.status != "open":
                 snooze.delivered_at = now
                 continue
-        expires_at = None
+        # Like the first reminder, a snoozed one is moot once the event
+        # occurrence it announced has started.
+        expires_at = snooze.expires_at
         if snooze.source_type == "event":
             event = db.query(CalendarEvent).filter(CalendarEvent.id == snooze.source_id).first()
             if event is None:
                 snooze.delivered_at = now
                 continue
-            if not event.recurrence and event.starts_at is not None:
-                # Like the first reminder, a snoozed one is moot once the
-                # event has started.
+            if expires_at is None and not event.recurrence and event.starts_at is not None:
+                # Snoozed before snoozes kept the occurrence start.
                 expires_at = local_wall_to_utc_naive(event.starts_at)
-                if expires_at <= now:
-                    snooze.delivered_at = now
-                    continue
+        if expires_at is not None and expires_at <= now:
+            snooze.delivered_at = now
+            continue
         pref = get_pref(snooze.user_id)
         if not pref.reminders_enabled:
             snooze.delivered_at = now
@@ -762,6 +764,7 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
                     snooze.user_id, snooze.family_id, snooze.source_type, snooze.source_id,
                     snooze.notification_type, snooze.title, snooze.body, snooze.link,
                     user_language(db, snooze.user_id),
+                    expires_at=expires_at,
                 ),
             )
         except Exception:

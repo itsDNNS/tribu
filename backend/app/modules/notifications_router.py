@@ -1,7 +1,9 @@
 import asyncio
+import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core import cache
@@ -16,6 +18,8 @@ from app.database import get_db, SessionLocal
 from app.models import Notification, NotificationPreference, NotificationSentLog, PushSubscription, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushStatusResponse, NotificationActionRequest, PushSubscriptionCreate, PushTestResponse, PushUnsubscribe
 from app.core.errors import error_detail, NOTIFICATION_NOT_FOUND
+
+UNREAD_COUNT_CACHE_SECONDS = 15
 
 router = APIRouter(prefix="/notifications", tags=["notifications"], responses={**AUTH_RESPONSES})
 
@@ -55,9 +59,22 @@ def list_notifications(
     response_description="Object with unread count",
 )
 def unread_count(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:read")):
+    now = utcnow()
+    unread = db.query(Notification).filter(Notification.user_id == user.id, Notification.read.is_(False), still_shown(now))
+    soonest: list = []
+
     def _load():
-        return {"count": db.query(Notification).filter(Notification.user_id == user.id, Notification.read.is_(False), still_shown()).count()}
-    return cache.get_or_set(f"tribu:notif_count:{user.id}", 15, _load)
+        soonest.append(unread.with_entities(func.min(Notification.expires_at)).scalar())
+        return {"count": unread.count()}
+
+    def _ttl(_result) -> int:
+        # Not cached past the moment the next reminder expires, so the
+        # badge never counts a reminder whose event has started.
+        if soonest and soonest[0] is not None:
+            return min(UNREAD_COUNT_CACHE_SECONDS, math.ceil((soonest[0] - now).total_seconds()))
+        return UNREAD_COUNT_CACHE_SECONDS
+
+    return cache.get_or_set(f"tribu:notif_count:{user.id}", _ttl, _load)
 
 
 @router.patch(

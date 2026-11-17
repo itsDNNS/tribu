@@ -74,6 +74,8 @@ def setup_db(monkeypatch):
 
 
 client = TestClient(app)
+# The fixture turns caching off; one test needs the real thing.
+_REAL_GET_OR_SET = cache.get_or_set
 
 
 def _user(db, email: str, family: Family | None = None, *, adult: bool = True) -> User:
@@ -485,9 +487,9 @@ def test_editing_an_event_notifies_only_newly_assigned_members():
     })
     with TestSession() as db:
         assert db.query(Notification).filter(Notification.type == "event_assigned").count() == 3
-        # The notice ends with the (all-day) event: the end of 15 November in Berlin.
+        # The notice ends with the (all-day) event: midnight after 15 November in Berlin.
         expiries = {row.expires_at for row in db.query(Notification)}
-        assert expiries == {datetime(2026, 11, 15, 22, 59, 59, 999999)}
+        assert expiries == {datetime(2026, 11, 15, 23, 0)}
 
 
 def test_assignment_notice_of_a_timed_event_ends_with_the_event():
@@ -507,3 +509,167 @@ def test_assignment_notice_of_a_timed_event_ends_with_the_event():
     with TestSession() as db:
         # 11:00 in Berlin is 10:00 UTC.
         assert db.query(Notification).one().expires_at == datetime(2026, 11, 20, 10, 0)
+
+
+@pytest.mark.parametrize(
+    ("ends_at", "expected"),
+    [
+        # From a calendar feed: the exclusive end, midnight after the last day.
+        ("2026-11-18T00:00:00", datetime(2026, 11, 17, 23, 0)),
+        # From the editor: the last day itself, so midnight after it.
+        ("2026-11-17T15:00:00", datetime(2026, 11, 17, 23, 0)),
+    ],
+)
+def test_assignment_notice_of_a_multi_day_all_day_event_ends_at_its_exclusive_end(ends_at, expected):
+    with TestSession() as db:
+        family = _family(db)
+        dennis = _user(db, "dennis@example.com", family)
+        partner = _user(db, "partner@example.com", family)
+        db.commit()
+        dennis_id, family_id = dennis.id, family.id
+        headers = _headers(partner)
+
+    response = client.post("/calendar/events", headers=headers, json={
+        "family_id": family_id, "title": "Ferienlager", "starts_at": "2026-11-16T00:00:00",
+        "ends_at": ends_at, "all_day": True, "assigned_to": [dennis_id],
+    })
+    assert response.status_code == 200, response.text
+    with TestSession() as db:
+        assert db.query(Notification).one().expires_at == expected
+
+
+# --- ids never repeat --------------------------------------------------------
+
+
+def test_new_notifications_never_reuse_ids_of_deleted_ones():
+    with TestSession() as db:
+        family = _family(db)
+        anna = _user(db, "anna@example.com", family)
+        ids = [_notify(db, anna, family, f"Old {n}").id for n in range(3)]
+        db.commit()
+        headers = _headers(anna)
+        anna_id, family_id = anna.id, family.id
+
+    # Two tabs saw the same list; the first one clears it.
+    up_to = max(ids)
+    assert client.delete(f"/notifications?up_to_id={up_to}", headers=headers).json()["deleted"] == 3
+    with TestSession() as db:
+        fresh = Notification(user_id=anna_id, family_id=family_id, type="system", title="Fresh")
+        db.add(fresh)
+        db.commit()
+        fresh_id = fresh.id
+    # A deleted id handed out again would be deleted by the second tab and
+    # skipped by a live stream that already passed it.
+    assert fresh_id > up_to
+    assert client.delete(f"/notifications?up_to_id={up_to}", headers=headers).json()["deleted"] == 0
+    assert [item["title"] for item in client.get("/notifications", headers=headers).json()] == ["Fresh"]
+
+
+# --- cached unread count -----------------------------------------------------
+
+
+class _FakeValkey:
+    def __init__(self):
+        self.values: dict[str, str] = {}
+        self.ttls: dict[str, int] = {}
+
+    def get(self, key):
+        return self.values.get(key)
+
+    def setex(self, key, ttl, value):
+        self.values[key] = value
+        self.ttls[key] = ttl
+
+    def delete(self, *keys):
+        for key in keys:
+            self.values.pop(key, None)
+
+
+def test_cached_unread_count_ends_when_the_next_reminder_expires(monkeypatch):
+    from app.modules import notifications_router
+
+    monkeypatch.setattr(cache, "get_or_set", _REAL_GET_OR_SET)
+    fake = _FakeValkey()
+    monkeypatch.setattr(cache, "_client", fake)
+    now = datetime(2026, 11, 17, 12, 0)
+    monkeypatch.setattr(notifications_router, "utcnow", lambda: now)
+    with TestSession() as db:
+        family = _family(db)
+        anna = _user(db, "anna@example.com", family)
+        ben = _user(db, "ben@example.com", family)
+        _notify(db, anna, family, "Starts soon", expires_at=now + timedelta(seconds=4, milliseconds=200))
+        _notify(db, anna, family, "Later", expires_at=now + timedelta(hours=1))
+        _notify(db, anna, family, "Read, expires sooner", read=True, read_at=now, expires_at=now + timedelta(seconds=1))
+        _notify(db, ben, family, "Plain")
+        db.commit()
+        anna_headers, ben_headers = _headers(anna), _headers(ben)
+        anna_key, ben_key = f"tribu:notif_count:{anna.id}", f"tribu:notif_count:{ben.id}"
+
+    assert client.get("/notifications/unread-count", headers=anna_headers).json() == {"count": 2}
+    # Cached only until "Starts soon" expires, not the usual 15 seconds.
+    assert fake.ttls[anna_key] == 5
+    assert client.get("/notifications/unread-count", headers=ben_headers).json() == {"count": 1}
+    assert fake.ttls[ben_key] == notifications_router.UNREAD_COUNT_CACHE_SECONDS
+
+
+# --- snoozed reminders of recurring events -----------------------------------
+
+
+def test_snoozed_reminder_of_a_recurring_event_expires_with_its_occurrence(monkeypatch):
+    from app.core import notification_actions
+    from app.core import scheduler as scheduler_module
+    from app.core.push import PushResult
+    from app.models import ReminderSnooze
+
+    pushes = []
+    monkeypatch.setattr(
+        scheduler_module, "send_push_for_user",
+        lambda db, uid, title, body, link, **options: pushes.append(options) or PushResult(attempted=1, succeeded=1),
+    )
+    with TestSession() as db:
+        family = _family(db)
+        anna = _user(db, "anna@example.com", family)
+        db.add(NotificationPreference(user_id=anna.id, reminders_enabled=True, reminder_minutes=30, push_enabled=True))
+        db.add(CalendarEvent(
+            family_id=family.id, title="Swimming", all_day=False, recurrence="weekly",
+            starts_at=datetime(2026, 11, 10, 16, 0),
+        ))
+        db.commit()
+        anna_id = anna.id
+
+    # 15:45 in Berlin on the 17th: the reminder for the 16:00 occurrence.
+    _freeze(monkeypatch, audit_now=datetime(2026, 11, 17, 14, 45), wall_now=datetime(2026, 11, 17, 15, 45))
+    scheduler_module._check_notifications()
+    assert len(pushes) == 1
+    response = client.post("/notifications/actions", json={"token": pushes[0]["action_token"], "action": "snooze"})
+    assert response.status_code == 200
+
+    occurrence_start = datetime(2026, 11, 17, 15, 0)  # 16:00 in Berlin, in UTC
+    with TestSession() as db:
+        snooze = db.query(ReminderSnooze).one()
+        assert snooze.expires_at == occurrence_start
+        snooze_id = snooze.id
+
+    default_pref = NotificationPreference(user_id=anna_id, reminders_enabled=True, reminder_minutes=30)
+
+    def run(now):
+        with TestSession() as db:
+            db.query(ReminderSnooze).filter(ReminderSnooze.id == snooze_id).update({"delivered_at": None})
+            db.query(Notification).filter(Notification.title == "Swimming", Notification.id > 1).delete()
+            scheduler_module.deliver_snoozed_reminders(db, now=now, local_now=now, get_pref=lambda uid: default_pref)
+            db.commit()
+            return [row.expires_at for row in db.query(Notification).filter(Notification.id > 1)]
+
+    # Snooze running out before the start: delivered, ending at the start.
+    with TestSession() as db:
+        db.query(ReminderSnooze).update({"remind_at": occurrence_start - timedelta(minutes=5)})
+        db.commit()
+    assert run(occurrence_start - timedelta(minutes=5)) == [occurrence_start]
+    # The usual hour later the occurrence has started: dropped.
+    assert run(occurrence_start + timedelta(minutes=45)) == []
+
+    token = notification_actions.create_action_token(
+        user_id=anna_id, family_id=1, source_type="event", source_id=1, notification_type="event_reminder",
+        title="Swimming", body="x", link=None, expires_at=occurrence_start,
+    )
+    assert token

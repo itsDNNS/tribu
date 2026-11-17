@@ -18,7 +18,7 @@ from app.core.calendar_subscriptions import (
     validate_subscription_url,
 )
 from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership
-from app.core.ics_utils import events_to_ics, ics_to_event_dicts
+from app.core.ics_utils import _all_day_end, events_to_ics, ics_to_event_dicts
 from app.core.notification_preferences import should_push_notification_type
 from app.core.push import send_push_for_user
 from app.core.recurrence import VALID_RECURRENCES, WEEKLY_RECURRENCES, expand_event, load_series_changes, normalize_weekdays
@@ -989,12 +989,14 @@ def _assignment_expiry(event: CalendarEvent) -> datetime | None:
         if event.recurrence_end is None:
             return None
         return local_day_bounds_as_utc_naive(event.recurrence_end.date())[1]
-    end = event.ends_at or event.starts_at
-    if end is None:
+    if event.starts_at is None:
         return None
     if event.all_day:
-        return local_day_bounds_as_utc_naive(end.date())[1]
-    return local_wall_to_utc_naive(end)
+        # All-day spans end at midnight after their last day (exclusive),
+        # read the same way as for calendar feeds.
+        last_day_after = _all_day_end(event.starts_at.date(), event.ends_at)
+        return local_day_bounds_as_utc_naive(last_day_after)[0]
+    return local_wall_to_utc_naive(event.ends_at or event.starts_at)
 
 
 def _create_assignment_notifications(db: Session, event: CalendarEvent, actor_user_id: int, previously_assigned=None):

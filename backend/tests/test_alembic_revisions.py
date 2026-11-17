@@ -581,11 +581,33 @@ def test_notification_expiry_migration_backfills_and_downgrades(tmp_path, monkey
                 (5, 1, 1, 'task_due', 'Bins', 0, '2026-11-01 10:00:00')
             """
         )
+        # More than one backfill batch.
+        conn.executemany(
+            "INSERT INTO notifications (id, user_id, family_id, type, title, read, created_at) VALUES (?, 1, 1, ?, 'x', 0, ?)",
+            [(100 + n, "birthday", "2026-11-01 10:00:00") for n in range(1205)],
+        )
         conn.commit()
 
     command.upgrade(config, "0082_notification_expiry")
     with sqlite3.connect(db_path) as conn:
-        rows = conn.execute("SELECT id, read_at IS NOT NULL, expires_at FROM notifications ORDER BY id").fetchall()
+        rows = conn.execute("SELECT id, read_at IS NOT NULL, expires_at FROM notifications WHERE id < 100 ORDER BY id").fetchall()
+        batched = conn.execute(
+            "SELECT COUNT(*) FROM notifications WHERE id >= 100 AND expires_at LIKE '2026-11-03 10:00:00%'"
+        ).fetchone()[0]
+        table_sql = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'notifications'").fetchone()[0]
+        indexes = {row[1] for row in conn.execute("PRAGMA index_list(notifications)")}
+        snooze_columns = {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
+        # Ids never repeat: deleting the newest rows does not hand their ids out again.
+        conn.execute("DELETE FROM notifications WHERE id >= 100")
+        conn.execute("INSERT INTO notifications (user_id, family_id, type, title, read) VALUES (1, 1, 'system', 'New', 0)")
+        new_id = conn.execute("SELECT id FROM notifications WHERE title = 'New'").fetchone()[0]
+        conn.execute("DELETE FROM notifications WHERE title = 'New'")
+        conn.commit()
+    assert batched == 1205
+    assert "AUTOINCREMENT" in table_sql.upper()
+    assert new_id == 100 + 1205
+    assert {"ix_notifications_read_at", "ix_notifications_expires_at"} <= indexes
+    assert "expires_at" in snooze_columns
     assert [(row_id, has_read_at) for row_id, has_read_at, _ in rows] == [(1, 0), (2, 1), (3, 0), (4, 1), (5, 0)]
     expiries = {row_id: (expires_at[:19] if expires_at else None) for row_id, _, expires_at in rows}
     assert expiries == {
@@ -599,5 +621,36 @@ def test_notification_expiry_migration_backfills_and_downgrades(tmp_path, monkey
     command.downgrade(config, "0081_shopping_photo_thumbnails")
     with sqlite3.connect(db_path) as conn:
         columns = {row[1] for row in conn.execute("PRAGMA table_info(notifications)")}
+        assert "expires_at" not in {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
         assert conn.execute("SELECT COUNT(*) FROM notifications").fetchone()[0] == 5
     assert "read_at" not in columns and "expires_at" not in columns
+
+
+
+def test_notification_expiry_backfill_reads_postgres_times_in_the_session_zone() -> None:
+    """``now()`` stored local wall time when the session was not in UTC."""
+    import importlib.util
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    spec = importlib.util.spec_from_file_location("m0082", VERSIONS_DIR / "0082_notification_expiry.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    class FakeBind:
+        def __init__(self, dialect, zone):
+            self.dialect = type("D", (), {"name": dialect})()
+            self.zone = zone
+
+        def execute(self, statement):
+            zone = self.zone
+            return type("R", (), {"scalar": lambda self: zone})()
+
+    assert module._session_zone(FakeBind("sqlite", None)) is None
+    assert module._session_zone(FakeBind("postgresql", "UTC")) is None
+    assert module._session_zone(FakeBind("postgresql", "Etc/UTC")) is None
+    berlin = module._session_zone(FakeBind("postgresql", "Europe/Berlin"))
+    assert berlin == ZoneInfo("Europe/Berlin")
+    # 10:00 in Berlin in November is 09:00 UTC.
+    assert module._as_utc(datetime(2026, 11, 1, 10, 0), berlin) == datetime(2026, 11, 1, 9, 0)
+    assert module._as_utc(datetime(2026, 11, 1, 10, 0), None) == datetime(2026, 11, 1, 10, 0)
