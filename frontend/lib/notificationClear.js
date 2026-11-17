@@ -125,6 +125,9 @@ export async function commitPendingClear({ keepalive = false } = {}) {
     ok = false;
   }
   if (keepalive) return;
+  // Another account may have signed in while the request was on its way;
+  // its list must not get the previous account's rows back.
+  if (current.userId !== currentUserId) return;
   if (ok) current.onCommitted?.(current);
   else current.onFailed?.(current);
 }

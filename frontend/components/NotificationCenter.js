@@ -70,6 +70,9 @@ export default function NotificationCenter({ onClose } = {}) {
   const { success: toastSuccess, error: toastError, dismiss: dismissToast } = useToast();
   const closeBtnRef = useRef(null);
   const headingRef = useRef(null);
+  // The list as it is now, for callbacks that run after the delete request.
+  const notificationsRef = useRef(notifications);
+  notificationsRef.current = notifications;
 
   const now = Date.now();
   const shown = notifications.filter((n) => !isNotificationExpired(n, now));
@@ -117,10 +120,13 @@ export default function NotificationCenter({ onClose } = {}) {
       onCommitted: () => loadNotifications(),
       onFailed: (failed) => {
         toastError(t(messages, 'toast.error'));
-        // Nothing was deleted: put the rows and their unread count back here,
-        // then compare with the server if it can be reached.
+        // Nothing was deleted: put the rows back here, then compare with the
+        // server if it can be reached. Rows a reload already brought back are
+        // in the count already, so only the missing ones add to it.
+        const present = new Set(notificationsRef.current.map((n) => n.id));
+        const missingUnread = failed.removed.filter((n) => !n.read && !present.has(n.id)).length;
         setNotifications((prev) => mergeById(prev, failed.removed));
-        setUnreadCount((c) => c + failed.removed.filter((n) => !n.read).length);
+        if (missingUnread) setUnreadCount((c) => c + missingUnread);
         loadNotifications();
       },
     });

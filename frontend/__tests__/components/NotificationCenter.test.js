@@ -398,6 +398,43 @@ describe('NotificationCenter panel actions', () => {
     expect(app.unreadCount).toBe(1);
   });
 
+  it('does not give the rows back to another account when the delete fails after a switch', async () => {
+    let answer;
+    api.apiDeleteAllNotifications.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+    const { app, server } = renderPanel([notif(4, { title: 'Annas' })]);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalled();
+    // Ben signs in while Anna's request is still on its way, then it fails.
+    setPendingClearUser(2);
+    server.offline = true;
+    await act(async () => { answer({ ok: false, data: {} }); });
+
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(app.notifications.map((n) => n.id)).toEqual([]);
+    expect(app.unreadCount).toBe(0);
+  });
+
+  it('does not count rows twice when a reload brought them back before the delete failed', async () => {
+    let answer;
+    api.apiDeleteAllNotifications.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+    const { app, server, loadNotifications } = renderPanel([notif(5, { title: 'Neu' })]);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
+    // The panel reopens while the request is on its way: the server still has the row.
+    await act(async () => { await loadNotifications(); });
+    expect(app.unreadCount).toBe(1);
+    server.offline = true;
+    await act(async () => { answer({ ok: false, data: {} }); });
+
+    expect(app.notifications.map((n) => n.id)).toEqual([5]);
+    expect(app.unreadCount).toBe(1);
+  });
+
   it('keeps the countdown of a page kept for "back" or frozen, and sends nothing meanwhile', async () => {
     renderPanel([notif(8)]);
     await act(async () => {});
