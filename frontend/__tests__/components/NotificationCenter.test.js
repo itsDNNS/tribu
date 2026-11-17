@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import NotificationCenter, { isNotificationExpired } from '../../components/NotificationCenter';
 import * as api from '../../lib/api';
-import { resetPendingClearForTests, withoutPendingClear } from '../../lib/notificationClear';
+import { resetPendingClearForTests, setPendingClearUser, withoutPendingClear } from '../../lib/notificationClear';
 import { UNDO_WINDOW_MS } from '../../lib/undo';
 import { buildMockAppState, buildTestMessages, renderWithMockApp, setMockAppState } from '../test-utils';
 
@@ -159,7 +159,8 @@ function renderPanel(initial, { page = false, overrides = {} } = {}) {
   const server = { rows: initial.map((n) => ({ ...n })) };
   const app = {};
   const loadNotifications = jest.fn(async () => {
-    const data = withoutPendingClear(server.rows.map((n) => ({ ...n })));
+    if (server.offline) return;
+    const data = withoutPendingClear(server.rows.map((n) => ({ ...n })), 1);
     app.setNotifications(data);
     app.setUnreadCount(data.filter((n) => !n.read).length);
   });
@@ -172,6 +173,7 @@ function renderPanel(initial, { page = false, overrides = {} } = {}) {
     setMockAppState(buildMockAppState({
       messages: buildTestMessages({}, page ? 'en' : 'de'),
       lang: page ? 'en' : 'de',
+      me: { id: 1, display_name: 'Dennis' },
       notifications,
       setNotifications,
       unreadCount,
@@ -186,6 +188,12 @@ function renderPanel(initial, { page = false, overrides = {} } = {}) {
   return { ...result, app, server, loadNotifications, onClose };
 }
 
+function pageEvent(type, persisted) {
+  const event = new Event(type);
+  Object.defineProperty(event, 'persisted', { value: persisted });
+  return event;
+}
+
 function undoOf(call) {
   return mockToastSuccess.mock.calls[call][1].onClick;
 }
@@ -197,6 +205,7 @@ describe('NotificationCenter panel actions', () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     resetPendingClearForTests();
+    setPendingClearUser(1);
     toastIds = 0;
     mockToastSuccess.mockImplementation(() => { toastIds += 1; return toastIds; });
     api.apiMarkAllNotificationsRead.mockResolvedValue({ ok: true });
@@ -267,7 +276,7 @@ describe('NotificationCenter panel actions', () => {
     loadNotifications.mockClear();
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
 
-    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(9, { keepalive: false });
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(9, { keepalive: false, userId: 1 });
     expect(mockToastDismiss).toHaveBeenCalledWith(1);
     // Afterwards the list and the badge come from the server.
     expect(loadNotifications).toHaveBeenCalled();
@@ -302,7 +311,7 @@ describe('NotificationCenter panel actions', () => {
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS - 1000); });
     expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
     await act(async () => { jest.advanceTimersByTime(1000); });
-    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(5, { keepalive: false });
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(5, { keepalive: false, userId: 1 });
   });
 
   it('can be undone after the panel closed', async () => {
@@ -329,9 +338,9 @@ describe('NotificationCenter panel actions', () => {
     Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
     expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
     // ... leaving the page does not.
-    await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+    await act(async () => { window.dispatchEvent(pageEvent('pagehide', false)); });
 
-    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(7, { keepalive: true });
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(7, { keepalive: true, userId: 1 });
     expect(mockToastDismiss).toHaveBeenCalledWith(1);
   });
 
@@ -373,16 +382,58 @@ describe('NotificationCenter panel actions', () => {
     expect(app.unreadCount).toBe(0);
   });
 
-  it('shows everything again when the delete fails', async () => {
+  it('shows everything again when the delete fails, also without reaching the server', async () => {
     api.apiDeleteAllNotifications.mockResolvedValue({ ok: false, data: {} });
-    renderPanel([notif(3, { title: 'Einkauf' })]);
+    const { app, server } = renderPanel([notif(3, { title: 'Einkauf' }), notif(2, { read: true })]);
     await act(async () => {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    expect(app.unreadCount).toBe(0);
+    server.offline = true;
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
 
     expect(mockToastError).toHaveBeenCalled();
     expect(screen.getByText('Einkauf')).toBeVisible();
+    expect(app.notifications.map((n) => n.id)).toEqual([3, 2]);
+    expect(app.unreadCount).toBe(1);
+  });
+
+  it('keeps the countdown of a page kept for "back" or frozen, and sends nothing meanwhile', async () => {
+    renderPanel([notif(8)]);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    await act(async () => { jest.advanceTimersByTime(4000); });
+    await act(async () => { window.dispatchEvent(pageEvent('pagehide', true)); });
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS * 3); });
+    expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+
+    await act(async () => { window.dispatchEvent(pageEvent('pageshow', true)); });
+    await act(async () => { document.dispatchEvent(new Event('freeze')); });
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS * 3); });
+    expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+
+    await act(async () => { document.dispatchEvent(new Event('resume')); });
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS - 4000 - 100); });
+    expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+    await act(async () => { jest.advanceTimersByTime(200); });
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(8, { keepalive: false, userId: 1 });
+  });
+
+  it('drops a waiting delete without sending it when another account takes over', async () => {
+    renderPanel([notif(4, { title: 'Annas' })]);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    // Signed out, and Ben signs in within the undo window.
+    setPendingClearUser(null);
+    setPendingClearUser(2);
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS * 2); });
+
+    expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+    expect(mockToastDismiss).toHaveBeenCalledWith(1);
+    // Ben's list is never filtered by Anna's cutoff.
+    expect(withoutPendingClear([notif(4)], 2).map((n) => n.id)).toEqual([4]);
   });
 
   it('leaves out reminders whose moment has passed', async () => {
@@ -409,6 +460,6 @@ describe('NotificationCenter panel actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete all' }));
     expect(screen.getByRole('heading', { name: 'Notifications' })).toHaveFocus();
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
-    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(1, { keepalive: false });
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(1, { keepalive: false, userId: 1 });
   });
 });

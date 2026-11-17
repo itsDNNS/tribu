@@ -66,7 +66,7 @@ function mergeById(current, restored) {
 }
 
 export default function NotificationCenter({ onClose } = {}) {
-  const { messages, lang, notifications, setNotifications, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
+  const { messages, lang, me, notifications, setNotifications, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
   const { success: toastSuccess, error: toastError, dismiss: dismissToast } = useToast();
   const closeBtnRef = useRef(null);
   const headingRef = useRef(null);
@@ -109,13 +109,18 @@ export default function NotificationCenter({ onClose } = {}) {
     const removed = notifications.filter((n) => n.id <= upToId);
     const unread = removed.filter((n) => !n.read).length;
     const token = startPendingClear({
+      userId: me?.id ?? null,
       upToId,
       removed,
       dismissToast,
       // Server truth afterwards: what is left and how much of it is unread.
       onCommitted: () => loadNotifications(),
-      onFailed: () => {
+      onFailed: (failed) => {
         toastError(t(messages, 'toast.error'));
+        // Nothing was deleted: put the rows and their unread count back here,
+        // then compare with the server if it can be reached.
+        setNotifications((prev) => mergeById(prev, failed.removed));
+        setUnreadCount((c) => c + failed.removed.filter((n) => !n.read).length);
         loadNotifications();
       },
     });

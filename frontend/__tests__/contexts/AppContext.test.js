@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import { AppProvider, useApp } from '../../contexts/AppContext';
 import * as api from '../../lib/api';
-import { resetPendingClearForTests, startPendingClear } from '../../lib/notificationClear';
+import { resetPendingClearForTests, startPendingClear, withoutPendingClear } from '../../lib/notificationClear';
 
 jest.mock('../../lib/api');
 
@@ -302,7 +302,7 @@ describe('AppProvider bootstrap', () => {
     });
     render(<AppProvider><NotifProbe /></AppProvider>);
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
-    startPendingClear({ upToId: 5 });
+    startPendingClear({ userId: 1, upToId: 5 });
     try {
       fireEvent.click(screen.getByRole('button', { name: 'Reload notifications' }));
       await waitFor(() => expect(screen.getByTestId('notif-ids')).toHaveTextContent(/^6$/));
@@ -340,5 +340,35 @@ describe('AppProvider bootstrap', () => {
 
     await waitFor(() => expect(screen.getByTestId('notif-ids')).toHaveTextContent(/^1$/), { timeout: 2000 });
     expect(screen.getByTestId('unread')).toHaveTextContent('1');
+  });
+
+  test('drops a waiting "delete all" on sign-out instead of sending it with the next account', async () => {
+    jest.useFakeTimers();
+    function LogoutProbe() {
+      const { loading, logout } = useApp();
+      return (
+        <div>
+          <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
+          <button type="button" onClick={() => logout()}>Sign out</button>
+        </div>
+      );
+    }
+    api.apiLogout.mockResolvedValue({ ok: true });
+    api.apiDeleteAllNotifications.mockResolvedValue({ ok: true });
+    try {
+      render(<AppProvider><LogoutProbe /></AppProvider>);
+      await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
+      const dismissToast = jest.fn();
+      startPendingClear({ userId: 1, upToId: 5, dismissToast });
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Sign out' })); });
+      await act(async () => { jest.advanceTimersByTime(20000); });
+
+      expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+      expect(dismissToast).toHaveBeenCalled();
+      expect(withoutPendingClear([{ id: 3 }], 1)).toEqual([{ id: 3 }]);
+    } finally {
+      resetPendingClearForTests();
+      jest.useRealTimers();
+    }
   });
 });
