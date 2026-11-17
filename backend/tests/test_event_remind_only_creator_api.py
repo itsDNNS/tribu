@@ -404,3 +404,63 @@ def test_a_phone_editing_a_contact_made_in_tribu_updates_it_in_place(client, fam
         assert [(r.id, r.full_name) for r in rows] == [(contact_id, "Oma Erika B.")]
     finally:
         db.close()
+
+
+def test_a_changed_occurrence_from_a_reimport_keeps_the_series_owner(client, family):
+    """Anna imports a series and has only herself reminded. Ben re-imports
+    the feed, which now changes one occurrence. That occurrence is part of
+    Anna's event: the API shows Anna and the setting for it, and Ben can
+    still edit its title."""
+    anna, ben = family["anna"], family["ben"]
+    series = (
+        "BEGIN:VEVENT\r\nUID:club-remind@example.com\r\nDTSTAMP:20260101T000000Z\r\n"
+        "DTSTART:20261202T180000\r\nDTEND:20261202T190000\r\nRRULE:FREQ=WEEKLY\r\n"
+        "SUMMARY:Club\r\nEND:VEVENT\r\n"
+    )
+    changed = (
+        "BEGIN:VEVENT\r\nUID:club-remind@example.com\r\nDTSTAMP:20260101T000000Z\r\n"
+        "RECURRENCE-ID:20261209T180000\r\n"
+        "DTSTART:20261210T180000\r\nDTEND:20261210T190000\r\n"
+        "SUMMARY:Club (moved)\r\nEND:VEVENT\r\n"
+    )
+    wrap = lambda *parts: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Club//EN\r\n" + "".join(parts) + "END:VCALENDAR\r\n"
+    payload = {"family_id": family["family_id"], "ics_text": wrap(series), "source_name": "Club"}
+    assert client.post("/calendar/events/import-ics", json=payload, headers=_auth(anna)).status_code == 200
+    series_id = _calendar_rows(family["family_id"])[0].id
+    on = client.patch(f"/calendar/events/{series_id}", json={"remind_only_creator": True}, headers=_auth(anna))
+    assert on.status_code == 200, on.text
+
+    payload["ics_text"] = wrap(series, changed)
+    assert client.post("/calendar/events/import-ics", json=payload, headers=_auth(ben)).status_code == 200
+    changed_row = next(r for r in _calendar_rows(family["family_id"]) if r.recurrence_id is not None)
+    assert (changed_row.created_by_user_id, changed_row.remind_only_creator) == (anna["id"], True)
+
+    for query in ("", "&range_start=2026-12-01T00:00:00&range_end=2026-12-31T00:00:00"):
+        listed = client.get(f"/calendar/events?family_id={family['family_id']}{query}", headers=_auth(ben))
+        moved = [item for item in listed.json()["items"] if item["title"] == "Club (moved)"]
+        assert moved and all(
+            (item["created_by_user_id"], item["remind_only_creator"]) == (anna["id"], True) for item in moved
+        ), moved
+
+    edited = client.patch(f"/calendar/events/{changed_row.id}", json={"title": "Club (hall B)"}, headers=_auth(ben))
+    assert edited.status_code == 200, edited.text
+    assert (edited.json()["created_by_user_id"], edited.json()["remind_only_creator"]) == (anna["id"], True)
+
+
+def test_responses_show_the_series_owner_for_rows_stored_before(client, family):
+    """A changed occurrence stored with someone else as creator (as older
+    imports and DAV writes did) is shown with the series' creator and
+    setting, so the dialog offers the toggle only to the series' creator."""
+    series_id, changed_id = _series_with_changed_occurrence(family)
+    on = client.patch(f"/calendar/events/{series_id}", json={"remind_only_creator": True}, headers=_auth(family["anna"]))
+    assert on.status_code == 200, on.text
+    db = SessionLocal()
+    try:
+        db.query(CalendarEvent).filter(CalendarEvent.id == changed_id).update({"remind_only_creator": False})
+        db.commit()
+    finally:
+        db.close()
+
+    listed = client.get(f"/calendar/events?family_id={family['family_id']}", headers=_auth(family["ben"]))
+    changed = next(item for item in listed.json()["items"] if item["id"] == changed_id)
+    assert (changed["created_by_user_id"], changed["remind_only_creator"]) == (family["anna"]["id"], True)

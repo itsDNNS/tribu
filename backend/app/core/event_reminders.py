@@ -8,7 +8,7 @@ turn into a storm of reminders for everyone.
 
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 
 from app.models import CalendarEvent
 
@@ -53,3 +53,41 @@ def only_reminded_user(settings_row: CalendarEvent, member_ids: Collection[int])
     if creator_id is None or creator_id not in member_ids:
         return None
     return creator_id
+
+
+def series_reminder_owners(db, events: Iterable[CalendarEvent]) -> dict[int, tuple[int | None, bool]]:
+    """``{event id: (creator id, remind_only_creator)}`` of the series, for
+    the changed occurrences among ``events`` whose series row exists.
+
+    API responses show a changed occurrence with its series' creator and
+    setting, since those decide who is reminded and who may change it.
+    """
+    changed = [ev for ev in events if ev.recurrence_id is not None and ev.ical_uid]
+    if not changed:
+        return {}
+    series = {
+        (family_id, ical_uid): (creator_id, bool(flag))
+        for family_id, ical_uid, creator_id, flag in db.query(
+            CalendarEvent.family_id,
+            CalendarEvent.ical_uid,
+            CalendarEvent.created_by_user_id,
+            CalendarEvent.remind_only_creator,
+        ).filter(
+            CalendarEvent.family_id.in_({ev.family_id for ev in changed}),
+            CalendarEvent.ical_uid.in_({ev.ical_uid for ev in changed}),
+            CalendarEvent.recurrence_id.is_(None),
+        )
+    }
+    return {
+        ev.id: series[(ev.family_id, ev.ical_uid)]
+        for ev in changed
+        if (ev.family_id, ev.ical_uid) in series
+    }
+
+
+def with_series_reminder_owner(item: dict, owners: dict[int, tuple[int | None, bool]]) -> dict:
+    """``item`` (an event or occurrence dict) with its series' creator and setting."""
+    owner = owners.get(item.get("id"))
+    if owner is None:
+        return item
+    return {**item, "created_by_user_id": owner[0], "remind_only_creator": owner[1]}

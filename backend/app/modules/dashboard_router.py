@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core import cache
 from app.core.deps import current_user, ensure_family_membership, next_birthday_date
+from app.core.event_reminders import series_reminder_owners, with_series_reminder_owner
 from app.core.recurrence import expand_event, load_series_changes
 from app.core.scopes import require_scope
 from app.database import get_db
@@ -63,7 +64,11 @@ def dashboard_summary(
             all_occurrences.extend(expand_event(ev, now, range_end, series_changes))
 
         all_occurrences.sort(key=lambda o: o["starts_at"])
-        next_events = [CalendarEventResponse(**o).model_dump() for o in all_occurrences[:8]]
+        owners = series_reminder_owners(db, [*non_recurring, *recurring])
+        next_events = [
+            CalendarEventResponse(**with_series_reminder_owner(o, owners)).model_dump()
+            for o in all_occurrences[:8]
+        ]
 
         birthdays = db.query(FamilyBirthday).filter(FamilyBirthday.family_id == family_id).all()
         today = local_today()

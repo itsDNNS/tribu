@@ -444,8 +444,11 @@ export function useCalendar() {
       color: editColor,
       icon: editIcon || null,
     };
-    // Anyone else leaves the setting alone; the API refuses their changes.
-    if (ownsEditingEvent) payload.remind_only_creator = editRemindOnlyCreator;
+    // Sent only when the (series') creator changed it: anyone else leaves
+    // it alone, and an unchanged value is never written back.
+    if (ownsEditingEvent && editRemindOnlyCreator !== Boolean(editingEvent.remind_only_creator)) {
+      payload.remind_only_creator = editRemindOnlyCreator;
+    }
     if (demoMode) {
       setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, ...payload } : ev));
     } else {

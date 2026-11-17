@@ -28,7 +28,7 @@ from app.database import get_db
 from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync, Membership, Notification, NotificationPreference, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, CalendarIcsSubscribe, CalendarSubscriptionCreate, CalendarSubscriptionResponse, PaginatedCalendarEvents
 from app.core.errors import error_detail, EVENT_NOT_FOUND, EVENT_REMINDER_CREATOR_ONLY, END_BEFORE_START, INVALID_RECURRENCE
-from app.core.event_reminders import reminder_settings_row
+from app.core.event_reminders import reminder_settings_row, series_reminder_owners, with_series_reminder_owner
 
 router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})
 logger = logging.getLogger(__name__)
@@ -89,13 +89,26 @@ def list_calendar_events(
         total = len(all_occurrences)
         page = all_occurrences[offset:offset + limit]
 
-        items = [CalendarEventResponse(**o) for o in page]
+        owners = series_reminder_owners(db, [*non_recurring, *recurring])
+        items = [CalendarEventResponse(**with_series_reminder_owner(o, owners)) for o in page]
         return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
 
     base = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id)
     total = base.count()
-    items = base.order_by(CalendarEvent.starts_at.asc()).offset(offset).limit(limit).all()
+    rows = base.order_by(CalendarEvent.starts_at.asc()).offset(offset).limit(limit).all()
+    owners = series_reminder_owners(db, rows)
+    items = [_event_response(row, owners) for row in rows]
     return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
+
+
+def _event_response(event: CalendarEvent, owners: dict[int, tuple[Optional[int], bool]]) -> CalendarEventResponse:
+    """The API view of ``event``; a changed occurrence of a series shows the
+    series' creator and reminder setting, which are the ones that apply."""
+    response = CalendarEventResponse.model_validate(event)
+    owner = owners.get(event.id)
+    if owner is None:
+        return response
+    return response.model_copy(update={"created_by_user_id": owner[0], "remind_only_creator": owner[1]})
 
 
 def _family_member_names(db: Session, family_id: int) -> dict[int, str]:
@@ -271,6 +284,14 @@ def _apply_ics_events(
                 setattr(existing, key, value)
             updated += 1
         else:
+            if owner is not None and event_dict.get("recurrence_id") is not None:
+                # A new changed occurrence is part of the series' event:
+                # it keeps the series' creator and who is reminded.
+                event_dict = {
+                    **event_dict,
+                    "created_by_user_id": owner.created_by_user_id,
+                    "remind_only_creator": owner.remind_only_creator,
+                }
             db.add(CalendarEvent(**event_dict))
             created += 1
 
@@ -903,7 +924,7 @@ def update_calendar_event(
     db.commit()
     db.refresh(event)
     cache.invalidate_pattern(f"tribu:dashboard:{event.family_id}:*")
-    return event
+    return _event_response(event, series_reminder_owners(db, [event]))
 
 
 @router.delete(

@@ -551,7 +551,7 @@ class CalendarEventResponse(BaseModel):
     color: Optional[str] = Field(None, description="Event color as hex string")
     category: Optional[str] = Field(None, description="Event category label")
     icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
-    created_by_user_id: Optional[int] = Field(None, description="User who created the event")
+    created_by_user_id: Optional[int] = Field(None, description="User who created the event; for a changed occurrence of a series, the series' creator")
     remind_only_creator: bool = Field(False, description="True if only the creator (created_by_user_id) is reminded before the event starts. While the creator is no longer in the family, everyone is reminded.")
     created_at: datetime = Field(..., description="Creation timestamp")
     source_type: str = Field("local", description="Where the event came from: 'local', 'import', or 'subscription'")

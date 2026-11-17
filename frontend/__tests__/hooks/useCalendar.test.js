@@ -732,6 +732,20 @@ describe('useCalendar remind only me', () => {
     expect(api.apiUpdateEvent).toHaveBeenCalledWith(42, expect.objectContaining({ remind_only_creator: true }));
   });
 
+  it('leaves it out when the creator edits something else', async () => {
+    const result = setup();
+    const api = require('../../lib/api');
+
+    act(() => result.current.startEdit(event({ remind_only_creator: true })));
+    act(() => result.current.setEditTitle('Dentist (moved)'));
+    await act(async () => {
+      await result.current.saveEdit({ preventDefault: () => {} });
+    });
+
+    expect(api.apiUpdateEvent.mock.calls[0][1]).toEqual(expect.objectContaining({ title: 'Dentist (moved)' }));
+    expect(api.apiUpdateEvent.mock.calls[0][1]).not.toHaveProperty('remind_only_creator');
+  });
+
   it('leaves it out of an edit by anyone else', async () => {
     const result = setup();
     const api = require('../../lib/api');
