@@ -1934,13 +1934,16 @@ button.contact-row:hover { background: var(--surface-soft); }
 .set-token-create-form { margin-top: var(--space-md); }
 .set-token-form-grid { display: grid; gap: var(--space-md); }
 .set-token-scope-check { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; margin-bottom: 8px; }
-.set-token-scope-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+.set-token-scope-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 12px; }
 .set-token-scope-module { font-size: 0.82rem; }
 .set-token-scope-label { font-weight: 500; margin-bottom: 4px; color: var(--text-secondary); }
+.set-token-scope-actions { display: flex; flex-wrap: wrap; gap: 2px 12px; }
 .set-token-scope-action { display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 2px; }
+.set-token-scope-missing { color: var(--warning); font-size: 0.8rem; margin-top: 8px; }
 .set-token-expiry-row { display: flex; gap: var(--space-sm); align-items: center; }
 .set-token-expiry-input { flex: 1; }
 .set-token-actions { display: flex; gap: var(--space-sm); }
+.set-token-actions .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 .set-token-add-btn { margin-top: var(--space-sm); }
 .set-token-banner-icon { color: var(--success); }
 .set-token-dismiss-icon { vertical-align: middle; }
