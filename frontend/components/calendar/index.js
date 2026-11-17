@@ -35,6 +35,8 @@ import CalendarDialog from './CalendarDialog';
 import EventEditor from './EventEditor';
 import { calendarEventStyle } from '../../lib/calendar-colors';
 import EventDetails, { calendarDateKey as dateKey, isReadonlyEvent as readonly } from './EventDetails';
+import { peekHandoff, takeHandoff } from '../../lib/viewHandoff';
+import { EVENT_LINK_EVENT, EVENT_LINK_HANDOFF, occurrenceStartOf, parseEventLink } from '../../lib/reminderMute';
 export { retargetCreateDraft } from './draftDates';
 
 
@@ -67,6 +69,21 @@ export default function CalendarView(props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const deletePending = useRef(false);
+  const reminderRef = useRef(null);
+  // An event to open from a link, with its reminder choice in focus: the
+  // "Don't remind me" push button of a series asks there. Read while
+  // rendering and taken once on screen, like useHandoff, so a second render
+  // (React's strict mode) still sees it.
+  const [eventLink, setEventLink] = useState(() => parseEventLink(peekHandoff(EVENT_LINK_HANDOFF)));
+  useEffect(() => {
+    takeHandoff(EVENT_LINK_HANDOFF);
+    const take = () => {
+      const target = parseEventLink(takeHandoff(EVENT_LINK_HANDOFF));
+      if (target) setEventLink(target);
+    };
+    window.addEventListener(EVENT_LINK_EVENT, take);
+    return () => window.removeEventListener(EVENT_LINK_EVENT, take);
+  }, []);
   const locale = localeForLang(lang);
   const copy = (key) => t(messages, `module.calendar.mockup.${key}`);
   const close = () => {
@@ -244,6 +261,29 @@ export default function CalendarView(props) {
       )}
     </AgendaDay>
   );
+  // The agenda list, shown on its own and below the week strip.
+  const agendaList = () => {
+    const days = Array.from({ length: cal.agendaDays || 14 }, (_, i) => addDays(selected, i));
+    const withEvents = days.filter((date) => eventsOn(date).length);
+    return (
+      <div className="ui-agenda-list">
+        {withEvents.map((date) => agendaDay(date, true))}
+        {!withEvents.length && (
+          <EmptyDay
+            messages={messages}
+            onAdd={isChild ? null : () => create(selected)}
+          />
+        )}
+        <button
+          className="tc-btn"
+          disabled={cal.rangeLoading}
+          onClick={() => cal.setAgendaDays((count) => count + 14)}
+        >
+          {plannerText(messages, 'load_more')}
+        </button>
+      </div>
+    );
+  };
   const eventButton = (event) => {
     const category = getCalendarEventIcon(event.icon);
     return (
@@ -267,6 +307,45 @@ export default function CalendarView(props) {
       </button>
     );
   };
+  // Go to the linked occurrence's day (openEventLink switched to its family
+  // already), open it once the range has it, and give up quietly when it is
+  // not there (deleted, moved away, or another family after all).
+  useEffect(() => {
+    if (!eventLink) return;
+    if (eventLink.familyId != null && String(eventLink.familyId) !== String(familyId)) {
+      setEventLink(null);
+      return;
+    }
+    const day = parseDate(eventLink.at);
+    if (!day) {
+      setEventLink(null);
+      return;
+    }
+    if (!eventLink.requested) {
+      selectDate(day);
+      setEventLink({ ...eventLink, requested: true });
+      return;
+    }
+    const found = cal.allEvents.find(
+      (ev) => String(ev.id) === String(eventLink.eventId) && occurrenceStartOf(ev) === eventLink.at,
+    );
+    if (found) {
+      setModal({ kind: 'event', event: found, focusReminder: Boolean(eventLink.choose) });
+      setEventLink(null);
+    } else if (eventLink.loading && !cal.rangeLoading) {
+      setEventLink(null);
+    } else if (cal.rangeLoading && !eventLink.loading) {
+      setEventLink({ ...eventLink, loading: true });
+    }
+  }, [eventLink, cal.allEvents, cal.rangeLoading, familyId]);
+  useEffect(() => {
+    if (modal?.kind !== 'event' || !modal.focusReminder) return;
+    const section = reminderRef.current;
+    if (!section) return;
+    section.scrollIntoView?.({ block: 'nearest' });
+    (section.querySelector('input:checked') || section.querySelector('input'))?.focus();
+    setModal((current) => (current === modal ? { ...current, focusReminder: false } : current));
+  }, [modal]);
   const selectedEvent = modal?.event;
   return (
     <div
@@ -456,54 +535,10 @@ export default function CalendarView(props) {
                 {t(messages, monthOpen ? 'module.calendar.week' : 'module.calendar.month')}
               </button>
             </div>
-          <div className="ui-agenda-list">
-            {Array.from({ length: cal.agendaDays || 14 }, (_, i) =>
-              addDays(selected, i),
-            )
-              .filter((date) => eventsOn(date).length)
-              .map((date) => agendaDay(date, true))}
-            {!Array.from(
-              { length: cal.agendaDays || 14 },
-              (_, i) => eventsOn(addDays(selected, i)).length,
-            ).some(Boolean) && (
-              <EmptyDay
-                messages={messages}
-                onAdd={isChild ? null : () => create(selected)}
-              />
-            )}
-            <button
-              className="tc-btn"
-              disabled={cal.rangeLoading}
-              onClick={() => cal.setAgendaDays((count) => count + 14)}
-            >
-              {plannerText(messages, 'load_more')}
-            </button>
-          </div>
+          {agendaList()}
           </>
         ) : cal.calendarView === 'agenda' ? (
-          <div className="ui-agenda-list">
-            {Array.from({ length: cal.agendaDays || 14 }, (_, i) =>
-              addDays(selected, i),
-            )
-              .filter((date) => eventsOn(date).length)
-              .map((date) => agendaDay(date, true))}
-            {!Array.from(
-              { length: cal.agendaDays || 14 },
-              (_, i) => eventsOn(addDays(selected, i)).length,
-            ).some(Boolean) && (
-              <EmptyDay
-                messages={messages}
-                onAdd={isChild ? null : () => create(selected)}
-              />
-            )}
-            <button
-              className="tc-btn"
-              disabled={cal.rangeLoading}
-              onClick={() => cal.setAgendaDays((count) => count + 14)}
-            >
-              {plannerText(messages, 'load_more')}
-            </button>
-          </div>
+          agendaList()
         ) : monthMode ? (
           <section
             className="tc-calendar-shell"
@@ -817,6 +852,19 @@ export default function CalendarView(props) {
             messages={messages}
             locale={locale}
             timeFormat={timeFormat}
+            me={me}
+            reminderRef={reminderRef}
+            onReminderChange={async (state) => {
+              const next = await cal.changeReminderMute(selectedEvent, state);
+              if (next !== undefined) {
+                setModal((current) =>
+                  current?.kind === 'event' && current.event === selectedEvent
+                    ? { ...current, event: { ...selectedEvent, reminder_muted: next } }
+                    : current,
+                );
+              }
+              return next;
+            }}
           />
         </CalendarDialog>
       )}

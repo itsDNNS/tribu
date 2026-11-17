@@ -729,3 +729,54 @@ def test_event_remind_only_creator_migration_defaults_to_everyone_and_downgrades
             "SELECT sql FROM sqlite_master WHERE name = 'uq_calendar_events_family_uid'"
         ).fetchone()[0]
     assert "recurrence_id IS NULL" in series_index
+
+
+def test_event_reminder_mutes_migration_creates_the_table_and_downgrades(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "event-reminder-mutes.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0083_event_remind_only_creator")
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'F')")
+        conn.execute(
+            "INSERT INTO users (id, email, display_name, must_change_password, has_completed_onboarding) "
+            "VALUES (1, 'a@example.com', 'A', 0, 1)"
+        )
+        conn.execute(
+            "INSERT INTO calendar_events (id, family_id, title, starts_at, all_day, created_at) "
+            "VALUES (1, 1, 'Swim', '2026-12-01 09:00:00', 0, '2026-01-01 00:00:00')"
+        )
+        conn.commit()
+
+    command.upgrade(config, "0084_event_reminder_mutes")
+    insert = "INSERT INTO event_reminder_mutes (user_id, event_id, occurrence_start) VALUES (1, 1, ?)"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute(insert, (None,))
+        conn.execute(insert, ("2026-12-08 09:00:00.000000",))
+        # One whole-series mute and one mute per occurrence and person.
+        for duplicate in (None, "2026-12-08 09:00:00.000000"):
+            with pytest.raises(sqlite3.IntegrityError):
+                conn.execute(insert, (duplicate,))
+        created = conn.execute("SELECT created_at FROM event_reminder_mutes").fetchall()
+        assert all(row[0] for row in created)
+        indexes = {row[1] for row in conn.execute("PRAGMA index_list(event_reminder_mutes)")}
+        assert {"uq_event_reminder_mutes_series", "ix_event_reminder_mutes_event_id"} <= indexes
+        snooze_columns = {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
+        assert {"occurrence_start", "event_created_at"} <= snooze_columns
+        # Deleting the event removes its mutes.
+        conn.execute("DELETE FROM calendar_events WHERE id = 1")
+        assert conn.execute("SELECT COUNT(*) FROM event_reminder_mutes").fetchone()[0] == 0
+        conn.commit()
+
+    command.downgrade(config, "0083_event_remind_only_creator")
+    with sqlite3.connect(db_path) as conn:
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        snooze_columns = {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
+        snooze_indexes = {row[1] for row in conn.execute("PRAGMA index_list(reminder_snoozes)")}
+    assert "event_reminder_mutes" not in tables
+    assert not {"occurrence_start", "event_created_at"} & snooze_columns
+    assert "ix_reminder_snoozes_due" in snooze_indexes
+    command.upgrade(config, "head")

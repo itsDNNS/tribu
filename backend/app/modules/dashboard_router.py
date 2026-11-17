@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from app.core.clock import local_today, local_wall_now, utcnow
 
@@ -8,11 +8,11 @@ from sqlalchemy.orm import Session
 from app.core import cache
 from app.core.deps import current_user, ensure_family_membership, next_birthday_date
 from app.core.event_reminders import series_reminder_owners, with_series_reminder_owner
-from app.core.recurrence import expand_event, load_series_changes
+from app.core.recurrence import family_occurrences
 from app.core.scopes import require_scope
 from app.database import get_db
-from app.models import CalendarEvent, FamilyBirthday, User
-from app.schemas import AUTH_RESPONSES, CalendarEventResponse, DashboardSummary
+from app.models import FamilyBirthday, User
+from app.schemas import AUTH_RESPONSES, DashboardEventResponse, DashboardSummary
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"], responses={**AUTH_RESPONSES})
 
@@ -36,37 +36,10 @@ def dashboard_summary(
         now = local_wall_now(utcnow())
         range_end = now + timedelta(days=14)
 
-        non_recurring = (
-            db.query(CalendarEvent)
-            .filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.recurrence.is_(None),
-                CalendarEvent.starts_at >= now,
-                CalendarEvent.starts_at < range_end,
-            )
-            .all()
-        )
-
-        recurring = (
-            db.query(CalendarEvent)
-            .filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.recurrence.isnot(None),
-            )
-            .all()
-        )
-
-        series_changes = load_series_changes(db, recurring)
-        all_occurrences = []
-        for ev in non_recurring:
-            all_occurrences.extend(expand_event(ev, now, range_end))
-        for ev in recurring:
-            all_occurrences.extend(expand_event(ev, now, range_end, series_changes))
-
-        all_occurrences.sort(key=lambda o: o["starts_at"])
-        owners = series_reminder_owners(db, [*non_recurring, *recurring])
+        events, all_occurrences = family_occurrences(db, family_id, now, range_end, include_ongoing=False)
+        owners = series_reminder_owners(db, events)
         next_events = [
-            CalendarEventResponse(**with_series_reminder_owner(o, owners)).model_dump()
+            DashboardEventResponse(**with_series_reminder_owner(o, owners)).model_dump()
             for o in all_occurrences[:8]
         ]
 

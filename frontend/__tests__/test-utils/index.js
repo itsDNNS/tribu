@@ -71,6 +71,8 @@ export function createMockApi(overrides = {}) {
     apiMarkAllNotificationsRead: jest.fn().mockResolvedValue({ ok: true }),
     apiDeleteNotification: jest.fn().mockResolvedValue({ ok: true }),
     apiDeleteAllNotifications: jest.fn().mockResolvedValue({ ok: true, data: { status: 'ok', deleted: 0 } }),
+    apiMuteEventReminder: jest.fn((id, scope) => Promise.resolve({ ok: true, data: { reminder_muted: scope } })),
+    apiUnmuteEventReminder: jest.fn().mockResolvedValue({ ok: true, data: { reminder_muted: null } }),
     ...overrides,
   };
 }

@@ -3,6 +3,8 @@ import { t } from "../../lib/i18n";
 import { parseDate } from "../../lib/helpers";
 import MemberAvatar from "../MemberAvatar";
 import { mapsLinksForLocation } from "./CalendarHelpers";
+import EventReminderControl from "./EventReminderControl";
+import { showsReminderControl } from "../../lib/reminderMute";
 
 export const calendarDateKey = (date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -13,15 +15,18 @@ export const isReadonlyEvent = (event) =>
 const dateKey = calendarDateKey;
 const readonly = isReadonlyEvent;
 
-// "A family moment": date and time, people, place and notes. The calendar
-// adds edit and delete; Today shows it with a way into the calendar
-// (Tribu 2.0, K5).
+// "A family moment": date and time, people, place, my reminder and notes.
+// The calendar adds edit and delete; Today shows it with a way into the
+// calendar (Tribu 2.0, K5).
 export default function EventDetails({
   event,
   members,
   messages,
   locale,
   timeFormat,
+  me,
+  onReminderChange,
+  reminderRef,
 }) {
   const time = (value) => {
     const date = parseDate(value);
@@ -107,6 +112,14 @@ export default function EventDetails({
             )}
           </div>
         </div>
+      )}
+      {onReminderChange && showsReminderControl(event, me) && (
+        <EventReminderControl
+          ref={reminderRef}
+          event={event}
+          messages={messages}
+          onChange={onReminderChange}
+        />
       )}
       {event.description && (
         <p className="tc-detail-description">{event.description}</p>

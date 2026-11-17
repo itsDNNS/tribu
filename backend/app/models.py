@@ -899,7 +899,47 @@ class ReminderSnooze(Base):
     # When the reminder stops being true (the start of the event occurrence
     # it announced), naive UTC. A snooze running out later is dropped.
     expires_at = Column(DateTime, nullable=True)
+    # For an occurrence of a series: its original start in local wall time,
+    # the key ``EventReminderMute`` uses, kept from the reminder so a mute
+    # still matches after the occurrence moved. NULL for a single event and
+    # for snoozes older than this column.
+    occurrence_start = Column(DateTime, nullable=True)
+    # The snoozed event's creation time: event ids can come back for a new
+    # event, so a snooze whose event no longer matches is dropped.
+    event_created_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class EventReminderMute(Base):
+    """Someone who no longer wants the reminder before an event starts.
+
+    ``event_id`` is always the series row (or the event itself when it is
+    not part of a series). ``occurrence_start`` names one occurrence by its
+    original start in local wall time, like ``CalendarEvent.recurrence_id``;
+    NULL mutes the whole event or series. Only reminders are affected, not
+    who takes part.
+    """
+
+    __tablename__ = "event_reminder_mutes"
+    __table_args__ = (
+        # NULLs never collide in a unique index, so the whole-series mute
+        # gets a partial index of its own.
+        Index(
+            "uq_event_reminder_mutes_series",
+            "user_id",
+            "event_id",
+            unique=True,
+            postgresql_where=text("occurrence_start IS NULL"),
+            sqlite_where=text("occurrence_start IS NULL"),
+        ),
+        UniqueConstraint("user_id", "event_id", "occurrence_start", name="uq_event_reminder_mutes_occurrence"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    event_id = Column(Integer, ForeignKey("calendar_events.id", ondelete="CASCADE"), nullable=False, index=True)
+    occurrence_start = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
 
 
 class NotificationSentLog(Base):

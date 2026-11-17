@@ -256,6 +256,22 @@ export function apiDeleteEvent(eventId, occurrenceDate) {
   return request(url, { method: 'DELETE' });
 }
 
+// Taking oneself off an event's reminder: scope 'series' or 'occurrence'
+// (with occurrenceStart, the occurrence's starts_at as the calendar lists it).
+export function apiMuteEventReminder(eventId, scope, occurrenceStart = null) {
+  return request(`/calendar/events/${eventId}/reminder-mute`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope, occurrence_start: occurrenceStart || null }),
+  });
+}
+
+export function apiUnmuteEventReminder(eventId, occurrenceStart = null) {
+  let url = `/calendar/events/${eventId}/reminder-mute`;
+  if (occurrenceStart) url += `?occurrence_start=${encodeURIComponent(occurrenceStart)}`;
+  return request(url, { method: 'DELETE' });
+}
+
 export function apiGetBirthdays(familyId) {
   return request(`/birthdays?family_id=${familyId}`);
 }

@@ -349,3 +349,42 @@ def expand_event(
         count += 1
 
     return occurrences
+
+
+def family_occurrences(
+    db: Session,
+    family_id: int,
+    range_start: datetime,
+    range_end: datetime,
+    *,
+    include_ongoing: bool = True,
+) -> tuple[list[CalendarEvent], list[dict]]:
+    """Events of a family and their occurrences in a range, sorted by start.
+
+    ``include_ongoing`` also returns one-off events that began before
+    ``range_start`` and are still running. Returns the loaded event rows
+    (one-off and series) and the sorted occurrences.
+    """
+    one_off = db.query(CalendarEvent).filter(
+        CalendarEvent.family_id == family_id,
+        CalendarEvent.recurrence.is_(None),
+        CalendarEvent.starts_at < range_end,
+    )
+    if include_ongoing:
+        one_off = one_off.filter(
+            (CalendarEvent.ends_at >= range_start)
+            | (CalendarEvent.ends_at.is_(None) & (CalendarEvent.starts_at >= range_start))
+        )
+    else:
+        one_off = one_off.filter(CalendarEvent.starts_at >= range_start)
+    one_off = one_off.all()
+    series = (
+        db.query(CalendarEvent)
+        .filter(CalendarEvent.family_id == family_id, CalendarEvent.recurrence.isnot(None))
+        .all()
+    )
+    series_changes = load_series_changes(db, series)
+    occurrences = [o for ev in one_off for o in expand_event(ev, range_start, range_end)]
+    occurrences += [o for ev in series for o in expand_event(ev, range_start, range_end, series_changes)]
+    occurrences.sort(key=lambda o: o["starts_at"])
+    return [*one_off, *series], occurrences

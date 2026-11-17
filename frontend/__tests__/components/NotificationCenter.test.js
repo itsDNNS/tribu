@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import NotificationCenter, { isNotificationExpired } from '../../components/NotificationCenter';
 import * as api from '../../lib/api';
@@ -498,5 +498,87 @@ describe('NotificationCenter panel actions', () => {
     expect(screen.getByRole('heading', { name: 'Notifications' })).toHaveFocus();
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
     expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(1, { keepalive: false, userId: 1 });
+  });
+});
+
+describe('NotificationCenter "Don\'t remind me"', () => {
+  const AT = '2026-12-08T09:00:00';
+  const reminder = (link, overrides = {}) => ({
+    id: 7, type: 'event_reminder', title: 'Swimming', body: 'Starts at 09:00', link,
+    read: false, created_at: new Date().toISOString(), ...overrides,
+  });
+  const muteButton = () => screen.getByRole('button', { name: "Don't remind me" });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    api.apiMuteEventReminder.mockImplementation((id, scope) => Promise.resolve({ ok: true, data: { reminder_muted: scope } }));
+  });
+
+  it.each([
+    ['a single event right away', `/calendar?event=42&at=${AT}`, null, 'series', 'Reminder off for this event'],
+    ['this occurrence of a series', `/calendar?event=42&at=${AT}&repeats=1`, 'Only this one', 'occurrence', 'Reminder off for this event'],
+    ['every repetition of a series', `/calendar?event=42&at=${AT}&repeats=1`, 'All repetitions', 'series', 'Reminder off for all repetitions'],
+  ])('mutes %s, with Undo', async (_, link, choice, scope, toast) => {
+    const setActiveView = jest.fn();
+    const announced = [];
+    const listen = (e) => announced.push(e.detail.state);
+    window.addEventListener('tribu:reminder-mute-changed', listen);
+    renderCenter({ notifications: [reminder(link)], setActiveView });
+
+    if (choice) {
+      expect(muteButton()).toHaveAttribute('aria-expanded', 'false');
+      fireEvent.click(muteButton());
+      expect(muteButton()).toHaveAttribute('aria-expanded', 'true');
+      expect(muteButton()).toHaveAttribute('aria-controls', screen.getByRole('group', { name: 'Stop reminders for' }).id);
+      expect(api.apiMuteEventReminder).not.toHaveBeenCalled();
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: choice })); });
+      expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    } else {
+      expect(muteButton()).not.toHaveAttribute('aria-expanded');
+      await act(async () => { fireEvent.click(muteButton()); });
+    }
+
+    expect(api.apiMuteEventReminder).toHaveBeenCalledWith(42, scope, AT);
+    // The notification itself does not open.
+    expect(setActiveView).not.toHaveBeenCalled();
+    expect(screen.getByText('Reminder off')).toHaveFocus();
+    expect(mockToastSuccess).toHaveBeenCalledWith(toast, expect.objectContaining({ label: 'Undo' }));
+
+    await act(async () => { await mockToastSuccess.mock.calls[0][1].onClick(); });
+    expect(api.apiUnmuteEventReminder).toHaveBeenCalledWith(42, AT);
+    expect(muteButton()).toBeInTheDocument();
+    expect(mockToastSuccess).toHaveBeenLastCalledWith('Reminder back on');
+    // An open calendar hears about both.
+    window.removeEventListener('tribu:reminder-mute-changed', listen);
+    expect(announced).toEqual([scope, null]);
+  });
+
+  it('closes the choice with Escape and returns to its button', () => {
+    renderCenter({ notifications: [reminder(`/calendar?event=42&at=${AT}&repeats=1`)] });
+    fireEvent.click(muteButton());
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Only this one' }), { key: 'Escape' });
+
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(muteButton()).toHaveFocus();
+  });
+
+  it('keeps the button and says so when muting fails', async () => {
+    api.apiMuteEventReminder.mockResolvedValue({ ok: false, data: null });
+    renderCenter({ notifications: [reminder(`/calendar?event=42&at=${AT}`)] });
+
+    await act(async () => { fireEvent.click(muteButton()); });
+
+    expect(mockToastError).toHaveBeenCalledWith('Something went wrong');
+    await waitFor(() => expect(muteButton()).toHaveFocus());
+  });
+
+  it('is only offered on event reminders that name their occurrence', () => {
+    renderCenter({ notifications: [
+      reminder('/calendar?event=42', { id: 1 }),
+      reminder('/tasks?id=3', { id: 2, type: 'task_due' }),
+      reminder(`/calendar?event=42&at=${AT}`, { id: 3, type: 'event_assigned' }),
+    ] });
+
+    expect(screen.queryByRole('button', { name: "Don't remind me" })).not.toBeInTheDocument();
   });
 });

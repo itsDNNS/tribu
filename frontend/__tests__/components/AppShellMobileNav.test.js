@@ -3,6 +3,8 @@ import path from 'path';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AppShell from '../../components/AppShell';
+import { EVENT_LINK_HANDOFF, parseEventLink } from '../../lib/reminderMute';
+import { peekHandoff, takeHandoff } from '../../lib/viewHandoff';
 import { DEFAULT_NAV_ORDER } from '../../contexts/AppContext';
 
 let mockAppState = {};
@@ -25,8 +27,9 @@ jest.mock('../../lib/api', () => ({
   apiAddShoppingItem: (...args) => mockAddShoppingItem(...args),
 }));
 const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
 jest.mock('../../contexts/ToastContext', () => ({
-  useToast: () => ({ success: mockToastSuccess, error: jest.fn(), info: jest.fn() }),
+  useToast: () => ({ success: mockToastSuccess, error: mockToastError, info: jest.fn() }),
 }));
 
 jest.mock('../../components/today/TodayView', () => function MockToday() { return <div>Today view</div>; });
@@ -391,4 +394,37 @@ describe('AppShell mobile bottom navigation', () => {
     expect(within(sheet).queryByRole('button', { name: 'Meal', exact: true })).not.toBeInTheDocument();
     expect(within(sheet).getByRole('button', { name: /Event/ })).toBeInTheDocument();
   });
+
+  describe('"Don\'t remind me" links', () => {
+    const link = { eventId: 4, familyId: 8, at: '2026-12-01T09:00:00', repeats: true, choose: true };
+    const families = [{ family_id: 1 }, { family_id: 8 }];
+    afterEach(() => { takeHandoff(EVENT_LINK_HANDOFF); });
+
+    it('switches to the event\'s family once the families are known, then opens it', async () => {
+      const switchFamily = jest.fn(() => Promise.resolve());
+      const setActiveView = jest.fn();
+      const setPendingEventLink = jest.fn();
+      mockAppState = baseState({ families, switchFamily, setActiveView, setPendingEventLink, pendingEventLink: link });
+      render(<AppShell />);
+
+      await waitFor(() => expect(setActiveView).toHaveBeenCalledWith('calendar'));
+      expect(setPendingEventLink).toHaveBeenCalledWith(null);
+      expect(switchFamily).toHaveBeenCalledWith('8');
+      expect(parseEventLink(peekHandoff(EVENT_LINK_HANDOFF))).toEqual(link);
+    });
+
+    it('says so and still opens the calendar when that family cannot be loaded', async () => {
+      const setActiveView = jest.fn();
+      mockAppState = baseState({
+        families, setActiveView, setPendingEventLink: jest.fn(), pendingEventLink: link,
+        switchFamily: jest.fn(() => Promise.reject(new Error('offline'))),
+      });
+      render(<AppShell />);
+
+      await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+      expect(setActiveView).toHaveBeenCalledWith('calendar');
+      expect(peekHandoff(EVENT_LINK_HANDOFF)).toBeNull();
+    });
+  });
 });
+

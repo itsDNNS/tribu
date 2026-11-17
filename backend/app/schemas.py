@@ -529,8 +529,8 @@ class CalendarEventUpdate(BaseModel):
         return v
 
 
-class CalendarEventResponse(BaseModel):
-    """Calendar event with recurrence metadata."""
+class CalendarEventBaseResponse(BaseModel):
+    """Calendar event with recurrence metadata, the same for every member."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(..., description="Event ID")
@@ -560,6 +560,33 @@ class CalendarEventResponse(BaseModel):
     imported_at: Optional[datetime] = Field(None, description="When the event was first imported")
     last_synced_at: Optional[datetime] = Field(None, description="Last time an external feed was refreshed or re-imported")
     sync_status: Optional[str] = Field(None, description="Current external sync state, e.g. ok or error")
+
+
+class CalendarEventResponse(CalendarEventBaseResponse):
+    """Calendar event with recurrence metadata and the signed-in user's reminder state."""
+    reminder_muted: Optional[Literal["series", "occurrence"]] = Field(None, description="Whether the signed-in user took themselves off the reminder for this event or occurrence: 'series' for the whole series (or the whole single event), 'occurrence' for this occurrence only, null when they get it. Only reminders are affected, not who takes part.")
+
+
+class DashboardEventResponse(CalendarEventBaseResponse):
+    """Upcoming event on the dashboard. The summary is shared by the whole
+    family, so it carries no personal reminder state; the calendar list has it."""
+
+
+class EventReminderMuteRequest(BaseModel):
+    """Take the signed-in user off an event's reminder."""
+    scope: Literal["occurrence", "series"] = Field("series", description="'series' mutes every occurrence of a series (a single event is always muted as a whole); 'occurrence' mutes only the occurrence starting at occurrence_start and lifts a mute of the whole series")
+    occurrence_start: Optional[datetime] = Field(None, description="Start of the occurrence as the calendar lists it (local wall time, or an instant with offset); needed for scope 'occurrence' unless the event is a changed occurrence")
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{"scope": "occurrence", "occurrence_start": "2026-12-01T09:00:00"}, {"scope": "series"}]
+    })
+
+
+class EventReminderMuteResponse(BaseModel):
+    """The signed-in user's reminder state for an event or occurrence."""
+    event_id: int = Field(..., description="Event ID from the request")
+    occurrence_start: Optional[datetime] = Field(None, description="Occurrence from the request, if any")
+    reminder_muted: Optional[Literal["series", "occurrence"]] = Field(None, description="'series', 'occurrence', or null when the user gets the reminder")
 
 
 class PaginatedCalendarEvents(BaseModel):
@@ -1276,7 +1303,7 @@ class UpcomingBirthday(BaseModel):
 class DashboardSummary(BaseModel):
     """Aggregated dashboard data: upcoming events (14 days) and birthdays (28 days)."""
     family_id: int = Field(..., description="Family ID")
-    next_events: list[CalendarEventResponse] = Field(..., description="Upcoming events within 14 days")
+    next_events: list[DashboardEventResponse] = Field(..., description="Upcoming events within 14 days")
     upcoming_birthdays: list[UpcomingBirthday] = Field(..., description="Upcoming birthdays within 28 days")
 
 

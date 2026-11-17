@@ -4,9 +4,11 @@ import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
 import ModalDialog from './ModalDialog';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import { resolveLaunchAction, resolveSharedText } from '../lib/navigationState';
+import { eventReminderTarget, openEventLink } from '../lib/reminderMute';
 import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf, navKeyOf, NO_HIDDEN_AREAS } from '../lib/navigation';
 import AppHeader from './shell/AppHeader';
 import SubNav from './shell/SubNav';
@@ -36,7 +38,8 @@ function TodaySkeleton({ messages }) {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, familyId, tasks, shoppingLists, demoMode, loading, navOrder, hiddenAreas = NO_HIDDEN_AREAS } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, familyId, families, switchFamily, pendingEventLink, setPendingEventLink, tasks, shoppingLists, demoMode, loading, navOrder, hiddenAreas = NO_HIDDEN_AREAS } = useApp();
+  const { error: toastError } = useToast();
   const [mobileSheet,setMobileSheet] = useState(null);
   const [createRequest,setCreateRequest] = useState(null);
   const [createKind, setCreateKind] = useState(null);
@@ -49,6 +52,13 @@ export default function AppShell() {
   useEffect(() => {
     if (launchHandled.current || loading || !me) return;
     launchHandled.current = true;
+    // Opened from a reminder's "Don't remind me" for a series.
+    const eventLink = eventReminderTarget(window.location.search);
+    if (eventLink?.choose) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
+      setPendingEventLink(eventLink);
+      return;
+    }
     const action = resolveLaunchAction(window.location.search);
     const shared = resolveSharedText(window.location.search);
     if (!action && !shared) return;
@@ -67,6 +77,16 @@ export default function AppShell() {
       setMobileSheet('new');
     }
   }, [loading, me, isChild, setActiveView]);
+  // An event link (from the address or the service worker) once the
+  // families are known, so it can switch to the event's family.
+  useEffect(() => {
+    if (!pendingEventLink || loading || !me || !families?.length) return;
+    setPendingEventLink(null);
+    openEventLink(pendingEventLink, {
+      setActiveView, switchFamily, familyId, families,
+      onError: () => toastError(t(messages, 'toast.error')),
+    });
+  }, [pendingEventLink, loading, me, families]);
   useEffect(() => {
     if (mobileSheet === 'new') return;
     setCreateKind(null);
