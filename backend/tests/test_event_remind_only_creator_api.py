@@ -464,3 +464,70 @@ def test_responses_show_the_series_owner_for_rows_stored_before(client, family):
     listed = client.get(f"/calendar/events?family_id={family['family_id']}", headers=_auth(family["ben"]))
     changed = next(item for item in listed.json()["items"] if item["id"] == changed_id)
     assert (changed["created_by_user_id"], changed["remind_only_creator"]) == (family["anna"]["id"], True)
+
+
+INVITATION = (
+    "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Mail//EN\r\n"
+    "BEGIN:VEVENT\r\nUID:invite-remind@example.com\r\nDTSTAMP:20260101T000000Z\r\n"
+    "RECURRENCE-ID:20261209T180000\r\n"
+    "DTSTART:20261210T180000\r\nDTEND:20261210T190000\r\n"
+    "SUMMARY:{title}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+)
+
+
+def _snapshot(family_id: int) -> list[tuple]:
+    return [
+        (r.id, r.title, r.ical_uid, r.recurrence_id, r.dav_href, r.created_by_user_id, r.remind_only_creator, r.updated_at)
+        for r in _calendar_rows(family_id)
+    ]
+
+
+def test_a_put_through_tribu_href_never_touches_a_lone_changed_occurrence(client, family):
+    """An imported invitation to one occurrence has no series row and is
+    served at tribu-event-<id>.ics. Writing it back there is refused, the
+    same way a UID conflict is, and nothing is deleted or changed."""
+    anna, ben = family["anna"], family["ben"]
+    imported = client.post(
+        "/calendar/events/import-ics",
+        json={"family_id": family["family_id"], "ics_text": INVITATION.format(title="Invitation"), "source_name": "Mail"},
+        headers=_auth(anna),
+    )
+    assert imported.status_code == 200, imported.text
+    [row] = _calendar_rows(family["family_id"])
+    assert row.recurrence_id is not None and row.dav_href is None
+    before = _snapshot(family["family_id"])
+    auth = {"Authorization": _basic(ben)["Authorization"]}
+    path = f"/dav/{ben['email']}/cal-{family['family_id']}/tribu-event-{row.id}.ics"
+
+    got = client.get(path, headers=auth)
+    assert got.status_code == 200, got.text
+    refused = client.put(path, headers=_basic(ben), content=got.text.replace("SUMMARY:Invitation", "SUMMARY:Changed"))
+
+    # Refused like the UID guard refused it before Tribu hrefs were
+    # resolved on PUT: a bad request, with nothing written.
+    assert refused.status_code == 400, refused.text
+    assert _snapshot(family["family_id"]) == before
+    assert client.get(path, headers=auth).text == got.text
+
+
+def test_occurrence_cleanup_never_removes_the_row_being_written(client, family):
+    """The cleanup of omitted changed occurrences skips the row the PUT
+    writes, even when that row is itself a changed occurrence."""
+    from app.dav.caldav_storage import CalendarCollection
+
+    db = SessionLocal()
+    try:
+        row = CalendarEvent(
+            family_id=family["family_id"], title="Invitation", starts_at=datetime(2026, 12, 10, 18, 0), all_day=False,
+            ical_uid="lone-remind@example.com", recurrence_id=datetime(2026, 12, 9, 18, 0),
+        )
+        db.add(row)
+        db.commit()
+        collection = CalendarCollection(None, family["anna"]["email"], family["family_id"], "Remind family")
+        collection._store_changed_occurrences(db, row, [])
+        db.commit()
+        row_id = row.id
+    finally:
+        db.close()
+
+    assert [r.id for r in _calendar_rows(family["family_id"])] == [row_id]

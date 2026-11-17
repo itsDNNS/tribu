@@ -371,9 +371,13 @@ class CalendarCollection(BaseCollection):
         those. The creator is the series' creator, since a changed
         occurrence is still part of the event that person created.
         """
+        # A resource of only a changed occurrence (an invitation to one
+        # occurrence) is that row itself, which is never an omitted
+        # occurrence of itself.
         existing = {
             ev.recurrence_id: ev
             for ev in _changed_occurrences_query(db, self._family_id, series.ical_uid)
+            if ev.id != series.id
         }
         for fields in occurrences:
             recurrence_id = fields["recurrence_id"]
@@ -420,16 +424,18 @@ class CalendarCollection(BaseCollection):
         client first writes them, so a client that GETs one and PUTs it
         back must update that row, keeping its creator and Tribu-only
         fields, instead of creating a copy. That href only names the row
-        while it has no client href of its own, and only if the row is
-        served as its own resource rather than inside a series.
+        while it has no client href of its own. A changed occurrence (a row
+        with ``recurrence_id``, for example an imported invitation to one
+        occurrence) cannot be written through it: the PUT is refused before
+        anything changes, as the UID guard did before.
         """
         ev = self._find_event_by_href_scoped(db, href)
         if ev is None or ev.dav_href == href:
             return ev
         if ev.dav_href is not None:
             return None
-        if self._resource_rows_scoped(db, ev) is None:
-            raise ValueError("This resource is part of another event; PUT to the series instead")
+        if ev.recurrence_id is not None:
+            raise ValueError("Changed occurrences cannot be written at this href; PUT the series instead")
         return ev
 
     def _find_event_by_href_scoped(self, db, href: str) -> Optional[CalendarEvent]:
