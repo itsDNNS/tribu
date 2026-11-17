@@ -142,6 +142,17 @@ self.addEventListener('push', (event) => {
   const actions = Array.isArray(data.actions) && data.action_token
     ? data.actions.filter((item) => item && item.action && item.title).slice(0, 2)
     : [];
+  const notificationData = { url: data.url || '/', actionToken: actions.length ? data.action_token : null };
+  // Buttons that open Tribu at a link instead of running in the background,
+  // such as "Don't remind me" for a series, which asks which ones.
+  const actionUrls = {};
+  if (data.action_urls && typeof data.action_urls === 'object') {
+    for (const { action } of actions) {
+      const url = data.action_urls[action];
+      if (typeof url === 'string' && url.startsWith('/')) actionUrls[action] = url;
+    }
+  }
+  if (Object.keys(actionUrls).length) notificationData.actionUrls = actionUrls;
 
   event.waitUntil(
     self.registration.showNotification(data.title, {
@@ -149,7 +160,7 @@ self.addEventListener('push', (event) => {
       icon: '/icons/icon-192.png',
       // Android uses the alpha mask for its small monochrome notification icon.
       badge: '/icons/notification-badge-96.png',
-      data: { url: data.url || '/', actionToken: actions.length ? data.action_token : null },
+      data: notificationData,
       actions,
     })
   );
@@ -182,12 +193,26 @@ function notificationViewFromUrl(rawUrl) {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const actionToken = event.notification.data?.actionToken;
-  if (event.action && actionToken) {
+  const actionUrl = event.action ? event.notification.data?.actionUrls?.[event.action] : null;
+  if (event.action && actionToken && !actionUrl) {
     event.waitUntil(runReminderAction(event.action, actionToken));
     return;
   }
-  const targetUrl = event.notification.data?.url || '/';
+  const targetUrl = actionUrl || event.notification.data?.url || '/';
   const targetView = notificationViewFromUrl(targetUrl);
+  // A button's link keeps its details (which event, which occurrence) for
+  // a newly opened window too.
+  let openQuery = '';
+  if (actionUrl) {
+    try {
+      const params = new URL(actionUrl, self.location.origin).searchParams;
+      params.delete('view');
+      const rest = params.toString();
+      if (rest) openQuery = `&${rest}`;
+    } catch {
+      openQuery = '';
+    }
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
@@ -197,7 +222,7 @@ self.addEventListener('notificationclick', (event) => {
           return client.focus();
         }
       }
-      return self.clients.openWindow(`/?view=${encodeURIComponent(targetView)}`);
+      return self.clients.openWindow(`/?view=${encodeURIComponent(targetView)}${openQuery}`);
     })
   );
 });

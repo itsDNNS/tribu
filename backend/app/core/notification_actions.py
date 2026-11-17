@@ -12,24 +12,37 @@ from __future__ import annotations
 import hashlib
 import hmac
 from datetime import datetime, timedelta, timezone
+from urllib.parse import parse_qs, urlsplit
 
 import jwt
 from sqlalchemy.orm import Session
 
 from app.core import task_service
 from app.core.clock import utcnow
+from app.core.event_reminders import (
+    MUTE_OCCURRENCE,
+    MUTE_SERIES,
+    ReminderMuteError,
+    is_part_of_series,
+    reminder_settings_row,
+    set_reminder_mute,
+    utc_to_local_wall,
+)
 from app.core.reminder_text import reminder_text
-from app.models import MealPlan, Membership, ReminderSnooze, ShoppingList, User
+from app.models import CalendarEvent, MealPlan, Membership, ReminderSnooze, ShoppingList, User
 from app.security import JWT_ALG, JWT_SECRET
 
 TOKEN_TYPE = "notification_action"
 TOKEN_TTL = timedelta(days=2)
 SNOOZE_DELAY = timedelta(hours=1)
 
-# What each kind of reminder offers.
+# What each kind of reminder offers. Browsers show at most two buttons.
 REMINDER_ACTIONS: dict[str, tuple[str, ...]] = {
     "task": ("done", "snooze"),
-    "event": ("snooze",),
+    # "Don't remind me": a single event is muted right from the
+    # notification; for a series the button opens Tribu to choose between
+    # this occurrence and all of them (see ``link_actions``).
+    "event": ("snooze", "mute"),
     # A meal whose ingredients are not on the list yet: "Add to list".
     "meal_plan": ("shopping",),
 }
@@ -53,6 +66,23 @@ def reminder_actions(source_type: str) -> tuple[str, ...]:
     return REMINDER_ACTIONS.get(source_type, ())
 
 
+def _repeats(link: str | None) -> bool:
+    """Whether an event reminder's link (``scheduler.event_reminder_link``)
+    is about an occurrence of a series."""
+    if not link:
+        return False
+    return parse_qs(urlsplit(link).query).get("repeats") == ["1"]
+
+
+def link_actions(source_type: str, link: str | None) -> dict[str, str]:
+    """Buttons that open Tribu at a link instead of running from the
+    notification: "Don't remind me" for an occurrence of a series, so the
+    choice between this one and all of them is made in the app."""
+    if source_type == "event" and _repeats(link):
+        return {"mute": f"{link}&mute=choose"}
+    return {}
+
+
 def create_action_token(
     *,
     user_id: int,
@@ -70,7 +100,8 @@ def create_action_token(
     ``expires_at`` (naive UTC) is when the reminder stops being true, such
     as the start of the event occurrence; a snooze keeps it.
     """
-    actions = reminder_actions(source_type)
+    opened = link_actions(source_type, link)
+    actions = tuple(action for action in reminder_actions(source_type) if action not in opened)
     if not actions:
         return None
     now = datetime.now(timezone.utc)
@@ -120,11 +151,15 @@ def reminder_push_actions(
     if token is None:
         return {}
     actions = reminder_actions(source_type)
-    return {
+    options = {
         "actions": actions,
         "action_token": token,
         "action_labels": {action: reminder_text(language, f"action_{action}") for action in actions},
     }
+    opened = link_actions(source_type, link)
+    if opened:
+        options["action_urls"] = opened
+    return options
 
 
 def _read_token(token: str) -> dict:
@@ -191,6 +226,9 @@ def apply_action(db: Session, token: str, action: str) -> dict:
     if action == "shopping" and payload["src"] == "meal_plan":
         return _add_meal_to_list(db, user, member, payload["sid"])
 
+    if action == "mute" and payload["src"] == "event":
+        return _mute_event_reminder(db, user, member, payload)
+
     raise NotificationActionError("ACTION_NOT_ALLOWED", 400)
 
 
@@ -217,3 +255,31 @@ def _add_meal_to_list(db: Session, user: User, member: Membership, plan_id: int)
         raise NotificationActionError("ACTION_GONE", 404)
     added = add_meal_ingredients(db, plan, shopping_list, user, missing_meal_ingredients(db, plan))
     return {"status": "ok", "action": "shopping", "added_count": len(added), "list_id": shopping_list.id}
+
+
+def _mute_event_reminder(db: Session, user: User, member: Membership, payload: dict) -> dict:
+    """"Don't remind me" from a reminder of a single event.
+
+    Tokens only offer it for single events. Should the event have become
+    part of a series since, only the occurrence the reminder was about is
+    muted, never the whole series.
+    """
+    event = (
+        db.query(CalendarEvent)
+        .filter(CalendarEvent.id == payload["sid"], CalendarEvent.family_id == member.family_id)
+        .first()
+    )
+    if event is None:
+        raise NotificationActionError("ACTION_GONE", 404)
+    try:
+        if not is_part_of_series(event, reminder_settings_row(db, event)):
+            state = set_reminder_mute(db, user.id, event, MUTE_SERIES, None)
+        elif payload.get("end") is not None:
+            start = utc_to_local_wall(datetime.fromtimestamp(payload["end"], timezone.utc).replace(tzinfo=None))
+            state = set_reminder_mute(db, user.id, event, MUTE_OCCURRENCE, start)
+        else:
+            raise NotificationActionError("ACTION_NOT_ALLOWED", 400)
+    except ReminderMuteError as exc:
+        raise NotificationActionError("ACTION_GONE", 404) from exc
+    db.commit()
+    return {"status": "ok", "action": "mute", "event_id": event.id, "reminder_muted": state}

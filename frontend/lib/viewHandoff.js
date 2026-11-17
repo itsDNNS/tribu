@@ -33,6 +33,13 @@ export function peekHandoff(key) {
   return store().get(key) ?? null;
 }
 
+// Takes what is waiting for a view, once.
+export function takeHandoff(key) {
+  const value = peekHandoff(key);
+  store().delete(key);
+  return value;
+}
+
 // "2026-09-30" as a local date, or null.
 export function handoffDate(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || '');

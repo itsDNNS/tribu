@@ -950,6 +950,14 @@ dialog:not([open]) { display: none; }
 .notif-title-unread { font-weight: 850; }
 .notif-time { font-size: 0.75rem; color: var(--text-muted); flex-shrink: 0; }
 .notif-body { font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px; }
+/* "Don't remind me" on event reminders, and its choice for a series. */
+.notif-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 0 -12px; }
+.notif-actions .notif-action { gap: 6px; font-size: 0.8rem; }
+.notif-mute-choice { display: flex; flex-wrap: wrap; gap: 6px; margin-left: 12px; }
+.notif-chip { min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--amethyst) 45%, var(--border-subtle)); background: color-mix(in srgb, var(--amethyst) 10%, var(--surface-paper)); color: var(--text-primary); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.notif-chip:hover { background: color-mix(in srgb, var(--amethyst) 18%, var(--surface-paper)); }
+.notif-chip:focus-visible, .notif-actions .notif-action:focus-visible { outline: 2px solid var(--amethyst); outline-offset: 2px; }
+.notif-muted { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0 0; font-size: 0.8rem; color: var(--text-muted); }
 .notif-delete { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 8px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); }
 .notif-empty { padding: var(--space-xl); text-align: center; color: var(--text-muted); background: var(--surface-paper); border: 1px dashed var(--border-subtle); border-radius: 14px; box-shadow: var(--shadow-soft); }
 .notif-empty-icon { margin-bottom: var(--space-sm); opacity: 0.4; }

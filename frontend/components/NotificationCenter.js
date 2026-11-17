@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Bell, CalendarClock, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, Utensils, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, BellOff, CalendarClock, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, Utensils, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../contexts/ToastContext';
 import { t, tc } from '../lib/i18n';
@@ -8,6 +8,7 @@ import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { setPendingClearToast, startPendingClear, undoPendingClear } from '../lib/notificationClear';
 import { isNotificationExpired } from '../lib/notificationExpiry';
+import { announceReminderMute, eventReminderTarget, setReminderMute } from '../lib/reminderMute';
 
 const TYPE_ICONS = {
   event_reminder: CalendarDays,
@@ -73,6 +74,20 @@ export default function NotificationCenter({ onClose } = {}) {
   // The list as it is now, for callbacks that run after the delete request.
   const notificationsRef = useRef(notifications);
   notificationsRef.current = notifications;
+
+  // "Don't remind me" on event reminders: the notification whose choice
+  // (this occurrence or all) is open, and those already muted here.
+  const [choosing, setChoosing] = useState(null);
+  const [muted, setMuted] = useState(() => new Set());
+  const muteButtons = useRef(new Map());
+  const mutedNotes = useRef(new Map());
+  const focusMutedNote = useRef(null);
+
+  useEffect(() => {
+    if (focusMutedNote.current == null) return;
+    mutedNotes.current.get(focusMutedNote.current)?.focus();
+    focusMutedNote.current = null;
+  }, [muted]);
 
   const now = Date.now();
   const shown = notifications.filter((n) => !isNotificationExpired(n, now));
@@ -155,6 +170,100 @@ export default function NotificationCenter({ onClose } = {}) {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       if (notif && !notif.read) setUnreadCount((c) => Math.max(0, c - 1));
     }
+  }
+
+  function markMuted(id, value) {
+    setMuted((prev) => {
+      const next = new Set(prev);
+      if (value) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  // Only reminders stop; who takes part stays. Undo reminds again.
+  async function handleMute(notif, target, scope) {
+    setChoosing(null);
+    try {
+      const state = await setReminderMute(api, target.eventId, scope, target.at);
+      announceReminderMute({ eventId: target.eventId, at: target.at, state });
+      focusMutedNote.current = notif.id;
+      markMuted(notif.id, true);
+      const key = state === 'occurrence'
+        ? 'toast.reminder_muted_occurrence'
+        : target.repeats ? 'toast.reminder_muted_series' : 'toast.reminder_muted_event';
+      toastSuccess(t(messages, key), {
+        label: t(messages, 'module.shopping.undo'),
+        onClick: async () => {
+          try {
+            await setReminderMute(api, target.eventId, null, target.at);
+            announceReminderMute({ eventId: target.eventId, at: target.at, state: null });
+            markMuted(notif.id, false);
+            toastSuccess(t(messages, 'toast.reminder_unmuted'));
+          } catch {
+            toastError(t(messages, 'toast.error'));
+          }
+        },
+      });
+    } catch {
+      toastError(t(messages, 'toast.error'));
+      muteButtons.current.get(notif.id)?.focus();
+    }
+  }
+
+  function closeChoice(id) {
+    setChoosing(null);
+    muteButtons.current.get(id)?.focus();
+  }
+
+  function renderMuteAction(notif) {
+    if (notif.type !== 'event_reminder') return null;
+    const target = eventReminderTarget(notif.link);
+    if (!target) return null;
+    if (muted.has(notif.id)) {
+      return (
+        <p
+          className="notif-muted"
+          tabIndex={-1}
+          ref={(el) => { if (el) mutedNotes.current.set(notif.id, el); else mutedNotes.current.delete(notif.id); }}
+        >
+          <BellOff size={14} aria-hidden="true" /> {t(messages, 'notifications_reminder_muted')}
+        </p>
+      );
+    }
+    const open = choosing === notif.id;
+    const choiceId = `notif-mute-choice-${notif.id}`;
+    return (
+      // Clicks and keys here belong to these buttons, not to opening the notification.
+      <div className="notif-actions" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="bento-empty-action notif-action"
+          ref={(el) => { if (el) muteButtons.current.set(notif.id, el); else muteButtons.current.delete(notif.id); }}
+          aria-expanded={target.repeats ? open : undefined}
+          aria-controls={target.repeats && open ? choiceId : undefined}
+          onClick={() => (target.repeats ? setChoosing(open ? null : notif.id) : handleMute(notif, target, 'series'))}
+        >
+          <BellOff size={14} aria-hidden="true" /> {t(messages, 'notifications_mute_reminder')}
+        </button>
+        {target.repeats && open && (
+          <div
+            id={choiceId}
+            role="group"
+            aria-label={t(messages, 'notifications_mute_choice')}
+            className="notif-mute-choice"
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); closeChoice(notif.id); } }}
+          >
+            <button type="button" className="notif-chip" onClick={() => handleMute(notif, target, 'occurrence')}>
+              {t(messages, 'notifications_mute_occurrence')}
+            </button>
+            <button type="button" className="notif-chip" onClick={() => handleMute(notif, target, 'series')}>
+              {t(messages, 'notifications_mute_series')}
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
   function handleClick(notif) {
@@ -287,6 +396,7 @@ export default function NotificationCenter({ onClose } = {}) {
                         {body}
                       </div>
                     )}
+                    {renderMuteAction(notif)}
                   </div>
                   <button
                     type="button"

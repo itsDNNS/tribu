@@ -5,6 +5,7 @@ import { dropDevicePushSubscription } from '../hooks/usePushSubscription';
 import { listLanguages, loadLocale } from '../lib/i18n';
 import { useLocaleMessages } from '../hooks/useLocaleMessages';
 import { resolveInitialView } from '../lib/navigationState';
+import { eventReminderTarget, openEventLink } from '../lib/reminderMute';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { cancelPendingClear, setPendingClearUser, withoutPendingClear } from '../lib/notificationClear';
 import { useNotificationExpiry } from '../hooks/useNotificationExpiry';
@@ -495,7 +496,10 @@ export function AppProvider({ children }) {
     if (!('serviceWorker' in navigator)) return;
     const handler = (event) => {
       if (event.data?.type === 'NAVIGATE' && event.data.url) {
-        setActiveView(notificationLinkView(event.data.url));
+        // "Don't remind me" on a reminder of a series opens the event to choose.
+        const target = eventReminderTarget(event.data.url);
+        if (target?.choose) openEventLink(target, setActiveView);
+        else setActiveView(notificationLinkView(event.data.url));
       }
     };
     navigator.serviceWorker.addEventListener('message', handler);

@@ -18,6 +18,8 @@ from app.core.clock import to_utc_naive, utcnow
 
 logger = logging.getLogger(__name__)
 PUSH_TIMEOUT_SECONDS = 10
+# Reminder buttons the Android and iOS apps know how to draw (Tribu 2.0, N-2).
+NATIVE_APP_ACTIONS = frozenset({"done", "snooze", "shopping"})
 
 
 @dataclass
@@ -313,6 +315,7 @@ def send_push_for_user(
     actions: tuple[str, ...] = (),
     action_token: str | None = None,
     action_labels: dict[str, str] | None = None,
+    action_urls: dict[str, str] | None = None,
 ) -> PushResult:
     """Send a web-push payload to every active subscription for ``user_id``.
 
@@ -345,6 +348,9 @@ def send_push_for_user(
         labels = action_labels or {}
         web_message["actions"] = [{"action": action, "title": labels.get(action, action)} for action in actions]
         web_message["action_token"] = action_token
+        if action_urls:
+            # Buttons that open Tribu at this link instead of running.
+            web_message["action_urls"] = action_urls
     payload = json.dumps(web_message)
     web_subscriptions = [sub for sub in subscriptions if getattr(sub, "platform", "web") == "web"]
     expo_subscriptions = [sub for sub in subscriptions if getattr(sub, "platform", "web") == "expo"]
@@ -422,6 +428,9 @@ def send_push_for_user(
             result.errors.append(error)
             logger.warning("Expo push failed for token prefix %s: %s", sub.endpoint[:24], error)
 
+    # The apps draw only the buttons they know (iOS needs a registered
+    # category for the set), so newer ones stay in the browser.
+    native_actions = tuple(action for action in actions if action in NATIVE_APP_ACTIONS)
     if fcm_subscriptions and not is_fcm_configured():
         result.skipped_reason = "fcm_not_configured" if result.attempted == 0 else result.skipped_reason
     for sub in fcm_subscriptions if is_fcm_configured() else []:
@@ -431,7 +440,7 @@ def send_push_for_user(
         result.attempted += 1
         ok, error, remove = _send_fcm_push(
             sub.endpoint, title, body, url, **options,
-            **({"actions": actions, "action_token": action_token} if getattr(sub, "supports_actions", False) else {}),
+            **({"actions": native_actions, "action_token": action_token} if getattr(sub, "supports_actions", False) else {}),
         )
         if ok:
             result.succeeded += 1

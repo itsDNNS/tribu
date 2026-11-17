@@ -553,6 +553,7 @@ class CalendarEventResponse(BaseModel):
     icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
     created_by_user_id: Optional[int] = Field(None, description="User who created the event; for a changed occurrence of a series, the series' creator")
     remind_only_creator: bool = Field(False, description="True if only the creator (created_by_user_id) is reminded before the event starts. While the creator is no longer in the family, everyone is reminded.")
+    reminder_muted: Optional[Literal["series", "occurrence"]] = Field(None, description="Whether the signed-in user took themselves off the reminder for this event or occurrence: 'series' for the whole series (or the whole single event), 'occurrence' for this occurrence only, null when they get it. Only reminders are affected, not who takes part.")
     created_at: datetime = Field(..., description="Creation timestamp")
     source_type: str = Field("local", description="Where the event came from: 'local', 'import', or 'subscription'")
     source_name: Optional[str] = Field(None, description="Human-readable name of the source feed (e.g. 'Apple Holidays')")
@@ -560,6 +561,23 @@ class CalendarEventResponse(BaseModel):
     imported_at: Optional[datetime] = Field(None, description="When the event was first imported")
     last_synced_at: Optional[datetime] = Field(None, description="Last time an external feed was refreshed or re-imported")
     sync_status: Optional[str] = Field(None, description="Current external sync state, e.g. ok or error")
+
+
+class EventReminderMuteRequest(BaseModel):
+    """Take the signed-in user off an event's reminder."""
+    scope: Literal["occurrence", "series"] = Field("series", description="'series' mutes every occurrence of a series (a single event is always muted as a whole); 'occurrence' mutes only the occurrence starting at occurrence_start and lifts a mute of the whole series")
+    occurrence_start: Optional[datetime] = Field(None, description="Start of the occurrence as the calendar lists it (local wall time, or an instant with offset); needed for scope 'occurrence' unless the event is a changed occurrence")
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{"scope": "occurrence", "occurrence_start": "2026-12-01T09:00:00"}, {"scope": "series"}]
+    })
+
+
+class EventReminderMuteResponse(BaseModel):
+    """The signed-in user's reminder state for an event or occurrence."""
+    event_id: int = Field(..., description="Event ID from the request")
+    occurrence_start: Optional[datetime] = Field(None, description="Occurrence from the request, if any")
+    reminder_muted: Optional[Literal["series", "occurrence"]] = Field(None, description="'series', 'occurrence', or null when the user gets the reminder")
 
 
 class PaginatedCalendarEvents(BaseModel):

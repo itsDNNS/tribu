@@ -695,6 +695,38 @@
 .tc-remind .tc-remind-hint {
   margin: 4px 0 0 24px;
 }
+/* "My reminder" in an event's details. */
+.tc-reminder-choice {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.tc-reminder-choice legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.tc-reminder .tc-check {
+  min-height: 32px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tc-reminder .tc-check input {
+  margin: 0;
+}
+.tc-reminder .tc-check input:focus-visible {
+  outline: 2px solid var(--tc-purple);
+  outline-offset: 2px;
+}
+.tc-reminder-switch {
+  font-weight: 600;
+}
+.tc-reminder .tc-remind-hint {
+  margin-top: 2px;
+}
 .tc-error {
   color: var(--danger);
   font-size: 12px;

@@ -213,7 +213,7 @@ def test_action_tokens_are_scoped_and_no_session(monkeypatch):
     assert unknown.status_code == 400
 
 
-def test_event_reminders_only_snooze(monkeypatch):
+def test_event_reminders_cannot_be_marked_done(monkeypatch):
     with TestSession() as db:
         user, family = _seed(db)
         event_row = CalendarEvent(family_id=family.id, title="Swimming", all_day=False, starts_at=datetime(2026, 9, 17, 16, 0))

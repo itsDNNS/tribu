@@ -108,6 +108,66 @@ describe('service worker reminder actions (Tribu 2.0, N-2)', () => {
   });
 });
 
+describe('service worker buttons that open Tribu', () => {
+  function handler(sandbox, type) {
+    return sandbox.self.addEventListener.mock.calls.find(([name]) => name === type)[1];
+  }
+
+  it('keeps the link of a button that opens Tribu', () => {
+    const sandbox = loadServiceWorker();
+    handler(sandbox, 'push')({
+      data: { json: () => ({
+        title: 'Swimming', body: 'Starts at 09:00', url: '/calendar?event=4&at=2026-12-08T09:00:00&repeats=1',
+        actions: [{ action: 'snooze', title: 'Later' }, { action: 'mute', title: "Don't remind me" }],
+        action_token: 'tok',
+        action_urls: { mute: '/calendar?event=4&at=2026-12-08T09:00:00&repeats=1&mute=choose', snooze: 'https://evil.example/' },
+      }) },
+      waitUntil: () => {},
+    });
+    const options = sandbox.self.registration.showNotification.mock.calls[0][1];
+    // Only same-origin paths, and only for buttons that are shown.
+    expect(options.data.actionUrls).toEqual({ mute: '/calendar?event=4&at=2026-12-08T09:00:00&repeats=1&mute=choose' });
+  });
+
+  it('opens Tribu at the link instead of running the button', async () => {
+    const sandbox = loadServiceWorker();
+    sandbox.self.clients.matchAll = jest.fn().mockResolvedValue([]);
+    sandbox.self.clients.openWindow = jest.fn();
+    let waited;
+    handler(sandbox, 'notificationclick')({
+      action: 'mute',
+      notification: {
+        close: jest.fn(),
+        data: { url: '/calendar?event=4', actionToken: 'tok', actionUrls: { mute: '/calendar?event=4&at=2026-12-08T09:00:00&repeats=1&mute=choose' } },
+      },
+      waitUntil: (promise) => { waited = promise; },
+    });
+    await waited;
+    expect(sandbox.fetch).not.toHaveBeenCalled();
+    expect(sandbox.self.clients.openWindow).toHaveBeenCalledWith(
+      '/?view=calendar&event=4&at=2026-12-08T09%3A00%3A00&repeats=1&mute=choose',
+    );
+  });
+
+  it('hands the link to an open Tribu window', async () => {
+    const sandbox = loadServiceWorker();
+    const client = { url: 'https://tribu.example.test/#dashboard', postMessage: jest.fn(), focus: jest.fn() };
+    sandbox.self.clients.matchAll = jest.fn().mockResolvedValue([client]);
+    sandbox.self.clients.openWindow = jest.fn();
+    let waited;
+    const link = '/calendar?event=4&at=2026-12-08T09:00:00&repeats=1&mute=choose';
+    handler(sandbox, 'notificationclick')({
+      action: 'mute',
+      notification: { close: jest.fn(), data: { url: '/calendar?event=4', actionToken: 'tok', actionUrls: { mute: link } } },
+      waitUntil: (promise) => { waited = promise; },
+    });
+    await waited;
+    expect(client.postMessage).toHaveBeenCalledWith({ type: 'NAVIGATE', url: link });
+    expect(client.focus).toHaveBeenCalled();
+    expect(sandbox.self.clients.openWindow).not.toHaveBeenCalled();
+  });
+});
+
 describe('service worker network routing and build cleanup', () => {
   const origin = 'https://tribu.example.test';
 

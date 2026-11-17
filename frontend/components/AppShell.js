@@ -7,6 +7,7 @@ import { useApp } from '../contexts/AppContext';
 import { t } from '../lib/i18n';
 import { announce } from '../lib/announce';
 import { resolveLaunchAction, resolveSharedText } from '../lib/navigationState';
+import { eventReminderTarget, openEventLink } from '../lib/reminderMute';
 import { ACCOUNT_NAV_KEYS, isNavItemVisible, NAV_GROUPS, NAV_ITEM_META, navGroupOf, navKeyOf, NO_HIDDEN_AREAS } from '../lib/navigation';
 import AppHeader from './shell/AppHeader';
 import SubNav from './shell/SubNav';
@@ -49,6 +50,13 @@ export default function AppShell() {
   useEffect(() => {
     if (launchHandled.current || loading || !me) return;
     launchHandled.current = true;
+    // Opened from a reminder's "Don't remind me" for a series.
+    const eventLink = eventReminderTarget(window.location.search);
+    if (eventLink?.choose) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
+      openEventLink(eventLink, setActiveView);
+      return;
+    }
     const action = resolveLaunchAction(window.location.search);
     const shared = resolveSharedText(window.location.search);
     if (!action && !shared) return;

@@ -26,9 +26,18 @@ from app.core.scopes import require_scope
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
 from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync, Membership, Notification, NotificationPreference, User
-from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, CalendarIcsSubscribe, CalendarSubscriptionCreate, CalendarSubscriptionResponse, PaginatedCalendarEvents
+from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, CalendarIcsSubscribe, CalendarSubscriptionCreate, CalendarSubscriptionResponse, EventReminderMuteRequest, EventReminderMuteResponse, PaginatedCalendarEvents
 from app.core.errors import error_detail, EVENT_NOT_FOUND, EVENT_REMINDER_CREATOR_ONLY, END_BEFORE_START, INVALID_RECURRENCE
-from app.core.event_reminders import reminder_settings_row, series_reminder_owners, with_series_reminder_owner
+from app.core.event_reminders import (
+    ReminderMuteError,
+    clear_reminder_mute,
+    reminder_mute_state,
+    reminder_mute_states,
+    reminder_settings_row,
+    series_reminder_owners,
+    set_reminder_mute,
+    with_series_reminder_owner,
+)
 
 router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})
 logger = logging.getLogger(__name__)
@@ -90,25 +99,33 @@ def list_calendar_events(
         page = all_occurrences[offset:offset + limit]
 
         owners = series_reminder_owners(db, [*non_recurring, *recurring])
-        items = [CalendarEventResponse(**with_series_reminder_owner(o, owners)) for o in page]
+        muted = reminder_mute_states(db, user.id, [*non_recurring, *recurring], page)
+        items = [
+            CalendarEventResponse(**with_series_reminder_owner(o, owners), reminder_muted=state)
+            for o, state in zip(page, muted)
+        ]
         return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
 
     base = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id)
     total = base.count()
     rows = base.order_by(CalendarEvent.starts_at.asc()).offset(offset).limit(limit).all()
     owners = series_reminder_owners(db, rows)
-    items = [_event_response(row, owners) for row in rows]
+    muted = reminder_mute_states(db, user.id, rows, [{"id": row.id, "starts_at": row.starts_at} for row in rows])
+    items = [_event_response(row, owners, state) for row, state in zip(rows, muted)]
     return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
 
 
-def _event_response(event: CalendarEvent, owners: dict[int, tuple[Optional[int], bool]]) -> CalendarEventResponse:
+def _event_response(
+    event: CalendarEvent, owners: dict[int, tuple[Optional[int], bool]], reminder_muted: Optional[str] = None,
+) -> CalendarEventResponse:
     """The API view of ``event``; a changed occurrence of a series shows the
     series' creator and reminder setting, which are the ones that apply."""
     response = CalendarEventResponse.model_validate(event)
+    update: dict = {"reminder_muted": reminder_muted}
     owner = owners.get(event.id)
-    if owner is None:
-        return response
-    return response.model_copy(update={"created_by_user_id": owner[0], "remind_only_creator": owner[1]})
+    if owner is not None:
+        update.update(created_by_user_id=owner[0], remind_only_creator=owner[1])
+    return response.model_copy(update=update)
 
 
 def _family_member_names(db: Session, family_id: int) -> dict[int, str]:
@@ -924,7 +941,8 @@ def update_calendar_event(
     db.commit()
     db.refresh(event)
     cache.invalidate_pattern(f"tribu:dashboard:{event.family_id}:*")
-    return _event_response(event, series_reminder_owners(db, [event]))
+    state = reminder_mute_states(db, user.id, [event], [{"id": event.id, "starts_at": event.starts_at}])[0]
+    return _event_response(event, series_reminder_owners(db, [event]), state)
 
 
 @router.delete(
@@ -990,6 +1008,86 @@ def delete_calendar_event(
     db.commit()
     cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")
     return {"status": "deleted", "event_id": event_id}
+
+
+def _event_for_reminder_mute(db: Session, event_id: int, user: User) -> CalendarEvent:
+    event = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail=error_detail(EVENT_NOT_FOUND))
+    # Any member can be reminded, so any member may take themselves off:
+    # children and members who cannot edit the event too.
+    ensure_family_membership(db, user.id, event.family_id)
+    return event
+
+
+REMINDER_MUTE_SCOPE_NOTE = (
+    "Scopes: `calendar:read` (the event must be visible) and `profile:write` (a personal notification "
+    "setting, like the notification preferences)."
+)
+
+
+@router.put(
+    "/events/{event_id}/reminder-mute",
+    response_model=EventReminderMuteResponse,
+    summary="Stop reminding me of an event",
+    description=(
+        "Take the signed-in user off the reminder before this event starts, in the app, by push and in the "
+        "count for household destinations. Taking part (`assigned_to`) is not affected. Any family member "
+        "may do this, also children and members who cannot edit the event. For a series, `scope` "
+        "`occurrence` mutes the occurrence starting at `occurrence_start` (a changed occurrence needs none) "
+        "and `series` every occurrence; a single event is muted as a whole. Undo with DELETE. "
+        + REMINDER_MUTE_SCOPE_NOTE
+    ),
+    response_description="The user's reminder state for the event or occurrence",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def mute_event_reminder(
+    event_id: int,
+    payload: EventReminderMuteRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _read_scope=require_scope("calendar:read"),
+    _write_scope=require_scope("profile:write"),
+):
+    event = _event_for_reminder_mute(db, event_id, user)
+    try:
+        state = set_reminder_mute(db, user.id, event, payload.scope, payload.occurrence_start)
+    except ReminderMuteError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=error_detail(exc.code))
+    db.commit()
+    return EventReminderMuteResponse(event_id=event_id, occurrence_start=payload.occurrence_start, reminder_muted=state)
+
+
+@router.delete(
+    "/events/{event_id}/reminder-mute",
+    response_model=EventReminderMuteResponse,
+    summary="Remind me of an event again",
+    description=(
+        "Undo a mute of the signed-in user. With `occurrence_start` (or for a changed occurrence) that "
+        "occurrence reminds again, which also lifts a mute of the whole series; without it, every mute of "
+        "the series or event goes. " + REMINDER_MUTE_SCOPE_NOTE
+    ),
+    response_description="The user's reminder state for the event or occurrence",
+    responses={**NOT_FOUND_RESPONSE},
+)
+def unmute_event_reminder(
+    event_id: int,
+    occurrence_start: Optional[datetime] = Query(None, description="Start of the occurrence as the calendar lists it"),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _read_scope=require_scope("calendar:read"),
+    _write_scope=require_scope("profile:write"),
+):
+    event = _event_for_reminder_mute(db, event_id, user)
+    try:
+        clear_reminder_mute(db, user.id, event, occurrence_start)
+        db.commit()
+        state = reminder_mute_state(db, user.id, event, occurrence_start)
+    except ReminderMuteError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=error_detail(exc.code))
+    return EventReminderMuteResponse(event_id=event_id, occurrence_start=occurrence_start, reminder_muted=state)
 
 
 def _set_remind_only_creator(db: Session, event: CalendarEvent, value: bool, user: User) -> None:

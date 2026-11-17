@@ -113,7 +113,7 @@ def _reminded(event_id: int) -> list[int]:
             uid
             for (uid,) in db.query(Notification.user_id).filter(
                 Notification.type == "event_reminder",
-                Notification.link == f"/calendar?event={event_id}",
+                Notification.link.like(f"/calendar?event={event_id}&%"),
             )
         )
     finally:
@@ -251,7 +251,7 @@ def _snooze(family_id: int, user_id: int, event_id: int) -> None:
             notification_type="event_reminder",
             title="Dentist",
             body="Snoozed",
-            link=f"/calendar?event={event_id}",
+            link=f"/calendar?event={event_id}&at={(NOW + timedelta(minutes=20)).isoformat()}",
             remind_at=NOW - timedelta(minutes=1),
             expires_at=NOW + timedelta(minutes=20),
         ))
