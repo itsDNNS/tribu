@@ -293,14 +293,7 @@ class CalendarCollection(BaseCollection):
 
         with _db() as db:
             member_names = _family_member_names(db, self._family_id)
-            existing_by_href = (
-                db.query(CalendarEvent)
-                .filter(
-                    CalendarEvent.family_id == self._family_id,
-                    CalendarEvent.dav_href == href,
-                )
-                .first()
-            )
+            existing_by_href = self._find_event_for_put_scoped(db, href)
             # Defensive guard against silent cross-resource hijack on
             # a UID match at a different href. The changed occurrences
             # of the series at this href are part of this resource.
@@ -419,6 +412,25 @@ class CalendarCollection(BaseCollection):
         if lead is None:
             return None
         return self._resource_rows_scoped(db, lead)
+
+    def _find_event_for_put_scoped(self, db, href: str) -> Optional[CalendarEvent]:
+        """The row a PUT to ``href`` overwrites.
+
+        Events made in Tribu are served at ``tribu-event-<id>.ics`` until a
+        client first writes them, so a client that GETs one and PUTs it
+        back must update that row, keeping its creator and Tribu-only
+        fields, instead of creating a copy. That href only names the row
+        while it has no client href of its own, and only if the row is
+        served as its own resource rather than inside a series.
+        """
+        ev = self._find_event_by_href_scoped(db, href)
+        if ev is None or ev.dav_href == href:
+            return ev
+        if ev.dav_href is not None:
+            return None
+        if self._resource_rows_scoped(db, ev) is None:
+            raise ValueError("This resource is part of another event; PUT to the series instead")
+        return ev
 
     def _find_event_by_href_scoped(self, db, href: str) -> Optional[CalendarEvent]:
         ev = (
@@ -716,11 +728,12 @@ class AddressBookCollection(BaseCollection):
         raw_vcard = fields.pop("raw_vcard", None)
 
         with _db() as db:
-            existing_by_href = (
-                db.query(Contact)
-                .filter(Contact.family_id == self._family_id, Contact.dav_href == href)
-                .first()
-            )
+            # Contacts made in Tribu are served at tribu-contact-<id>.vcf
+            # until a client first writes them; a PUT there updates that
+            # contact instead of creating a copy.
+            existing_by_href = self._find_contact_by_href_scoped(db, href)
+            if existing_by_href is not None and existing_by_href.dav_href not in (None, href):
+                existing_by_href = None
             existing_by_uid = (
                 db.query(Contact)
                 .filter(Contact.family_id == self._family_id, Contact.vcard_uid == uid)

@@ -16,11 +16,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.database import Base, SessionLocal, engine
-from app.models import CalendarEvent, Family, Membership, PersonalAccessToken, User
+from app.models import CalendarEvent, Contact, Family, Membership, PersonalAccessToken, User
 from app.security import PAT_PREFIX, hash_password
 
 
-SCOPES = "calendar:read,calendar:write"
+SCOPES = "calendar:read,calendar:write,contacts:read,contacts:write"
 
 
 @pytest.fixture(scope="module")
@@ -62,6 +62,7 @@ def family(client):
         db = SessionLocal()
         try:
             db.query(CalendarEvent).delete()
+            db.query(Contact).delete()
             db.query(PersonalAccessToken).delete()
             db.query(Membership).delete()
             db.query(User).delete()
@@ -337,3 +338,69 @@ def test_dav_writes_never_reset_the_setting(client, family):
     sneaky = _dav_event("Gym (renamed)").replace("SUMMARY:", "X-TRIBU-REMIND-ONLY-CREATOR:FALSE\r\nSUMMARY:")
     assert client.put(ben_path, headers=_basic(ben), content=sneaky).status_code in (201, 204)
     assert _row(series_id).remind_only_creator is True
+
+
+def _calendar_rows(family_id: int) -> list[CalendarEvent]:
+    db = SessionLocal()
+    try:
+        return db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).order_by(CalendarEvent.id).all()
+    finally:
+        db.close()
+
+
+def test_a_phone_editing_an_event_made_in_tribu_updates_it_in_place(client, family):
+    """Events made in Tribu are served at tribu-event-<id>.ics. A phone
+    that GETs one and PUTs it back changes that event; it must not create
+    a copy that belongs to the phone's user and reminds everyone."""
+    anna, ben = family["anna"], family["ben"]
+    event = _create(client, family, title="Dentist", remind_only_creator=True)
+    path = f"/dav/{ben['email']}/cal-{family['family_id']}/tribu-event-{event['id']}.ics"
+    headers = _basic(ben)
+
+    got = client.get(path, headers={"Authorization": headers["Authorization"]})
+    assert got.status_code == 200, got.text
+    assert "SUMMARY:Dentist" in got.text
+    edited = got.text.replace("SUMMARY:Dentist", "SUMMARY:Dentist (moved)")
+    put = client.put(path, headers=headers, content=edited)
+    assert put.status_code in (201, 204), put.text
+
+    rows = _calendar_rows(family["family_id"])
+    assert [(r.id, r.title, r.created_by_user_id, r.remind_only_creator) for r in rows] == [
+        (event["id"], "Dentist (moved)", anna["id"], True),
+    ]
+    # Still served at the same URL, and a second round trip stays in place.
+    again = client.get(path, headers={"Authorization": headers["Authorization"]})
+    assert again.status_code == 200, again.text
+    put = client.put(path, headers=headers, content=again.text.replace("Dentist (moved)", "Dentist (later)"))
+    assert put.status_code in (201, 204), put.text
+    assert [(r.id, r.title) for r in _calendar_rows(family["family_id"])] == [(event["id"], "Dentist (later)")]
+
+    deleted = client.request("DELETE", path, headers={"Authorization": headers["Authorization"]})
+    assert deleted.status_code in (200, 204), deleted.text
+    assert _calendar_rows(family["family_id"]) == []
+
+
+def test_a_phone_editing_a_contact_made_in_tribu_updates_it_in_place(client, family):
+    db = SessionLocal()
+    try:
+        contact = Contact(family_id=family["family_id"], full_name="Oma Erika", phone="+49 30 1234")
+        db.add(contact)
+        db.commit()
+        contact_id = contact.id
+    finally:
+        db.close()
+    ben = family["ben"]
+    path = f"/dav/{ben['email']}/book-{family['family_id']}/tribu-contact-{contact_id}.vcf"
+    auth = {"Authorization": _basic(ben)["Authorization"]}
+
+    got = client.get(path, headers=auth)
+    assert got.status_code == 200, got.text
+    put = client.put(path, headers={**auth, "Content-Type": "text/vcard"}, content=got.text.replace("Oma Erika", "Oma Erika B."))
+    assert put.status_code in (201, 204), put.text
+
+    db = SessionLocal()
+    try:
+        rows = db.query(Contact).filter(Contact.family_id == family["family_id"]).all()
+        assert [(r.id, r.full_name) for r in rows] == [(contact_id, "Oma Erika B.")]
+    finally:
+        db.close()
