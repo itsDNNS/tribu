@@ -371,4 +371,63 @@ describe('AppProvider bootstrap', () => {
       jest.useRealTimers();
     }
   });
+
+  test('clears loading when a request of a family switch fails', async () => {
+    function SwitchProbe() {
+      const { loading, familyId, switchFamily } = useApp();
+      return (
+        <div>
+          <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
+          <span data-testid="family-id">{familyId}</span>
+          <button type="button" onClick={() => switchFamily('8').catch(() => {})}>Switch family</button>
+        </div>
+      );
+    }
+    render(<AppProvider><SwitchProbe /></AppProvider>);
+    await waitFor(() => expect(screen.getByTestId('family-id')).toHaveTextContent('7'));
+    api.apiGetMembers.mockRejectedValueOnce(new Error('offline'));
+
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch family' })); });
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
+  });
+
+  test('keeps a "Don\'t remind me" push link that arrives while starting', async () => {
+    const listeners = [];
+    Object.defineProperty(window.navigator, 'serviceWorker', {
+      configurable: true,
+      value: { addEventListener: (type, fn) => listeners.push(fn), removeEventListener: jest.fn() },
+    });
+    let loadFamilies;
+    api.apiGetMyFamilies.mockReturnValue(new Promise((resolve) => { loadFamilies = resolve; }));
+    function LinkProbe() {
+      const { loading, pendingEventLink } = useApp();
+      return (
+        <div>
+          <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
+          <output data-testid="pending">{JSON.stringify(pendingEventLink)}</output>
+        </div>
+      );
+    }
+    const { unmount } = render(<AppProvider><LinkProbe /></AppProvider>);
+    try {
+      await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
+      act(() => {
+        listeners.forEach((fn) => fn({ data: { type: 'NAVIGATE', url: '/calendar?event=4&family=8&at=2026-12-01T09:00:00&repeats=1&mute=choose' } }));
+      });
+      await act(async () => {
+        loadFamilies({ ok: true, data: [{ family_id: 7, role: 'admin', is_adult: true }, { family_id: 8, role: 'member', is_adult: true }] });
+      });
+      await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
+
+      // Waiting for AppShell, which switches to family 8 and opens it.
+      expect(JSON.parse(screen.getByTestId('pending').textContent)).toEqual({
+        eventId: 4, familyId: 8, at: '2026-12-01T09:00:00', repeats: true, choose: true,
+      });
+    } finally {
+      unmount();
+      delete window.navigator.serviceWorker;
+    }
+  });
 });
+

@@ -765,7 +765,7 @@ def test_event_reminder_mutes_migration_creates_the_table_and_downgrades(tmp_pat
         indexes = {row[1] for row in conn.execute("PRAGMA index_list(event_reminder_mutes)")}
         assert {"uq_event_reminder_mutes_series", "ix_event_reminder_mutes_event_id"} <= indexes
         snooze_columns = {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
-        assert "occurrence_start" in snooze_columns
+        assert {"occurrence_start", "event_created_at"} <= snooze_columns
         # Deleting the event removes its mutes.
         conn.execute("DELETE FROM calendar_events WHERE id = 1")
         assert conn.execute("SELECT COUNT(*) FROM event_reminder_mutes").fetchone()[0] == 0
@@ -777,6 +777,6 @@ def test_event_reminder_mutes_migration_creates_the_table_and_downgrades(tmp_pat
         snooze_columns = {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
         snooze_indexes = {row[1] for row in conn.execute("PRAGMA index_list(reminder_snoozes)")}
     assert "event_reminder_mutes" not in tables
-    assert "occurrence_start" not in snooze_columns
+    assert not {"occurrence_start", "event_created_at"} & snooze_columns
     assert "ix_reminder_snoozes_due" in snooze_indexes
     command.upgrade(config, "head")

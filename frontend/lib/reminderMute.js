@@ -18,15 +18,22 @@ export function announceReminderMute(detail) {
 // Opens the calendar at ``target``. Someone in several families may have
 // another one open: Tribu switches to the event's family first (the views
 // wait while it loads), then hands the event to the calendar. A family
-// they are no longer in just opens the calendar.
-export async function openEventLink(target, { setActiveView, switchFamily, familyId, families = [] }) {
+// they are no longer in just opens the calendar; when that family cannot be
+// loaded, ``onError`` says so and the calendar opens without the event.
+export async function openEventLink(target, { setActiveView, switchFamily, familyId, families = [], onError }) {
   const linked = target.familyId != null ? String(target.familyId) : null;
   if (linked && linked !== String(familyId)) {
     if (!families.some((family) => String(family.family_id) === linked)) {
       setActiveView('calendar');
       return;
     }
-    await switchFamily(linked);
+    try {
+      await switchFamily(linked);
+    } catch {
+      onError?.();
+      setActiveView('calendar');
+      return;
+    }
   }
   handOff(EVENT_LINK_HANDOFF, JSON.stringify(target));
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENT_LINK_EVENT));

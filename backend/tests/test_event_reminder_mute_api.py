@@ -415,6 +415,68 @@ def test_an_old_mute_button_does_not_reach_a_new_event_with_the_same_id(family):
     assert _mutes() == set()
 
 
+def test_a_replacement_created_in_the_same_second_does_not_match(family):
+    old_id = _event(family, created_at=datetime(2026, 11, 20, 8, 0, 0, 100))
+    token = _token(family, old_id, f"/calendar?event={old_id}&at=2026-12-01T09:00:00")
+    with TestSession() as db:
+        db.delete(db.get(CalendarEvent, old_id))
+        db.commit()
+    assert _event(family, title="Parents' evening", created_at=datetime(2026, 11, 20, 8, 0, 0, 900)) == old_id
+
+    assert client.post("/notifications/actions", json={"token": token, "action": "mute"}).status_code == 404
+    assert _mutes() == set()
+
+
+def _deliver_snoozes(monkeypatch) -> list[dict]:
+    """Runs the snoozed reminders an hour and a minute from now; returns
+    the pushes sent."""
+    from app.core import scheduler as scheduler_module
+    from app.core.push import PushResult
+    from app.models import NotificationPreference, ReminderSnooze
+
+    sent: list[dict] = []
+    monkeypatch.setattr(
+        scheduler_module, "send_push_for_user",
+        lambda db, uid, title, body, link=None, **options: sent.append(options) or PushResult(attempted=1, succeeded=1),
+    )
+    with TestSession() as db:
+        due = db.query(ReminderSnooze).one().remind_at + timedelta(minutes=1)
+        scheduler_module.deliver_snoozed_reminders(
+            db, now=due, local_now=due,
+            get_pref=lambda uid: NotificationPreference(user_id=uid, reminders_enabled=True, push_enabled=True),
+        )
+        db.commit()
+    return sent
+
+
+def test_a_snooze_does_not_come_back_for_a_new_event_with_its_id(family, monkeypatch):
+    old_id = _event(family)
+    token = _token(family, old_id, f"/calendar?event={old_id}&at=2026-12-01T09:00:00", end=datetime(2026, 12, 1, 9, 0))
+    assert client.post("/notifications/actions", json={"token": token, "action": "snooze"}).status_code == 200
+    with TestSession() as db:
+        db.delete(db.get(CalendarEvent, old_id))
+        db.commit()
+    assert _event(family, title="Parents' evening", created_at=datetime(2026, 11, 20, 8, 0)) == old_id
+
+    assert _deliver_snoozes(monkeypatch) == []
+    from app.models import Notification, ReminderSnooze
+
+    with TestSession() as db:
+        assert db.query(Notification).count() == 0
+        assert db.query(ReminderSnooze).one().delivered_at is not None
+
+
+def test_the_snoozed_push_signs_for_the_snoozed_event(family, monkeypatch):
+    event_id = _event(family)
+    token = _token(family, event_id, f"/calendar?event={event_id}&at=2026-12-01T09:00:00", end=datetime(2026, 12, 1, 9, 0))
+    client.post("/notifications/actions", json={"token": token, "action": "snooze"})
+
+    [push] = _deliver_snoozes(monkeypatch)
+    resp = client.post("/notifications/actions", json={"token": push["action_token"], "action": "mute"})
+    assert resp.status_code == 200, resp.text
+    assert _mutes() == {(family["ben"]["id"], event_id, None)}
+
+
 def test_a_mute_token_must_name_its_event(family):
     event_id = _event(family)
     bare = notification_actions.create_action_token(

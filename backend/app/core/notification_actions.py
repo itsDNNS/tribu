@@ -131,12 +131,25 @@ def create_action_token(
     if occurrence_start is not None:
         payload["occ"] = _iso(occurrence_start)
     if event_created_at is not None:
-        payload["evc"] = _iso(event_created_at)
+        payload["evc"] = event_identity(event_created_at)
     return jwt.encode(payload, _signing_key(), algorithm=JWT_ALG)
 
 
 def _iso(value: datetime) -> str:
     return value.replace(microsecond=0, tzinfo=None).isoformat()
+
+
+def event_identity(created_at: datetime) -> str:
+    """An event's creation time to the microsecond: a new event that gets a
+    deleted event's id, even within the same second, does not match."""
+    return created_at.replace(tzinfo=None).isoformat(timespec="microseconds")
+
+
+def _token_event_created_at(payload: dict) -> datetime | None:
+    try:
+        return datetime.fromisoformat(payload["evc"]) if payload.get("evc") else None
+    except (TypeError, ValueError):
+        return None
 
 
 def reminder_push_actions(
@@ -243,6 +256,9 @@ def apply_action(db: Session, token: str, action: str) -> dict:
                 else None
             ),
             occurrence_start=_token_occurrence(payload),
+            # The event the reminder was about, so the snooze never comes
+            # back for another event that got its id.
+            event_created_at=_token_event_created_at(payload),
         ))
         db.commit()
         return {"status": "ok", "action": action, "remind_at": remind_at.isoformat()}
@@ -301,7 +317,7 @@ def _mute_event_reminder(db: Session, user: User, member: Membership, payload: d
         .filter(CalendarEvent.id == payload["sid"], CalendarEvent.family_id == member.family_id)
         .first()
     )
-    if event is None or not payload.get("evc") or payload["evc"] != _iso(event.created_at):
+    if event is None or not payload.get("evc") or payload["evc"] != event_identity(event.created_at):
         raise NotificationActionError("ACTION_GONE", 404)
     try:
         if not is_part_of_series(event, reminder_settings_row(db, event)):

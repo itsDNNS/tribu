@@ -5,7 +5,7 @@ import { dropDevicePushSubscription } from '../hooks/usePushSubscription';
 import { listLanguages, loadLocale } from '../lib/i18n';
 import { useLocaleMessages } from '../hooks/useLocaleMessages';
 import { resolveInitialView } from '../lib/navigationState';
-import { eventReminderTarget, openEventLink } from '../lib/reminderMute';
+import { eventReminderTarget } from '../lib/reminderMute';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { cancelPendingClear, setPendingClearUser, withoutPendingClear } from '../lib/notificationClear';
 import { useNotificationExpiry } from '../hooks/useNotificationExpiry';
@@ -273,8 +273,12 @@ export function AppProvider({ children }) {
       setMyFamilyRole(selected.role);
       setMyFamilyIsAdult(selected.is_adult);
     }
-    await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadActivity(fid), loadQuickCaptureInbox(fid)]);
-    if (String(activeFamilyRef.current) === String(fid)) setLoading(false);
+    try {
+      await Promise.all([loadDashboard(fid), loadEvents(fid), loadMembers(fid), loadContacts(fid), loadBirthdays(fid), loadTasks(fid), loadShoppingLists(fid), loadActivity(fid), loadQuickCaptureInbox(fid)]);
+    } finally {
+      // A failed request must not leave the app loading.
+      if (String(activeFamilyRef.current) === String(fid)) setLoading(false);
+    }
   }, [families, loadDashboard, loadEvents, loadMembers, loadContacts, loadBirthdays, loadTasks, loadShoppingLists, loadActivity, loadQuickCaptureInbox]);
 
   const loadFamilyDataInBackground = useCallback((fid) => {
@@ -491,16 +495,18 @@ export function AppProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
 
+  // "Don't remind me" on a reminder of a series opens the event to choose.
+  // It waits here until the families are loaded (a tab can get it while
+  // starting); AppShell opens it then, switching family if needed.
+  const [pendingEventLink, setPendingEventLink] = useState(null);
+
   // SW navigation messages
-  const eventLinkContext = useRef(null);
-  eventLinkContext.current = { setActiveView, switchFamily, familyId, families };
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const handler = (event) => {
       if (event.data?.type === 'NAVIGATE' && event.data.url) {
-        // "Don't remind me" on a reminder of a series opens the event to choose.
         const target = eventReminderTarget(event.data.url);
-        if (target?.choose) openEventLink(target, eventLinkContext.current);
+        if (target?.choose) setPendingEventLink(target);
         else setActiveView(notificationLinkView(event.data.url));
       }
     };
@@ -620,6 +626,7 @@ export function AppProvider({ children }) {
     availableThemes,
     availableLanguages,
     activeView, setActiveView, restoreView,
+    pendingEventLink, setPendingEventLink,
     isMobile, setIsMobile,
     navOrder, setNavOrder,
     loading, setLoading,

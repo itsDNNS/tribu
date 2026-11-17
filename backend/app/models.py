@@ -904,6 +904,9 @@ class ReminderSnooze(Base):
     # still matches after the occurrence moved. NULL for a single event and
     # for snoozes older than this column.
     occurrence_start = Column(DateTime, nullable=True)
+    # The snoozed event's creation time: event ids can come back for a new
+    # event, so a snooze whose event no longer matches is dropped.
+    event_created_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 

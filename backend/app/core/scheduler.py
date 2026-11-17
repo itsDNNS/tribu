@@ -833,7 +833,10 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
         expires_at = snooze.expires_at
         if snooze.source_type == "event":
             event = db.query(CalendarEvent).filter(CalendarEvent.id == snooze.source_id).first()
-            if event is None:
+            # Gone, or its id now belongs to another event (SQLite reuses ids).
+            if event is None or (
+                snooze.event_created_at is not None and snooze.event_created_at != event.created_at
+            ):
                 snooze.delivered_at = now
                 continue
             # Snoozed before the event was set to remind only its creator.
@@ -885,7 +888,7 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
                     user_language(db, snooze.user_id),
                     expires_at=expires_at,
                     occurrence_start=snooze.occurrence_start,
-                    event_created_at=event.created_at if event is not None else None,
+                    event_created_at=snooze.event_created_at,
                 ),
             )
         except Exception:
