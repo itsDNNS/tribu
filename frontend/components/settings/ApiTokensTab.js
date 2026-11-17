@@ -1,26 +1,29 @@
-import { useState, useEffect, useCallback, useId } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
 import { copyTextToClipboard, parseServerInstant } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
-
-const SCOPE_MODULE_KEYS_BASE = ['calendar', 'tasks', 'contacts', 'birthdays', 'families', 'profile', 'household_templates'];
+import { FULL_ACCESS_SCOPE, formatTokenScopes, tokenScopeModulesFor } from '../../lib/tokenScopes';
 
 export default function ApiTokensTab() {
   const { messages, lang, loggedIn, demoMode, isAdmin } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
-  const scopeModuleKeys = isAdmin ? [...SCOPE_MODULE_KEYS_BASE, 'admin'] : SCOPE_MODULE_KEYS_BASE;
+  const scopeModules = tokenScopeModulesFor(isAdmin);
 
   const [tokens, setTokens] = useState([]);
   const id = useId();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newScopes, setNewScopes] = useState(['*']);
+  const [newScopes, setNewScopes] = useState([FULL_ACCESS_SCOPE]);
   const [newExpiry, setNewExpiry] = useState('');
   const [createdToken, setCreatedToken] = useState(null);
   const [copied, setCopied] = useState(false);
+  // One request at a time: a double click must not create two tokens and
+  // replace the secret of the first before it could be copied.
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const loadTokens = useCallback(async () => {
     if (!loggedIn || demoMode) return;
@@ -30,16 +33,19 @@ export default function ApiTokensTab() {
 
   useEffect(() => { loadTokens(); }, [loadTokens]);
 
-  const isFullAccess = newScopes.includes('*');
+  const isFullAccess = newScopes.includes(FULL_ACCESS_SCOPE);
+  // Without Full access the token needs at least one module scope; an empty
+  // list must never fall back to full access.
+  const scopeMissing = !isFullAccess && newScopes.length === 0;
 
   function toggleFullAccess(checked) {
-    setNewScopes(checked ? ['*'] : []);
+    setNewScopes(checked ? [FULL_ACCESS_SCOPE] : []);
   }
 
   function toggleModuleScope(mod, action, checked) {
     const scope = `${mod}:${action}`;
     setNewScopes(prev => {
-      const filtered = prev.filter(s => s !== '*');
+      const filtered = prev.filter(s => s !== FULL_ACCESS_SCOPE);
       if (checked) return [...filtered, scope];
       return filtered.filter(s => s !== scope);
     });
@@ -47,18 +53,27 @@ export default function ApiTokensTab() {
 
   async function handleCreateToken(e) {
     e.preventDefault();
+    if (scopeMissing || submittingRef.current) return;
     const payload = {
       name: newName.trim(),
-      scopes: newScopes.length ? newScopes : ['*'],
+      scopes: newScopes,
     };
     if (newExpiry) payload.expires_at = new Date(newExpiry).toISOString();
 
-    const res = await api.apiCreateToken(payload);
+    submittingRef.current = true;
+    setSubmitting(true);
+    let res;
+    try {
+      res = await api.apiCreateToken(payload);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
     if (res.ok) {
       setCreatedToken(res.data.token);
       setShowCreate(false);
       setNewName('');
-      setNewScopes(['*']);
+      setNewScopes([FULL_ACCESS_SCOPE]);
       setNewExpiry('');
       toastSuccess(t(messages, 'token_created'));
       loadTokens();
@@ -88,11 +103,6 @@ export default function ApiTokensTab() {
   function formatDate(iso) {
     if (!iso) return null;
     return parseServerInstant(iso).toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-  }
-
-  function formatScopes(scopeStr) {
-    if (!scopeStr || scopeStr === '*') return t(messages, 'token_full_access');
-    return scopeStr.split(',').join(', ');
   }
 
   return (
@@ -141,7 +151,7 @@ export default function ApiTokensTab() {
               <div>
                 <div className="set-token-name">{tk.name}</div>
                 <div className="set-token-scopes">
-                  {formatScopes(tk.scopes)}
+                  {formatTokenScopes(messages, tk.scopes)}
                 </div>
                 <div className="set-token-meta">
                   <span>{t(messages, 'token_last_used')}: {tk.last_used_at ? formatDate(tk.last_used_at) : t(messages, 'token_never_used')}</span>
@@ -183,22 +193,29 @@ export default function ApiTokensTab() {
                 </label>
                 {!isFullAccess && (
                   <div className="set-token-scope-grid">
-                    {scopeModuleKeys.map(mod => (
+                    {scopeModules.map(({ key: mod, actions }) => (
                       <div key={mod} className="set-token-scope-module" role="group" aria-labelledby={`${id}-scope-${mod}`}>
                         <div id={`${id}-scope-${mod}`} className="set-token-scope-label">{t(messages, `token_scope_${mod}`)}</div>
-                        {['read', 'write'].map(action => (
-                          <label key={action} className="set-token-scope-action">
-                            <input
-                              type="checkbox"
-                              checked={newScopes.includes(`${mod}:${action}`)}
-                              onChange={e => toggleModuleScope(mod, action, e.target.checked)}
-                            />
-                            {t(messages, `token_action_${action}`)}
-                          </label>
-                        ))}
+                        <div className="set-token-scope-actions">
+                          {actions.map(action => (
+                            <label key={action} className="set-token-scope-action">
+                              <input
+                                type="checkbox"
+                                checked={newScopes.includes(`${mod}:${action}`)}
+                                onChange={e => toggleModuleScope(mod, action, e.target.checked)}
+                              />
+                              {t(messages, `token_action_${action}`)}
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
+                )}
+                {scopeMissing && (
+                  <p id={`${id}-scope-missing`} className="set-token-scope-missing" role="status">
+                    {t(messages, 'token_scope_required')}
+                  </p>
                 )}
               </div>
 
@@ -222,7 +239,12 @@ export default function ApiTokensTab() {
               </div>
 
               <div className="set-token-actions">
-                <button type="submit" className="btn-sm" disabled={!newName.trim()}>
+                <button
+                  type="submit"
+                  className="btn-sm"
+                  disabled={!newName.trim() || scopeMissing || submitting}
+                  aria-describedby={scopeMissing ? `${id}-scope-missing` : undefined}
+                >
                   <Plus size={14} /> {t(messages, 'create_token')}
                 </button>
                 <button type="button" className="btn-ghost" onClick={() => setShowCreate(false)}>
