@@ -140,7 +140,9 @@ def test_event_reminder_uses_configured_local_wall_clock_and_utc_audit_timestamp
     try:
         notification = db.query(Notification).filter(Notification.user_id == user_id).one()
         log = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).one()
-        assert notification.body == "Starts in 60 minutes"
+        # The start time, not a countdown that turns false once read later.
+        assert notification.body == "Starts at 09:15"
+        assert notification.expires_at == datetime(2026, 5, 9, 7, 15, 0)
         assert log.last_attempt_at == audit_now
         assert log.delivered_at == audit_now
     finally:
@@ -174,7 +176,8 @@ def test_calendar_push_uses_occurrence_start_and_urgent_expiry(monkeypatch, recu
     scheduler_module._check_notifications()
     assert len(calls) == 1
     body, options = calls[0]
-    assert body == "Starts at 2026-09-17 16:45 (Europe/Berlin)"
+    # Push and the in-app notification say the same, as a clock time.
+    assert body == "Starts at 16:45"
     assert options["urgent"] is True
     assert options["expires_at"] == datetime(2026, 9, 17, 14, 45)
     # Event reminders offer "Remind me in 1 hour" (Tribu 2.0, N-2).
@@ -182,7 +185,7 @@ def test_calendar_push_uses_occurrence_start_and_urgent_expiry(monkeypatch, recu
     assert options["action_labels"] == {"snooze": "Remind me in 1 hour"}
     assert options["action_token"]
     with TestSession() as db:
-        assert db.query(Notification).one().body == "Starts in 60 minutes"
+        assert db.query(Notification).one().body == "Starts at 16:45"
 
 
 def test_reminder_job_checks_preferences_every_minute(monkeypatch):
@@ -300,7 +303,8 @@ def test_event_reminder_fires_at_real_offset_across_spring_dst_gap(monkeypatch):
     try:
         notification = db.query(Notification).filter(Notification.user_id == user_id).one()
         log = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).one()
-        assert notification.body == "Starts in 60 minutes"
+        assert notification.body == "Starts at 03:15"
+        assert notification.expires_at == datetime(2026, 3, 29, 1, 15, 0)
         assert log.last_attempt_at == datetime(2026, 3, 29, 0, 15, 0)
     finally:
         db.close()
@@ -338,7 +342,7 @@ def test_recurring_event_reminder_prefilter_keeps_spring_dst_gap_occurrence(monk
     try:
         notification = db.query(Notification).filter(Notification.user_id == user_id).one()
         assert notification.title == "Daily spring practice"
-        assert notification.body == "Starts in 60 minutes"
+        assert notification.body == "Starts at 03:15"
     finally:
         db.close()
 
@@ -385,7 +389,8 @@ def test_event_reminder_does_not_fire_on_first_repeated_hour_before_fall_dst(mon
     db = TestSession()
     try:
         notification = db.query(Notification).filter(Notification.user_id == user_id).one()
-        assert notification.body == "Starts in 30 minutes"
+        assert notification.body == "Starts at 03:00"
+        assert notification.expires_at == datetime(2026, 10, 25, 2, 0, 0)
     finally:
         db.close()
 

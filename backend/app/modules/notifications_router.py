@@ -10,6 +10,8 @@ from app.core.scopes import require_scope
 from app.core.push import get_vapid_public_key, is_fcm_configured, is_pywebpush_available, is_vapid_configured, send_push_for_user
 from app.core.notification_actions import NotificationActionError, apply_action
 from app.core.notification_preferences import normalize_push_categories
+from app.core.notification_housekeeping import still_shown
+from app.core.clock import utcnow
 from app.database import get_db, SessionLocal
 from app.models import Notification, NotificationPreference, NotificationSentLog, PushSubscription, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, NotificationPreferenceResponse, NotificationPreferenceUpdate, NotificationResponse, PushStatusResponse, NotificationActionRequest, PushSubscriptionCreate, PushTestResponse, PushUnsubscribe
@@ -22,7 +24,10 @@ router = APIRouter(prefix="/notifications", tags=["notifications"], responses={*
     "",
     response_model=list[NotificationResponse],
     summary="List notifications",
-    description="Return paginated notifications for the current user, newest first.",
+    description=(
+        "Return paginated notifications for the current user, newest first. Reminders whose moment has "
+        "passed (an event that started, a birthday that is over) are left out."
+    ),
     response_description="List of notifications",
 )
 def list_notifications(
@@ -34,8 +39,8 @@ def list_notifications(
 ):
     rows = (
         db.query(Notification)
-        .filter(Notification.user_id == user.id)
-        .order_by(Notification.created_at.desc())
+        .filter(Notification.user_id == user.id, still_shown())
+        .order_by(Notification.created_at.desc(), Notification.id.desc())
         .offset(offset)
         .limit(limit)
         .all()
@@ -51,7 +56,7 @@ def list_notifications(
 )
 def unread_count(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:read")):
     def _load():
-        return {"count": db.query(Notification).filter(Notification.user_id == user.id, Notification.read.is_(False)).count()}
+        return {"count": db.query(Notification).filter(Notification.user_id == user.id, Notification.read.is_(False), still_shown()).count()}
     return cache.get_or_set(f"tribu:notif_count:{user.id}", 15, _load)
 
 
@@ -66,7 +71,9 @@ def mark_read(notification_id: int, user: User = Depends(current_user), db: Sess
     notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
     if not notif:
         raise HTTPException(status_code=404, detail=error_detail(NOTIFICATION_NOT_FOUND))
-    notif.read = True
+    if not notif.read:
+        notif.read = True
+        notif.read_at = utcnow()
     db.commit()
     cache.invalidate(f"tribu:notif_count:{user.id}")
     return {"status": "ok"}
@@ -75,14 +82,38 @@ def mark_read(notification_id: int, user: User = Depends(current_user), db: Sess
 @router.post(
     "/read-all",
     summary="Mark all notifications as read",
-    description="Mark all unread notifications as read for the current user.",
+    description="Mark all unread notifications as read for the current user. Read notifications are removed a week later.",
     response_description="Confirmation",
 )
 def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:write")):
-    db.query(Notification).filter(Notification.user_id == user.id, Notification.read.is_(False)).update({"read": True})
+    db.query(Notification).filter(Notification.user_id == user.id, Notification.read.is_(False)).update({"read": True, "read_at": utcnow()}, synchronize_session=False)
     db.commit()
     cache.invalidate(f"tribu:notif_count:{user.id}")
     return {"status": "ok"}
+
+
+@router.delete(
+    "",
+    summary="Delete all notifications",
+    description=(
+        "Permanently delete the current user's notifications. With `up_to_id`, only notifications up to and "
+        "including that ID go, so one that arrived after the list was loaded stays."
+    ),
+    response_description="Confirmation with the number of deleted notifications",
+)
+def delete_all_notifications(
+    up_to_id: int | None = Query(None, ge=1, description="Delete only notifications with an ID up to this one"),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    _scope=require_scope("profile:write"),
+):
+    query = db.query(Notification).filter(Notification.user_id == user.id)
+    if up_to_id is not None:
+        query = query.filter(Notification.id <= up_to_id)
+    deleted = query.delete(synchronize_session=False)
+    db.commit()
+    cache.invalidate(f"tribu:notif_count:{user.id}")
+    return {"status": "ok", "deleted": deleted}
 
 
 @router.delete(
@@ -123,7 +154,7 @@ async def notification_stream(
                 try:
                     query = (
                         db.query(Notification)
-                        .filter(Notification.user_id == user_id, Notification.id > last_id)
+                        .filter(Notification.user_id == user_id, Notification.id > last_id, still_shown())
                         .order_by(Notification.id.asc())
                         .all()
                     )

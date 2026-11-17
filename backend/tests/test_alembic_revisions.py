@@ -555,3 +555,49 @@ def test_member_birthdays_migration_fills_the_list_and_downgrades(tmp_path, monk
         tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     assert "contact_member_dismissals" not in tables
 
+
+
+def test_notification_expiry_migration_backfills_and_downgrades(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "notification-expiry.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0081_shopping_photo_thumbnails")
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'One')")
+        conn.execute(
+            "INSERT INTO users (id, email, password_hash, display_name) VALUES (1, 'a@example.com', 'x', 'A')"
+        )
+        conn.execute(
+            """
+            INSERT INTO notifications (id, user_id, family_id, type, title, read, created_at)
+            VALUES
+                (1, 1, 1, 'event_reminder', 'Dentist', 0, '2026-11-01 10:00:00'),
+                (2, 1, 1, 'birthday', 'Chloe', 1, '2026-11-14 07:00:00'),
+                (3, 1, 1, 'duty_week', 'Duties', 0, '2026-11-08 17:00:00'),
+                (4, 1, 1, 'event_assigned', 'Chloe Geburtstag', 1, '2026-11-12 09:00:00'),
+                (5, 1, 1, 'task_due', 'Bins', 0, '2026-11-01 10:00:00')
+            """
+        )
+        conn.commit()
+
+    command.upgrade(config, "0082_notification_expiry")
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute("SELECT id, read_at IS NOT NULL, expires_at FROM notifications ORDER BY id").fetchall()
+    assert [(row_id, has_read_at) for row_id, has_read_at, _ in rows] == [(1, 0), (2, 1), (3, 0), (4, 1), (5, 0)]
+    expiries = {row_id: (expires_at[:19] if expires_at else None) for row_id, _, expires_at in rows}
+    assert expiries == {
+        1: "2026-11-02 10:00:00",
+        2: "2026-11-16 07:00:00",
+        3: "2026-11-16 17:00:00",
+        4: None,
+        5: None,
+    }
+
+    command.downgrade(config, "0081_shopping_photo_thumbnails")
+    with sqlite3.connect(db_path) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(notifications)")}
+        assert conn.execute("SELECT COUNT(*) FROM notifications").fetchone()[0] == 5
+    assert "read_at" not in columns and "expires_at" not in columns

@@ -561,6 +561,11 @@ export function apiDeleteNotification(id) {
   return del(`/notifications/${id}`);
 }
 
+// Up to and including upToId, so one that arrived meanwhile stays.
+export function apiDeleteAllNotifications(upToId) {
+  return del(upToId ? `/notifications?up_to_id=${encodeURIComponent(upToId)}` : '/notifications');
+}
+
 export function apiGetNotificationPreferences() {
   return request('/notifications/preferences');
 }

@@ -833,6 +833,11 @@ class Notification(Base):
     link = Column(String, nullable=True)
     read = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    # Naive UTC. Read notifications are cleaned up a while after read_at;
+    # time-bound reminders (an event start, a birthday) stop showing at
+    # expires_at, read or not.
+    read_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
 
 
 class NotificationPreference(Base):

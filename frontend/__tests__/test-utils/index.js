@@ -70,6 +70,7 @@ export function createMockApi(overrides = {}) {
     apiMarkNotificationRead: jest.fn().mockResolvedValue({ ok: true }),
     apiMarkAllNotificationsRead: jest.fn().mockResolvedValue({ ok: true }),
     apiDeleteNotification: jest.fn().mockResolvedValue({ ok: true }),
+    apiDeleteAllNotifications: jest.fn().mockResolvedValue({ ok: true, data: { status: 'ok', deleted: 0 } }),
     ...overrides,
   };
 }

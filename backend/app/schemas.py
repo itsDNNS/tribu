@@ -1499,6 +1499,8 @@ class NotificationResponse(BaseModel):
     link: Optional[str] = Field(None, description="Deep link to related content")
     read: bool = Field(..., description="Whether the notification has been read")
     created_at: datetime = Field(..., description="Creation timestamp")
+    read_at: Optional[datetime] = Field(None, description="When it was marked read (UTC); read notifications are removed a week later")
+    expires_at: Optional[datetime] = Field(None, description="When a time-bound reminder stops being shown (UTC), e.g. the event start")
 
 
 class NotificationPreferenceResponse(BaseModel):

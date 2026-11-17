@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell, CalendarClock, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, Utensils, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { t, tc } from '../lib/i18n';
 import * as api from '../lib/api';
 import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
 import { notificationLinkView } from '../lib/notificationLinks';
+import { UNDO_WINDOW_MS } from '../lib/undo';
 
 const TYPE_ICONS = {
   event_reminder: CalendarDays,
@@ -54,9 +56,69 @@ export function renderNotificationBody(notif, messages) {
   return notif.body;
 }
 
+// A reminder whose moment has passed (the event started, the birthday is
+// over) is no longer true; the server stops listing it, and an open panel
+// should not keep showing it either.
+export function isNotificationExpired(notif, now = Date.now()) {
+  const expiresAt = parseServerInstant(notif?.expires_at);
+  return Boolean(expiresAt) && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() <= now;
+}
+
 export default function NotificationCenter({ onClose } = {}) {
-  const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
+  const { messages, lang, notifications, setNotifications, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
+  const { success: toastSuccess, error: toastError, dismiss: dismissToast } = useToast();
   const closeBtnRef = useRef(null);
+  const headingRef = useRef(null);
+
+  // "Delete all" waits for the undo window before it is sent, like deleting
+  // tasks or shopping items. Until then the list hides what it will delete.
+  const pendingClearRef = useRef(null);
+  const [clearedUpTo, setClearedUpTo] = useState(null);
+
+  const runPendingClear = useCallback(async () => {
+    const pending = pendingClearRef.current;
+    if (!pending) return;
+    pendingClearRef.current = null;
+    clearTimeout(pending.timer);
+    // Sent early when the panel closes or the page hides: its Undo could no longer take it back.
+    dismissToast(pending.toastId);
+    let ok = false;
+    try {
+      ({ ok } = await api.apiDeleteAllNotifications(pending.upToId));
+    } catch {
+      ok = false;
+    }
+    if (ok) {
+      setNotifications((prev) => prev.filter((n) => n.id > pending.upToId));
+    } else {
+      toastError(t(messages, 'toast.error'));
+      setUnreadCount((c) => c + pending.unread);
+    }
+    setClearedUpTo(null);
+  }, [dismissToast, messages, setNotifications, setUnreadCount, toastError]);
+
+  // Closing the panel, leaving the page or hiding it sends what is still
+  // waiting. The ref keeps the listeners stable across re-renders.
+  const runPendingClearRef = useRef(runPendingClear);
+  runPendingClearRef.current = runPendingClear;
+
+  useEffect(() => {
+    const flush = () => runPendingClearRef.current();
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, []);
+
+  const now = Date.now();
+  const shown = notifications.filter((n) => (clearedUpTo === null || n.id > clearedUpTo) && !isNotificationExpired(n, now));
+  const hasUnreadShown = shown.some((n) => !n.read);
 
   useEffect(() => {
     loadNotifications();
@@ -82,6 +144,29 @@ export default function NotificationCenter({ onClose } = {}) {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     }
+  }
+
+  function handleDeleteAll() {
+    if (pendingClearRef.current || shown.length === 0) return;
+    const upToId = Math.max(...shown.map((n) => n.id));
+    const unread = shown.filter((n) => !n.read).length;
+    setClearedUpTo(upToId);
+    setUnreadCount((c) => Math.max(0, c - unread));
+    const pending = { upToId, unread, timer: setTimeout(() => runPendingClearRef.current(), UNDO_WINDOW_MS) };
+    pendingClearRef.current = pending;
+    pending.toastId = toastSuccess(t(messages, 'notifications_deleted_all'), {
+      label: t(messages, 'module.shopping.undo'),
+      onClick: () => {
+        const waiting = pendingClearRef.current;
+        if (!waiting) return;
+        clearTimeout(waiting.timer);
+        pendingClearRef.current = null;
+        setClearedUpTo(null);
+        setUnreadCount((c) => c + waiting.unread);
+      },
+    });
+    // The pressed button goes away with the list; keep focus in the panel.
+    (closeBtnRef.current || headingRef.current)?.focus();
   }
 
   async function handleDelete(id) {
@@ -119,7 +204,7 @@ export default function NotificationCenter({ onClose } = {}) {
     const yesterday = [];
     const older = [];
 
-    notifications.forEach(n => {
+    shown.forEach(n => {
       const d = parseServerInstant(n.created_at);
       if (d >= todayStart) today.push(n);
       else if (d >= yesterdayStart) yesterday.push(n);
@@ -136,23 +221,37 @@ export default function NotificationCenter({ onClose } = {}) {
   return (
     <div className={onClose ? 'notifications-panel-content' : 'notifications-page'}>
       {onClose ? (
-        <div className="notif-panel-header">
-          <h2 className="notif-panel-title">{t(messages, 'notifications')}</h2>
-          {unreadCount > 0 && (
-            <button className="bento-empty-action" onClick={handleMarkAllRead}>
-              <CheckCheck size={14} /> {t(messages, 'notifications_mark_all_read')}
+        <>
+          <div className="notif-panel-header">
+            <h2 className="notif-panel-title">{t(messages, 'notifications')}</h2>
+            <button type="button" ref={closeBtnRef} className="btn-ghost notif-delete" onClick={onClose} aria-label={t(messages, 'close')}>
+              <X size={16} />
             </button>
+          </div>
+          {shown.length > 0 && (
+            <div className="notif-panel-actions">
+              {hasUnreadShown && (
+                <button type="button" className="bento-empty-action" onClick={handleMarkAllRead}>
+                  <CheckCheck size={14} aria-hidden="true" /> {t(messages, 'notifications_mark_all_read')}
+                </button>
+              )}
+              <button type="button" className="bento-empty-action notif-delete-all" onClick={handleDeleteAll}>
+                <Trash2 size={14} aria-hidden="true" /> {t(messages, 'notifications_delete_all')}
+              </button>
+            </div>
           )}
-          <button ref={closeBtnRef} className="btn-ghost notif-delete" onClick={onClose} aria-label={t(messages, 'close')}>
-            <X size={16} />
-          </button>
-        </div>
+        </>
       ) : (
         <header className="list-header notifications-list-header">
-          <h1>{t(messages, 'notifications')}</h1>
-          {unreadCount > 0 && (
+          <h1 ref={headingRef} tabIndex={-1}>{t(messages, 'notifications')}</h1>
+          {hasUnreadShown && (
             <button type="button" className="list-header-action" onClick={handleMarkAllRead}>
               <CheckCheck size={16} aria-hidden="true" /> {t(messages, 'notifications_mark_all_read')}
+            </button>
+          )}
+          {shown.length > 0 && (
+            <button type="button" className="list-header-action notif-delete-all" onClick={handleDeleteAll}>
+              <Trash2 size={16} aria-hidden="true" /> {t(messages, 'notifications_delete_all')}
             </button>
           )}
         </header>
@@ -170,7 +269,7 @@ export default function NotificationCenter({ onClose } = {}) {
       )}
 
       <div className="stagger notif-list">
-        {notifications.length === 0 && (
+        {shown.length === 0 && (
           <div className="notif-empty">
             <Bell size={32} className="notif-empty-icon" />
             <p>{t(messages, 'notifications_empty')}</p>
@@ -223,6 +322,10 @@ export default function NotificationCenter({ onClose } = {}) {
             })}
           </div>
         ))}
+
+        {shown.length > 0 && (
+          <p className="notif-cleanup-hint">{t(messages, 'notifications_read_cleanup_hint')}</p>
+        )}
       </div>
     </div>
   );

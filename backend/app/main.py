@@ -77,7 +77,7 @@ from app.modules.display_router import admin_router as display_admin_router, dis
 from app.modules.mobile_router import router as mobile_router
 from app.modules.webhooks_router import router as webhooks_router
 from app.modules.notification_destinations_router import router as notification_destinations_router
-from app.core.scheduler import start_backup_schedule_sync_job, start_calendar_subscription_refresh_job, start_duty_tasks_job, start_notification_job, start_scheduler, shutdown_scheduler
+from app.core.scheduler import start_backup_schedule_sync_job, start_calendar_subscription_refresh_job, start_duty_tasks_job, start_notification_cleanup_job, start_notification_job, start_scheduler, shutdown_scheduler
 from app.core import scheduler_leader
 from app.core import ws_broadcast
 from app.schemas import (
@@ -243,6 +243,7 @@ async def lifespan(app: FastAPI):
         start_calendar_subscription_refresh_job()
         start_backup_schedule_sync_job(BACKUP_DB_URL, BACKUP_DIR)
         start_duty_tasks_job()
+        start_notification_cleanup_job()
 
     # With several workers only one process runs the scheduler (issue #494).
     scheduler_leader.start(run_scheduler, shutdown_scheduler)

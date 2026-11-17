@@ -965,6 +965,11 @@ dialog:not([open]) { display: none; }
 @keyframes notifSlideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 .notif-panel-header { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .notif-panel-title { font-size: 1.1rem; font-weight: 600; flex: 1; }
+/* "Mark all read" on the left, the calmer "Delete all" on the right; text aligned with the title. */
+.notif-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: calc(var(--space-md) * -1) -12px 0; }
+.notif-panel-actions .notif-delete-all { margin-left: auto; color: var(--text-secondary); }
+.notif-panel-actions .bento-empty-action { gap: 6px; }
+.notif-cleanup-hint { margin: var(--space-sm) 0 0; font-size: 0.75rem; color: var(--text-muted); text-align: center; }
 [data-theme="light"] .notif-panel { background: var(--void); border-color: var(--border-subtle); }
 
 /* ═══════════════════════════════════════════

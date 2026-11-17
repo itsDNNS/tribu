@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import current_user, ensure_family_membership
 from app.core.errors import error_detail, INSUFFICIENT_SCOPE
 from app.core.recurrence import expand_event, load_series_changes
+from app.core.notification_housekeeping import still_shown
 from app.core.clock import local_today, utcnow
 from app.database import get_db
 from app.models import CalendarEvent, Membership, Notification, QuickCaptureItem, ShoppingItem, ShoppingList, Task, User
@@ -257,6 +258,7 @@ def mobile_daily_snapshot(
         Notification.family_id == family_id,
         Notification.user_id == user.id,
         Notification.read.is_(False),
+        still_shown(),
     ).count()
     generated_at = utcnow()
 
