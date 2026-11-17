@@ -9,7 +9,7 @@ import { eventOccursOn } from '../lib/calendar-dates';
 import { weekdaysPayload } from '../lib/calendar-recurrence';
 import * as api from '../lib/api';
 import { useHandoff } from '../lib/viewHandoff';
-import { REMINDER_MUTE_CHANGED, isSeriesEvent, occurrenceStartOf, setReminderMute } from '../lib/reminderMute';
+import { REMINDER_MUTE_CHANGED, isSeriesEvent, occurrenceStartOf, reminderMuteToastKey, setReminderMute } from '../lib/reminderMute';
 
 function formatLocalDateTimeInput(date, hour = date.getHours(), minute = date.getMinutes()) {
   const local = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
@@ -154,21 +154,21 @@ export function useCalendar() {
     loadEventsForRange();
   }, [calendarMonth, familyId, demoMode, loadEventsForRange]);
 
-  // Muted from the notification panel: show it here at once, then load the
-  // range again, since a series mute changes every occurrence.
+  // A reminder muted here or in the notification panel: show it at once;
+  // a series changes in every occurrence, so load the range again.
+  const applyReminderMute = useCallback(({ eventId, at, state, repeats }) => {
+    setEvents((prev) => prev.map((ev) => (
+      String(ev.id) === String(eventId) && (state === 'series' || occurrenceStartOf(ev) === at)
+        ? { ...ev, reminder_muted: state }
+        : ev
+    )));
+    if (repeats) loadEventsForRange();
+  }, [loadEventsForRange, setEvents]);
   useEffect(() => {
-    const changed = (e) => {
-      const { eventId, at, state } = e.detail || {};
-      setEvents((prev) => prev.map((ev) => (
-        String(ev.id) === String(eventId) && (state === 'series' || String(ev.starts_at).slice(0, 19) === at)
-          ? { ...ev, reminder_muted: state }
-          : ev
-      )));
-      loadEventsForRange();
-    };
+    const changed = (e) => applyReminderMute(e.detail);
     window.addEventListener(REMINDER_MUTE_CHANGED, changed);
     return () => window.removeEventListener(REMINDER_MUTE_CHANGED, changed);
-  }, [loadEventsForRange, setEvents]);
+  }, [applyReminderMute]);
 
   // Sync calendarMonth when weekAnchor crosses month boundary (to load events)
   useEffect(() => {
@@ -521,30 +521,17 @@ export function useCalendar() {
   // 'occurrence' or 'series'. Only reminders; who takes part stays.
   // Resolves to the new state, or undefined when it failed.
   async function changeReminderMute(event, state) {
-    const occurrence = occurrenceStartOf(event);
+    const target = { eventId: event.id, at: occurrenceStartOf(event), repeats: isSeriesEvent(event) };
     let next;
-    if (demoMode) {
-      next = state && !isSeriesEvent(event) ? 'series' : state;
-    } else {
-      try {
-        next = await setReminderMute(api, event.id, state, occurrence);
-      } catch {
-        toastError(t(messages, 'toast.error'));
-        return undefined;
-      }
-      if (!isCurrentFamily()) return next;
+    try {
+      next = demoMode ? (state && !target.repeats ? 'series' : state) : await setReminderMute(target, state);
+    } catch {
+      toastError(t(messages, 'toast.error'));
+      return undefined;
     }
-    setEvents((prev) => prev.map((ev) => (
-      ev.id === event.id && String(ev.starts_at) === String(event.starts_at) ? { ...ev, reminder_muted: next } : ev
-    )));
-    // A series mute changes the other occurrences as well.
-    if (!demoMode && isSeriesEvent(event)) loadEventsForRange();
-    const toastKey = !next
-      ? 'toast.reminder_unmuted'
-      : next === 'occurrence'
-        ? 'toast.reminder_muted_occurrence'
-        : isSeriesEvent(event) ? 'toast.reminder_muted_series' : 'toast.reminder_muted_event';
-    toastSuccess(t(messages, toastKey));
+    if (demoMode) applyReminderMute({ ...target, state: next });
+    if (!isCurrentFamily()) return next;
+    toastSuccess(t(messages, reminderMuteToastKey(next, target.repeats)));
     return next;
   }
 

@@ -1,666 +1,389 @@
-"""Members taking themselves off an event's reminders.
-
-Drives ``app.core.scheduler._check_notifications`` against an in-memory
-SQLite database, like ``test_event_remind_only_creator``.
-"""
+"""Members taking themselves off an event's reminders, as the scheduler
+sees it (see ``reminder_support`` for the database and the family)."""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.event_reminders import (
     MUTE_OCCURRENCE,
     MUTE_SERIES,
     ReminderMuteError,
     clear_reminder_mute,
-    reminder_mute_state,
+    reminder_mute_states,
     set_reminder_mute,
 )
-from app.database import Base
-from app.models import (
-    CalendarEvent,
-    EventReminderMute,
-    Family,
-    Membership,
-    Notification,
-    NotificationPreference,
-    ReminderSnooze,
-    User,
+from app.models import CalendarEvent, EventReminderMute, Notification, NotificationPreference, ReminderSnooze, User
+# reminder_db and destinations are fixtures.
+from tests.reminder_support import (
+    NOW,
+    TestSession,
+    add_event,
+    add_family,
+    add_snooze,
+    at,
+    destinations,
+    reminded,
+    reminder_db,
+    run_scheduler,
 )
-from app.security import hash_password
 
+pytestmark = pytest.mark.usefixtures("reminder_db")
 
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSession = sessionmaker(bind=engine, autoflush=False)
-
-NOW = datetime(2026, 4, 25, 12, 0, 0)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    Base.metadata.create_all(bind=engine)
-    from app.core import scheduler as scheduler_module
-
-    monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
-    _at(monkeypatch, NOW)
-    monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
-    yield
-    Base.metadata.drop_all(bind=engine)
-
-
-def _at(monkeypatch, moment: datetime) -> None:
-    from app.core import scheduler as scheduler_module
-
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: moment)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: moment)
-
-
-@pytest.fixture
-def destinations(monkeypatch):
-    """Records what would go to the family's notification destinations."""
-    from app.core import scheduler as scheduler_module
-
-    calls: list[dict] = []
-    monkeypatch.setattr(scheduler_module, "dispatch_family_notification", lambda **kwargs: calls.append(kwargs))
-    return calls
+SOON = NOW + timedelta(minutes=20)
 
 
 @pytest.fixture
 def family():
-    """Anna and Ben (adults) and Cleo (a child); returns (family_id, [ids])."""
-    db = TestSession()
-    try:
-        fam = Family(name="Busy family")
-        db.add(fam)
-        db.flush()
-        ids = []
-        for name, adult in (("anna", True), ("ben", True), ("cleo", False)):
-            user = User(email=f"{name}@example.com", password_hash=hash_password("p"), display_name=name.title())
-            db.add(user)
-            db.flush()
-            db.add(Membership(user_id=user.id, family_id=fam.id, role="admin" if adult else "member", is_adult=adult))
-            db.add(NotificationPreference(user_id=user.id, reminders_enabled=True, reminder_minutes=30, push_enabled=False))
-            ids.append(user.id)
-        db.commit()
-        return fam.id, ids
-    finally:
-        db.close()
-
-
-def _add_event(family_id: int, **fields) -> int:
-    db = TestSession()
-    try:
-        values = {
-            "family_id": family_id,
-            "title": "Dentist",
-            "starts_at": NOW + timedelta(minutes=20),
-            "all_day": False,
-        }
-        values.update(fields)
-        ev = CalendarEvent(**values)
-        db.add(ev)
-        db.commit()
-        return ev.id
-    finally:
-        db.close()
+    return add_family()
 
 
 def _mute(user_id: int, event_id: int, scope: str = MUTE_SERIES, occurrence_start: datetime | None = None) -> str:
-    db = TestSession()
-    try:
+    with TestSession() as db:
         state = set_reminder_mute(db, user_id, db.get(CalendarEvent, event_id), scope, occurrence_start)
         db.commit()
         return state
-    finally:
-        db.close()
 
 
 def _unmute(user_id: int, event_id: int, occurrence_start: datetime | None = None) -> None:
-    db = TestSession()
-    try:
+    with TestSession() as db:
         clear_reminder_mute(db, user_id, db.get(CalendarEvent, event_id), occurrence_start)
         db.commit()
-    finally:
-        db.close()
 
 
-def _reminded(event_id: int) -> list[int]:
-    db = TestSession()
-    try:
-        return sorted(
-            uid
-            for (uid,) in db.query(Notification.user_id).filter(
-                Notification.type == "event_reminder",
-                Notification.link.like(f"/calendar?event={event_id}&%"),
-            )
-        )
-    finally:
-        db.close()
+def _mutes() -> set[tuple]:
+    with TestSession() as db:
+        return {(m.user_id, m.event_id, m.occurrence_start) for m in db.query(EventReminderMute)}
 
 
-def _run():
-    from app.core.scheduler import _check_notifications
+def _state(user_id: int, event_id: int, starts_at: datetime) -> str | None:
+    with TestSession() as db:
+        return reminder_mute_states(db, user_id, [db.get(CalendarEvent, event_id)], [{"id": event_id, "starts_at": starts_at}])[0]
 
-    _check_notifications()
 
-
-def test_a_muted_single_event_reminds_everyone_else(family, destinations):
+@pytest.mark.parametrize("muter", [1, 2], ids=["adult", "child without edit rights"])
+def test_a_muted_single_event_reminds_everyone_else(family, destinations, muter):
     family_id, users = family
-    event_id = _add_event(family_id, created_by_user_id=users[0])
-    assert _mute(users[1], event_id) == MUTE_SERIES
+    event_id = add_event(family_id, created_by_user_id=users[0])
+    assert _mute(users[muter], event_id) == MUTE_SERIES
 
-    _run()
+    run_scheduler()
 
-    assert _reminded(event_id) == [users[0], users[2]]
-    # The household channel still goes out, without Ben as a recipient.
+    others = [uid for uid in users if uid != users[muter]]
+    assert reminded(event_id) == others
+    # The household channel still goes out, without them as a recipient.
     assert [call["source_id"] for call in destinations] == [event_id]
-    assert {user.user_id for user in destinations[0]["eligible_users"]} == {users[0], users[2]}
+    assert {user.user_id for user in destinations[0]["eligible_users"]} == set(others)
 
 
-def test_the_reminder_link_names_the_occurrence(family, destinations):
+def test_the_reminder_link_names_the_family_and_the_occurrence(family, destinations):
     family_id, _ = family
-    single = _add_event(family_id)
-    series = _add_event(family_id, title="Meds", recurrence="daily", starts_at=NOW - timedelta(days=2) + timedelta(minutes=10))
+    single = add_event(family_id)
+    series = add_event(family_id, title="Meds", recurrence="daily", starts_at=NOW - timedelta(days=2) + timedelta(minutes=10))
 
-    _run()
+    run_scheduler()
 
-    db = TestSession()
-    try:
+    with TestSession() as db:
         links = {link for (link,) in db.query(Notification.link)}
-    finally:
-        db.close()
     assert links == {
         f"/calendar?event={single}&family={family_id}&at=2026-04-25T12:20:00",
         f"/calendar?event={series}&family={family_id}&at=2026-04-25T12:10:00&repeats=1",
     }
 
 
-def test_a_muted_series_stays_quiet_for_every_occurrence(family, destinations, monkeypatch):
+@pytest.mark.parametrize(
+    "scope, start, today, tomorrow",
+    [
+        (MUTE_SERIES, None, [1, 2], [1, 2]),
+        (MUTE_OCCURRENCE, SOON, [1, 2], [0, 1, 2]),
+    ],
+    ids=["series: every occurrence", "occurrence: only that one"],
+)
+def test_muting_a_series_or_one_occurrence(family, destinations, monkeypatch, scope, start, today, tomorrow):
     family_id, users = family
-    event_id = _add_event(family_id, recurrence="daily", starts_at=NOW - timedelta(days=3) + timedelta(minutes=20))
-    _mute(users[0], event_id, MUTE_SERIES)
+    event_id = add_event(family_id, recurrence="daily", starts_at=SOON - timedelta(days=3))
+    _mute(users[0], event_id, scope, start)
 
-    _run()
-    _at(monkeypatch, NOW + timedelta(days=1))
-    _run()
+    run_scheduler()
+    assert reminded(event_id) == [users[i] for i in today]
+    at(monkeypatch, NOW + timedelta(days=1))
+    run_scheduler()
+    assert reminded(event_id) == sorted([users[i] for i in today + tomorrow])
 
-    assert _reminded(event_id) == sorted([users[1], users[1], users[2], users[2]])
 
-
-def test_a_muted_occurrence_leaves_the_next_one(family, destinations, monkeypatch):
+def test_the_state_of_an_occurrence_is_the_last_choice(family):
+    """An occurrence mute lifts a series mute, and the other way round."""
     family_id, users = family
-    event_id = _add_event(family_id, recurrence="daily", starts_at=NOW - timedelta(days=3) + timedelta(minutes=20))
-    assert _mute(users[0], event_id, MUTE_OCCURRENCE, NOW + timedelta(minutes=20)) == MUTE_OCCURRENCE
-
-    _run()
-    assert _reminded(event_id) == [users[1], users[2]]
-
-    _at(monkeypatch, NOW + timedelta(days=1))
-    _run()
-    assert _reminded(event_id) == sorted([users[0], users[1], users[1], users[2], users[2]])
-
-
-def test_an_occurrence_mute_lifts_the_series_mute_and_the_other_way_round(family):
-    family_id, users = family
-    event_id = _add_event(family_id, recurrence="weekly", starts_at=NOW + timedelta(minutes=20))
-    today = NOW + timedelta(minutes=20)
-    next_week = today + timedelta(days=7)
+    event_id = add_event(family_id, recurrence="weekly", starts_at=SOON)
+    next_week = SOON + timedelta(days=7)
 
     _mute(users[0], event_id, MUTE_SERIES)
-    _mute(users[0], event_id, MUTE_OCCURRENCE, today)
-    db = TestSession()
-    try:
-        ev = db.get(CalendarEvent, event_id)
-        assert reminder_mute_state(db, users[0], ev, today) == MUTE_OCCURRENCE
-        assert reminder_mute_state(db, users[0], ev, next_week) is None
-    finally:
-        db.close()
-
+    _mute(users[0], event_id, MUTE_OCCURRENCE, SOON)
+    assert (_state(users[0], event_id, SOON), _state(users[0], event_id, next_week)) == (MUTE_OCCURRENCE, None)
     _mute(users[0], event_id, MUTE_SERIES)
-    db = TestSession()
-    try:
-        ev = db.get(CalendarEvent, event_id)
-        assert reminder_mute_state(db, users[0], ev, next_week) == MUTE_SERIES
-    finally:
-        db.close()
+    assert _state(users[0], event_id, next_week) == MUTE_SERIES
 
 
-def test_an_occurrence_must_belong_to_the_series(family):
+@pytest.mark.parametrize("start", [None, SOON + timedelta(days=1)], ids=["missing", "not an occurrence"])
+def test_an_occurrence_must_belong_to_the_series(family, start):
     family_id, users = family
-    event_id = _add_event(family_id, recurrence="weekly", starts_at=NOW + timedelta(minutes=20))
+    event_id = add_event(family_id, recurrence="weekly", starts_at=SOON)
 
     with pytest.raises(ReminderMuteError):
-        _mute(users[0], event_id, MUTE_OCCURRENCE, NOW + timedelta(days=1, minutes=20))
-    with pytest.raises(ReminderMuteError):
-        _mute(users[0], event_id, MUTE_OCCURRENCE, None)
+        _mute(users[0], event_id, MUTE_OCCURRENCE, start)
 
 
 def test_unmuting_reminds_again(family, destinations):
     family_id, users = family
-    single = _add_event(family_id, title="Single")
-    series = _add_event(family_id, title="Series", recurrence="daily", starts_at=NOW - timedelta(days=1) + timedelta(minutes=20))
+    single = add_event(family_id, title="Single")
+    series = add_event(family_id, title="Series", recurrence="daily", starts_at=SOON - timedelta(days=1))
     _mute(users[0], single)
     _mute(users[0], series, MUTE_SERIES)
-    _mute(users[1], series, MUTE_OCCURRENCE, NOW + timedelta(minutes=20))
+    _mute(users[1], series, MUTE_OCCURRENCE, SOON)
 
     _unmute(users[0], single)
     _unmute(users[0], series)
     # The occurrence reminds again, which also lifts a series mute.
-    _unmute(users[1], series, NOW + timedelta(minutes=20))
+    _unmute(users[1], series, SOON)
 
-    _run()
-
-    assert _reminded(single) == sorted(users)
-    assert _reminded(series) == sorted(users)
-    db = TestSession()
-    try:
-        assert db.query(EventReminderMute).count() == 0
-    finally:
-        db.close()
+    run_scheduler()
+    assert reminded(single) == sorted(users)
+    assert reminded(series) == sorted(users)
+    assert _mutes() == set()
 
 
-def test_a_changed_occurrence_follows_its_series_mute(family, destinations):
+SERIES_START = NOW - timedelta(days=7) + timedelta(hours=3)
+ORIGINAL = SERIES_START + timedelta(days=7)
+
+
+@pytest.mark.parametrize(
+    "on_moved, scope, start, before_move, stored",
+    [
+        (False, MUTE_SERIES, None, False, None),
+        # Muted while it was a regular occurrence, still muted after the move.
+        (False, MUTE_OCCURRENCE, ORIGINAL, True, ORIGINAL),
+        # The changed row itself is one occurrence already.
+        (True, MUTE_OCCURRENCE, None, False, ORIGINAL),
+    ],
+    ids=["whole series", "occurrence before the move", "the changed occurrence"],
+)
+def test_a_changed_occurrence_follows_its_series(family, destinations, on_moved, scope, start, before_move, stored):
+    """A weekly series whose occurrence of today a phone moved to SOON."""
     family_id, users = family
-    series_start = NOW - timedelta(days=7) + timedelta(hours=3)
-    series_id = _add_event(
-        family_id, title="Choir", recurrence="weekly", starts_at=series_start, ical_uid="choir@example.com",
-    )
-    moved_id = _add_event(
-        family_id,
-        title="Choir (moved)",
-        ical_uid="choir@example.com",
-        recurrence_id=series_start + timedelta(days=7),
-        starts_at=NOW + timedelta(minutes=20),
-    )
-    _mute(users[0], series_id, MUTE_SERIES)
+    series_id = add_event(family_id, title="Choir", recurrence="weekly", starts_at=SERIES_START, ical_uid="choir@example.com")
+    if before_move:
+        _mute(users[0], series_id, scope, start)
+    moved_id = add_event(family_id, title="Choir (moved)", ical_uid="choir@example.com", recurrence_id=ORIGINAL, starts_at=SOON)
+    if not before_move:
+        _mute(users[0], moved_id if on_moved else series_id, scope, start)
 
-    _run()
+    run_scheduler()
 
-    assert _reminded(moved_id) == [users[1], users[2]]
-    db = TestSession()
-    try:
-        # Stored on the series row.
-        assert [(m.event_id, m.occurrence_start) for m in db.query(EventReminderMute)] == [(series_id, None)]
-    finally:
-        db.close()
-
-
-def test_a_changed_occurrence_is_muted_by_its_original_start(family, destinations):
-    """Muted before a phone moved it, still muted after."""
-    family_id, users = family
-    series_start = NOW - timedelta(days=7) + timedelta(hours=3)
-    original = series_start + timedelta(days=7)
-    series_id = _add_event(
-        family_id, title="Choir", recurrence="weekly", starts_at=series_start, ical_uid="choir@example.com",
-    )
-    # Ben mutes the occurrence while it is still a regular one.
-    _mute(users[1], series_id, MUTE_OCCURRENCE, original)
-    moved_id = _add_event(
-        family_id,
-        title="Choir (moved)",
-        ical_uid="choir@example.com",
-        recurrence_id=original,
-        starts_at=NOW + timedelta(minutes=20),
-    )
-    # Anna mutes the changed row itself; it is one occurrence already.
-    assert _mute(users[0], moved_id, MUTE_OCCURRENCE) == MUTE_OCCURRENCE
-
-    _run()
-
-    assert _reminded(moved_id) == [users[2]]
-    db = TestSession()
-    try:
-        assert {(m.user_id, m.event_id, m.occurrence_start) for m in db.query(EventReminderMute)} == {
-            (users[0], series_id, original),
-            (users[1], series_id, original),
-        }
-    finally:
-        db.close()
+    assert reminded(moved_id) == users[1:]
+    assert _mutes() == {(users[0], series_id, stored)}
 
 
 def test_a_series_changing_all_following_occurrences_keeps_their_original_starts(family, destinations):
     """A row continuing the series an hour later (RANGE=THISANDFUTURE) names
     its occurrences by where they were before."""
     family_id, users = family
-    series_start = NOW - timedelta(days=14) + timedelta(minutes=20) - timedelta(hours=1)
-    split_original = NOW - timedelta(days=7) + timedelta(minutes=20) - timedelta(hours=1)
-    series_id = _add_event(
-        family_id, title="Swim", recurrence="weekly", starts_at=series_start, ical_uid="swim@example.com",
+    split_original = SOON - timedelta(days=7, hours=1)
+    series_id = add_event(family_id, recurrence="weekly", starts_at=split_original - timedelta(days=7), ical_uid="swim@example.com")
+    split_id = add_event(
+        family_id, recurrence="weekly", ical_uid="swim@example.com",
+        recurrence_id=split_original, starts_at=split_original + timedelta(hours=1),
     )
-    split_id = _add_event(
-        family_id,
-        title="Swim (later)",
-        recurrence="weekly",
-        ical_uid="swim@example.com",
-        recurrence_id=split_original,
-        starts_at=split_original + timedelta(hours=1),
-    )
-    # Today's occurrence of the later row (12:20) was at 11:20 before the change.
-    assert _mute(users[0], split_id, MUTE_OCCURRENCE, NOW + timedelta(minutes=20)) == MUTE_OCCURRENCE
+    assert _mute(users[0], split_id, MUTE_OCCURRENCE, SOON) == MUTE_OCCURRENCE
 
-    _run()
+    run_scheduler()
 
-    assert _reminded(split_id) == [users[1], users[2]]
-    db = TestSession()
-    try:
-        mute = db.query(EventReminderMute).one()
-        assert (mute.event_id, mute.occurrence_start) == (series_id, NOW + timedelta(minutes=20) - timedelta(hours=1))
-    finally:
-        db.close()
+    assert reminded(split_id) == users[1:]
+    assert _mutes() == {(users[0], series_id, SOON - timedelta(hours=1))}
 
 
-def test_children_can_mute_too(family, destinations):
-    family_id, users = family
-    event_id = _add_event(family_id, created_by_user_id=users[0])
-    _mute(users[2], event_id)
-
-    _run()
-
-    assert _reminded(event_id) == [users[0], users[1]]
-
-
-def test_household_destination_stays_quiet_when_everyone_muted(family, destinations):
-    family_id, users = family
-    event_id = _add_event(family_id)
-    for uid in users:
-        _mute(uid, event_id)
-
-    _run()
-
-    assert _reminded(event_id) == []
-    # Nobody counts as a recipient, so the household channel stays quiet
-    # (dispatch_family_notification skips reminders without recipients).
-    assert all(not call["eligible_users"] for call in destinations)
-
-
-def test_real_destination_dispatch_skips_an_event_everyone_muted(family, monkeypatch):
+@pytest.mark.parametrize(
+    "muters, sent",
+    [((0, 1, 2), []), ((0,), ["Dentist"])],
+    ids=["everyone muted: quiet", "someone muted: sent"],
+)
+def test_the_household_destination(family, monkeypatch, muters, sent):
+    """With a real destination set up, it stays quiet only once nobody is
+    left to remind (it skips reminders without recipients)."""
     family_id, users = family
     from app.core import notification_destinations as destinations_module
     from app.models import NotificationDestination
 
     monkeypatch.setattr(destinations_module, "SessionLocal", TestSession)
-    sent: list[str] = []
-    monkeypatch.setattr(destinations_module, "_send_with_apprise", lambda url, payload: sent.append(payload["title"]) or True)
-    db = TestSession()
-    try:
+    delivered: list[str] = []
+    monkeypatch.setattr(destinations_module, "_send_with_apprise", lambda url, payload: delivered.append(payload["title"]) or True)
+    with TestSession() as db:
         db.add(NotificationDestination(
-            family_id=family_id,
-            name="Family chat",
+            family_id=family_id, name="Family chat", events=["calendar.reminder"], active=True, respect_quiet_hours=False,
             target_url_secret=destinations_module.protect_target_url("ntfys://ntfy.sh/tribu-test"),
-            events=["calendar.reminder"],
-            active=True,
-            respect_quiet_hours=False,
         ))
         db.commit()
-    finally:
-        db.close()
-    quiet = _add_event(family_id, title="Quiet")
-    partly = _add_event(family_id, title="Partly")
-    for uid in users:
-        _mute(uid, quiet)
-    _mute(users[0], partly)
+    event_id = add_event(family_id)
+    for i in muters:
+        _mute(users[i], event_id)
 
-    _run()
+    run_scheduler()
 
-    assert sent == ["Partly"]
+    assert delivered == sent
 
 
 def test_the_creator_of_a_creator_only_event_can_mute_it(family, destinations):
     family_id, users = family
-    event_id = _add_event(family_id, created_by_user_id=users[0], remind_only_creator=True)
+    event_id = add_event(family_id, created_by_user_id=users[0], remind_only_creator=True)
     _mute(users[0], event_id)
 
-    _run()
+    run_scheduler()
 
-    assert _reminded(event_id) == []
+    assert reminded(event_id) == []
     assert destinations == []
 
 
-def _snooze(family_id: int, user_id: int, event_id: int, starts_at: datetime) -> None:
-    db = TestSession()
-    try:
-        db.add(ReminderSnooze(
-            user_id=user_id,
-            family_id=family_id,
-            source_type="event",
-            source_id=event_id,
-            notification_type="event_reminder",
-            title="Dentist",
-            body="Snoozed",
-            link=f"/calendar?event={event_id}&at={starts_at.isoformat()}",
-            remind_at=NOW - timedelta(minutes=1),
-            expires_at=starts_at,
-        ))
-        db.commit()
-    finally:
-        db.close()
-
-
-def _snoozed_notifications() -> list[tuple[int, str]]:
-    db = TestSession()
-    try:
-        return sorted(
-            (uid, link) for uid, link in db.query(Notification.user_id, Notification.link).filter(Notification.body == "Snoozed")
-        )
-    finally:
-        db.close()
+def _snoozed() -> list[int]:
+    """Who got a snoozed reminder."""
+    with TestSession() as db:
+        return sorted(uid for (uid,) in db.query(Notification.user_id).filter(Notification.body == "Snoozed"))
 
 
 def test_snoozed_reminders_of_muted_occurrences_are_dropped(family, destinations):
     family_id, users = family
     later = NOW + timedelta(hours=2)
-    single = _add_event(family_id, title="Single", starts_at=later)
-    series = _add_event(family_id, title="Series", recurrence="daily", starts_at=later - timedelta(days=2))
+    single = add_event(family_id, title="Single", starts_at=later)
+    series = add_event(family_id, title="Series", recurrence="daily", starts_at=later - timedelta(days=2))
     for uid in users:
-        _snooze(family_id, uid, single, later)
-        _snooze(family_id, uid, series, later)
+        add_snooze(family_id, uid, single, later)
+        add_snooze(family_id, uid, series, later)
     _mute(users[0], single)
     _mute(users[0], series, MUTE_SERIES)
     _mute(users[1], series, MUTE_OCCURRENCE, later)
     # Cleo's mute of tomorrow does not touch her snooze for today.
     _mute(users[2], series, MUTE_OCCURRENCE, later + timedelta(days=1))
 
-    _run()
+    run_scheduler()
 
-    delivered = _snoozed_notifications()
-    assert [uid for uid, _ in delivered] == sorted([users[1], users[2], users[2]])
-    db = TestSession()
-    try:
+    assert _snoozed() == [users[1], users[2], users[2]]
+    with TestSession() as db:
         # Dropped ones are done with, not kept for later.
         assert db.query(ReminderSnooze).filter(ReminderSnooze.delivered_at.is_(None)).count() == 0
-    finally:
-        db.close()
 
 
 def test_a_snooze_comes_back_when_the_mute_is_undone_in_time(family, destinations):
     family_id, users = family
     later = NOW + timedelta(hours=2)
-    event_id = _add_event(family_id, starts_at=later)
-    _snooze(family_id, users[0], event_id, later)
+    event_id = add_event(family_id, starts_at=later)
+    add_snooze(family_id, users[0], event_id, later)
     _mute(users[0], event_id)
     _unmute(users[0], event_id)
 
-    _run()
+    run_scheduler()
 
-    assert [uid for uid, _ in _snoozed_notifications()] == [users[0]]
+    assert _snoozed() == [users[0]]
 
 
-def test_mutes_go_with_the_event_and_the_user(family):
+def test_mutes_go_with_the_event_and_the_user_and_are_kept_once(family):
     family_id, users = family
-    event_id = _add_event(family_id)
-    other = _add_event(family_id)
-    _mute(users[0], event_id)
+    event_id = add_event(family_id, recurrence="daily")
+    other = add_event(family_id)
+    for _ in range(2):
+        _mute(users[0], event_id)
+        _mute(users[0], event_id, MUTE_OCCURRENCE, SOON)
+    assert len(_mutes()) == 1
     _mute(users[1], other)
 
-    db = TestSession()
-    try:
+    with TestSession() as db:
         db.delete(db.get(CalendarEvent, event_id))
         db.delete(db.get(User, users[1]))
         db.commit()
-        assert db.query(EventReminderMute).count() == 0
-    finally:
-        db.close()
+    assert _mutes() == set()
 
 
-def test_muting_twice_keeps_one_row(family):
-    family_id, users = family
-    event_id = _add_event(family_id, recurrence="daily")
-    _mute(users[0], event_id)
-    _mute(users[0], event_id)
-    _mute(users[0], event_id, MUTE_OCCURRENCE, NOW + timedelta(minutes=20))
-    _mute(users[0], event_id, MUTE_OCCURRENCE, NOW + timedelta(minutes=20))
-
-    db = TestSession()
-    try:
-        assert db.query(EventReminderMute).count() == 1
-    finally:
-        db.close()
-
-
-# ── Snoozed from a push button, muted afterwards ─────────────────────────
+# ── Snoozed from a push button, muted afterwards (review findings) ───────
 
 
 @pytest.fixture
-def pushes(monkeypatch):
-    """Anna gets reminders two hours ahead by push; returns her pushes."""
+def snooze_by_push(family, destinations, monkeypatch):
+    """Runs the scheduler for Anna (push, two hours ahead), snoozes her
+    reminder from its button and returns a function that delivers the
+    snoozes at a given time and tells whether hers came back."""
     from app.core import notification_actions
     from app.core import scheduler as scheduler_module
     from app.core.push import PushResult
 
-    sent: list[dict] = []
-
-    def send(db, uid, title, body, link=None, **options):
-        sent.append({"user_id": uid, "link": link, **options})
-        return PushResult(attempted=1, succeeded=1)
-
-    monkeypatch.setattr(scheduler_module, "send_push_for_user", send)
-    monkeypatch.setattr(notification_actions, "utcnow", lambda: NOW)
-    return sent
-
-
-def _push_to(family, pushes) -> None:
-    db = TestSession()
-    try:
+    with TestSession() as db:
         pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == family[1][0]).one()
-        pref.push_enabled = True
-        pref.reminder_minutes = 120
+        pref.push_enabled, pref.reminder_minutes = True, 120
         db.commit()
-    finally:
-        db.close()
+    pushes: list[dict] = []
+    monkeypatch.setattr(
+        scheduler_module, "send_push_for_user",
+        lambda db, uid, title, body, link=None, **options: pushes.append({"user_id": uid, **options})
+        or PushResult(attempted=1, succeeded=1),
+    )
+
+    def snooze(audit_now: datetime) -> None:
+        monkeypatch.setattr(notification_actions, "utcnow", lambda: audit_now)
+        run_scheduler()
+        token = next(push["action_token"] for push in pushes if push["user_id"] == family[1][0])
+        with TestSession() as db:
+            notification_actions.apply_action(db, token, "snooze")
+
+    def comes_back(at_time: datetime) -> bool:
+        with TestSession() as db:
+            before = db.query(Notification).filter(Notification.user_id == family[1][0]).count()
+            scheduler_module.deliver_snoozed_reminders(
+                db, now=at_time, local_now=at_time,
+                get_pref=lambda uid: NotificationPreference(user_id=uid, reminders_enabled=True, push_enabled=False),
+            )
+            db.commit()
+            return db.query(Notification).filter(Notification.user_id == family[1][0]).count() > before
+
+    return snooze, comes_back
 
 
-def _snooze_from_push(pushes, user_id: int) -> None:
-    from app.core import notification_actions
-
-    token = next(push["action_token"] for push in pushes if push["user_id"] == user_id)
-    db = TestSession()
-    try:
-        notification_actions.apply_action(db, token, "snooze")
-    finally:
-        db.close()
-
-
-def _deliver_snoozes(at: datetime) -> None:
-    from app.core import scheduler as scheduler_module
-
-    db = TestSession()
-    try:
-        scheduler_module.deliver_snoozed_reminders(
-            db, now=at, local_now=at,
-            get_pref=lambda uid: NotificationPreference(user_id=uid, reminders_enabled=True, push_enabled=False),
-        )
-        db.commit()
-    finally:
-        db.close()
-
-
-def _notifications_of(user_id: int) -> int:
-    db = TestSession()
-    try:
-        return db.query(Notification).filter(Notification.user_id == user_id).count()
-    finally:
-        db.close()
-
-
-def test_a_snooze_stays_muted_after_its_occurrence_moved_again(family, destinations, pushes):
+def test_a_snooze_stays_muted_after_its_occurrence_moved_again(family, snooze_by_push):
     """A series continued an hour later (09:00 became 10:00), snoozed, then
     moved once more (11:00): muting that occurrence still silences the snooze."""
-    _push_to(family, pushes)
+    snooze, comes_back = snooze_by_push
     family_id, users = family
     split_original = NOW - timedelta(days=7) + timedelta(minutes=30)
-    _add_event(
-        family_id, title="Swim", recurrence="weekly", starts_at=split_original - timedelta(days=7),
-        ical_uid="swim@example.com",
-    )
-    split_id = _add_event(
-        family_id, title="Swim (later)", recurrence="weekly", ical_uid="swim@example.com",
+    add_event(family_id, recurrence="weekly", starts_at=split_original - timedelta(days=7), ical_uid="swim@example.com")
+    split_id = add_event(
+        family_id, recurrence="weekly", ical_uid="swim@example.com",
         recurrence_id=split_original, starts_at=split_original + timedelta(hours=1),
     )
-    _run()
-    _snooze_from_push(pushes, users[0])
-    db = TestSession()
-    try:
-        assert db.query(ReminderSnooze).one().occurrence_start == NOW + timedelta(minutes=30)
+    snooze(NOW)
+    with TestSession() as db:
         db.get(CalendarEvent, split_id).starts_at = split_original + timedelta(hours=2)
         db.commit()
-    finally:
-        db.close()
     _mute(users[0], split_id, MUTE_OCCURRENCE, NOW + timedelta(minutes=150))
 
-    before = _notifications_of(users[0])
-    _deliver_snoozes(NOW + timedelta(minutes=61))
-
-    assert _notifications_of(users[0]) == before
-    db = TestSession()
-    try:
-        assert db.query(ReminderSnooze).one().delivered_at is not None
-    finally:
-        db.close()
+    assert not comes_back(NOW + timedelta(minutes=61))
 
 
-def test_a_snooze_of_an_occurrence_in_the_spring_forward_gap_stays_muted(family, destinations, pushes, monkeypatch):
+def test_a_snooze_of_an_occurrence_in_the_spring_forward_gap_stays_muted(family, snooze_by_push, monkeypatch):
     """02:30 on the night Berlin skips to 03:00 does not survive a round trip
     through UTC (it comes back as 03:30); the snooze keeps 02:30 itself."""
     from app.core import scheduler as scheduler_module
     from app.core.clock import app_timezone, local_wall_to_utc_naive
 
+    snooze, comes_back = snooze_by_push
     monkeypatch.setenv("TZ", "Europe/Berlin")
     app_timezone.cache_clear()
     try:
         audit_now = datetime(2027, 3, 27, 23, 40)
         monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", local_wall_to_utc_naive)
-        monkeypatch.setattr(scheduler_module, "utcnow", lambda: audit_now)
-        monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: datetime(2027, 3, 28, 0, 40))
-        from app.core import notification_actions
-
-        monkeypatch.setattr(notification_actions, "utcnow", lambda: audit_now)
-        _push_to(family, pushes)
+        at(monkeypatch, audit_now, wall=datetime(2027, 3, 28, 0, 40))
         family_id, users = family
         gap = datetime(2027, 3, 28, 2, 30)
-        event_id = _add_event(family_id, title="Night feed", recurrence="daily", starts_at=gap - timedelta(days=5))
-        _run()
-        _snooze_from_push(pushes, users[0])
+        event_id = add_event(family_id, recurrence="daily", starts_at=gap - timedelta(days=5))
+        snooze(audit_now)
         _mute(users[0], event_id, MUTE_OCCURRENCE, gap)
 
-        before = _notifications_of(users[0])
-        _deliver_snoozes(audit_now + timedelta(hours=1, minutes=1))
-
-        assert _notifications_of(users[0]) == before
+        assert not comes_back(audit_now + timedelta(hours=1, minutes=1))
     finally:
         app_timezone.cache_clear()

@@ -17,7 +17,8 @@ const EventReminderControl = forwardRef(function EventReminderControl(
   const hintId = useId();
   const seriesHintId = useId();
   const name = useId();
-  useEffect(() => setState(event.reminder_muted || null), [event.reminder_muted, event.id, event.starts_at]);
+  useEffect(() => setState(event.reminder_muted || null), [event.reminder_muted]);
+  const series = isSeriesEvent(event);
   const copy = (key) => t(messages, `module.calendar.reminder_mute.${key}`);
 
   const choose = async (next) => {
@@ -35,14 +36,14 @@ const EventReminderControl = forwardRef(function EventReminderControl(
 
   // From "all repetitions off", "On" and "Off for this one" both bring the
   // other repetitions back (there is no "all but this one"); say so first.
-  const seriesMuted = isSeriesEvent(event) && state === 'series';
+  const seriesMuted = series && state === 'series';
   const Icon = state ? BellOff : Bell;
   return (
     // data-no-autofocus: opening an event does not land on this choice.
     <div ref={ref} className="tc-detail-line tc-reminder" aria-busy={busy || undefined} data-no-autofocus="">
       <Icon size={20} aria-hidden="true" />
       <div>
-        {isSeriesEvent(event) ? (
+        {series ? (
           <fieldset
             className="tc-reminder-choice"
             aria-describedby={seriesMuted ? `${hintId} ${seriesHintId}` : hintId}

@@ -1,5 +1,6 @@
 // Taking oneself off an event's reminder (only reminders: who takes part
 // stays as it is).
+import * as api from './api';
 import { handOff } from './viewHandoff';
 
 // An event the calendar should open, with the reminder choice when asked
@@ -7,13 +8,9 @@ import { handOff } from './viewHandoff';
 export const EVENT_LINK_HANDOFF = 'tribu_calendar_event';
 export const EVENT_LINK_EVENT = 'tribu:open-event';
 
-// Told when a reminder was muted outside the calendar (the notification
-// panel), so an open calendar shows the new state.
+// Told whenever a reminder was muted or unmuted ({ eventId, at, state,
+// repeats }), so the calendar shows the new state wherever it changed.
 export const REMINDER_MUTE_CHANGED = 'tribu:reminder-mute-changed';
-
-export function announceReminderMute(detail) {
-  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(REMINDER_MUTE_CHANGED, { detail }));
-}
 
 // Opens the calendar at ``target``. Someone in several families may have
 // another one open: Tribu switches to the event's family first (the views
@@ -22,31 +19,22 @@ export function announceReminderMute(detail) {
 // loaded, ``onError`` says so and the calendar opens without the event.
 export async function openEventLink(target, { setActiveView, switchFamily, familyId, families = [], onError }) {
   const linked = target.familyId != null ? String(target.familyId) : null;
-  if (linked && linked !== String(familyId)) {
-    if (!families.some((family) => String(family.family_id) === linked)) {
-      setActiveView('calendar');
-      return;
-    }
-    try {
+  try {
+    if (linked && linked !== String(familyId)) {
+      if (!families.some((family) => String(family.family_id) === linked)) return;
       await switchFamily(linked);
-    } catch {
-      onError?.();
-      setActiveView('calendar');
-      return;
     }
+    handOff(EVENT_LINK_HANDOFF, JSON.stringify(target));
+    window.dispatchEvent(new Event(EVENT_LINK_EVENT));
+  } catch {
+    onError?.();
+  } finally {
+    setActiveView('calendar');
   }
-  handOff(EVENT_LINK_HANDOFF, JSON.stringify(target));
-  if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENT_LINK_EVENT));
-  setActiveView('calendar');
 }
 
 export function parseEventLink(value) {
-  try {
-    const target = JSON.parse(value || 'null');
-    return target && Number.isInteger(target.eventId) && target.at ? target : null;
-  } catch {
-    return null;
-  }
+  return value ? JSON.parse(value) : null;
 }
 
 // What an event reminder's link names: the event, its family, the
@@ -81,8 +69,7 @@ export function eventReminderTarget(link) {
 // have no reminder), and not one that reminds only its creator when that is
 // someone else. The state comes from the calendar API.
 export function showsReminderControl(event, me) {
-  if (!event || event._isBirthday || event.all_day) return false;
-  if (!Object.prototype.hasOwnProperty.call(event, 'reminder_muted')) return false;
+  if (!event || event._isBirthday || event.all_day || event.reminder_muted === undefined) return false;
   if (
     event.remind_only_creator &&
     event.created_by_user_id != null &&
@@ -105,11 +92,19 @@ export function occurrenceStartOf(event) {
 }
 
 // Sets the state of one occurrence: null (remind me), 'occurrence' or
-// 'series'. Resolves to the server's state, or throws.
-export async function setReminderMute(api, eventId, state, occurrenceStart) {
+// 'series', and tells the calendar. Resolves to the server's state, or throws.
+export async function setReminderMute({ eventId, at, repeats }, state) {
   const result = state
-    ? await api.apiMuteEventReminder(eventId, state, occurrenceStart)
-    : await api.apiUnmuteEventReminder(eventId, occurrenceStart);
+    ? await api.apiMuteEventReminder(eventId, state, at)
+    : await api.apiUnmuteEventReminder(eventId, at);
   if (!result?.ok) throw new Error('reminder_mute_failed');
-  return result.data?.reminder_muted ?? null;
+  const saved = result.data?.reminder_muted ?? null;
+  window.dispatchEvent(new CustomEvent(REMINDER_MUTE_CHANGED, { detail: { eventId, at, repeats, state: saved } }));
+  return saved;
+}
+
+// The toast after a change of the state.
+export function reminderMuteToastKey(state, repeats) {
+  if (!state) return 'toast.reminder_unmuted';
+  return state === 'series' && repeats ? 'toast.reminder_muted_series' : 'toast.reminder_muted';
 }

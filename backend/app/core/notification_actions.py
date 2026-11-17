@@ -18,16 +18,8 @@ import jwt
 from sqlalchemy.orm import Session
 
 from app.core import task_service
-from app.core.clock import utcnow
-from app.core.event_reminders import (
-    MUTE_OCCURRENCE,
-    MUTE_SERIES,
-    ReminderMuteError,
-    is_part_of_series,
-    reminder_settings_row,
-    set_reminder_mute,
-    utc_to_local_wall,
-)
+from app.core.clock import local_wall_now, utcnow
+from app.core.event_reminders import MUTE_OCCURRENCE, ReminderMuteError, set_reminder_mute
 from app.core.reminder_text import reminder_text
 from app.models import CalendarEvent, MealPlan, Membership, ReminderSnooze, ShoppingList, User
 from app.security import JWT_ALG, JWT_SECRET
@@ -66,19 +58,12 @@ def reminder_actions(source_type: str) -> tuple[str, ...]:
     return REMINDER_ACTIONS.get(source_type, ())
 
 
-def _repeats(link: str | None) -> bool:
-    """Whether an event reminder's link (``scheduler.event_reminder_link``)
-    is about an occurrence of a series."""
-    if not link:
-        return False
-    return parse_qs(urlsplit(link).query).get("repeats") == ["1"]
-
-
 def link_actions(source_type: str, link: str | None) -> dict[str, str]:
     """Buttons that open Tribu at a link instead of running from the
-    notification: "Don't remind me" for an occurrence of a series, so the
+    notification: "Don't remind me" for an occurrence of a series (its link
+    says ``repeats=1``, see ``scheduler.event_reminder_link``), so the
     choice between this one and all of them is made in the app."""
-    if source_type == "event" and _repeats(link):
+    if source_type == "event" and link and parse_qs(urlsplit(link).query).get("repeats") == ["1"]:
         return {"mute": f"{link}&mute=choose"}
     return {}
 
@@ -128,28 +113,16 @@ def create_action_token(
     }
     if expires_at is not None:
         payload["end"] = int(expires_at.replace(tzinfo=timezone.utc).timestamp())
-    if occurrence_start is not None:
-        payload["occ"] = _iso(occurrence_start)
-    if event_created_at is not None:
-        payload["evc"] = event_identity(event_created_at)
+    for key, value in (("occ", occurrence_start), ("evc", event_created_at)):
+        if value is not None:
+            # To the microsecond: an event created in the same second as a
+            # deleted one with its id must not match.
+            payload[key] = value.isoformat(timespec="microseconds")
     return jwt.encode(payload, _signing_key(), algorithm=JWT_ALG)
 
 
-def _iso(value: datetime) -> str:
-    return value.replace(microsecond=0, tzinfo=None).isoformat()
-
-
-def event_identity(created_at: datetime) -> str:
-    """An event's creation time to the microsecond: a new event that gets a
-    deleted event's id, even within the same second, does not match."""
-    return created_at.replace(tzinfo=None).isoformat(timespec="microseconds")
-
-
-def _token_event_created_at(payload: dict) -> datetime | None:
-    try:
-        return datetime.fromisoformat(payload["evc"]) if payload.get("evc") else None
-    except (TypeError, ValueError):
-        return None
+def _token_time(payload: dict, key: str) -> datetime | None:
+    return datetime.fromisoformat(payload[key]) if payload.get(key) else None
 
 
 def reminder_push_actions(
@@ -162,14 +135,11 @@ def reminder_push_actions(
     body: str | None,
     link: str | None,
     language: str,
-    expires_at: datetime | None = None,
-    occurrence_start: datetime | None = None,
-    event_created_at: datetime | None = None,
+    **token_fields,
 ) -> dict:
     """``send_push_for_user`` options for a reminder's buttons, or none.
 
-    See :func:`create_action_token` for ``occurrence_start`` and
-    ``event_created_at``, which event reminders pass.
+    ``token_fields`` are the optional fields of :func:`create_action_token`.
     """
     token = create_action_token(
         user_id=user_id,
@@ -180,9 +150,7 @@ def reminder_push_actions(
         title=title,
         body=body,
         link=link,
-        expires_at=expires_at,
-        occurrence_start=occurrence_start,
-        event_created_at=event_created_at,
+        **token_fields,
     )
     if token is None:
         return {}
@@ -255,10 +223,10 @@ def apply_action(db: Session, token: str, action: str) -> dict:
                 if payload.get("end") is not None
                 else None
             ),
-            occurrence_start=_token_occurrence(payload),
+            occurrence_start=_token_time(payload, "occ"),
             # The event the reminder was about, so the snooze never comes
             # back for another event that got its id.
-            event_created_at=_token_event_created_at(payload),
+            event_created_at=_token_time(payload, "evc"),
         ))
         db.commit()
         return {"status": "ok", "action": action, "remind_at": remind_at.isoformat()}
@@ -297,36 +265,23 @@ def _add_meal_to_list(db: Session, user: User, member: Membership, plan_id: int)
     return {"status": "ok", "action": "shopping", "added_count": len(added), "list_id": shopping_list.id}
 
 
-def _token_occurrence(payload: dict) -> datetime | None:
-    try:
-        return datetime.fromisoformat(payload["occ"]) if payload.get("occ") else None
-    except (TypeError, ValueError):
-        return None
-
-
 def _mute_event_reminder(db: Session, user: User, member: Membership, payload: dict) -> dict:
     """"Don't remind me" from a reminder of a single event.
 
-    Tokens only offer it for single events. Should the event have become
-    part of a series since, only the occurrence the reminder was about is
-    muted, never the whole series. A token for an event that is gone does
-    nothing, also when a new event got the same id.
+    Should the event have become part of a series since, only the
+    occurrence the reminder was about is muted. A token for an event that is
+    gone does nothing, also when a new event got its id.
     """
     event = (
         db.query(CalendarEvent)
         .filter(CalendarEvent.id == payload["sid"], CalendarEvent.family_id == member.family_id)
         .first()
     )
-    if event is None or not payload.get("evc") or payload["evc"] != event_identity(event.created_at):
+    if event is None or _token_time(payload, "evc") != event.created_at:
         raise NotificationActionError("ACTION_GONE", 404)
+    start = local_wall_now(datetime.fromtimestamp(payload["end"], timezone.utc))
     try:
-        if not is_part_of_series(event, reminder_settings_row(db, event)):
-            state = set_reminder_mute(db, user.id, event, MUTE_SERIES, None)
-        elif payload.get("end") is not None:
-            start = utc_to_local_wall(datetime.fromtimestamp(payload["end"], timezone.utc).replace(tzinfo=None))
-            state = set_reminder_mute(db, user.id, event, MUTE_OCCURRENCE, start)
-        else:
-            raise NotificationActionError("ACTION_NOT_ALLOWED", 400)
+        state = set_reminder_mute(db, user.id, event, MUTE_OCCURRENCE, start)
     except ReminderMuteError as exc:
         raise NotificationActionError("ACTION_GONE", 404) from exc
     db.commit()

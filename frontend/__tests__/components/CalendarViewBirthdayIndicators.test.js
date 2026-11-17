@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import CalendarView from '../../components/calendar';
 import en from '../../i18n/en.json';
@@ -8,8 +8,13 @@ import * as api from '../../lib/api';
 import { handOff } from '../../lib/viewHandoff';
 
 jest.mock('../../contexts/AppContext', () => ({ useApp: jest.fn() }));
-jest.mock('../../contexts/ToastContext', () => ({ useToast: () => ({ success: jest.fn(), error: jest.fn() }) }));
-jest.mock('../../lib/api', () => ({ apiCreateEvent: jest.fn(), apiUpdateEvent: jest.fn(), apiDeleteEvent: jest.fn(), apiGetEvents: jest.fn() }));
+const mockToastSuccess = jest.fn();
+jest.mock('../../contexts/ToastContext', () => ({ useToast: () => ({ success: mockToastSuccess, error: jest.fn() }) }));
+jest.mock('../../lib/api', () => ({
+  apiCreateEvent: jest.fn(), apiUpdateEvent: jest.fn(), apiDeleteEvent: jest.fn(), apiGetEvents: jest.fn(),
+  apiMuteEventReminder: jest.fn((id, scope) => Promise.resolve({ ok: true, data: { reminder_muted: scope } })),
+  apiUnmuteEventReminder: jest.fn(() => Promise.resolve({ ok: true, data: { reminder_muted: null } })),
+}));
 
 const member = { user_id: 1, display_name: 'Alex' };
 const event = { id: 1, title: 'Piano lesson', starts_at: '2026-05-04T14:00:00', ends_at: '2026-05-04T15:00:00', assigned_to: [1], description: 'Bring music', color: '#8052a3' };
@@ -181,4 +186,85 @@ it('shows a multi-day event on each intersecting day, excluding its midnight end
   expect(container.querySelectorAll('.tc-calendar-event')).toHaveLength(3);
   fireEvent.click(screen.getByRole('button',{name:'Week',exact:true}));
   expect(container.querySelectorAll('.tc-week-item')).toHaveLength(3);
+});
+
+describe('My reminder in the calendar', () => {
+  const swim = {
+    ...event, id: 7, family_id: 1, title: 'Swimming', all_day: false, recurrence: 'weekly', is_recurring: true,
+    created_by_user_id: 1, remind_only_creator: false, reminder_muted: null,
+  };
+  const link = { eventId: 7, familyId: 1, at: '2026-05-04T14:00:00', repeats: true, choose: true };
+  const loaded = async (events = [swim], props = {}) => {
+    api.apiGetEvents.mockResolvedValue({ ok: true, data: events });
+    render(<Harness initialEvents={events} demoMode={false} {...props} />);
+    await waitFor(() => expect(api.apiGetEvents).toHaveBeenCalled());
+  };
+  const openSwim = () => {
+    fireEvent.click(screen.getAllByRole('button', { name: /Swimming/ })[0]);
+    return within(screen.getByRole('dialog'));
+  };
+  const choiceFocused = async () => {
+    const dialog = within(await screen.findByRole('dialog'));
+    expect(dialog.getByRole('heading', { name: 'Swimming' })).toBeInTheDocument();
+    await waitFor(() => expect(dialog.getByRole('radio', { name: 'On' })).toHaveFocus());
+  };
+
+  it('lets a child without edit rights take themselves off all repetitions and back on', async () => {
+    await loaded([swim], { isChild: true, me: { user_id: 3, display_name: 'Cleo' } });
+    const dialog = openSwim();
+    expect(dialog.queryByRole('button', { name: 'Edit', exact: true })).not.toBeInTheDocument();
+    // Opening the event does not land on the choice.
+    expect(dialog.getByRole('radio', { name: 'On' })).not.toHaveFocus();
+
+    await act(async () => { fireEvent.click(dialog.getByRole('radio', { name: 'Off for all repetitions' })); });
+    expect(api.apiMuteEventReminder).toHaveBeenCalledWith(7, 'series', '2026-05-04T14:00:00');
+    expect(dialog.getByRole('radio', { name: 'Off for all repetitions' })).toBeChecked();
+    expect(mockToastSuccess).toHaveBeenCalledWith('Reminder off for all repetitions');
+    // The other occurrences change too, so the range is loaded again.
+    await waitFor(() => expect(api.apiGetEvents.mock.calls.length).toBeGreaterThan(1));
+
+    await act(async () => { fireEvent.click(dialog.getByRole('radio', { name: 'On' })); });
+    expect(api.apiUnmuteEventReminder).toHaveBeenCalledWith(7, '2026-05-04T14:00:00');
+  });
+
+  it('says that leaving "all repetitions off" brings the others back', async () => {
+    await loaded([{ ...swim, reminder_muted: 'series' }]);
+    const group = openSwim().getByRole('group', { name: 'My reminder' });
+    expect(group).toHaveAccessibleDescription(
+      'Only your own reminder changes, not who takes part. On and Off for this one both bring back the reminders for the other repetitions.',
+    );
+    await act(async () => { fireEvent.click(within(group).getByRole('radio', { name: 'Off for this one' })); });
+    expect(group).toHaveAccessibleDescription('Only your own reminder changes, not who takes part.');
+  });
+
+  it('shows a mute made in the notification panel', async () => {
+    await loaded();
+    act(() => {
+      window.dispatchEvent(new CustomEvent('tribu:reminder-mute-changed', {
+        detail: { eventId: 7, at: '2026-05-04T14:00:00', state: 'series', repeats: false },
+      }));
+    });
+    expect(openSwim().getByRole('radio', { name: 'Off for all repetitions' })).toBeChecked();
+  });
+
+  it.each([
+    ['when the calendar opens', true],
+    ['when it arrives while the calendar is open', false],
+  ])('opens a reminder link with the choice in focus %s', async (_, early) => {
+    if (early) handOff('tribu_calendar_event', JSON.stringify(link));
+    await loaded();
+    if (!early) {
+      act(() => {
+        handOff('tribu_calendar_event', JSON.stringify(link));
+        window.dispatchEvent(new Event('tribu:open-event'));
+      });
+    }
+    await choiceFocused();
+  });
+
+  it('leaves a link of another family alone (opening it switches family first)', async () => {
+    handOff('tribu_calendar_event', JSON.stringify({ ...link, familyId: 2 }));
+    await loaded();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });

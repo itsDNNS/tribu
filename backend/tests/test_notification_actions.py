@@ -270,8 +270,38 @@ def test_web_push_carries_labelled_buttons(monkeypatch):
             db, user.id, "Bins", "Overdue", "/tasks?id=1",
             actions=("done", "snooze"), action_token="tok", action_labels={"done": "Done", "snooze": "Later"},
         )
-    assert sent == [{
-        "title": "Bins", "body": "Overdue", "url": "/tasks?id=1",
-        "actions": [{"action": "done", "title": "Done"}, {"action": "snooze", "title": "Later"}],
-        "action_token": "tok",
-    }]
+        # A button that opens Tribu ("Don't remind me" of a series) carries its link.
+        push_module.send_push_for_user(
+            db, user.id, "Swim", "Starts at 9", "/calendar?event=1",
+            actions=("snooze", "mute"), action_token="tok", action_labels={"snooze": "Later", "mute": "Mute"},
+            action_urls={"mute": "/calendar?event=1&mute=choose"},
+        )
+    assert sent == [
+        {
+            "title": "Bins", "body": "Overdue", "url": "/tasks?id=1",
+            "actions": [{"action": "done", "title": "Done"}, {"action": "snooze", "title": "Later"}],
+            "action_token": "tok",
+        },
+        {
+            "title": "Swim", "body": "Starts at 9", "url": "/calendar?event=1",
+            "actions": [{"action": "snooze", "title": "Later"}, {"action": "mute", "title": "Mute"}],
+            "action_token": "tok", "action_urls": {"mute": "/calendar?event=1&mute=choose"},
+        },
+    ]
+
+
+def test_apps_only_get_the_buttons_they_know(monkeypatch):
+    """iOS needs a registered category for each set of buttons, so newer
+    ones ("mute") stay in the browser."""
+    from app.core import push as push_module
+    from app.models import PushSubscription
+
+    sent_fcm = []
+    monkeypatch.setattr(push_module, "is_fcm_configured", lambda: True)
+    monkeypatch.setattr(push_module, "_send_fcm_push", lambda token, title, body, url, **kwargs: sent_fcm.append(kwargs) or (True, None, False))
+    with TestSession() as db:
+        user, _ = _seed(db)
+        db.add(PushSubscription(user_id=user.id, endpoint="fcm-token", p256dh="", auth="", platform="fcm", supports_actions=True))
+        db.commit()
+        push_module.send_push_for_user(db, user.id, "Swim", "", "/calendar", actions=("snooze", "mute"), action_token="tok")
+    assert sent_fcm[0]["actions"] == ("snooze",)

@@ -12,13 +12,14 @@ from app.core.backup import create_backup, enforce_retention
 from app.core.clock import local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
 from app.core.duties import sync_all_duties, week_summary
 from app.core.event_reminders import (
+    is_muted,
     is_part_of_series,
     load_reminder_mutes,
     mute_state,
     only_reminded_user,
     reminder_mute_key,
     reminder_settings_row,
-    utc_to_local_wall,
+    snoozed_mute_key,
 )
 from app.core.push import send_push_for_user
 from app.core.notification_actions import SNOOZE_DELAY, reminder_push_actions
@@ -315,8 +316,7 @@ def _check_notifications():
             trigger_key: str,
             event_starts_at: datetime | None = None,
             expires_at: datetime | None = None,
-            occurrence_start: datetime | None = None,
-            event_created_at: datetime | None = None,
+            **token_fields,
         ) -> None:
             """Idempotent reminder delivery for a (user, trigger_key) pair.
 
@@ -327,8 +327,7 @@ def _check_notifications():
 
             ``expires_at`` (naive UTC) is when the reminder stops being true;
             the in-app notification disappears then, read or not.
-            ``occurrence_start`` and ``event_created_at`` go into the
-            buttons' token for event reminders (see
+            ``token_fields`` go into the buttons' token (see
             ``notification_actions.create_action_token``).
             """
             pref = get_pref(uid)
@@ -381,8 +380,7 @@ def _check_notifications():
                     action_options = reminder_push_actions(
                         uid, fid, source_type, source_id, ntype, title, push_body, link, lang,
                         expires_at=expires_at,
-                        occurrence_start=occurrence_start,
-                        event_created_at=event_created_at,
+                        **token_fields,
                     )
                     if event_starts_at is not None:
                         push_result = send_push_for_user(
@@ -788,24 +786,6 @@ def legacy_snooze_expiry(remind_at: datetime) -> datetime:
     return remind_at - SNOOZE_DELAY + LEGACY_SNOOZE_LIFETIME
 
 
-def _snoozed_occurrence_key(snooze: ReminderSnooze, event: CalendarEvent, settings_row: CalendarEvent):
-    """``(event id, occurrence)`` a mute must match to silence ``snooze``.
-
-    A snooze keeps the occurrence as the reminder named it, so it still
-    matches after the occurrence moved, and needs no round trip through
-    UTC (which cannot tell 02:30 on the night clocks go forward). Snoozes
-    from before that work it out from when the reminder ran out.
-    """
-    part_of_series = is_part_of_series(event, settings_row)
-    if snooze.occurrence_start is not None:
-        return (settings_row.id if part_of_series else event.id), snooze.occurrence_start.replace(microsecond=0)
-    if snooze.expires_at is not None:
-        return reminder_mute_key(event, settings_row, utc_to_local_wall(snooze.expires_at))
-    if not event.recurrence:
-        return reminder_mute_key(event, settings_row, event.starts_at)
-    return settings_row.id, None
-
-
 def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pref) -> set[int]:
     """Sends the reminders whose snooze has run out, once each.
 
@@ -822,7 +802,6 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
         .all()
     )
     for snooze in due:
-        event = None
         if snooze.source_type == "task":
             task = db.query(Task).filter(Task.id == snooze.source_id).first()
             if task is None or task.status != "open":
@@ -839,20 +818,17 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
             ):
                 snooze.delivered_at = now
                 continue
-            # Snoozed before the event was set to remind only its creator.
+            # Since snoozing, the event was set to remind only its creator,
+            # or they took themselves off it (checked here rather than
+            # deleted on mute, so undoing the mute keeps the snooze).
             member_ids = {
                 uid for (uid,) in db.query(Membership.user_id).filter(Membership.family_id == event.family_id)
             }
             settings_row = reminder_settings_row(db, event)
             only_user = only_reminded_user(settings_row, member_ids)
-            if only_user is not None and only_user != snooze.user_id:
-                snooze.delivered_at = now
-                continue
-            # Taken off the reminder for this occurrence or the whole
-            # series since snoozing. Checked here rather than deleted on
-            # mute, so undoing the mute keeps the snooze.
-            event_id, occurrence = _snoozed_occurrence_key(snooze, event, settings_row)
-            if mute_state(load_reminder_mutes(db, [event_id], [snooze.user_id]).get((snooze.user_id, event_id)), occurrence):
+            if (only_user is not None and only_user != snooze.user_id) or is_muted(
+                db, snooze.user_id, snoozed_mute_key(snooze, event, settings_row),
+            ):
                 snooze.delivered_at = now
                 continue
             if expires_at is None:

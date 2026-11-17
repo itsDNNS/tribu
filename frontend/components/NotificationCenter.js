@@ -8,7 +8,7 @@ import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { setPendingClearToast, startPendingClear, undoPendingClear } from '../lib/notificationClear';
 import { isNotificationExpired } from '../lib/notificationExpiry';
-import { announceReminderMute, eventReminderTarget, setReminderMute } from '../lib/reminderMute';
+import { eventReminderTarget, reminderMuteToastKey, setReminderMute } from '../lib/reminderMute';
 
 const TYPE_ICONS = {
   event_reminder: CalendarDays,
@@ -76,15 +76,16 @@ export default function NotificationCenter({ onClose } = {}) {
   notificationsRef.current = notifications;
 
   // "Don't remind me" on event reminders: the notification whose choice
-  // (this occurrence or all) is open, and those already muted here.
+  // (this occurrence or all) is open, those muted here, and the elements
+  // that take the focus back.
   const [choosing, setChoosing] = useState(null);
   const [muted, setMuted] = useState(() => new Set());
   const muteButtons = useRef(new Map());
   const mutedNotes = useRef(new Map());
   const focusMutedNote = useRef(null);
+  const keep = (map, id) => (el) => (el ? map.set(id, el) : map.delete(id));
 
   useEffect(() => {
-    if (focusMutedNote.current == null) return;
     mutedNotes.current.get(focusMutedNote.current)?.focus();
     focusMutedNote.current = null;
   }, [muted]);
@@ -185,21 +186,16 @@ export default function NotificationCenter({ onClose } = {}) {
   async function handleMute(notif, target, scope) {
     setChoosing(null);
     try {
-      const state = await setReminderMute(api, target.eventId, scope, target.at);
-      announceReminderMute({ eventId: target.eventId, at: target.at, state });
+      const state = await setReminderMute(target, scope);
       focusMutedNote.current = notif.id;
       markMuted(notif.id, true);
-      const key = state === 'occurrence'
-        ? 'toast.reminder_muted_occurrence'
-        : target.repeats ? 'toast.reminder_muted_series' : 'toast.reminder_muted_event';
-      toastSuccess(t(messages, key), {
+      toastSuccess(t(messages, reminderMuteToastKey(state, target.repeats)), {
         label: t(messages, 'module.shopping.undo'),
         onClick: async () => {
           try {
-            await setReminderMute(api, target.eventId, null, target.at);
-            announceReminderMute({ eventId: target.eventId, at: target.at, state: null });
+            await setReminderMute(target, null);
             markMuted(notif.id, false);
-            toastSuccess(t(messages, 'toast.reminder_unmuted'));
+            toastSuccess(t(messages, reminderMuteToastKey(null)));
           } catch {
             toastError(t(messages, 'toast.error'));
           }
@@ -211,11 +207,6 @@ export default function NotificationCenter({ onClose } = {}) {
     }
   }
 
-  function closeChoice(id) {
-    setChoosing(null);
-    muteButtons.current.get(id)?.focus();
-  }
-
   function renderMuteAction(notif) {
     if (notif.type !== 'event_reminder') return null;
     const target = eventReminderTarget(notif.link);
@@ -225,7 +216,7 @@ export default function NotificationCenter({ onClose } = {}) {
         <p
           className="notif-muted"
           tabIndex={-1}
-          ref={(el) => { if (el) mutedNotes.current.set(notif.id, el); else mutedNotes.current.delete(notif.id); }}
+          ref={keep(mutedNotes.current, notif.id)}
         >
           <BellOff size={14} aria-hidden="true" /> {t(messages, 'notifications_reminder_muted')}
         </p>
@@ -239,7 +230,7 @@ export default function NotificationCenter({ onClose } = {}) {
         <button
           type="button"
           className="bento-empty-action notif-action"
-          ref={(el) => { if (el) muteButtons.current.set(notif.id, el); else muteButtons.current.delete(notif.id); }}
+          ref={keep(muteButtons.current, notif.id)}
           aria-expanded={target.repeats ? open : undefined}
           aria-controls={target.repeats && open ? choiceId : undefined}
           onClick={() => (target.repeats ? setChoosing(open ? null : notif.id) : handleMute(notif, target, 'series'))}
@@ -252,14 +243,18 @@ export default function NotificationCenter({ onClose } = {}) {
             role="group"
             aria-label={t(messages, 'notifications_mute_choice')}
             className="notif-mute-choice"
-            onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); closeChoice(notif.id); } }}
+            onKeyDown={(e) => {
+              if (e.key !== 'Escape') return;
+              e.preventDefault();
+              setChoosing(null);
+              muteButtons.current.get(notif.id)?.focus();
+            }}
           >
-            <button type="button" className="notif-chip" onClick={() => handleMute(notif, target, 'occurrence')}>
-              {t(messages, 'notifications_mute_occurrence')}
-            </button>
-            <button type="button" className="notif-chip" onClick={() => handleMute(notif, target, 'series')}>
-              {t(messages, 'notifications_mute_series')}
-            </button>
+            {['occurrence', 'series'].map((scope) => (
+              <button key={scope} type="button" className="notif-chip" onClick={() => handleMute(notif, target, scope)}>
+                {t(messages, `notifications_mute_${scope}`)}
+              </button>
+            ))}
           </div>
         )}
       </div>

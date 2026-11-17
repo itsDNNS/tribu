@@ -31,7 +31,6 @@ from app.core.errors import error_detail, EVENT_NOT_FOUND, EVENT_REMINDER_CREATO
 from app.core.event_reminders import (
     ReminderMuteError,
     clear_reminder_mute,
-    reminder_mute_state,
     reminder_mute_states,
     reminder_settings_row,
     series_reminder_owners,
@@ -110,7 +109,7 @@ def list_calendar_events(
     total = base.count()
     rows = base.order_by(CalendarEvent.starts_at.asc()).offset(offset).limit(limit).all()
     owners = series_reminder_owners(db, rows)
-    muted = reminder_mute_states(db, user.id, rows, [{"id": row.id, "starts_at": row.starts_at} for row in rows])
+    muted = reminder_mute_states(db, user.id, rows)
     items = [_event_response(row, owners, state) for row, state in zip(rows, muted)]
     return PaginatedCalendarEvents(items=items, total=total, offset=offset, limit=limit)
 
@@ -941,8 +940,7 @@ def update_calendar_event(
     db.commit()
     db.refresh(event)
     cache.invalidate_pattern(f"tribu:dashboard:{event.family_id}:*")
-    state = reminder_mute_states(db, user.id, [event], [{"id": event.id, "starts_at": event.starts_at}])[0]
-    return _event_response(event, series_reminder_owners(db, [event]), state)
+    return _event_response(event, series_reminder_owners(db, [event]), reminder_mute_states(db, user.id, [event])[0])
 
 
 @router.delete(
@@ -1020,17 +1018,6 @@ def _event_for_reminder_mute(db: Session, event_id: int, user: User) -> Calendar
     return event
 
 
-# Token scopes for muting: the event must be visible (calendar:read) and it
-# is a personal notification setting like the notification preferences
-# (profile:write). The MCP endpoint only offers routes with exactly one
-# scope; switching to one is a change of this tuple.
-# One scope, so the MCP endpoint (which offers single-scope operations) can mute too.
-REMINDER_MUTE_SCOPES: tuple[str, ...] = ("calendar:write",)
-# The user first: signing in with a token is what sets the scopes checked.
-REMINDER_MUTE_DEPENDENCIES = [Depends(current_user), *(require_scope(scope) for scope in REMINDER_MUTE_SCOPES)]
-REMINDER_MUTE_SCOPE_NOTE = ("Scope: " if len(REMINDER_MUTE_SCOPES) == 1 else "Scopes: ") + " and ".join(f"`{scope}`" for scope in REMINDER_MUTE_SCOPES) + "."
-
-
 @router.put(
     "/events/{event_id}/reminder-mute",
     response_model=EventReminderMuteResponse,
@@ -1041,23 +1028,22 @@ REMINDER_MUTE_SCOPE_NOTE = ("Scope: " if len(REMINDER_MUTE_SCOPES) == 1 else "Sc
         "may do this, also children and members who cannot edit the event. For a series, `scope` "
         "`occurrence` mutes the occurrence starting at `occurrence_start` (a changed occurrence needs none) "
         "and `series` every occurrence; a single event is muted as a whole. Undo with DELETE. "
-        + REMINDER_MUTE_SCOPE_NOTE
+        "Scope: `calendar:write`."
     ),
     response_description="The user's reminder state for the event or occurrence",
     responses={**NOT_FOUND_RESPONSE},
-    dependencies=REMINDER_MUTE_DEPENDENCIES,
 )
 def mute_event_reminder(
     event_id: int,
     payload: EventReminderMuteRequest,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
 ):
     event = _event_for_reminder_mute(db, event_id, user)
     try:
         state = set_reminder_mute(db, user.id, event, payload.scope, payload.occurrence_start)
     except ReminderMuteError as exc:
-        db.rollback()
         raise HTTPException(status_code=400, detail=error_detail(exc.code))
     db.commit()
     return EventReminderMuteResponse(event_id=event_id, occurrence_start=payload.occurrence_start, reminder_muted=state)
@@ -1070,27 +1056,21 @@ def mute_event_reminder(
     description=(
         "Undo a mute of the signed-in user. With `occurrence_start` (or for a changed occurrence) that "
         "occurrence reminds again, which also lifts a mute of the whole series; without it, every mute of "
-        "the series or event goes. " + REMINDER_MUTE_SCOPE_NOTE
+        "the series or event goes. Scope: `calendar:write`."
     ),
     response_description="The user's reminder state for the event or occurrence",
     responses={**NOT_FOUND_RESPONSE},
-    dependencies=REMINDER_MUTE_DEPENDENCIES,
 )
 def unmute_event_reminder(
     event_id: int,
     occurrence_start: Optional[datetime] = Query(None, description="Start of the occurrence as the calendar lists it"),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
+    _scope=require_scope("calendar:write"),
 ):
-    event = _event_for_reminder_mute(db, event_id, user)
-    try:
-        clear_reminder_mute(db, user.id, event, occurrence_start)
-        db.commit()
-        state = reminder_mute_state(db, user.id, event, occurrence_start)
-    except ReminderMuteError as exc:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=error_detail(exc.code))
-    return EventReminderMuteResponse(event_id=event_id, occurrence_start=occurrence_start, reminder_muted=state)
+    clear_reminder_mute(db, user.id, _event_for_reminder_mute(db, event_id, user), occurrence_start)
+    db.commit()
+    return EventReminderMuteResponse(event_id=event_id, occurrence_start=occurrence_start, reminder_muted=None)
 
 
 def _set_remind_only_creator(db: Session, event: CalendarEvent, value: bool, user: User) -> None:

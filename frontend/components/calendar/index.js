@@ -36,7 +36,7 @@ import EventEditor from './EventEditor';
 import { calendarEventStyle } from '../../lib/calendar-colors';
 import EventDetails, { calendarDateKey as dateKey, isReadonlyEvent as readonly } from './EventDetails';
 import { peekHandoff, takeHandoff } from '../../lib/viewHandoff';
-import { EVENT_LINK_EVENT, EVENT_LINK_HANDOFF, parseEventLink } from '../../lib/reminderMute';
+import { EVENT_LINK_EVENT, EVENT_LINK_HANDOFF, occurrenceStartOf, parseEventLink } from '../../lib/reminderMute';
 export { retargetCreateDraft } from './draftDates';
 
 
@@ -304,7 +304,7 @@ export default function CalendarView(props) {
       return;
     }
     const found = cal.allEvents.find(
-      (ev) => String(ev.id) === String(eventLink.eventId) && String(ev.starts_at).slice(0, 19) === eventLink.at,
+      (ev) => String(ev.id) === String(eventLink.eventId) && occurrenceStartOf(ev) === eventLink.at,
     );
     if (found) {
       setModal({ kind: 'event', event: found, focusReminder: Boolean(eventLink.choose) });
