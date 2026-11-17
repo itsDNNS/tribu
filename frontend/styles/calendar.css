@@ -686,6 +686,15 @@
   gap: 8px;
   font-size: 12px;
 }
+.tc-remind-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--tc-muted);
+}
+.tc-remind .tc-remind-hint {
+  margin: 4px 0 0 24px;
+}
 .tc-error {
   color: var(--danger);
   font-size: 12px;

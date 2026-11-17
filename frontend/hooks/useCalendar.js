@@ -17,7 +17,7 @@ function formatLocalDateTimeInput(date, hour = date.getHours(), minute = date.ge
 }
 
 export function useCalendar() {
-  const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members, birthdays, weekStart } = useApp();
+  const { events, setEvents, familyId, loadDashboard, demoMode, setSummary, lang, messages, members, birthdays, weekStart, me } = useApp();
   const { success: toastSuccess, error: toastError } = useToast();
   const startIdx = weekStartIndex(weekStart);
   const mounted = useRef(true);
@@ -68,6 +68,8 @@ export function useCalendar() {
   const [color, setColor] = useState('');
   const [category, setCategory] = useState('');
   const [icon, setIcon] = useState('');
+  // Whether only the person creating the event gets its reminder.
+  const [remindOnlyCreator, setRemindOnlyCreator] = useState(false);
 
   // Duplicate drafts reuse the create form but retain a source snapshot so
   // the UI remains stable across event refetches.
@@ -92,6 +94,11 @@ export function useCalendar() {
   const [editColor, setEditColor] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editIcon, setEditIcon] = useState('');
+  const [editRemindOnlyCreator, setEditRemindOnlyCreator] = useState(false);
+  // Only the creator can choose who gets the event's reminder.
+  const isOwnEvent = (ev) => ev?.created_by_user_id != null && me?.user_id != null
+    && String(ev.created_by_user_id) === String(me.user_id);
+  const ownsEditingEvent = isOwnEvent(editingEvent);
 
   // Delete confirmation for recurring events
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -270,6 +277,7 @@ export function useCalendar() {
   function resetCreateFields(nextStartsAt = '') {
     setTitle(''); setDescription(''); setLocation(''); setStartsAt(nextStartsAt); setEndsAt(''); setAllDay(false);
     setRecurrence(''); setRecurrenceEnd(''); setRecurrenceWeekdays([]); setAssignedTo([]); setColor(''); setCategory(''); setIcon('');
+    setRemindOnlyCreator(false);
   }
 
   function startDuplicate(ev) {
@@ -295,6 +303,9 @@ export function useCalendar() {
     setColor(ev.color || '');
     setCategory(ev.category || '');
     setIcon(ev.icon || '');
+    // The copy is the duplicating person's own event, so "only me" carries
+    // over only when it already meant them.
+    setRemindOnlyCreator(isOwnEvent(ev) && Boolean(ev.remind_only_creator));
 
     const sourceDate = parseDate(ev.starts_at);
     if (!isNaN(sourceDate.getTime())) {
@@ -343,6 +354,7 @@ export function useCalendar() {
         color: color || null,
         category: category || null,
         icon: icon || null,
+        remind_only_creator: remindOnlyCreator,
       };
       if (demoMode) {
         const newEvent = { id: Date.now(), ...payload, is_recurring: !!recurrence, occurrence_date: null };
@@ -400,6 +412,7 @@ export function useCalendar() {
     setEditColor(ev.color || '');
     setEditCategory(ev.category || '');
     setEditIcon(ev.icon || '');
+    setEditRemindOnlyCreator(Boolean(ev.remind_only_creator));
   }
 
   function cancelEdit() {
@@ -431,6 +444,11 @@ export function useCalendar() {
       color: editColor,
       icon: editIcon || null,
     };
+    // Sent only when the (series') creator changed it: anyone else leaves
+    // it alone, and an unchanged value is never written back.
+    if (ownsEditingEvent && editRemindOnlyCreator !== Boolean(editingEvent.remind_only_creator)) {
+      payload.remind_only_creator = editRemindOnlyCreator;
+    }
     if (demoMode) {
       setEvents(prev => prev.map(ev => ev.id === eventId ? { ...ev, ...payload } : ev));
     } else {
@@ -530,6 +548,7 @@ export function useCalendar() {
     color, setColor,
     category, setCategory,
     icon, setIcon,
+    remindOnlyCreator, setRemindOnlyCreator,
     duplicateSource, startDuplicate, cancelDuplicate,
     creating,
     deleteConfirm, setDeleteConfirm,
@@ -551,6 +570,8 @@ export function useCalendar() {
     editColor, setEditColor,
     editCategory, setEditCategory,
     editIcon, setEditIcon,
+    editRemindOnlyCreator, setEditRemindOnlyCreator,
+    ownsEditingEvent,
   };
 }
 

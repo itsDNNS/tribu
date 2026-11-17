@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Check, Trash2 } from 'lucide-react';
 import CalendarDialog from './CalendarDialog';
 import MemberAvatar from '../MemberAvatar';
@@ -54,6 +54,16 @@ export default function EventEditor({
   const [recurrenceWeekdays, setRecurrenceWeekdays] = field('recurrenceWeekdays');
   const [icon, setIcon] = field('icon');
   const [allDay, setAllDay] = field('allDay');
+  const [remindOnlyCreator, setRemindOnlyCreator] = field('remindOnlyCreator');
+  const remindHintId = useId();
+  // The creator chooses who is reminded; everyone else only sees it.
+  const choosesReminder = !editing || cal.ownsEditingEvent;
+  const remindedMember =
+    editing && !choosesReminder && cal.editingEvent?.remind_only_creator
+      ? members.find(
+          (m) => String(m.user_id) === String(cal.editingEvent.created_by_user_id),
+        )
+      : null;
   const date = startsAt?.slice(0, 10) || '';
   const endDate = endsAt?.slice(0, 10) || date;
   const [advanced, setAdvanced] = useState(
@@ -219,6 +229,31 @@ export default function EventEditor({
               ))}
             </div>
           </div>
+          {choosesReminder ? (
+            <div className="tc-remind full">
+              <label className="tc-check">
+                <input
+                  type="checkbox"
+                  checked={Boolean(remindOnlyCreator)}
+                  aria-describedby={remindHintId}
+                  onChange={(e) => setRemindOnlyCreator(e.target.checked)}
+                />
+                {t(messages, 'module.calendar.remind_only_me')}
+              </label>
+              <p id={remindHintId} className="tc-remind-hint">
+                {t(messages, 'module.calendar.remind_only_me_hint')}
+              </p>
+            </div>
+          ) : (
+            remindedMember && (
+              <p className="tc-remind-hint full">
+                {t(messages, 'module.calendar.remind_only_member').replace(
+                  '{name}',
+                  remindedMember.display_name,
+                )}
+              </p>
+            )
+          )}
           <label className="tc-field full">
             {copy('location')}
             <input

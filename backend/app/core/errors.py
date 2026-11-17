@@ -78,6 +78,7 @@ SHOPPING_STORE_LINK_INVALID_TEMPLATE = "SHOPPING_STORE_LINK_INVALID_TEMPLATE"
 # ── Calendar ──────────────────────────────────────────────────
 EVENT_NOT_FOUND = "EVENT_NOT_FOUND"
 END_BEFORE_START = "END_BEFORE_START"
+EVENT_REMINDER_CREATOR_ONLY = "EVENT_REMINDER_CREATOR_ONLY"
 
 # ── Birthdays ─────────────────────────────────────────────────
 BIRTHDAY_NOT_FOUND = "BIRTHDAY_NOT_FOUND"
@@ -243,6 +244,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     SHOPPING_STORE_LINK_INVALID_TEMPLATE: "Search address must be an http or https URL that contains the item placeholder exactly once",
     EVENT_NOT_FOUND: "Event not found",
     END_BEFORE_START: "End must be after start",
+    EVENT_REMINDER_CREATOR_ONLY: "Only the person who created this event can change who is reminded",
     BIRTHDAY_NOT_FOUND: "Birthday not found",
     INVALID_MONTH: "Month must be between 1 and 12",
     INVALID_DAY: "Day must be between 1 and 31",

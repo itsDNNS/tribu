@@ -1,7 +1,7 @@
 
 from app.core.clock import utcnow, utcnow_aware
 
-from sqlalchemy import BigInteger, CheckConstraint, Column, Date, Float, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, text, Time
+from sqlalchemy import BigInteger, CheckConstraint, Column, Date, Float, Index, Integer, String, ForeignKey, UniqueConstraint, DateTime, Boolean, func, Text, JSON, false, text, Time
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -142,6 +142,10 @@ class CalendarEvent(Base):
     category = Column(String, nullable=True)
     icon = Column(String(50), nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # Only the creator gets the reminder before the event starts, for every
+    # occurrence of a series. Only the creator can change it; DAV clients and
+    # feeds cannot. Without a creator in the family everyone is reminded.
+    remind_only_creator = Column(Boolean, nullable=False, default=False, server_default=false())
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(
         DateTime,
