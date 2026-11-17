@@ -261,6 +261,29 @@ export default function CalendarView(props) {
       )}
     </AgendaDay>
   );
+  // The agenda list, shown on its own and below the week strip.
+  const agendaList = () => {
+    const days = Array.from({ length: cal.agendaDays || 14 }, (_, i) => addDays(selected, i));
+    const withEvents = days.filter((date) => eventsOn(date).length);
+    return (
+      <div className="ui-agenda-list">
+        {withEvents.map((date) => agendaDay(date, true))}
+        {!withEvents.length && (
+          <EmptyDay
+            messages={messages}
+            onAdd={isChild ? null : () => create(selected)}
+          />
+        )}
+        <button
+          className="tc-btn"
+          disabled={cal.rangeLoading}
+          onClick={() => cal.setAgendaDays((count) => count + 14)}
+        >
+          {plannerText(messages, 'load_more')}
+        </button>
+      </div>
+    );
+  };
   const eventButton = (event) => {
     const category = getCalendarEventIcon(event.icon);
     return (
@@ -512,54 +535,10 @@ export default function CalendarView(props) {
                 {t(messages, monthOpen ? 'module.calendar.week' : 'module.calendar.month')}
               </button>
             </div>
-          <div className="ui-agenda-list">
-            {Array.from({ length: cal.agendaDays || 14 }, (_, i) =>
-              addDays(selected, i),
-            )
-              .filter((date) => eventsOn(date).length)
-              .map((date) => agendaDay(date, true))}
-            {!Array.from(
-              { length: cal.agendaDays || 14 },
-              (_, i) => eventsOn(addDays(selected, i)).length,
-            ).some(Boolean) && (
-              <EmptyDay
-                messages={messages}
-                onAdd={isChild ? null : () => create(selected)}
-              />
-            )}
-            <button
-              className="tc-btn"
-              disabled={cal.rangeLoading}
-              onClick={() => cal.setAgendaDays((count) => count + 14)}
-            >
-              {plannerText(messages, 'load_more')}
-            </button>
-          </div>
+          {agendaList()}
           </>
         ) : cal.calendarView === 'agenda' ? (
-          <div className="ui-agenda-list">
-            {Array.from({ length: cal.agendaDays || 14 }, (_, i) =>
-              addDays(selected, i),
-            )
-              .filter((date) => eventsOn(date).length)
-              .map((date) => agendaDay(date, true))}
-            {!Array.from(
-              { length: cal.agendaDays || 14 },
-              (_, i) => eventsOn(addDays(selected, i)).length,
-            ).some(Boolean) && (
-              <EmptyDay
-                messages={messages}
-                onAdd={isChild ? null : () => create(selected)}
-              />
-            )}
-            <button
-              className="tc-btn"
-              disabled={cal.rangeLoading}
-              onClick={() => cal.setAgendaDays((count) => count + 14)}
-            >
-              {plannerText(messages, 'load_more')}
-            </button>
-          </div>
+          agendaList()
         ) : monthMode ? (
           <section
             className="tc-calendar-shell"

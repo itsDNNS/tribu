@@ -25,6 +25,18 @@ function Probe() {
   );
 }
 
+function NotifProbe() {
+  const { notifications, unreadCount, loadNotifications, loading } = useApp();
+  return (
+    <div>
+      <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
+      <span data-testid="notif-ids">{notifications.map((n) => n.id).join(',')}</span>
+      <span data-testid="unread">{unreadCount}</span>
+      <button type="button" onClick={() => loadNotifications()}>Reload notifications</button>
+    </div>
+  );
+}
+
 describe('AppProvider bootstrap', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -281,17 +293,6 @@ describe('AppProvider bootstrap', () => {
 
 
   test('keeps notifications waiting for "delete all" hidden when the list reloads', async () => {
-    function NotifProbe() {
-      const { notifications, unreadCount, loadNotifications, loading } = useApp();
-      return (
-        <div>
-          <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
-          <span data-testid="notif-ids">{notifications.map((n) => n.id).join(',')}</span>
-          <span data-testid="unread">{unreadCount}</span>
-          <button type="button" onClick={() => loadNotifications()}>Reload notifications</button>
-        </div>
-      );
-    }
     api.apiGetNotifications.mockResolvedValue({
       ok: true,
       data: [
@@ -313,17 +314,6 @@ describe('AppProvider bootstrap', () => {
   });
 
   test('drops a reminder from the list and the badge when it expires', async () => {
-    function NotifProbe() {
-      const { notifications, unreadCount, loadNotifications, loading } = useApp();
-      return (
-        <div>
-          <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
-          <span data-testid="notif-ids">{notifications.map((n) => n.id).join(',')}</span>
-          <span data-testid="unread">{unreadCount}</span>
-          <button type="button" onClick={() => loadNotifications()}>Reload notifications</button>
-        </div>
-      );
-    }
     const soon = new Date(Date.now() + 400).toISOString().replace('Z', '');
     api.apiGetNotifications.mockResolvedValue({
       ok: true,
