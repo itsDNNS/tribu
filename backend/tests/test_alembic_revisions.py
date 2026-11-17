@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import logging
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -581,6 +582,16 @@ def test_notification_expiry_migration_backfills_and_downgrades(tmp_path, monkey
                 (5, 1, 1, 'task_due', 'Bins', 0, '2026-11-01 10:00:00')
             """
         )
+        conn.execute(
+            "INSERT INTO calendar_events (id, family_id, title, starts_at, all_day, recurrence) VALUES "
+            "(1, 1, 'Weekly', '2026-11-03 16:00:00', 0, 'weekly'), (2, 1, 'Once', '2026-11-20 16:00:00', 0, NULL)"
+        )
+        conn.execute(
+            "INSERT INTO reminder_snoozes (id, user_id, family_id, source_type, source_id, notification_type, title, remind_at) VALUES "
+            "(1, 1, 1, 'event', 1, 'event_reminder', 'Weekly', '2026-11-17 15:00:00'), "
+            "(2, 1, 1, 'event', 2, 'event_reminder', 'Once', '2026-11-17 15:00:00'), "
+            "(3, 1, 1, 'task', 1, 'task_due', 'Bins', '2026-11-17 15:00:00')"
+        )
         # More than one backfill batch.
         conn.executemany(
             "INSERT INTO notifications (id, user_id, family_id, type, title, read, created_at) VALUES (?, 1, 1, ?, 'x', 0, ?)",
@@ -597,6 +608,7 @@ def test_notification_expiry_migration_backfills_and_downgrades(tmp_path, monkey
         table_sql = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'notifications'").fetchone()[0]
         indexes = {row[1] for row in conn.execute("PRAGMA index_list(notifications)")}
         snooze_columns = {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
+        snooze_expiries = conn.execute("SELECT id, expires_at FROM reminder_snoozes ORDER BY id").fetchall()
         # Ids never repeat: deleting the newest rows does not hand their ids out again.
         conn.execute("DELETE FROM notifications WHERE id >= 100")
         conn.execute("INSERT INTO notifications (user_id, family_id, type, title, read) VALUES (1, 1, 'system', 'New', 0)")
@@ -608,6 +620,10 @@ def test_notification_expiry_migration_backfills_and_downgrades(tmp_path, monkey
     assert new_id == 100 + 1205
     assert {"ix_notifications_read_at", "ix_notifications_expires_at"} <= indexes
     assert "expires_at" in snooze_columns
+    # A recurring event's snooze ends a day after it was snoozed (an hour before it ran out).
+    assert [(row_id, (value or "")[:19]) for row_id, value in snooze_expiries] == [
+        (1, "2026-11-18 14:00:00"), (2, ""), (3, ""),
+    ]
     assert [(row_id, has_read_at) for row_id, has_read_at, _ in rows] == [(1, 0), (2, 1), (3, 0), (4, 1), (5, 0)]
     expiries = {row_id: (expires_at[:19] if expires_at else None) for row_id, _, expires_at in rows}
     assert expiries == {
@@ -626,31 +642,50 @@ def test_notification_expiry_migration_backfills_and_downgrades(tmp_path, monkey
     assert "read_at" not in columns and "expires_at" not in columns
 
 
+@pytest.mark.skipif(
+    not __import__("os").environ.get("TRIBU_TEST_POSTGRES_URL"),
+    reason="needs an empty PostgreSQL database in TRIBU_TEST_POSTGRES_URL",
+)
+def test_notification_expiry_migration_converts_postgres_session_times(monkeypatch) -> None:
+    """``now()`` wrote local wall time when sessions ran in another zone."""
+    import os
 
-def test_notification_expiry_backfill_reads_postgres_times_in_the_session_zone() -> None:
-    """``now()`` stored local wall time when the session was not in UTC."""
-    import importlib.util
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
+    import sqlalchemy as sa
 
-    spec = importlib.util.spec_from_file_location("m0082", VERSIONS_DIR / "0082_notification_expiry.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    class FakeBind:
-        def __init__(self, dialect, zone):
-            self.dialect = type("D", (), {"name": dialect})()
-            self.zone = zone
-
-        def execute(self, statement):
-            zone = self.zone
-            return type("R", (), {"scalar": lambda self: zone})()
-
-    assert module._session_zone(FakeBind("sqlite", None)) is None
-    assert module._session_zone(FakeBind("postgresql", "UTC")) is None
-    assert module._session_zone(FakeBind("postgresql", "Etc/UTC")) is None
-    berlin = module._session_zone(FakeBind("postgresql", "Europe/Berlin"))
-    assert berlin == ZoneInfo("Europe/Berlin")
-    # 10:00 in Berlin in November is 09:00 UTC.
-    assert module._as_utc(datetime(2026, 11, 1, 10, 0), berlin) == datetime(2026, 11, 1, 9, 0)
-    assert module._as_utc(datetime(2026, 11, 1, 10, 0), None) == datetime(2026, 11, 1, 10, 0)
+    url = os.environ["TRIBU_TEST_POSTGRES_URL"]
+    engine = sa.create_engine(url.replace("postgresql://", "postgresql+psycopg2://", 1))
+    with engine.begin() as conn:
+        conn.execute(sa.text("DROP SCHEMA public CASCADE"))
+        conn.execute(sa.text("CREATE SCHEMA public"))
+        name = conn.execute(sa.text("SELECT current_database()")).scalar()
+        conn.execute(sa.text(f'ALTER DATABASE "{name}" SET timezone TO \'Europe/Berlin\''))
+    engine.dispose()
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", url)
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    try:
+        command.upgrade(config, "0081_shopping_photo_thumbnails")
+        with engine.begin() as conn:
+            conn.execute(sa.text("INSERT INTO families (id, name) VALUES (1, 'One')"))
+            conn.execute(sa.text("INSERT INTO users (id, email, password_hash, display_name) VALUES (1, 'a@example.com', 'x', 'A')"))
+            conn.execute(sa.text(
+                "INSERT INTO notifications (id, user_id, family_id, type, title, read, created_at) VALUES "
+                "(1, 1, 1, 'event_reminder', 'Winter', false, '2026-11-01 10:00:00'), "
+                "(2, 1, 1, 'birthday', 'Summer', false, '2026-07-14 07:00:00')"
+            ))
+        command.upgrade(config, "0082_notification_expiry")
+        with engine.begin() as conn:
+            rows = conn.execute(sa.text("SELECT id, created_at, expires_at FROM notifications ORDER BY id")).fetchall()
+        assert [(r.created_at, r.expires_at) for r in rows] == [
+            # 10:00 in Berlin in winter is 09:00 UTC, in summer 07:00 is 05:00 UTC.
+            (datetime(2026, 11, 1, 9, 0), datetime(2026, 11, 2, 9, 0)),
+            (datetime(2026, 7, 14, 5, 0), datetime(2026, 7, 16, 5, 0)),
+        ]
+        command.downgrade(config, "0081_shopping_photo_thumbnails")
+        with engine.begin() as conn:
+            assert conn.execute(sa.text("SELECT created_at FROM notifications WHERE id = 1")).scalar() == datetime(2026, 11, 1, 10, 0)
+    finally:
+        with engine.begin() as conn:
+            conn.execute(sa.text(f'ALTER DATABASE "{name}" RESET timezone'))
+        engine.dispose()

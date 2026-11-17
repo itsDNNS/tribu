@@ -71,7 +71,8 @@ def unread_count(user: User = Depends(current_user), db: Session = Depends(get_d
         # Not cached past the moment the next reminder expires, so the
         # badge never counts a reminder whose event has started.
         if soonest and soonest[0] is not None:
-            return min(UNREAD_COUNT_CACHE_SECONDS, math.ceil((soonest[0] - now).total_seconds()))
+            # Rounded down: the cached count never outlives the expiry.
+            return min(UNREAD_COUNT_CACHE_SECONDS, math.floor((soonest[0] - now).total_seconds()))
         return UNREAD_COUNT_CACHE_SECONDS
 
     return cache.get_or_set(f"tribu:notif_count:{user.id}", _ttl, _load)
@@ -114,16 +115,21 @@ def mark_all_read(user: User = Depends(current_user), db: Session = Depends(get_
     summary="Delete all notifications",
     description=(
         "Permanently delete the current user's notifications. With `up_to_id`, only notifications up to and "
-        "including that ID go, so one that arrived after the list was loaded stays."
+        "including that ID go, so one that arrived after the list was loaded stays. With `user_id`, nothing "
+        "is deleted unless it is the signed-in user's ID, so a delete started under one account never "
+        "reaches another that signed in meanwhile."
     ),
     response_description="Confirmation with the number of deleted notifications",
 )
 def delete_all_notifications(
     up_to_id: int | None = Query(None, ge=1, description="Delete only notifications with an ID up to this one"),
+    user_id: int | None = Query(None, ge=1, description="Delete only when this is the signed-in user's ID"),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
     _scope=require_scope("profile:write"),
 ):
+    if user_id is not None and user_id != user.id:
+        return {"status": "ok", "deleted": 0}
     query = db.query(Notification).filter(Notification.user_id == user.id)
     if up_to_id is not None:
         query = query.filter(Notification.id <= up_to_id)

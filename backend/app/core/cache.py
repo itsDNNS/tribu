@@ -45,7 +45,7 @@ def get_or_set(key: str, ttl: int | Callable[[T], int], loader: Callable[[], T])
     """The cached value of ``key``, or what ``loader`` returns, cached.
 
     ``ttl`` may be a function of the loaded value, for values that turn
-    stale at a known moment.
+    stale at a known moment; under one second means not cached.
     """
     client = _get_client()
     if client:
@@ -60,8 +60,10 @@ def get_or_set(key: str, ttl: int | Callable[[T], int], loader: Callable[[], T])
 
     if client and result is not None:
         try:
-            seconds = ttl(result) if callable(ttl) else ttl
-            client.setex(key, max(1, int(seconds)), json.dumps(result, default=str))
+            seconds = int(ttl(result) if callable(ttl) else ttl)
+            # A value that is stale in under a second is not cached at all.
+            if seconds >= 1:
+                client.setex(key, seconds, json.dumps(result, default=str))
         except Exception as e:
             logger.debug("Cache set failed for %s: %s", key, e)
 

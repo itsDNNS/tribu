@@ -12,7 +12,7 @@ from app.core.backup import create_backup, enforce_retention
 from app.core.clock import local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
 from app.core.duties import sync_all_duties, week_summary
 from app.core.push import send_push_for_user
-from app.core.notification_actions import reminder_push_actions
+from app.core.notification_actions import SNOOZE_DELAY, reminder_push_actions
 from app.core.notification_housekeeping import purge_notifications
 from app.core.reminder_text import event_start_text, reminder_text, short_date, user_language
 from app.core.notification_preferences import should_push_notification_type
@@ -33,6 +33,9 @@ BACKUP_SCHEDULE_SYNC_JOB_ID = "sync_backup_schedule"
 DUTY_TASKS_JOB_ID = "create_duty_tasks"
 NOTIFICATION_CLEANUP_JOB_ID = "clean_up_notifications"
 DST_TRANSITION_BUFFER = timedelta(hours=3)
+# How long a snoozed reminder of a recurring event stays without knowing its
+# occurrence (snoozed before snoozes kept it).
+LEGACY_SNOOZE_LIFETIME = timedelta(days=1)
 # Meal reminders go out from this hour of the evening before, naming at most
 # this many missing ingredients.
 MEAL_REMINDER_HOUR = 17
@@ -707,6 +710,12 @@ def deliver_meal_reminders(db, *, tomorrow, user_families: dict[int, list[int]],
             )
 
 
+def legacy_snooze_expiry(remind_at: datetime) -> datetime:
+    """Bounded end for a snooze of a recurring event that does not know its
+    occurrence: a day after it was snoozed."""
+    return remind_at - SNOOZE_DELAY + LEGACY_SNOOZE_LIFETIME
+
+
 def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pref) -> set[int]:
     """Sends the reminders whose snooze has run out, once each.
 
@@ -736,9 +745,12 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
             if event is None:
                 snooze.delivered_at = now
                 continue
-            if expires_at is None and not event.recurrence and event.starts_at is not None:
+            if expires_at is None:
                 # Snoozed before snoozes kept the occurrence start.
-                expires_at = local_wall_to_utc_naive(event.starts_at)
+                if not event.recurrence and event.starts_at is not None:
+                    expires_at = local_wall_to_utc_naive(event.starts_at)
+                elif event.recurrence:
+                    expires_at = legacy_snooze_expiry(snooze.remind_at)
         if expires_at is not None and expires_at <= now:
             snooze.delivered_at = now
             continue

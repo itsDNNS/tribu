@@ -16,18 +16,24 @@ so they disappear a week after it instead of all at once. Existing
 time-bound reminders get a generous expiry from their creation time, since
 the exact event or birthday they announced is not stored with them.
 
-Timestamps are naive UTC throughout Tribu. ``notifications.created_at`` used
-to come only from the database clock (``now()``), which PostgreSQL stores in
-the session time zone; the backfill converts from that zone, so a server
-whose sessions do not run in UTC still gets correct expiry times.
+Timestamps are naive UTC throughout Tribu, and from now on
+``notifications.created_at`` is written by the app in UTC. It used to come
+only from the database clock (``now()``), which PostgreSQL stores in the
+session time zone. On PostgreSQL the upgrade converts existing values to UTC
+with the database's own zone rules before computing expiries. Which zone the
+sessions that wrote them used cannot be known afterwards; the current
+session zone is assumed (for a default setup that is UTC and nothing
+changes). SQLite's CURRENT_TIMESTAMP is UTC already.
+
+Snoozed reminders of recurring events that were snoozed before snoozes kept
+their occurrence get a bounded expiry of a day after they were snoozed.
 
 Revision ID: 0082_notification_expiry
 Revises: 0081_shopping_photo_thumbnails
 """
 
-from datetime import timedelta, timezone
+from datetime import timedelta
 from typing import Sequence, Union
-from zoneinfo import ZoneInfo
 
 from alembic import op
 import sqlalchemy as sa
@@ -65,27 +71,50 @@ _notifications = sa.table(
 )
 
 
-def _session_zone(bind):
-    """The zone PostgreSQL wrote ``now()`` in, or None for UTC."""
-    if bind.dialect.name != "postgresql":
-        return None  # SQLite's CURRENT_TIMESTAMP is UTC.
-    name = bind.execute(sa.text("SHOW TIME ZONE")).scalar() or "UTC"
-    if name.upper() in ("UTC", "ETC/UTC", "GMT", "Z", "UCT"):
-        return None
-    try:
-        return ZoneInfo(name)
-    except Exception:
-        return None
+# On PostgreSQL: read a session-zone wall time as UTC, and back.
+_CREATED_AT_TO_UTC = (
+    "UPDATE notifications SET created_at = "
+    "(created_at AT TIME ZONE current_setting('TimeZone')) AT TIME ZONE 'UTC'"
+)
+_CREATED_AT_TO_SESSION_ZONE = (
+    "UPDATE notifications SET created_at = "
+    "(created_at AT TIME ZONE 'UTC') AT TIME ZONE current_setting('TimeZone')"
+)
+# A snooze runs out an hour after it was made (SNOOZE_DELAY); without its
+# occurrence a snoozed recurring reminder lasts a day from then.
+_LEGACY_SNOOZE_LIFETIME = timedelta(days=1) - timedelta(hours=1)
+
+_snoozes = sa.table(
+    "reminder_snoozes",
+    sa.column("id", sa.Integer),
+    sa.column("source_type", sa.String),
+    sa.column("source_id", sa.Integer),
+    sa.column("remind_at", sa.DateTime),
+    sa.column("delivered_at", sa.DateTime),
+    sa.column("expires_at", sa.DateTime),
+)
+_events = sa.table("calendar_events", sa.column("id", sa.Integer), sa.column("recurrence", sa.String))
 
 
-def _as_utc(value, zone):
-    if zone is None:
-        return value
-    return value.replace(tzinfo=zone).astimezone(timezone.utc).replace(tzinfo=None)
+def _backfill_snoozes(bind) -> None:
+    rows = bind.execute(
+        sa.select(_snoozes.c.id, _snoozes.c.remind_at)
+        .select_from(_snoozes.join(_events, _events.c.id == _snoozes.c.source_id))
+        .where(
+            _snoozes.c.source_type == "event",
+            _snoozes.c.delivered_at.is_(None),
+            _snoozes.c.expires_at.is_(None),
+            _events.c.recurrence.isnot(None),
+        )
+    ).fetchall()
+    if rows:
+        bind.execute(
+            _snoozes.update().where(_snoozes.c.id == sa.bindparam("row_id")).values(expires_at=sa.bindparam("value")),
+            [{"row_id": row.id, "value": row.remind_at + _LEGACY_SNOOZE_LIFETIME} for row in rows],
+        )
 
 
 def _backfill_expiry(bind) -> None:
-    zone = _session_zone(bind)
     update = (
         _notifications.update()
         .where(_notifications.c.id == sa.bindparam("row_id"))
@@ -103,7 +132,7 @@ def _backfill_expiry(bind) -> None:
             return
         last_id = rows[-1].id
         updates = [
-            {"row_id": row.id, "value": _as_utc(row.created_at, zone) + _LEGACY_LIFETIMES[row.type]}
+            {"row_id": row.id, "value": row.created_at + _LEGACY_LIFETIMES[row.type]}
             for row in rows
             if row.created_at is not None
         ]
@@ -117,6 +146,8 @@ def upgrade() -> None:
     op.add_column("reminder_snoozes", sa.Column("expires_at", sa.DateTime(), nullable=True))
 
     bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        bind.execute(sa.text(_CREATED_AT_TO_UTC))
     if bind.dialect.name == "sqlite":
         # Rebuilt with AUTOINCREMENT; copying the rows records the highest id.
         with op.batch_alter_table(
@@ -130,12 +161,17 @@ def upgrade() -> None:
         .values(read_at=utcnow())
     )
     _backfill_expiry(bind)
+    _backfill_snoozes(bind)
 
     op.create_index("ix_notifications_read_at", "notifications", ["read_at"])
     op.create_index("ix_notifications_expires_at", "notifications", ["expires_at"])
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        # The old code writes created_at in the session zone again.
+        bind.execute(sa.text(_CREATED_AT_TO_SESSION_ZONE))
     op.drop_index("ix_notifications_expires_at", table_name="notifications")
     op.drop_index("ix_notifications_read_at", table_name="notifications")
     with op.batch_alter_table("reminder_snoozes") as batch:

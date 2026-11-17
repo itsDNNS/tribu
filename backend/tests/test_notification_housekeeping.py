@@ -606,10 +606,21 @@ def test_cached_unread_count_ends_when_the_next_reminder_expires(monkeypatch):
         anna_key, ben_key = f"tribu:notif_count:{anna.id}", f"tribu:notif_count:{ben.id}"
 
     assert client.get("/notifications/unread-count", headers=anna_headers).json() == {"count": 2}
-    # Cached only until "Starts soon" expires, not the usual 15 seconds.
-    assert fake.ttls[anna_key] == 5
+    # Cached only until "Starts soon" expires (rounded down), not the usual 15 seconds.
+    assert fake.ttls[anna_key] == 4
     assert client.get("/notifications/unread-count", headers=ben_headers).json() == {"count": 1}
     assert fake.ttls[ben_key] == notifications_router.UNREAD_COUNT_CACHE_SECONDS
+
+    # Under a second to go: not cached at all.
+    with TestSession() as db:
+        db.query(Notification).filter(Notification.title == "Starts soon").update(
+            {"expires_at": now + timedelta(milliseconds=600)}
+        )
+        db.commit()
+    fake.values.clear()
+    fake.ttls.clear()
+    assert client.get("/notifications/unread-count", headers=anna_headers).json() == {"count": 2}
+    assert anna_key not in fake.values
 
 
 # --- snoozed reminders of recurring events -----------------------------------
@@ -673,3 +684,47 @@ def test_snoozed_reminder_of_a_recurring_event_expires_with_its_occurrence(monke
         title="Swimming", body="x", link=None, expires_at=occurrence_start,
     )
     assert token
+
+
+def test_delete_all_for_another_account_deletes_nothing():
+    with TestSession() as db:
+        family = _family(db)
+        anna = _user(db, "anna@example.com", family)
+        ben = _user(db, "ben@example.com", family)
+        _notify(db, ben, family, "Ben's")
+        db.commit()
+        anna_id, ben_headers = anna.id, _headers(ben)
+
+    # Anna started "delete all", then Ben signed in on the same browser.
+    response = client.delete(f"/notifications?up_to_id=99&user_id={anna_id}", headers=ben_headers)
+    assert response.json() == {"status": "ok", "deleted": 0}
+    assert [item["title"] for item in client.get("/notifications", headers=ben_headers).json()] == ["Ben's"]
+    with TestSession() as db:
+        ben_id = db.query(User).filter(User.email == "ben@example.com").one().id
+    assert client.delete(f"/notifications?user_id={ben_id}", headers=ben_headers).json()["deleted"] == 1
+
+
+def test_snooze_of_a_recurring_event_without_its_occurrence_ends_a_day_after_snoozing():
+    from app.core import scheduler as scheduler_module
+    from app.models import ReminderSnooze
+
+    now = datetime(2026, 11, 17, 15, 0)
+    with TestSession() as db:
+        family = _family(db)
+        anna = _user(db, "anna@example.com", family)
+        event = CalendarEvent(family_id=family.id, title="Swimming", all_day=False, recurrence="weekly", starts_at=datetime(2026, 11, 3, 16, 0))
+        db.add(event)
+        db.flush()
+        for remind_at in (now - timedelta(minutes=1), now - timedelta(days=2)):
+            db.add(ReminderSnooze(
+                user_id=anna.id, family_id=family.id, source_type="event", source_id=event.id,
+                notification_type="event_reminder", title="Swimming", body="x", link=None, remind_at=remind_at,
+            ))
+        db.commit()
+
+        default_pref = NotificationPreference(user_id=anna.id, reminders_enabled=True, reminder_minutes=30)
+        scheduler_module.deliver_snoozed_reminders(db, now=now, local_now=now, get_pref=lambda uid: default_pref)
+        db.commit()
+        # Snoozed an hour before it ran out, so it lasts until a day after that.
+        assert [row.expires_at for row in db.query(Notification)] == [now - timedelta(minutes=1, hours=1) + timedelta(days=1)]
+        assert all(snooze.delivered_at == now for snooze in db.query(ReminderSnooze))
