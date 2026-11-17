@@ -561,6 +561,17 @@ export function apiDeleteNotification(id) {
   return del(`/notifications/${id}`);
 }
 
+// Up to and including upToId, so one that arrived meanwhile stays; with
+// userId nothing happens unless that account is still the signed-in one.
+// keepalive lets the request finish while the page unloads.
+export function apiDeleteAllNotifications(upToId, { keepalive = false, userId } = {}) {
+  const params = new URLSearchParams();
+  if (upToId) params.set('up_to_id', String(upToId));
+  if (userId) params.set('user_id', String(userId));
+  const query = params.toString();
+  return request(`/notifications${query ? `?${query}` : ''}`, keepalive ? { method: 'DELETE', keepalive: true } : { method: 'DELETE' });
+}
+
 export function apiGetNotificationPreferences() {
   return request('/notifications/preferences');
 }

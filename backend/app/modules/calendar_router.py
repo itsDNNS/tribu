@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core import cache
 from app.core.activity import record_activity
-from app.core.clock import to_local_wall_naive, utcnow
+from app.core.clock import local_day_bounds_as_utc_naive, local_wall_to_utc_naive, to_local_wall_naive, utcnow
 from app.core.calendar_icons import normalize_calendar_event_icon
 from app.core.calendar_subscriptions import (
     IcsSubscriptionError,
@@ -18,7 +18,7 @@ from app.core.calendar_subscriptions import (
     validate_subscription_url,
 )
 from app.core.deps import current_user, current_user_via_token_param, ensure_adult, ensure_family_membership
-from app.core.ics_utils import events_to_ics, ics_to_event_dicts
+from app.core.ics_utils import _all_day_end, events_to_ics, ics_to_event_dicts
 from app.core.notification_preferences import should_push_notification_type
 from app.core.push import send_push_for_user
 from app.core.recurrence import VALID_RECURRENCES, WEEKLY_RECURRENCES, expand_event, load_series_changes, normalize_weekdays
@@ -882,7 +882,7 @@ def update_calendar_event(
         old_assigned = event.assigned_to
         event.assigned_to = payload.assigned_to
         if payload.assigned_to != old_assigned:
-            _create_assignment_notifications(db, event, user.id)
+            _create_assignment_notifications(db, event, user.id, previously_assigned=old_assigned)
     if payload.color is not None:
         event.color = payload.color or None
     if payload.category is not None:
@@ -967,23 +967,53 @@ def delete_calendar_event(
     return {"status": "deleted", "event_id": event_id}
 
 
-def _create_assignment_notifications(db: Session, event: CalendarEvent, actor_user_id: int):
-    """Create notifications for members assigned to an event."""
-    assigned = event.assigned_to
-    if not assigned:
-        return
-
+def _assigned_user_ids(db: Session, family_id: int, assigned) -> set[int]:
+    """The members an ``assigned_to`` value stands for."""
     if assigned == "all":
-        member_rows = db.query(Membership).filter(Membership.family_id == event.family_id).all()
-        user_ids = [m.user_id for m in member_rows]
-    elif isinstance(assigned, list):
-        user_ids = assigned
-    else:
-        return
-
-    for uid in user_ids:
-        if uid == actor_user_id:
+        return {uid for (uid,) in db.query(Membership.user_id).filter(Membership.family_id == family_id)}
+    if not isinstance(assigned, list):
+        return set()
+    ids = set()
+    for value in assigned:
+        try:
+            ids.add(int(value))
+        except (TypeError, ValueError):
             continue
+    return ids
+
+
+def _assignment_expiry(event: CalendarEvent) -> datetime | None:
+    """When an assignment notice is moot: once a single event is over, or a
+    series has ended. Naive UTC."""
+    if event.recurrence:
+        if event.recurrence_end is None:
+            return None
+        return local_day_bounds_as_utc_naive(event.recurrence_end.date())[1]
+    if event.starts_at is None:
+        return None
+    if event.all_day:
+        # All-day spans end at midnight after their last day (exclusive),
+        # read the same way as for calendar feeds.
+        last_day_after = _all_day_end(event.starts_at.date(), event.ends_at)
+        return local_day_bounds_as_utc_naive(last_day_after)[0]
+    return local_wall_to_utc_naive(event.ends_at or event.starts_at)
+
+
+def _create_assignment_notifications(db: Session, event: CalendarEvent, actor_user_id: int, previously_assigned=None):
+    """Tells members they were assigned to an event.
+
+    After an edit only members who were not assigned before hear about it;
+    the others already have a notice for this event.
+    """
+    user_ids = _assigned_user_ids(db, event.family_id, event.assigned_to)
+    if previously_assigned is not None:
+        user_ids -= _assigned_user_ids(db, event.family_id, previously_assigned)
+    user_ids.discard(actor_user_id)
+    if not user_ids:
+        return
+    expires_at = _assignment_expiry(event)
+
+    for uid in sorted(user_ids):
         notification = Notification(
             user_id=uid,
             family_id=event.family_id,
@@ -991,6 +1021,7 @@ def _create_assignment_notifications(db: Session, event: CalendarEvent, actor_us
             title=event.title,
             body=None,
             link=f"/calendar?event={event.id}",
+            expires_at=expires_at,
         )
         db.add(notification)
         pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == uid).first()

@@ -186,6 +186,13 @@
   cursor: pointer;
 }
 .list-header .list-header-action:hover { filter: brightness(1.06); }
+.notifications-list-header h1 { margin-right: auto; }
+/* Next to "Mark all read", deleting everything is the quieter choice. */
+.list-header .list-header-action.notif-delete-all {
+  background: transparent;
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
 
 /* Areas a family uses (R4): settings and the setup wizard. */
 .area-switches { list-style: none; margin: 0; padding: 0; display: grid; }

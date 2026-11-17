@@ -9,11 +9,12 @@ from sqlalchemy import or_
 
 from app.core import cache
 from app.core.backup import create_backup, enforce_retention
-from app.core.clock import app_timezone, local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
+from app.core.clock import local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
 from app.core.duties import sync_all_duties, week_summary
 from app.core.push import send_push_for_user
-from app.core.notification_actions import reminder_push_actions
-from app.core.reminder_text import reminder_text, short_date, user_language
+from app.core.notification_actions import SNOOZE_DELAY, reminder_push_actions
+from app.core.notification_housekeeping import purge_notifications
+from app.core.reminder_text import event_start_text, reminder_text, short_date, user_language
 from app.core.notification_preferences import should_push_notification_type
 from app.core.notification_destinations import EligibleReminderUser, dispatch_family_notification
 from app.core.recurrence import expand_event, load_series_changes
@@ -30,7 +31,11 @@ NOTIFICATION_JOB_ID = "check_notifications"
 CALENDAR_SUBSCRIPTION_REFRESH_JOB_ID = "refresh_calendar_subscriptions"
 BACKUP_SCHEDULE_SYNC_JOB_ID = "sync_backup_schedule"
 DUTY_TASKS_JOB_ID = "create_duty_tasks"
+NOTIFICATION_CLEANUP_JOB_ID = "clean_up_notifications"
 DST_TRANSITION_BUFFER = timedelta(hours=3)
+# How long a snoozed reminder of a recurring event stays without knowing its
+# occurrence (snoozed before snoozes kept it).
+LEGACY_SNOOZE_LIFETIME = timedelta(days=1)
 # Meal reminders go out from this hour of the evening before, naming at most
 # this many missing ingredients.
 MEAL_REMINDER_HOUR = 17
@@ -131,12 +136,20 @@ def _birthday_trigger_key(birthday_id: int, target_date) -> str:
     return f"birthday:{birthday_id}:{target_date.isoformat()}"
 
 
+def end_of_local_day(day) -> datetime:
+    """The last instant of ``day`` in Tribu's timezone, as naive UTC."""
+    return local_day_bounds_as_utc_naive(day)[1]
+
+
 def _check_notifications():
     db = SessionLocal()
     try:
         audit_now = utcnow()
         now = local_wall_now(audit_now)
         tomorrow = now.date() + timedelta(days=1)
+        from app.core.utils import get_setting
+
+        time_format = "12h" if get_setting(db, "time_format", "24h") == "12h" else "24h"
 
         memberships = db.query(Membership).all()
         user_families: dict[int, list[int]] = {}
@@ -169,10 +182,6 @@ def _check_notifications():
             starts_at_utc = local_wall_to_utc_naive(starts_at)
             window_utc = audit_now + timedelta(minutes=pref.reminder_minutes)
             return audit_now < starts_at_utc <= window_utc
-
-        def _minutes_until(starts_at: datetime) -> int:
-            starts_at_utc = local_wall_to_utc_naive(starts_at)
-            return int((starts_at_utc - audit_now).total_seconds() / 60)
 
         def eligible_reminder_users(fid: int, starts_at: datetime | None = None) -> list[EligibleReminderUser]:
             users: list[EligibleReminderUser] = []
@@ -281,6 +290,7 @@ def _check_notifications():
             source_id: int,
             trigger_key: str,
             event_starts_at: datetime | None = None,
+            expires_at: datetime | None = None,
         ) -> None:
             """Idempotent reminder delivery for a (user, trigger_key) pair.
 
@@ -288,6 +298,9 @@ def _check_notifications():
             NotificationSentLog row. On retry runs reuses the existing log,
             does NOT create another in-app Notification, but may re-attempt
             push if push is enabled and the previous attempt failed.
+
+            ``expires_at`` (naive UTC) is when the reminder stops being true;
+            the in-app notification disappears then, read or not.
             """
             pref = get_pref(uid)
             if not pref.reminders_enabled:
@@ -310,7 +323,7 @@ def _check_notifications():
             if first_run:
                 notif = Notification(
                     user_id=uid, family_id=fid, type=ntype,
-                    title=title, body=body, link=link,
+                    title=title, body=body, link=link, expires_at=expires_at,
                 )
                 db.add(notif)
                 log = NotificationSentLog(
@@ -335,16 +348,10 @@ def _check_notifications():
             if push_allowed:
                 try:
                     push_body = body
-                    if event_starts_at is not None:
-                        # A relative countdown becomes false when Android delays
-                        # delivery or the notification remains in the tray.
-                        push_body = reminder_text(
-                            lang, "event_starts_at",
-                            when=f"{event_starts_at:%Y-%m-%d %H:%M} ({app_timezone().key})",
-                        )
                     # Buttons for the reminder (Tribu 2.0, N-2).
                     action_options = reminder_push_actions(
                         uid, fid, source_type, source_id, ntype, title, push_body, link, lang,
+                        expires_at=expires_at,
                     )
                     if event_starts_at is not None:
                         push_result = send_push_for_user(
@@ -450,9 +457,10 @@ def _check_notifications():
                         continue
                     if not _reminder_due_for_pref(starts_at, pref):
                         continue
-                    mins = _minutes_until(starts_at)
-                    body = f"Starts in {mins} minutes"
-                    localized_body = lambda lang, mins=mins: reminder_text(lang, "event_starts_in", minutes=mins)
+                    # The start time, not a countdown: a countdown is false as
+                    # soon as delivery is delayed or the reminder is read later.
+                    body = event_start_text("en", starts_at, now.date(), time_format)
+                    localized_body = lambda lang, starts_at=starts_at: event_start_text(lang, starts_at, now.date(), time_format)
                     trigger_key = _event_trigger_key(ev.id, starts_at)
                     dispatch_destination_once(
                         event_type="calendar.reminder",
@@ -472,6 +480,7 @@ def _check_notifications():
                         f"/calendar?event={ev.id}", "event", ev.id,
                         trigger_key,
                         event_starts_at=starts_at,
+                        expires_at=local_wall_to_utc_naive(starts_at),
                     )
 
 
@@ -542,6 +551,8 @@ def _check_notifications():
                     lambda lang: reminder_text(lang, "birthday_tomorrow", date=short_date(lang, tomorrow)),
                     f"/birthdays?id={bd.id}", "birthday", bd.id,
                     trigger_key,
+                    # "Birthday tomorrow" stays until that day is over.
+                    expires_at=end_of_local_day(tomorrow),
                 )
 
         # 4. Tomorrow's meals whose ingredients are not on a list yet
@@ -623,6 +634,8 @@ def deliver_gift_reminders(db, *, on, user_families: dict[int, list[int]], deliv
                 lambda lang: reminder_text(lang, "gift_nothing_yet", date=short_date(lang, on)),
                 f"/gifts?occasion=birthday:{on.isoformat()}:{recipient}", "gift_occasion", birthday.id,
                 _gift_trigger_key(birthday.id, on),
+                # A missing gift is moot once the birthday is over.
+                expires_at=end_of_local_day(on),
             )
 
 
@@ -649,6 +662,8 @@ def deliver_duty_previews(db, *, monday, user_families: dict[int, list[int]], de
                 lambda lang, mine=mine, total=len(week): reminder_text(lang, "duty_week_body", mine=mine, total=total),
                 "/duties", "duty_week", family_id,
                 f"duty_week:{family_id}:{monday.isoformat()}",
+                # The preview is about that week only.
+                expires_at=end_of_local_day(monday + timedelta(days=6)),
             )
 
 
@@ -690,13 +705,22 @@ def deliver_meal_reminders(db, *, tomorrow, user_families: dict[int, list[int]],
                 lambda lang, items=items: reminder_text(lang, "meal_missing", items=items),
                 "/meal_plans", "meal_plan", plan.id,
                 _meal_trigger_key(plan.id, tomorrow),
+                # Shopping for a meal that was yesterday is no use.
+                expires_at=end_of_local_day(tomorrow),
             )
+
+
+def legacy_snooze_expiry(remind_at: datetime) -> datetime:
+    """Bounded end for a snooze of a recurring event that does not know its
+    occurrence: a day after it was snoozed."""
+    return remind_at - SNOOZE_DELAY + LEGACY_SNOOZE_LIFETIME
 
 
 def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pref) -> set[int]:
     """Sends the reminders whose snooze has run out, once each.
 
-    Tasks done or deleted in the meantime and removed events are dropped;
+    Tasks done or deleted in the meantime, removed events and reminders for
+    an event occurrence that has started are dropped;
     quiet hours postpone the reminder to a later run.
     """
     notified: set[int] = set()
@@ -713,10 +737,23 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
             if task is None or task.status != "open":
                 snooze.delivered_at = now
                 continue
-        elif snooze.source_type == "event":
-            if db.query(CalendarEvent.id).filter(CalendarEvent.id == snooze.source_id).first() is None:
+        # Like the first reminder, a snoozed one is moot once the event
+        # occurrence it announced has started.
+        expires_at = snooze.expires_at
+        if snooze.source_type == "event":
+            event = db.query(CalendarEvent).filter(CalendarEvent.id == snooze.source_id).first()
+            if event is None:
                 snooze.delivered_at = now
                 continue
+            if expires_at is None:
+                # Snoozed before snoozes kept the occurrence start.
+                if not event.recurrence and event.starts_at is not None:
+                    expires_at = local_wall_to_utc_naive(event.starts_at)
+                elif event.recurrence:
+                    expires_at = legacy_snooze_expiry(snooze.remind_at)
+        if expires_at is not None and expires_at <= now:
+            snooze.delivered_at = now
+            continue
         pref = get_pref(snooze.user_id)
         if not pref.reminders_enabled:
             snooze.delivered_at = now
@@ -726,7 +763,7 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
         snooze.delivered_at = now
         db.add(Notification(
             user_id=snooze.user_id, family_id=snooze.family_id, type=snooze.notification_type,
-            title=snooze.title, body=snooze.body, link=snooze.link,
+            title=snooze.title, body=snooze.body, link=snooze.link, expires_at=expires_at,
         ))
         notified.add(snooze.user_id)
         push_allowed, _ = should_push_notification_type(pref, snooze.notification_type)
@@ -739,6 +776,7 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
                     snooze.user_id, snooze.family_id, snooze.source_type, snooze.source_id,
                     snooze.notification_type, snooze.title, snooze.body, snooze.link,
                     user_language(db, snooze.user_id),
+                    expires_at=expires_at,
                 ),
             )
         except Exception:
@@ -758,6 +796,37 @@ def start_notification_job():
         replace_existing=True,
     )
     logger.info("Notification check job started (every 1 min).")
+
+
+def _clean_up_notifications():
+    db = SessionLocal()
+    try:
+        deleted, users = purge_notifications(db)
+        db.commit()
+        for uid in users:
+            cache.invalidate(f"tribu:notif_count:{uid}")
+        if deleted:
+            logger.info("Removed %s read or expired notification(s).", deleted)
+    except Exception:
+        db.rollback()
+        logger.exception("Notification cleanup failed")
+    finally:
+        db.close()
+
+
+def start_notification_cleanup_job():
+    # Expired notifications are hidden right away by the list and count
+    # queries; this only keeps the table small.
+    _clean_up_notifications()
+    get_scheduler().add_job(
+        _clean_up_notifications,
+        trigger=IntervalTrigger(hours=1),
+        id=NOTIFICATION_CLEANUP_JOB_ID,
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    logger.info("Notification cleanup job started (every hour).")
 
 
 def _refresh_active_calendar_subscriptions():

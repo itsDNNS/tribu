@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { Bell, CalendarClock, CalendarDays, CheckSquare, Cake, Trash2, CheckCheck, Utensils, X } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import { t, tc } from '../lib/i18n';
 import * as api from '../lib/api';
 import { parseServerInstant, serverTimeAgo } from '../lib/helpers';
 import { notificationLinkView } from '../lib/notificationLinks';
+import { setPendingClearToast, startPendingClear, undoPendingClear } from '../lib/notificationClear';
+import { isNotificationExpired } from '../lib/notificationExpiry';
 
 const TYPE_ICONS = {
   event_reminder: CalendarDays,
@@ -54,9 +57,26 @@ export function renderNotificationBody(notif, messages) {
   return notif.body;
 }
 
+export { isNotificationExpired };
+
+// Newest first, as the server lists them; ids only ever grow.
+function mergeById(current, restored) {
+  const known = new Set(current.map((n) => n.id));
+  return [...current, ...restored.filter((n) => !known.has(n.id))].sort((a, b) => b.id - a.id);
+}
+
 export default function NotificationCenter({ onClose } = {}) {
-  const { messages, lang, notifications, setNotifications, unreadCount, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
+  const { messages, lang, me, notifications, setNotifications, setUnreadCount, loadNotifications, setActiveView, isAdmin, isChild, demoMode } = useApp();
+  const { success: toastSuccess, error: toastError, dismiss: dismissToast } = useToast();
   const closeBtnRef = useRef(null);
+  const headingRef = useRef(null);
+  // The list as it is now, for callbacks that run after the delete request.
+  const notificationsRef = useRef(notifications);
+  notificationsRef.current = notifications;
+
+  const now = Date.now();
+  const shown = notifications.filter((n) => !isNotificationExpired(n, now));
+  const hasUnreadShown = shown.some((n) => !n.read);
 
   useEffect(() => {
     loadNotifications();
@@ -82,6 +102,50 @@ export default function NotificationCenter({ onClose } = {}) {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     }
+  }
+
+  // The delete waits for the undo window in lib/notificationClear, outside
+  // this panel, so closing the panel keeps the Undo in its toast working.
+  function handleDeleteAll() {
+    if (shown.length === 0) return;
+    const upToId = Math.max(...shown.map((n) => n.id));
+    const removed = notifications.filter((n) => n.id <= upToId);
+    const unread = removed.filter((n) => !n.read).length;
+    const token = startPendingClear({
+      userId: me?.id ?? null,
+      upToId,
+      removed,
+      dismissToast,
+      // Server truth afterwards: what is left and how much of it is unread.
+      onCommitted: () => loadNotifications(),
+      onFailed: (failed) => {
+        toastError(t(messages, 'toast.error'));
+        // Nothing was deleted: put the rows back here, then compare with the
+        // server if it can be reached. Rows a reload already brought back are
+        // in the count already, so only the missing ones add to it.
+        const present = new Set(notificationsRef.current.map((n) => n.id));
+        const missingUnread = failed.removed.filter((n) => !n.read && !present.has(n.id)).length;
+        setNotifications((prev) => mergeById(prev, failed.removed));
+        if (missingUnread) setUnreadCount((c) => c + missingUnread);
+        loadNotifications();
+      },
+    });
+    setNotifications((prev) => prev.filter((n) => n.id > upToId));
+    setUnreadCount((c) => Math.max(0, c - unread));
+    const toastId = toastSuccess(t(messages, 'notifications_deleted_all'), {
+      label: t(messages, 'module.shopping.undo'),
+      onClick: () => {
+        const cancelled = undoPendingClear(token);
+        if (!cancelled) return;
+        setNotifications((prev) => mergeById(prev, cancelled.removed));
+        // Reloaded rather than restored from a snapshot, so the badge stays
+        // right when "Mark all read" ran in the meantime.
+        loadNotifications();
+      },
+    });
+    setPendingClearToast(token, toastId);
+    // The pressed button goes away with the list; keep focus in the panel.
+    (closeBtnRef.current || headingRef.current)?.focus();
   }
 
   async function handleDelete(id) {
@@ -119,7 +183,7 @@ export default function NotificationCenter({ onClose } = {}) {
     const yesterday = [];
     const older = [];
 
-    notifications.forEach(n => {
+    shown.forEach(n => {
       const d = parseServerInstant(n.created_at);
       if (d >= todayStart) today.push(n);
       else if (d >= yesterdayStart) yesterday.push(n);
@@ -136,23 +200,37 @@ export default function NotificationCenter({ onClose } = {}) {
   return (
     <div className={onClose ? 'notifications-panel-content' : 'notifications-page'}>
       {onClose ? (
-        <div className="notif-panel-header">
-          <h2 className="notif-panel-title">{t(messages, 'notifications')}</h2>
-          {unreadCount > 0 && (
-            <button className="bento-empty-action" onClick={handleMarkAllRead}>
-              <CheckCheck size={14} /> {t(messages, 'notifications_mark_all_read')}
+        <>
+          <div className="notif-panel-header">
+            <h2 className="notif-panel-title">{t(messages, 'notifications')}</h2>
+            <button type="button" ref={closeBtnRef} className="btn-ghost notif-delete" onClick={onClose} aria-label={t(messages, 'close')}>
+              <X size={16} />
             </button>
+          </div>
+          {shown.length > 0 && (
+            <div className="notif-panel-actions">
+              {hasUnreadShown && (
+                <button type="button" className="bento-empty-action" onClick={handleMarkAllRead}>
+                  <CheckCheck size={14} aria-hidden="true" /> {t(messages, 'notifications_mark_all_read')}
+                </button>
+              )}
+              <button type="button" className="bento-empty-action notif-delete-all" onClick={handleDeleteAll}>
+                <Trash2 size={14} aria-hidden="true" /> {t(messages, 'notifications_delete_all')}
+              </button>
+            </div>
           )}
-          <button ref={closeBtnRef} className="btn-ghost notif-delete" onClick={onClose} aria-label={t(messages, 'close')}>
-            <X size={16} />
-          </button>
-        </div>
+        </>
       ) : (
         <header className="list-header notifications-list-header">
-          <h1>{t(messages, 'notifications')}</h1>
-          {unreadCount > 0 && (
+          <h1 ref={headingRef} tabIndex={-1}>{t(messages, 'notifications')}</h1>
+          {hasUnreadShown && (
             <button type="button" className="list-header-action" onClick={handleMarkAllRead}>
               <CheckCheck size={16} aria-hidden="true" /> {t(messages, 'notifications_mark_all_read')}
+            </button>
+          )}
+          {shown.length > 0 && (
+            <button type="button" className="list-header-action notif-delete-all" onClick={handleDeleteAll}>
+              <Trash2 size={16} aria-hidden="true" /> {t(messages, 'notifications_delete_all')}
             </button>
           )}
         </header>
@@ -170,7 +248,7 @@ export default function NotificationCenter({ onClose } = {}) {
       )}
 
       <div className="stagger notif-list">
-        {notifications.length === 0 && (
+        {shown.length === 0 && (
           <div className="notif-empty">
             <Bell size={32} className="notif-empty-icon" />
             <p>{t(messages, 'notifications_empty')}</p>
@@ -223,6 +301,10 @@ export default function NotificationCenter({ onClose } = {}) {
             })}
           </div>
         ))}
+
+        {shown.length > 0 && (
+          <p className="notif-cleanup-hint">{t(messages, 'notifications_read_cleanup_hint')}</p>
+        )}
       </div>
     </div>
   );

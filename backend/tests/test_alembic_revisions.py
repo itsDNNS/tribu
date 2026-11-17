@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import logging
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -555,3 +556,136 @@ def test_member_birthdays_migration_fills_the_list_and_downgrades(tmp_path, monk
         tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     assert "contact_member_dismissals" not in tables
 
+
+
+def test_notification_expiry_migration_backfills_and_downgrades(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "notification-expiry.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0081_shopping_photo_thumbnails")
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'One')")
+        conn.execute(
+            "INSERT INTO users (id, email, password_hash, display_name) VALUES (1, 'a@example.com', 'x', 'A')"
+        )
+        conn.execute(
+            """
+            INSERT INTO notifications (id, user_id, family_id, type, title, read, created_at)
+            VALUES
+                (1, 1, 1, 'event_reminder', 'Dentist', 0, '2026-11-01 10:00:00'),
+                (2, 1, 1, 'birthday', 'Chloe', 1, '2026-11-14 07:00:00'),
+                (3, 1, 1, 'duty_week', 'Duties', 0, '2026-11-08 17:00:00'),
+                (4, 1, 1, 'event_assigned', 'Chloe Geburtstag', 1, '2026-11-12 09:00:00'),
+                (5, 1, 1, 'task_due', 'Bins', 0, '2026-11-01 10:00:00')
+            """
+        )
+        conn.execute(
+            "INSERT INTO calendar_events (id, family_id, title, starts_at, all_day, recurrence) VALUES "
+            "(1, 1, 'Weekly', '2026-11-03 16:00:00', 0, 'weekly'), (2, 1, 'Once', '2026-11-20 16:00:00', 0, NULL)"
+        )
+        conn.execute(
+            "INSERT INTO reminder_snoozes (id, user_id, family_id, source_type, source_id, notification_type, title, remind_at) VALUES "
+            "(1, 1, 1, 'event', 1, 'event_reminder', 'Weekly', '2026-11-17 15:00:00'), "
+            "(2, 1, 1, 'event', 2, 'event_reminder', 'Once', '2026-11-17 15:00:00'), "
+            "(3, 1, 1, 'task', 1, 'task_due', 'Bins', '2026-11-17 15:00:00')"
+        )
+        # More than one backfill batch.
+        conn.executemany(
+            "INSERT INTO notifications (id, user_id, family_id, type, title, read, created_at) VALUES (?, 1, 1, ?, 'x', 0, ?)",
+            [(100 + n, "birthday", "2026-11-01 10:00:00") for n in range(1205)],
+        )
+        conn.commit()
+
+    command.upgrade(config, "0082_notification_expiry")
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute("SELECT id, read_at IS NOT NULL, expires_at FROM notifications WHERE id < 100 ORDER BY id").fetchall()
+        batched = conn.execute(
+            "SELECT COUNT(*) FROM notifications WHERE id >= 100 AND expires_at LIKE '2026-11-03 10:00:00%'"
+        ).fetchone()[0]
+        table_sql = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'notifications'").fetchone()[0]
+        indexes = {row[1] for row in conn.execute("PRAGMA index_list(notifications)")}
+        snooze_columns = {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
+        snooze_expiries = conn.execute("SELECT id, expires_at FROM reminder_snoozes ORDER BY id").fetchall()
+        # Ids never repeat: deleting the newest rows does not hand their ids out again.
+        conn.execute("DELETE FROM notifications WHERE id >= 100")
+        conn.execute("INSERT INTO notifications (user_id, family_id, type, title, read) VALUES (1, 1, 'system', 'New', 0)")
+        new_id = conn.execute("SELECT id FROM notifications WHERE title = 'New'").fetchone()[0]
+        conn.execute("DELETE FROM notifications WHERE title = 'New'")
+        conn.commit()
+    assert batched == 1205
+    assert "AUTOINCREMENT" in table_sql.upper()
+    assert new_id == 100 + 1205
+    assert {"ix_notifications_read_at", "ix_notifications_expires_at"} <= indexes
+    assert "expires_at" in snooze_columns
+    # A recurring event's snooze ends a day after it was snoozed (an hour before it ran out).
+    assert [(row_id, (value or "")[:19]) for row_id, value in snooze_expiries] == [
+        (1, "2026-11-18 14:00:00"), (2, ""), (3, ""),
+    ]
+    assert [(row_id, has_read_at) for row_id, has_read_at, _ in rows] == [(1, 0), (2, 1), (3, 0), (4, 1), (5, 0)]
+    expiries = {row_id: (expires_at[:19] if expires_at else None) for row_id, _, expires_at in rows}
+    assert expiries == {
+        1: "2026-11-02 10:00:00",
+        2: "2026-11-16 07:00:00",
+        3: "2026-11-16 17:00:00",
+        4: None,
+        5: None,
+    }
+
+    command.downgrade(config, "0081_shopping_photo_thumbnails")
+    with sqlite3.connect(db_path) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(notifications)")}
+        assert "expires_at" not in {row[1] for row in conn.execute("PRAGMA table_info(reminder_snoozes)")}
+        assert conn.execute("SELECT COUNT(*) FROM notifications").fetchone()[0] == 5
+    assert "read_at" not in columns and "expires_at" not in columns
+
+
+@pytest.mark.skipif(
+    not __import__("os").environ.get("TRIBU_TEST_POSTGRES_URL"),
+    reason="needs an empty PostgreSQL database in TRIBU_TEST_POSTGRES_URL",
+)
+def test_notification_expiry_migration_converts_postgres_session_times(monkeypatch) -> None:
+    """``now()`` wrote local wall time when sessions ran in another zone."""
+    import os
+
+    import sqlalchemy as sa
+
+    url = os.environ["TRIBU_TEST_POSTGRES_URL"]
+    engine = sa.create_engine(url.replace("postgresql://", "postgresql+psycopg2://", 1))
+    with engine.begin() as conn:
+        conn.execute(sa.text("DROP SCHEMA public CASCADE"))
+        conn.execute(sa.text("CREATE SCHEMA public"))
+        name = conn.execute(sa.text("SELECT current_database()")).scalar()
+        conn.execute(sa.text(f'ALTER DATABASE "{name}" SET timezone TO \'Europe/Berlin\''))
+    engine.dispose()
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", url)
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    try:
+        command.upgrade(config, "0081_shopping_photo_thumbnails")
+        with engine.begin() as conn:
+            conn.execute(sa.text("INSERT INTO families (id, name) VALUES (1, 'One')"))
+            conn.execute(sa.text("INSERT INTO users (id, email, password_hash, display_name) VALUES (1, 'a@example.com', 'x', 'A')"))
+            conn.execute(sa.text(
+                "INSERT INTO notifications (id, user_id, family_id, type, title, read, created_at) VALUES "
+                "(1, 1, 1, 'event_reminder', 'Winter', false, '2026-11-01 10:00:00'), "
+                "(2, 1, 1, 'birthday', 'Summer', false, '2026-07-14 07:00:00')"
+            ))
+        command.upgrade(config, "0082_notification_expiry")
+        with engine.begin() as conn:
+            rows = conn.execute(sa.text("SELECT id, created_at, expires_at FROM notifications ORDER BY id")).fetchall()
+        assert [(r.created_at, r.expires_at) for r in rows] == [
+            # 10:00 in Berlin in winter is 09:00 UTC, in summer 07:00 is 05:00 UTC.
+            (datetime(2026, 11, 1, 9, 0), datetime(2026, 11, 2, 9, 0)),
+            (datetime(2026, 7, 14, 5, 0), datetime(2026, 7, 16, 5, 0)),
+        ]
+        command.downgrade(config, "0081_shopping_photo_thumbnails")
+        with engine.begin() as conn:
+            assert conn.execute(sa.text("SELECT created_at FROM notifications WHERE id = 1")).scalar() == datetime(2026, 11, 1, 10, 0)
+    finally:
+        with engine.begin() as conn:
+            conn.execute(sa.text(f'ALTER DATABASE "{name}" RESET timezone'))
+        engine.dispose()

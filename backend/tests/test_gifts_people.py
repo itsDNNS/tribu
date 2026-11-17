@@ -388,7 +388,7 @@ class TestReminder:
         try:
             families = {uid: [fam.family_id] for uid in fam.ids.values()}
             deliver_gift_reminders(db, on=on, user_families=families,
-                                   deliver=lambda uid, fid, ntype, title, body, link, *rest: sent.append(
+                                   deliver=lambda uid, fid, ntype, title, body, link, *rest, **options: sent.append(
                                        (uid, ntype, title, body("de"), link)))
         finally:
             db.close()

@@ -823,6 +823,9 @@ class FamilySetupChecklist(Base):
 
 class Notification(Base):
     __tablename__ = "notifications"
+    # Ids only ever grow, also on SQLite: the live stream and "delete all up
+    # to this id" rely on a new notification never reusing a deleted id.
+    __table_args__ = {"sqlite_autoincrement": True}
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -832,7 +835,14 @@ class Notification(Base):
     body = Column(Text, nullable=True)
     link = Column(String, nullable=True)
     read = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    # Naive UTC like the other timestamps here; the Python default keeps it
+    # UTC even when a PostgreSQL session runs in another time zone.
+    created_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
+    # Read notifications are cleaned up a while after read_at; time-bound
+    # reminders (an event start, a birthday) stop showing at expires_at,
+    # read or not.
+    read_at = Column(DateTime, nullable=True, index=True)
+    expires_at = Column(DateTime, nullable=True, index=True)
 
 
 class NotificationPreference(Base):
@@ -882,6 +892,9 @@ class ReminderSnooze(Base):
     link = Column(String, nullable=True)
     remind_at = Column(DateTime, nullable=False)
     delivered_at = Column(DateTime, nullable=True)
+    # When the reminder stops being true (the start of the event occurrence
+    # it announced), naive UTC. A snooze running out later is dropped.
+    expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 

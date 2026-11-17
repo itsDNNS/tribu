@@ -6,6 +6,8 @@ import { listLanguages, loadLocale } from '../lib/i18n';
 import { useLocaleMessages } from '../hooks/useLocaleMessages';
 import { resolveInitialView } from '../lib/navigationState';
 import { notificationLinkView } from '../lib/notificationLinks';
+import { cancelPendingClear, setPendingClearUser, withoutPendingClear } from '../lib/notificationClear';
+import { useNotificationExpiry } from '../hooks/useNotificationExpiry';
 import { listThemes } from '../lib/themes';
 
 export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'duties', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'family', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
@@ -29,6 +31,8 @@ export function AppProvider({ children }) {
   // Auth state
   const [loggedIn, setLoggedIn] = useState(false);
   const [me, setMe] = useState(null);
+  const meIdRef = useRef(null);
+  meIdRef.current = me?.id ?? null;
   const [profileImage, setProfileImage] = useState('');
   const [needsSetup, setNeedsSetup] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
@@ -54,6 +58,10 @@ export function AppProvider({ children }) {
   const [quickCaptureInbox, setQuickCaptureInbox] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  useNotificationExpiry(notifications, setNotifications, setUnreadCount);
+  useEffect(() => {
+    setPendingClearUser(loggedIn ? me?.id ?? null : null);
+  }, [loggedIn, me?.id]);
   const lastEventIdRef = useRef(0);
 
   // UI state
@@ -165,12 +173,14 @@ export function AppProvider({ children }) {
   }, []);
 
   const loadNotifications = useCallback(async () => {
-    const { ok, data } = await api.apiGetNotifications(50, 0);
+    const { ok, data: loaded } = await api.apiGetNotifications(50, 0);
     if (ok) {
+      // What "Delete all" is about to remove stays hidden until it is sent or undone.
+      const data = withoutPendingClear(loaded, meIdRef.current);
       setNotifications(data);
       setUnreadCount(data.filter((n) => !n.read).length);
-      if (data.length) {
-        lastEventIdRef.current = Math.max(lastEventIdRef.current, data[0].id);
+      if (loaded.length) {
+        lastEventIdRef.current = Math.max(lastEventIdRef.current, loaded[0].id);
       }
     }
   }, []);
@@ -308,6 +318,8 @@ export function AppProvider({ children }) {
   }, [lang]);
 
   const logout = useCallback(async () => {
+    // A "delete all" still waiting belongs to this account; never send it later.
+    cancelPendingClear();
     if (!demoMode) {
       await dropDevicePushSubscription();
       await api.apiLogout();
