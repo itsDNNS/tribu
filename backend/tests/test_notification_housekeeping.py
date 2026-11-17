@@ -1,7 +1,8 @@
 """Notifications that clean up after themselves.
 
 Read notifications go a week after they were read, time-bound reminders
-disappear once their moment has passed, and everything can be deleted at once.
+disappear once their moment has passed, everything can be deleted at once,
+and an event edit only notifies people who were newly assigned.
 """
 
 from __future__ import annotations
@@ -427,3 +428,82 @@ def test_snoozed_reminder_for_an_event_that_started_is_dropped(monkeypatch):
         # 18:00 in Berlin is 17:00 UTC.
         assert rows[0].expires_at == datetime(2026, 11, 17, 17, 0)
         assert all(snooze.delivered_at == now for snooze in db.query(ReminderSnooze).all())
+
+
+# --- duplicate assignment notices ------------------------------------------
+
+
+def _assignment_titles(user_id: int) -> list[str]:
+    with TestSession() as db:
+        return [
+            row.title
+            for row in db.query(Notification).filter(Notification.user_id == user_id, Notification.type == "event_assigned")
+        ]
+
+
+def test_editing_an_event_notifies_only_newly_assigned_members():
+    with TestSession() as db:
+        family = _family(db)
+        dennis = _user(db, "dennis@example.com", family)
+        partner = _user(db, "partner@example.com", family)
+        chloe = _user(db, "chloe@example.com", family, adult=False)
+        grandma = _user(db, "grandma@example.com", family)
+        db.commit()
+        ids = {"dennis": dennis.id, "partner": partner.id, "chloe": chloe.id, "grandma": grandma.id}
+        family_id = family.id
+        headers = _headers(partner)
+
+    created = client.post("/calendar/events", headers=headers, json={
+        "family_id": family_id, "title": "Chloe Geburtstag", "starts_at": "2026-11-15T00:00:00",
+        "all_day": True, "assigned_to": [ids["dennis"], ids["partner"]],
+    })
+    assert created.status_code == 200, created.text
+    event_id = created.json()["id"]
+    assert _assignment_titles(ids["dennis"]) == ["Chloe Geburtstag"]
+    assert _assignment_titles(ids["partner"]) == []
+
+    # Adding Chloe used to notify Dennis a second time.
+    edited = client.patch(f"/calendar/events/{event_id}", headers=headers, json={
+        "assigned_to": [ids["dennis"], ids["partner"], ids["chloe"]],
+    })
+    assert edited.status_code == 200, edited.text
+    assert _assignment_titles(ids["dennis"]) == ["Chloe Geburtstag"]
+    assert _assignment_titles(ids["chloe"]) == ["Chloe Geburtstag"]
+
+    # Same people in another order, then the whole family: only Grandma is new.
+    client.patch(f"/calendar/events/{event_id}", headers=headers, json={
+        "assigned_to": [ids["chloe"], ids["partner"], ids["dennis"]],
+    })
+    client.patch(f"/calendar/events/{event_id}", headers=headers, json={"assigned_to": "all"})
+    assert _assignment_titles(ids["dennis"]) == ["Chloe Geburtstag"]
+    assert _assignment_titles(ids["chloe"]) == ["Chloe Geburtstag"]
+    assert _assignment_titles(ids["grandma"]) == ["Chloe Geburtstag"]
+
+    # Everyone (all) to an explicit list of the same people: nothing new.
+    client.patch(f"/calendar/events/{event_id}", headers=headers, json={
+        "assigned_to": [ids["dennis"], ids["partner"], ids["chloe"], ids["grandma"]],
+    })
+    with TestSession() as db:
+        assert db.query(Notification).filter(Notification.type == "event_assigned").count() == 3
+        # The notice ends with the (all-day) event: the end of 15 November in Berlin.
+        expiries = {row.expires_at for row in db.query(Notification)}
+        assert expiries == {datetime(2026, 11, 15, 22, 59, 59, 999999)}
+
+
+def test_assignment_notice_of_a_timed_event_ends_with_the_event():
+    with TestSession() as db:
+        family = _family(db)
+        dennis = _user(db, "dennis@example.com", family)
+        partner = _user(db, "partner@example.com", family)
+        db.commit()
+        dennis_id, family_id = dennis.id, family.id
+        headers = _headers(partner)
+
+    response = client.post("/calendar/events", headers=headers, json={
+        "family_id": family_id, "title": "Dentist", "starts_at": "2026-11-20T10:00:00",
+        "ends_at": "2026-11-20T11:00:00", "all_day": False, "assigned_to": [dennis_id],
+    })
+    assert response.status_code == 200, response.text
+    with TestSession() as db:
+        # 11:00 in Berlin is 10:00 UTC.
+        assert db.query(Notification).one().expires_at == datetime(2026, 11, 20, 10, 0)
