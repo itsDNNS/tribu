@@ -90,7 +90,7 @@ def family():
             people[name] = {"id": user.id, "token": _pat(db, user.id, name, ALL_SCOPES)}
         people["read_only"] = _pat(db, people["ben"]["id"], "ben-read", "calendar:read")
         people["profile_only"] = _pat(db, people["ben"]["id"], "ben-profile", "profile:write")
-        people["read_profile"] = _pat(db, people["ben"]["id"], "ben-read-profile", "calendar:read,profile:write")
+        people["calendar_write"] = _pat(db, people["ben"]["id"], "ben-calendar-write", "calendar:write")
         db.commit()
         yield people
 
@@ -268,16 +268,16 @@ def test_token_scopes(family):
     event_id = _event(family)
     url = f"/calendar/events/{event_id}/reminder-mute"
 
-    # Reading the event is not enough to change a notification setting ...
+    # Reading the event is not enough to change its reminders ...
     read_only = client.put(url, json={}, headers=_auth(family["read_only"]))
     assert read_only.status_code == 403
     assert read_only.json()["detail"]["code"] == "INSUFFICIENT_SCOPE"
-    # ... and a notification setting alone does not reveal the calendar.
+    # ... and a profile token is not a calendar token.
     assert client.put(url, json={}, headers=_auth(family["profile_only"])).status_code == 403
     assert client.delete(url, headers=_auth(family["read_only"])).status_code == 403
 
-    assert client.put(url, json={}, headers=_auth(family["read_profile"])).status_code == 200
-    assert client.delete(url, headers=_auth(family["read_profile"])).status_code == 200
+    assert client.put(url, json={}, headers=_auth(family["calendar_write"])).status_code == 200
+    assert client.delete(url, headers=_auth(family["calendar_write"])).status_code == 200
     # The mute state in the event list needs only calendar:read.
     listed = client.get(f"/calendar/events?family_id={family['family_id']}", headers=_auth(family["read_only"]))
     assert listed.status_code == 200
@@ -297,11 +297,21 @@ def test_the_scopes_come_from_one_place():
         assert _dependency_facts(route.dependant)[1] == set(REMINDER_MUTE_SCOPES)
 
 
+def test_the_mcp_endpoint_offers_mute_and_unmute():
+    from app.core.mcp_catalog import build_catalog
+
+    catalog = build_catalog(app)
+    ops = [op for op in catalog.allowed({"calendar:write"}) if op.path == "/calendar/events/{event_id}/reminder-mute"]
+    assert {op.method for op in ops} == {"PUT", "DELETE"}
+    assert all(op.scope == "calendar:write" for op in ops)
+    assert not [op for op in catalog.allowed({"calendar:read"}) if op.path.endswith("/reminder-mute")]
+
+
 def test_openapi_documents_the_endpoints(family):
     spec = client.get("/openapi.json").json()
     path = spec["paths"]["/calendar/events/{event_id}/reminder-mute"]
     assert {"put", "delete"} <= set(path)
-    assert "calendar:read" in path["put"]["description"] and "profile:write" in path["put"]["description"]
+    assert "`calendar:write`" in path["put"]["description"]
     assert "reminder_muted" in spec["components"]["schemas"]["CalendarEventResponse"]["properties"]
 
 

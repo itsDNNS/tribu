@@ -1024,10 +1024,11 @@ def _event_for_reminder_mute(db: Session, event_id: int, user: User) -> Calendar
 # is a personal notification setting like the notification preferences
 # (profile:write). The MCP endpoint only offers routes with exactly one
 # scope; switching to one is a change of this tuple.
-REMINDER_MUTE_SCOPES: tuple[str, ...] = ("calendar:read", "profile:write")
+# One scope, so the MCP endpoint (which offers single-scope operations) can mute too.
+REMINDER_MUTE_SCOPES: tuple[str, ...] = ("calendar:write",)
 # The user first: signing in with a token is what sets the scopes checked.
 REMINDER_MUTE_DEPENDENCIES = [Depends(current_user), *(require_scope(scope) for scope in REMINDER_MUTE_SCOPES)]
-REMINDER_MUTE_SCOPE_NOTE = "Scopes: " + " and ".join(f"`{scope}`" for scope in REMINDER_MUTE_SCOPES) + "."
+REMINDER_MUTE_SCOPE_NOTE = ("Scope: " if len(REMINDER_MUTE_SCOPES) == 1 else "Scopes: ") + " and ".join(f"`{scope}`" for scope in REMINDER_MUTE_SCOPES) + "."
 
 
 @router.put(
