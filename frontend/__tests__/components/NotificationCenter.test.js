@@ -1,11 +1,13 @@
-import { act, fireEvent, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import NotificationCenter, { isNotificationExpired } from '../../components/NotificationCenter';
 import * as api from '../../lib/api';
+import { resetPendingClearForTests, withoutPendingClear } from '../../lib/notificationClear';
 import { UNDO_WINDOW_MS } from '../../lib/undo';
-import { buildTestMessages, renderWithMockApp } from '../test-utils';
+import { buildMockAppState, buildTestMessages, renderWithMockApp, setMockAppState } from '../test-utils';
 
-const mockToastSuccess = jest.fn(() => 77);
+const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 const mockToastDismiss = jest.fn();
 
@@ -151,41 +153,64 @@ function notif(id, overrides = {}) {
   };
 }
 
-// The panel with a state-less app mock: setNotifications and setUnreadCount
-// are spies, so the tests apply their updaters to see what they would do.
-function renderPanel(notifications, overrides = {}) {
-  const onClose = jest.fn();
-  const result = renderWithMockApp(<NotificationCenter onClose={onClose} />, {
-    messages: buildTestMessages({}, 'de'),
-    lang: 'de',
-    notifications,
-    unreadCount: notifications.filter((n) => !n.read).length,
-    setNotifications: jest.fn(),
-    setUnreadCount: jest.fn(),
-    ...overrides,
+// The panel on top of real list state, with a fake server behind
+// loadNotifications that, like AppContext, hides a delete still waiting.
+function renderPanel(initial, { page = false, overrides = {} } = {}) {
+  const server = { rows: initial.map((n) => ({ ...n })) };
+  const app = {};
+  const loadNotifications = jest.fn(async () => {
+    const data = withoutPendingClear(server.rows.map((n) => ({ ...n })));
+    app.setNotifications(data);
+    app.setUnreadCount(data.filter((n) => !n.read).length);
   });
-  return { ...result, onClose };
+  const onClose = jest.fn();
+
+  function Harness() {
+    const [notifications, setNotifications] = useState(initial);
+    const [unreadCount, setUnreadCount] = useState(initial.filter((n) => !n.read).length);
+    Object.assign(app, { notifications, unreadCount, setNotifications, setUnreadCount });
+    setMockAppState(buildMockAppState({
+      messages: buildTestMessages({}, page ? 'en' : 'de'),
+      lang: page ? 'en' : 'de',
+      notifications,
+      setNotifications,
+      unreadCount,
+      setUnreadCount,
+      loadNotifications,
+      ...overrides,
+    }));
+    return page ? <NotificationCenter /> : <NotificationCenter onClose={onClose} />;
+  }
+
+  const result = render(<Harness />);
+  return { ...result, app, server, loadNotifications, onClose };
 }
 
-function applyUpdater(spy, value) {
-  return spy.mock.calls.reduce((current, [update]) => (typeof update === 'function' ? update(current) : update), value);
+function undoOf(call) {
+  return mockToastSuccess.mock.calls[call][1].onClick;
 }
 
 describe('NotificationCenter panel actions', () => {
+  let toastIds;
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    mockToastSuccess.mockImplementation(() => 77);
+    resetPendingClearForTests();
+    toastIds = 0;
+    mockToastSuccess.mockImplementation(() => { toastIds += 1; return toastIds; });
     api.apiMarkAllNotificationsRead.mockResolvedValue({ ok: true });
     api.apiDeleteAllNotifications.mockResolvedValue({ ok: true, data: { status: 'ok', deleted: 3 } });
   });
 
   afterEach(() => {
+    resetPendingClearForTests();
     jest.useRealTimers();
   });
 
-  it('offers mark all read and delete all next to the heading', () => {
+  it('offers mark all read and delete all next to the heading', async () => {
     renderPanel([notif(1), notif(2, { read: true })]);
+    await act(async () => {});
 
     expect(screen.getByRole('heading', { name: 'Benachrichtigungen' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Alle als gelesen markieren' })).toBeVisible();
@@ -193,8 +218,9 @@ describe('NotificationCenter panel actions', () => {
     expect(screen.getByText('Gelesene Benachrichtigungen verschwinden nach 7 Tagen.')).toBeVisible();
   });
 
-  it('hides both actions when there is nothing to show', () => {
+  it('hides both actions when there is nothing to show', async () => {
     renderPanel([]);
+    await act(async () => {});
 
     expect(screen.getByText('Keine Benachrichtigungen')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Alle löschen' })).not.toBeInTheDocument();
@@ -202,96 +228,173 @@ describe('NotificationCenter panel actions', () => {
     expect(screen.getByRole('button', { name: 'Schließen' })).toBeVisible();
   });
 
-  it('offers only delete all once everything is read', () => {
+  it('offers only delete all once everything is read', async () => {
     renderPanel([notif(1, { read: true })]);
+    await act(async () => {});
 
     expect(screen.queryByRole('button', { name: 'Alle als gelesen markieren' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Alle löschen' })).toBeVisible();
   });
 
   it('marks all as read', async () => {
-    const { appState } = renderPanel([notif(1), notif(2)]);
+    const { app } = renderPanel([notif(1), notif(2)]);
+    await act(async () => {});
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Alle als gelesen markieren' }));
     });
 
     expect(api.apiMarkAllNotificationsRead).toHaveBeenCalledTimes(1);
-    expect(applyUpdater(appState.setNotifications, [notif(1), notif(2)]).every((n) => n.read)).toBe(true);
-    expect(appState.setUnreadCount).toHaveBeenCalledWith(0);
+    expect(app.notifications.every((n) => n.read)).toBe(true);
+    expect(app.unreadCount).toBe(0);
   });
 
   it('deletes all only after the undo window, up to the newest shown notification', async () => {
-    const notifications = [notif(9, { title: 'Chloe Geburtstag' }), notif(4, { read: true }), notif(2)];
-    const { appState } = renderPanel(notifications);
+    const { app, loadNotifications } = renderPanel([notif(9, { title: 'Chloe Geburtstag' }), notif(4, { read: true }), notif(2)]);
+    await act(async () => {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
 
-    // Gone from the list at once, with an Undo toast; nothing sent yet.
+    // Gone from the list and the badge at once, with an Undo toast; nothing sent yet.
     expect(screen.queryByText('Chloe Geburtstag')).not.toBeInTheDocument();
     expect(screen.getByText('Keine Benachrichtigungen')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Alle löschen' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Schließen' })).toHaveFocus();
     expect(mockToastSuccess).toHaveBeenCalledWith('Benachrichtigungen gelöscht', expect.objectContaining({ label: 'Rückgängig' }));
+    expect(app.unreadCount).toBe(0);
     expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
-    expect(applyUpdater(appState.setUnreadCount, 2)).toBe(0);
 
+    loadNotifications.mockClear();
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
 
-    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(9);
-    expect(mockToastDismiss).toHaveBeenCalledWith(77);
-    // One that arrived while the toast was up stays.
-    expect(applyUpdater(appState.setNotifications, [notif(12), ...notifications]).map((n) => n.id)).toEqual([12]);
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(9, { keepalive: false });
+    expect(mockToastDismiss).toHaveBeenCalledWith(1);
+    // Afterwards the list and the badge come from the server.
+    expect(loadNotifications).toHaveBeenCalled();
   });
 
-  it('brings everything back with Undo and never sends the delete', async () => {
-    const { appState } = renderPanel([notif(1, { title: 'Zahnarzt' }), notif(2, { read: true })]);
+  it('brings everything back with Undo, closes its toast and never sends the delete', async () => {
+    renderPanel([notif(1, { title: 'Zahnarzt' }), notif(2, { read: true })]);
+    await act(async () => {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
     expect(screen.queryByText('Zahnarzt')).not.toBeInTheDocument();
 
-    const [, action] = mockToastSuccess.mock.calls[0];
-    act(() => { action.onClick(); });
+    await act(async () => { undoOf(0)(); });
 
     expect(screen.getByText('Zahnarzt')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Alle löschen' })).toBeVisible();
-    // The unread count goes down and back up again.
-    expect(applyUpdater(appState.setUnreadCount, 1)).toBe(1);
+    expect(mockToastDismiss).toHaveBeenCalledWith(1);
 
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS * 2); });
     expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
   });
 
-  it('sends a waiting delete at once when the panel closes', async () => {
-    const { unmount } = renderPanel([notif(5)]);
+  it('keeps the Undo working after the panel closes and sends only when the window is over', async () => {
+    const { unmount } = renderPanel([notif(5), notif(3)]);
+    await act(async () => {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
     await act(async () => { unmount(); });
+    expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+    expect(mockToastDismiss).not.toHaveBeenCalled();
 
-    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(5);
-    expect(mockToastDismiss).toHaveBeenCalledWith(77);
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS - 1000); });
+    expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+    await act(async () => { jest.advanceTimersByTime(1000); });
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(5, { keepalive: false });
+  });
+
+  it('can be undone after the panel closed', async () => {
+    const { unmount } = renderPanel([notif(5)]);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    await act(async () => { unmount(); });
+    await act(async () => { undoOf(0)(); });
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS * 2); });
+
+    expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+    expect(mockToastDismiss).toHaveBeenCalledWith(1);
+  });
+
+  it('sends a waiting delete with keepalive when the page unloads', async () => {
+    renderPanel([notif(7)]);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    // Switching to another app keeps the window open ...
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    expect(api.apiDeleteAllNotifications).not.toHaveBeenCalled();
+    // ... leaving the page does not.
+    await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(7, { keepalive: true });
+    expect(mockToastDismiss).toHaveBeenCalledWith(1);
+  });
+
+  it('ignores an old Undo once a later delete took over', async () => {
+    const { app, server } = renderPanel([notif(1, { title: 'Zahnarzt' })]);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    await act(async () => { undoOf(0)(); });
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    expect(mockToastSuccess).toHaveBeenCalledTimes(2);
+
+    // The first toast's button no longer cancels the second delete.
+    await act(async () => { undoOf(0)(); });
+    expect(screen.queryByText('Zahnarzt')).not.toBeInTheDocument();
+    server.rows = [];
+    await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
+
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledTimes(1);
+    expect(app.notifications).toEqual([]);
+  });
+
+  it('counts unread again from the server after Undo, so "mark all read" in between holds', async () => {
+    const { app, server } = renderPanel([notif(2), notif(1)]);
+    await act(async () => {});
+    api.apiMarkAllNotificationsRead.mockImplementation(async () => {
+      server.rows = server.rows.map((n) => ({ ...n, read: true }));
+      return { ok: true };
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
+    expect(app.unreadCount).toBe(0);
+    // Another tab or device marks everything read meanwhile.
+    await api.apiMarkAllNotificationsRead();
+    await act(async () => { undoOf(0)(); });
+
+    expect(app.notifications.map((n) => n.id)).toEqual([2, 1]);
+    expect(app.notifications.every((n) => n.read)).toBe(true);
+    expect(app.unreadCount).toBe(0);
   });
 
   it('shows everything again when the delete fails', async () => {
     api.apiDeleteAllNotifications.mockResolvedValue({ ok: false, data: {} });
-    const { appState } = renderPanel([notif(3, { title: 'Einkauf' })]);
+    renderPanel([notif(3, { title: 'Einkauf' })]);
+    await act(async () => {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Alle löschen' }));
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
 
     expect(mockToastError).toHaveBeenCalled();
     expect(screen.getByText('Einkauf')).toBeVisible();
-    expect(appState.setNotifications).not.toHaveBeenCalled();
-    expect(applyUpdater(appState.setUnreadCount, 1)).toBe(1);
   });
 
-  it('leaves out reminders whose moment has passed', () => {
+  it('leaves out reminders whose moment has passed', async () => {
     const past = new Date(Date.now() - 60000).toISOString().replace('Z', '');
     const future = new Date(Date.now() + 3600000).toISOString().replace('Z', '');
-    renderPanel([
-      notif(1, { title: 'Startet bald', expires_at: future }),
-      notif(2, { title: 'Hat schon begonnen', expires_at: past }),
-    ]);
+    renderWithMockApp(<NotificationCenter onClose={jest.fn()} />, {
+      messages: buildTestMessages({}, 'de'),
+      notifications: [
+        notif(1, { title: 'Startet bald', expires_at: future }),
+        notif(2, { title: 'Hat schon begonnen', expires_at: past }),
+      ],
+    });
 
     expect(screen.getByText('Startet bald')).toBeVisible();
     expect(screen.queryByText('Hat schon begonnen')).not.toBeInTheDocument();
@@ -300,17 +403,12 @@ describe('NotificationCenter panel actions', () => {
   });
 
   it('offers delete all on the notifications page too', async () => {
-    renderWithMockApp(<NotificationCenter />, {
-      messages: buildTestMessages(),
-      notifications: [notif(1)],
-      unreadCount: 1,
-      setNotifications: jest.fn(),
-      setUnreadCount: jest.fn(),
-    });
+    renderPanel([notif(1)], { page: true });
+    await act(async () => {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete all' }));
     expect(screen.getByRole('heading', { name: 'Notifications' })).toHaveFocus();
     await act(async () => { jest.advanceTimersByTime(UNDO_WINDOW_MS); });
-    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(1);
+    expect(api.apiDeleteAllNotifications).toHaveBeenCalledWith(1, { keepalive: false });
   });
 });

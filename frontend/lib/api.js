@@ -562,8 +562,10 @@ export function apiDeleteNotification(id) {
 }
 
 // Up to and including upToId, so one that arrived meanwhile stays.
-export function apiDeleteAllNotifications(upToId) {
-  return del(upToId ? `/notifications?up_to_id=${encodeURIComponent(upToId)}` : '/notifications');
+// keepalive lets the request finish while the page unloads.
+export function apiDeleteAllNotifications(upToId, { keepalive = false } = {}) {
+  const path = upToId ? `/notifications?up_to_id=${encodeURIComponent(upToId)}` : '/notifications';
+  return request(path, keepalive ? { method: 'DELETE', keepalive: true } : { method: 'DELETE' });
 }
 
 export function apiGetNotificationPreferences() {

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import { AppProvider, useApp } from '../../contexts/AppContext';
 import * as api from '../../lib/api';
+import { resetPendingClearForTests, startPendingClear } from '../../lib/notificationClear';
 
 jest.mock('../../lib/api');
 
@@ -278,4 +279,66 @@ describe('AppProvider bootstrap', () => {
     expect(screen.getByTestId('household-data')).not.toHaveTextContent('Old household');
   });
 
+
+  test('keeps notifications waiting for "delete all" hidden when the list reloads', async () => {
+    function NotifProbe() {
+      const { notifications, unreadCount, loadNotifications, loading } = useApp();
+      return (
+        <div>
+          <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
+          <span data-testid="notif-ids">{notifications.map((n) => n.id).join(',')}</span>
+          <span data-testid="unread">{unreadCount}</span>
+          <button type="button" onClick={() => loadNotifications()}>Reload notifications</button>
+        </div>
+      );
+    }
+    api.apiGetNotifications.mockResolvedValue({
+      ok: true,
+      data: [
+        { id: 6, title: 'New', read: false, created_at: '2026-11-17T08:00:00' },
+        { id: 5, title: 'Old', read: false, created_at: '2026-11-17T07:00:00' },
+        { id: 4, title: 'Older', read: false, created_at: '2026-11-17T06:00:00' },
+      ],
+    });
+    render(<AppProvider><NotifProbe /></AppProvider>);
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
+    startPendingClear({ upToId: 5 });
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Reload notifications' }));
+      await waitFor(() => expect(screen.getByTestId('notif-ids')).toHaveTextContent(/^6$/));
+      expect(screen.getByTestId('unread')).toHaveTextContent('1');
+    } finally {
+      resetPendingClearForTests();
+    }
+  });
+
+  test('drops a reminder from the list and the badge when it expires', async () => {
+    function NotifProbe() {
+      const { notifications, unreadCount, loadNotifications, loading } = useApp();
+      return (
+        <div>
+          <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
+          <span data-testid="notif-ids">{notifications.map((n) => n.id).join(',')}</span>
+          <span data-testid="unread">{unreadCount}</span>
+          <button type="button" onClick={() => loadNotifications()}>Reload notifications</button>
+        </div>
+      );
+    }
+    const soon = new Date(Date.now() + 400).toISOString().replace('Z', '');
+    api.apiGetNotifications.mockResolvedValue({
+      ok: true,
+      data: [
+        { id: 2, title: 'Starts now', read: false, created_at: '2026-11-17T08:00:00', expires_at: soon },
+        { id: 1, title: 'Stays', read: false, created_at: '2026-11-17T07:00:00', expires_at: null },
+      ],
+    });
+    render(<AppProvider><NotifProbe /></AppProvider>);
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'));
+    fireEvent.click(screen.getByRole('button', { name: 'Reload notifications' }));
+    await waitFor(() => expect(screen.getByTestId('notif-ids')).toHaveTextContent('2,1'));
+    expect(screen.getByTestId('unread')).toHaveTextContent('2');
+
+    await waitFor(() => expect(screen.getByTestId('notif-ids')).toHaveTextContent(/^1$/), { timeout: 2000 });
+    expect(screen.getByTestId('unread')).toHaveTextContent('1');
+  });
 });
