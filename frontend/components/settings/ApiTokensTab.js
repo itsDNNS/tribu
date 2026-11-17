@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useId } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { Key, Plus, Trash2, Copy, Check, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -20,6 +20,10 @@ export default function ApiTokensTab() {
   const [newExpiry, setNewExpiry] = useState('');
   const [createdToken, setCreatedToken] = useState(null);
   const [copied, setCopied] = useState(false);
+  // One request at a time: a double click must not create two tokens and
+  // replace the secret of the first before it could be copied.
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const loadTokens = useCallback(async () => {
     if (!loggedIn || demoMode) return;
@@ -49,14 +53,22 @@ export default function ApiTokensTab() {
 
   async function handleCreateToken(e) {
     e.preventDefault();
-    if (scopeMissing) return;
+    if (scopeMissing || submittingRef.current) return;
     const payload = {
       name: newName.trim(),
       scopes: newScopes,
     };
     if (newExpiry) payload.expires_at = new Date(newExpiry).toISOString();
 
-    const res = await api.apiCreateToken(payload);
+    submittingRef.current = true;
+    setSubmitting(true);
+    let res;
+    try {
+      res = await api.apiCreateToken(payload);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
     if (res.ok) {
       setCreatedToken(res.data.token);
       setShowCreate(false);
@@ -201,7 +213,7 @@ export default function ApiTokensTab() {
                   </div>
                 )}
                 {scopeMissing && (
-                  <p id={`${id}-scope-missing`} className="set-token-scope-missing">
+                  <p id={`${id}-scope-missing`} className="set-token-scope-missing" role="status">
                     {t(messages, 'token_scope_required')}
                   </p>
                 )}
@@ -230,7 +242,7 @@ export default function ApiTokensTab() {
                 <button
                   type="submit"
                   className="btn-sm"
-                  disabled={!newName.trim() || scopeMissing}
+                  disabled={!newName.trim() || scopeMissing || submitting}
                   aria-describedby={scopeMissing ? `${id}-scope-missing` : undefined}
                 >
                   <Plus size={14} /> {t(messages, 'create_token')}

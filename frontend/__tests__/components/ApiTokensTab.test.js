@@ -111,6 +111,29 @@ describe('ApiTokensTab', () => {
     await waitFor(() => expect(api.apiCreateToken).toHaveBeenCalledWith({ name: 'Local assistant', scopes: ['*'] }));
   });
 
+  it('creates only one token when Create is pressed twice quickly', async () => {
+    let answer;
+    api.apiCreateToken.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+    render(<ApiTokensTab />);
+    openCreateForm();
+    const form = submitButton().closest('form');
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(api.apiCreateToken).toHaveBeenCalledTimes(1);
+    expect(submitButton()).toBeDisabled();
+
+    answer({ ok: true, data: { token: 'tribu_pat_first' } });
+    await waitFor(() => expect(screen.getByText('tribu_pat_first')).toBeInTheDocument());
+    expect(api.apiCreateToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('announces why Create is unavailable', () => {
+    render(<ApiTokensTab />);
+    openCreateForm();
+    fireEvent.click(screen.getByLabelText('Full access'));
+    expect(screen.getByRole('status')).toHaveTextContent(/at least one permission/i);
+  });
+
   it('shows the scopes of existing tokens with readable labels', async () => {
     mockAppState = { ...mockAppState, messages: buildMessages('de'), lang: 'de' };
     api.apiGetTokens.mockResolvedValue({
