@@ -21,7 +21,7 @@ from app.core.deps import current_user, current_user_via_token_param, ensure_adu
 from app.core.ics_utils import _all_day_end, events_to_ics, ics_to_event_dicts
 from app.core.notification_preferences import should_push_notification_type
 from app.core.push import send_push_for_user
-from app.core.recurrence import VALID_RECURRENCES, WEEKLY_RECURRENCES, expand_event, load_series_changes, normalize_weekdays
+from app.core.recurrence import VALID_RECURRENCES, WEEKLY_RECURRENCES, family_occurrences, normalize_weekdays
 from app.core.scopes import require_scope
 from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
@@ -65,40 +65,12 @@ def list_calendar_events(
         range_start = to_local_wall_naive(range_start)
         range_end = to_local_wall_naive(range_end)
 
-        non_recurring = (
-            db.query(CalendarEvent)
-            .filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.recurrence.is_(None),
-                CalendarEvent.starts_at < range_end,
-            )
-            .filter(
-                (CalendarEvent.ends_at >= range_start) | (CalendarEvent.ends_at.is_(None) & (CalendarEvent.starts_at >= range_start))
-            )
-            .all()
-        )
-        recurring = (
-            db.query(CalendarEvent)
-            .filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.recurrence.isnot(None),
-            )
-            .all()
-        )
-
-        series_changes = load_series_changes(db, recurring)
-        all_occurrences = []
-        for ev in non_recurring:
-            all_occurrences.extend(expand_event(ev, range_start, range_end))
-        for ev in recurring:
-            all_occurrences.extend(expand_event(ev, range_start, range_end, series_changes))
-
-        all_occurrences.sort(key=lambda o: o["starts_at"])
+        events, all_occurrences = family_occurrences(db, family_id, range_start, range_end)
         total = len(all_occurrences)
         page = all_occurrences[offset:offset + limit]
 
-        owners = series_reminder_owners(db, [*non_recurring, *recurring])
-        muted = reminder_mute_states(db, user.id, [*non_recurring, *recurring], page)
+        owners = series_reminder_owners(db, events)
+        muted = reminder_mute_states(db, user.id, events, page)
         items = [
             CalendarEventResponse(**with_series_reminder_owner(o, owners), reminder_muted=state)
             for o, state in zip(page, muted)
