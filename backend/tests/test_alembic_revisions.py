@@ -689,3 +689,43 @@ def test_notification_expiry_migration_converts_postgres_session_times(monkeypat
         with engine.begin() as conn:
             conn.execute(sa.text(f'ALTER DATABASE "{name}" RESET timezone'))
         engine.dispose()
+
+
+def test_event_remind_only_creator_migration_defaults_to_everyone_and_downgrades(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "event-remind-only-creator.db"
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.syspath_prepend(str(BACKEND_DIR))
+    command.upgrade(config, "0082_notification_expiry")
+
+    insert = (
+        "INSERT INTO calendar_events (family_id, title, starts_at, all_day, created_at) "
+        "VALUES (1, ?, '2026-12-01 09:00:00', 0, '2026-01-01 00:00:00')"
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO families (id, name) VALUES (1, 'F')")
+        conn.execute(insert, ("Existing",))
+        conn.commit()
+
+    command.upgrade(config, "0083_event_remind_only_creator")
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(insert, ("New",))
+        rows = conn.execute("SELECT title, remind_only_creator FROM calendar_events ORDER BY id").fetchall()
+        conn.commit()
+    assert rows == [("Existing", 0), ("New", 0)]
+
+    command.downgrade(config, "0082_notification_expiry")
+    with sqlite3.connect(db_path) as conn:
+        titles = [row[0] for row in conn.execute("SELECT title FROM calendar_events ORDER BY id")]
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(calendar_events)")}
+        indexes = {row[1] for row in conn.execute("PRAGMA index_list(calendar_events)")}
+    assert titles == ["Existing", "New"]
+    assert "remind_only_creator" not in columns
+    # The partial unique indexes on the UID survive the table rebuild.
+    assert {"uq_calendar_events_family_uid", "uq_calendar_events_family_uid_recurrence"} <= indexes
+    with sqlite3.connect(db_path) as conn:
+        series_index = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE name = 'uq_calendar_events_family_uid'"
+        ).fetchone()[0]
+    assert "recurrence_id IS NULL" in series_index

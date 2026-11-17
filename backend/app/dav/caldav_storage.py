@@ -374,7 +374,9 @@ class CalendarCollection(BaseCollection):
         """Make the series' changed-occurrence rows match the PUT body.
 
         New rows take the series' Tribu-only fields (source, members,
-        color) since DAV clients cannot set those.
+        color, creator, who is reminded) since DAV clients cannot set
+        those. The creator is the series' creator, since a changed
+        occurrence is still part of the event that person created.
         """
         existing = {
             ev.recurrence_id: ev
@@ -386,7 +388,6 @@ class CalendarCollection(BaseCollection):
             if ev is None:
                 ev = CalendarEvent(
                     family_id=self._family_id,
-                    created_by_user_id=current_user_id(),
                     ical_uid=series.ical_uid,
                     recurrence_id=recurrence_id,
                     **{name: getattr(series, name) for name in _INHERITED_OCCURRENCE_FIELDS},
@@ -968,6 +969,8 @@ _INHERITED_OCCURRENCE_FIELDS = (
     "color",
     "category",
     "icon",
+    "created_by_user_id",
+    "remind_only_creator",
     "source_type",
     "source_name",
     "source_url",
@@ -979,8 +982,9 @@ def _apply_event_fields(ev: CalendarEvent, fields: Mapping[str, object]) -> None
     """Copy parsed-ICS fields from ``ics_to_event_dicts`` onto a row.
 
     The helper keeps the set of honored columns narrow on purpose:
-    assigned_to, color, category, and created_by_user_id are Tribu-only
-    concepts that DAV clients should not be able to change.
+    assigned_to, color, category, created_by_user_id and
+    remind_only_creator are Tribu-only concepts that DAV clients should
+    not be able to change.
     """
     for name in _MUTABLE_EVENT_FIELDS:
         if name in fields:

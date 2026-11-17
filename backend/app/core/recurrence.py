@@ -221,6 +221,7 @@ def _event_to_dict(event) -> dict:
         "category": event.category,
         "icon": event.icon,
         "created_by_user_id": event.created_by_user_id,
+        "remind_only_creator": bool(getattr(event, "remind_only_creator", False)),
         "created_at": event.created_at,
         "recurrence_id": getattr(event, "recurrence_id", None),
         "source_type": event.source_type,

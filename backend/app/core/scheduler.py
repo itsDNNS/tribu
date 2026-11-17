@@ -11,6 +11,7 @@ from app.core import cache
 from app.core.backup import create_backup, enforce_retention
 from app.core.clock import local_day_bounds_as_utc_naive, local_wall_now, local_wall_to_utc_naive, utcnow
 from app.core.duties import sync_all_duties, week_summary
+from app.core.event_reminders import only_reminded_user, reminder_settings_row
 from app.core.push import send_push_for_user
 from app.core.notification_actions import SNOOZE_DELAY, reminder_push_actions
 from app.core.notification_housekeeping import purge_notifications
@@ -421,6 +422,16 @@ def _check_notifications():
                 )
 
         # 1. Event reminders
+        only_reminded: dict[int, int | None] = {}
+
+        def only_reminded_user_of(ev: CalendarEvent) -> int | None:
+            """The creator, if the event reminds only them; None for everyone."""
+            if ev.id not in only_reminded:
+                only_reminded[ev.id] = only_reminded_user(
+                    reminder_settings_row(db, ev), family_users.get(ev.family_id, []),
+                )
+            return only_reminded[ev.id]
+
         for uid, fam_ids in user_families.items():
             pref = get_pref(uid)
             if not pref.reminders_enabled:
@@ -446,6 +457,9 @@ def _check_notifications():
             )
             series_changes = load_series_changes(db, events)
             for ev in events:
+                only_user = only_reminded_user_of(ev)
+                if only_user is not None and only_user != uid:
+                    continue
                 occurrences = (
                     expand_event(ev, range_start=now, range_end=window + timedelta(seconds=1), series_changes=series_changes)
                     if ev.recurrence
@@ -462,17 +476,22 @@ def _check_notifications():
                     body = event_start_text("en", starts_at, now.date(), time_format)
                     localized_body = lambda lang, starts_at=starts_at: event_start_text(lang, starts_at, now.date(), time_format)
                     trigger_key = _event_trigger_key(ev.id, starts_at)
-                    dispatch_destination_once(
-                        event_type="calendar.reminder",
-                        fid=ev.family_id,
-                        title=ev.title,
-                        body=body,
-                        link=f"/calendar?event={ev.id}",
-                        source_type="event",
-                        source_id=ev.id,
-                        trigger_key=trigger_key,
-                        eligible_users=eligible_reminder_users(ev.family_id, starts_at),
-                    )
+                    # Notification destinations are household channels (a
+                    # family Telegram or ntfy topic, set up by an admin),
+                    # not anyone's own: an event that reminds only its
+                    # creator stays out of them.
+                    if only_user is None:
+                        dispatch_destination_once(
+                            event_type="calendar.reminder",
+                            fid=ev.family_id,
+                            title=ev.title,
+                            body=body,
+                            link=f"/calendar?event={ev.id}",
+                            source_type="event",
+                            source_id=ev.id,
+                            trigger_key=trigger_key,
+                            eligible_users=eligible_reminder_users(ev.family_id, starts_at),
+                        )
                     deliver(
                         uid, ev.family_id, "event_reminder",
                         ev.title,
@@ -743,6 +762,14 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
         if snooze.source_type == "event":
             event = db.query(CalendarEvent).filter(CalendarEvent.id == snooze.source_id).first()
             if event is None:
+                snooze.delivered_at = now
+                continue
+            # Snoozed before the event was set to remind only its creator.
+            member_ids = {
+                uid for (uid,) in db.query(Membership.user_id).filter(Membership.family_id == event.family_id)
+            }
+            only_user = only_reminded_user(reminder_settings_row(db, event), member_ids)
+            if only_user is not None and only_user != snooze.user_id:
                 snooze.delivered_at = now
                 continue
             if expires_at is None:

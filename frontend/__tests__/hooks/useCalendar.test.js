@@ -665,3 +665,96 @@ describe('calendar range and family isolation', () => {
     expect(api.apiUpdateEvent).toHaveBeenCalledWith(1, expect.objectContaining({ color: '', description: '', assigned_to: [] }));
   });
 });
+
+describe('useCalendar remind only me', () => {
+  const { renderHook, act } = require('@testing-library/react');
+
+  function setup() {
+    const { useApp } = require('../../contexts/AppContext');
+    useApp.mockReturnValue({
+      familyId: '1',
+      events: [],
+      setEvents: jest.fn(),
+      setSummary: jest.fn(),
+      messages: {},
+      lang: 'en',
+      weekStart: 'monday',
+      members: [{ user_id: 7, display_name: 'Max' }, { user_id: 8, display_name: 'Mia' }],
+      birthdays: [],
+      loadDashboard: jest.fn(() => Promise.resolve()),
+      demoMode: false,
+      me: { user_id: 7, display_name: 'Max' },
+    });
+    const { useCalendar } = require('../../hooks/useCalendar');
+    return renderHook(() => useCalendar()).result;
+  }
+
+  const event = (overrides = {}) => ({
+    id: 42, title: 'Dentist', starts_at: '2026-05-01T10:00:00', ends_at: null,
+    description: '', location: '', all_day: false, recurrence: '', recurrence_end: null,
+    assigned_to: null, color: null, category: null, is_recurring: false,
+    created_by_user_id: 7, remind_only_creator: false,
+    ...overrides,
+  });
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('sends the choice when creating and starts unchecked again afterwards', async () => {
+    const result = setup();
+    const api = require('../../lib/api');
+    expect(result.current.remindOnlyCreator).toBe(false);
+
+    act(() => {
+      result.current.setTitle('Dentist');
+      result.current.setStartsAt('2026-05-12T16:00');
+      result.current.setRemindOnlyCreator(true);
+    });
+    await act(async () => {
+      await result.current.createEvent({ preventDefault: () => {} });
+    });
+
+    expect(api.apiCreateEvent).toHaveBeenCalledWith(expect.objectContaining({ remind_only_creator: true }));
+    expect(result.current.remindOnlyCreator).toBe(false);
+  });
+
+  it('lets the creator change it when editing', async () => {
+    const result = setup();
+    const api = require('../../lib/api');
+
+    act(() => result.current.startEdit(event()));
+    expect(result.current.ownsEditingEvent).toBe(true);
+    expect(result.current.editRemindOnlyCreator).toBe(false);
+    act(() => result.current.setEditRemindOnlyCreator(true));
+    await act(async () => {
+      await result.current.saveEdit({ preventDefault: () => {} });
+    });
+
+    expect(api.apiUpdateEvent).toHaveBeenCalledWith(42, expect.objectContaining({ remind_only_creator: true }));
+  });
+
+  it('leaves it out of an edit by anyone else', async () => {
+    const result = setup();
+    const api = require('../../lib/api');
+
+    act(() => result.current.startEdit(event({ created_by_user_id: 8, remind_only_creator: true })));
+    expect(result.current.ownsEditingEvent).toBe(false);
+    expect(result.current.editRemindOnlyCreator).toBe(true);
+    act(() => result.current.setEditTitle('Dentist (moved)'));
+    await act(async () => {
+      await result.current.saveEdit({ preventDefault: () => {} });
+    });
+
+    expect(api.apiUpdateEvent.mock.calls[0][1]).toEqual(expect.objectContaining({ title: 'Dentist (moved)' }));
+    expect(api.apiUpdateEvent.mock.calls[0][1]).not.toHaveProperty('remind_only_creator');
+  });
+
+  it('keeps it on a duplicate only when it already meant the person duplicating', () => {
+    const result = setup();
+
+    act(() => result.current.startDuplicate(event({ remind_only_creator: true })));
+    expect(result.current.remindOnlyCreator).toBe(true);
+
+    act(() => result.current.startDuplicate(event({ created_by_user_id: 8, remind_only_creator: true })));
+    expect(result.current.remindOnlyCreator).toBe(false);
+  });
+});

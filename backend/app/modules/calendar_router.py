@@ -27,7 +27,8 @@ from app.core.webhooks import dispatch_webhook_event
 from app.database import get_db
 from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync, Membership, Notification, NotificationPreference, User
 from app.schemas import AUTH_RESPONSES, NOT_FOUND_RESPONSE, CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarIcsImport, CalendarIcsSubscribe, CalendarSubscriptionCreate, CalendarSubscriptionResponse, PaginatedCalendarEvents
-from app.core.errors import error_detail, EVENT_NOT_FOUND, END_BEFORE_START, INVALID_RECURRENCE
+from app.core.errors import error_detail, EVENT_NOT_FOUND, EVENT_REMINDER_CREATOR_ONLY, END_BEFORE_START, INVALID_RECURRENCE
+from app.core.event_reminders import reminder_settings_row
 
 router = APIRouter(prefix="/calendar", tags=["calendar"], responses={**AUTH_RESPONSES})
 logger = logging.getLogger(__name__)
@@ -808,6 +809,7 @@ def create_calendar_event(
         category=payload.category,
         icon=payload.icon,
         created_by_user_id=user.id,
+        remind_only_creator=payload.remind_only_creator,
     )
     db.add(event)
     db.flush()
@@ -847,6 +849,8 @@ def update_calendar_event(
         raise HTTPException(status_code=404, detail=error_detail(EVENT_NOT_FOUND))
 
     ensure_adult(db, user.id, event.family_id)
+    if payload.remind_only_creator is not None:
+        _set_remind_only_creator(db, event, payload.remind_only_creator, user)
     before = _calendar_event_snapshot(event)
 
     if payload.title is not None:
@@ -965,6 +969,31 @@ def delete_calendar_event(
     db.commit()
     cache.invalidate_pattern(f"tribu:dashboard:{family_id}:*")
     return {"status": "deleted", "event_id": event_id}
+
+
+def _set_remind_only_creator(db: Session, event: CalendarEvent, value: bool, user: User) -> None:
+    """Switch whether only the creator of ``event`` is reminded.
+
+    Only the creator may change it; sending the current value is fine for
+    anyone, so clients can send the whole form back. The setting belongs to
+    the series, so a changed occurrence and the series always agree.
+    """
+    series = reminder_settings_row(db, event)
+    if value == bool(series.remind_only_creator):
+        return
+    if series.created_by_user_id != user.id:
+        raise HTTPException(status_code=403, detail=error_detail(EVENT_REMINDER_CREATOR_ONLY))
+    series.remind_only_creator = value
+    if series.ical_uid:
+        (
+            db.query(CalendarEvent)
+            .filter(
+                CalendarEvent.family_id == series.family_id,
+                CalendarEvent.ical_uid == series.ical_uid,
+                CalendarEvent.recurrence_id.isnot(None),
+            )
+            .update({CalendarEvent.remind_only_creator: value}, synchronize_session="fetch")
+        )
 
 
 def _assigned_user_ids(db: Session, family_id: int, assigned) -> set[int]:

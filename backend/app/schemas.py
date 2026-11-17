@@ -480,6 +480,7 @@ class CalendarEventCreate(BaseModel):
     color: Optional[str] = Field(None, description="Event color as hex string (e.g. '#7c3aed')")
     category: Optional[str] = Field(None, description="Event category label")
     icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
+    remind_only_creator: bool = Field(False, description="Remind only the person creating the event (for every occurrence of a series). Other members get no reminder before it starts; assignment notices are not affected. If the creator later leaves the family, everyone is reminded again. Only the creator can change it later.")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"family_id": 1, "title": "Family Dinner", "starts_at": "2026-03-01T18:00:00", "ends_at": "2026-03-01T20:00:00", "all_day": False, "recurrence": "weekly", "recurrence_end": "2026-06-01T00:00:00", "assigned_to": [1, 3]}]
@@ -513,6 +514,7 @@ class CalendarEventUpdate(BaseModel):
     color: Optional[str] = Field(None, description="Event color as hex string")
     category: Optional[str] = Field(None, description="Event category label")
     icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
+    remind_only_creator: Optional[bool] = Field(None, description="True reminds only the event's creator (for every occurrence of a series), false reminds every member; null or omission leaves it unchanged. Only the creator can change it: anyone else gets 403 EVENT_REMINDER_CREATOR_ONLY, unless the value sent is the current one.")
 
     @field_validator("icon")
     @classmethod
@@ -550,6 +552,7 @@ class CalendarEventResponse(BaseModel):
     category: Optional[str] = Field(None, description="Event category label")
     icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
     created_by_user_id: Optional[int] = Field(None, description="User who created the event")
+    remind_only_creator: bool = Field(False, description="True if only the creator (created_by_user_id) is reminded before the event starts. While the creator is no longer in the family, everyone is reminded.")
     created_at: datetime = Field(..., description="Creation timestamp")
     source_type: str = Field("local", description="Where the event came from: 'local', 'import', or 'subscription'")
     source_name: Optional[str] = Field(None, description="Human-readable name of the source feed (e.g. 'Apple Holidays')")
