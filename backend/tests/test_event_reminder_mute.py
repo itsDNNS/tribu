@@ -186,8 +186,8 @@ def test_the_reminder_link_names_the_occurrence(family, destinations):
     finally:
         db.close()
     assert links == {
-        f"/calendar?event={single}&at=2026-04-25T12:20:00",
-        f"/calendar?event={series}&at=2026-04-25T12:10:00&repeats=1",
+        f"/calendar?event={single}&family={family_id}&at=2026-04-25T12:20:00",
+        f"/calendar?event={series}&family={family_id}&at=2026-04-25T12:10:00&repeats=1",
     }
 
 
@@ -531,3 +531,136 @@ def test_muting_twice_keeps_one_row(family):
         assert db.query(EventReminderMute).count() == 1
     finally:
         db.close()
+
+
+# ── Snoozed from a push button, muted afterwards ─────────────────────────
+
+
+@pytest.fixture
+def pushes(monkeypatch):
+    """Anna gets reminders two hours ahead by push; returns her pushes."""
+    from app.core import notification_actions
+    from app.core import scheduler as scheduler_module
+    from app.core.push import PushResult
+
+    sent: list[dict] = []
+
+    def send(db, uid, title, body, link=None, **options):
+        sent.append({"user_id": uid, "link": link, **options})
+        return PushResult(attempted=1, succeeded=1)
+
+    monkeypatch.setattr(scheduler_module, "send_push_for_user", send)
+    monkeypatch.setattr(notification_actions, "utcnow", lambda: NOW)
+    return sent
+
+
+def _push_to(family, pushes) -> None:
+    db = TestSession()
+    try:
+        pref = db.query(NotificationPreference).filter(NotificationPreference.user_id == family[1][0]).one()
+        pref.push_enabled = True
+        pref.reminder_minutes = 120
+        db.commit()
+    finally:
+        db.close()
+
+
+def _snooze_from_push(pushes, user_id: int) -> None:
+    from app.core import notification_actions
+
+    token = next(push["action_token"] for push in pushes if push["user_id"] == user_id)
+    db = TestSession()
+    try:
+        notification_actions.apply_action(db, token, "snooze")
+    finally:
+        db.close()
+
+
+def _deliver_snoozes(at: datetime) -> None:
+    from app.core import scheduler as scheduler_module
+
+    db = TestSession()
+    try:
+        scheduler_module.deliver_snoozed_reminders(
+            db, now=at, local_now=at,
+            get_pref=lambda uid: NotificationPreference(user_id=uid, reminders_enabled=True, push_enabled=False),
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def _notifications_of(user_id: int) -> int:
+    db = TestSession()
+    try:
+        return db.query(Notification).filter(Notification.user_id == user_id).count()
+    finally:
+        db.close()
+
+
+def test_a_snooze_stays_muted_after_its_occurrence_moved_again(family, destinations, pushes):
+    """A series continued an hour later (09:00 became 10:00), snoozed, then
+    moved once more (11:00): muting that occurrence still silences the snooze."""
+    _push_to(family, pushes)
+    family_id, users = family
+    split_original = NOW - timedelta(days=7) + timedelta(minutes=30)
+    _add_event(
+        family_id, title="Swim", recurrence="weekly", starts_at=split_original - timedelta(days=7),
+        ical_uid="swim@example.com",
+    )
+    split_id = _add_event(
+        family_id, title="Swim (later)", recurrence="weekly", ical_uid="swim@example.com",
+        recurrence_id=split_original, starts_at=split_original + timedelta(hours=1),
+    )
+    _run()
+    _snooze_from_push(pushes, users[0])
+    db = TestSession()
+    try:
+        assert db.query(ReminderSnooze).one().occurrence_start == NOW + timedelta(minutes=30)
+        db.get(CalendarEvent, split_id).starts_at = split_original + timedelta(hours=2)
+        db.commit()
+    finally:
+        db.close()
+    _mute(users[0], split_id, MUTE_OCCURRENCE, NOW + timedelta(minutes=150))
+
+    before = _notifications_of(users[0])
+    _deliver_snoozes(NOW + timedelta(minutes=61))
+
+    assert _notifications_of(users[0]) == before
+    db = TestSession()
+    try:
+        assert db.query(ReminderSnooze).one().delivered_at is not None
+    finally:
+        db.close()
+
+
+def test_a_snooze_of_an_occurrence_in_the_spring_forward_gap_stays_muted(family, destinations, pushes, monkeypatch):
+    """02:30 on the night Berlin skips to 03:00 does not survive a round trip
+    through UTC (it comes back as 03:30); the snooze keeps 02:30 itself."""
+    from app.core import scheduler as scheduler_module
+    from app.core.clock import app_timezone, local_wall_to_utc_naive
+
+    monkeypatch.setenv("TZ", "Europe/Berlin")
+    app_timezone.cache_clear()
+    try:
+        audit_now = datetime(2027, 3, 27, 23, 40)
+        monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", local_wall_to_utc_naive)
+        monkeypatch.setattr(scheduler_module, "utcnow", lambda: audit_now)
+        monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: datetime(2027, 3, 28, 0, 40))
+        from app.core import notification_actions
+
+        monkeypatch.setattr(notification_actions, "utcnow", lambda: audit_now)
+        _push_to(family, pushes)
+        family_id, users = family
+        gap = datetime(2027, 3, 28, 2, 30)
+        event_id = _add_event(family_id, title="Night feed", recurrence="daily", starts_at=gap - timedelta(days=5))
+        _run()
+        _snooze_from_push(pushes, users[0])
+        _mute(users[0], event_id, MUTE_OCCURRENCE, gap)
+
+        before = _notifications_of(users[0])
+        _deliver_snoozes(audit_now + timedelta(hours=1, minutes=1))
+
+        assert _notifications_of(users[0]) == before
+    finally:
+        app_timezone.cache_clear()

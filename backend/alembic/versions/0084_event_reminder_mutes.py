@@ -3,6 +3,10 @@
 - ``event_reminder_mutes``: a member who no longer wants the reminder
   before an event, for the whole event or series (``occurrence_start``
   NULL) or for one occurrence of a series (its original start).
+- ``reminder_snoozes.occurrence_start``: the same occurrence key for a
+  snoozed reminder, so a mute made after snoozing matches it even when the
+  occurrence moved. Existing snoozes keep NULL; they run out within a day
+  and the scheduler falls back to working the occurrence out from the event.
 
 Revision ID: 0084_event_reminder_mutes
 Revises: 0083_event_remind_only_creator
@@ -42,9 +46,12 @@ def upgrade() -> None:
         postgresql_where=sa.text("occurrence_start IS NULL"),
         sqlite_where=sa.text("occurrence_start IS NULL"),
     )
+    op.add_column("reminder_snoozes", sa.Column("occurrence_start", sa.DateTime(), nullable=True))
 
 
 def downgrade() -> None:
+    with op.batch_alter_table("reminder_snoozes") as batch:
+        batch.drop_column("occurrence_start")
     op.drop_index("uq_event_reminder_mutes_series", table_name="event_reminder_mutes")
     op.drop_index("ix_event_reminder_mutes_event_id", table_name="event_reminder_mutes")
     op.drop_index("ix_event_reminder_mutes_id", table_name="event_reminder_mutes")

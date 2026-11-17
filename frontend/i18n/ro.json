@@ -1033,6 +1033,7 @@
   "module.calendar.reminder_mute.off_series": "Dezactivat pentru toate repetările",
   "module.calendar.reminder_mute.remind_me": "Amintește-mi",
   "module.calendar.reminder_mute.hint": "Se schimbă doar mementoul tău, nu cine participă.",
+  "module.calendar.reminder_mute.series_hint": "„Activat” și „Dezactivat pentru acesta” reactivează amândouă mementoul pentru celelalte repetări.",
   "module.calendar.new_event": "Eveniment nou...",
   "module.calendar.to": "la",
   "module.calendar.cw": "CW",

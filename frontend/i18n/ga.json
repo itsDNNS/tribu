@@ -1027,6 +1027,7 @@
   "module.calendar.reminder_mute.off_series": "Múchta do gach athrá",
   "module.calendar.reminder_mute.remind_me": "Meabhraigh dom",
   "module.calendar.reminder_mute.hint": "Ní athraíonn ach do mheabhrúchán féin, ní hé cé atá páirteach.",
+  "module.calendar.reminder_mute.series_hint": "Cuireann “Ar siúl” agus “Múchta an uair seo” an meabhrúchán ar siúl arís do na hathráite eile.",
   "module.calendar.new_event": "Imeacht nua...",
   "module.calendar.to": "chuig",
   "module.calendar.cw": "CW",

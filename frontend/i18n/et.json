@@ -1028,6 +1028,7 @@
   "module.calendar.reminder_mute.off_series": "Väljas kõigi korduste jaoks",
   "module.calendar.reminder_mute.remind_me": "Tuleta mulle meelde",
   "module.calendar.reminder_mute.hint": "Muutub ainult sinu meeldetuletus, mitte see, kes osaleb.",
+  "module.calendar.reminder_mute.series_hint": "„Sees” ja „Väljas seekord” lülitavad mõlemad teiste korduste meeldetuletuse uuesti sisse.",
   "module.calendar.new_event": "Uus üritus...",
   "module.calendar.to": "juurde",
   "module.calendar.cw": "CW",

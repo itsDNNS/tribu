@@ -284,10 +284,15 @@ export default function CalendarView(props) {
       </button>
     );
   };
-  // Go to the linked occurrence's day; open it once the range has it, and
-  // give up quietly when it is not there (deleted, or moved away).
+  // Go to the linked occurrence's day (openEventLink switched to its family
+  // already), open it once the range has it, and give up quietly when it is
+  // not there (deleted, moved away, or another family after all).
   useEffect(() => {
     if (!eventLink) return;
+    if (eventLink.familyId != null && String(eventLink.familyId) !== String(familyId)) {
+      setEventLink(null);
+      return;
+    }
     const day = parseDate(eventLink.at);
     if (!day) {
       setEventLink(null);
@@ -309,7 +314,7 @@ export default function CalendarView(props) {
     } else if (cal.rangeLoading && !eventLink.loading) {
       setEventLink({ ...eventLink, loading: true });
     }
-  }, [eventLink, cal.allEvents, cal.rangeLoading]);
+  }, [eventLink, cal.allEvents, cal.rangeLoading, familyId]);
   useEffect(() => {
     if (modal?.kind !== 'event' || !modal.focusReminder) return;
     const section = reminderRef.current;

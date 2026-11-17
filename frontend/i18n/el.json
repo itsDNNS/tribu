@@ -1029,6 +1029,7 @@
   "module.calendar.reminder_mute.off_series": "Ανενεργή για όλες τις επαναλήψεις",
   "module.calendar.reminder_mute.remind_me": "Να μου θυμίζει",
   "module.calendar.reminder_mute.hint": "Αλλάζει μόνο η δική σας υπενθύμιση, όχι ποιος συμμετέχει.",
+  "module.calendar.reminder_mute.series_hint": "Το «Ενεργή» και το «Ανενεργή για αυτή τη φορά» ενεργοποιούν ξανά την υπενθύμιση για τις άλλες επαναλήψεις.",
   "module.calendar.new_event": "Νέα εκδήλωση...",
   "module.calendar.to": "να",
   "module.calendar.cw": "CW",

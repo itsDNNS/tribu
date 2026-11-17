@@ -492,13 +492,15 @@ export function AppProvider({ children }) {
   }, [loggedIn]);
 
   // SW navigation messages
+  const eventLinkContext = useRef(null);
+  eventLinkContext.current = { setActiveView, switchFamily, familyId, families };
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const handler = (event) => {
       if (event.data?.type === 'NAVIGATE' && event.data.url) {
         // "Don't remind me" on a reminder of a series opens the event to choose.
         const target = eventReminderTarget(event.data.url);
-        if (target?.choose) openEventLink(target, setActiveView);
+        if (target?.choose) openEventLink(target, eventLinkContext.current);
         else setActiveView(notificationLinkView(event.data.url));
       }
     };

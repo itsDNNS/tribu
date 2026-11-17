@@ -1028,6 +1028,7 @@
   "module.calendar.reminder_mute.off_series": "Uit voor alle herhalingen",
   "module.calendar.reminder_mute.remind_me": "Herinner mij",
   "module.calendar.reminder_mute.hint": "Alleen je eigen herinnering verandert, niet wie meedoet.",
+  "module.calendar.reminder_mute.series_hint": "‘Aan’ en ‘Uit voor deze keer’ zetten allebei de herinnering voor de andere herhalingen weer aan.",
   "module.calendar.new_event": "Nieuw evenement...",
   "module.calendar.to": "aan",
   "module.calendar.cw": "CW",

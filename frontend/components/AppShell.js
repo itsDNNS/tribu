@@ -37,7 +37,7 @@ function TodaySkeleton({ messages }) {
 }
 
 export default function AppShell() {
-  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, familyId, tasks, shoppingLists, demoMode, loading, navOrder, hiddenAreas = NO_HIDDEN_AREAS } = useApp();
+  const { activeView, setActiveView, isMobile, isAdmin, isChild, messages, me, familyId, families, switchFamily, tasks, shoppingLists, demoMode, loading, navOrder, hiddenAreas = NO_HIDDEN_AREAS } = useApp();
   const [mobileSheet,setMobileSheet] = useState(null);
   const [createRequest,setCreateRequest] = useState(null);
   const [createKind, setCreateKind] = useState(null);
@@ -54,7 +54,7 @@ export default function AppShell() {
     const eventLink = eventReminderTarget(window.location.search);
     if (eventLink?.choose) {
       window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
-      openEventLink(eventLink, setActiveView);
+      openEventLink(eventLink, { setActiveView, switchFamily, familyId, families });
       return;
     }
     const action = resolveLaunchAction(window.location.search);

@@ -12,7 +12,7 @@ from app.core.recurrence import expand_event, load_series_changes
 from app.core.scopes import require_scope
 from app.database import get_db
 from app.models import CalendarEvent, FamilyBirthday, User
-from app.schemas import AUTH_RESPONSES, CalendarEventResponse, DashboardSummary
+from app.schemas import AUTH_RESPONSES, DashboardEventResponse, DashboardSummary
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"], responses={**AUTH_RESPONSES})
 
@@ -66,7 +66,7 @@ def dashboard_summary(
         all_occurrences.sort(key=lambda o: o["starts_at"])
         owners = series_reminder_owners(db, [*non_recurring, *recurring])
         next_events = [
-            CalendarEventResponse(**with_series_reminder_owner(o, owners)).model_dump()
+            DashboardEventResponse(**with_series_reminder_owner(o, owners)).model_dump()
             for o in all_occurrences[:8]
         ]
 

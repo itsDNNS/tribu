@@ -1051,6 +1051,7 @@
   "module.calendar.reminder_mute.off_series": "Off for all repetitions",
   "module.calendar.reminder_mute.remind_me": "Remind me",
   "module.calendar.reminder_mute.hint": "Only your own reminder changes, not who takes part.",
+  "module.calendar.reminder_mute.series_hint": "On and Off for this one both bring back the reminders for the other repetitions.",
   "module.calendar.new_event": "New event...",
   "module.calendar.to": "to",
   "module.calendar.cw": "CW",

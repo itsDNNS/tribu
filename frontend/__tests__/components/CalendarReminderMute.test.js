@@ -6,7 +6,7 @@ import en from '../../i18n/en.json';
 import { useApp } from '../../contexts/AppContext';
 import * as api from '../../lib/api';
 import { handOff } from '../../lib/viewHandoff';
-import { announceReminderMute } from '../../lib/reminderMute';
+import { announceReminderMute, openEventLink } from '../../lib/reminderMute';
 
 const mockToastSuccess = jest.fn();
 jest.mock('../../contexts/AppContext', () => ({ useApp: jest.fn() }));
@@ -24,12 +24,16 @@ const swim = {
   remind_only_creator: false, reminder_muted: null,
 };
 
+let switchToFamily;
 function Harness({ me = anna, isChild = false }) {
   const [events, setEvents] = useState([swim]);
   const [summary, setSummary] = useState({ next_events: [] });
+  const [familyId, setFamilyId] = useState(1);
+  switchToFamily = async (fid) => { setEvents([]); setFamilyId(Number(fid)); };
   useApp.mockReturnValue({
-    familyId: 1, me, members: [anna, cleo], messages: en, lang: 'en', weekStart: 'monday', timeFormat: '24h',
+    familyId, me, members: [anna, cleo], messages: en, lang: 'en', weekStart: 'monday', timeFormat: '24h',
     isChild, demoMode: false, birthdays: [], loadDashboard: jest.fn(), events, setEvents, summary, setSummary,
+    families: [{ family_id: 1 }, { family_id: 2 }],
   });
   return <CalendarView />;
 }
@@ -94,6 +98,40 @@ describe('My reminder in the calendar', () => {
     expect(within(dialog).getByRole('heading', { name: 'Swimming' })).toBeInTheDocument();
     await waitFor(() => expect(within(dialog).getByRole('radio', { name: 'On' })).toHaveFocus());
     expect(within(dialog).getByRole('group', { name: 'My reminder' })).toBeInTheDocument();
+  });
+
+  it('opens a push link of another family after switching to it', async () => {
+    const choir = { ...swim, id: 9, family_id: 2, title: 'Choir' };
+    api.apiGetEvents.mockImplementation((fid) => Promise.resolve({ ok: true, data: String(fid) === '2' ? [choir] : [swim] }));
+    render(<Harness />);
+    await waitFor(() => expect(api.apiGetEvents).toHaveBeenCalled());
+
+    await act(async () => {
+      await openEventLink(
+        { eventId: 9, familyId: 2, at: '2026-05-04T14:00:00', repeats: true, choose: true },
+        { familyId: 1, families: [{ family_id: 1 }, { family_id: 2 }], switchFamily: (fid) => switchToFamily(fid), setActiveView: jest.fn() },
+      );
+    });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Choir' })).toBeInTheDocument();
+    await waitFor(() => expect(within(dialog).getByRole('radio', { name: 'On' })).toHaveFocus());
+  });
+
+  it('says that leaving "all repetitions off" brings the others back', async () => {
+    api.apiGetEvents.mockResolvedValue({ ok: true, data: [{ ...swim, reminder_muted: 'series' }] });
+    render(<Harness />);
+    await waitFor(() => expect(api.apiGetEvents).toHaveBeenCalled());
+    await waitFor(() => fireEvent.click(screen.getAllByRole('button', { name: /Swimming/ })[0]));
+    const group = within(screen.getByRole('dialog')).getByRole('group', { name: 'My reminder' });
+    expect(group).toHaveAccessibleDescription(
+      'Only your own reminder changes, not who takes part. On and Off for this one both bring back the reminders for the other repetitions.',
+    );
+
+    await act(async () => {
+      fireEvent.click(within(group).getByRole('radio', { name: 'Off for this one' }));
+    });
+    expect(group).toHaveAccessibleDescription('Only your own reminder changes, not who takes part.');
   });
 
   it('opens a link that arrives while the calendar is open', async () => {

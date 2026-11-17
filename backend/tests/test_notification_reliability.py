@@ -149,9 +149,9 @@ def test_event_reminder_uses_configured_local_wall_clock_and_utc_audit_timestamp
         db.close()
 
 
-def _only_event_id() -> int:
+def _only_event() -> tuple[int, int]:
     with TestSession() as db:
-        return db.query(CalendarEvent.id).one()[0]
+        return tuple(db.query(CalendarEvent.id, CalendarEvent.family_id).one())
 
 
 @pytest.mark.parametrize("recurrence", [None, "weekly"])
@@ -191,9 +191,9 @@ def test_calendar_push_uses_occurrence_start_and_urgent_expiry(monkeypatch, recu
     assert options["action_labels"] == {"snooze": "Remind me in 1 hour", "mute": "Don't remind me"}
     assert options["action_token"]
     if recurrence:
-        event_id = _only_event_id()
+        event_id, family_id = _only_event()
         assert options["action_urls"] == {
-            "mute": f"/calendar?event={event_id}&at=2026-09-17T16:45:00&repeats=1&mute=choose",
+            "mute": f"/calendar?event={event_id}&family={family_id}&at=2026-09-17T16:45:00&repeats=1&mute=choose",
         }
     else:
         assert "action_urls" not in options
@@ -660,6 +660,7 @@ def test_disabled_push_category_keeps_in_app_reminder_and_skips_push(monkeypatch
         db.commit()
         user_id = user.id
         ev_id = ev.id
+        fam_id = fam.id
     finally:
         db.close()
 
@@ -683,7 +684,7 @@ def test_disabled_push_category_keeps_in_app_reminder_and_skips_push(monkeypatch
         assert len(notifs) == 1
         assert notifs[0].type == "event_reminder"
         # The link names the occurrence, so the app can mute just this one.
-        assert notifs[0].link == f"/calendar?event={ev_id}&at={(now + timedelta(minutes=10)).isoformat()}"
+        assert notifs[0].link == f"/calendar?event={ev_id}&family={fam_id}&at={(now + timedelta(minutes=10)).isoformat()}"
         assert len(logs) == 1
         assert logs[0].status == "delivered"
         assert logs[0].last_error == "push_skipped:category_disabled:calendar_reminders"
@@ -838,7 +839,7 @@ def test_recurring_event_occurrence_creates_one_reminder(monkeypatch):
         )
         db.add(ev)
         db.commit()
-        user_id, ev_id = user.id, ev.id
+        user_id, ev_id, fam_id = user.id, ev.id, fam.id
         expected_occurrence = now + timedelta(minutes=20)
     finally:
         db.close()
@@ -854,7 +855,7 @@ def test_recurring_event_occurrence_creates_one_reminder(monkeypatch):
         notifs = db.query(Notification).filter(Notification.user_id == user_id).all()
         logs = db.query(NotificationSentLog).filter(NotificationSentLog.user_id == user_id).all()
         assert len(notifs) == 1
-        assert notifs[0].link == f"/calendar?event={ev_id}&at={expected_occurrence.isoformat()}&repeats=1"
+        assert notifs[0].link == f"/calendar?event={ev_id}&family={fam_id}&at={expected_occurrence.isoformat()}&repeats=1"
         assert len(logs) == 1
         assert logs[0].trigger_key == _event_trigger_key(ev_id, expected_occurrence)
         assert logs[0].status == "delivered"

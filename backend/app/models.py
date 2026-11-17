@@ -899,6 +899,11 @@ class ReminderSnooze(Base):
     # When the reminder stops being true (the start of the event occurrence
     # it announced), naive UTC. A snooze running out later is dropped.
     expires_at = Column(DateTime, nullable=True)
+    # For an occurrence of a series: its original start in local wall time,
+    # the key ``EventReminderMute`` uses, kept from the reminder so a mute
+    # still matches after the occurrence moved. NULL for a single event and
+    # for snoozes older than this column.
+    occurrence_start = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 

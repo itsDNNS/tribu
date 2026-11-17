@@ -15,7 +15,19 @@ export function announceReminderMute(detail) {
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(REMINDER_MUTE_CHANGED, { detail }));
 }
 
-export function openEventLink(target, setActiveView) {
+// Opens the calendar at ``target``. Someone in several families may have
+// another one open: Tribu switches to the event's family first (the views
+// wait while it loads), then hands the event to the calendar. A family
+// they are no longer in just opens the calendar.
+export async function openEventLink(target, { setActiveView, switchFamily, familyId, families = [] }) {
+  const linked = target.familyId != null ? String(target.familyId) : null;
+  if (linked && linked !== String(familyId)) {
+    if (!families.some((family) => String(family.family_id) === linked)) {
+      setActiveView('calendar');
+      return;
+    }
+    await switchFamily(linked);
+  }
   handOff(EVENT_LINK_HANDOFF, JSON.stringify(target));
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENT_LINK_EVENT));
   setActiveView('calendar');
@@ -30,10 +42,12 @@ export function parseEventLink(value) {
   }
 }
 
-// What an event reminder's link names: the event, the occurrence (local
-// wall time, as the calendar lists starts_at) and whether it repeats. The
-// server writes it as /calendar?event=12&at=2026-12-01T09:00:00[&repeats=1];
-// older reminders without the occurrence give null.
+// What an event reminder's link names: the event, its family, the
+// occurrence (local wall time, as the calendar lists starts_at) and whether
+// it repeats. The server writes it as
+// /calendar?event=12&family=3&at=2026-12-01T09:00:00[&repeats=1]; older
+// reminders without the occurrence give null, without the family
+// familyId null.
 export function eventReminderTarget(link) {
   const raw = String(link || '').trim();
   if (!raw) return null;
@@ -46,7 +60,14 @@ export function eventReminderTarget(link) {
   const eventId = Number(params.get('event'));
   const at = params.get('at');
   if (!Number.isInteger(eventId) || eventId <= 0 || !at) return null;
-  return { eventId, at, repeats: params.get('repeats') === '1', choose: params.get('mute') === 'choose' };
+  const family = Number(params.get('family'));
+  return {
+    eventId,
+    familyId: Number.isInteger(family) && family > 0 ? family : null,
+    at,
+    repeats: params.get('repeats') === '1',
+    choose: params.get('mute') === 'choose',
+  };
 }
 
 // An event someone gets reminded of here: not a birthday, not all-day (those

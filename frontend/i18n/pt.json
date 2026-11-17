@@ -1029,6 +1029,7 @@
   "module.calendar.reminder_mute.off_series": "Desligado para todas as repetições",
   "module.calendar.reminder_mute.remind_me": "Lembrar-me",
   "module.calendar.reminder_mute.hint": "Só muda o seu lembrete, não quem participa.",
+  "module.calendar.reminder_mute.series_hint": "«Ligado» e «Desligado para este» voltam ambos a ligar o lembrete das outras repetições.",
   "module.calendar.new_event": "Novo evento...",
   "module.calendar.to": "para",
   "module.calendar.cw": "CW",

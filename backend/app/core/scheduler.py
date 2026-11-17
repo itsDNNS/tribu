@@ -136,11 +136,12 @@ def _event_trigger_key(event_id: int, starts_at: datetime) -> str:
     return f"event:{event_id}:{starts_at.replace(microsecond=0).isoformat()}"
 
 
-def event_reminder_link(event_id: int, starts_at: datetime, repeats: bool) -> str:
-    """Where an event reminder leads: the event, its occurrence (local wall
+def event_reminder_link(event_id: int, family_id: int, starts_at: datetime, repeats: bool) -> str:
+    """Where an event reminder leads: the event, its family (someone in
+    several families may have another one open), its occurrence (local wall
     time, as the calendar API lists it) and whether it is part of a series,
     so the app can offer "Don't remind me" for this one or all of them."""
-    link = f"/calendar?event={event_id}&at={starts_at.replace(microsecond=0).isoformat()}"
+    link = f"/calendar?event={event_id}&family={family_id}&at={starts_at.replace(microsecond=0).isoformat()}"
     return f"{link}&repeats=1" if repeats else link
 
 
@@ -314,6 +315,8 @@ def _check_notifications():
             trigger_key: str,
             event_starts_at: datetime | None = None,
             expires_at: datetime | None = None,
+            occurrence_start: datetime | None = None,
+            event_created_at: datetime | None = None,
         ) -> None:
             """Idempotent reminder delivery for a (user, trigger_key) pair.
 
@@ -324,6 +327,9 @@ def _check_notifications():
 
             ``expires_at`` (naive UTC) is when the reminder stops being true;
             the in-app notification disappears then, read or not.
+            ``occurrence_start`` and ``event_created_at`` go into the
+            buttons' token for event reminders (see
+            ``notification_actions.create_action_token``).
             """
             pref = get_pref(uid)
             if not pref.reminders_enabled:
@@ -375,6 +381,8 @@ def _check_notifications():
                     action_options = reminder_push_actions(
                         uid, fid, source_type, source_id, ntype, title, push_body, link, lang,
                         expires_at=expires_at,
+                        occurrence_start=occurrence_start,
+                        event_created_at=event_created_at,
                     )
                     if event_starts_at is not None:
                         push_result = send_push_for_user(
@@ -457,13 +465,17 @@ def _check_notifications():
             return only_reminded_user(settings_row_of(ev), family_users.get(ev.family_id, []))
 
         def muted_for(ev: CalendarEvent, starts_at: datetime):
-            """``muted(uid)``: whether that member took themselves off the
-            reminder for this occurrence or its whole series."""
+            """``(muted, occurrence)``: ``muted(uid)`` tells whether that
+            member took themselves off the reminder for this occurrence or
+            its whole series; ``occurrence`` is the key mutes use for it."""
             event_id, occurrence = reminder_mute_key(ev, settings_row_of(ev), starts_at)
             if event_id not in mutes_by_event:
                 mutes_by_event[event_id] = load_reminder_mutes(db, [event_id])
             mutes = mutes_by_event[event_id]
-            return lambda candidate_uid: mute_state(mutes.get((candidate_uid, event_id)), occurrence) is not None
+            return (
+                lambda candidate_uid: mute_state(mutes.get((candidate_uid, event_id)), occurrence) is not None,
+                occurrence,
+            )
 
         for uid, fam_ids in user_families.items():
             pref = get_pref(uid)
@@ -504,7 +516,7 @@ def _check_notifications():
                         continue
                     if not _reminder_due_for_pref(starts_at, pref):
                         continue
-                    muted = muted_for(ev, starts_at)
+                    muted, occurrence_key = muted_for(ev, starts_at)
                     if muted(uid):
                         continue
                     # The start time, not a countdown: a countdown is false as
@@ -534,11 +546,13 @@ def _check_notifications():
                         uid, ev.family_id, "event_reminder",
                         ev.title,
                         localized_body,
-                        event_reminder_link(ev.id, starts_at, is_part_of_series(ev, settings_row_of(ev))),
+                        event_reminder_link(ev.id, ev.family_id, starts_at, is_part_of_series(ev, settings_row_of(ev))),
                         "event", ev.id,
                         trigger_key,
                         event_starts_at=starts_at,
                         expires_at=local_wall_to_utc_naive(starts_at),
+                        occurrence_start=occurrence_key,
+                        event_created_at=ev.created_at,
                     )
 
 
@@ -774,6 +788,24 @@ def legacy_snooze_expiry(remind_at: datetime) -> datetime:
     return remind_at - SNOOZE_DELAY + LEGACY_SNOOZE_LIFETIME
 
 
+def _snoozed_occurrence_key(snooze: ReminderSnooze, event: CalendarEvent, settings_row: CalendarEvent):
+    """``(event id, occurrence)`` a mute must match to silence ``snooze``.
+
+    A snooze keeps the occurrence as the reminder named it, so it still
+    matches after the occurrence moved, and needs no round trip through
+    UTC (which cannot tell 02:30 on the night clocks go forward). Snoozes
+    from before that work it out from when the reminder ran out.
+    """
+    part_of_series = is_part_of_series(event, settings_row)
+    if snooze.occurrence_start is not None:
+        return (settings_row.id if part_of_series else event.id), snooze.occurrence_start.replace(microsecond=0)
+    if snooze.expires_at is not None:
+        return reminder_mute_key(event, settings_row, utc_to_local_wall(snooze.expires_at))
+    if not event.recurrence:
+        return reminder_mute_key(event, settings_row, event.starts_at)
+    return settings_row.id, None
+
+
 def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pref) -> set[int]:
     """Sends the reminders whose snooze has run out, once each.
 
@@ -790,6 +822,7 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
         .all()
     )
     for snooze in due:
+        event = None
         if snooze.source_type == "task":
             task = db.query(Task).filter(Task.id == snooze.source_id).first()
             if task is None or task.status != "open":
@@ -815,15 +848,7 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
             # Taken off the reminder for this occurrence or the whole
             # series since snoozing. Checked here rather than deleted on
             # mute, so undoing the mute keeps the snooze.
-            occurrence_start = (
-                utc_to_local_wall(snooze.expires_at) if snooze.expires_at is not None
-                else event.starts_at if not event.recurrence else None
-            )
-            event_id, occurrence = (
-                reminder_mute_key(event, settings_row, occurrence_start)
-                if occurrence_start is not None
-                else (settings_row.id, None)
-            )
+            event_id, occurrence = _snoozed_occurrence_key(snooze, event, settings_row)
             if mute_state(load_reminder_mutes(db, [event_id], [snooze.user_id]).get((snooze.user_id, event_id)), occurrence):
                 snooze.delivered_at = now
                 continue
@@ -859,6 +884,8 @@ def deliver_snoozed_reminders(db, *, now: datetime, local_now: datetime, get_pre
                     snooze.notification_type, snooze.title, snooze.body, snooze.link,
                     user_language(db, snooze.user_id),
                     expires_at=expires_at,
+                    occurrence_start=snooze.occurrence_start,
+                    event_created_at=event.created_at if event is not None else None,
                 ),
             )
         except Exception:

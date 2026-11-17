@@ -1028,6 +1028,7 @@
   "module.calendar.reminder_mute.off_series": "Izslēgts visām atkārtošanās reizēm",
   "module.calendar.reminder_mute.remind_me": "Atgādināt man",
   "module.calendar.reminder_mute.hint": "Mainās tikai jūsu atgādinājums, nevis tas, kas piedalās.",
+  "module.calendar.reminder_mute.series_hint": "“Ieslēgts” un “Izslēgts šoreiz” abi atkal ieslēdz atgādinājumu pārējām atkārtošanās reizēm.",
   "module.calendar.new_event": "Jauns pasākums...",
   "module.calendar.to": "uz",
   "module.calendar.cw": "CW",

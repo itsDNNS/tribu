@@ -1028,6 +1028,7 @@
   "module.calendar.reminder_mute.off_series": "Isključen za sva ponavljanja",
   "module.calendar.reminder_mute.remind_me": "Podsjeti me",
   "module.calendar.reminder_mute.hint": "Mijenja se samo vaš podsjetnik, ne tko sudjeluje.",
+  "module.calendar.reminder_mute.series_hint": "„Uključen” i „Isključen za ovaj put” ponovno uključuju podsjetnik za ostala ponavljanja.",
   "module.calendar.new_event": "Novi događaj...",
   "module.calendar.to": "do",
   "module.calendar.cw": "CW",

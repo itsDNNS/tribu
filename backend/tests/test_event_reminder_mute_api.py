@@ -283,6 +283,20 @@ def test_token_scopes(family):
     assert listed.status_code == 200
 
 
+def test_the_scopes_come_from_one_place():
+    """Both routes take their token scopes from REMINDER_MUTE_SCOPES, and the
+    MCP catalog reads them from there: with one scope it would offer them."""
+    from app.core.mcp_catalog import _dependency_facts
+    from app.modules.calendar_router import REMINDER_MUTE_SCOPES
+
+    from app.core.mcp_catalog import _iter_api_routes
+
+    routes = [route for route in _iter_api_routes(app) if route.path_format == "/calendar/events/{event_id}/reminder-mute"]
+    assert {method for route in routes for method in route.methods} == {"PUT", "DELETE"}
+    for route in routes:
+        assert _dependency_facts(route.dependant)[1] == set(REMINDER_MUTE_SCOPES)
+
+
 def test_openapi_documents_the_endpoints(family):
     spec = client.get("/openapi.json").json()
     path = spec["paths"]["/calendar/events/{event_id}/reminder-mute"]
@@ -294,10 +308,16 @@ def test_openapi_documents_the_endpoints(family):
 # ── Push button ──────────────────────────────────────────────────────────
 
 
+def _created(event_id: int) -> datetime:
+    with TestSession() as db:
+        return db.get(CalendarEvent, event_id).created_at
+
+
 def _token(family, event_id: int, link: str, end: datetime | None = None, person: str = "ben") -> str:
     return notification_actions.create_action_token(
         user_id=family[person]["id"], family_id=family["family_id"], source_type="event", source_id=event_id,
         notification_type="event_reminder", title="Dentist", body="Starts at 09:00", link=link, expires_at=end,
+        event_created_at=_created(event_id),
     )
 
 
@@ -306,7 +326,7 @@ def test_push_button_mutes_a_single_event(family):
     link = f"/calendar?event={event_id}&at=2026-12-01T09:00:00"
     options = notification_actions.reminder_push_actions(
         family["ben"]["id"], family["family_id"], "event", event_id, "event_reminder", "Dentist", "Starts at 09:00",
-        link, "de", expires_at=datetime(2026, 12, 1, 9, 0),
+        link, "de", expires_at=datetime(2026, 12, 1, 9, 0), event_created_at=_created(event_id),
     )
     assert options["actions"] == ("snooze", "mute")
     assert options["action_labels"]["mute"] == "Nicht mehr erinnern"
@@ -360,12 +380,55 @@ def test_push_mute_stays_in_the_tokens_family_and_event(family):
     forged = notification_actions.create_action_token(
         user_id=family["olga"]["id"], family_id=olga_family, source_type="event", source_id=event_id,
         notification_type="event_reminder", title="Dentist", body="", link=f"/calendar?event={event_id}&at=2026-12-01T09:00:00",
+        event_created_at=_created(event_id),
     )
     assert client.post("/notifications/actions", json={"token": token, "action": "mute"}).status_code == 401
     gone = client.post("/notifications/actions", json={"token": forged, "action": "mute"})
     assert gone.status_code == 404
     assert gone.json()["detail"]["code"] == "ACTION_GONE"
     assert _mutes() == set()
+
+
+def test_an_old_mute_button_does_not_reach_a_new_event_with_the_same_id(family):
+    """SQLite hands the highest id out again once that event is deleted."""
+    old_id = _event(family)
+    token = _token(family, old_id, f"/calendar?event={old_id}&at=2026-12-01T09:00:00")
+    with TestSession() as db:
+        db.delete(db.get(CalendarEvent, old_id))
+        db.commit()
+    new_id = _event(family, title="Parents' evening", created_at=datetime(2026, 11, 20, 8, 0))
+    assert new_id == old_id
+
+    resp = client.post("/notifications/actions", json={"token": token, "action": "mute"})
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "ACTION_GONE"
+    assert _mutes() == set()
+
+
+def test_a_mute_token_must_name_its_event(family):
+    event_id = _event(family)
+    bare = notification_actions.create_action_token(
+        user_id=family["ben"]["id"], family_id=family["family_id"], source_type="event", source_id=event_id,
+        notification_type="event_reminder", title="Dentist", body="", link=f"/calendar?event={event_id}&at=2026-12-01T09:00:00",
+    )
+    assert client.post("/notifications/actions", json={"token": bare, "action": "mute"}).status_code == 404
+    assert _mutes() == set()
+
+
+def test_the_dashboard_does_not_claim_a_reminder_state(family):
+    """The summary is cached for the whole family, so it leaves the personal
+    state out instead of saying "not muted"; the calendar list has it."""
+    soon = (datetime.now() + timedelta(days=2)).replace(hour=9, minute=0, second=0, microsecond=0)
+    event_id = _event(family, starts_at=soon)
+    _put(family, "ben", event_id)
+
+    resp = client.get(f"/dashboard/summary?family_id={family['family_id']}", headers=_auth(family["ben"]))
+    assert resp.status_code == 200, resp.text
+    events = resp.json()["next_events"]
+    assert [item["id"] for item in events] == [event_id]
+    assert "reminder_muted" not in events[0]
+    spec = client.get("/openapi.json").json()["components"]["schemas"]
+    assert "reminder_muted" not in spec["DashboardEventResponse"]["properties"]
 
 
 def test_apps_only_get_the_buttons_they_know(family, monkeypatch):

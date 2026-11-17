@@ -1027,6 +1027,7 @@
   "module.calendar.reminder_mute.off_series": "Ki minden ismétlésre",
   "module.calendar.reminder_mute.remind_me": "Emlékeztess",
   "module.calendar.reminder_mute.hint": "Csak a saját emlékeztetőd változik, a résztvevők nem.",
+  "module.calendar.reminder_mute.series_hint": "A „Be” és a „Ki erre az alkalomra” is visszakapcsolja a többi ismétlés emlékeztetőjét.",
   "module.calendar.new_event": "Új esemény...",
   "module.calendar.to": "hogy",
   "module.calendar.cw": "CW",

@@ -1028,6 +1028,7 @@
   "module.calendar.reminder_mute.off_series": "Wyłączone dla wszystkich powtórzeń",
   "module.calendar.reminder_mute.remind_me": "Przypominaj mi",
   "module.calendar.reminder_mute.hint": "Zmienia się tylko twoje przypomnienie, nie to, kto uczestniczy.",
+  "module.calendar.reminder_mute.series_hint": "„Włączone” i „Wyłączone dla tego terminu” przywracają przypomnienia o pozostałych powtórzeniach.",
   "module.calendar.new_event": "Nowe wydarzenie...",
   "module.calendar.to": "do",
   "module.calendar.cw": "tydz.",

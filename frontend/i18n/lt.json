@@ -1027,6 +1027,7 @@
   "module.calendar.reminder_mute.off_series": "Išjungtas visiems pasikartojimams",
   "module.calendar.reminder_mute.remind_me": "Priminti man",
   "module.calendar.reminder_mute.hint": "Keičiasi tik jūsų priminimas, ne tai, kas dalyvauja.",
+  "module.calendar.reminder_mute.series_hint": "„Įjungtas“ ir „Išjungtas šį kartą“ vėl įjungia priminimus apie kitus pasikartojimus.",
   "module.calendar.new_event": "Naujas renginys...",
   "module.calendar.to": "į",
   "module.calendar.cw": "CW",

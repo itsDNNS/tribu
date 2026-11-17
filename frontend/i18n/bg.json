@@ -1029,6 +1029,7 @@
   "module.calendar.reminder_mute.off_series": "Изключено за всички повторения",
   "module.calendar.reminder_mute.remind_me": "Напомняй ми",
   "module.calendar.reminder_mute.hint": "Променя се само вашето напомняне, не кой участва.",
+  "module.calendar.reminder_mute.series_hint": "„Включено“ и „Изключено за този път“ включват отново напомнянето за другите повторения.",
   "module.calendar.new_event": "Ново събитие...",
   "module.calendar.to": "към",
   "module.calendar.cw": "CW",

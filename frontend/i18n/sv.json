@@ -1029,6 +1029,7 @@
   "module.calendar.reminder_mute.off_series": "Av för alla upprepningar",
   "module.calendar.reminder_mute.remind_me": "Påminn mig",
   "module.calendar.reminder_mute.hint": "Bara din egen påminnelse ändras, inte vem som är med.",
+  "module.calendar.reminder_mute.series_hint": "”På” och ”Av för den här gången” slår båda på påminnelsen för de andra upprepningarna igen.",
   "module.calendar.new_event": "Nytt event...",
   "module.calendar.to": "till",
   "module.calendar.cw": "CW",

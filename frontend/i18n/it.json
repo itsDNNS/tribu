@@ -1029,6 +1029,7 @@
   "module.calendar.reminder_mute.off_series": "Disattivato per tutte le ripetizioni",
   "module.calendar.reminder_mute.remind_me": "Ricordamelo",
   "module.calendar.reminder_mute.hint": "Cambia solo il tuo promemoria, non chi partecipa.",
+  "module.calendar.reminder_mute.series_hint": "«Attivo» e «Disattivato per questo» riattivano entrambi il promemoria per le altre ripetizioni.",
   "module.calendar.new_event": "Nuovo evento...",
   "module.calendar.to": "a",
   "module.calendar.cw": "CW",

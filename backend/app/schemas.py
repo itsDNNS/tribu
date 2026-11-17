@@ -529,8 +529,8 @@ class CalendarEventUpdate(BaseModel):
         return v
 
 
-class CalendarEventResponse(BaseModel):
-    """Calendar event with recurrence metadata."""
+class CalendarEventBaseResponse(BaseModel):
+    """Calendar event with recurrence metadata, the same for every member."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(..., description="Event ID")
@@ -553,7 +553,6 @@ class CalendarEventResponse(BaseModel):
     icon: Optional[str] = Field(None, description="Allowlisted calendar event icon key")
     created_by_user_id: Optional[int] = Field(None, description="User who created the event; for a changed occurrence of a series, the series' creator")
     remind_only_creator: bool = Field(False, description="True if only the creator (created_by_user_id) is reminded before the event starts. While the creator is no longer in the family, everyone is reminded.")
-    reminder_muted: Optional[Literal["series", "occurrence"]] = Field(None, description="Whether the signed-in user took themselves off the reminder for this event or occurrence: 'series' for the whole series (or the whole single event), 'occurrence' for this occurrence only, null when they get it. Only reminders are affected, not who takes part.")
     created_at: datetime = Field(..., description="Creation timestamp")
     source_type: str = Field("local", description="Where the event came from: 'local', 'import', or 'subscription'")
     source_name: Optional[str] = Field(None, description="Human-readable name of the source feed (e.g. 'Apple Holidays')")
@@ -561,6 +560,16 @@ class CalendarEventResponse(BaseModel):
     imported_at: Optional[datetime] = Field(None, description="When the event was first imported")
     last_synced_at: Optional[datetime] = Field(None, description="Last time an external feed was refreshed or re-imported")
     sync_status: Optional[str] = Field(None, description="Current external sync state, e.g. ok or error")
+
+
+class CalendarEventResponse(CalendarEventBaseResponse):
+    """Calendar event with recurrence metadata and the signed-in user's reminder state."""
+    reminder_muted: Optional[Literal["series", "occurrence"]] = Field(None, description="Whether the signed-in user took themselves off the reminder for this event or occurrence: 'series' for the whole series (or the whole single event), 'occurrence' for this occurrence only, null when they get it. Only reminders are affected, not who takes part.")
+
+
+class DashboardEventResponse(CalendarEventBaseResponse):
+    """Upcoming event on the dashboard. The summary is shared by the whole
+    family, so it carries no personal reminder state; the calendar list has it."""
 
 
 class EventReminderMuteRequest(BaseModel):
@@ -1294,7 +1303,7 @@ class UpcomingBirthday(BaseModel):
 class DashboardSummary(BaseModel):
     """Aggregated dashboard data: upcoming events (14 days) and birthdays (28 days)."""
     family_id: int = Field(..., description="Family ID")
-    next_events: list[CalendarEventResponse] = Field(..., description="Upcoming events within 14 days")
+    next_events: list[DashboardEventResponse] = Field(..., description="Upcoming events within 14 days")
     upcoming_birthdays: list[UpcomingBirthday] = Field(..., description="Upcoming birthdays within 28 days")
 
 

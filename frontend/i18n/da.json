@@ -1029,6 +1029,7 @@
   "module.calendar.reminder_mute.off_series": "Fra for alle gentagelser",
   "module.calendar.reminder_mute.remind_me": "Påmind mig",
   "module.calendar.reminder_mute.hint": "Kun din egen påmindelse ændres, ikke hvem der deltager.",
+  "module.calendar.reminder_mute.series_hint": "“Til” og “Fra for denne gang” slår begge påmindelsen for de andre gentagelser til igen.",
   "module.calendar.new_event": "Ny begivenhed...",
   "module.calendar.to": "til",
   "module.calendar.cw": "CW",

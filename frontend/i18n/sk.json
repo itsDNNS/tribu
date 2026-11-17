@@ -1027,6 +1027,7 @@
   "module.calendar.reminder_mute.off_series": "Vypnutá pre všetky opakovania",
   "module.calendar.reminder_mute.remind_me": "Pripomenúť mi",
   "module.calendar.reminder_mute.hint": "Mení sa len tvoja pripomienka, nie to, kto sa zúčastní.",
+  "module.calendar.reminder_mute.series_hint": "„Zapnutá“ aj „Vypnutá pre tento termín“ znova zapnú pripomienku ostatných opakovaní.",
   "module.calendar.new_event": "Nová udalosť...",
   "module.calendar.to": "do",
   "module.calendar.cw": "CW",

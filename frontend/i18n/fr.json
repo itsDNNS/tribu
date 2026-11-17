@@ -1029,6 +1029,7 @@
   "module.calendar.reminder_mute.off_series": "Désactivé pour toutes les répétitions",
   "module.calendar.reminder_mute.remind_me": "Me rappeler",
   "module.calendar.reminder_mute.hint": "Seul votre rappel change, pas qui participe.",
+  "module.calendar.reminder_mute.series_hint": "« Activé » et « Désactivé pour celui-ci » réactivent tous deux le rappel des autres répétitions.",
   "module.calendar.new_event": "Nouvel événement...",
   "module.calendar.to": "à",
   "module.calendar.cw": "Sem.",

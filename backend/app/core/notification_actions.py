@@ -94,11 +94,18 @@ def create_action_token(
     body: str | None,
     link: str | None,
     expires_at: datetime | None = None,
+    occurrence_start: datetime | None = None,
+    event_created_at: datetime | None = None,
 ) -> str | None:
     """A token for the actions of one reminder, or None when it has none.
 
     ``expires_at`` (naive UTC) is when the reminder stops being true, such
     as the start of the event occurrence; a snooze keeps it.
+    ``occurrence_start`` is the occurrence of a series in the form mutes
+    name it (``event_reminders.reminder_mute_key``); a snooze keeps it.
+    ``event_created_at`` ties the token to that very event: an event id can
+    come back for a new event once the old one is deleted (SQLite reuses
+    the highest id), and "Don't remind me" must not reach the new one.
     """
     opened = link_actions(source_type, link)
     actions = tuple(action for action in reminder_actions(source_type) if action not in opened)
@@ -121,7 +128,15 @@ def create_action_token(
     }
     if expires_at is not None:
         payload["end"] = int(expires_at.replace(tzinfo=timezone.utc).timestamp())
+    if occurrence_start is not None:
+        payload["occ"] = _iso(occurrence_start)
+    if event_created_at is not None:
+        payload["evc"] = _iso(event_created_at)
     return jwt.encode(payload, _signing_key(), algorithm=JWT_ALG)
+
+
+def _iso(value: datetime) -> str:
+    return value.replace(microsecond=0, tzinfo=None).isoformat()
 
 
 def reminder_push_actions(
@@ -135,8 +150,14 @@ def reminder_push_actions(
     link: str | None,
     language: str,
     expires_at: datetime | None = None,
+    occurrence_start: datetime | None = None,
+    event_created_at: datetime | None = None,
 ) -> dict:
-    """``send_push_for_user`` options for a reminder's buttons, or none."""
+    """``send_push_for_user`` options for a reminder's buttons, or none.
+
+    See :func:`create_action_token` for ``occurrence_start`` and
+    ``event_created_at``, which event reminders pass.
+    """
     token = create_action_token(
         user_id=user_id,
         family_id=family_id,
@@ -147,6 +168,8 @@ def reminder_push_actions(
         body=body,
         link=link,
         expires_at=expires_at,
+        occurrence_start=occurrence_start,
+        event_created_at=event_created_at,
     )
     if token is None:
         return {}
@@ -219,6 +242,7 @@ def apply_action(db: Session, token: str, action: str) -> dict:
                 if payload.get("end") is not None
                 else None
             ),
+            occurrence_start=_token_occurrence(payload),
         ))
         db.commit()
         return {"status": "ok", "action": action, "remind_at": remind_at.isoformat()}
@@ -257,19 +281,27 @@ def _add_meal_to_list(db: Session, user: User, member: Membership, plan_id: int)
     return {"status": "ok", "action": "shopping", "added_count": len(added), "list_id": shopping_list.id}
 
 
+def _token_occurrence(payload: dict) -> datetime | None:
+    try:
+        return datetime.fromisoformat(payload["occ"]) if payload.get("occ") else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _mute_event_reminder(db: Session, user: User, member: Membership, payload: dict) -> dict:
     """"Don't remind me" from a reminder of a single event.
 
     Tokens only offer it for single events. Should the event have become
     part of a series since, only the occurrence the reminder was about is
-    muted, never the whole series.
+    muted, never the whole series. A token for an event that is gone does
+    nothing, also when a new event got the same id.
     """
     event = (
         db.query(CalendarEvent)
         .filter(CalendarEvent.id == payload["sid"], CalendarEvent.family_id == member.family_id)
         .first()
     )
-    if event is None:
+    if event is None or not payload.get("evc") or payload["evc"] != _iso(event.created_at):
         raise NotificationActionError("ACTION_GONE", 404)
     try:
         if not is_part_of_series(event, reminder_settings_row(db, event)):

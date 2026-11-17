@@ -1029,6 +1029,7 @@
   "module.calendar.reminder_mute.off_series": "Pois kaikilta toistoilta",
   "module.calendar.reminder_mute.remind_me": "Muistuta minua",
   "module.calendar.reminder_mute.hint": "Vain oma muistutuksesi muuttuu, ei se, kuka osallistuu.",
+  "module.calendar.reminder_mute.series_hint": "”Päällä” ja ”Pois tältä kerralta” palauttavat kumpikin muistutukset muille toistoille.",
   "module.calendar.new_event": "Uusi tapahtuma...",
   "module.calendar.to": "kohtaan",
   "module.calendar.cw": "CW",

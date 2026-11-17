@@ -1020,10 +1020,14 @@ def _event_for_reminder_mute(db: Session, event_id: int, user: User) -> Calendar
     return event
 
 
-REMINDER_MUTE_SCOPE_NOTE = (
-    "Scopes: `calendar:read` (the event must be visible) and `profile:write` (a personal notification "
-    "setting, like the notification preferences)."
-)
+# Token scopes for muting: the event must be visible (calendar:read) and it
+# is a personal notification setting like the notification preferences
+# (profile:write). The MCP endpoint only offers routes with exactly one
+# scope; switching to one is a change of this tuple.
+REMINDER_MUTE_SCOPES: tuple[str, ...] = ("calendar:read", "profile:write")
+# The user first: signing in with a token is what sets the scopes checked.
+REMINDER_MUTE_DEPENDENCIES = [Depends(current_user), *(require_scope(scope) for scope in REMINDER_MUTE_SCOPES)]
+REMINDER_MUTE_SCOPE_NOTE = "Scopes: " + " and ".join(f"`{scope}`" for scope in REMINDER_MUTE_SCOPES) + "."
 
 
 @router.put(
@@ -1040,14 +1044,13 @@ REMINDER_MUTE_SCOPE_NOTE = (
     ),
     response_description="The user's reminder state for the event or occurrence",
     responses={**NOT_FOUND_RESPONSE},
+    dependencies=REMINDER_MUTE_DEPENDENCIES,
 )
 def mute_event_reminder(
     event_id: int,
     payload: EventReminderMuteRequest,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
-    _read_scope=require_scope("calendar:read"),
-    _write_scope=require_scope("profile:write"),
 ):
     event = _event_for_reminder_mute(db, event_id, user)
     try:
@@ -1070,14 +1073,13 @@ def mute_event_reminder(
     ),
     response_description="The user's reminder state for the event or occurrence",
     responses={**NOT_FOUND_RESPONSE},
+    dependencies=REMINDER_MUTE_DEPENDENCIES,
 )
 def unmute_event_reminder(
     event_id: int,
     occurrence_start: Optional[datetime] = Query(None, description="Start of the occurrence as the calendar lists it"),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
-    _read_scope=require_scope("calendar:read"),
-    _write_scope=require_scope("profile:write"),
 ):
     event = _event_for_reminder_mute(db, event_id, user)
     try:

@@ -1050,6 +1050,7 @@
   "module.calendar.reminder_mute.off_series": "Aus für alle Wiederholungen",
   "module.calendar.reminder_mute.remind_me": "Mich erinnern",
   "module.calendar.reminder_mute.hint": "Nur deine Erinnerung ändert sich, nicht wer dabei ist.",
+  "module.calendar.reminder_mute.series_hint": "„An“ und „Aus für diesen Termin“ schalten die Erinnerung für die anderen Wiederholungen wieder ein.",
   "module.calendar.new_event": "Neuer Termin...",
   "module.calendar.to": "bis",
   "module.calendar.cw": "KW",
