@@ -7,7 +7,6 @@ another family), the token scope, and the "Don't remind me" push action.
 
 from __future__ import annotations
 
-import hashlib
 from datetime import datetime, timedelta
 
 import pytest
@@ -15,10 +14,9 @@ from fastapi.testclient import TestClient
 
 from app.core import notification_actions
 from app.main import app
-from app.models import CalendarEvent, EventReminderMute, Notification, NotificationPreference, PersonalAccessToken, ReminderSnooze
-from app.security import PAT_PREFIX
-# reminder_db is a fixture.
-from tests.reminder_support import TestSession, add_event, add_family, reminder_db
+from app.models import CalendarEvent, EventReminderMute, Notification, NotificationPreference, ReminderSnooze
+from tests.reminder_support import add_event, add_family
+from tests.support import TestSession, add_pat, auth
 
 pytestmark = pytest.mark.usefixtures("reminder_db")
 
@@ -41,10 +39,7 @@ def family():
             ("calendar:read", ben, "calendar:read"), ("profile:write", ben, "profile:write"),
             ("calendar:write", ben, "calendar:write"),
         ):
-            plain = f"{PAT_PREFIX}mute-{name}"
-            digest = hashlib.sha256(plain.encode()).hexdigest()
-            db.add(PersonalAccessToken(user_id=user_id, name=name, token_hash=digest, token_lookup=digest, scopes=scopes))
-            people["tokens"][name] = {"Authorization": f"Bearer {plain}"}
+            people["tokens"][name] = auth(add_pat(db, user_id, scopes, name=name))
         db.commit()
     return people
 
@@ -138,17 +133,10 @@ def test_an_occurrence_needs_a_real_start(family, body, status):
     assert _mutes() == set()
 
 
-def test_an_instant_with_offset_is_read_as_local_time(family, monkeypatch):
-    from app.core.clock import app_timezone
-
-    monkeypatch.setenv("TZ", "Europe/Berlin")
-    app_timezone.cache_clear()
-    try:
-        event_id = _event(family, recurrence="daily")
-        assert _put(family, event_id, scope="occurrence", occurrence_start="2026-12-02T08:00:00Z").status_code == 200
-        assert _mutes() == {(family["ben"], event_id, datetime(2026, 12, 2, 9, 0))}
-    finally:
-        app_timezone.cache_clear()
+def test_an_instant_with_offset_is_read_as_local_time(family, berlin_tz):
+    event_id = _event(family, recurrence="daily")
+    assert _put(family, event_id, scope="occurrence", occurrence_start="2026-12-02T08:00:00Z").status_code == 200
+    assert _mutes() == {(family["ben"], event_id, datetime(2026, 12, 2, 9, 0))}
 
 
 def test_a_changed_occurrence_is_muted_on_its_series(family):

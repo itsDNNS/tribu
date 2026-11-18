@@ -11,19 +11,8 @@ from datetime import timedelta
 import pytest
 
 from app.models import Membership, Notification, ReminderSnooze
-# reminder_db and destinations are fixtures.
-from tests.reminder_support import (
-    NOW,
-    TestSession,
-    add_event,
-    add_family,
-    at,
-    destinations,
-    reminded,
-    add_snooze,
-    reminder_db,
-    run_scheduler,
-)
+from tests.reminder_support import NOW, add_event, add_family, add_snooze, reminded, run_scheduler
+from tests.support import TestSession, freeze_scheduler
 
 pytestmark = pytest.mark.usefixtures("reminder_db")
 
@@ -68,7 +57,7 @@ def test_only_the_creator_is_reminded_for_every_occurrence_of_a_series(family, d
     assert reminded(event_id) == [users[2]]
 
     # The next day's occurrence as well.
-    at(monkeypatch, NOW + timedelta(days=1))
+    freeze_scheduler(monkeypatch, NOW + timedelta(days=1))
     run_scheduler()
 
     assert reminded(event_id) == [users[2], users[2]]

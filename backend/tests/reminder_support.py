@@ -1,72 +1,17 @@
-"""Shared setup for the event reminder tests: an in-memory database that
-the scheduler and the API both use, a family, events, and scheduler runs."""
+"""Shared data for the event reminder tests: a family, events, snoozes and
+scheduler runs. The ``reminder_db`` and ``destinations`` fixtures are in
+``conftest.py``."""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from app.database import Base, get_db
-from app.models import CalendarEvent, Family, Membership, Notification, NotificationPreference, ReminderSnooze, User
-from app.security import hash_password
-
-engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-TestSession = sessionmaker(bind=engine, autoflush=False)
+from app.models import CalendarEvent, Family, Notification, NotificationPreference, ReminderSnooze
+from tests.support import TestSession, add_member
 
 NOW = datetime(2026, 4, 25, 12, 0, 0)
 # Anna and Ben are grown-ups, Cleo is a child.
 MEMBERS = (("anna", True), ("ben", True), ("cleo", False))
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def at(monkeypatch, moment: datetime, wall: datetime | None = None) -> None:
-    """Sets the scheduler's clock: ``moment`` in UTC, ``wall`` local (the same by default)."""
-    from app.core import scheduler as scheduler_module
-
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: moment)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: wall or moment)
-
-
-@pytest.fixture
-def reminder_db(monkeypatch):
-    """The database for the scheduler (its clock at ``NOW``, local time
-    equal to UTC) and the API."""
-    from app.core import scheduler as scheduler_module
-    from app.main import app
-
-    Base.metadata.create_all(bind=engine)
-    monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
-    monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
-    at(monkeypatch, NOW)
-
-    def _session():
-        with TestSession() as db:
-            yield db
-
-    app.dependency_overrides[get_db] = _session
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def destinations(monkeypatch):
-    """Records what would go to the family's notification destinations."""
-    from app.core import scheduler as scheduler_module
-
-    calls: list[dict] = []
-    monkeypatch.setattr(scheduler_module, "dispatch_family_notification", lambda **kwargs: calls.append(kwargs))
-    return calls
 
 
 def add_family(name: str = "Busy family", members=MEMBERS) -> tuple[int, list[int]]:
@@ -77,12 +22,12 @@ def add_family(name: str = "Busy family", members=MEMBERS) -> tuple[int, list[in
         db.flush()
         ids = []
         for member, adult in members:
-            user = User(email=f"{member}@example.com", password_hash=hash_password("p"), display_name=member.title())
-            db.add(user)
-            db.flush()
-            db.add(Membership(user_id=user.id, family_id=fam.id, role="admin" if adult else "member", is_adult=adult))
-            db.add(NotificationPreference(user_id=user.id, reminders_enabled=True, reminder_minutes=30, push_enabled=False))
-            ids.append(user.id)
+            user_id = add_member(
+                db, f"{member}@example.com", scopes=None, family_id=fam.id, is_adult=adult,
+                password="p", display_name=member.title(),
+            ).user_id
+            db.add(NotificationPreference(user_id=user_id, reminders_enabled=True, reminder_minutes=30, push_enabled=False))
+            ids.append(user_id)
         db.commit()
         return fam.id, ids
 
