@@ -335,7 +335,9 @@ def test_login_still_works_when_oidc_not_ready():
     # Flag on but no issuer/client => not ready => flag ignored
     seed_oidc_config(issuer="", client_id="", client_secret="", disable_password_login=True, proven=False)
 
-    resp = client.post(
+    # A client of its own: the session cookie from this login would win over
+    # the bearer tokens of later tests on the module client.
+    resp = TestClient(app).post(
         "/auth/login",
         json={"email": "existing2@example.com", "password": "Secure1Pass"},
     )
