@@ -1,18 +1,13 @@
 """Tests for family-configured shopping store search links."""
 
-import hashlib
 import unicodedata
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, ShoppingStoreLink, User
-from app.security import PAT_PREFIX, hash_password
+from app.models import Family, ShoppingStoreLink
 from app.core.shopping_domain import (
     InvalidStoreUrlTemplate,
     MAX_STORE_NAME_KEY_LENGTH,
@@ -20,6 +15,10 @@ from app.core.shopping_domain import (
     store_name_key,
     validate_store_url_template,
 )
+from tests.support import TestSession, auth, seed_member
+
+
+pytestmark = pytest.mark.usefixtures("app_db")
 
 
 class TestUrlTemplateValidation:
@@ -81,43 +80,7 @@ class TestStoreName:
         assert unicodedata.category("\u0390") == "Ll"
 
 
-engine = create_engine(
-    "sqlite:///./test-shopping-store-links.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
-
 client = TestClient(app)
-
-
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
 
 
 def _seed_member(
@@ -128,44 +91,22 @@ def _seed_member(
     role: str | None = None,
     family_id: int | None = None,
 ) -> tuple[str, int]:
-    db = TestSession()
-    user = User(
-        email=f"shopping-store-link-{suffix}@example.com",
-        password_hash=hash_password("Password1"),
+    member = seed_member(
+        f"shopping-store-link-{suffix}@example.com",
+        scopes=scopes,
+        family_id=family_id,
+        is_adult=is_adult,
+        role=role,
         display_name="Store Link User",
     )
-    db.add(user)
-    db.flush()
-    if family_id is None:
-        family = Family(name=f"Store Link Family {suffix}")
-        db.add(family)
-        db.flush()
-        family_id = family.id
-    db.add(Membership(
-        user_id=user.id,
-        family_id=family_id,
-        role=role or ("admin" if is_adult else "member"),
-        is_adult=is_adult,
-    ))
-    plain = f"{PAT_PREFIX}shopping-store-link-{suffix}-{scopes.replace(',', '-').replace(':', '_').replace('*', 'star')}"
-    fingerprint = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(
-        user_id=user.id,
-        name="shopping-store-link-pat",
-        token_hash=fingerprint,
-        token_lookup=fingerprint,
-        scopes=scopes,
-    ))
-    db.commit()
-    db.close()
-    return plain, family_id
+    return member.token, member.family_id
 
 
 def _create(token: str, family_id: int, name: str = "Corner Market", template: str = "https://example.com/?q={query}"):
     return client.post(
         "/shopping/store-links",
         json={"family_id": family_id, "name": name, "url_template": template},
-        headers=_auth(token),
+        headers=auth(token),
     )
 
 
@@ -221,7 +162,7 @@ def test_adult_create_list_patch_delete_round_trip_and_ordering():
     assert first.json()["url_template"] == "HTTPS://EXAMPLE.COM/?q={query}"
     assert "normalized_name" not in first.json()
 
-    listed = client.get(f"/shopping/store-links?family_id={family_id}", headers=_auth(token))
+    listed = client.get(f"/shopping/store-links?family_id={family_id}", headers=auth(token))
     assert listed.status_code == 200
     assert [row["id"] for row in listed.json()] == [first.json()["id"], second.json()["id"]]
     assert all("normalized_name" not in row for row in listed.json())
@@ -229,11 +170,11 @@ def test_adult_create_list_patch_delete_round_trip_and_ordering():
     updated = client.patch(
         f"/shopping/store-links/{first.json()['id']}",
         json={"name": "CORNER market", "url_template": "https://example.com/#/find/{query}"},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert updated.status_code == 200
     assert updated.json()["name"] == "CORNER market"
-    deleted = client.delete(f"/shopping/store-links/{first.json()['id']}", headers=_auth(token))
+    deleted = client.delete(f"/shopping/store-links/{first.json()['id']}", headers=auth(token))
     assert deleted.status_code == 200
     assert deleted.json() == {"status": "deleted", "store_link_id": first.json()["id"]}
 
@@ -244,19 +185,19 @@ def test_non_admin_adult_can_create_list_update_and_delete():
     assert created.status_code == 200
     store_link_id = created.json()["id"]
 
-    listed = client.get(f"/shopping/store-links?family_id={family_id}", headers=_auth(token))
+    listed = client.get(f"/shopping/store-links?family_id={family_id}", headers=auth(token))
     assert listed.status_code == 200
     assert [row["id"] for row in listed.json()] == [store_link_id]
 
     updated = client.patch(
         f"/shopping/store-links/{store_link_id}",
         json={"name": "Adult Member Store"},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert updated.status_code == 200
     assert updated.json()["name"] == "Adult Member Store"
 
-    deleted = client.delete(f"/shopping/store-links/{store_link_id}", headers=_auth(token))
+    deleted = client.delete(f"/shopping/store-links/{store_link_id}", headers=auth(token))
     assert deleted.status_code == 200
 
 
@@ -293,7 +234,7 @@ def test_api_persists_full_casefold_key_and_returns_display_name():
     assert len(row.normalized_name) == 240
     assert row.normalized_name == "\u03b9\u0308\u0301" * 80
     db.close()
-    listed = client.get(f"/shopping/store-links?family_id={family_id}", headers=_auth(token))
+    listed = client.get(f"/shopping/store-links?family_id={family_id}", headers=auth(token))
     assert listed.json()[0]["name"] == display_name
 
 
@@ -306,7 +247,7 @@ def test_same_name_is_allowed_in_another_family_and_own_case_rename_succeeds():
     renamed = client.patch(
         f"/shopping/store-links/{first.json()['id']}",
         json={"name": "AMAZON"},
-        headers=_auth(first_token),
+        headers=auth(first_token),
     )
     assert renamed.status_code == 200
     assert renamed.json()["name"] == "AMAZON"
@@ -317,7 +258,7 @@ def test_patch_rejects_another_store_name():
     first = _create(token, family_id, "First").json()
     second = _create(token, family_id, "Second").json()
     response = client.patch(
-        f"/shopping/store-links/{second['id']}", json={"name": " FIRST "}, headers=_auth(token)
+        f"/shopping/store-links/{second['id']}", json={"name": " FIRST "}, headers=auth(token)
     )
     assert response.status_code == 409
     assert response.json()["detail"]["code"] == "SHOPPING_STORE_LINK_NAME_TAKEN"
@@ -338,7 +279,7 @@ def test_invalid_template_is_structured_on_create_and_update(method, template, r
         response = client.patch(
             f"/shopping/store-links/{link['id']}",
             json={"url_template": template},
-            headers=_auth(token),
+            headers=auth(token),
         )
     assert response.status_code == 422
     detail = response.json()["detail"]
@@ -365,10 +306,10 @@ def test_children_are_denied_all_four_endpoints():
     link = _create(adult_token, family_id).json()
     child_token, _ = _seed_member(suffix="child", is_adult=False, family_id=family_id)
     responses = [
-        client.get(f"/shopping/store-links?family_id={family_id}", headers=_auth(child_token)),
+        client.get(f"/shopping/store-links?family_id={family_id}", headers=auth(child_token)),
         _create(child_token, family_id, "Child Store"),
-        client.patch(f"/shopping/store-links/{link['id']}", json={"name": "Child Edit"}, headers=_auth(child_token)),
-        client.delete(f"/shopping/store-links/{link['id']}", headers=_auth(child_token)),
+        client.patch(f"/shopping/store-links/{link['id']}", json={"name": "Child Edit"}, headers=auth(child_token)),
+        client.delete(f"/shopping/store-links/{link['id']}", headers=auth(child_token)),
     ]
     assert [response.status_code for response in responses] == [403, 403, 403, 403]
     assert all(response.json()["detail"]["code"] == "ADULT_REQUIRED" for response in responses)
@@ -378,16 +319,16 @@ def test_family_isolation_and_unknown_ids():
     owner_token, owner_family = _seed_member(suffix="isolation-owner")
     outsider_token, outsider_family = _seed_member(suffix="isolation-outsider")
     link = _create(owner_token, owner_family).json()
-    no_access = client.get(f"/shopping/store-links?family_id={owner_family}", headers=_auth(outsider_token))
+    no_access = client.get(f"/shopping/store-links?family_id={owner_family}", headers=auth(outsider_token))
     assert no_access.status_code == 403
     assert no_access.json()["detail"]["code"] == "NO_FAMILY_ACCESS"
     for method in ("patch", "delete"):
         call = getattr(client, method)
         kwargs = {"json": {"name": "Nope"}} if method == "patch" else {}
-        response = call(f"/shopping/store-links/{link['id']}", headers=_auth(outsider_token), **kwargs)
+        response = call(f"/shopping/store-links/{link['id']}", headers=auth(outsider_token), **kwargs)
         assert response.status_code == 403
         assert response.json()["detail"]["code"] == "NO_FAMILY_ACCESS"
-    unknown = client.patch("/shopping/store-links/999999", json={"name": "Nope"}, headers=_auth(outsider_token))
+    unknown = client.patch("/shopping/store-links/999999", json={"name": "Nope"}, headers=auth(outsider_token))
     assert unknown.status_code == 404
     assert unknown.json()["detail"]["code"] == "SHOPPING_STORE_LINK_NOT_FOUND"
     assert outsider_family != owner_family
@@ -396,10 +337,10 @@ def test_family_isolation_and_unknown_ids():
 def test_store_link_endpoints_enforce_shopping_scopes():
     read_token, family_id = _seed_member(scopes="shopping:read", suffix="scope-read")
     write_token, _ = _seed_member(scopes="shopping:write", suffix="scope-write", family_id=family_id)
-    assert client.get(f"/shopping/store-links?family_id={family_id}", headers=_auth(read_token)).status_code == 200
+    assert client.get(f"/shopping/store-links?family_id={family_id}", headers=auth(read_token)).status_code == 200
     assert _create(read_token, family_id).status_code == 403
     assert _create(write_token, family_id).status_code == 200
-    assert client.get(f"/shopping/store-links?family_id={family_id}", headers=_auth(write_token)).status_code == 403
+    assert client.get(f"/shopping/store-links?family_id={family_id}", headers=auth(write_token)).status_code == 403
 
 
 def test_deleting_family_cascades_store_links():
@@ -428,9 +369,9 @@ def test_store_link_crud_emits_no_events(monkeypatch):
     token, family_id = _seed_member(suffix="no-events")
     created = _create(token, family_id)
     link_id = created.json()["id"]
-    assert client.get(f"/shopping/store-links?family_id={family_id}", headers=_auth(token)).status_code == 200
+    assert client.get(f"/shopping/store-links?family_id={family_id}", headers=auth(token)).status_code == 200
     assert client.patch(
-        f"/shopping/store-links/{link_id}", json={"name": "Updated"}, headers=_auth(token)
+        f"/shopping/store-links/{link_id}", json={"name": "Updated"}, headers=auth(token)
     ).status_code == 200
-    assert client.delete(f"/shopping/store-links/{link_id}", headers=_auth(token)).status_code == 200
+    assert client.delete(f"/shopping/store-links/{link_id}", headers=auth(token)).status_code == 200
     assert calls == []

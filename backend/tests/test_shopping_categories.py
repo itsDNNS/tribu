@@ -2,83 +2,25 @@
 every language, renaming and deleting the family's own categories, and a
 switch for families that do not use categories."""
 
-import hashlib
-
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core.shopping_categories import BUILTIN_CATEGORIES, builtin_category_key, stored_category
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, ShoppingList, User
-from app.modules import shopping_router
-from app.security import PAT_PREFIX, hash_password
+from tests.support import seed_member, seed_shopping_list
 
 
-engine = create_engine("sqlite:///./test-shopping-categories.db", connect_args={"check_same_thread": False})
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args, **kwargs: None)
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db", "shopping_broadcasts")
 
 client = TestClient(app)
 SCOPES = "shopping:read,shopping:write,families:read,families:write"
 
 
 def _seed_member(suffix: str, *, family_id: int | None = None, is_adult: bool = True) -> tuple[dict, int, int]:
-    db = TestSession()
-    user = User(email=f"categories-{suffix}@example.com", password_hash=hash_password("Password1"), display_name=f"Categories {suffix}")
-    db.add(user)
-    db.flush()
-    if family_id is None:
-        family = Family(name=f"Categories {suffix}")
-        db.add(family)
-        db.flush()
-        family_id = family.id
-    db.add(Membership(user_id=user.id, family_id=family_id, role="admin" if is_adult else "member", is_adult=is_adult))
-    plain = f"{PAT_PREFIX}categories-{suffix}"
-    fingerprint = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(user_id=user.id, name="categories", token_hash=fingerprint, token_lookup=fingerprint, scopes=SCOPES))
-    db.commit()
-    user_id = user.id
-    db.close()
-    return {"Authorization": f"Bearer {plain}"}, family_id, user_id
-
-
-def _seed_list(family_id: int, user_id: int) -> int:
-    db = TestSession()
-    shopping_list = ShoppingList(family_id=family_id, name="Groceries", created_by_user_id=user_id)
-    db.add(shopping_list)
-    db.commit()
-    list_id = shopping_list.id
-    db.close()
-    return list_id
+    member = seed_member(
+        f"categories-{suffix}@example.com", scopes=SCOPES, family_id=family_id, is_adult=is_adult, display_name=f"Categories {suffix}",
+    )
+    return member.headers, member.family_id, member.user_id
 
 
 def _add(headers, list_id, name, category=None):
@@ -96,7 +38,7 @@ def test_every_translation_of_a_built_in_category_is_one_category():
     assert stored_category("Dairy") == "Dairy"
 
     headers, family_id, user_id = _seed_member("aliases")
-    list_id = _seed_list(family_id, user_id)
+    list_id = seed_shopping_list(family_id, user_id=user_id)
     # The German web app, the English app and a French user file the same shelf.
     assert _add(headers, list_id, "Apples", "Obst & Gemüse")["category"] == "Obst & Gemüse"
     assert _add(headers, list_id, "Pears", "Fruit & vegetables")["category"] == "Obst & Gemüse"
@@ -106,7 +48,7 @@ def test_every_translation_of_a_built_in_category_is_one_category():
 
 def test_usage_lists_categories_with_their_items_and_built_in_keys():
     headers, family_id, user_id = _seed_member("usage")
-    list_id = _seed_list(family_id, user_id)
+    list_id = seed_shopping_list(family_id, user_id=user_id)
     _add(headers, list_id, "Milk", "Chilled")
     _add(headers, list_id, "Candles", "Party")
     _add(headers, list_id, "Balloons", "party")
@@ -122,7 +64,7 @@ def test_usage_lists_categories_with_their_items_and_built_in_keys():
 
 def test_renaming_a_category_follows_it_everywhere_and_can_merge():
     headers, family_id, user_id = _seed_member("rename")
-    list_id = _seed_list(family_id, user_id)
+    list_id = seed_shopping_list(family_id, user_id=user_id)
     candles = _add(headers, list_id, "Candles", "Party")
     _add(headers, list_id, "Tea", "Drinks & more")
     assert client.patch(f"/shopping/lists/{list_id}", json={"category_order": ["Party", "Drinks & more"]}, headers=headers).status_code == 200
@@ -150,7 +92,7 @@ def test_renaming_a_category_follows_it_everywhere_and_can_merge():
 
 def test_deleting_a_category_moves_its_items_to_other():
     headers, family_id, user_id = _seed_member("delete")
-    list_id = _seed_list(family_id, user_id)
+    list_id = seed_shopping_list(family_id, user_id=user_id)
     candles = _add(headers, list_id, "Candles", "Party")
     assert client.patch(f"/shopping/lists/{list_id}", json={"category_order": ["Party", "Kühlregal"]}, headers=headers).status_code == 200
 
@@ -168,7 +110,7 @@ def test_deleting_a_category_moves_its_items_to_other():
 def test_built_in_categories_cannot_be_renamed_or_deleted_and_children_cannot_manage():
     headers, family_id, user_id = _seed_member("guard")
     child, _, _ = _seed_member("guard-child", family_id=family_id, is_adult=False)
-    list_id = _seed_list(family_id, user_id)
+    list_id = seed_shopping_list(family_id, user_id=user_id)
     _add(headers, list_id, "Milk", "Chilled")
     _add(headers, list_id, "Candles", "Party")
     built_in = client.post("/shopping/categories/rename", json={"family_id": family_id, "name": "Kühlregal", "new_name": "Dairy"}, headers=headers)

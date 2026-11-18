@@ -1,97 +1,37 @@
 """Mobile daily snapshot API tests."""
 
-import hashlib
 from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
 from app.models import (
     CalendarEvent,
-    Family,
-    Membership,
     Notification,
-    PersonalAccessToken,
     QuickCaptureItem,
     ShoppingItem,
     ShoppingList,
     Task,
-    User,
 )
-from app.security import PAT_PREFIX, hash_password
+from tests.support import TestSession, auth, seed_member
 
 
-engine = create_engine(
-    "sqlite:///./test-mobile-daily.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
 
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
 def _seed_member(scopes: str, suffix: str, *, family_id: int | None = None, role: str = "admin") -> tuple[str, int, int]:
-    db = TestSession()
-    user = User(
-        email=f"mobile-{suffix}@example.com",
-        password_hash=hash_password("Password123"),
-        display_name=f"Mobile {suffix}",
-    )
-    db.add(user)
-    db.flush()
-    if family_id is None:
-        family = Family(name=f"Mobile Family {suffix}")
-        db.add(family)
-        db.flush()
-        family_id = family.id
-    db.add(Membership(user_id=user.id, family_id=family_id, role=role, is_adult=True, color="#7c3aed"))
-    plain = f"{PAT_PREFIX}mobile-{suffix}-{scopes.replace(',', '-').replace(':', '_').replace('*', 'star')}"
-    lookup = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(
-        user_id=user.id,
-        name="mobile-daily-pat",
-        token_hash=lookup,
-        token_lookup=lookup,
+    member = seed_member(
+        f"mobile-{suffix}@example.com",
         scopes=scopes,
-    ))
-    db.commit()
-    user_id = user.id
-    db.close()
-    return plain, family_id, user_id
+        family_id=family_id,
+        role=role,
+        display_name=f"Mobile {suffix}",
+        color="#7c3aed",
+    )
+    return member.token, member.family_id, member.user_id
 
 
 def test_mobile_daily_snapshot_collects_today_loop_without_secrets():
@@ -164,7 +104,7 @@ def test_mobile_daily_snapshot_collects_today_loop_without_secrets():
     shopping_id = shopping.id
     db.close()
 
-    resp = client.get(f"/mobile/daily?family_id={family_id}&date=2026-05-04", headers=_auth(token))
+    resp = client.get(f"/mobile/daily?family_id={family_id}&date=2026-05-04", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     data = resp.json()
@@ -201,13 +141,13 @@ def test_mobile_daily_enforces_family_scope_and_required_read_scopes():
     intruder_token, _, _ = _seed_member("*", "intruder")
     limited_token, limited_family_id, _ = _seed_member("calendar:read,tasks:read", "limited")
 
-    denied = client.get(f"/mobile/daily?family_id={family_id}&date=2026-05-04", headers=_auth(intruder_token))
+    denied = client.get(f"/mobile/daily?family_id={family_id}&date=2026-05-04", headers=auth(intruder_token))
     assert denied.status_code == 403
 
-    limited = client.get(f"/mobile/daily?family_id={limited_family_id}&date=2026-05-04", headers=_auth(limited_token))
+    limited = client.get(f"/mobile/daily?family_id={limited_family_id}&date=2026-05-04", headers=auth(limited_token))
     assert limited.status_code == 403
 
-    ok = client.get(f"/mobile/daily?family_id={family_id}&date=2026-05-04", headers=_auth(owner_token))
+    ok = client.get(f"/mobile/daily?family_id={family_id}&date=2026-05-04", headers=auth(owner_token))
     assert ok.status_code == 200, ok.json()
     assert ok.json()["agenda"] == []
     assert ok.json()["tasks"] == []

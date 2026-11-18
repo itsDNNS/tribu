@@ -1,83 +1,42 @@
 """Who is out shopping with a list (Tribu 2.0, L4)."""
 
-import hashlib
 from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, ShoppingItem, ShoppingList, User
+from app.models import ShoppingItem
 from app.modules import shopping_router
-from app.security import PAT_PREFIX, hash_password
-
-engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-TestSession = sessionmaker(bind=engine)
+from tests.support import TestSession, seed_member, seed_shopping_list
 
 
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    Base.metadata.create_all(bind=engine)
-    events = []
-    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args: events.append(args))
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield events
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db", "shopping_broadcasts")
 
 client = TestClient(app)
 
 
 def _member(suffix: str, name: str, family_id: int | None = None, adult: bool = True) -> tuple[dict, int, int]:
-    with TestSession() as db:
-        user = User(email=f"trip-{suffix}@example.com", password_hash=hash_password("Password1"), display_name=name)
-        db.add(user)
-        db.flush()
-        if family_id is None:
-            family = Family(name="Trip family")
-            db.add(family)
-            db.flush()
-            family_id = family.id
-        db.add(Membership(user_id=user.id, family_id=family_id, role="admin" if adult else "member", is_adult=adult))
-        plain = f"{PAT_PREFIX}trip-{suffix}"
-        lookup = hashlib.sha256(plain.encode()).hexdigest()
-        db.add(PersonalAccessToken(user_id=user.id, name="trip", token_hash=lookup, token_lookup=lookup,
-                                   scopes="shopping:read,shopping:write"))
-        db.commit()
-        return {"Authorization": f"Bearer {plain}"}, family_id, user.id
+    member = seed_member(
+        f"trip-{suffix}@example.com",
+        scopes="shopping:read,shopping:write",
+        family_id=family_id,
+        is_adult=adult,
+        display_name=name,
+    )
+    return member.headers, member.family_id, member.user_id
 
 
 def _list(family_id: int) -> int:
+    """A "Weekly" list with one checked item."""
+    list_id = seed_shopping_list(family_id, "Weekly")
     with TestSession() as db:
-        sl = ShoppingList(family_id=family_id, name="Weekly")
-        db.add(sl)
-        db.flush()
-        db.add(ShoppingItem(list_id=sl.id, name="Milk", checked=True, position=0))
+        db.add(ShoppingItem(list_id=list_id, name="Milk", checked=True, position=0))
         db.commit()
-        return sl.id
+    return list_id
 
 
-def test_the_family_sees_who_is_shopping_until_they_are_done(setup_db):
+def test_the_family_sees_who_is_shopping_until_they_are_done(shopping_broadcasts):
     anna, family_id, anna_id = _member("anna", "Anna Braun")
     dennis, _, _ = _member("dennis", "Dennis", family_id)
     list_id = _list(family_id)
@@ -89,7 +48,7 @@ def test_the_family_sees_who_is_shopping_until_they_are_done(setup_db):
     lists = client.get(f"/shopping/lists?family_id={family_id}", headers=dennis).json()
     assert lists[0]["shopper"]["user_id"] == anna_id
     # Everyone watching the family or the list hears about it.
-    assert [(scope, name) for scope, _, name, _ in setup_db] == [("family", "shopper_changed"), ("list", "shopper_changed")]
+    assert [(scope, name) for scope, _, name, _ in shopping_broadcasts] == [("family", "shopper_changed"), ("list", "shopper_changed")]
 
     # Someone else ending "their" trip changes nothing.
     client.post(f"/shopping/lists/{list_id}/trip", json={"active": False}, headers=dennis)
@@ -98,7 +57,7 @@ def test_the_family_sees_who_is_shopping_until_they_are_done(setup_db):
     # Finishing the trip ends it.
     assert client.post(f"/shopping/lists/{list_id}/complete", headers=anna).status_code == 200
     assert client.get(f"/shopping/lists?family_id={family_id}", headers=dennis).json()[0]["shopper"] is None
-    ended = [payload for _, _, name, payload in setup_db if name == "shopper_changed"][-1]
+    ended = [payload for _, _, name, payload in shopping_broadcasts if name == "shopper_changed"][-1]
     assert ended == {"list_id": list_id, "shopper": None}
 
 

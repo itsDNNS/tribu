@@ -1,75 +1,34 @@
 """Rewards around goals: stars without setup, personal and family goals,
 praise with or without stars, and wishes that are approved and given."""
-import hashlib
-
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, Notification, PersonalAccessToken, User
-from app.security import PAT_PREFIX, hash_password
-
-engine = create_engine("sqlite:///./test-rewards.db", connect_args={"check_same_thread": False})
-TestSession = sessionmaker(bind=engine, autoflush=False)
+from app.models import Notification
+from tests.support import TestSession, add_member
 
 SCOPES = "rewards:read,rewards:write,tasks:read,tasks:write"
 
-
-@event.listens_for(engine, "connect")
-def _foreign_keys(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
+pytestmark = pytest.mark.usefixtures("app_db")
 
 
 @pytest.fixture
 def family():
     """A parent, a second parent and a child, each with their own client."""
-    db = TestSession()
-    fam = Family(name="Star Family")
-    db.add(fam)
-    db.flush()
     clients = {}
     ids = {}
-    for key, name, adult in (("mum", "Anna Weber", True), ("dad", "Dennis Weber", True), ("kid", "Lena Weber", False)):
-        user = User(email=f"{key}@example.com", password_hash=hash_password("p"), display_name=name)
-        db.add(user)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=fam.id, role="admin" if adult else "member", is_adult=adult))
-        plain = f"{PAT_PREFIX}rewards-{key}"
-        db.add(PersonalAccessToken(
-            user_id=user.id, name="pat",
-            token_hash=hashlib.sha256(plain.encode()).hexdigest(),
-            token_lookup=hashlib.sha256(plain.encode()).hexdigest(),
-            scopes=SCOPES,
-        ))
-        ids[key] = user.id
-        client = TestClient(app)
-        client.headers["Authorization"] = f"Bearer {plain}"
-        clients[key] = client
-    db.commit()
-    family_id = fam.id
-    db.close()
+    family_id = None
+    with TestSession() as db:
+        for key, name, adult in (("mum", "Anna Weber", True), ("dad", "Dennis Weber", True), ("kid", "Lena Weber", False)):
+            member = add_member(
+                db, f"{key}@example.com", scopes=SCOPES, family_id=family_id, family_name="Star Family", is_adult=adult, display_name=name,
+            )
+            family_id = member.family_id
+            ids[key] = member.user_id
+            client = TestClient(app)
+            client.headers.update(member.headers)
+            clients[key] = client
+        db.commit()
     return clients, ids, family_id
 
 

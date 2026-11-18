@@ -70,6 +70,16 @@ def destinations(monkeypatch):
 
 
 @pytest.fixture
+def shopping_broadcasts(monkeypatch):
+    """Records the shopping router's WebSocket broadcasts (their positional arguments) instead of sending them."""
+    from app.modules import shopping_router
+
+    events: list[tuple] = []
+    monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args, **kwargs: events.append(args))
+    return events
+
+
+@pytest.fixture
 def oidc_db(app_db):
     """``app_db``, and the OIDC discovery cache is emptied after the test."""
     from app.core import oidc as oidc_core
