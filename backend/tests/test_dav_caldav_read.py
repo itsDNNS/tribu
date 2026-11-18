@@ -15,8 +15,12 @@ from fastapi.testclient import TestClient
 from icalendar import Calendar
 
 from app.database import SessionLocal
-from app.models import CalendarEvent, Family, Membership, PersonalAccessToken, User
-from tests.support import add_member, dav_basic, delete_production_rows
+from app.models import CalendarEvent, User
+from tests.support import add_member, dav_basic, propfind
+
+
+# The DAV plugins read the production database; remove what each test adds.
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 EMAIL = "dav-caldav@example.com"
@@ -50,9 +54,7 @@ def seeded(dav_app):
             created_by_user_id=member.user_id,
         ))
         db.commit()
-    yield member.token, member.family_id
-    # teardown: wipe rows so other tests keep a clean table
-    delete_production_rows(CalendarEvent, Membership, PersonalAccessToken, User, Family)
+    return member.token, member.family_id
 
 
 def _fetch_ctag(client: TestClient, headers: dict, family_id: int) -> str:
@@ -63,12 +65,7 @@ def _fetch_ctag(client: TestClient, headers: dict, family_id: int) -> str:
         '<propfind xmlns="DAV:" xmlns:CS="http://calendarserver.org/ns/">'
         '<prop><CS:getctag/></prop></propfind>'
     )
-    resp = client.request(
-        "PROPFIND",
-        f"/dav/{EMAIL}/cal-{family_id}/",
-        headers={**headers, "Depth": "0", "Content-Type": "application/xml"},
-        content=body,
-    )
+    resp = propfind(client, f"/dav/{EMAIL}/cal-{family_id}/", body, headers=headers, depth="0")
     assert resp.status_code == 207, resp.text
     match = re.search(r"<CS:getctag[^>]*>([^<]+)</CS:getctag>", resp.text)
     return match.group(1) if match else ""
@@ -81,10 +78,7 @@ def _propfind(client: TestClient, path: str, *, headers=None, depth="1"):
         '<resourcetype/><displayname/><getetag/><getcontenttype/>'
         '</prop></propfind>'
     )
-    h = {"Depth": depth, "Content-Type": "application/xml"}
-    if headers:
-        h.update(headers)
-    return client.request("PROPFIND", path, headers=h, content=body)
+    return propfind(client, path, body, headers=headers, depth=depth)
 
 
 class TestCalDAVRead:

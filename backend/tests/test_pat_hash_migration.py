@@ -7,12 +7,17 @@ now via the new path.
 """
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.database import SessionLocal
-from app.models import Family, Membership, PersonalAccessToken, User
+from app.models import PersonalAccessToken
 from app.security import PAT_PREFIX
-from tests.support import add_member, dav_basic, delete_production_rows
+from tests.support import add_member, dav_basic, propfind
+
+
+# The DAV plugins read the production database; remove what each test adds.
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 EMAIL = "pat-migrate@example.com"
@@ -40,7 +45,7 @@ def test_legacy_pat_lazy_migrates_on_first_auth(dav_app):
         '<propfind xmlns="DAV:"><prop><current-user-principal/></prop></propfind>'
     )
     # First PROPFIND must succeed via the legacy fallback.
-    resp1 = client.request("PROPFIND", f"/dav/{EMAIL}/", headers={**headers, "Depth": "0", "Content-Type": "application/xml"}, content=body)
+    resp1 = propfind(client, f"/dav/{EMAIL}/", body, headers=headers, depth="0")
     assert resp1.status_code == 207, resp1.text
 
     # Row should now be bcrypt-format, and token_lookup still holds
@@ -55,21 +60,10 @@ def test_legacy_pat_lazy_migrates_on_first_auth(dav_app):
         db.close()
 
     # Second PROPFIND still works (now via bcrypt + lookup).
-    resp2 = client.request("PROPFIND", f"/dav/{EMAIL}/", headers={**headers, "Depth": "0", "Content-Type": "application/xml"}, content=body)
+    resp2 = propfind(client, f"/dav/{EMAIL}/", body, headers=headers, depth="0")
     assert resp2.status_code == 207, resp2.text
 
     # Wrong token must still fail.
-    resp3 = client.request(
-        "PROPFIND",
-        f"/dav/{EMAIL}/",
-        headers={
-            "Authorization": dav_basic(EMAIL, PAT_PREFIX + "not-the-real-token"),
-            "Depth": "0",
-            "Content-Type": "application/xml",
-        },
-        content=body,
-    )
+    wrong = {"Authorization": dav_basic(EMAIL, PAT_PREFIX + "not-the-real-token")}
+    resp3 = propfind(client, f"/dav/{EMAIL}/", body, headers=wrong, depth="0")
     assert resp3.status_code == 401
-
-    # Cleanup
-    delete_production_rows(PersonalAccessToken, Membership, Family, User)

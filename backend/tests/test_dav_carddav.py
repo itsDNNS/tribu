@@ -10,8 +10,12 @@ from fastapi.testclient import TestClient
 
 from app.core.vcard_utils import contact_channel_values
 from app.database import SessionLocal
-from app.models import Contact, Family, FamilyBirthday, Membership, PersonalAccessToken, User
-from tests.support import add_member, dav_basic, delete_production_rows
+from app.models import Contact, FamilyBirthday
+from tests.support import add_member, dav_basic, propfind
+
+
+# The DAV plugins read the production database; remove what each test adds.
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 EMAIL = "dav-carddav@example.com"
@@ -35,8 +39,7 @@ def seeded(dav_app):
             email="peter@example.com",
         ))
         db.commit()
-    yield member.token, member.family_id
-    delete_production_rows(Contact, Membership, PersonalAccessToken, User, Family)
+    return member.token, member.family_id
 
 
 def _propfind(client: TestClient, path: str, *, headers=None, depth="1"):
@@ -44,10 +47,7 @@ def _propfind(client: TestClient, path: str, *, headers=None, depth="1"):
         '<?xml version="1.0"?>'
         '<propfind xmlns="DAV:"><prop><resourcetype/><displayname/><getetag/></prop></propfind>'
     )
-    h = {"Depth": depth, "Content-Type": "application/xml"}
-    if headers:
-        h.update(headers)
-    return client.request("PROPFIND", path, headers=h, content=body)
+    return propfind(client, path, body, headers=headers, depth=depth)
 
 
 class TestCardDAV:

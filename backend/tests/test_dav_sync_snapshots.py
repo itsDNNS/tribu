@@ -6,16 +6,9 @@ from app.database import SessionLocal
 from app.dav import sync_snapshots
 from app.dav.sync_snapshots import SYNC_TOKEN_PREFIX, sync_changes
 from app.models import DavSyncSnapshot
-from tests.support import delete_production_rows
 
 # sync_changes opens the production SessionLocal itself.
-pytestmark = pytest.mark.usefixtures("production_db")
-
-
-@pytest.fixture(autouse=True)
-def fresh_snapshots():
-    yield
-    delete_production_rows(DavSyncSnapshot)
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 def test_changes_since_a_token():

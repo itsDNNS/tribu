@@ -12,8 +12,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.database import SessionLocal
-from app.models import CalendarEvent, Contact, Family, Membership, PersonalAccessToken, User
-from tests.support import add_member, auth, dav_basic, delete_production_rows
+from app.models import CalendarEvent, Contact
+from tests.support import add_member, auth, dav_basic
+
+
+# The DAV plugins read the production database; remove what each test adds.
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 SCOPES = "calendar:read,calendar:write,contacts:read,contacts:write"
@@ -36,8 +40,7 @@ def family(client):
             family_id = member.family_id
             people[name] = {"id": member.user_id, "token": member.token, "email": email}
         db.commit()
-    yield {"family_id": family_id, **people}
-    delete_production_rows(CalendarEvent, Contact, PersonalAccessToken, Membership, User, Family)
+    return {"family_id": family_id, **people}
 
 
 def _auth(person: dict) -> dict:

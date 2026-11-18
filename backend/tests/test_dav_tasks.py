@@ -11,15 +11,16 @@ from icalendar import Calendar
 
 from app.database import SessionLocal
 from app.models import (
-    Family,
-    Membership,
-    PersonalAccessToken,
     RewardCurrency,
     Task,
     TokenTransaction,
     User,
 )
-from tests.support import add_member, add_pat, dav_basic, delete_production_rows
+from tests.support import add_member, add_pat, dav_basic, propfind
+
+
+# The DAV plugins read the production database; remove what each test adds.
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 EMAIL = "dav-tasks-integration@example.com"
@@ -54,8 +55,7 @@ def seeded(dav_app):
         db.add_all([assigned, hidden])
         db.commit()
         result = {**tokens, "family_id": adult.family_id, "assigned_id": assigned.id, "hidden_id": hidden.id}
-    yield result
-    delete_production_rows(Task, Membership, PersonalAccessToken, User, Family)
+    return result
 
 
 def _headers(token: str, email: str = EMAIL) -> dict[str, str]:
@@ -70,11 +70,11 @@ def _vtodo(uid="client-one", summary="A task", extra="") -> str:
 
 
 def _propfind(client, path, headers, depth="1"):
-    return client.request(
-        "PROPFIND", path,
-        headers={**headers, "Depth": depth, "Content-Type": "application/xml"},
-        content='<?xml version="1.0"?><propfind xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav"><prop><displayname/><getetag/><C:supported-calendar-component-set/></prop></propfind>',
+    body = (
+        '<?xml version="1.0"?><propfind xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">'
+        '<prop><displayname/><getetag/><C:supported-calendar-component-set/></prop></propfind>'
     )
+    return propfind(client, path, body, headers=headers, depth=depth)
 
 
 def test_discovery_is_literal_opt_in_and_vtodo_only(dav_app, seeded):

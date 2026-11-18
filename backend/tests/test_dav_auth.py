@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.clock import utcnow
@@ -10,7 +11,11 @@ from app.database import SessionLocal
 from app.models import PersonalAccessToken
 from app.schemas import PATResponse
 from app.security import PAT_PREFIX
-from tests.support import add_member, add_pat, add_user, dav_basic, token_digest
+from tests.support import add_member, add_pat, add_user, dav_basic, propfind, token_digest
+
+
+# The DAV plugins read the production database; remove what each test adds.
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 def _seed_pat(email: str, scopes: str) -> str:
@@ -36,16 +41,16 @@ def _pat_by_token(token: str) -> PersonalAccessToken:
         return pat
 
 
+DISPLAY_NAMES = '<?xml version="1.0"?><propfind xmlns="DAV:"><prop><displayname/></prop></propfind>'
+
+
 def _propfind(client: TestClient, path: str, *, headers=None):
     # Standard CalDAV discovery PROPFIND with Depth=0.
     body = (
         '<?xml version="1.0"?>'
         '<propfind xmlns="DAV:"><prop><current-user-principal/></prop></propfind>'
     )
-    h = {"Depth": "0", "Content-Type": "application/xml"}
-    if headers:
-        h.update(headers)
-    return client.request("PROPFIND", path, headers=h, content=body)
+    return propfind(client, path, body, headers=headers, depth="0")
 
 
 class TestDavAuth:
@@ -146,12 +151,7 @@ class TestDavAuth:
         denied = _propfind(client, f"/dav/{email}/cal-{family_id + 100000}/", headers=headers)
         assert denied.status_code == 403
 
-        discovery = client.request(
-            "PROPFIND",
-            f"/dav/{email}/",
-            headers={**headers, "Depth": "1", "Content-Type": "application/xml"},
-            content='<?xml version="1.0"?><propfind xmlns="DAV:"><prop><displayname/></prop></propfind>',
-        )
+        discovery = propfind(client, f"/dav/{email}/", DISPLAY_NAMES, headers=headers)
         assert f"task-{family_id}" not in discovery.text
 
     def test_task_only_pat_authenticates_and_discovers_tasks(self, dav_app):
@@ -160,12 +160,7 @@ class TestDavAuth:
         client = TestClient(dav_app)
         headers = {"Authorization": dav_basic(email, token)}
 
-        discovery = client.request(
-            "PROPFIND",
-            f"/dav/{email}/",
-            headers={**headers, "Depth": "1", "Content-Type": "application/xml"},
-            content='<?xml version="1.0"?><propfind xmlns="DAV:"><prop><displayname/></prop></propfind>',
-        )
+        discovery = propfind(client, f"/dav/{email}/", DISPLAY_NAMES, headers=headers)
         assert discovery.status_code == 207, discovery.text
         assert f"task-{family_id}" in discovery.text
         assert f"cal-{family_id}" not in discovery.text

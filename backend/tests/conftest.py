@@ -8,11 +8,25 @@ migrations) keep their own setup.
 from __future__ import annotations
 
 import os
+import re
 import tempfile
+from pathlib import Path
 
 import pytest
+from sqlalchemy import func, select
+from sqlalchemy.engine import make_url
 
 from tests.support import TestSession, engine, foreign_keys_enabled, freeze_scheduler_in_utc, sqlite_engine
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# The Radicale mount reads its storage folder when ``app.main`` is first
+# imported, which happens while test modules are collected. Radicale keeps
+# nothing there (DAV data lives in the database), so a throwaway folder does,
+# unless the run configures one.
+if not os.environ.get("DAV_STORAGE_FOLDER"):
+    _dav_storage = tempfile.TemporaryDirectory(prefix="tribu-dav-test-")
+    os.environ["DAV_STORAGE_FOLDER"] = _dav_storage.name
 
 
 @pytest.fixture
@@ -103,32 +117,68 @@ def shopping_broadcasts(monkeypatch):
     return events
 
 
+def _is_test_database(url: str) -> bool:
+    """Whether ``url`` names a database the tests may write to and clean up:
+    an in-memory SQLite, a SQLite file in the repository or the temp folder,
+    or any database whose name has a word starting with "test"."""
+    parsed = make_url(url)
+    name = parsed.database or ""
+    if re.search(r"(?<![a-z])test", Path(name).name.lower()):
+        return True
+    if parsed.get_backend_name() != "sqlite":
+        return False
+    if name in ("", ":memory:"):
+        return True
+    path = Path(name).resolve()
+    return any(path.is_relative_to(root) for root in (REPO_ROOT, Path(tempfile.gettempdir()).resolve()))
+
+
 @pytest.fixture(scope="module")
 def production_db():
-    """Tables in the production database (``DATABASE_URL``) for one module.
+    """The tables of the production database (``DATABASE_URL``), for code
+    that opens ``app.database.SessionLocal`` itself, such as the DAV auth and
+    storage plugins; seed it with ``SessionLocal()`` too.
 
-    For code that opens ``app.database.SessionLocal`` itself, such as the
-    DAV auth and storage plugins; seed it with ``SessionLocal()`` too.
+    Refuses anything but a test database, and never drops tables: use
+    ``production_rows`` to remove what a test adds.
     """
+    from app.database import DATABASE_URL, Base, engine as production_engine
+
+    if not _is_test_database(DATABASE_URL):
+        pytest.fail(f"DATABASE_URL={make_url(DATABASE_URL)!r} is not a test database; refusing to write to it", pytrace=False)
+    Base.metadata.create_all(bind=production_engine)
+
+
+@pytest.fixture
+def production_rows(production_db):
+    """Deletes the rows the test adds to ``production_db``, and only those:
+    rows with an id above the highest one at the start of the test, and in
+    tables keyed otherwise, rows whose key was not there yet."""
     from app.database import Base, engine as production_engine
 
-    Base.metadata.create_all(bind=production_engine)
+    tables = [table for table in Base.metadata.sorted_tables if len(table.primary_key.columns) == 1]
+    with production_engine.connect() as conn:
+        before = {}
+        for table in tables:
+            (key,) = table.primary_key.columns
+            if key.name == "id":
+                before[table] = conn.execute(select(func.max(key))).scalar() or 0
+            else:
+                before[table] = set(conn.execute(select(key)).scalars())
     yield
-    Base.metadata.drop_all(bind=production_engine)
+    with production_engine.begin() as conn:
+        for table in reversed(tables):
+            (key,) = table.primary_key.columns
+            added = key > before[table] if key.name == "id" else key.not_in(before[table])
+            conn.execute(table.delete().where(added))
 
 
 @pytest.fixture(scope="module")
 def dav_app(production_db):
-    """The app with its Radicale mount on ``production_db`` and a temporary
-    DAV storage folder, set before ``app.main`` is first imported."""
-    with tempfile.TemporaryDirectory(prefix="tribu-dav-test-") as folder:
-        os.environ["DAV_STORAGE_FOLDER"] = folder
-        from app.main import app
+    """The app, whose Radicale mount works on ``production_db``."""
+    from app.main import app
 
-        try:
-            yield app
-        finally:
-            os.environ.pop("DAV_STORAGE_FOLDER", None)
+    return app
 
 
 @pytest.fixture

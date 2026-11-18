@@ -189,12 +189,8 @@ def dav_basic(login: str, token: str) -> str:
     return "Basic " + base64.b64encode(f"{login}:{token}".encode("utf-8")).decode("ascii")
 
 
-def delete_production_rows(*models) -> None:
-    """Deletes every row of ``models``, in this order, from the production
-    database (``DATABASE_URL``) that ``production_db`` and ``dav_app`` use."""
-    from app.database import SessionLocal
-
-    with SessionLocal() as db:
-        for model in models:
-            db.query(model).delete()
-        db.commit()
+def propfind(client, path: str, body: str, *, headers: Mapping | None = None, depth: str = "1"):
+    """Sends a PROPFIND with the XML ``body`` and the given ``Depth``."""
+    return client.request(
+        "PROPFIND", path, headers={"Depth": depth, "Content-Type": "application/xml", **(headers or {})}, content=body,
+    )
