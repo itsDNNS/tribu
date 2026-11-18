@@ -151,3 +151,10 @@ def freeze_scheduler_in_utc(monkeypatch, now: datetime) -> None:
 
     freeze_scheduler(monkeypatch, now)
     monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
+
+
+def post_contact(client, family_id: int, **fields) -> dict:
+    """Creates a contact through the API (the client carries the auth) and returns it."""
+    resp = client.post("/contacts", json={"family_id": family_id, **fields})
+    assert resp.status_code == 200, resp.text
+    return resp.json()

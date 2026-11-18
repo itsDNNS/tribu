@@ -1,76 +1,24 @@
 """Contacts carry birthdays, and the same person is not kept twice."""
-import hashlib
-
 import pytest
 import vobject
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core.contact_duplicates import normalize_name, normalize_phone
-from app.database import Base, get_db
 from app.main import app
-from app.models import Contact, Family, FamilyBirthday, Membership, PersonalAccessToken, User
-from app.security import PAT_PREFIX, hash_password
+from app.models import Contact, Family
+from tests.support import TestSession, post_contact, seed_member
 
-engine = create_engine("sqlite:///./test-contacts-unified.db", connect_args={"check_same_thread": False})
-TestSession = sessionmaker(bind=engine, autoflush=False)
-
-
-@event.listens_for(engine, "connect")
-def _foreign_keys(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
+pytestmark = pytest.mark.usefixtures("app_db")
 
 
 @pytest.fixture
 def api():
-    db = TestSession()
-    user = User(email="c@example.com", password_hash=hash_password("p"), display_name="C")
-    db.add(user)
-    db.flush()
-    family = Family(name="Contacts Family")
-    db.add(family)
-    db.flush()
-    db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-    plain = f"{PAT_PREFIX}contacts-rw"
-    db.add(PersonalAccessToken(
-        user_id=user.id,
-        name="pat",
-        token_hash=hashlib.sha256(plain.encode()).hexdigest(),
-        token_lookup=hashlib.sha256(plain.encode()).hexdigest(),
-        scopes="contacts:read,contacts:write,birthdays:read,birthdays:write",
-    ))
-    db.commit()
-    family_id = family.id
-    db.close()
+    member = seed_member(
+        scopes="contacts:read,contacts:write,birthdays:read,birthdays:write", family_name="Contacts Family", display_name="C",
+    )
     client = TestClient(app)
-    client.headers["Authorization"] = f"Bearer {plain}"
-    return client, family_id
-
-
-def _contact(client, family_id, **fields):
-    resp = client.post("/contacts", json={"family_id": family_id, **fields})
-    assert resp.status_code == 200, resp.text
-    return resp.json()
+    client.headers.update(member.headers)
+    return client, member.family_id
 
 
 def test_normalization():
@@ -81,7 +29,7 @@ def test_normalization():
 
 def test_a_contact_keeps_its_year_of_birth(api):
     client, family_id = api
-    contact = _contact(client, family_id, full_name="Helga Müller", birthday_month=10, birthday_day=2, birthday_year=1948)
+    contact = post_contact(client, family_id, full_name="Helga Müller", birthday_month=10, birthday_day=2, birthday_year=1948)
     assert contact["birthday_year"] == 1948
     [birthday] = client.get("/birthdays", params={"family_id": family_id}).json()
     assert (birthday["contact_id"], birthday["year"]) == (contact["id"], 1948)
@@ -107,10 +55,10 @@ def test_the_birthdays_api_works_on_contacts(api):
 
 def test_duplicates_are_found_by_email_phone_and_name(api):
     client, family_id = api
-    a = _contact(client, family_id, full_name="Sophie Weber", phone="0170 1234567")
-    b = _contact(client, family_id, full_name="Dr. S. Weber", phone="+49 170 1234567")
-    c = _contact(client, family_id, full_name="Weber, Sophie", email="sophie@example.com")
-    _contact(client, family_id, full_name="Tom Becker", email="tom@example.com")
+    a = post_contact(client, family_id, full_name="Sophie Weber", phone="0170 1234567")
+    b = post_contact(client, family_id, full_name="Dr. S. Weber", phone="+49 170 1234567")
+    c = post_contact(client, family_id, full_name="Weber, Sophie", email="sophie@example.com")
+    post_contact(client, family_id, full_name="Tom Becker", email="tom@example.com")
     groups = client.get("/contacts/duplicates", params={"family_id": family_id}).json()
     assert groups == [{"contact_ids": [a["id"], b["id"], c["id"]], "reasons": ["name", "phone"], "member_user_id": None}]
 
@@ -120,8 +68,8 @@ def test_duplicates_are_found_by_email_phone_and_name(api):
 
 def test_merging_keeps_everything_once(api):
     client, family_id = api
-    keep = _contact(client, family_id, full_name="Sophie Weber", phone="0170 1234567")
-    other = _contact(client, family_id, full_name="Sophie Weber", email="sophie@example.com", phone="+49 30 99887766", birthday_month=7, birthday_day=7, birthday_year=1990)
+    keep = post_contact(client, family_id, full_name="Sophie Weber", phone="0170 1234567")
+    other = post_contact(client, family_id, full_name="Sophie Weber", email="sophie@example.com", phone="+49 30 99887766", birthday_month=7, birthday_day=7, birthday_year=1990)
     merged = client.post("/contacts/merge", json={"family_id": family_id, "keep_id": keep["id"], "merge_ids": [other["id"]]})
     assert merged.status_code == 200, merged.text
     body = merged.json()
@@ -141,7 +89,7 @@ def test_merging_keeps_everything_once(api):
 
 def test_merging_other_families_contacts_is_refused(api):
     client, family_id = api
-    keep = _contact(client, family_id, full_name="Anna")
+    keep = post_contact(client, family_id, full_name="Anna")
     db = TestSession()
     stranger_family = Family(name="Other")
     db.add(stranger_family)
@@ -157,7 +105,7 @@ def test_merging_other_families_contacts_is_refused(api):
 
 def test_csv_import_completes_known_people(api):
     client, family_id = api
-    _contact(client, family_id, full_name="Sophie Weber", phone="0170 1234567")
+    post_contact(client, family_id, full_name="Sophie Weber", phone="0170 1234567")
     csv_text = (
         "full_name,email,phone,birthday_month,birthday_day,birthday_year\n"
         "Sophie Weber,sophie@example.com,+49 170 1234567,7,7,1990\n"

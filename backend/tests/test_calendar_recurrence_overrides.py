@@ -7,80 +7,26 @@ place of the regular occurrence, and keeps it in sync with the feed
 (issue #510).
 """
 
-import hashlib
 from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
 from icalendar import Calendar
-from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
 
 from app.core.ics_utils import events_to_ics, ics_to_event_dicts
-from app.database import Base, get_db
 from app.main import app
-from app.models import CalendarEvent, CalendarSubscription, Family, Membership, PersonalAccessToken, User
-from app.security import hash_password, PAT_PREFIX
+from app.models import CalendarEvent, CalendarSubscription
+from tests.calendar_feed_support import patch_ics_fetch, seed_calendar_admin
+from tests.support import TestSession, auth
 
 
-engine = create_engine(
-    "sqlite:///./test-calendar-recurrence-overrides.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine, autoflush=False)
+pytestmark = pytest.mark.usefixtures("app_db")
 
 FEED_URL = "https://feed.example.com/pack.ics"
 SERIES_UID = "pack@google.com"
 
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
-
-def _seed_adult() -> tuple[str, int]:
-    db = TestSession()
-    try:
-        user = User(email="rid@example.com", password_hash=hash_password("p"), display_name="Rid")
-        db.add(user)
-        db.flush()
-        family = Family(name="Rid Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}rid-rw"
-        digest = hashlib.sha256(plain.encode("utf-8")).hexdigest()
-        db.add(PersonalAccessToken(
-            user_id=user.id,
-            name="rid-pat",
-            token_hash=digest,
-            token_lookup=digest,
-            scopes="calendar:read,calendar:write",
-        ))
-        db.commit()
-        return plain, family.id
-    finally:
-        db.close()
+client = TestClient(app)
 
 
 @pytest.fixture
@@ -94,10 +40,6 @@ def app_tz(monkeypatch):
 
     yield _set
     app_timezone.cache_clear()
-
-
-def _auth(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}"}
 
 
 def _calendar(*vevents: str) -> str:
@@ -135,16 +77,14 @@ DINNER = _vevent(
 
 
 def _patch_fetch(monkeypatch, ics_text: str):
-    from app.modules import calendar_router as router_mod
-
-    monkeypatch.setattr(router_mod, "fetch_ics_text", lambda url, **kw: ics_text)
+    patch_ics_fetch(monkeypatch, lambda url, **kw: ics_text)
 
 
 def _subscribe(client: TestClient, token: str, family_id: int) -> dict:
     resp = client.post(
         "/calendar/subscriptions",
         json={"family_id": family_id, "source_url": FEED_URL, "source_name": "Pack"},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert resp.status_code == 200, resp.text
     return resp.json()
@@ -154,7 +94,7 @@ def _titles_between(client: TestClient, token: str, family_id: int, start: str, 
     resp = client.get(
         "/calendar/events",
         params={"family_id": family_id, "range_start": start, "range_end": end, "limit": 200},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert resp.status_code == 200, resp.text
     return [(item["starts_at"][:10], item["title"]) for item in resp.json()["items"]]
@@ -218,9 +158,8 @@ class TestParser:
 
 class TestSubscriptionImport:
     def test_feed_with_changed_occurrences_imports_all_of_them(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         _patch_fetch(monkeypatch, _calendar(SERIES, BOWLING, DINNER))
-        client = TestClient(app)
 
         subscription = _subscribe(client, token, family_id)
 
@@ -235,9 +174,8 @@ class TestSubscriptionImport:
         assert all(r.subscription_id == subscription["id"] for r in rows)
 
     def test_changed_occurrence_replaces_the_regular_one(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         _patch_fetch(monkeypatch, _calendar(SERIES, BOWLING, DINNER))
-        client = TestClient(app)
         _subscribe(client, token, family_id)
 
         titles = _titles_between(client, token, family_id, "2026-10-05T00:00:00", "2026-10-31T00:00:00")
@@ -250,12 +188,11 @@ class TestSubscriptionImport:
         ]
 
     def test_moved_occurrence_is_hidden_even_outside_the_range_it_moved_to(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         far_away = BOWLING.replace("DTSTART:20261016T180000", "DTSTART:20261120T180000").replace(
             "DTEND:20261016T200000", "DTEND:20261120T200000"
         )
         _patch_fetch(monkeypatch, _calendar(SERIES, far_away))
-        client = TestClient(app)
         _subscribe(client, token, family_id)
 
         titles = _titles_between(client, token, family_id, "2026-10-12T00:00:00", "2026-10-19T00:00:00")
@@ -263,13 +200,12 @@ class TestSubscriptionImport:
         assert titles == []
 
     def test_refresh_removes_occurrences_the_feed_no_longer_changes(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         _patch_fetch(monkeypatch, _calendar(SERIES, BOWLING, DINNER))
-        client = TestClient(app)
         subscription = _subscribe(client, token, family_id)
 
         _patch_fetch(monkeypatch, _calendar(SERIES, DINNER.replace("Dinner", "Dinner out")))
-        resp = client.post(f"/calendar/subscriptions/{subscription['id']}/refresh", headers=_auth(token))
+        resp = client.post(f"/calendar/subscriptions/{subscription['id']}/refresh", headers=auth(token))
 
         assert resp.status_code == 200, resp.text
         assert resp.json()["last_sync_status"] == "success"
@@ -278,7 +214,7 @@ class TestSubscriptionImport:
         assert titles == [("2026-10-15", "Pack Meeting")]
 
     def test_changed_occurrence_does_not_attach_to_another_sources_series(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         db = TestSession()
         db.add(CalendarEvent(
             family_id=family_id,
@@ -291,7 +227,6 @@ class TestSubscriptionImport:
         db.commit()
         db.close()
         _patch_fetch(monkeypatch, _calendar(BOWLING))
-        client = TestClient(app)
 
         subscription = _subscribe(client, token, family_id)
 
@@ -301,18 +236,17 @@ class TestSubscriptionImport:
         assert titles == [("2026-10-15", "Local series")]
 
     def test_manual_import_stores_changed_occurrences(self):
-        token, family_id = _seed_adult()
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
 
         resp = client.post(
             "/calendar/events/import-ics",
             json={"family_id": family_id, "ics_text": _calendar(SERIES, BOWLING)},
-            headers=_auth(token),
+            headers=auth(token),
         )
         again = client.post(
             "/calendar/events/import-ics",
             json={"family_id": family_id, "ics_text": _calendar(SERIES, BOWLING)},
-            headers=_auth(token),
+            headers=auth(token),
         )
 
         assert resp.json()["created"] == 2
@@ -320,15 +254,14 @@ class TestSubscriptionImport:
         assert len(_rows()) == 2
 
     def test_preview_counts_changed_occurrences_as_updates_after_import(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         _patch_fetch(monkeypatch, _calendar(SERIES, BOWLING))
-        client = TestClient(app)
         _subscribe(client, token, family_id)
 
         resp = client.post(
             "/calendar/events/subscribe-ics/preview",
             json={"family_id": family_id, "source_url": FEED_URL},
-            headers=_auth(token),
+            headers=auth(token),
         )
 
         assert resp.status_code == 200, resp.text
@@ -336,7 +269,7 @@ class TestSubscriptionImport:
         assert (body["would_create"], body["would_update"], body["would_skip"]) == (0, 2, 0)
 
     def test_storage_failure_is_recorded_instead_of_a_500(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         _patch_fetch(monkeypatch, _calendar(SERIES))
         from app.modules import calendar_router as router_mod
 
@@ -344,7 +277,6 @@ class TestSubscriptionImport:
             raise IntegrityError("INSERT", {}, Exception("duplicate key"))
 
         monkeypatch.setattr(router_mod, "_apply_ics_events", _fail)
-        client = TestClient(app)
 
         subscription = _subscribe(client, token, family_id)
 
@@ -362,17 +294,16 @@ class TestDeleting:
         resp = client.post(
             "/calendar/events/import-ics",
             json={"family_id": family_id, "ics_text": _calendar(SERIES, BOWLING)},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
 
     def test_deleting_a_changed_occurrence_cancels_it(self):
-        token, family_id = _seed_adult()
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
         self._import(client, token, family_id)
         bowling = next(r for r in _rows() if r.recurrence_id is not None)
 
-        resp = client.delete(f"/calendar/events/{bowling.id}", headers=_auth(token))
+        resp = client.delete(f"/calendar/events/{bowling.id}", headers=auth(token))
 
         assert resp.status_code == 200, resp.text
         rows = _rows()
@@ -381,12 +312,11 @@ class TestDeleting:
         assert _titles_between(client, token, family_id, "2026-10-12T00:00:00", "2026-10-19T00:00:00") == []
 
     def test_deleting_the_series_deletes_its_changed_occurrences(self):
-        token, family_id = _seed_adult()
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
         self._import(client, token, family_id)
         series = next(r for r in _rows() if r.recurrence_id is None)
 
-        resp = client.delete(f"/calendar/events/{series.id}", headers=_auth(token))
+        resp = client.delete(f"/calendar/events/{series.id}", headers=auth(token))
 
         assert resp.status_code == 200, resp.text
         assert _rows() == []
@@ -394,7 +324,7 @@ class TestDeleting:
 
 class TestUniqueness:
     def test_series_uid_stays_unique_per_family(self):
-        _, family_id = _seed_adult()
+        _, family_id = seed_calendar_admin()
         db = TestSession()
         try:
             for title in ("One", "Two"):
@@ -405,7 +335,7 @@ class TestUniqueness:
             db.close()
 
     def test_changed_occurrence_is_unique_per_recurrence_id(self):
-        _, family_id = _seed_adult()
+        _, family_id = seed_calendar_admin()
         db = TestSession()
         try:
             for title in ("One", "Two"):
@@ -497,7 +427,7 @@ class TestMonthlyByWeekdayImport:
 
     def test_issue_510_feed_shows_every_second_thursday_with_its_changes(self, monkeypatch, app_tz):
         app_tz("America/Chicago")
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         _patch_fetch(monkeypatch, _calendar(
             _vevent(
                 "DTSTART;TZID=America/Chicago:20261008T184500",
@@ -527,7 +457,6 @@ class TestMonthlyByWeekdayImport:
                 "SUMMARY:Dinner",
             ),
         ))
-        client = TestClient(app)
 
         subscription = _subscribe(client, token, family_id)
 
@@ -546,13 +475,12 @@ class TestMonthlyByWeekdayImport:
 
     @pytest.mark.parametrize("recurrence", ["monthly_weekday", "monthly_last_weekday"])
     def test_events_can_be_created_with_weekday_rules(self, recurrence):
-        token, family_id = _seed_adult()
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
 
         resp = client.post(
             "/calendar/events",
             json={"family_id": family_id, "title": "Club", "starts_at": "2026-10-29T18:00:00", "recurrence": recurrence},
-            headers=_auth(token),
+            headers=auth(token),
         )
 
         assert resp.status_code == 200, resp.text
@@ -645,8 +573,7 @@ class TestWeeklyAndYearlyImport:
         assert (valid[0]["recurrence"], valid[0]["recurrence_weekdays"]) == (recurrence, weekdays)
 
     def test_api_stores_and_normalizes_weekdays(self):
-        token, family_id = _seed_adult()
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
 
         created = client.post(
             "/calendar/events",
@@ -654,7 +581,7 @@ class TestWeeklyAndYearlyImport:
                 "family_id": family_id, "title": "Training", "starts_at": "2026-10-05T18:00:00",
                 "recurrence": "weekly", "recurrence_weekdays": [3, 0, 3],
             },
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert created.status_code == 200, created.text
         assert created.json()["recurrence_weekdays"] == [0, 3]
@@ -663,25 +590,24 @@ class TestWeeklyAndYearlyImport:
         listed = _titles_between(client, token, family_id, "2026-10-05T00:00:00", "2026-10-12T00:00:00")
         assert listed == [("2026-10-05", "Training"), ("2026-10-08", "Training")]
 
-        monthly = client.patch(f"/calendar/events/{event_id}", json={"recurrence": "monthly"}, headers=_auth(token))
+        monthly = client.patch(f"/calendar/events/{event_id}", json={"recurrence": "monthly"}, headers=auth(token))
         assert monthly.json()["recurrence_weekdays"] is None
 
         invalid = client.post(
             "/calendar/events",
             json={"family_id": family_id, "title": "X", "starts_at": "2026-10-05T18:00:00", "recurrence": "weekly", "recurrence_weekdays": [7]},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert invalid.status_code == 422
 
     @pytest.mark.parametrize("recurrence", ["yearly_weekday", "yearly_last_weekday"])
     def test_events_can_be_created_with_yearly_weekday_rules(self, recurrence):
-        token, family_id = _seed_adult()
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
 
         resp = client.post(
             "/calendar/events",
             json={"family_id": family_id, "title": "Holiday", "starts_at": "2026-11-26T00:00:00", "all_day": True, "recurrence": recurrence},
-            headers=_auth(token),
+            headers=auth(token),
         )
 
         assert resp.status_code == 200, resp.text
@@ -738,7 +664,7 @@ class TestThisAndFuture:
         assert valid[0]["recurrence_end"] == datetime(2026, 11, 2, 17, 59, 59)
 
     def test_feed_shows_the_changed_series_from_the_change_on(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         moved = _vevent(
             f"UID:{CHOIR_UID}",
             "RECURRENCE-ID:20261110T190000",
@@ -746,7 +672,6 @@ class TestThisAndFuture:
             "DTSTART:20261111T190000",
         )
         _patch_fetch(monkeypatch, _calendar(CHOIR, CHOIR_FROM_NOW_ON, moved))
-        client = TestClient(app)
 
         subscription = _subscribe(client, token, family_id)
 
@@ -774,17 +699,16 @@ class TestThisAndFuture:
         assert ics.count("EXDATE") == 1
 
     def test_deleting_the_changed_series_ends_the_series_before_it(self):
-        token, family_id = _seed_adult()
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
         resp = client.post(
             "/calendar/events/import-ics",
             json={"family_id": family_id, "ics_text": _calendar(CHOIR, CHOIR_FROM_NOW_ON)},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.json()["created"] == 2
         split = next(r for r in _rows() if r.recurrence_id is not None)
 
-        deleted = client.delete(f"/calendar/events/{split.id}", headers=_auth(token))
+        deleted = client.delete(f"/calendar/events/{split.id}", headers=auth(token))
 
         assert deleted.status_code == 200, deleted.text
         rows = _rows()

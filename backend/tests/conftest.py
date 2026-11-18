@@ -67,3 +67,12 @@ def destinations(monkeypatch):
     calls: list[dict] = []
     monkeypatch.setattr(scheduler_module, "dispatch_family_notification", lambda **kwargs: calls.append(kwargs))
     return calls
+
+
+@pytest.fixture
+def oidc_db(app_db):
+    """``app_db``, and the OIDC discovery cache is emptied after the test."""
+    from app.core import oidc as oidc_core
+
+    yield
+    oidc_core.invalidate_discovery_cache()

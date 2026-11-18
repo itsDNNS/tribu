@@ -11,102 +11,24 @@ few state / nonce / redirect failure modes.
 """
 from __future__ import annotations
 
+from datetime import timedelta
 from urllib.parse import parse_qs, urlsplit
 
 import jwt
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core import oidc as oidc_core
-from app.database import Base, get_db
+from app.core.clock import utcnow
 from app.main import app
 from app.models import Family, FamilyInvitation, Membership, OIDCIdentity, User
 from app.modules.oidc_auth_router import FLOW_COOKIE
-from app.security import JWT_SECRET, hash_password
+from app.security import JWT_SECRET
+from tests.oidc_support import ISSUER, discovery_document, seed_oidc_config, seed_user
+from tests.support import TestSession
 
 
-engine = create_engine(
-    "sqlite:///./test-oidc-flow.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-    oidc_core.invalidate_discovery_cache()
-
-
-ISSUER = "https://idp.example.com"
-
-
-def _valid_discovery() -> dict:
-    return {
-        "issuer": ISSUER,
-        "authorization_endpoint": f"{ISSUER}/authorize",
-        "token_endpoint": f"{ISSUER}/token",
-        "userinfo_endpoint": f"{ISSUER}/userinfo",
-        "jwks_uri": f"{ISSUER}/jwks",
-    }
-
-
-def _seed_config(
-    *,
-    allow_signup: bool = False,
-    disable_password_login: bool = False,
-    button_label: str = "",
-    enabled: bool = True,
-    proven: bool = True,
-) -> None:
-    """Seed the OIDC config rows for tests.
-
-    ``proven=True`` also records a recent successful SSO login so the
-    password-login gate treats the config as trusted end-to-end. Tests
-    that want to exercise the "flag flipped before first success"
-    path pass ``proven=False``.
-    """
-    db = TestSession()
-    try:
-        oidc_core.save_config(
-            db,
-            enabled=enabled,
-            preset="generic",
-            button_label=button_label,
-            issuer=ISSUER,
-            client_id="tribu-client",
-            client_secret="topsecret",
-            scopes="openid profile email",
-            allow_signup=allow_signup,
-            disable_password_login=disable_password_login,
-        )
-        if proven:
-            oidc_core.record_successful_sso_login(db)
-        db.commit()
-    finally:
-        db.close()
-
+pytestmark = pytest.mark.usefixtures("oidc_db")
 
 client = TestClient(app, follow_redirects=False)
 
@@ -129,7 +51,7 @@ def test_public_config_when_disabled():
 
 
 def test_public_config_when_enabled_and_ready():
-    _seed_config(button_label="Sign in with Home IdP", disable_password_login=True)
+    seed_oidc_config(button_label="Sign in with Home IdP", disable_password_login=True)
     resp = client.get("/auth/oidc/public-config")
     body = resp.json()
     assert body["enabled"] is True
@@ -150,8 +72,8 @@ def test_login_rejects_when_not_configured():
 
 
 def test_login_redirects_to_authorize(monkeypatch):
-    _seed_config()
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    seed_oidc_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
 
     resp = client.get("/auth/oidc/login?invite=abc&redirect_to=/calendar")
     assert resp.status_code == 303
@@ -177,8 +99,8 @@ def test_login_redirects_to_authorize(monkeypatch):
 
 
 def test_login_rejects_open_redirect(monkeypatch):
-    _seed_config()
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    seed_oidc_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
 
     resp = client.get("/auth/oidc/login?redirect_to=https://evil.example.com/")
     assert resp.status_code == 303
@@ -189,8 +111,8 @@ def test_login_rejects_open_redirect(monkeypatch):
 
 
 def test_login_accepts_native_mobile_redirect(monkeypatch):
-    _seed_config()
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    seed_oidc_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
 
     resp = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback&mobile_state=native-123")
     assert resp.status_code == 303
@@ -203,8 +125,8 @@ def test_login_accepts_native_mobile_redirect(monkeypatch):
 
 
 def test_login_rejects_untrusted_mobile_redirect(monkeypatch):
-    _seed_config()
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    seed_oidc_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
 
     resp = client.get("/auth/oidc/login?mobile_redirect_uri=https%3A%2F%2Fevil.example%2Fcallback")
     assert resp.status_code == 400
@@ -213,7 +135,7 @@ def test_login_rejects_untrusted_mobile_redirect(monkeypatch):
 
 
 def test_login_falls_back_when_discovery_fails(monkeypatch):
-    _seed_config()
+    seed_oidc_config()
 
     def broken(url, timeout=5.0):
         raise oidc_core.DiscoveryError("boom")
@@ -246,8 +168,8 @@ def test_callback_with_tampered_flow_cookie():
 
 
 def test_callback_state_mismatch(monkeypatch):
-    _seed_config()
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    seed_oidc_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
 
     client.get("/auth/oidc/login")
     resp = client.get("/auth/oidc/callback?code=x&state=WRONG")
@@ -257,8 +179,8 @@ def test_callback_state_mismatch(monkeypatch):
 
 
 def test_callback_provider_error_is_reported(monkeypatch):
-    _seed_config()
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    seed_oidc_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
 
     start = client.get("/auth/oidc/login")
     assert start.status_code == 303
@@ -269,8 +191,8 @@ def test_callback_provider_error_is_reported(monkeypatch):
 
 
 def test_mobile_callback_provider_error_returns_to_app(monkeypatch):
-    _seed_config()
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    seed_oidc_config()
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
 
     start = client.get("/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback&mobile_state=native-err")
     assert start.status_code == 303
@@ -286,7 +208,7 @@ def test_mobile_callback_provider_error_returns_to_app(monkeypatch):
 
 
 def _perform_login_and_extract_state(monkeypatch) -> str:
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
     resp = client.get("/auth/oidc/login")
     location = resp.headers["location"]
     for part in location.split("?", 1)[1].split("&"):
@@ -297,7 +219,7 @@ def _perform_login_and_extract_state(monkeypatch) -> str:
 
 
 def _perform_mobile_login_and_extract_state(monkeypatch, mobile_state: str = "") -> str:
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
     url = "/auth/oidc/login?mobile_redirect_uri=tribu%3A%2F%2Fauth%2Foidc%2Fcallback"
     if mobile_state:
         url += f"&mobile_state={mobile_state}"
@@ -340,7 +262,7 @@ def test_callback_reuses_authorize_redirect_uri(monkeypatch):
     requests the IdP would otherwise reject the code for
     redirect_uri_mismatch.
     """
-    _seed_config(proven=False)
+    seed_oidc_config(proven=False)
 
     captured = {}
 
@@ -357,7 +279,7 @@ def test_callback_reuses_authorize_redirect_uri(monkeypatch):
             raw={},
         )
 
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
     monkeypatch.setattr(oidc_core, "exchange_code_for_tokens", fake_exchange)
     monkeypatch.setattr(oidc_core, "verify_id_token", fake_verify)
 
@@ -372,12 +294,7 @@ def test_callback_reuses_authorize_redirect_uri(monkeypatch):
     state = start.headers["location"].split("state=", 1)[1].split("&", 1)[0]
 
     # Seed a user so the callback succeeds
-    db = TestSession()
-    try:
-        db.add(User(email="pin@example.com", password_hash=hash_password("P1xxx1234"), display_name="Pin"))
-        db.commit()
-    finally:
-        db.close()
+    seed_user("pin@example.com", "Pin", password="P1xxx1234")
 
     # Callback arrives with a DIFFERENT forwarded host. Without the
     # pin, redirect_uri would be recomputed to the second host and
@@ -398,17 +315,8 @@ def test_callback_stamps_last_success_timestamp(monkeypatch):
     proven=False so the assertion actually proves the callback is
     the thing that stamps.
     """
-    _seed_config(proven=False)
-    db = TestSession()
-    try:
-        db.add(User(
-            email="stamp@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Stamp",
-        ))
-        db.commit()
-    finally:
-        db.close()
+    seed_oidc_config(proven=False)
+    seed_user("stamp@example.com", "Stamp")
 
     state = _perform_login_and_extract_state(monkeypatch)
     _mock_token_exchange(
@@ -435,17 +343,8 @@ def test_callback_stamps_last_success_timestamp(monkeypatch):
 
 
 def test_mobile_callback_exchanges_short_code_for_bearer_tokens(monkeypatch):
-    _seed_config(proven=False)
-    db = TestSession()
-    try:
-        db.add(User(
-            email="mobile-sso@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Mobile SSO",
-        ))
-        db.commit()
-    finally:
-        db.close()
+    seed_oidc_config(proven=False)
+    seed_user("mobile-sso@example.com", "Mobile SSO")
 
     state = _perform_mobile_login_and_extract_state(monkeypatch)
     _mock_token_exchange(
@@ -482,17 +381,8 @@ def test_mobile_callback_exchanges_short_code_for_bearer_tokens(monkeypatch):
 
 
 def test_mobile_callback_binds_short_code_to_native_state(monkeypatch):
-    _seed_config(proven=False)
-    db = TestSession()
-    try:
-        db.add(User(
-            email="mobile-state@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Mobile State",
-        ))
-        db.commit()
-    finally:
-        db.close()
+    seed_oidc_config(proven=False)
+    seed_user("mobile-state@example.com", "Mobile State")
 
     native_state = "native-state-456"
     state = _perform_mobile_login_and_extract_state(monkeypatch, native_state)
@@ -526,23 +416,8 @@ def test_login_not_blocked_until_first_sso_success(monkeypatch):
     non-empty fields. Password login must stay available until at
     least one callback has actually completed.
     """
-    db = TestSession()
-    try:
-        db.add(User(
-            email="admin@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Admin",
-        ))
-        oidc_core.save_config(
-            db,
-            enabled=True, preset="generic", button_label="",
-            issuer=ISSUER, client_id="tribu-client", client_secret="s",
-            scopes="openid profile email",
-            allow_signup=False, disable_password_login=True,
-        )
-        db.commit()
-    finally:
-        db.close()
+    seed_user("admin@example.com", "Admin")
+    seed_oidc_config(disable_password_login=True, proven=False)
 
     resp = client.post(
         "/auth/login",
@@ -554,19 +429,8 @@ def test_login_not_blocked_until_first_sso_success(monkeypatch):
 
 
 def test_callback_links_existing_user_by_verified_email(monkeypatch):
-    _seed_config()
-    db = TestSession()
-    try:
-        user = User(
-            email="anna@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Anna",
-        )
-        db.add(user)
-        db.commit()
-        user_id = user.id
-    finally:
-        db.close()
+    seed_oidc_config()
+    user_id = seed_user("anna@example.com", "Anna")
 
     state = _perform_login_and_extract_state(monkeypatch)
     _mock_token_exchange(
@@ -596,17 +460,8 @@ def test_callback_links_existing_user_by_verified_email(monkeypatch):
 
 
 def test_callback_refuses_unverified_email(monkeypatch):
-    _seed_config()
-    db = TestSession()
-    try:
-        db.add(User(
-            email="anna@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Anna",
-        ))
-        db.commit()
-    finally:
-        db.close()
+    seed_oidc_config()
+    seed_user("anna@example.com", "Anna")
 
     state = _perform_login_and_extract_state(monkeypatch)
     _mock_token_exchange(
@@ -634,25 +489,16 @@ def test_callback_refuses_unverified_email(monkeypatch):
 
 
 def test_callback_returning_user_updates_last_login(monkeypatch):
-    _seed_config()
-    db = TestSession()
-    try:
-        user = User(
-            email="anna@example.com",
-            password_hash=None,
-            display_name="Anna",
-        )
-        db.add(user)
-        db.flush()
+    seed_oidc_config()
+    user_id = seed_user("anna@example.com", "Anna", password=None)
+    with TestSession() as db:
         db.add(OIDCIdentity(
-            user_id=user.id,
+            user_id=user_id,
             issuer=ISSUER,
             subject="sub-123",
             email_at_login="old@example.com",
         ))
         db.commit()
-    finally:
-        db.close()
 
     state = _perform_login_and_extract_state(monkeypatch)
     _mock_token_exchange(
@@ -681,7 +527,7 @@ def test_callback_returning_user_updates_last_login(monkeypatch):
 
 
 def test_callback_unknown_user_without_signup(monkeypatch):
-    _seed_config(allow_signup=False)
+    seed_oidc_config(allow_signup=False)
     state = _perform_login_and_extract_state(monkeypatch)
     _mock_token_exchange(
         monkeypatch,
@@ -705,30 +551,28 @@ def test_callback_unknown_user_without_signup(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_invite_bound_signup_creates_user_and_membership(monkeypatch):
-    _seed_config(allow_signup=True)
-    db = TestSession()
-    try:
-        fam = Family(name="Mueller Family")
-        db.add(fam)
+def _seed_invitation(token: str, *, family_name: str, role_preset: str, is_adult_preset: bool) -> int:
+    """Commits a new family with an invitation valid for a day and returns the family id."""
+    with TestSession() as db:
+        family = Family(name=family_name)
+        db.add(family)
         db.flush()
-        invitation = FamilyInvitation(
-            family_id=fam.id,
-            token="invite-xyz",
-            role_preset="member",
-            is_adult_preset=True,
-            expires_at=oidc_core.utcnow() if False else __import__("app.core.clock", fromlist=["utcnow"]).utcnow(),
-        )
-        # extend expiry into the future
-        from datetime import timedelta
-        invitation.expires_at = invitation.expires_at + timedelta(days=1)
-        db.add(invitation)
+        db.add(FamilyInvitation(
+            family_id=family.id,
+            token=token,
+            role_preset=role_preset,
+            is_adult_preset=is_adult_preset,
+            expires_at=utcnow() + timedelta(days=1),
+        ))
         db.commit()
-        fam_id = fam.id
-    finally:
-        db.close()
+        return family.id
 
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+
+def test_invite_bound_signup_creates_user_and_membership(monkeypatch):
+    seed_oidc_config(allow_signup=True)
+    fam_id = _seed_invitation("invite-xyz", family_name="Mueller Family", role_preset="member", is_adult_preset=True)
+
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
     resp_start = client.get("/auth/oidc/login?invite=invite-xyz")
     state = None
     for part in resp_start.headers["location"].split("?", 1)[1].split("&"):
@@ -774,19 +618,11 @@ def test_callback_race_guard_on_existing_email_link(monkeypatch):
     insert — achieved by patching _link_identity_with_race_guard's
     IntegrityError path via a pre-seeded row that fails the flush.
     """
-    _seed_config()
-    db = TestSession()
-    try:
-        user = User(
-            email="anna@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Anna",
-        )
-        db.add(user)
-        db.flush()
-        winner_user_id = user.id
-        # Seed the winner row that would appear between our read and
-        # write. The handler should catch IntegrityError and reuse it.
+    seed_oidc_config()
+    winner_user_id = seed_user("anna@example.com", "Anna")
+    # Seed the winner row that would appear between our read and
+    # write. The handler should catch IntegrityError and reuse it.
+    with TestSession() as db:
         db.add(OIDCIdentity(
             user_id=winner_user_id,
             issuer=ISSUER,
@@ -794,8 +630,6 @@ def test_callback_race_guard_on_existing_email_link(monkeypatch):
             email_at_login="anna@example.com",
         ))
         db.commit()
-    finally:
-        db.close()
 
     state = _perform_login_and_extract_state(monkeypatch)
     _mock_token_exchange(
@@ -866,17 +700,12 @@ def test_token_endpoint_auth_bubbles_non_401_failure(monkeypatch):
 
 def test_flow_cookie_rejects_wrong_purpose():
     """Session-style JWTs (no purpose=oidc_flow) must not satisfy callback."""
-    import jwt as _jwt
-    from datetime import timedelta as _td
-    from app.core.clock import utcnow as _now
-    from app.security import JWT_SECRET as _secret
-
     # Craft a JWT with valid HS256/exp but missing purpose claim.
-    fake = _jwt.encode(
+    fake = jwt.encode(
         {"state": "anything", "nonce": "n", "verifier": "v",
          "invite": "", "redirect_to": "/", "issuer": ISSUER,
-         "exp": _now() + _td(seconds=60)},
-        _secret, algorithm="HS256",
+         "exp": utcnow() + timedelta(seconds=60)},
+        JWT_SECRET, algorithm="HS256",
     )
     client.cookies.set("tribu_oidc_flow", fake, path="/auth/oidc")
     resp = client.get("/auth/oidc/callback?code=c&state=anything")
@@ -887,26 +716,10 @@ def test_flow_cookie_rejects_wrong_purpose():
 
 def test_invite_bound_signup_rejects_admin_non_adult_preset(monkeypatch):
     """Defensive demotion: preset admin+non-adult must be downgraded to member."""
-    _seed_config(allow_signup=True)
-    db = TestSession()
-    try:
-        fam = Family(name="Fam")
-        db.add(fam)
-        db.flush()
-        from datetime import timedelta
-        inv = FamilyInvitation(
-            family_id=fam.id,
-            token="tok",
-            role_preset="admin",
-            is_adult_preset=False,
-            expires_at=__import__("app.core.clock", fromlist=["utcnow"]).utcnow() + timedelta(days=1),
-        )
-        db.add(inv)
-        db.commit()
-    finally:
-        db.close()
+    seed_oidc_config(allow_signup=True)
+    _seed_invitation("tok", family_name="Fam", role_preset="admin", is_adult_preset=False)
 
-    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: _valid_discovery())
+    monkeypatch.setattr(oidc_core, "_fetch_json", lambda url, timeout=5.0: discovery_document())
     resp_start = client.get("/auth/oidc/login?invite=tok")
     state = resp_start.headers["location"].split("state=", 1)[1].split("&", 1)[0]
 

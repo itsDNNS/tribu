@@ -6,101 +6,28 @@ the same rows (matched by VEVENT UID); rows owned by another source
 are never overwritten.
 """
 
-import hashlib
 import socket
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
-from app.main import app
-from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync, Family, Membership, PersonalAccessToken, User
-from app.security import hash_password, PAT_PREFIX
 from app.core.calendar_subscriptions import IcsSubscriptionError, fetch_ics_text
-
-
-engine = create_engine(
-    "sqlite:///./test-calendar-subscriptions.db",
-    connect_args={"check_same_thread": False},
+from app.main import app
+from app.models import CalendarEvent, CalendarSubscription, CalendarSubscriptionSync
+from tests.calendar_feed_support import (
+    events_with_uid,
+    ics_event,
+    patch_ics_fetch,
+    refuse_fetch,
+    seed_calendar_admin,
+    seed_calendar_event,
 )
-TestSession = sessionmaker(bind=engine, autoflush=False)
+from tests.support import TestSession, auth
 
 
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+pytestmark = pytest.mark.usefixtures("app_db")
 
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
-
-def _seed_adult(scopes: str = "calendar:read,calendar:write") -> tuple[str, int]:
-    db = TestSession()
-    try:
-        user = User(email="sub@example.com", password_hash=hash_password("p"), display_name="Sub")
-        db.add(user)
-        db.flush()
-        family = Family(name="Sub Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}sub-rw"
-        digest = hashlib.sha256(plain.encode("utf-8")).hexdigest()
-        db.add(PersonalAccessToken(
-            user_id=user.id,
-            name="sub-pat",
-            token_hash=digest,
-            token_lookup=digest,
-            scopes=scopes,
-        ))
-        db.commit()
-        return plain, family.id
-    finally:
-        db.close()
-
-
-def _auth(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}"}
-
-
-def _ics(uid: str, summary: str = "Holiday", dtstart: str = "20260310T090000") -> str:
-    return (
-        "BEGIN:VCALENDAR\r\n"
-        "VERSION:2.0\r\n"
-        "BEGIN:VEVENT\r\n"
-        f"SUMMARY:{summary}\r\n"
-        f"DTSTART:{dtstart}\r\n"
-        "DTEND:20260310T093000\r\n"
-        "DTSTAMP:20260101T000000\r\n"
-        f"UID:{uid}\r\n"
-        "END:VEVENT\r\n"
-        "END:VCALENDAR\r\n"
-    )
-
-
-def _patch_fetch(monkeypatch, fn):
-    """Replace the network fetch helper at the call site used by the router."""
-    from app.modules import calendar_router as router_mod
-
-    monkeypatch.setattr(router_mod, "fetch_ics_text", fn)
+client = TestClient(app)
 
 
 # --- URL safety -------------------------------------------------------------
@@ -108,20 +35,13 @@ def _patch_fetch(monkeypatch, fn):
 
 class TestUrlSafety:
     def test_rejects_non_http_scheme(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
 
-        called = {"hit": False}
-
-        def _should_not_be_called(url, **kwargs):
-            called["hit"] = True
-            return ""
-
-        _patch_fetch(monkeypatch, _should_not_be_called)
-        client = TestClient(app)
+        called = refuse_fetch(monkeypatch)
         resp = client.post(
             "/calendar/events/subscribe-ics",
             json={"family_id": family_id, "source_url": "file:///etc/passwd"},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 400, resp.text
         assert called["hit"] is False
@@ -132,13 +52,12 @@ class TestUrlSafety:
         assert "/etc/passwd" not in text
 
     def test_rejects_blank_url(self, monkeypatch):
-        token, family_id = _seed_adult()
-        _patch_fetch(monkeypatch, lambda url, **kw: "")
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
+        patch_ics_fetch(monkeypatch, lambda url, **kw: "")
         resp = client.post(
             "/calendar/events/subscribe-ics",
             json={"family_id": family_id, "source_url": "   "},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 400, resp.text
 
@@ -229,12 +148,11 @@ class TestUrlSafety:
             fetch_ics_text("https://feed.example.com/holidays.ics")
 
     def test_malformed_url_returns_safe_400(self):
-        token, family_id = _seed_adult()
-        client = TestClient(app)
+        token, family_id = seed_calendar_admin()
         resp = client.post(
             "/calendar/events/subscribe-ics",
             json={"family_id": family_id, "source_url": "https://[::1/holidays.ics"},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 400, resp.text
         assert "Traceback" not in resp.text
@@ -245,10 +163,9 @@ class TestUrlSafety:
 
 class TestSubscribeCreates:
     def test_first_fetch_creates_subscription_rows(self, monkeypatch):
-        token, family_id = _seed_adult()
-        _patch_fetch(monkeypatch, lambda url, **kw: _ics("evt-1@feed.example.com", summary="Holiday"))
+        token, family_id = seed_calendar_admin()
+        patch_ics_fetch(monkeypatch, lambda url, **kw: ics_event("evt-1@feed.example.com", summary="Holiday"))
 
-        client = TestClient(app)
         resp = client.post(
             "/calendar/events/subscribe-ics",
             json={
@@ -256,7 +173,7 @@ class TestSubscribeCreates:
                 "source_url": "https://feed.example.com/holidays.ics",
                 "source_name": "Public Holidays",
             },
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -266,46 +183,31 @@ class TestSubscribeCreates:
         assert body["skipped"] == 0
         assert body["errors"] == []
 
-        db = TestSession()
-        try:
-            row = db.query(CalendarEvent).filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.ical_uid == "evt-1@feed.example.com",
-            ).one()
-            assert row.source_type == "subscription"
-            assert row.source_url == "https://feed.example.com/holidays.ics"
-            assert row.source_name == "Public Holidays"
-            assert row.last_synced_at is not None
-            assert row.sync_status == "ok"
-        finally:
-            db.close()
+        [row] = events_with_uid(family_id, "evt-1@feed.example.com")
+        assert row.source_type == "subscription"
+        assert row.source_url == "https://feed.example.com/holidays.ics"
+        assert row.source_name == "Public Holidays"
+        assert row.last_synced_at is not None
+        assert row.sync_status == "ok"
 
     def test_default_source_name_uses_hostname_when_omitted(self, monkeypatch):
-        token, family_id = _seed_adult()
-        _patch_fetch(monkeypatch, lambda url, **kw: _ics("evt-2@feed.example.com"))
+        token, family_id = seed_calendar_admin()
+        patch_ics_fetch(monkeypatch, lambda url, **kw: ics_event("evt-2@feed.example.com"))
 
-        client = TestClient(app)
         resp = client.post(
             "/calendar/events/subscribe-ics",
             json={
                 "family_id": family_id,
                 "source_url": "https://feed.example.com/holidays.ics",
             },
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
 
-        db = TestSession()
-        try:
-            row = db.query(CalendarEvent).filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.ical_uid == "evt-2@feed.example.com",
-            ).one()
-            # When no source_name was provided we fall back to a label
-            # derived from the URL so the UI can still show provenance.
-            assert row.source_name == "feed.example.com"
-        finally:
-            db.close()
+        [row] = events_with_uid(family_id, "evt-2@feed.example.com")
+        # When no source_name was provided we fall back to a label
+        # derived from the URL so the UI can still show provenance.
+        assert row.source_name == "feed.example.com"
 
 
 # --- Refresh / re-subscription ---------------------------------------------
@@ -313,66 +215,45 @@ class TestSubscribeCreates:
 
 class TestSubscribeRefresh:
     def test_refresh_updates_existing_subscription_row(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
 
-        ics_v1 = _ics("evt-1@feed.example.com", summary="Holiday")
-        ics_v2 = _ics("evt-1@feed.example.com", summary="Holiday (renamed)")
+        ics_v1 = ics_event("evt-1@feed.example.com", summary="Holiday")
+        ics_v2 = ics_event("evt-1@feed.example.com", summary="Holiday (renamed)")
 
         url = "https://feed.example.com/holidays.ics"
 
-        _patch_fetch(monkeypatch, lambda u, **kw: ics_v1)
-        client = TestClient(app)
+        patch_ics_fetch(monkeypatch, lambda u, **kw: ics_v1)
         first = client.post(
             "/calendar/events/subscribe-ics",
             json={"family_id": family_id, "source_url": url, "source_name": "Holidays"},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert first.status_code == 200, first.text
         assert first.json()["created"] == 1
 
-        _patch_fetch(monkeypatch, lambda u, **kw: ics_v2)
+        patch_ics_fetch(monkeypatch, lambda u, **kw: ics_v2)
         second = client.post(
             "/calendar/events/subscribe-ics",
             json={"family_id": family_id, "source_url": url, "source_name": "Holidays"},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert second.status_code == 200, second.text
         body = second.json()
         assert body["created"] == 0
         assert body["updated"] == 1
 
-        db = TestSession()
-        try:
-            rows = db.query(CalendarEvent).filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.ical_uid == "evt-1@feed.example.com",
-            ).all()
-            assert len(rows) == 1
-            assert rows[0].title == "Holiday (renamed)"
-            assert rows[0].source_type == "subscription"
-            assert rows[0].source_url == url
-        finally:
-            db.close()
+        rows = events_with_uid(family_id, "evt-1@feed.example.com")
+        assert len(rows) == 1
+        assert rows[0].title == "Holiday (renamed)"
+        assert rows[0].source_type == "subscription"
+        assert rows[0].source_url == url
 
     def test_refresh_does_not_overwrite_local_event(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
 
-        from datetime import datetime
-        db = TestSession()
-        try:
-            db.add(CalendarEvent(
-                family_id=family_id,
-                title="Local copy",
-                starts_at=datetime(2026, 3, 10, 9, 0),
-                ical_uid="shared@example.com",
-                source_type="local",
-            ))
-            db.commit()
-        finally:
-            db.close()
+        seed_calendar_event(family_id, "Local copy", "shared@example.com", source_type="local")
 
-        _patch_fetch(monkeypatch, lambda u, **kw: _ics("shared@example.com", summary="External"))
-        client = TestClient(app)
+        patch_ics_fetch(monkeypatch, lambda u, **kw: ics_event("shared@example.com", summary="External"))
         resp = client.post(
             "/calendar/events/subscribe-ics",
             json={
@@ -380,7 +261,7 @@ class TestSubscribeRefresh:
                 "source_url": "https://feed.example.com/holidays.ics",
                 "source_name": "Holidays",
             },
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -390,38 +271,30 @@ class TestSubscribeRefresh:
         assert body["errors"]
         assert "non-subscription" in body["errors"][0]["error"] or "not owned" in body["errors"][0]["error"]
 
-        db = TestSession()
-        try:
-            row = db.query(CalendarEvent).filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.ical_uid == "shared@example.com",
-            ).one()
-            assert row.title == "Local copy"
-            assert row.source_type == "local"
-        finally:
-            db.close()
+        [row] = events_with_uid(family_id, "shared@example.com")
+        assert row.title == "Local copy"
+        assert row.source_type == "local"
 
     def test_refresh_does_not_overwrite_subscription_from_different_url(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
 
         url_a = "https://feed-a.example.com/cal.ics"
         url_b = "https://feed-b.example.com/cal.ics"
 
-        _patch_fetch(monkeypatch, lambda u, **kw: _ics("dup@example.com", summary="From A"))
-        client = TestClient(app)
+        patch_ics_fetch(monkeypatch, lambda u, **kw: ics_event("dup@example.com", summary="From A"))
         first = client.post(
             "/calendar/events/subscribe-ics",
             json={"family_id": family_id, "source_url": url_a, "source_name": "Feed A"},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert first.status_code == 200
         assert first.json()["created"] == 1
 
-        _patch_fetch(monkeypatch, lambda u, **kw: _ics("dup@example.com", summary="From B"))
+        patch_ics_fetch(monkeypatch, lambda u, **kw: ics_event("dup@example.com", summary="From B"))
         second = client.post(
             "/calendar/events/subscribe-ics",
             json={"family_id": family_id, "source_url": url_b, "source_name": "Feed B"},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert second.status_code == 200, second.text
         body = second.json()
@@ -429,16 +302,9 @@ class TestSubscribeRefresh:
         assert body["updated"] == 0
         assert body["skipped"] == 1
 
-        db = TestSession()
-        try:
-            row = db.query(CalendarEvent).filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.ical_uid == "dup@example.com",
-            ).one()
-            assert row.title == "From A"
-            assert row.source_url == url_a
-        finally:
-            db.close()
+        [row] = events_with_uid(family_id, "dup@example.com")
+        assert row.title == "From A"
+        assert row.source_url == url_a
 
 
 # --- Network / parser failure ----------------------------------------------
@@ -446,16 +312,13 @@ class TestSubscribeRefresh:
 
 class TestFetchFailureSafe:
     def test_fetch_failure_returns_user_safe_400_no_traceback(self, monkeypatch):
-        token, family_id = _seed_adult()
-
-        from app.core.calendar_subscriptions import IcsSubscriptionError
+        token, family_id = seed_calendar_admin()
 
         def _boom(url, **kw):
             raise IcsSubscriptionError("could not fetch")
 
-        _patch_fetch(monkeypatch, _boom)
+        patch_ics_fetch(monkeypatch, _boom)
 
-        client = TestClient(app)
         resp = client.post(
             "/calendar/events/subscribe-ics",
             json={
@@ -463,28 +326,27 @@ class TestFetchFailureSafe:
                 "source_url": "https://feed.example.com/holidays.ics",
                 "source_name": "Holidays",
             },
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 400, resp.text
         text = resp.text
         assert "Traceback" not in text
 
     def test_unexpected_exception_does_not_leak_to_user(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
 
         def _boom(url, **kw):
             raise RuntimeError("internal proxy host unreachable: 10.0.0.5:8080")
 
-        _patch_fetch(monkeypatch, _boom)
+        patch_ics_fetch(monkeypatch, _boom)
 
-        client = TestClient(app)
         resp = client.post(
             "/calendar/events/subscribe-ics",
             json={
                 "family_id": family_id,
                 "source_url": "https://feed.example.com/holidays.ics",
             },
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 400, resp.text
         text = resp.text
@@ -495,10 +357,9 @@ class TestFetchFailureSafe:
 
 class TestManagedSubscriptions:
     def test_create_persists_feed_status_and_sync_history(self, monkeypatch):
-        token, family_id = _seed_adult()
-        _patch_fetch(monkeypatch, lambda url, **kw: _ics("managed-1@feed.example.com", summary="Practice"))
+        token, family_id = seed_calendar_admin()
+        patch_ics_fetch(monkeypatch, lambda url, **kw: ics_event("managed-1@feed.example.com", summary="Practice"))
 
-        client = TestClient(app)
         resp = client.post(
             "/calendar/subscriptions",
             json={
@@ -506,7 +367,7 @@ class TestManagedSubscriptions:
                 "source_url": "https://feed.example.com/team.ics",
                 "source_name": "Team",
             },
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -530,29 +391,28 @@ class TestManagedSubscriptions:
             db.close()
 
     def test_list_refresh_and_delete_managed_subscription(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
         url = "https://feed.example.com/team.ics"
-        client = TestClient(app)
 
-        _patch_fetch(monkeypatch, lambda u, **kw: _ics("managed-refresh@feed.example.com", summary="Practice"))
+        patch_ics_fetch(monkeypatch, lambda u, **kw: ics_event("managed-refresh@feed.example.com", summary="Practice"))
         first = client.post(
             "/calendar/subscriptions",
             json={"family_id": family_id, "source_url": url, "source_name": "Team"},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert first.status_code == 200, first.text
         subscription_id = first.json()["id"]
 
-        listed = client.get(f"/calendar/subscriptions?family_id={family_id}", headers=_auth(token))
+        listed = client.get(f"/calendar/subscriptions?family_id={family_id}", headers=auth(token))
         assert listed.status_code == 200, listed.text
         assert listed.json()[0]["id"] == subscription_id
 
-        _patch_fetch(monkeypatch, lambda u, **kw: _ics("managed-refresh@feed.example.com", summary="Practice updated"))
-        refreshed = client.post(f"/calendar/subscriptions/{subscription_id}/refresh", headers=_auth(token))
+        patch_ics_fetch(monkeypatch, lambda u, **kw: ics_event("managed-refresh@feed.example.com", summary="Practice updated"))
+        refreshed = client.post(f"/calendar/subscriptions/{subscription_id}/refresh", headers=auth(token))
         assert refreshed.status_code == 200, refreshed.text
         assert refreshed.json()["last_updated"] == 1
 
-        deleted = client.delete(f"/calendar/subscriptions/{subscription_id}", headers=_auth(token))
+        deleted = client.delete(f"/calendar/subscriptions/{subscription_id}", headers=auth(token))
         assert deleted.status_code == 200, deleted.text
 
         db = TestSession()
@@ -566,17 +426,16 @@ class TestManagedSubscriptions:
             db.close()
 
     def test_managed_refresh_failure_records_safe_status(self, monkeypatch):
-        token, family_id = _seed_adult()
+        token, family_id = seed_calendar_admin()
 
         def _boom(url, **kw):
             raise RuntimeError("internal host 10.1.2.3 failed")
 
-        _patch_fetch(monkeypatch, _boom)
-        client = TestClient(app)
+        patch_ics_fetch(monkeypatch, _boom)
         resp = client.post(
             "/calendar/subscriptions",
             json={"family_id": family_id, "source_url": "https://feed.example.com/bad.ics"},
-            headers=_auth(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()

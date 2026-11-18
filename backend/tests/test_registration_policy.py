@@ -1,47 +1,14 @@
 from datetime import timedelta
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core.utils import utcnow
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, FamilyInvitation, Membership, User
-from app.security import hash_password
+from app.models import FamilyInvitation
+from tests.support import TestSession, add_member
 
-engine = create_engine(
-    "sqlite:///./test-registration-policy.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def setup_function():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-
-
-def teardown_function():
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
@@ -83,33 +50,21 @@ def test_invite_registration_still_works_after_initial_setup(monkeypatch):
         invalidated_patterns.append,
     )
 
-    db = TestSession()
-    try:
-        admin = User(
-            email="admin@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Admin",
-            has_completed_onboarding=True,
+    with TestSession() as db:
+        admin = add_member(
+            db, "admin@example.com", scopes=None, family_name="Fam", password="Secure1Pass",
+            display_name="Admin", user_fields={"has_completed_onboarding": True},
         )
-        db.add(admin)
-        db.flush()
-        family = Family(name="Fam")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=admin.id, family_id=family.id, role="admin", is_adult=True))
-        invitation = FamilyInvitation(
-            family_id=family.id,
+        db.add(FamilyInvitation(
+            family_id=admin.family_id,
             token="invite-token",
-            created_by_user_id=admin.id,
+            created_by_user_id=admin.user_id,
             role_preset="member",
             is_adult_preset=True,
             max_uses=1,
             expires_at=utcnow() + timedelta(days=1),
-        )
-        db.add(invitation)
+        ))
         db.commit()
-    finally:
-        db.close()
 
     resp = client.post(
         "/auth/register-with-invite",
