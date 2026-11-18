@@ -7,6 +7,8 @@ migrations) keep their own setup.
 
 from __future__ import annotations
 
+import os
+import tempfile
 
 import pytest
 
@@ -77,6 +79,34 @@ def shopping_broadcasts(monkeypatch):
     events: list[tuple] = []
     monkeypatch.setattr(shopping_router, "broadcast_shopping_event", lambda *args, **kwargs: events.append(args))
     return events
+
+
+@pytest.fixture(scope="module")
+def production_db():
+    """Tables in the production database (``DATABASE_URL``) for one module.
+
+    For code that opens ``app.database.SessionLocal`` itself, such as the
+    DAV auth and storage plugins; seed it with ``SessionLocal()`` too.
+    """
+    from app.database import Base, engine as production_engine
+
+    Base.metadata.create_all(bind=production_engine)
+    yield
+    Base.metadata.drop_all(bind=production_engine)
+
+
+@pytest.fixture(scope="module")
+def dav_app(production_db):
+    """The app with its Radicale mount on ``production_db`` and a temporary
+    DAV storage folder, set before ``app.main`` is first imported."""
+    with tempfile.TemporaryDirectory(prefix="tribu-dav-test-") as folder:
+        os.environ["DAV_STORAGE_FOLDER"] = folder
+        from app.main import app
+
+        try:
+            yield app
+        finally:
+            os.environ.pop("DAV_STORAGE_FOLDER", None)
 
 
 @pytest.fixture

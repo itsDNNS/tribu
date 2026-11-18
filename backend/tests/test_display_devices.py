@@ -9,57 +9,17 @@ Covers:
 - The display dashboard never leaks member emails.
 """
 
-import hashlib
 import json as json_module
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import event, text
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, FamilyBirthday, Membership, PersonalAccessToken, SchoolTimetable, SchoolTimetableAssignment, SchoolTimetableLesson, SchoolTimetablePeriod, User
-from app.security import PAT_PREFIX, hash_password
+from app.models import FamilyBirthday, User
+from tests.support import TestSession, auth, engine, seed_member
 
-
-import tempfile
-import os
-
-# Keep the SQLite test DB outside committed artifacts. Per-process
-# tempfile, cleaned up at interpreter exit.
-_DB_FD, _DB_PATH = tempfile.mkstemp(prefix="tribu-display-devices-", suffix=".db")
-os.close(_DB_FD)
-engine = create_engine(
-    f"sqlite:///{_DB_PATH}",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
@@ -81,44 +41,19 @@ def _seed_member_with_pat(
     color: str | None = None,
 ) -> tuple[str, int, int]:
     """Seed a user + family + membership + PAT. Returns (token, user_id, family_id)."""
-    db = TestSession()
-    user = User(
-        email=email or f"display-{suffix}@example.com",
-        password_hash=hash_password("password"),
-        display_name=f"User {suffix}",
-        profile_image=profile_image,
-        # The display serves the derived small size; seed it as that.
-        profile_image_small=profile_image,
-    )
-    db.add(user)
-    db.flush()
-
-    if family_id is None:
-        family = Family(name=f"Family {suffix}")
-        db.add(family)
-        db.flush()
-        family_id = int(family.id)
-    assert family_id is not None
-
-    db.add(Membership(user_id=user.id, family_id=family_id, role=role, is_adult=is_adult, color=color))
-
-    plain = f"{PAT_PREFIX}displaytest-{suffix}"
-    lookup = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(
-        user_id=user.id,
-        name="display-pat",
-        token_hash=lookup,
-        token_lookup=lookup,
+    member = seed_member(
+        email or f"display-{suffix}@example.com",
         scopes=scopes,
-    ))
-    user_id = user.id
-    db.commit()
-    db.close()
-    return plain, user_id, family_id
-
-
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+        family_id=family_id,
+        family_name=f"Family {suffix}",
+        role=role,
+        is_adult=is_adult,
+        display_name=f"User {suffix}",
+        # The display serves the derived small size; seed it as that.
+        user_fields={"profile_image": profile_image, "profile_image_small": profile_image},
+        color=color,
+    )
+    return member.token, member.user_id, member.family_id
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +67,7 @@ class TestAdminCreateAndList:
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Kitchen Tablet"},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -144,7 +79,7 @@ class TestAdminCreateAndList:
         # Listing must NOT contain the plaintext token.
         list_resp = client.get(
             f"/families/{family_id}/display-devices",
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert list_resp.status_code == 200
         items = list_resp.json()
@@ -160,7 +95,7 @@ class TestAdminCreateAndList:
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Hallway Frame"},
-            headers=_auth(member_token),
+            headers=auth(member_token),
         )
         assert resp.status_code == 403
         assert "ADMIN_REQUIRED" in resp.text
@@ -171,7 +106,7 @@ class TestAdminCreateAndList:
         )
         resp = client.get(
             f"/families/{family_id}/display-devices",
-            headers=_auth(member_token),
+            headers=auth(member_token),
         )
         assert resp.status_code == 403
 
@@ -181,7 +116,7 @@ class TestAdminCreateAndList:
         outsider_token, _, _ = _seed_member_with_pat("admB", role="admin", is_adult=True)
         resp = client.get(
             f"/families/{family_a}/display-devices",
-            headers=_auth(outsider_token),
+            headers=auth(outsider_token),
         )
         assert resp.status_code == 403
 
@@ -201,7 +136,7 @@ def _mint_display_token(family_id: int, name: str = "Test Display") -> str:
     resp = client.post(
         f"/families/{family_id}/display-devices",
         json={"name": name},
-        headers=_auth(admin_token),
+        headers=auth(admin_token),
     )
     assert resp.status_code == 200, resp.text
     return resp.json()["token"]
@@ -212,7 +147,7 @@ class TestDisplayRuntime:
         _, _, family_id = _seed_member_with_pat("dispOwner1", role="admin", is_adult=True)
         token = _mint_display_token(family_id, "Kitchen")
 
-        resp = client.get("/display/me", headers=_auth(token))
+        resp = client.get("/display/me", headers=auth(token))
         assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["family_id"] == family_id
@@ -238,12 +173,12 @@ class TestDisplayRuntime:
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Living Room"},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 200, resp.text
         display_token = resp.json()["token"]
 
-        dash = client.get("/display/dashboard", headers=_auth(display_token))
+        dash = client.get("/display/dashboard", headers=auth(display_token))
         assert dash.status_code == 200, dash.text
         body = dash.json()
         assert body["family_id"] == family_id
@@ -276,11 +211,11 @@ class TestDisplayRuntime:
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Wall"},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         token = resp.json()["token"]
 
-        dash = client.get("/display/dashboard", headers=_auth(token))
+        dash = client.get("/display/dashboard", headers=auth(token))
         assert dash.status_code == 200
         body = dash.json()
         assert body["members"], "expected at least one member"
@@ -329,11 +264,11 @@ class TestDisplayRuntime:
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Hall"},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         token = resp.json()["token"]
 
-        dash = client.get("/display/dashboard", headers=_auth(token))
+        dash = client.get("/display/dashboard", headers=auth(token))
         assert dash.status_code == 200, dash.text
         body = dash.json()
         assert body["next_events"], "event should appear in dashboard"
@@ -415,11 +350,11 @@ class TestDisplayRuntime:
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Kitchen"},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         token = resp.json()["token"]
 
-        dash = client.get("/display/dashboard", headers=_auth(token))
+        dash = client.get("/display/dashboard", headers=auth(token))
         assert dash.status_code == 200, dash.text
         events = {event["title"]: event for event in dash.json()["next_events"]}
 
@@ -441,7 +376,7 @@ class TestDisplayTokenIsolation:
         _, _, family_id = _seed_member_with_pat("isoAdm1", role="admin", is_adult=True)
         token = _mint_display_token(family_id, "Iso1")
 
-        resp = client.get("/auth/me", headers=_auth(token))
+        resp = client.get("/auth/me", headers=auth(token))
         # Either 401 (display tokens are explicitly refused) or 403 — but never 200.
         assert resp.status_code in (401, 403)
         assert resp.status_code != 200
@@ -450,7 +385,7 @@ class TestDisplayTokenIsolation:
         _, _, family_id = _seed_member_with_pat("isoAdm2", role="admin", is_adult=True)
         token = _mint_display_token(family_id, "Iso2")
 
-        resp = client.get("/families/me", headers=_auth(token))
+        resp = client.get("/families/me", headers=auth(token))
         assert resp.status_code in (401, 403)
         assert resp.status_code != 200
 
@@ -459,7 +394,7 @@ class TestDisplayTokenIsolation:
         admin_token, _, _ = _seed_member_with_pat(
             "patVsDisplay", role="admin", is_adult=True
         )
-        resp = client.get("/display/me", headers=_auth(admin_token))
+        resp = client.get("/display/me", headers=auth(admin_token))
         assert resp.status_code == 401
 
     def test_no_token_on_display_endpoints(self):
@@ -480,31 +415,31 @@ class TestRevocation:
         create = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Hallway"},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert create.status_code == 200
         display_token = create.json()["token"]
         device_id = create.json()["device"]["id"]
 
         # Sanity: works before revoke.
-        ok = client.get("/display/me", headers=_auth(display_token))
+        ok = client.get("/display/me", headers=auth(display_token))
         assert ok.status_code == 200
 
         revoke = client.delete(
             f"/families/{family_id}/display-devices/{device_id}",
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert revoke.status_code == 200
         assert revoke.json()["status"] == "revoked"
 
-        denied = client.get("/display/me", headers=_auth(display_token))
+        denied = client.get("/display/me", headers=auth(display_token))
         assert denied.status_code == 401
         assert "DISPLAY_TOKEN_REVOKED" in denied.text
 
         # The DB row is still present (soft revoke) and surfaces a revoked_at.
         listed = client.get(
             f"/families/{family_id}/display-devices",
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert listed.status_code == 200
         items = listed.json()
@@ -517,7 +452,7 @@ class TestRevocation:
         )
         resp = client.delete(
             f"/families/{family_id}/display-devices/9999",
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 404
         assert "DISPLAY_DEVICE_NOT_FOUND" in resp.text
@@ -529,13 +464,13 @@ class TestRevocation:
         create = client.post(
             f"/families/{family_a}/display-devices",
             json={"name": "FamA Display"},
-            headers=_auth(admin_a),
+            headers=auth(admin_a),
         )
         device_id = create.json()["device"]["id"]
         # Admin B tries to revoke family A's device by addressing it under family B.
         cross = client.delete(
             f"/families/{family_b}/display-devices/{device_id}",
-            headers=_auth(admin_b),
+            headers=auth(admin_b),
         )
         assert cross.status_code == 404
 
@@ -545,7 +480,7 @@ class TestStageLayoutConfig:
 
     def test_new_device_gets_the_default_stage_layout(self):
         admin_token, _, family_id = _seed_member_with_pat("stageDefault", role="admin", is_adult=True)
-        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Kitchen"}, headers=_auth(admin_token))
+        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Kitchen"}, headers=auth(admin_token))
         assert resp.status_code == 200, resp.text
         device = resp.json()["device"]
         assert device["layout_preset"] == "stage"
@@ -585,7 +520,7 @@ class TestStageLayoutConfig:
                     "theme_mode": "dark",
                 },
             },
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 200, resp.text
         device = resp.json()["device"]
@@ -612,7 +547,7 @@ class TestStageLayoutConfig:
                 "name": "Hall",
                 "layout_config": {"version": 2, "theme_mode": "purple"},
             },
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["device"]["layout_config"]["theme_mode"] == "auto"
@@ -623,7 +558,7 @@ class TestStageLayoutConfig:
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Hall", "layout_config": {"version": 2, "night_dim": True}},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["device"]["layout_config"]["theme_mode"] == "auto"
@@ -634,14 +569,14 @@ class TestStageLayoutConfig:
         resp = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Hall", "layout_config": {"version": 2, "night_dim": False}},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["device"]["layout_config"]["theme_mode"] == "light"
 
     def test_night_dim_is_no_longer_a_stored_field(self):
         admin_token, _, family_id = _seed_member_with_pat("stageNoNightDim", role="admin", is_adult=True)
-        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Kitchen"}, headers=_auth(admin_token))
+        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Kitchen"}, headers=auth(admin_token))
         assert resp.status_code == 200, resp.text
         assert "night_dim" not in resp.json()["device"]["layout_config"]
 
@@ -654,7 +589,7 @@ class TestStageLayoutConfig:
                 "layout_preset": "family_board",
                 "layout_config": {"columns": 3, "rows": 3, "widgets": [{"type": "agenda", "x": 0, "y": 0, "w": 3, "h": 3}]},
             },
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 200, resp.text
         layout = resp.json()["device"]["layout_config"]
@@ -663,7 +598,7 @@ class TestStageLayoutConfig:
 
     def test_admin_can_update_display_config_without_reminting_token(self):
         admin_token, _, family_id = _seed_member_with_pat("cfgUpdate", role="admin", is_adult=True)
-        create = client.post(f"/families/{family_id}/display-devices", json={"name": "Wall"}, headers=_auth(admin_token))
+        create = client.post(f"/families/{family_id}/display-devices", json={"name": "Wall"}, headers=auth(admin_token))
         body = create.json()
         token = body["token"]
         device_id = body["device"]["id"]
@@ -671,7 +606,7 @@ class TestStageLayoutConfig:
         update = client.patch(
             f"/families/{family_id}/display-devices/{device_id}",
             json={"layout_config": {"version": 2, "zones": {"c": {"cards": ["birthdays"], "interval_seconds": 120}}}},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert update.status_code == 200, update.text
         assert "token" not in update.json()
@@ -680,11 +615,11 @@ class TestStageLayoutConfig:
         mode = client.patch(
             f"/families/{family_id}/display-devices/{device_id}",
             json={"display_mode": "eink", "refresh_interval_seconds": 900},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert mode.status_code == 200, mode.text
 
-        dash = client.get("/display/dashboard", headers=_auth(token))
+        dash = client.get("/display/dashboard", headers=auth(token))
         assert dash.status_code == 200
         config = dash.json()["config"]
         assert config["display_mode"] == "eink"
@@ -695,12 +630,12 @@ class TestStageLayoutConfig:
     def test_non_admin_cannot_update_display_config(self):
         admin_token, _, family_id = _seed_member_with_pat("cfgAdmin", role="admin", is_adult=True)
         member_token, _, _ = _seed_member_with_pat("cfgMember", role="member", is_adult=True, family_id=family_id)
-        create = client.post(f"/families/{family_id}/display-devices", json={"name": "Wall"}, headers=_auth(admin_token))
+        create = client.post(f"/families/{family_id}/display-devices", json={"name": "Wall"}, headers=auth(admin_token))
         device_id = create.json()["device"]["id"]
         update = client.patch(
             f"/families/{family_id}/display-devices/{device_id}",
             json={"display_mode": "eink"},
-            headers=_auth(member_token),
+            headers=auth(member_token),
         )
         assert update.status_code == 403
 
@@ -711,19 +646,9 @@ class TestStageLayoutConfig:
 
 
 def _seed_child(family_id: int, suffix: str, *, color: str | None = None) -> int:
-    db = TestSession()
-    child = User(
-        email=f"school-child-{suffix}@example.com",
-        password_hash=hash_password("password"),
-        display_name=f"Child {suffix}",
-    )
-    db.add(child)
-    db.flush()
-    db.add(Membership(user_id=child.id, family_id=family_id, role="member", is_adult=False, color=color))
-    child_id = child.id
-    db.commit()
-    db.close()
-    return child_id
+    return seed_member(
+        f"school-child-{suffix}@example.com", scopes=None, family_id=family_id, is_adult=False, display_name=f"Child {suffix}", color=color,
+    ).user_id
 
 
 def _school_payload(family_id: int, child_ids: list[int], *, include_saturday: bool = False) -> dict:
@@ -756,7 +681,7 @@ class TestSchoolTimetables:
         resp = client.post(
             "/school-timetables",
             json=_school_payload(family_id, [child_a, child_b]),
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -765,7 +690,7 @@ class TestSchoolTimetables:
         assert [m["display_name"] for m in body["assigned_members"]] == ["Child A", "Child B"]
         assert [p["kind"] for p in body["periods"]] == ["lesson", "break", "lesson"]
 
-        listed = client.get(f"/school-timetables?family_id={family_id}", headers=_auth(admin_token))
+        listed = client.get(f"/school-timetables?family_id={family_id}", headers=auth(admin_token))
         assert listed.status_code == 200, listed.text
         assert listed.json()[0]["lessons"][0]["subject"] == "Math"
 
@@ -786,7 +711,7 @@ class TestSchoolTimetables:
         created = client.post(
             "/school-timetables",
             json=_school_payload(family_id, [child_a, child_b], include_saturday=True),
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert created.status_code == 200, created.text
 
@@ -797,7 +722,7 @@ class TestSchoolTimetables:
 
         event.listen(engine, "before_cursor_execute", capture_statement)
         try:
-            listed = client.get(f"/school-timetables?family_id={family_id}", headers=_auth(admin_token))
+            listed = client.get(f"/school-timetables?family_id={family_id}", headers=auth(admin_token))
         finally:
             event.remove(engine, "before_cursor_execute", capture_statement)
 
@@ -822,7 +747,7 @@ class TestSchoolTimetables:
         created = client.post(
             "/school-timetables",
             json=_school_payload(family_id, [child_id]),
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert created.status_code == 200, created.text
         lesson_id = created.json()["lessons"][0]["id"]
@@ -839,7 +764,7 @@ class TestSchoolTimetables:
         finally:
             db.close()
 
-        listed = client.get(f"/school-timetables?family_id={family_id}", headers=_auth(admin_token))
+        listed = client.get(f"/school-timetables?family_id={family_id}", headers=auth(admin_token))
         assert listed.status_code == 200, listed.text
         assert all(lesson["period_id"] != 999_999 for lesson in listed.json()[0]["lessons"])
 
@@ -849,7 +774,7 @@ class TestSchoolTimetables:
         )
         payload = _school_payload(family_id, [admin_user_id])
 
-        resp = client.post("/school-timetables", json=payload, headers=_auth(admin_token))
+        resp = client.post("/school-timetables", json=payload, headers=auth(admin_token))
         assert resp.status_code == 400
         assert "child family members" in resp.text
 
@@ -861,7 +786,7 @@ class TestSchoolTimetables:
         payload = _school_payload(family_id, [child_id])
         payload["lessons"].append({"weekday": 6, "period_position": 1, "subject": "Club"})
 
-        resp = client.post("/school-timetables", json=payload, headers=_auth(admin_token))
+        resp = client.post("/school-timetables", json=payload, headers=auth(admin_token))
         assert resp.status_code == 400
         assert "Saturday" in resp.text
 
@@ -876,10 +801,10 @@ class TestSchoolTimetables:
         db.add(FamilyBirthday(family_id=family_id, person_name="Leap Kid", month=2, day=29))
         db.commit()
         db.close()
-        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Hall"}, headers=_auth(admin_token))
+        resp = client.post(f"/families/{family_id}/display-devices", json={"name": "Hall"}, headers=auth(admin_token))
         display_token = resp.json()["token"]
 
-        dash = client.get("/display/dashboard", headers=_auth(display_token))
+        dash = client.get("/display/dashboard", headers=auth(display_token))
 
         assert dash.status_code == 200, dash.text
         assert dash.json()["upcoming_birthdays"] == [
@@ -898,7 +823,7 @@ class TestSchoolTimetables:
         create = client.post(
             "/school-timetables",
             json=_school_payload(family_id, [child_a, child_b], include_saturday=True),
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert create.status_code == 200, create.text
         token = _mint_display_token(family_id, "Kitchen School")
@@ -909,7 +834,7 @@ class TestSchoolTimetables:
 
         event.listen(engine, "before_cursor_execute", record)
         try:
-            resp = client.get("/display/dashboard", headers=_auth(token))
+            resp = client.get("/display/dashboard", headers=auth(token))
         finally:
             event.remove(engine, "before_cursor_execute", record)
         assert resp.status_code == 200, resp.text
@@ -935,25 +860,25 @@ class TestSchoolTimetables:
     def test_a_display_can_show_one_timetable_in_full(self):
         admin_token, _, family_id = _seed_member_with_pat("schoolWeek", role="admin", is_adult=True)
         child = _seed_child(family_id, "Week", color="#7c3aed")
-        first = client.post("/school-timetables", json=_school_payload(family_id, [child]), headers=_auth(admin_token))
+        first = client.post("/school-timetables", json=_school_payload(family_id, [child]), headers=auth(admin_token))
         second = client.post(
             "/school-timetables",
             json={**_school_payload(family_id, []), "name": "Class 6a", "lessons": [
                 {"weekday": 3, "period_position": 3, "subject": "Art", "room": "B2"},
             ]},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert first.status_code == 200 and second.status_code == 200
         created = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Kids room", "layout_config": {"version": 2, "arrangement": "timetable", "timetable_id": second.json()["id"]}},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert created.status_code == 200, created.text
         layout = created.json()["device"]["layout_config"]
         assert (layout["arrangement"], layout["timetable_id"]) == ("timetable", second.json()["id"])
 
-        body = client.get("/display/dashboard", headers=_auth(created.json()["token"])).json()
+        body = client.get("/display/dashboard", headers=auth(created.json()["token"])).json()
         assert len(body["school_weeks"]) == 1
         week = body["school_weeks"][0]
         assert week["name"] == "Class 6a"
@@ -966,15 +891,15 @@ class TestSchoolTimetables:
     def test_timetable_content_falls_back_to_the_first_plan(self):
         admin_token, _, family_id = _seed_member_with_pat("schoolWeekFallback", role="admin", is_adult=True)
         child = _seed_child(family_id, "Fallback", color="#7c3aed")
-        client.post("/school-timetables", json=_school_payload(family_id, [child]), headers=_auth(admin_token))
+        client.post("/school-timetables", json=_school_payload(family_id, [child]), headers=auth(admin_token))
         created = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Hall", "layout_config": {"version": 2, "content": "timetable", "timetable_id": 999999}},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         # The short-lived "content" setting still reads as the arrangement.
         assert created.json()["device"]["layout_config"]["arrangement"] == "timetable"
-        body = client.get("/display/dashboard", headers=_auth(created.json()["token"])).json()
+        body = client.get("/display/dashboard", headers=auth(created.json()["token"])).json()
         week = body["school_weeks"][0]
         assert week["name"] == "Class 4b"
         assert [child["display_name"] for child in week["children"]] == ["Child Fallback"]
@@ -983,13 +908,13 @@ class TestSchoolTimetables:
     def test_the_family_stage_does_not_carry_the_week(self):
         _, _, family_id = _seed_member_with_pat("schoolWeekStage", role="admin", is_adult=True)
         token = _mint_display_token(family_id, "Stage only")
-        assert client.get("/display/dashboard", headers=_auth(token)).json()["school_weeks"] == []
+        assert client.get("/display/dashboard", headers=auth(token)).json()["school_weeks"] == []
 
     def test_a_large_bottom_zone_rotates_the_weeks_of_every_plan(self):
         admin_token, _, family_id = _seed_member_with_pat("schoolWeekCard", role="admin", is_adult=True)
         child = _seed_child(family_id, "Card", color="#7c3aed")
-        client.post("/school-timetables", json=_school_payload(family_id, [child]), headers=_auth(admin_token))
-        client.post("/school-timetables", json={**_school_payload(family_id, []), "name": "Class 6a"}, headers=_auth(admin_token))
+        client.post("/school-timetables", json=_school_payload(family_id, [child]), headers=auth(admin_token))
+        client.post("/school-timetables", json={**_school_payload(family_id, []), "name": "Class 6a"}, headers=auth(admin_token))
         created = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Kitchen", "layout_config": {
@@ -997,17 +922,17 @@ class TestSchoolTimetables:
                 "arrangement": "bottom_large",
                 "zones": {"d": {"cards": ["week", "timetable"], "interval_seconds": 60}},
             }},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         layout = created.json()["device"]["layout_config"]
         assert layout["arrangement"] == "bottom_large"
         assert layout["zones"]["d"]["cards"] == ["week", "timetable"]
-        body = client.get("/display/dashboard", headers=_auth(created.json()["token"])).json()
+        body = client.get("/display/dashboard", headers=auth(created.json()["token"])).json()
         assert [week["name"] for week in body["school_weeks"]] == ["Class 4b", "Class 6a"]
 
     def test_a_pinned_timetable_brings_the_weeks_too(self):
         admin_token, _, family_id = _seed_member_with_pat("schoolWeekPin", role="admin", is_adult=True)
-        client.post("/school-timetables", json=_school_payload(family_id, []), headers=_auth(admin_token))
+        client.post("/school-timetables", json=_school_payload(family_id, []), headers=auth(admin_token))
         created = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Hall", "layout_config": {
@@ -1015,11 +940,11 @@ class TestSchoolTimetables:
                 "arrangement": "bottom_large",
                 "timetable_pin": {"enabled": True, "from": "06:45", "until": "25:00"},
             }},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         pin = created.json()["device"]["layout_config"]["timetable_pin"]
         assert pin == {"enabled": True, "from": "06:45", "until": "08:00"}
-        body = client.get("/display/dashboard", headers=_auth(created.json()["token"])).json()
+        body = client.get("/display/dashboard", headers=auth(created.json()["token"])).json()
         assert len(body["school_weeks"]) == 1
 
     def test_content_and_timetable_id_are_validated(self):
@@ -1027,7 +952,7 @@ class TestSchoolTimetables:
         created = client.post(
             f"/families/{family_id}/display-devices",
             json={"name": "Odd", "layout_config": {"version": 2, "arrangement": "cinema", "timetable_id": "7", "timetable_pin": "yes"}},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         layout = created.json()["device"]["layout_config"]
         assert (layout["arrangement"], layout["timetable_id"]) == ("standard", None)
@@ -1107,7 +1032,7 @@ class TestStageDashboardData:
     def test_dashboard_contains_the_stage_cards_without_identifiers(self):
         _, family_id, child_id = _seed_stage_family("Data")
         token = _mint_display_token(family_id, "Stage Data")
-        resp = client.get("/display/dashboard", headers=_auth(token))
+        resp = client.get("/display/dashboard", headers=auth(token))
         assert resp.status_code == 200, resp.text
         body = resp.json()
         names = [member["display_name"] for member in body["members"]]
@@ -1192,14 +1117,14 @@ class TestDisplayWeather:
         put = client.put(
             f"/families/{family_id}/weather-location",
             json={"name": "Hamburg", "latitude": 53.55, "longitude": 9.99},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         assert put.status_code == 200, put.text
-        assert client.get(f"/families/{family_id}/weather-location", headers=_auth(admin_token)).json()["name"] == "Hamburg"
+        assert client.get(f"/families/{family_id}/weather-location", headers=auth(admin_token)).json()["name"] == "Hamburg"
 
         token = _mint_display_token(family_id, "Weather Wall")
-        first = client.get("/display/dashboard", headers=_auth(token)).json()["weather"]
-        second = client.get("/display/dashboard", headers=_auth(token)).json()["weather"]
+        first = client.get("/display/dashboard", headers=auth(token)).json()["weather"]
+        second = client.get("/display/dashboard", headers=auth(token)).json()["weather"]
         assert first == second
         assert len(calls) == 1, "forecast must be cached between display refreshes"
         assert calls[0][1]["latitude"] == "53.5500"
@@ -1211,9 +1136,9 @@ class TestDisplayWeather:
         assert first["hourly"][0]["time"] == "2026-09-29T07:00"
         assert len(first["hourly"]) == 16
 
-        cleared = client.delete(f"/families/{family_id}/weather-location", headers=_auth(admin_token))
+        cleared = client.delete(f"/families/{family_id}/weather-location", headers=auth(admin_token))
         assert cleared.json() == {"name": None, "latitude": None, "longitude": None}
-        assert client.get("/display/dashboard", headers=_auth(token)).json()["weather"] is None
+        assert client.get("/display/dashboard", headers=auth(token)).json()["weather"] is None
 
     def test_forecast_failure_keeps_the_display_working(self, monkeypatch):
         from app.core import weather
@@ -1226,10 +1151,10 @@ class TestDisplayWeather:
         client.put(
             f"/families/{family_id}/weather-location",
             json={"name": "Nowhere", "latitude": 1, "longitude": 2},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         )
         token = _mint_display_token(family_id, "Offline Wall")
-        resp = client.get("/display/dashboard", headers=_auth(token))
+        resp = client.get("/display/dashboard", headers=auth(token))
         assert resp.status_code == 200
         assert resp.json()["weather"] is None
 
@@ -1242,20 +1167,20 @@ class TestDisplayWeather:
         ]})
         admin_token, _, family_id = _seed_member_with_pat("wxSearch", role="admin", is_adult=True)
         member_token, _, _ = _seed_member_with_pat("wxSearchMember", role="member", is_adult=True, family_id=family_id)
-        found = client.get(f"/families/{family_id}/weather-location/search?q=Hamb&lang=de", headers=_auth(admin_token))
+        found = client.get(f"/families/{family_id}/weather-location/search?q=Hamb&lang=de", headers=auth(admin_token))
         assert found.status_code == 200, found.text
         assert found.json() == [{"name": "Hamburg", "region": "Hamburg", "country": "Germany", "latitude": 53.55, "longitude": 9.99}]
-        assert client.get(f"/families/{family_id}/weather-location/search?q=Hamb", headers=_auth(member_token)).status_code == 403
+        assert client.get(f"/families/{family_id}/weather-location/search?q=Hamb", headers=auth(member_token)).status_code == 403
         assert client.put(
             f"/families/{family_id}/weather-location",
             json={"name": "X", "latitude": 99, "longitude": 0},
-            headers=_auth(admin_token),
+            headers=auth(admin_token),
         ).status_code == 422
 
         def broken(url, params):
             raise OSError("down")
 
         monkeypatch.setattr(weather, "_fetch_json", broken)
-        failed = client.get(f"/families/{family_id}/weather-location/search?q=Hamb", headers=_auth(admin_token))
+        failed = client.get(f"/families/{family_id}/weather-location/search?q=Hamb", headers=auth(admin_token))
         assert failed.status_code == 502
         assert failed.json()["detail"]["code"] == "WEATHER_SEARCH_UNAVAILABLE"

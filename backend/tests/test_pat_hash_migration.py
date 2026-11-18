@@ -7,75 +7,34 @@ now via the new path.
 """
 from __future__ import annotations
 
-import base64
-import os
-import tempfile
-
-import pytest
 from fastapi.testclient import TestClient
 
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.models import Family, Membership, PersonalAccessToken, User
-from app.security import PAT_PREFIX, hash_password
+from app.security import PAT_PREFIX
+from tests.support import add_member, dav_basic, delete_production_rows
 
 
 EMAIL = "pat-migrate@example.com"
 
 
-@pytest.fixture(scope="module")
-def dav_storage_folder():
-    with tempfile.TemporaryDirectory(prefix="tribu-pat-migrate-") as folder:
-        os.environ["DAV_STORAGE_FOLDER"] = folder
-        yield folder
-        os.environ.pop("DAV_STORAGE_FOLDER", None)
-
-
-@pytest.fixture(scope="module")
-def app_under_test(dav_storage_folder):
-    from app.main import app
-
-    Base.metadata.create_all(bind=engine)
-    yield app
-    Base.metadata.drop_all(bind=engine)
-
-
-def _basic(login: str, token: str) -> str:
-    return "Basic " + base64.b64encode(f"{login}:{token}".encode("utf-8")).decode("ascii")
-
-
-def test_legacy_pat_lazy_migrates_on_first_auth(app_under_test):
+def test_legacy_pat_lazy_migrates_on_first_auth(dav_app):
     from app.security import pat_lookup_key
 
-    app = app_under_test
-    db = SessionLocal()
-    try:
-        user = User(email=EMAIL, password_hash=hash_password("x"), display_name="Mig User")
-        db.add(user)
-        db.flush()
-        family = Family(name="Mig Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}legacy-pat-migrate"
-        # Seed the row in the pre-migration layout that the Alembic
-        # upgrade would produce: token_hash = SHA-256(plain),
+    with SessionLocal() as db:
+        # add_member seeds the PAT in the pre-migration layout that the
+        # Alembic upgrade would produce: token_hash = SHA-256(plain),
         # token_lookup = same value (Alembic 0027 backfills it from
         # token_hash).
-        legacy = pat_lookup_key(plain)
-        db.add(PersonalAccessToken(
-            user_id=user.id,
-            name="legacy-pat",
-            token_hash=legacy,
-            token_lookup=legacy,
-            scopes="calendar:read,calendar:write,contacts:read",
-        ))
+        member = add_member(db, EMAIL, scopes="calendar:read,calendar:write,contacts:read", family_name="Mig Family", display_name="Mig User")
         db.commit()
-        pat_id = db.query(PersonalAccessToken).filter(PersonalAccessToken.user_id == user.id).one().id
-    finally:
-        db.close()
+        plain = member.token
+        pat = db.query(PersonalAccessToken).filter(PersonalAccessToken.user_id == member.user_id).one()
+        assert pat.token_hash == pat.token_lookup == pat_lookup_key(plain)
+        pat_id = pat.id
 
-    client = TestClient(app)
-    headers = {"Authorization": _basic(EMAIL, plain)}
+    client = TestClient(dav_app)
+    headers = {"Authorization": dav_basic(EMAIL, plain)}
     body = (
         '<?xml version="1.0"?>'
         '<propfind xmlns="DAV:"><prop><current-user-principal/></prop></propfind>'
@@ -104,7 +63,7 @@ def test_legacy_pat_lazy_migrates_on_first_auth(app_under_test):
         "PROPFIND",
         f"/dav/{EMAIL}/",
         headers={
-            "Authorization": _basic(EMAIL, PAT_PREFIX + "not-the-real-token"),
+            "Authorization": dav_basic(EMAIL, PAT_PREFIX + "not-the-real-token"),
             "Depth": "0",
             "Content-Type": "application/xml",
         },
@@ -113,12 +72,4 @@ def test_legacy_pat_lazy_migrates_on_first_auth(app_under_test):
     assert resp3.status_code == 401
 
     # Cleanup
-    db = SessionLocal()
-    try:
-        db.query(PersonalAccessToken).filter(PersonalAccessToken.user_id == user.id).delete()
-        db.query(Membership).filter(Membership.user_id == user.id).delete()
-        db.query(Family).delete()
-        db.query(User).filter(User.email == EMAIL).delete()
-        db.commit()
-    finally:
-        db.close()
+    delete_production_rows(PersonalAccessToken, Membership, Family, User)

@@ -5,61 +5,24 @@ the ``/<user>/book-<family_id>/`` path.
 """
 from __future__ import annotations
 
-import base64
-import hashlib
-import os
-import tempfile
-
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.vcard_utils import contact_channel_values
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.models import Contact, Family, FamilyBirthday, Membership, PersonalAccessToken, User
-from app.security import hash_password, PAT_PREFIX
+from tests.support import add_member, dav_basic, delete_production_rows
 
 
 EMAIL = "dav-carddav@example.com"
 
 
-@pytest.fixture(scope="module")
-def dav_storage_folder():
-    with tempfile.TemporaryDirectory(prefix="tribu-dav-carddav-") as folder:
-        os.environ["DAV_STORAGE_FOLDER"] = folder
-        yield folder
-        os.environ.pop("DAV_STORAGE_FOLDER", None)
-
-
-@pytest.fixture(scope="module")
-def app_under_test(dav_storage_folder):
-    from app.main import app
-
-    Base.metadata.create_all(bind=engine)
-    yield app
-    Base.metadata.drop_all(bind=engine)
-
-
 @pytest.fixture
-def seeded(app_under_test):
-    db = SessionLocal()
-    try:
-        user = User(email=EMAIL, password_hash=hash_password("x"), display_name="CardDAV User")
-        db.add(user)
-        db.flush()
-        family = Family(name="CardDAV Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}carddav-rw"
-        db.add(PersonalAccessToken(
-            user_id=user.id,
-            name="carddav-pat",
-            token_hash=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
-            token_lookup=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
-            scopes="contacts:read,contacts:write",
-        ))
+def seeded(dav_app):
+    with SessionLocal() as db:
+        member = add_member(db, EMAIL, scopes="contacts:read,contacts:write", family_name="CardDAV Family", display_name="CardDAV User")
         db.add(Contact(
-            family_id=family.id,
+            family_id=member.family_id,
             full_name="Oma Schmidt",
             email="oma@example.com",
             phone="+49 1234 5678",
@@ -67,30 +30,13 @@ def seeded(app_under_test):
             birthday_day=14,
         ))
         db.add(Contact(
-            family_id=family.id,
+            family_id=member.family_id,
             full_name="Onkel Peter",
             email="peter@example.com",
         ))
         db.commit()
-        token = plain
-        family_id = family.id
-    finally:
-        db.close()
-    yield token, family_id
-    db = SessionLocal()
-    try:
-        db.query(Contact).delete()
-        db.query(Membership).delete()
-        db.query(PersonalAccessToken).delete()
-        db.query(User).filter(User.email == EMAIL).delete()
-        db.query(Family).delete()
-        db.commit()
-    finally:
-        db.close()
-
-
-def _basic(login: str, token: str) -> str:
-    return "Basic " + base64.b64encode(f"{login}:{token}".encode("utf-8")).decode("ascii")
+    yield member.token, member.family_id
+    delete_production_rows(Contact, Membership, PersonalAccessToken, User, Family)
 
 
 def _propfind(client: TestClient, path: str, *, headers=None, depth="1"):
@@ -105,30 +51,30 @@ def _propfind(client: TestClient, path: str, *, headers=None, depth="1"):
 
 
 class TestCardDAV:
-    def test_principal_lists_addressbook_for_contact_scoped_pat(self, app_under_test, seeded):
+    def test_principal_lists_addressbook_for_contact_scoped_pat(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        headers = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        headers = {"Authorization": dav_basic(EMAIL, token)}
         resp = _propfind(client, f"/dav/{EMAIL}/", headers=headers, depth="1")
         assert resp.status_code == 207, resp.text
         assert f"book-{family_id}" in resp.text
         assert f"cal-{family_id}" not in resp.text
 
-    def test_addressbook_lists_contacts(self, app_under_test, seeded):
+    def test_addressbook_lists_contacts(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        headers = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        headers = {"Authorization": dav_basic(EMAIL, token)}
         resp = _propfind(client, f"/dav/{EMAIL}/book-{family_id}/", headers=headers, depth="1")
         assert resp.status_code == 207, resp.text
         assert "tribu-contact-" in resp.text
         assert resp.text.count("tribu-contact-") >= 2
 
-    def test_get_returns_vcard(self, app_under_test, seeded):
+    def test_get_returns_vcard(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         import re
 
-        headers = {"Authorization": _basic(EMAIL, token)}
+        headers = {"Authorization": dav_basic(EMAIL, token)}
         listing = _propfind(client, f"/dav/{EMAIL}/book-{family_id}/", headers=headers, depth="1")
         match = re.search(r"tribu-contact-(\d+)\.vcf", listing.text)
         assert match, listing.text
@@ -144,10 +90,10 @@ class TestCardDAV:
         assert "FN:" in body
         assert ("Oma Schmidt" in body) or ("Onkel Peter" in body)
 
-    def test_put_creates_contact(self, app_under_test, seeded):
+    def test_put_creates_contact(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/vcard"}
         vcard = (
             "BEGIN:VCARD\r\nVERSION:3.0\r\n"
             "UID:new-contact@example.com\r\n"
@@ -164,7 +110,7 @@ class TestCardDAV:
         assert put.status_code in (201, 204), put.text
         get = client.get(
             f"/dav/{EMAIL}/book-{family_id}/new-contact.vcf",
-            headers={"Authorization": _basic(EMAIL, token)},
+            headers={"Authorization": dav_basic(EMAIL, token)},
         )
         assert get.status_code == 200, get.text
         assert "Tante Lisa" in get.text
@@ -181,10 +127,10 @@ class TestCardDAV:
         finally:
             db.close()
 
-    def test_delete_removes_contact(self, app_under_test, seeded):
+    def test_delete_removes_contact(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
         vcard = (
             "BEGIN:VCARD\r\nVERSION:3.0\r\n"
             "UID:to-delete@example.com\r\n"
@@ -208,10 +154,10 @@ class TestCardDAV:
         )
         assert missing.status_code == 404
 
-    def test_delete_removes_synced_birthday(self, app_under_test, seeded):
+    def test_delete_removes_synced_birthday(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/vcard"}
         vcard = (
             "BEGIN:VCARD\r\nVERSION:3.0\r\n"
             "UID:bday-delete@example.com\r\n"
@@ -229,7 +175,7 @@ class TestCardDAV:
         delete = client.request(
             "DELETE",
             f"/dav/{EMAIL}/book-{family_id}/birthday-remove.vcf",
-            headers={"Authorization": _basic(EMAIL, token)},
+            headers={"Authorization": dav_basic(EMAIL, token)},
         )
         assert delete.status_code in (200, 204)
 
@@ -244,13 +190,13 @@ class TestCardDAV:
         finally:
             db.close()
 
-    def test_put_updates_synced_birthday_in_place(self, app_under_test, seeded):
+    def test_put_updates_synced_birthday_in_place(self, dav_app, seeded):
         """A CardDAV update changing BDAY must update the linked birthday
         row in place — same id, new month/day, no duplicates.
         """
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/vcard"}
         original = (
             "BEGIN:VCARD\r\nVERSION:3.0\r\n"
             "UID:bday-update@example.com\r\n"
@@ -332,10 +278,10 @@ class TestCardDAV:
         finally:
             db.close()
 
-    def test_put_preserves_multiple_channel_values_in_contact_response(self, app_under_test, seeded):
+    def test_put_preserves_multiple_channel_values_in_contact_response(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/vcard"}
         vcard = (
             "BEGIN:VCARD\r\nVERSION:3.0\r\n"
             "UID:multi-channel@example.com\r\n"
@@ -368,11 +314,11 @@ class TestCardDAV:
         finally:
             db.close()
 
-    def test_put_preserves_unmodeled_fields(self, app_under_test, seeded):
+    def test_put_preserves_unmodeled_fields(self, dav_app, seeded):
         """A PUT with ORG/ADR/NOTE and multiple EMAIL must round-trip."""
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/vcard"}
         vcard = (
             "BEGIN:VCARD\r\nVERSION:3.0\r\n"
             "UID:rich-roundtrip@example.com\r\n"
@@ -395,17 +341,17 @@ class TestCardDAV:
 
         get = client.get(
             f"/dav/{EMAIL}/book-{family_id}/rich.vcf",
-            headers={"Authorization": _basic(EMAIL, token)},
+            headers={"Authorization": dav_basic(EMAIL, token)},
         )
         assert get.status_code == 200, get.text
         body = get.text
         for expected in ("Familienfest GmbH", "Seestrasse", "Apfelstrudel", "marta@work.example"):
             assert expected in body, f"round-trip lost {expected!r} from body:\n{body}"
 
-    def test_put_with_duplicate_uid_on_new_href_is_rejected(self, app_under_test, seeded):
+    def test_put_with_duplicate_uid_on_new_href_is_rejected(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/vcard"}
         vcard = (
             "BEGIN:VCARD\r\nVERSION:3.0\r\n"
             "UID:taken@example.com\r\nFN:First\r\nN:First;;;;\r\n"
@@ -431,14 +377,14 @@ class TestCardDAV:
         # First row must still be reachable unchanged.
         still = client.get(
             f"/dav/{EMAIL}/book-{family_id}/first.vcf",
-            headers={"Authorization": _basic(EMAIL, token)},
+            headers={"Authorization": dav_basic(EMAIL, token)},
         )
         assert still.status_code == 200, still.text
 
-    def test_put_invalid_vcard_is_rejected(self, app_under_test, seeded):
+    def test_put_invalid_vcard_is_rejected(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/vcard"}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/vcard"}
         # Missing FN -> vcard_to_contact_dict returns an error.
         vcard = (
             "BEGIN:VCARD\r\nVERSION:3.0\r\n"

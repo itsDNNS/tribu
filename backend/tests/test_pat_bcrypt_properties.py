@@ -18,20 +18,16 @@ from __future__ import annotations
 import hashlib
 import importlib
 
-import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, User
+from app.models import PersonalAccessToken
 from app.security import (
     PAT_PREFIX,
     generate_pat,
-    hash_password,
     pat_lookup_key,
 )
+from tests.support import TestSession, add_member, auth
 
 
 # ---------------------------------------------------------------------------
@@ -70,54 +66,13 @@ def test_pat_lookup_key_unaffected_by_jwt_secret_rotation(monkeypatch):
 # Property 2: Freshly-minted bcrypt PAT authenticates without migration
 # ---------------------------------------------------------------------------
 
-engine = create_engine(
-    "sqlite:///./test-pat-bcrypt.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture
-def clean_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
-
-def test_fresh_bcrypt_pat_authenticates_without_migration(clean_db):
+def test_fresh_bcrypt_pat_authenticates_without_migration(app_db):
     db = TestSession()
-    user = User(
-        email="fresh-bcrypt@example.com",
-        password_hash=hash_password("x"),
-        display_name="Fresh Install",
-    )
-    db.add(user)
-    db.flush()
-    family = Family(name="Fresh Family")
-    db.add(family)
-    db.flush()
-    db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
+    member = add_member(db, "fresh-bcrypt@example.com", scopes=None, family_name="Fresh Family", display_name="Fresh Install")
 
     plain, token_hash, lookup_key = generate_pat()
     pat = PersonalAccessToken(
-        user_id=user.id,
+        user_id=member.user_id,
         name="fresh-pat",
         token_hash=token_hash,
         token_lookup=lookup_key,
@@ -134,7 +89,7 @@ def test_fresh_bcrypt_pat_authenticates_without_migration(clean_db):
     db.close()
 
     client = TestClient(app)
-    resp = client.get("/tokens", headers={"Authorization": f"Bearer {plain}"})
+    resp = client.get("/tokens", headers=auth(plain))
     assert resp.status_code == 200, resp.text
     assert any(t["name"] == "fresh-pat" for t in resp.json())
 

@@ -7,105 +7,52 @@ are rejected without changing stored events.
 """
 from __future__ import annotations
 
-import base64
-import hashlib
 import logging
-import os
 import re
-import tempfile
 
 import pytest
 from fastapi.testclient import TestClient
 from icalendar import Calendar
 
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.models import CalendarEvent, Family, Membership, PersonalAccessToken, User
-from app.security import hash_password, PAT_PREFIX
+from tests.support import add_member, dav_basic, delete_production_rows
 
 
 EMAIL = "dav-caldav@example.com"
 
 
-@pytest.fixture(scope="module")
-def dav_storage_folder():
-    with tempfile.TemporaryDirectory(prefix="tribu-dav-caldav-") as folder:
-        os.environ["DAV_STORAGE_FOLDER"] = folder
-        yield folder
-        os.environ.pop("DAV_STORAGE_FOLDER", None)
-
-
-@pytest.fixture(scope="module")
-def app_under_test(dav_storage_folder):
-    from app.main import app
-
-    Base.metadata.create_all(bind=engine)
-    yield app
-    Base.metadata.drop_all(bind=engine)
-
-
 @pytest.fixture
-def seeded(app_under_test):
+def seeded(dav_app):
     from datetime import datetime
 
-    db = SessionLocal()
-    try:
-        user = User(email=EMAIL, password_hash=hash_password("x"), display_name="CalDAV User")
-        db.add(user)
-        db.flush()
-        family = Family(name="CalDAV Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}caldav-rw"
-        db.add(PersonalAccessToken(
-            user_id=user.id,
-            name="caldav-pat",
-            token_hash=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
-            token_lookup=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
-            scopes="calendar:read,calendar:write",
-        ))
+    with SessionLocal() as db:
+        member = add_member(db, EMAIL, scopes="calendar:read,calendar:write", family_name="CalDAV Family", display_name="CalDAV User")
         # Two events
         db.add(CalendarEvent(
-            family_id=family.id,
+            family_id=member.family_id,
             title="Team sync",
             starts_at=datetime(2026, 5, 4, 10, 0),
             ends_at=datetime(2026, 5, 4, 11, 0),
             all_day=False,
-            created_by_user_id=user.id,
-            assigned_to=[user.id],
+            created_by_user_id=member.user_id,
+            assigned_to=[member.user_id],
             category="Sport, Outdoor",
             color="#ff0000",
         ))
         db.add(CalendarEvent(
-            family_id=family.id,
+            family_id=member.family_id,
             title="Picnic",
             starts_at=datetime(2026, 5, 10, 0, 0),
             ends_at=datetime(2026, 5, 10, 23, 59),
             all_day=True,
             recurrence="yearly",
-            created_by_user_id=user.id,
+            created_by_user_id=member.user_id,
         ))
         db.commit()
-        token = plain
-        family_id = family.id
-    finally:
-        db.close()
-    yield token, family_id
+    yield member.token, member.family_id
     # teardown: wipe rows so other tests keep a clean table
-    db = SessionLocal()
-    try:
-        db.query(CalendarEvent).delete()
-        db.query(Membership).delete()
-        db.query(PersonalAccessToken).delete()
-        db.query(User).filter(User.email == EMAIL).delete()
-        db.query(Family).delete()
-        db.commit()
-    finally:
-        db.close()
-
-
-def _basic(login: str, token: str) -> str:
-    return "Basic " + base64.b64encode(f"{login}:{token}".encode("utf-8")).decode("ascii")
+    delete_production_rows(CalendarEvent, Membership, PersonalAccessToken, User, Family)
 
 
 def _fetch_ctag(client: TestClient, headers: dict, family_id: int) -> str:
@@ -141,31 +88,31 @@ def _propfind(client: TestClient, path: str, *, headers=None, depth="1"):
 
 
 class TestCalDAVRead:
-    def test_principal_home_lists_the_family_calendar(self, app_under_test, seeded):
+    def test_principal_home_lists_the_family_calendar(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        headers = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        headers = {"Authorization": dav_basic(EMAIL, token)}
         resp = _propfind(client, f"/dav/{EMAIL}/", headers=headers, depth="1")
         assert resp.status_code == 207, resp.text
         body = resp.text
         assert f"cal-{family_id}" in body
 
-    def test_collection_exposes_both_events(self, app_under_test, seeded):
+    def test_collection_exposes_both_events(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        headers = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        headers = {"Authorization": dav_basic(EMAIL, token)}
         resp = _propfind(client, f"/dav/{EMAIL}/cal-{family_id}/", headers=headers, depth="1")
         assert resp.status_code == 207, resp.text
         assert "tribu-event-" in resp.text
         # exactly 2 item hrefs
         assert resp.text.count("tribu-event-") >= 2
 
-    def test_item_fetch_returns_vevent_with_summary(self, app_under_test, seeded):
+    def test_item_fetch_returns_vevent_with_summary(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         # GET the VEVENT ics body of the first event
         # We don't know the event id in advance, grab it via PROPFIND
-        headers = {"Authorization": _basic(EMAIL, token)}
+        headers = {"Authorization": dav_basic(EMAIL, token)}
         listing = _propfind(
             client,
             f"/dav/{EMAIL}/cal-{family_id}/",
@@ -189,14 +136,14 @@ class TestCalDAVRead:
         # One of our seeded events must be in there
         assert ("Team sync" in get_resp.text) or ("Picnic" in get_resp.text)
 
-    def test_ctag_changes_when_event_is_edited(self, app_under_test, seeded):
+    def test_ctag_changes_when_event_is_edited(self, dav_app, seeded):
         """Editing a stored event must bump the collection ctag so clients
         that poll CS:getctag before refetching notice the change."""
         import time
 
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        headers = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        headers = {"Authorization": dav_basic(EMAIL, token)}
 
         ctag_before = _fetch_ctag(client, headers, family_id)
         assert ctag_before, "ctag must be present"
@@ -217,7 +164,7 @@ class TestCalDAVRead:
             f"Expected ctag to change after edit. before={ctag_before!r} after={ctag_after!r}"
         )
 
-    def test_sync_token_refresh_is_rejected_until_phase_d(self, app_under_test, seeded):
+    def test_sync_token_refresh_is_rejected_until_phase_d(self, dav_app, seeded):
         """A sync-collection REPORT with an old token must force a full refresh.
 
         Radicale converts the storage plugin's ``ValueError`` into a
@@ -225,9 +172,9 @@ class TestCalDAVRead:
         client re-runs without a token.
         """
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         headers = {
-            "Authorization": _basic(EMAIL, token),
+            "Authorization": dav_basic(EMAIL, token),
             "Depth": "1",
             "Content-Type": "application/xml",
         }
@@ -248,11 +195,11 @@ class TestCalDAVRead:
         assert resp.status_code == 403, resp.text
         assert "valid-sync-token" in resp.text
 
-    def test_put_creates_a_row(self, app_under_test, seeded):
+    def test_put_creates_a_row(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         headers = {
-            "Authorization": _basic(EMAIL, token),
+            "Authorization": dav_basic(EMAIL, token),
             "Content-Type": "text/calendar",
         }
         ics = (
@@ -272,15 +219,15 @@ class TestCalDAVRead:
         # The row should be fetchable at the same href.
         get = client.get(
             f"/dav/{EMAIL}/cal-{family_id}/from-dav.ics",
-            headers={"Authorization": _basic(EMAIL, token)},
+            headers={"Authorization": dav_basic(EMAIL, token)},
         )
         assert get.status_code == 200, get.text
         assert "From DAV" in get.text
 
-    def test_put_keeps_the_location_a_phone_sets(self, app_under_test, seeded):
+    def test_put_keeps_the_location_a_phone_sets(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        headers = {"Authorization": _basic(EMAIL, token), "Content-Type": "text/calendar"}
+        client = TestClient(dav_app)
+        headers = {"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/calendar"}
         ics = (
             "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
             "BEGIN:VEVENT\r\nUID:with-location@example.com\r\n"
@@ -296,10 +243,10 @@ class TestCalDAVRead:
         assert client.put(path, headers=headers, content=moved).status_code in (201, 204)
         assert "LOCATION:Outdoor pool" in client.get(path, headers=headers).text
 
-    def test_put_overwrite_and_delete(self, app_under_test, seeded):
+    def test_put_overwrite_and_delete(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
         ics_v1 = (
             "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
             "BEGIN:VEVENT\r\nUID:overwrite@example.com\r\n"
@@ -341,7 +288,7 @@ class TestCalDAVRead:
         )
         assert get_after.status_code == 404
 
-    def test_concurrent_put_same_href_does_not_500(self, app_under_test, seeded):
+    def test_concurrent_put_same_href_does_not_500(self, dav_app, seeded):
         """Two threads racing on the same href must not both commit and
         must not surface a 500. The write lock serializes them; either
         both succeed (with one overwriting the other) or the second
@@ -351,7 +298,7 @@ class TestCalDAVRead:
 
         token, family_id = seeded
         headers = {
-            "Authorization": _basic(EMAIL, token),
+            "Authorization": dav_basic(EMAIL, token),
             "Content-Type": "text/calendar",
         }
 
@@ -365,7 +312,7 @@ class TestCalDAVRead:
             )
 
         def put(suffix: str):
-            client = TestClient(app_under_test)
+            client = TestClient(dav_app)
             return client.put(
                 f"/dav/{EMAIL}/cal-{family_id}/race.ics",
                 headers=headers,
@@ -378,11 +325,11 @@ class TestCalDAVRead:
         for s in statuses:
             assert s < 500, statuses
 
-    def test_put_rejects_invalid_ics(self, app_under_test, seeded):
+    def test_put_rejects_invalid_ics(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         headers = {
-            "Authorization": _basic(EMAIL, token),
+            "Authorization": dav_basic(EMAIL, token),
             "Content-Type": "text/calendar",
         }
         # Missing SUMMARY -> ics_to_event_dicts rejects it.
@@ -400,11 +347,11 @@ class TestCalDAVRead:
         # Radicale maps a ValueError from storage to a 4xx.
         assert 400 <= put.status_code < 500, put.text
 
-    def test_vtodo_put_is_rejected_without_mutating_events(self, app_under_test, seeded, caplog):
+    def test_vtodo_put_is_rejected_without_mutating_events(self, dav_app, seeded, caplog):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         headers = {
-            "Authorization": _basic(EMAIL, token),
+            "Authorization": dav_basic(EMAIL, token),
             "Content-Type": "text/calendar",
         }
         todo = (
@@ -444,11 +391,11 @@ class TestCalDAVRead:
         finally:
             db.close()
 
-    def test_whole_collection_put_is_rejected_without_mutation(self, app_under_test, seeded, caplog):
+    def test_whole_collection_put_is_rejected_without_mutation(self, dav_app, seeded, caplog):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         headers = {
-            "Authorization": _basic(EMAIL, token),
+            "Authorization": dav_basic(EMAIL, token),
             "Content-Type": "text/calendar",
         }
         replacement = (
@@ -494,10 +441,10 @@ class TestCalDAVRead:
             db.close()
         assert after == before
 
-    def test_collection_delete_is_rejected_without_mutation(self, app_under_test, seeded):
+    def test_collection_delete_is_rejected_without_mutation(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
         db = SessionLocal()
         try:
             before = db.query(CalendarEvent).filter(CalendarEvent.family_id == family_id).count()
@@ -558,13 +505,13 @@ class TestCalDAVMemberProjection:
     """Discussion #438: assigned members, category, and color must be
     visible to CalDAV clients without letting lossy clients erase them."""
 
-    def test_event_get_emits_member_attendees_category_and_color(self, app_under_test, seeded):
+    def test_event_get_emits_member_attendees_category_and_color(self, dav_app, seeded):
         from icalendar import Calendar
 
         token, family_id = seeded
         user_id, event_id = _seeded_ids(family_id)
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
 
         resp = client.get(
             f"/dav/{EMAIL}/cal-{family_id}/tribu-event-{event_id}.ics",
@@ -588,14 +535,14 @@ class TestCalDAVMemberProjection:
         assert "ORGANIZER" not in resp.text
         assert vevent.get("COLOR") is None
 
-    def test_lossy_put_preserves_assignment_category_and_color(self, app_under_test, seeded):
+    def test_lossy_put_preserves_assignment_category_and_color(self, dav_app, seeded):
         """A phone client that never saw ATTENDEE/CATEGORIES/X-TRIBU-COLOR
         PUTs the event back without them; Tribu's fields must survive and
         the following GET must re-emit them."""
         token, family_id = seeded
         user_id, _ = _seeded_ids(family_id)
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
         put_headers = {**auth, "Content-Type": "text/calendar"}
 
         def phone_ics(summary: str) -> str:
@@ -655,13 +602,13 @@ class TestCalDAVMemberProjection:
         assert "CATEGORIES:Health" in get.text
         assert "X-TRIBU-COLOR:#00ff00" in get.text
 
-    def test_ctag_changes_after_member_rename_and_membership_change(self, app_under_test, seeded):
+    def test_ctag_changes_after_member_rename_and_membership_change(self, dav_app, seeded):
         """Member renames/additions change emitted ATTENDEE content without
         touching any event row, so the collection ctag must reflect the
         family membership fingerprint."""
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        headers = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        headers = {"Authorization": dav_basic(EMAIL, token)}
 
         ctag_initial = _fetch_ctag(client, headers, family_id)
         assert ctag_initial
@@ -677,24 +624,14 @@ class TestCalDAVMemberProjection:
         ctag_after_rename = _fetch_ctag(client, headers, family_id)
         assert ctag_after_rename != ctag_initial
 
-        db = SessionLocal()
-        try:
-            extra = User(
-                email="dav-caldav-second@example.com",
-                password_hash=hash_password("x"),
-                display_name="Second Member",
-            )
-            db.add(extra)
-            db.flush()
-            db.add(Membership(user_id=extra.id, family_id=family_id, role="member", is_adult=True))
+        with SessionLocal() as db:
+            add_member(db, "dav-caldav-second@example.com", scopes=None, family_id=family_id, role="member", display_name="Second Member")
             db.commit()
-        finally:
-            db.close()
 
         ctag_after_join = _fetch_ctag(client, headers, family_id)
         assert ctag_after_join not in (ctag_initial, ctag_after_rename)
 
-    def test_collection_serialize_has_no_per_event_member_queries(self, app_under_test, seeded):
+    def test_collection_serialize_has_no_per_event_member_queries(self, dav_app, seeded):
         """The member mapping must be preloaded once per collection
         operation, not looked up per event (N+1)."""
         from typing import cast
@@ -765,17 +702,17 @@ class TestCalDAVChangedOccurrences:
     def _put(self, client, token, family_id, ics):
         resp = client.put(
             f"/dav/{EMAIL}/cal-{family_id}/choir.ics",
-            headers={"Authorization": _basic(EMAIL, token), "Content-Type": "text/calendar"},
+            headers={"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/calendar"},
             content=ics,
         )
         assert resp.status_code in (201, 204), resp.text
 
-    def test_put_stores_and_serves_the_changed_occurrence(self, app_under_test, seeded):
+    def test_put_stores_and_serves_the_changed_occurrence(self, dav_app, seeded):
         from datetime import datetime
 
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
 
         self._put(client, token, family_id, self._calendar(self.SERIES, self.CHANGED))
 
@@ -793,9 +730,9 @@ class TestCalDAVChangedOccurrences:
         assert listing.text.count("choir.ics") == 1
         assert f"tribu-event-{rows[1].id}.ics" not in listing.text
 
-    def test_put_without_the_occurrence_restores_it_and_delete_removes_all(self, app_under_test, seeded):
+    def test_put_without_the_occurrence_restores_it_and_delete_removes_all(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         self._put(client, token, family_id, self._calendar(self.SERIES, self.CHANGED))
 
         self._put(client, token, family_id, self._calendar(self.SERIES))
@@ -805,14 +742,14 @@ class TestCalDAVChangedOccurrences:
         delete = client.request(
             "DELETE",
             f"/dav/{EMAIL}/cal-{family_id}/choir.ics",
-            headers={"Authorization": _basic(EMAIL, token)},
+            headers={"Authorization": dav_basic(EMAIL, token)},
         )
         assert delete.status_code in (200, 204), delete.text
         assert self._rows(family_id) == []
 
-    def test_put_keeps_a_change_to_all_following_occurrences(self, app_under_test, seeded):
+    def test_put_keeps_a_change_to_all_following_occurrences(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         from_now_on = (
             "BEGIN:VEVENT\r\nUID:series@example.com\r\n"
             "DTSTAMP:20260101T000000Z\r\n"
@@ -829,20 +766,20 @@ class TestCalDAVChangedOccurrences:
             ("Choir", "weekly", [2, 4]),
             ("Choir (Thursdays)", "weekly", [3, 5]),
         ]
-        get = client.get(f"/dav/{EMAIL}/cal-{family_id}/choir.ics", headers={"Authorization": _basic(EMAIL, token)})
+        get = client.get(f"/dav/{EMAIL}/cal-{family_id}/choir.ics", headers={"Authorization": dav_basic(EMAIL, token)})
         changed = next(component for component in Calendar.from_ical(get.text).walk("VEVENT") if component.get("RECURRENCE-ID"))
         assert changed["RECURRENCE-ID"].dt.strftime("%Y%m%dT%H%M%S") == "20260819T180000"
         assert changed["RECURRENCE-ID"].params["RANGE"] == "THISANDFUTURE"
         assert get.text.count("RRULE:") == 1
 
-    def test_changed_occurrence_uid_cannot_hijack_another_resource(self, app_under_test, seeded):
+    def test_changed_occurrence_uid_cannot_hijack_another_resource(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
+        client = TestClient(dav_app)
         self._put(client, token, family_id, self._calendar(self.SERIES, self.CHANGED))
 
         resp = client.put(
             f"/dav/{EMAIL}/cal-{family_id}/other.ics",
-            headers={"Authorization": _basic(EMAIL, token), "Content-Type": "text/calendar"},
+            headers={"Authorization": dav_basic(EMAIL, token), "Content-Type": "text/calendar"},
             content=self._calendar(self.CHANGED),
         )
 
@@ -879,10 +816,10 @@ def _sync_report(client, path, auth, token=""):
 
 
 class TestCalDAVIncrementalSync:
-    def test_a_sync_token_returns_only_what_changed(self, app_under_test, seeded):
+    def test_a_sync_token_returns_only_what_changed(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
         collection = f"/dav/{EMAIL}/cal-{family_id}/"
         put = {**auth, "Content-Type": "text/calendar"}
         for uid in ("keep", "edit", "drop"):
@@ -902,19 +839,19 @@ class TestCalDAVIncrementalSync:
         assert status == 207
         assert changes == {"sync-edit.ics": "changed", "sync-drop.ics": "gone", "sync-new.ics": "changed"}
 
-    def test_an_unknown_token_asks_for_a_full_sync(self, app_under_test, seeded):
+    def test_an_unknown_token_asks_for_a_full_sync(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
         status, _, _ = _sync_report(client, f"/dav/{EMAIL}/cal-{family_id}/", auth, "http://radicale.org/ns/sync/unknown")
         assert status == 403
 
 
 class TestCalDAVKeepsClientProperties:
-    def test_alarms_and_links_survive_a_tribu_edit(self, app_under_test, seeded):
+    def test_alarms_and_links_survive_a_tribu_edit(self, dav_app, seeded):
         token, family_id = seeded
-        client = TestClient(app_under_test)
-        auth = {"Authorization": _basic(EMAIL, token)}
+        client = TestClient(dav_app)
+        auth = {"Authorization": dav_basic(EMAIL, token)}
         path = f"/dav/{EMAIL}/cal-{family_id}/with-alarm.ics"
         extra = (
             "URL:https://example.com/course\r\nTRANSP:TRANSPARENT\r\n"

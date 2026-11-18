@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import logging
-import os
-import tempfile
 from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
 from icalendar import Calendar
 
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.models import (
     Family,
     Membership,
@@ -23,84 +19,47 @@ from app.models import (
     TokenTransaction,
     User,
 )
-from app.security import PAT_PREFIX, hash_password
+from tests.support import add_member, add_pat, dav_basic, delete_production_rows
 
 
 EMAIL = "dav-tasks-integration@example.com"
 
 
-@pytest.fixture(scope="module")
-def app_under_test():
-    with tempfile.TemporaryDirectory(prefix="tribu-dav-task-") as folder:
-        os.environ["DAV_STORAGE_FOLDER"] = folder
-        from app.main import app
-        Base.metadata.create_all(bind=engine)
-        yield app
-        Base.metadata.drop_all(bind=engine)
-        os.environ.pop("DAV_STORAGE_FOLDER", None)
-
-
-def _basic(email: str, token: str) -> str:
-    value = base64.b64encode(f"{email}:{token}".encode()).decode()
-    return f"Basic {value}"
-
-
-def _token(db, user_id: int, scopes: str, suffix: str) -> str:
-    plain = f"{PAT_PREFIX}task-dav-{suffix}"
-    lookup = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(
-        user_id=user_id, name=suffix, token_hash=lookup, token_lookup=lookup, scopes=scopes,
-    ))
-    return plain
-
-
 @pytest.fixture
-def seeded(app_under_test):
-    db = SessionLocal()
-    adult = User(email=EMAIL, password_hash=hash_password("x"), display_name="Task Adult")
-    child = User(email="dav-task-child@example.com", password_hash=hash_password("x"), display_name="Task Child")
-    family = Family(name="Task Family")
-    db.add_all([adult, child, family])
-    db.flush()
-    db.add_all([
-        Membership(user_id=adult.id, family_id=family.id, role="admin", is_adult=True),
-        Membership(user_id=child.id, family_id=family.id, role="member", is_adult=False),
-    ])
-    tokens = {
-        "rw": _token(db, adult.id, "tasks:read,tasks:write", "rw"),
-        "ro": _token(db, adult.id, "tasks:read", "ro"),
-        "star": _token(db, adult.id, "*", "star"),
-        "child": _token(db, child.id, "tasks:read,tasks:write", "child"),
-    }
-    assigned = Task(
-        family_id=family.id,
-        title="Assigned legacy",
-        description="Private notes",
-        priority="high",
-        due_date=datetime(2026, 8, 27),
-        due_is_date=True,
-        recurrence="weekly",
-        assigned_to_user_id=child.id,
-        created_by_user_id=adult.id,
-        token_reward_amount=5,
-    )
-    hidden = Task(family_id=family.id, title="Adults", priority="normal", created_by_user_id=adult.id)
-    db.add_all([assigned, hidden])
-    db.commit()
-    result = {**tokens, "family_id": family.id, "assigned_id": assigned.id, "hidden_id": hidden.id}
-    db.close()
+def seeded(dav_app):
+    with SessionLocal() as db:
+        adult = add_member(db, EMAIL, scopes="tasks:read,tasks:write", family_name="Task Family", display_name="Task Adult")
+        child = add_member(
+            db, "dav-task-child@example.com", scopes="tasks:read,tasks:write", family_id=adult.family_id, is_adult=False, display_name="Task Child",
+        )
+        tokens = {
+            "rw": adult.token,
+            "ro": add_pat(db, adult.user_id, "tasks:read"),
+            "star": add_pat(db, adult.user_id, "*"),
+            "child": child.token,
+        }
+        assigned = Task(
+            family_id=adult.family_id,
+            title="Assigned legacy",
+            description="Private notes",
+            priority="high",
+            due_date=datetime(2026, 8, 27),
+            due_is_date=True,
+            recurrence="weekly",
+            assigned_to_user_id=child.user_id,
+            created_by_user_id=adult.user_id,
+            token_reward_amount=5,
+        )
+        hidden = Task(family_id=adult.family_id, title="Adults", priority="normal", created_by_user_id=adult.user_id)
+        db.add_all([assigned, hidden])
+        db.commit()
+        result = {**tokens, "family_id": adult.family_id, "assigned_id": assigned.id, "hidden_id": hidden.id}
     yield result
-    db = SessionLocal()
-    for model in (Task, Membership, PersonalAccessToken):
-        db.query(model).delete()
-    db.query(User).filter(User.email.in_([EMAIL, "dav-task-child@example.com"])).delete(synchronize_session=False)
-    db.query(Family).delete()
-    db.commit()
-    db.close()
+    delete_production_rows(Task, Membership, PersonalAccessToken, User, Family)
 
 
 def _headers(token: str, email: str = EMAIL) -> dict[str, str]:
-    return {"Authorization": _basic(email, token)}
+    return {"Authorization": dav_basic(email, token)}
 
 
 def _vtodo(uid="client-one", summary="A task", extra="") -> str:
@@ -118,8 +77,8 @@ def _propfind(client, path, headers, depth="1"):
     )
 
 
-def test_discovery_is_literal_opt_in_and_vtodo_only(app_under_test, seeded):
-    client = TestClient(app_under_test)
+def test_discovery_is_literal_opt_in_and_vtodo_only(dav_app, seeded):
+    client = TestClient(dav_app)
     path = f"/dav/{EMAIL}/"
     task = _propfind(client, path, _headers(seeded["rw"]))
     assert task.status_code == 207
@@ -129,8 +88,8 @@ def test_discovery_is_literal_opt_in_and_vtodo_only(app_under_test, seeded):
     assert f"task-{seeded['family_id']}" not in wildcard.text
 
 
-def test_crud_round_trip_preserves_unknown_fields_and_precision(app_under_test, seeded):
-    client = TestClient(app_under_test)
+def test_crud_round_trip_preserves_unknown_fields_and_precision(dav_app, seeded):
+    client = TestClient(dav_app)
     href = f"/dav/{EMAIL}/task-{seeded['family_id']}/new.ics"
     wire = _vtodo(
         summary="Client task",
@@ -160,8 +119,8 @@ def test_crud_round_trip_preserves_unknown_fields_and_precision(app_under_test, 
     assert client.get(href, headers=_headers(seeded["rw"])).status_code == 404
 
 
-def test_child_can_resend_unchanged_fields_while_completing_but_not_edit_protected_values(app_under_test, seeded):
-    client = TestClient(app_under_test)
+def test_child_can_resend_unchanged_fields_while_completing_but_not_edit_protected_values(dav_app, seeded):
+    client = TestClient(dav_app)
     href = f"/dav/dav-task-child@example.com/task-{seeded['family_id']}/tribu-task-{seeded['assigned_id']}.ics"
     auth = _headers(seeded["child"], "dav-task-child@example.com")
     current = client.get(href, headers=auth)
@@ -187,8 +146,8 @@ def test_child_can_resend_unchanged_fields_while_completing_but_not_edit_protect
     db.close()
 
 
-def test_read_only_uid_conflicts_recurrence_and_event_calendar_are_rejected(app_under_test, seeded):
-    client = TestClient(app_under_test)
+def test_read_only_uid_conflicts_recurrence_and_event_calendar_are_rejected(dav_app, seeded):
+    client = TestClient(dav_app)
     base = f"/dav/{EMAIL}/task-{seeded['family_id']}"
     readable = client.get(
         f"{base}/tribu-task-{seeded['assigned_id']}.ics",
@@ -241,8 +200,8 @@ def test_read_only_uid_conflicts_recurrence_and_event_calendar_are_rejected(app_
     assert 400 <= event_calendar.status_code < 500
 
 
-def test_malformed_payload_returns_safe_4xx_without_logging_contents(app_under_test, seeded, caplog):
-    client = TestClient(app_under_test)
+def test_malformed_payload_returns_safe_4xx_without_logging_contents(dav_app, seeded, caplog):
+    client = TestClient(dav_app)
     secret_title = "PRIVATE-TASK-TITLE-458"
     wire = _vtodo(uid="private-uid-458", summary=secret_title, extra="RRULE:FREQ=DAILY\r\n")
     with caplog.at_level(logging.WARNING):
@@ -257,8 +216,8 @@ def test_malformed_payload_returns_safe_4xx_without_logging_contents(app_under_t
     assert "RRULE:FREQ=DAILY" not in caplog.text
 
 
-def test_task_etag_rejects_stale_if_match(app_under_test, seeded):
-    client = TestClient(app_under_test)
+def test_task_etag_rejects_stale_if_match(dav_app, seeded):
+    client = TestClient(dav_app)
     href = f"/dav/{EMAIL}/task-{seeded['family_id']}/etag.ics"
     headers = {**_headers(seeded["rw"]), "Content-Type": "text/calendar"}
     assert client.put(href, headers=headers, content=_vtodo(uid="etag", summary="One")).status_code in (201, 204)
@@ -278,8 +237,8 @@ def test_task_etag_rejects_stale_if_match(app_under_test, seeded):
     assert stale.status_code == 412
 
 
-def test_rest_created_updated_and_deleted_task_converges_in_dav(app_under_test, seeded):
-    client = TestClient(app_under_test)
+def test_rest_created_updated_and_deleted_task_converges_in_dav(dav_app, seeded):
+    client = TestClient(dav_app)
     api_headers = {"Authorization": f"Bearer {seeded['rw']}"}
     created = client.post(
         "/tasks",
@@ -315,7 +274,7 @@ def test_rest_created_updated_and_deleted_task_converges_in_dav(app_under_test, 
     assert client.get(href, headers=_headers(seeded["rw"])).status_code == 404
 
 
-def test_existing_240_character_task_round_trips_through_dav(app_under_test, seeded):
+def test_existing_240_character_task_round_trips_through_dav(dav_app, seeded):
     title = "T" * 240
     db = SessionLocal()
     adult = db.query(User).filter(User.email == EMAIL).one()
@@ -330,7 +289,7 @@ def test_existing_240_character_task_round_trips_through_dav(app_under_test, see
     task_id = task.id
     db.close()
 
-    client = TestClient(app_under_test)
+    client = TestClient(dav_app)
     href = f"/dav/{EMAIL}/task-{seeded['family_id']}/tribu-task-{task_id}.ics"
     fetched = client.get(href, headers=_headers(seeded["rw"]))
     assert fetched.status_code == 200
@@ -350,8 +309,8 @@ def test_existing_240_character_task_round_trips_through_dav(app_under_test, see
     db.close()
 
 
-def test_dav_completion_reopen_and_repeat_put_use_domain_effects_once(app_under_test, seeded):
-    client = TestClient(app_under_test)
+def test_dav_completion_reopen_and_repeat_put_use_domain_effects_once(dav_app, seeded):
+    client = TestClient(dav_app)
     db = SessionLocal()
     db.add(RewardCurrency(family_id=seeded["family_id"], name="Stars", icon="star"))
     db.commit()

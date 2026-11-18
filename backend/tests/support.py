@@ -7,6 +7,7 @@ same in-memory database the app sees through the ``get_db`` override.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -167,3 +168,19 @@ def post_contact(client, family_id: int, **fields) -> dict:
     resp = client.post("/contacts", json={"family_id": family_id, **fields})
     assert resp.status_code == 200, resp.text
     return resp.json()
+
+
+def dav_basic(login: str, token: str) -> str:
+    """The ``Authorization`` value a DAV client sends: HTTP Basic with the PAT as password."""
+    return "Basic " + base64.b64encode(f"{login}:{token}".encode("utf-8")).decode("ascii")
+
+
+def delete_production_rows(*models) -> None:
+    """Deletes every row of ``models``, in this order, from the production
+    database (``DATABASE_URL``) that ``production_db`` and ``dav_app`` use."""
+    from app.database import SessionLocal
+
+    with SessionLocal() as db:
+        for model in models:
+            db.query(model).delete()
+        db.commit()

@@ -3,14 +3,12 @@
 import json
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from app.core import scheduler as scheduler_module
 from app.core import scheduler_leader, ws_broadcast
 from app.core.rate_limits import limiter_storage_options
-from app.database import Base
 from app.models import SystemSetting
+from tests.support import TestSession
 
 
 def test_only_one_holder_gets_the_scheduler_lock(tmp_path):
@@ -52,18 +50,14 @@ def test_failed_start_hands_the_lock_back(tmp_path):
     assert scheduler_leader.FileLock(path).acquire() is True
 
 
-def test_backup_schedule_is_applied_when_it_changes(tmp_path, monkeypatch):
-    engine = create_engine(f"sqlite:///{tmp_path / 'settings.db'}")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    monkeypatch.setattr(scheduler_module, "SessionLocal", Session)
+def test_backup_schedule_is_applied_when_it_changes(scheduler_db, monkeypatch):
     monkeypatch.setattr(scheduler_module, "_applied_backup_schedule", None)
     applied = []
     monkeypatch.setattr(scheduler_module, "configure_backup_schedule", lambda *args: applied.append(args))
 
     assert scheduler_module.sync_backup_schedule("db", "/backups") is True
     assert scheduler_module.sync_backup_schedule("db", "/backups") is False
-    with Session() as db:
+    with TestSession() as db:
         db.add_all([SystemSetting(key="backup_schedule", value="daily"), SystemSetting(key="backup_retention", value="3")])
         db.commit()
     assert scheduler_module.sync_backup_schedule("db", "/backups") is True
