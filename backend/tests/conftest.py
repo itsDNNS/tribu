@@ -12,7 +12,7 @@ import tempfile
 
 import pytest
 
-from tests.support import TestSession, engine, freeze_scheduler_in_utc
+from tests.support import TestSession, engine, foreign_keys_enabled, freeze_scheduler_in_utc, sqlite_engine
 
 
 @pytest.fixture
@@ -21,6 +21,9 @@ def app_db():
     from app.database import Base, get_db
     from app.main import app
 
+    if not foreign_keys_enabled():
+        with engine.connect() as conn:
+            conn.exec_driver_sql("PRAGMA foreign_keys=ON")
     Base.metadata.create_all(bind=engine)
 
     def _session():
@@ -30,7 +33,26 @@ def app_db():
     app.dependency_overrides[get_db] = _session
     yield
     app.dependency_overrides.pop(get_db, None)
+    leaked = not foreign_keys_enabled()
+    if leaked:
+        with engine.connect() as conn:
+            conn.exec_driver_sql("PRAGMA foreign_keys=ON")
     Base.metadata.drop_all(bind=engine)
+    assert not leaked, "the test left PRAGMA foreign_keys off on the shared connection"
+
+
+@pytest.fixture
+def file_db(app_db, tmp_path):
+    """``app_db`` on a SQLite file, so that every session has its own
+    connection: for tests about what concurrent writers see."""
+    from app.database import Base
+
+    file_engine = sqlite_engine(f"sqlite:///{tmp_path / 'app.db'}")
+    Base.metadata.create_all(bind=file_engine)
+    TestSession.configure(bind=file_engine)
+    yield
+    TestSession.configure(bind=engine)
+    file_engine.dispose()
 
 
 @pytest.fixture

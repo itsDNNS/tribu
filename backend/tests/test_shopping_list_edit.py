@@ -555,7 +555,8 @@ def test_history_restore_emits_restored_state_to_all_integrations(monkeypatch):
     assert destinations[0]["action"] == "restored"
 
 
-def test_finish_uses_current_checked_state_when_another_member_unchecks_after_authorization(monkeypatch):
+def test_finish_uses_current_checked_state_when_another_member_unchecks_after_authorization(monkeypatch, file_db):
+    # file_db: the request and the other member write over separate connections.
     token,family,user=_seed_member(suffix="concurrent-finish")
     list_id=seed_shopping_list(family, "Trip", user_id=user)
     keep=_seed_item(list_id,"Changed by another member",checked=True)

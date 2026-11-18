@@ -760,8 +760,9 @@ class TestSchoolTimetables:
                 {"period_id": 999_999, "lesson_id": lesson_id},
             )
             db.commit()
-            db.execute(text("PRAGMA foreign_keys=ON"))
         finally:
+            db.rollback()
+            db.execute(text("PRAGMA foreign_keys=ON"))
             db.close()
 
         listed = client.get(f"/school-timetables?family_id={family_id}", headers=auth(admin_token))

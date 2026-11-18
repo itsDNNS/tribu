@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from itertools import count
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -22,19 +22,33 @@ from app.core.push import PushResult
 from app.models import Family, Membership, PersonalAccessToken, ShoppingList, User
 from app.security import PAT_PREFIX, hash_password
 
+
+def _enable_foreign_keys(dbapi_conn, _record):
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+def sqlite_engine(url: str, **options) -> Engine:
+    """A SQLite engine usable from the TestClient's threads, with foreign keys enforced."""
+    created = create_engine(url, connect_args={"check_same_thread": False}, **options)
+    event.listen(created, "connect", _enable_foreign_keys)
+    return created
+
+
 # One in-memory database for the whole run; ``app_db`` creates the tables
-# before each test and drops them afterwards.
-engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+# before each test and drops them afterwards. All sessions share its single
+# connection; ``file_db`` gives a test independent connections instead.
+engine = sqlite_engine("sqlite://", poolclass=StaticPool)
 TestSession = sessionmaker(bind=engine, autoflush=False)
 
 _serial = count(1)
 
 
-@event.listens_for(engine, "connect")
-def _enable_foreign_keys(dbapi_conn, _record):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+def foreign_keys_enabled() -> bool:
+    """Whether the shared connection enforces foreign keys."""
+    with engine.connect() as conn:
+        return conn.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1
 
 
 def auth(token: str) -> dict[str, str]:

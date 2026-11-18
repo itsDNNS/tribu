@@ -56,7 +56,8 @@ def test_item_source_names_each_recipe_once_and_stays_short():
 
 
 def test_item_source_follows_merges_and_starts_over_on_restore(app_db):
-    db = TestSession()
+    # Autoflush on, as the domain code expects in a request session.
+    db = TestSession(autoflush=True)
     family = Family(name="Source")
     db.add(family)
     db.flush()
@@ -70,14 +71,17 @@ def test_item_source_follows_merges_and_starts_over_on_restore(app_db):
     assert (first.item.spec, first.item.source) == ("3 l", "Pancakes, Lasagne")
 
     first.item.checked = True
+    db.flush()
     restored = add_or_merge_shopping_item(db, shopping_list=groceries, name="Milk")
     assert restored.action == "restored"
-    assert restored.item.source is None
+    db.flush()
+    db.refresh(restored.item)
+    assert (restored.item.checked, restored.item.source) == (False, None)
     db.close()
 
 
 def test_add_merge_restore_quantity_and_family_category_preference(app_db):
-    db = TestSession()
+    db = TestSession(autoflush=True)
     original_user = User(email="first@example.com", password_hash="hash", display_name="First")
     other_user = User(email="other@example.com", password_hash="hash", display_name="Other")
     first_family = Family(name="First")
@@ -124,6 +128,7 @@ def test_add_merge_restore_quantity_and_family_category_preference(app_db):
     assert checked_variant.checked is True
 
     merged.item.checked = True
+    db.flush()
     restored = add_or_merge_shopping_item(
         db,
         shopping_list=first_list,
@@ -131,6 +136,8 @@ def test_add_merge_restore_quantity_and_family_category_preference(app_db):
         spec="0,5 l",
     )
     assert restored.action == "restored"
+    db.flush()
+    db.refresh(restored.item)
     assert restored.item.spec == "0.5 l"
     assert restored.item.checked is False
 
@@ -202,7 +209,7 @@ def test_shopping_item_construction_is_centralized():
 def test_historic_category_variants_remain_unchanged_and_template_application_canonicalizes(app_db):
     from app.core.shopping_domain import canonicalize_category, category_vocabulary
     from app.models import ShoppingTemplate, ShoppingTemplateItem
-    with TestSession() as db:
+    with TestSession(autoflush=True) as db:
         family = Family(name="Categories")
         db.add(family)
         db.flush()
