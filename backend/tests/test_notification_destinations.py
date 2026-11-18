@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import socket
 import types
@@ -10,95 +9,39 @@ from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-import app.models  # noqa: F401 - ensure all models are registered before create_all
-from app.database import Base, get_db
 from app.main import app
 from app.models import (
     CalendarEvent,
-    Family,
-    Membership,
     NotificationDestination,
     NotificationDestinationDelivery,
     HouseholdTemplate,
     MealPlan,
     NotificationPreference,
-    PersonalAccessToken,
     QuickCaptureItem,
     Recipe,
     ShoppingItem,
     ShoppingList,
     ShoppingTemplate,
     ShoppingTemplateItem,
-    User,
 )
-from app.security import PAT_PREFIX, hash_password
 from app.schemas import NotificationDestinationCreate
+from tests.support import TestSession, auth, freeze_scheduler_in_utc, seed_member, seed_shopping_list
 
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+pytestmark = pytest.mark.usefixtures("scheduler_db")
 
 
 @pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+def destination_settings(monkeypatch):
+    from app.core import notification_destinations as destinations_core
+
     monkeypatch.setenv("NOTIFICATION_DESTINATION_SECRET_KEY", "notification-destination-test-key")
     monkeypatch.delenv("NOTIFICATION_DESTINATION_ALLOWED_HOSTS", raising=False)
     monkeypatch.delenv("NOTIFICATION_DESTINATION_ALLOW_PRIVATE_HOSTS", raising=False)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-
-    from app.core import notification_destinations as destinations_core
-    from app.core import scheduler as scheduler_module
-
     monkeypatch.setattr(destinations_core, "SessionLocal", TestSession)
-    monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
-
-    yield
-
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
 
 
 client = TestClient(app)
-
-
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
-def _pat(user_id: int, scopes: str, suffix: str) -> str:
-    plain = f"{PAT_PREFIX}notification-dest-{suffix}"
-    lookup = hashlib.sha256(plain.encode()).hexdigest()
-    return plain, PersonalAccessToken(
-        user_id=user_id,
-        name=f"dest-{suffix}",
-        token_hash=lookup,
-        token_lookup=lookup,
-        scopes=scopes,
-    )
 
 
 def _seed_member(
@@ -109,23 +52,11 @@ def _seed_member(
     family_id: int | None = None,
     suffix: str = "admin",
 ) -> tuple[str, int, int]:
-    db = TestSession()
-    try:
-        family = db.get(Family, family_id) if family_id else Family(name=f"Family {suffix}")
-        user = User(
-            email=f"{suffix}@example.com",
-            password_hash=hash_password("Password123"),
-            display_name=f"User {suffix}",
-        )
-        db.add_all([family, user])
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role=role, is_adult=is_adult))
-        plain, token = _pat(user.id, scopes, suffix)
-        db.add(token)
-        db.commit()
-        return plain, family.id, user.id
-    finally:
-        db.close()
+    member = seed_member(
+        f"{suffix}@example.com", scopes=scopes, role=role, is_adult=is_adult, family_id=family_id,
+        family_name=f"Family {suffix}", password="Password123", display_name=f"User {suffix}", pat_name=f"dest-{suffix}",
+    )
+    return member.token, member.family_id, member.user_id
 
 
 def _destination(family_id: int, user_id: int, **overrides) -> NotificationDestination:
@@ -168,17 +99,6 @@ def _seed_shopping_destination(family_id: int, user_id: int) -> None:
         db.close()
 
 
-def _seed_shopping_list(family_id: int, user_id: int, name: str = "Coverage list") -> int:
-    db = TestSession()
-    try:
-        shopping_list = ShoppingList(family_id=family_id, name=name, created_by_user_id=user_id)
-        db.add(shopping_list)
-        db.commit()
-        return shopping_list.id
-    finally:
-        db.close()
-
-
 def test_create_schema_omits_provider_configuration_but_ignores_legacy_input():
     schema = NotificationDestinationCreate.model_json_schema()
     assert "provider" not in schema["properties"]
@@ -204,7 +124,7 @@ def test_admin_crud_redacts_secret_and_audits_safe_metadata():
 
     created = client.post(
         "/notification-destinations",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Kitchen ntfy",
@@ -243,21 +163,21 @@ def test_admin_crud_redacts_secret_and_audits_safe_metadata():
     assert "placeholder-token" not in stored
     assert reveal_target_url(stored) == raw_url
 
-    listed = client.get(f"/notification-destinations?family_id={family_id}", headers=_auth(token))
+    listed = client.get(f"/notification-destinations?family_id={family_id}", headers=auth(token))
     assert listed.status_code == 200, listed.json()
     assert listed.json()[0]["id"] == body["id"]
     assert "placeholder-token" not in str(listed.json())
 
     patched = client.patch(
         f"/notification-destinations/{body['id']}",
-        headers=_auth(token),
+        headers=auth(token),
         json={"name": "Kitchen reminders", "target_url_secret": ""},
     )
     assert patched.status_code == 200, patched.json()
     assert patched.json()["name"] == "Kitchen reminders"
     assert patched.json()["has_secret"] is True
 
-    deleted = client.delete(f"/notification-destinations/{body['id']}", headers=_auth(token))
+    deleted = client.delete(f"/notification-destinations/{body['id']}", headers=auth(token))
     assert deleted.status_code == 200
 
 
@@ -270,7 +190,7 @@ def test_response_normalizes_legacy_stored_provider_to_apprise():
     finally:
         db.close()
 
-    listed = client.get(f"/notification-destinations?family_id={family_id}", headers=_auth(token))
+    listed = client.get(f"/notification-destinations?family_id={family_id}", headers=auth(token))
 
     assert listed.status_code == 200, listed.json()
     assert listed.json()[0]["provider"] == "apprise"
@@ -290,7 +210,7 @@ def test_admin_authorization_cross_family_and_pat_scope_split():
 
     created = client.post(
         "/notification-destinations",
-        headers=_auth(admin_token),
+        headers=auth(admin_token),
         json={
             "family_id": family_id,
             "name": "Gotify",
@@ -301,17 +221,17 @@ def test_admin_authorization_cross_family_and_pat_scope_split():
     assert created.status_code == 200, created.json()
     dest_id = created.json()["id"]
 
-    assert client.get(f"/notification-destinations?family_id={family_id}", headers=_auth(read_token)).status_code == 200
-    assert client.get(f"/notification-destinations?family_id={family_id}", headers=_auth(write_token)).status_code == 403
+    assert client.get(f"/notification-destinations?family_id={family_id}", headers=auth(read_token)).status_code == 200
+    assert client.get(f"/notification-destinations?family_id={family_id}", headers=auth(write_token)).status_code == 403
 
     denied_adult = client.patch(
         f"/notification-destinations/{dest_id}",
-        headers=_auth(adult_member_token),
+        headers=auth(adult_member_token),
         json={"active": False},
     )
     assert denied_adult.status_code == 403
 
-    denied_outsider = client.delete(f"/notification-destinations/{dest_id}", headers=_auth(outsider_token))
+    denied_outsider = client.delete(f"/notification-destinations/{dest_id}", headers=auth(outsider_token))
     assert denied_outsider.status_code == 404
     assert "token" not in str(denied_outsider.json()).lower()
 
@@ -328,7 +248,7 @@ def test_rejects_private_destination_hosts_without_echoing_secret(url):
 
     resp = client.post(
         "/notification-destinations",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Unsafe internal",
@@ -355,7 +275,7 @@ def test_telegram_destination_token_is_not_treated_as_destination_host(monkeypat
 
     resp = client.post(
         "/notification-destinations",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Telegram reminders",
@@ -380,7 +300,7 @@ def test_rejects_network_destination_when_hostname_cannot_be_resolved(monkeypatc
 
     resp = client.post(
         "/notification-destinations",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Unresolved Gotify",
@@ -457,7 +377,7 @@ def test_private_destination_host_can_be_enabled_with_explicit_allowlist(monkeyp
 
     resp = client.post(
         "/notification-destinations",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Allowed local Gotify",
@@ -492,7 +412,7 @@ def test_existing_private_destination_url_is_blocked_at_delivery_time(monkeypatc
 
     monkeypatch.setattr(destinations_core, "_send_with_apprise", fail_if_called)
 
-    resp = client.post(f"/notification-destinations/{dest_id}/test", headers=_auth(token))
+    resp = client.post(f"/notification-destinations/{dest_id}/test", headers=auth(token))
     assert resp.status_code == 200, resp.json()
     assert resp.json()["status"] == "failed"
     assert resp.json()["error"] == "invalid_url"
@@ -509,7 +429,7 @@ def test_rejects_unsupported_schemes_without_echoing_secret(url):
 
     resp = client.post(
         "/notification-destinations",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Unsafe",
@@ -546,11 +466,11 @@ def test_provider_status_and_test_send_with_mocked_sender(monkeypatch):
 
     monkeypatch.setattr(destinations_core, "_send_with_apprise", fake_send)
 
-    status = client.get("/notification-destinations/provider/status", headers=_auth(token))
+    status = client.get("/notification-destinations/provider/status", headers=auth(token))
     assert status.status_code == 200
     assert status.json()["available"] is True
 
-    resp = client.post(f"/notification-destinations/{dest_id}/test", headers=_auth(token))
+    resp = client.post(f"/notification-destinations/{dest_id}/test", headers=auth(token))
     assert resp.status_code == 200, resp.json()
     assert resp.json()["status"] == "delivered"
     assert calls[0][0] == "mailto://user@example.com"
@@ -573,7 +493,7 @@ def test_provider_unavailable_is_safe_and_does_not_leak_secret(monkeypatch):
 
     monkeypatch.setattr(destinations_core, "is_provider_available", lambda: False)
 
-    resp = client.post(f"/notification-destinations/{dest_id}/test", headers=_auth(token))
+    resp = client.post(f"/notification-destinations/{dest_id}/test", headers=auth(token))
     assert resp.status_code == 200, resp.json()
     assert resp.json()["status"] == "failed"
     assert resp.json()["error"] == "provider_unavailable"
@@ -602,7 +522,7 @@ def test_send_failure_log_does_not_echo_destination_secret(monkeypatch, caplog):
     monkeypatch.setattr(destinations_core, "_send_with_apprise", failing_send)
 
     with caplog.at_level(logging.WARNING, logger="app.core.notification_destinations"):
-        resp = client.post(f"/notification-destinations/{dest_id}/test", headers=_auth(token))
+        resp = client.post(f"/notification-destinations/{dest_id}/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     assert resp.json()["status"] == "failed"
@@ -636,16 +556,11 @@ def test_scheduler_dispatches_once_across_users_and_retries(monkeypatch):
     finally:
         db.close()
 
-    from app.core import notification_destinations as destinations_core
     from app.core import scheduler as scheduler_module
 
-    calls = []
-    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
-    monkeypatch.setattr(destinations_core, "_send_with_apprise", lambda url, payload: calls.append(payload) or True)
+    calls = _capture_destination_calls(monkeypatch)
     monkeypatch.setattr(scheduler_module, "send_push_for_user", lambda *_, **__: None)
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: now)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: now)
-    monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
+    freeze_scheduler_in_utc(monkeypatch, now)
 
     scheduler_module._check_notifications()
     scheduler_module._check_notifications()
@@ -667,14 +582,14 @@ def test_scheduler_dispatches_once_across_users_and_retries(monkeypatch):
 def test_provider_status_and_crud_accept_shopping_event_destinations():
     token, family_id, _ = _seed_member()
 
-    status = client.get("/notification-destinations/provider/status", headers=_auth(token))
+    status = client.get("/notification-destinations/provider/status", headers=auth(token))
     assert status.status_code == 200
     assert "shopping.list.changed" in status.json()["events"]
     assert "shopping.item.changed" in status.json()["events"]
 
     created = client.post(
         "/notification-destinations",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Shopping channel",
@@ -687,7 +602,7 @@ def test_provider_status_and_crud_accept_shopping_event_destinations():
 
     invalid = client.post(
         "/notification-destinations",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Audit channel",
@@ -727,7 +642,7 @@ def test_shopping_list_destination_delivery_runs_after_saved_change(monkeypatch)
 
     resp = client.post(
         "/shopping/lists",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "name": "Groceries"},
     )
 
@@ -751,7 +666,7 @@ def test_shopping_item_destination_failure_is_isolated_and_filters_destinations(
     token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
     created_list = client.post(
         "/shopping/lists",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "name": "Errands"},
     )
     assert created_list.status_code == 200, created_list.json()
@@ -781,7 +696,7 @@ def test_shopping_item_destination_failure_is_isolated_and_filters_destinations(
 
     resp = client.post(
         f"/shopping/lists/{list_id}/items",
-        headers=_auth(token),
+        headers=auth(token),
         json={"name": "Milk"},
     )
 
@@ -809,7 +724,7 @@ def test_shopping_item_destination_update_actions_include_unchecked(monkeypatch)
     token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
     created_list = client.post(
         "/shopping/lists",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "name": "Market"},
     )
     assert created_list.status_code == 200, created_list.json()
@@ -830,16 +745,16 @@ def test_shopping_item_destination_update_actions_include_unchecked(monkeypatch)
 
     created_item = client.post(
         f"/shopping/lists/{list_id}/items",
-        headers=_auth(token),
+        headers=auth(token),
         json={"name": "Apples"},
     )
     assert created_item.status_code == 200, created_item.json()
     item_id = created_item.json()["id"]
 
-    checked = client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"checked": True})
+    checked = client.patch(f"/shopping/items/{item_id}", headers=auth(token), json={"checked": True})
     assert checked.status_code == 200, checked.json()
 
-    unchecked = client.patch(f"/shopping/items/{item_id}", headers=_auth(token), json={"checked": False})
+    unchecked = client.patch(f"/shopping/items/{item_id}", headers=auth(token), json={"checked": False})
     assert unchecked.status_code == 200, unchecked.json()
 
     assert [call["trigger_key"].split(":")[2] for call in calls] == ["created", "checked", "unchecked"]
@@ -855,7 +770,7 @@ def test_shopping_template_apply_sends_item_destination_after_items_are_saved(mo
     token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:read,shopping:write")
     created_list = client.post(
         "/shopping/lists",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "name": "Weekly shop"},
     )
     assert created_list.status_code == 200, created_list.json()
@@ -895,7 +810,7 @@ def test_shopping_template_apply_sends_item_destination_after_items_are_saved(mo
 
     applied = client.post(
         f"/shopping/templates/{template_id}/apply",
-        headers=_auth(token),
+        headers=auth(token),
         json={"list_id": list_id},
     )
 
@@ -911,7 +826,7 @@ def test_shopping_template_apply_sends_item_destination_after_items_are_saved(mo
 
 def test_recipe_add_to_shopping_sends_item_destination(monkeypatch):
     token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,recipes:write")
-    list_id = _seed_shopping_list(family_id, user_id, "Recipe list")
+    list_id = seed_shopping_list(family_id, "Recipe list", user_id=user_id)
     _seed_shopping_destination(family_id, user_id)
     db = TestSession()
     try:
@@ -930,7 +845,7 @@ def test_recipe_add_to_shopping_sends_item_destination(monkeypatch):
     calls = _capture_destination_calls(monkeypatch)
     resp = client.post(
         f"/recipes/{recipe_id}/add-to-shopping",
-        headers=_auth(token),
+        headers=auth(token),
         json={"shopping_list_id": list_id, "ingredient_names": ["Flour", "Milk"]},
     )
 
@@ -945,7 +860,7 @@ def test_recipe_add_to_shopping_sends_item_destination(monkeypatch):
 
 def test_meal_plan_add_to_shopping_sends_single_and_week_item_destinations(monkeypatch):
     token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,meal_plans:write")
-    list_id = _seed_shopping_list(family_id, user_id, "Meal plan list")
+    list_id = seed_shopping_list(family_id, "Meal plan list", user_id=user_id)
     _seed_shopping_destination(family_id, user_id)
     db = TestSession()
     try:
@@ -974,12 +889,12 @@ def test_meal_plan_add_to_shopping_sends_single_and_week_item_destinations(monke
     calls = _capture_destination_calls(monkeypatch)
     single_resp = client.post(
         f"/meal-plans/{single_id}/add-to-shopping",
-        headers=_auth(token),
+        headers=auth(token),
         json={"shopping_list_id": list_id},
     )
     week_resp = client.post(
         "/meal-plans/week/add-to-shopping",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "week_start": "2026-05-11", "shopping_list_id": list_id},
     )
 
@@ -1012,7 +927,7 @@ def test_household_template_apply_sends_list_and_item_destinations(monkeypatch):
     calls = _capture_destination_calls(monkeypatch)
     resp = client.post(
         f"/household-templates/{template_id}/apply",
-        headers=_auth(token),
+        headers=auth(token),
         json={"target_date": "2026-05-11", "shopping_list_name": "Party shop"},
     )
 
@@ -1039,12 +954,12 @@ def test_quick_capture_shopping_routes_send_destinations(monkeypatch):
     calls = _capture_destination_calls(monkeypatch)
     direct = client.post(
         "/quick-capture",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "text": "Bananas", "destination": "shopping"},
     )
     converted = client.post(
         f"/quick-capture/inbox/{inbox_id}/convert",
-        headers=_auth(token),
+        headers=auth(token),
         json={"destination": "shopping"},
     )
 
@@ -1066,7 +981,7 @@ def test_quick_capture_shopping_routes_send_destinations(monkeypatch):
 
 def test_clear_checked_shopping_items_sends_item_destination(monkeypatch):
     token, family_id, user_id = _seed_member(scopes="admin:read,admin:write,shopping:write")
-    list_id = _seed_shopping_list(family_id, user_id, "Checked list")
+    list_id = seed_shopping_list(family_id, "Checked list", user_id=user_id)
     _seed_shopping_destination(family_id, user_id)
     db = TestSession()
     try:
@@ -1080,7 +995,7 @@ def test_clear_checked_shopping_items_sends_item_destination(monkeypatch):
         db.close()
 
     calls = _capture_destination_calls(monkeypatch)
-    resp = client.delete(f"/shopping/lists/{list_id}/checked", headers=_auth(token))
+    resp = client.delete(f"/shopping/lists/{list_id}/checked", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     assert resp.json()["deleted_count"] == 2
@@ -1123,7 +1038,7 @@ def test_shopping_destination_respects_household_quiet_hours(monkeypatch):
 
     resp = client.post(
         "/shopping/lists",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "name": "Quiet groceries"},
     )
 
@@ -1174,7 +1089,7 @@ def test_shopping_destination_sends_when_any_household_member_is_awake(monkeypat
 
     resp = client.post(
         "/shopping/lists",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "name": "Awake groceries"},
     )
 
@@ -1217,16 +1132,11 @@ def test_disabled_category_and_quiet_hours_aggregation(monkeypatch):
     finally:
         db.close()
 
-    from app.core import notification_destinations as destinations_core
     from app.core import scheduler as scheduler_module
 
-    calls = []
-    monkeypatch.setattr(destinations_core, "is_provider_available", lambda: True)
-    monkeypatch.setattr(destinations_core, "_send_with_apprise", lambda url, payload: calls.append(payload) or True)
+    calls = _capture_destination_calls(monkeypatch)
     monkeypatch.setattr(scheduler_module, "send_push_for_user", lambda *_, **__: None)
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: now)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: now)
-    monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
+    freeze_scheduler_in_utc(monkeypatch, now)
 
     scheduler_module._check_notifications()
 

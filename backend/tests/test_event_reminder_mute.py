@@ -16,19 +16,8 @@ from app.core.event_reminders import (
     set_reminder_mute,
 )
 from app.models import CalendarEvent, EventReminderMute, Notification, NotificationPreference, ReminderSnooze, User
-# reminder_db and destinations are fixtures.
-from tests.reminder_support import (
-    NOW,
-    TestSession,
-    add_event,
-    add_family,
-    add_snooze,
-    at,
-    destinations,
-    reminded,
-    reminder_db,
-    run_scheduler,
-)
+from tests.reminder_support import NOW, add_event, add_family, add_snooze, reminded, run_scheduler
+from tests.support import TestSession, freeze_scheduler
 
 pytestmark = pytest.mark.usefixtures("reminder_db")
 
@@ -108,7 +97,7 @@ def test_muting_a_series_or_one_occurrence(family, destinations, monkeypatch, sc
 
     run_scheduler()
     assert reminded(event_id) == [users[i] for i in today]
-    at(monkeypatch, NOW + timedelta(days=1))
+    freeze_scheduler(monkeypatch, NOW + timedelta(days=1))
     run_scheduler()
     assert reminded(event_id) == sorted([users[i] for i in today + tomorrow])
 
@@ -377,7 +366,7 @@ def test_a_snooze_of_an_occurrence_in_the_spring_forward_gap_stays_muted(family,
     try:
         audit_now = datetime(2027, 3, 27, 23, 40)
         monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", local_wall_to_utc_naive)
-        at(monkeypatch, audit_now, wall=datetime(2027, 3, 28, 0, 40))
+        freeze_scheduler(monkeypatch, audit_now, wall=datetime(2027, 3, 28, 0, 40))
         family_id, users = family
         gap = datetime(2027, 3, 28, 2, 30)
         event_id = add_event(family_id, recurrence="daily", starts_at=gap - timedelta(days=5))

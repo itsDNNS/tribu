@@ -6,88 +6,33 @@ on response, rejecting out-of-range years, and patching the year
 (including clearing a previously-set year with an explicit null).
 """
 
-import hashlib
-
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core.clock import utcnow
 from app.core.contact_birthdays import backfill_contact_id_from_name_match
-from app.database import Base, get_db
 from app.main import app
-from app.models import Contact, Family, FamilyBirthday, Membership, PersonalAccessToken, User
-from app.security import hash_password, PAT_PREFIX
+from app.models import Contact, Family, FamilyBirthday
+from tests.support import TestSession, auth, engine, seed_member
 
 
-engine = create_engine(
-    "sqlite:///./test-birthdays.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine, autoflush=False)
+pytestmark = pytest.mark.usefixtures("app_db")
 
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
+client = TestClient(app)
 
 
 def _seed_member(scopes: str = "birthdays:read,birthdays:write") -> tuple[str, int]:
-    db = TestSession()
-    try:
-        user = User(email="bd@example.com", password_hash=hash_password("p"), display_name="BD")
-        db.add(user)
-        db.flush()
-        family = Family(name="Birthday Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}bd-rw"
-        db.add(PersonalAccessToken(
-            user_id=user.id,
-            name="bd-pat",
-            token_hash=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
-            token_lookup=hashlib.sha256(plain.encode("utf-8")).hexdigest(),
-            scopes=scopes,
-        ))
-        db.commit()
-        return plain, family.id
-    finally:
-        db.close()
-
-
-def _auth_headers(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}"}
+    member = seed_member(scopes=scopes, family_name="Birthday Family", display_name="BD")
+    return member.token, member.family_id
 
 
 def test_create_without_year_stores_and_returns_null():
     token, family_id = _seed_member()
-    client = TestClient(app)
 
     resp = client.post(
         "/birthdays",
         json={"family_id": family_id, "person_name": "Unknown Aunt", "month": 7, "day": 3},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
 
     assert resp.status_code == 200, resp.text
@@ -97,46 +42,29 @@ def test_create_without_year_stores_and_returns_null():
 
 def test_create_with_year_persists_and_returns_it():
     token, family_id = _seed_member()
-    client = TestClient(app)
 
     resp = client.post(
         "/birthdays",
         json={"family_id": family_id, "person_name": "Oma Schmidt", "month": 4, "day": 14, "year": 1948},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
 
     assert resp.status_code == 200, resp.text
     assert resp.json()["year"] == 1948
 
 
-def test_create_rejects_year_before_1900():
+@pytest.mark.parametrize(
+    ("person_name", "year"),
+    [("Ancestor", 1899), ("Future Baby", utcnow().year + 5)],
+    ids=["before_1900", "too_far_in_future"],
+)
+def test_create_rejects_year(person_name: str, year: int):
     token, family_id = _seed_member()
-    client = TestClient(app)
 
     resp = client.post(
         "/birthdays",
-        json={"family_id": family_id, "person_name": "Ancestor", "month": 1, "day": 1, "year": 1899},
-        headers=_auth_headers(token),
-    )
-
-    assert resp.status_code == 400
-    assert resp.json()["detail"]["code"] == "INVALID_YEAR"
-
-
-def test_create_rejects_year_too_far_in_future():
-    token, family_id = _seed_member()
-    client = TestClient(app)
-
-    resp = client.post(
-        "/birthdays",
-        json={
-            "family_id": family_id,
-            "person_name": "Future Baby",
-            "month": 1,
-            "day": 1,
-            "year": utcnow().year + 5,
-        },
-        headers=_auth_headers(token),
+        json={"family_id": family_id, "person_name": person_name, "month": 1, "day": 1, "year": year},
+        headers=auth(token),
     )
 
     assert resp.status_code == 400
@@ -145,18 +73,17 @@ def test_create_rejects_year_too_far_in_future():
 
 def test_patch_sets_year_on_existing_birthday():
     token, family_id = _seed_member()
-    client = TestClient(app)
 
     created = client.post(
         "/birthdays",
         json={"family_id": family_id, "person_name": "Onkel Karl", "month": 9, "day": 3},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
 
     resp = client.patch(
         f"/birthdays/{created['id']}",
         json={"year": 1962},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
 
     assert resp.status_code == 200, resp.text
@@ -165,18 +92,17 @@ def test_patch_sets_year_on_existing_birthday():
 
 def test_patch_clears_year_when_explicit_null_sent():
     token, family_id = _seed_member()
-    client = TestClient(app)
 
     created = client.post(
         "/birthdays",
         json={"family_id": family_id, "person_name": "Tante", "month": 5, "day": 22, "year": 1950},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
 
     resp = client.patch(
         f"/birthdays/{created['id']}",
         json={"year": None},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
 
     assert resp.status_code == 200, resp.text
@@ -185,18 +111,17 @@ def test_patch_clears_year_when_explicit_null_sent():
 
 def test_patch_without_year_key_leaves_year_untouched():
     token, family_id = _seed_member()
-    client = TestClient(app)
 
     created = client.post(
         "/birthdays",
         json={"family_id": family_id, "person_name": "Opa", "month": 3, "day": 11, "year": 1940},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
 
     resp = client.patch(
         f"/birthdays/{created['id']}",
         json={"person_name": "Grandpa"},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
 
     assert resp.status_code == 200, resp.text
@@ -213,18 +138,17 @@ def test_contact_rename_updates_same_synced_row_without_creating_duplicate():
     still matches.
     """
     token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
-    client = TestClient(app)
 
     created = client.post(
         "/contacts",
         json={"family_id": family_id, "full_name": "Alice", "birthday_month": 4, "birthday_day": 14},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
     assert created.status_code == 200, created.text
     contact_id = created.json()["id"]
 
     before = client.get(
-        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+        "/birthdays", params={"family_id": family_id}, headers=auth(token),
     ).json()
     assert len(before) == 1
     synced_id = before[0]["id"]
@@ -233,12 +157,12 @@ def test_contact_rename_updates_same_synced_row_without_creating_duplicate():
     rename = client.patch(
         f"/contacts/{contact_id}",
         json={"full_name": "Alice Smith"},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
     assert rename.status_code == 200, rename.text
 
     after = client.get(
-        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+        "/birthdays", params={"family_id": family_id}, headers=auth(token),
     ).json()
     assert len(after) == 1
     assert after[0]["id"] == synced_id
@@ -253,18 +177,17 @@ def test_contact_birthday_date_change_updates_same_row_in_place():
     must update the synced row in place — no stale leftover, no new row.
     """
     token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
-    client = TestClient(app)
 
     created = client.post(
         "/contacts",
         json={"family_id": family_id, "full_name": "Alice", "birthday_month": 4, "birthday_day": 14},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
     assert created.status_code == 200, created.text
     contact_id = created.json()["id"]
 
     before = client.get(
-        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+        "/birthdays", params={"family_id": family_id}, headers=auth(token),
     ).json()
     assert len(before) == 1
     synced_id = before[0]["id"]
@@ -274,12 +197,12 @@ def test_contact_birthday_date_change_updates_same_row_in_place():
     patch = client.patch(
         f"/contacts/{contact_id}",
         json={"birthday_month": 12, "birthday_day": 25},
-        headers=_auth_headers(token),
+        headers=auth(token),
     )
     assert patch.status_code == 200, patch.text
 
     after = client.get(
-        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+        "/birthdays", params={"family_id": family_id}, headers=auth(token),
     ).json()
     assert len(after) == 1, f"expected exactly one synced row, got {after}"
     assert after[0]["id"] == synced_id
@@ -292,12 +215,11 @@ def test_manual_birthday_survives_matching_contact_create_and_delete():
     """A birthday added on its own becomes a contact; another contact with
     the same name and date is a different person and leaves it alone."""
     token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
-    client = TestClient(app)
 
     manual = client.post(
         "/birthdays",
         json={"family_id": family_id, "person_name": "Alice", "month": 4, "day": 14, "year": 1980},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
     manual_id = manual["id"]
     manual_contact = manual["contact_id"]
@@ -306,12 +228,12 @@ def test_manual_birthday_survives_matching_contact_create_and_delete():
     contact = client.post(
         "/contacts",
         json={"family_id": family_id, "full_name": "Alice", "birthday_month": 4, "birthday_day": 14},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
     contact_id = contact["id"]
 
     rows = client.get(
-        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+        "/birthdays", params={"family_id": family_id}, headers=auth(token),
     ).json()
     by_id = {r["id"]: r for r in rows}
     assert manual_id in by_id
@@ -322,12 +244,12 @@ def test_manual_birthday_survives_matching_contact_create_and_delete():
     assert synced[0]["id"] != manual_id
 
     delete = client.delete(
-        f"/contacts/{contact_id}", headers=_auth_headers(token),
+        f"/contacts/{contact_id}", headers=auth(token),
     )
     assert delete.status_code == 200, delete.text
 
     remaining = client.get(
-        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+        "/birthdays", params={"family_id": family_id}, headers=auth(token),
     ).json()
     assert [r["id"] for r in remaining] == [manual_id]
     assert remaining[0]["year"] == 1980
@@ -335,22 +257,21 @@ def test_manual_birthday_survives_matching_contact_create_and_delete():
 
 def test_two_contacts_same_name_each_own_a_birthday_row():
     token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
-    client = TestClient(app)
 
     a = client.post(
         "/contacts",
         json={"family_id": family_id, "full_name": "Max", "birthday_month": 9, "birthday_day": 3},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
     b = client.post(
         "/contacts",
         json={"family_id": family_id, "full_name": "Max", "birthday_month": 9, "birthday_day": 3},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
     assert a["id"] != b["id"]
 
     rows = client.get(
-        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+        "/birthdays", params={"family_id": family_id}, headers=auth(token),
     ).json()
     assert {r["contact_id"] for r in rows} == {a["id"], b["id"]}
     assert len(rows) == 2
@@ -358,23 +279,22 @@ def test_two_contacts_same_name_each_own_a_birthday_row():
 
 def test_deleting_one_duplicate_name_contact_only_removes_its_own_row():
     token, family_id = _seed_member(scopes="birthdays:read,birthdays:write,contacts:write")
-    client = TestClient(app)
 
     a = client.post(
         "/contacts",
         json={"family_id": family_id, "full_name": "Max", "birthday_month": 9, "birthday_day": 3},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
     b = client.post(
         "/contacts",
         json={"family_id": family_id, "full_name": "Max", "birthday_month": 9, "birthday_day": 3},
-        headers=_auth_headers(token),
+        headers=auth(token),
     ).json()
 
-    client.delete(f"/contacts/{a['id']}", headers=_auth_headers(token))
+    client.delete(f"/contacts/{a['id']}", headers=auth(token))
 
     remaining = client.get(
-        "/birthdays", params={"family_id": family_id}, headers=_auth_headers(token),
+        "/birthdays", params={"family_id": family_id}, headers=auth(token),
     ).json()
     assert len(remaining) == 1
     assert remaining[0]["contact_id"] == b["id"]

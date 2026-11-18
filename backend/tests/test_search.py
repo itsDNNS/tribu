@@ -1,86 +1,25 @@
-import hashlib
-
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, ShoppingItem, ShoppingList, User
-from app.security import PAT_PREFIX, hash_password
+from app.models import ShoppingItem
+from tests.support import TestSession, auth, seed_member, seed_shopping_list
 
 
-engine = create_engine(
-    "sqlite:///./test-search.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
 
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
 def _seed_shopping_search() -> tuple[str, int]:
-    db = TestSession()
-    user = User(
-        email="search-owner@example.com",
-        password_hash=hash_password("Password1"),
-        display_name="Search Owner",
-    )
-    db.add(user)
-    db.flush()
-    family = Family(name="Search Family")
-    db.add(family)
-    db.flush()
-    db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-    shopping_list = ShoppingList(family_id=family.id, name="Drogerie", created_by_user_id=user.id)
-    db.add(shopping_list)
-    db.flush()
-    db.add(ShoppingItem(list_id=shopping_list.id, name="Zahnpasta", checked=False, added_by_user_id=user.id))
-    db.add(ShoppingItem(list_id=shopping_list.id, name="Zahn history", checked=True, archived=True, added_by_user_id=user.id))
-    plain = f"{PAT_PREFIX}search-owner"
-    fingerprint = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(
-        user_id=user.id,
-        name="search-pat",
-        token_hash=fingerprint,
-        token_lookup=fingerprint,
-        scopes="families:read",
-    ))
-    db.commit()
-    family_id = family.id
-    db.close()
-    return plain, family_id
+    """A "Drogerie" list with an open and an archived "Zahn..." item. Returns (token, family_id)."""
+    member = seed_member("search-owner@example.com", scopes="families:read", display_name="Search Owner")
+    list_id = seed_shopping_list(member.family_id, "Drogerie", user_id=member.user_id)
+    with TestSession() as db:
+        db.add(ShoppingItem(list_id=list_id, name="Zahnpasta", checked=False, added_by_user_id=member.user_id))
+        db.add(ShoppingItem(list_id=list_id, name="Zahn history", checked=True, archived=True, added_by_user_id=member.user_id))
+        db.commit()
+    return member.token, member.family_id
 
 
 def test_shopping_search_result_includes_list_name_for_mobile_context():
@@ -89,7 +28,7 @@ def test_shopping_search_result_includes_list_name_for_mobile_context():
     response = client.get(
         "/search",
         params={"family_id": family_id, "q": "Zahn"},
-        headers=_auth(token),
+        headers=auth(token),
     )
 
     assert response.status_code == 200, response.text

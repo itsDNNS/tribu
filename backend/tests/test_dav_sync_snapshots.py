@@ -2,20 +2,13 @@
 
 import pytest
 
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.dav import sync_snapshots
 from app.dav.sync_snapshots import SYNC_TOKEN_PREFIX, sync_changes
 from app.models import DavSyncSnapshot
 
-
-@pytest.fixture(autouse=True)
-def tables():
-    Base.metadata.create_all(bind=engine)
-    yield
-    db = SessionLocal()
-    db.query(DavSyncSnapshot).delete()
-    db.commit()
-    db.close()
+# sync_changes opens the production SessionLocal itself.
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 def test_changes_since_a_token():

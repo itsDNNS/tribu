@@ -2,40 +2,19 @@
 
 from __future__ import annotations
 
-import hashlib
-
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import NotificationPreference, PersonalAccessToken, PushSubscription, User
-from app.security import PAT_PREFIX, hash_password
+from app.models import NotificationPreference, PushSubscription, User
+from app.security import hash_password
+from tests.support import TestSession, add_pat, auth
 
-
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+pytestmark = pytest.mark.usefixtures("app_db")
 
 
 @pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
+def no_push_configuration(monkeypatch):
     monkeypatch.delenv("VAPID_PUBLIC_KEY", raising=False)
     monkeypatch.delenv("VAPID_PRIVATE_KEY", raising=False)
     monkeypatch.delenv("VAPID_CLAIMS_EMAIL", raising=False)
@@ -45,50 +24,19 @@ def setup_db(monkeypatch):
     monkeypatch.delenv("FIREBASE_SERVICE_ACCOUNT_JSON", raising=False)
     monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
 
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
 
 client = TestClient(app)
 
 
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
 def _seed_user(suffix: str = "push") -> tuple[str, int]:
-    db = TestSession()
-    user = User(
-        email=f"{suffix}@example.com",
-        password_hash=hash_password("Password123"),
-        display_name="Push User",
-    )
-    db.add(user)
-    db.flush()
-    plain = f"{PAT_PREFIX}{suffix}-profile"
-    lookup = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(
-        PersonalAccessToken(
-            user_id=user.id,
-            name="push-pat",
-            token_hash=lookup,
-            token_lookup=lookup,
-            scopes="profile:read,profile:write",
-        )
-    )
-    db.commit()
-    user_id = user.id
-    db.close()
-    return plain, user_id
+    """A user without a family, with a profile PAT. Returns (token, user_id)."""
+    with TestSession() as db:
+        user = User(email=f"{suffix}@example.com", password_hash=hash_password("Password123"), display_name="Push User")
+        db.add(user)
+        db.flush()
+        plain = add_pat(db, user.id, "profile:read,profile:write", name="push-pat")
+        db.commit()
+        return plain, user.id
 
 
 def test_push_status_explains_missing_server_configuration_without_secrets():
@@ -99,7 +47,7 @@ def test_push_status_explains_missing_server_configuration_without_secrets():
     db.commit()
     db.close()
 
-    resp = client.get("/notifications/push/status", headers=_auth(token))
+    resp = client.get("/notifications/push/status", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     body = resp.json()
@@ -119,7 +67,7 @@ def test_push_subscribe_persists_subscription_and_enables_preference():
 
     resp = client.post(
         "/notifications/push/subscribe",
-        headers=_auth(token),
+        headers=auth(token),
         json={"endpoint": "https://push.example/device-1", "p256dh": "key", "auth": "secret"},
     )
 
@@ -140,7 +88,7 @@ def test_native_push_subscribe_persists_expo_subscription_and_enables_preference
 
     resp = client.post(
         "/notifications/push/subscribe",
-        headers=_auth(token),
+        headers=auth(token),
         json={"endpoint": "ExponentPushToken[native-device-1]", "platform": "expo", "device_name": "iPhone"},
     )
 
@@ -158,7 +106,7 @@ def test_native_push_subscribe_persists_expo_subscription_and_enables_preference
     finally:
         db.close()
 
-    status = client.get("/notifications/push/status", headers=_auth(token))
+    status = client.get("/notifications/push/status", headers=auth(token))
     assert status.status_code == 200, status.json()
     body = status.json()
     assert body["ready"] is True
@@ -172,7 +120,7 @@ def test_native_push_subscribe_persists_fcm_subscription_and_requires_sender_con
 
     resp = client.post(
         "/notifications/push/subscribe",
-        headers=_auth(token),
+        headers=auth(token),
         json={"endpoint": "fcm-device-token-1", "platform": "fcm", "device_name": "Pixel"},
     )
 
@@ -190,7 +138,7 @@ def test_native_push_subscribe_persists_fcm_subscription_and_requires_sender_con
     finally:
         db.close()
 
-    status = client.get("/notifications/push/status", headers=_auth(token))
+    status = client.get("/notifications/push/status", headers=auth(token))
     assert status.status_code == 200, status.json()
     body = status.json()
     assert body["ready"] is False
@@ -212,7 +160,7 @@ def test_push_status_treats_blank_vapid_values_as_not_configured(monkeypatch):
     monkeypatch.setenv("VAPID_PRIVATE_KEY", " private ")
     monkeypatch.setenv("VAPID_CLAIMS_EMAIL", "   ")
 
-    resp = client.get("/notifications/push/status", headers=_auth(token))
+    resp = client.get("/notifications/push/status", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     body = resp.json()
@@ -242,7 +190,7 @@ def test_push_test_skips_when_push_preference_is_disabled(monkeypatch):
 
     monkeypatch.setattr(notifications_router, "send_push_for_user", fake_send)
 
-    resp = client.post("/notifications/push/test", headers=_auth(token))
+    resp = client.post("/notifications/push/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     assert calls == []
@@ -284,7 +232,7 @@ def test_push_test_endpoint_uses_stored_subscriptions_and_redacts_failures(monke
 
     monkeypatch.setattr(notifications_router, "send_push_for_user", fake_send)
 
-    resp = client.post("/notifications/push/test", headers=_auth(token))
+    resp = client.post("/notifications/push/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     body = resp.json()
@@ -327,7 +275,7 @@ def test_push_test_endpoint_sends_to_native_expo_subscription_without_vapid(monk
 
     monkeypatch.setattr(push_module, "_send_expo_push", fake_expo_send)
 
-    resp = client.post("/notifications/push/test", headers=_auth(token))
+    resp = client.post("/notifications/push/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     assert calls == [("ExponentPushToken[native-private]", "Tribu test notification", "Push notifications are ready for this device.", "settings")]
@@ -373,7 +321,7 @@ def test_push_test_endpoint_sends_to_native_fcm_subscription_when_configured(mon
 
     monkeypatch.setattr(push_module, "_send_fcm_push", fake_fcm_send)
 
-    resp = client.post("/notifications/push/test", headers=_auth(token))
+    resp = client.post("/notifications/push/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     assert calls == [("fcm-private-token", "Tribu test notification", "Push notifications are ready for this device.", "settings")]

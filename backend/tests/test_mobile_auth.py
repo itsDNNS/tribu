@@ -1,73 +1,19 @@
+import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, User
-from app.security import hash_password
+from tests.support import seed_member
 
-
-engine = create_engine(
-    "sqlite:///./test-mobile-auth.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def setup_function():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-
-
-def teardown_function():
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
 
-def _seed_user():
-    db = TestSession()
-    try:
-        user = User(
-            email="mobile-login@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Mobile Login",
-            must_change_password=True,
-            has_completed_onboarding=True,
-        )
-        db.add(user)
-        db.flush()
-        family = Family(name="Mobile Family")
-        db.add(family)
-        db.flush()
-        db.add(
-            Membership(
-                user_id=user.id, family_id=family.id, role="admin", is_adult=True
-            )
-        )
-        db.commit()
-        return family.id
-    finally:
-        db.close()
+def _seed_user() -> int:
+    return seed_member(
+        "mobile-login@example.com", scopes=None, family_name="Mobile Family", password="Secure1Pass",
+        display_name="Mobile Login", user_fields={"must_change_password": True, "has_completed_onboarding": True},
+    ).family_id
 
 
 def test_mobile_login_returns_bearer_token_usable_for_authenticated_routes():

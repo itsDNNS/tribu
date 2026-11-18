@@ -8,43 +8,20 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core import oidc as oidc_core
 from app.core.oidc_presets import PRESETS, get_preset, list_presets
-from app.database import Base
+from tests.oidc_support import discovery_document, save_oidc_config
+from tests.support import TestSession
 
 
-engine = create_engine(
-    "sqlite:///./test-oidc-config.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-    oidc_core.invalidate_discovery_cache()
+pytestmark = pytest.mark.usefixtures("oidc_db")
 
 
 @pytest.fixture
 def db():
-    session = TestSession()
-    try:
+    with TestSession() as session:
         yield session
-    finally:
-        session.close()
 
 
 # ---------------------------------------------------------------------------
@@ -177,18 +154,8 @@ class TestConfigRoundTrip:
 
 class TestPasswordLoginGate:
     def _store(self, db, *, enabled: bool, disable_flag: bool, ready: bool):
-        oidc_core.save_config(
-            db,
-            enabled=enabled,
-            preset="generic",
-            button_label="",
-            issuer="https://idp.example.com" if ready else "",
-            client_id="tribu" if ready else "",
-            client_secret="s" if ready else "",
-            scopes="openid profile email",
-            allow_signup=False,
-            disable_password_login=disable_flag,
-        )
+        blank = {} if ready else {"issuer": "", "client_id": "", "client_secret": ""}
+        save_oidc_config(db, enabled=enabled, disable_password_login=disable_flag, **blank)
         db.commit()
 
     def _stamp(self, db, *, days_ago: float = 0.0):
@@ -295,19 +262,9 @@ class TestPasswordLoginGate:
 # ---------------------------------------------------------------------------
 
 
-def _valid_doc(issuer: str = "https://idp.example.com") -> dict:
-    return {
-        "issuer": issuer,
-        "authorization_endpoint": f"{issuer}/authorize",
-        "token_endpoint": f"{issuer}/token",
-        "userinfo_endpoint": f"{issuer}/userinfo",
-        "jwks_uri": f"{issuer}/jwks",
-    }
-
-
 class TestDiscovery:
     def test_happy_path(self):
-        with patch.object(oidc_core, "_fetch_json", return_value=_valid_doc()):
+        with patch.object(oidc_core, "_fetch_json", return_value=discovery_document()):
             disc = oidc_core.fetch_discovery("https://idp.example.com", force=True)
         assert disc.issuer == "https://idp.example.com"
         assert disc.authorization_endpoint.endswith("/authorize")
@@ -320,7 +277,7 @@ class TestDiscovery:
 
         def fake_fetch(url, timeout=5.0):
             fetched_urls.append(url)
-            return _valid_doc(issuer)
+            return discovery_document(issuer)
 
         with patch.object(oidc_core, "_fetch_json", side_effect=fake_fetch):
             disc = oidc_core.fetch_discovery(issuer, force=True)
@@ -334,7 +291,7 @@ class TestDiscovery:
         with patch.object(
             oidc_core,
             "_fetch_json",
-            return_value=_valid_doc("https://idp.example.com/application/o/tribu/"),
+            return_value=discovery_document("https://idp.example.com/application/o/tribu/"),
         ):
             with pytest.raises(oidc_core.DiscoveryError):
                 oidc_core.fetch_discovery(
@@ -342,14 +299,14 @@ class TestDiscovery:
                 )
 
     def test_missing_required_field_raises(self):
-        bad = _valid_doc()
+        bad = discovery_document()
         del bad["token_endpoint"]
         with patch.object(oidc_core, "_fetch_json", return_value=bad):
             with pytest.raises(oidc_core.DiscoveryError):
                 oidc_core.fetch_discovery("https://idp.example.com", force=True)
 
     def test_issuer_mismatch_raises(self):
-        doc = _valid_doc("https://other.example.com")
+        doc = discovery_document("https://other.example.com")
         with patch.object(oidc_core, "_fetch_json", return_value=doc):
             with pytest.raises(oidc_core.DiscoveryError):
                 oidc_core.fetch_discovery("https://idp.example.com", force=True)
@@ -359,7 +316,7 @@ class TestDiscovery:
 
         def fake_fetch(url, timeout=5.0):
             call_count["n"] += 1
-            return _valid_doc()
+            return discovery_document()
 
         with patch.object(oidc_core, "_fetch_json", side_effect=fake_fetch):
             oidc_core.fetch_discovery("https://idp.example.com", force=True)
@@ -373,7 +330,7 @@ class TestDiscovery:
 
         def fake_fetch(url, timeout=5.0):
             call_count["n"] += 1
-            return _valid_doc()
+            return discovery_document()
 
         with patch.object(oidc_core, "_fetch_json", side_effect=fake_fetch):
             oidc_core.fetch_discovery("https://idp.example.com", force=True)
@@ -387,7 +344,7 @@ class TestDiscovery:
 
         def fake_fetch(url, timeout=5.0):
             call_count["n"] += 1
-            return _valid_doc()
+            return discovery_document()
 
         with patch.object(oidc_core, "_fetch_json", side_effect=fake_fetch):
             oidc_core.fetch_discovery("https://idp.example.com", force=True)

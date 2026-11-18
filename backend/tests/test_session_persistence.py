@@ -4,71 +4,24 @@ import pytest
 import jwt
 from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core.auth_sessions import issue_refresh_session, rotate_refresh_token
 from app.core.deps import _resolve_user
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, User, UserSession
-from app.security import JWT_ALG, JWT_SECRET, generate_pat, hash_password
+from app.models import PersonalAccessToken, User, UserSession
+from app.security import JWT_ALG, JWT_SECRET, generate_pat
+from tests.support import TestSession, seed_member
 
-engine = create_engine(
-    "sqlite:///./test-session-persistence.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def setup_function():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-
-
-def teardown_function():
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
 
-def _seed_user():
-    db = TestSession()
-    try:
-        user = User(
-            email="session@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Session User",
-            has_completed_onboarding=True,
-        )
-        db.add(user)
-        db.flush()
-        family = Family(name="Session Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        db.commit()
-        return user.id
-    finally:
-        db.close()
+def _seed_user() -> int:
+    return seed_member(
+        "session@example.com", scopes=None, family_name="Session Family", password="Secure1Pass",
+        display_name="Session User", user_fields={"has_completed_onboarding": True},
+    ).user_id
 
 
 def _expired_access_token(user_id: int) -> str:
@@ -89,6 +42,7 @@ def test_rotate_refresh_token_accepts_aware_postgres_expiry_timestamp():
     try:
         user = db.query(User).filter(User.id == user_id).one()
         refresh_token = issue_refresh_session(db, user)
+        db.flush()
         session = db.query(UserSession).filter(UserSession.user_id == user_id).one()
         setattr(session, "expires_at", datetime.now(timezone.utc) + timedelta(days=1))
 
@@ -123,6 +77,7 @@ def test_expired_refresh_token_with_aware_postgres_timestamp_is_invalid():
     try:
         user = db.query(User).filter(User.id == user_id).one()
         refresh_token = issue_refresh_session(db, user)
+        db.flush()
         session = db.query(UserSession).filter(UserSession.user_id == user_id).one()
         setattr(session, "expires_at", datetime.now(timezone.utc) - timedelta(minutes=1))
 

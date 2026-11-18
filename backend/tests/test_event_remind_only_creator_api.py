@@ -6,74 +6,45 @@ import and CalDAV writes.
 
 from __future__ import annotations
 
-import base64
-import hashlib
-import os
-import tempfile
 from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.database import Base, SessionLocal, engine
-from app.models import CalendarEvent, Contact, Family, Membership, PersonalAccessToken, User
-from app.security import PAT_PREFIX, hash_password
+from app.database import SessionLocal
+from app.models import CalendarEvent, Contact
+from tests.support import add_member, auth, dav_basic
+
+
+# The DAV plugins read the production database; remove what each test adds.
+pytestmark = pytest.mark.usefixtures("production_rows")
 
 
 SCOPES = "calendar:read,calendar:write,contacts:read,contacts:write"
 
 
 @pytest.fixture(scope="module")
-def client():
-    with tempfile.TemporaryDirectory(prefix="tribu-remind-only-") as folder:
-        os.environ["DAV_STORAGE_FOLDER"] = folder
-        from app.main import app
-
-        Base.metadata.create_all(bind=engine)
-        try:
-            yield TestClient(app)
-        finally:
-            Base.metadata.drop_all(bind=engine)
-            os.environ.pop("DAV_STORAGE_FOLDER", None)
+def client(dav_app):
+    return TestClient(dav_app)
 
 
 @pytest.fixture
 def family(client):
     """Two adults, Anna (creates events) and Ben; yields ids and tokens."""
-    db = SessionLocal()
-    try:
-        fam = Family(name="Remind family")
-        db.add(fam)
-        db.flush()
-        people = {}
+    people = {}
+    family_id = None
+    with SessionLocal() as db:
         for name in ("anna", "ben"):
-            user = User(email=f"{name}-remind@example.com", password_hash=hash_password("p"), display_name=name.title())
-            db.add(user)
-            db.flush()
-            db.add(Membership(user_id=user.id, family_id=fam.id, role="admin", is_adult=True))
-            plain = f"{PAT_PREFIX}remind-{name}"
-            digest = hashlib.sha256(plain.encode("utf-8")).hexdigest()
-            db.add(PersonalAccessToken(user_id=user.id, name=f"{name}-pat", token_hash=digest, token_lookup=digest, scopes=SCOPES))
-            people[name] = {"id": user.id, "token": plain, "email": user.email}
+            email = f"{name}-remind@example.com"
+            member = add_member(db, email, scopes=SCOPES, family_id=family_id, family_name="Remind family", display_name=name.title())
+            family_id = member.family_id
+            people[name] = {"id": member.user_id, "token": member.token, "email": email}
         db.commit()
-        yield {"family_id": fam.id, **people}
-    finally:
-        db.close()
-        db = SessionLocal()
-        try:
-            db.query(CalendarEvent).delete()
-            db.query(Contact).delete()
-            db.query(PersonalAccessToken).delete()
-            db.query(Membership).delete()
-            db.query(User).delete()
-            db.query(Family).delete()
-            db.commit()
-        finally:
-            db.close()
+    return {"family_id": family_id, **people}
 
 
 def _auth(person: dict) -> dict:
-    return {"Authorization": f"Bearer {person['token']}"}
+    return auth(person["token"])
 
 
 def _create(client, family, person="anna", **fields) -> dict:
@@ -274,8 +245,7 @@ def test_ics_import_reminds_everyone_and_a_reimport_keeps_the_setting(client, fa
 
 
 def _basic(person: dict) -> dict:
-    raw = f"{person['email']}:{person['token']}".encode("utf-8")
-    return {"Authorization": "Basic " + base64.b64encode(raw).decode("ascii"), "Content-Type": "text/calendar"}
+    return {"Authorization": dav_basic(person["email"], person["token"]), "Content-Type": "text/calendar"}
 
 
 def _dav_event(summary: str, *changed: str) -> str:

@@ -1,44 +1,11 @@
 from io import BytesIO
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
 
-engine = create_engine(
-    "sqlite:///./test-setup-restore.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def setup_function():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-
-
-def teardown_function():
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 

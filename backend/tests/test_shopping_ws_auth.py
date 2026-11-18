@@ -1,72 +1,24 @@
 import pytest
 from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, ShoppingList, User
-from app.security import create_access_token, hash_password
+from app.security import create_access_token
+from tests.support import seed_member, seed_shopping_list
 
 
-engine = create_engine(
-    "sqlite:///./test-shopping-ws-auth.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def setup_function():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-
-
-def teardown_function():
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
 
-def _seed_shopping_list():
-    db = TestSession()
-    try:
-        user = User(
-            email="shopping-ws@example.com",
-            password_hash=hash_password("Secure1Pass"),
-            display_name="Shopping WS",
-            has_completed_onboarding=True,
-        )
-        db.add(user)
-        db.flush()
-        family = Family(name="Shopping Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        shopping_list = ShoppingList(family_id=family.id, name="Groceries")
-        db.add(shopping_list)
-        db.commit()
-        return user.id, user.email, shopping_list.id
-    finally:
-        db.close()
+def _seed_shopping_list() -> tuple[int, str, int]:
+    """An onboarded adult without a PAT and a list. Returns (user_id, email, list_id)."""
+    email = "shopping-ws@example.com"
+    member = seed_member(
+        email, scopes=None, display_name="Shopping WS", user_fields={"has_completed_onboarding": True},
+    )
+    return member.user_id, email, seed_shopping_list(member.family_id)
 
 
 def test_shopping_ws_accepts_native_bearer_header():

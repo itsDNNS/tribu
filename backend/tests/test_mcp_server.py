@@ -1,9 +1,7 @@
 """MCP endpoint at /mcp: PAT-only auth, scope filtering, exclusions and
 in-process calls through the real REST endpoints."""
 
-import hashlib
 import json
-import os
 from datetime import timedelta
 
 import anyio
@@ -12,57 +10,20 @@ import pytest
 from fastapi.testclient import TestClient
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core.config import COOKIE_NAME
 from app.core.mcp_catalog import EXCLUDED_PATHS, build_catalog, exclusion_reason
 from app.core.scopes import VALID_SCOPES
 from app.core.utils import utcnow
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, Task, User
+from app.models import PersonalAccessToken, Task
 from app.modules import mcp_server
-from app.security import PAT_PREFIX, create_access_token, hash_password
-
-DB_FILE = "./test-mcp-server.db"
-engine = create_engine(f"sqlite:///{DB_FILE}", connect_args={"check_same_thread": False})
-TestSession = sessionmaker(bind=engine)
+from app.security import PAT_PREFIX, create_access_token
+from tests.support import TestSession, add_pat, seed_member
 
 ACCEPT = "application/json, text/event-stream"
 
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture(scope="module", autouse=True)
-def remove_db_file():
-    yield
-    engine.dispose()
-    if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
@@ -72,38 +33,15 @@ client = TestClient(app)
 # ---------------------------------------------------------------------------
 
 
-def _pat(db, user_id: int, scopes: str, *, label: str, expires_at=None) -> str:
-    plain = f"{PAT_PREFIX}mcp-{label}"
-    digest = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(
-        user_id=user_id,
-        name=f"mcp-{label}",
-        token_hash=digest,
-        token_lookup=digest,
-        scopes=scopes,
-        expires_at=expires_at,
-    ))
-    return plain
-
-
 def _family_with_admin(name: str, email: str) -> tuple[int, int]:
-    db = TestSession()
-    user = User(email=email, password_hash=hash_password("password"), display_name=f"{name} Admin")
-    family = Family(name=name)
-    db.add_all([user, family])
-    db.flush()
-    db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-    db.commit()
-    ids = (user.id, family.id)
-    db.close()
-    return ids
+    member = seed_member(email, scopes=None, family_name=name, display_name=f"{name} Admin")
+    return member.user_id, member.family_id
 
 
-def _token(user_id: int, scopes: str, label: str, **kwargs) -> str:
-    db = TestSession()
-    plain = _pat(db, user_id, scopes, label=label, **kwargs)
-    db.commit()
-    db.close()
+def _token(user_id: int, scopes: str, label: str, **fields) -> str:
+    with TestSession() as db:
+        plain = add_pat(db, user_id, scopes, name=f"mcp-{label}", **fields)
+        db.commit()
     return plain
 
 

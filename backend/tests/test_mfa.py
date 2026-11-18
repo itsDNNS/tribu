@@ -1,56 +1,28 @@
 import base64
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app import reset_mfa as reset_mfa_cli
 from app.core import mfa
 from app.core.config import COOKIE_NAME
-from app.database import Base, get_db
 from app.main import app, limiter as app_limiter
-from app.models import AuditLog, Family, Membership, MfaRecoveryCode, User
+from app.models import AuditLog, Membership, MfaRecoveryCode, User
 from app.modules.mfa_router import limiter as mfa_limiter
-from app.security import hash_password
+from tests.support import TestSession, add_member
 
 
-engine = create_engine(
-    "sqlite:///./test-mfa.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
+pytestmark = pytest.mark.usefixtures("app_db")
 
 PASSWORD = "Secure1Pass"
 ADMIN_EMAIL = "admin-mfa@example.com"
 MEMBER_EMAIL = "member-mfa@example.com"
 
 
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def setup_function():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+@pytest.fixture(autouse=True)
+def _reset_limiters():
     app_limiter.reset()
     mfa_limiter.reset()
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-
-
-def teardown_function():
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
 
 
 def _client() -> TestClient:
@@ -58,19 +30,18 @@ def _client() -> TestClient:
 
 
 def _seed_family() -> tuple[int, int, int]:
-    db = TestSession()
-    try:
-        admin = User(email=ADMIN_EMAIL, password_hash=hash_password(PASSWORD), display_name="Admin", has_completed_onboarding=True)
-        member = User(email=MEMBER_EMAIL, password_hash=hash_password(PASSWORD), display_name="Member", has_completed_onboarding=True)
-        family = Family(name="MFA Family")
-        db.add_all([admin, member, family])
-        db.flush()
-        db.add(Membership(user_id=admin.id, family_id=family.id, role="admin", is_adult=True))
-        db.add(Membership(user_id=member.id, family_id=family.id, role="member", is_adult=True))
+    onboarded = {"has_completed_onboarding": True}
+    with TestSession() as db:
+        admin = add_member(
+            db, ADMIN_EMAIL, scopes=None, family_name="MFA Family", password=PASSWORD,
+            display_name="Admin", user_fields=onboarded,
+        )
+        member = add_member(
+            db, MEMBER_EMAIL, scopes=None, family_id=admin.family_id, role="member", password=PASSWORD,
+            display_name="Member", user_fields=onboarded,
+        )
         db.commit()
-        return family.id, admin.id, member.id
-    finally:
-        db.close()
+        return admin.family_id, admin.user_id, member.user_id
 
 
 def _login(client: TestClient, email: str):

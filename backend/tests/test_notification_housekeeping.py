@@ -7,20 +7,15 @@ and an event edit only notifies people who were newly assigned.
 
 from __future__ import annotations
 
-import hashlib
 from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core import cache
 from app.core.clock import utcnow
 from app.core.notification_housekeeping import READ_NOTIFICATION_RETENTION, purge_notifications
 from app.core.reminder_text import _KEYS, _TEXTS, clock_time, event_start_text
-from app.database import Base, get_db
 from app.main import app
 from app.models import (
     CalendarEvent,
@@ -29,48 +24,20 @@ from app.models import (
     Membership,
     Notification,
     NotificationPreference,
-    PersonalAccessToken,
     SystemSetting,
     User,
     UserNavOrder,
 )
-from app.security import PAT_PREFIX, create_access_token, hash_password
+from app.security import create_access_token
+from tests.support import TestSession, add_member, add_pat, auth, capture_pushes, freeze_scheduler
 
-engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-TestSession = sessionmaker(bind=engine, autoflush=False)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+pytestmark = pytest.mark.usefixtures("scheduler_db", "berlin_tz")
 
 
 @pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    monkeypatch.setenv("TZ", "Europe/Berlin")
-    from app.core.clock import app_timezone
-    from app.core import scheduler as scheduler_module
-
-    app_timezone.cache_clear()
-    Base.metadata.create_all(bind=engine)
-    monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
+def _uncached_unread_counts(monkeypatch):
     # Unread counts are cached per user id; ids repeat across tests.
     monkeypatch.setattr(cache, "get_or_set", lambda key, ttl, loader: loader())
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    app_timezone.cache_clear()
-    Base.metadata.drop_all(bind=engine)
 
 
 client = TestClient(app)
@@ -78,14 +45,11 @@ client = TestClient(app)
 _REAL_GET_OR_SET = cache.get_or_set
 
 
-def _user(db, email: str, family: Family | None = None, *, adult: bool = True) -> User:
-    user = User(email=email, password_hash=hash_password("p"), display_name=email.split("@")[0].title())
-    db.add(user)
-    db.flush()
-    if family is not None:
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin" if adult else "member", is_adult=adult))
-        db.flush()
-    return user
+def _user(db, email: str, family: Family, *, adult: bool = True) -> User:
+    member = add_member(
+        db, email, scopes=None, family_id=family.id, is_adult=adult, password="p", display_name=email.split("@")[0].title(),
+    )
+    return db.get(User, member.user_id)
 
 
 def _family(db, name: str = "Fam") -> Family:
@@ -96,7 +60,7 @@ def _family(db, name: str = "Fam") -> Family:
 
 
 def _headers(user: User) -> dict:
-    return {"Authorization": f"Bearer {create_access_token(user.id, user.email)}"}
+    return auth(create_access_token(user.id, user.email))
 
 
 def _notify(db, user: User, family: Family, title: str, **fields) -> Notification:
@@ -235,13 +199,6 @@ def test_delete_all_without_login_is_refused():
     assert client.delete("/notifications").status_code == 401
 
 
-def _pat(db, user: User, scopes: str) -> str:
-    plain = f"{PAT_PREFIX}notif-{scopes.replace(':', '_').replace(',', '-')}"
-    digest = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(user_id=user.id, name="t", token_hash=digest, token_lookup=digest, scopes=scopes))
-    return plain
-
-
 @pytest.mark.parametrize(
     ("scopes", "status"),
     [("profile:write", 200), ("profile:read", 403), ("calendar:write", 403), ("*", 200)],
@@ -251,10 +208,10 @@ def test_delete_all_needs_profile_write_scope(scopes, status):
         family = _family(db)
         anna = _user(db, "anna@example.com", family)
         _notify(db, anna, family, "Mine")
-        token = _pat(db, anna, scopes)
+        token = add_pat(db, anna.id, scopes)
         db.commit()
 
-    response = client.delete("/notifications", headers={"Authorization": f"Bearer {token}"})
+    response = client.delete("/notifications", headers=auth(token))
     assert response.status_code == status
     with TestSession() as db:
         assert db.query(Notification).count() == (0 if status == 200 else 1)
@@ -337,22 +294,10 @@ def test_event_start_text_names_the_time_and_the_date_when_not_today():
         assert "{" not in rendered and "17:00" in rendered and "18" in rendered, language
 
 
-def _freeze(monkeypatch, *, audit_now: datetime, wall_now: datetime) -> None:
-    from app.core import scheduler as scheduler_module
-
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: audit_now)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: wall_now)
-
-
 def test_event_reminder_in_app_and_push_name_the_start_and_expire_then(monkeypatch):
     from app.core import scheduler as scheduler_module
-    from app.core.push import PushResult
 
-    pushes = []
-    monkeypatch.setattr(
-        scheduler_module, "send_push_for_user",
-        lambda db, uid, title, body, link, **options: pushes.append(body) or PushResult(attempted=1, succeeded=1),
-    )
+    pushes = capture_pushes(monkeypatch)
     with TestSession() as db:
         family = _family(db)
         anna = _user(db, "anna@example.com", family)
@@ -364,7 +309,7 @@ def test_event_reminder_in_app_and_push_name_the_start_and_expire_then(monkeypat
         db.commit()
 
     # 23:45 in Berlin (UTC+1).
-    _freeze(monkeypatch, audit_now=datetime(2026, 11, 17, 22, 45), wall_now=datetime(2026, 11, 17, 23, 45))
+    freeze_scheduler(monkeypatch, datetime(2026, 11, 17, 22, 45), datetime(2026, 11, 17, 23, 45))
     scheduler_module._check_notifications()
 
     with TestSession() as db:
@@ -372,7 +317,7 @@ def test_event_reminder_in_app_and_push_name_the_start_and_expire_then(monkeypat
         assert row.type == "event_reminder"
         assert row.body == "Beginnt am 18.11. um 12:30 AM"
         assert row.expires_at == datetime(2026, 11, 17, 23, 30)
-    assert pushes == ["Beginnt am 18.11. um 12:30 AM"]
+    assert [push["body"] for push in pushes] == ["Beginnt am 18.11. um 12:30 AM"]
 
 
 def test_birthday_tomorrow_notice_lasts_until_the_birthday_is_over(monkeypatch):
@@ -386,7 +331,7 @@ def test_birthday_tomorrow_notice_lasts_until_the_birthday_is_over(monkeypatch):
         db.commit()
         headers = _headers(anna)
 
-    _freeze(monkeypatch, audit_now=datetime(2026, 11, 14, 8, 0), wall_now=datetime(2026, 11, 14, 9, 0))
+    freeze_scheduler(monkeypatch, datetime(2026, 11, 14, 8, 0), datetime(2026, 11, 14, 9, 0))
     scheduler_module._check_notifications()
 
     with TestSession() as db:
@@ -629,14 +574,9 @@ def test_cached_unread_count_ends_when_the_next_reminder_expires(monkeypatch):
 def test_snoozed_reminder_of_a_recurring_event_expires_with_its_occurrence(monkeypatch):
     from app.core import notification_actions
     from app.core import scheduler as scheduler_module
-    from app.core.push import PushResult
     from app.models import ReminderSnooze
 
-    pushes = []
-    monkeypatch.setattr(
-        scheduler_module, "send_push_for_user",
-        lambda db, uid, title, body, link, **options: pushes.append(options) or PushResult(attempted=1, succeeded=1),
-    )
+    pushes = capture_pushes(monkeypatch)
     with TestSession() as db:
         family = _family(db)
         anna = _user(db, "anna@example.com", family)
@@ -649,7 +589,7 @@ def test_snoozed_reminder_of_a_recurring_event_expires_with_its_occurrence(monke
         anna_id = anna.id
 
     # 15:45 in Berlin on the 17th: the reminder for the 16:00 occurrence.
-    _freeze(monkeypatch, audit_now=datetime(2026, 11, 17, 14, 45), wall_now=datetime(2026, 11, 17, 15, 45))
+    freeze_scheduler(monkeypatch, datetime(2026, 11, 17, 14, 45), datetime(2026, 11, 17, 15, 45))
     scheduler_module._check_notifications()
     assert len(pushes) == 1
     response = client.post("/notifications/actions", json={"token": pushes[0]["action_token"], "action": "snooze"})

@@ -1,55 +1,31 @@
 """Backend process runs, crash detection and the admin system status (issue #494)."""
 
-import hashlib
-import os
-import tempfile
 from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from app.core import process_health
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, Notification, PersonalAccessToken, ProcessRun, User
-from app.security import PAT_PREFIX, hash_password
+from app.models import Notification, ProcessRun
+from tests.support import TestSession, add_member, auth
 
-_DB_FD, _DB_PATH = tempfile.mkstemp(prefix="tribu-process-health-", suffix=".db")
-os.close(_DB_FD)
-engine = create_engine(f"sqlite:///{_DB_PATH}", connect_args={"check_same_thread": False})
-TestSession = sessionmaker(bind=engine)
 client = TestClient(app)
 NOW = datetime(2026, 9, 27, 12, 0)
 
 
 @pytest.fixture()
-def db():
-    Base.metadata.create_all(bind=engine)
-    session = TestSession()
-    yield session
-    session.close()
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
+def db(app_db):
+    with TestSession() as session:
+        yield session
 
 
 def _seed_users(db):
-    family = Family(name="Health family")
-    db.add(family)
-    db.flush()
-    tokens = []
-    for name in ("owner", "other"):
-        user = User(email=f"{name}@example.com", password_hash=hash_password("pw"), display_name=name.title())
-        db.add(user)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}health-{name}"
-        lookup = hashlib.sha256(plain.encode()).hexdigest()
-        db.add(PersonalAccessToken(user_id=user.id, name="pat", token_hash=lookup, token_lookup=lookup, scopes="*"))
-        tokens.append(plain)
+    """Two adults in one family, the owner first; returns their tokens."""
+    owner = add_member(db, "owner@example.com", family_name="Health family", display_name="Owner")
+    other = add_member(db, "other@example.com", family_id=owner.family_id, display_name="Other")
     db.commit()
-    return tokens
+    return [owner.token, other.token]
 
 
 def _dead_run(db, minutes_ago: int) -> ProcessRun:
@@ -126,20 +102,11 @@ def test_status_is_for_the_instance_admin(db, monkeypatch):
     db.commit()
     run_id = process_health.record_start(db)
     process_health.heartbeat(db, run_id)
-
-    def _override():
-        session = TestSession()
-        try:
-            yield session
-        finally:
-            session.close()
-
-    app.dependency_overrides[get_db] = _override
     monkeypatch.setattr(process_health, "current_run_id", lambda: run_id)
 
-    denied = client.get("/admin/system/status", headers={"Authorization": f"Bearer {other}"})
+    denied = client.get("/admin/system/status", headers=auth(other))
     assert denied.status_code == 403
-    resp = client.get("/admin/system/status", headers={"Authorization": f"Bearer {owner}"})
+    resp = client.get("/admin/system/status", headers=auth(owner))
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["crashes_last_day"] == 1 and body["crashes_last_week"] == 1

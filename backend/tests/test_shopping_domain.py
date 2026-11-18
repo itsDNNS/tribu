@@ -4,9 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
 
 from app.core.shopping_domain import (
     add_or_merge_shopping_item,
@@ -16,8 +14,8 @@ from app.core.shopping_domain import (
     remember_category,
     specs_are_compatible,
 )
-from app.database import Base
 from app.models import Family, FamilyProductPreference, ShoppingItem, ShoppingList, User
+from tests.support import TestSession
 
 
 @pytest.mark.parametrize(
@@ -57,10 +55,9 @@ def test_item_source_names_each_recipe_once_and_stays_short():
     assert merge_item_source(None, "y" * 300) == "y" * 200
 
 
-def test_item_source_follows_merges_and_starts_over_on_restore(tmp_path):
-    engine = create_engine(f"sqlite:///{tmp_path / 'source.db'}")
-    Base.metadata.create_all(engine)
-    db = sessionmaker(bind=engine)()
+def test_item_source_follows_merges_and_starts_over_on_restore(app_db):
+    # Autoflush on, as the domain code expects in a request session.
+    db = TestSession(autoflush=True)
     family = Family(name="Source")
     db.add(family)
     db.flush()
@@ -74,22 +71,17 @@ def test_item_source_follows_merges_and_starts_over_on_restore(tmp_path):
     assert (first.item.spec, first.item.source) == ("3 l", "Pancakes, Lasagne")
 
     first.item.checked = True
+    db.flush()
     restored = add_or_merge_shopping_item(db, shopping_list=groceries, name="Milk")
     assert restored.action == "restored"
-    assert restored.item.source is None
+    db.flush()
+    db.refresh(restored.item)
+    assert (restored.item.checked, restored.item.source) == (False, None)
     db.close()
 
 
-def test_add_merge_restore_quantity_and_family_category_preference(tmp_path):
-    engine = create_engine(f"sqlite:///{tmp_path / 'domain.db'}")
-
-    @event.listens_for(engine, "connect")
-    def _foreign_keys(dbapi_connection, _record):
-        dbapi_connection.execute("PRAGMA foreign_keys=ON")
-
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    db = Session()
+def test_add_merge_restore_quantity_and_family_category_preference(app_db):
+    db = TestSession(autoflush=True)
     original_user = User(email="first@example.com", password_hash="hash", display_name="First")
     other_user = User(email="other@example.com", password_hash="hash", display_name="Other")
     first_family = Family(name="First")
@@ -136,6 +128,7 @@ def test_add_merge_restore_quantity_and_family_category_preference(tmp_path):
     assert checked_variant.checked is True
 
     merged.item.checked = True
+    db.flush()
     restored = add_or_merge_shopping_item(
         db,
         shopping_list=first_list,
@@ -143,6 +136,8 @@ def test_add_merge_restore_quantity_and_family_category_preference(tmp_path):
         spec="0,5 l",
     )
     assert restored.action == "restored"
+    db.flush()
+    db.refresh(restored.item)
     assert restored.item.spec == "0.5 l"
     assert restored.item.checked is False
 
@@ -182,6 +177,7 @@ def test_add_merge_restore_quantity_and_family_category_preference(tmp_path):
         family_id=first_family.id,
         normalized_name=normalize_product_name("Milk"),
     ).one().category == "Cold shelf"
+    db.close()
 
 
 def test_category_upsert_recovers_unique_race_inside_savepoint():
@@ -210,12 +206,10 @@ def test_shopping_item_construction_is_centralized():
     assert offenders == []
 
 
-def test_historic_category_variants_remain_unchanged_and_template_application_canonicalizes(tmp_path):
+def test_historic_category_variants_remain_unchanged_and_template_application_canonicalizes(app_db):
     from app.core.shopping_domain import canonicalize_category, category_vocabulary
     from app.models import ShoppingTemplate, ShoppingTemplateItem
-    engine = create_engine(f"sqlite:///{tmp_path / 'categories.db'}")
-    Base.metadata.create_all(engine)
-    with sessionmaker(bind=engine)() as db:
+    with TestSession(autoflush=True) as db:
         family = Family(name="Categories")
         db.add(family)
         db.flush()
@@ -235,4 +229,3 @@ def test_historic_category_variants_remain_unchanged_and_template_application_ca
         db.refresh(template.items[0])
         assert variant.category == " dairy "
         assert template.items[0].category == "DAIRY"
-    engine.dispose()

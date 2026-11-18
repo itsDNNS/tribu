@@ -2,82 +2,26 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-import app.models  # noqa: F401 - ensure all models are registered before create_all
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, RewardCurrency, Task, TokenTransaction, User
-from app.security import PAT_PREFIX, hash_password
+from app.models import RewardCurrency, Task, TokenTransaction
+from tests.support import TestSession, add_pat, auth, seed_member
 
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
 
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
 def _seed_admin() -> tuple[str, int, int]:
-    db = TestSession()
-    try:
-        family = Family(name="Ops Family")
-        user = User(email="ops@example.com", password_hash=hash_password("Password123"), display_name="Ops Admin")
-        db.add_all([family, user])
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}task-specific-recurrence"
-        lookup = hashlib.sha256(plain.encode()).hexdigest()
-        db.add(PersonalAccessToken(
-            user_id=user.id,
-            name="task-specific-recurrence-pat",
-            token_hash=lookup,
-            token_lookup=lookup,
-            scopes="tasks:read,tasks:write",
-        ))
-        db.commit()
-        return plain, family.id, user.id
-    finally:
-        db.close()
+    member = seed_member(
+        "ops@example.com", scopes="tasks:read,tasks:write", family_name="Ops Family", password="Password123",
+        display_name="Ops Admin", pat_name="task-specific-recurrence-pat",
+    )
+    return member.token, member.family_id, member.user_id
 
 
 @pytest.mark.parametrize(
@@ -107,7 +51,7 @@ def test_first_weekday_monthly_creates_next_occurrence_on_completion(recurrence,
     finally:
         db.close()
 
-    resp = client.patch(f"/tasks/{task_id}", headers=_auth(token), json={"status": "done"})
+    resp = client.patch(f"/tasks/{task_id}", headers=auth(token), json={"status": "done"})
 
     assert resp.status_code == 200, resp.json()
     db = TestSession()
@@ -140,7 +84,7 @@ def test_biweekly_creates_next_occurrence_on_completion():
     finally:
         db.close()
 
-    resp = client.patch(f"/tasks/{task_id}", headers=_auth(token), json={"status": "done"})
+    resp = client.patch(f"/tasks/{task_id}", headers=auth(token), json={"status": "done"})
 
     assert resp.status_code == 200, resp.json()
     db = TestSession()
@@ -186,7 +130,7 @@ def test_list_tasks_reward_only_returns_open_reward_tasks():
     finally:
         db.close()
 
-    resp = client.get(f"/tasks?family_id={family_id}&reward_only=true", headers=_auth(token))
+    resp = client.get(f"/tasks?family_id={family_id}&reward_only=true", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     data = resp.json()
@@ -199,7 +143,7 @@ def test_rest_task_title_contract_accepts_240_and_rejects_241_characters():
     title = "T" * 240
     created = client.post(
         "/tasks",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "title": title, "priority": "normal"},
     )
     assert created.status_code == 200, created.json()
@@ -207,7 +151,7 @@ def test_rest_task_title_contract_accepts_240_and_rejects_241_characters():
 
     updated = client.patch(
         f"/tasks/{created.json()['id']}",
-        headers=_auth(token),
+        headers=auth(token),
         json={"title": title, "priority": "high"},
     )
     assert updated.status_code == 200, updated.json()
@@ -216,14 +160,14 @@ def test_rest_task_title_contract_accepts_240_and_rejects_241_characters():
     too_long = f"{title}X"
     rejected_create = client.post(
         "/tasks",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "title": too_long, "priority": "normal"},
     )
     assert rejected_create.status_code == 422
 
     rejected_update = client.patch(
         f"/tasks/{created.json()['id']}",
-        headers=_auth(token),
+        headers=auth(token),
         json={"title": too_long},
     )
     assert rejected_update.status_code == 422
@@ -250,8 +194,8 @@ def test_repeated_done_updates_create_one_reward_and_one_next_occurrence():
     finally:
         db.close()
 
-    first = client.patch(f"/tasks/{task_id}", headers=_auth(token), json={"status": "done"})
-    second = client.patch(f"/tasks/{task_id}", headers=_auth(token), json={"status": "done", "title": "Repeat safely"})
+    first = client.patch(f"/tasks/{task_id}", headers=auth(token), json={"status": "done"})
+    second = client.patch(f"/tasks/{task_id}", headers=auth(token), json={"status": "done", "title": "Repeat safely"})
     assert first.status_code == second.status_code == 200
 
     db = TestSession()
@@ -278,11 +222,11 @@ def test_reopen_clears_completed_at_and_later_completion_does_not_duplicate_rewa
     finally:
         db.close()
 
-    assert client.patch(f"/tasks/{task_id}", headers=_auth(token), json={"status": "done"}).status_code == 200
-    reopened = client.patch(f"/tasks/{task_id}", headers=_auth(token), json={"status": "open"})
+    assert client.patch(f"/tasks/{task_id}", headers=auth(token), json={"status": "done"}).status_code == 200
+    reopened = client.patch(f"/tasks/{task_id}", headers=auth(token), json={"status": "open"})
     assert reopened.status_code == 200
     assert reopened.json()["completed_at"] is None
-    assert client.patch(f"/tasks/{task_id}", headers=_auth(token), json={"status": "done"}).status_code == 200
+    assert client.patch(f"/tasks/{task_id}", headers=auth(token), json={"status": "done"}).status_code == 200
 
     db = TestSession()
     try:
@@ -295,7 +239,7 @@ def test_rest_can_clear_optional_fields_and_due_precision():
     token, family_id, user_id = _seed_admin()
     created = client.post(
         "/tasks",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "title": "Precise",
@@ -312,7 +256,7 @@ def test_rest_can_clear_optional_fields_and_due_precision():
 
     updated = client.patch(
         f"/tasks/{created.json()['id']}",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "description": None,
             "due_date": None,
@@ -335,20 +279,12 @@ def test_rest_wildcard_pat_still_reads_tasks():
     _, family_id, user_id = _seed_admin()
     db = TestSession()
     try:
-        plain = f"{PAT_PREFIX}rest-wildcard"
-        lookup = hashlib.sha256(plain.encode()).hexdigest()
-        db.add(PersonalAccessToken(
-            user_id=user_id,
-            name="rest-wildcard",
-            token_hash=lookup,
-            token_lookup=lookup,
-            scopes="*",
-        ))
+        plain = add_pat(db, user_id, "*", name="rest-wildcard")
         db.add(Task(family_id=family_id, title="Visible", priority="normal", created_by_user_id=user_id))
         db.commit()
     finally:
         db.close()
 
-    response = client.get(f"/tasks?family_id={family_id}", headers=_auth(plain))
+    response = client.get(f"/tasks?family_id={family_id}", headers=auth(plain))
     assert response.status_code == 200
     assert response.json()["total"] == 1

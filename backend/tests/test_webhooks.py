@@ -2,85 +2,27 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import urllib.error
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-import app.models  # noqa: F401 - ensure all models are registered before create_all
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, Membership, PersonalAccessToken, ShoppingList, User, WebhookDelivery, WebhookEndpoint
-from app.security import PAT_PREFIX, hash_password
+from app.models import WebhookDelivery, WebhookEndpoint
+from tests.support import TestSession, auth, seed_member, seed_shopping_list
 
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
 
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
 def _seed_admin(scopes: str = "admin:read,admin:write,shopping:write") -> tuple[str, int, int]:
-    db = TestSession()
-    try:
-        family = Family(name="Webhook Family")
-        user = User(email="webhooks@example.com", password_hash=hash_password("Password123"), display_name="Webhook Admin")
-        db.add_all([family, user])
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}webhook-admin"
-        lookup = hashlib.sha256(plain.encode()).hexdigest()
-        db.add(
-            PersonalAccessToken(
-                user_id=user.id,
-                name="webhook-pat",
-                token_hash=lookup,
-                token_lookup=lookup,
-                scopes=scopes,
-            )
-        )
-        db.commit()
-        return plain, family.id, user.id
-    finally:
-        db.close()
+    member = seed_member(
+        "webhooks@example.com", scopes=scopes, family_name="Webhook Family", password="Password123",
+        display_name="Webhook Admin", pat_name="webhook-pat",
+    )
+    return member.token, member.family_id, member.user_id
 
 
 def _seed_webhook_endpoint(family_id: int, *, url: str = "https://receiver.example/hook?token=private") -> int:
@@ -108,7 +50,7 @@ def test_create_webhook_redacts_url_and_secret():
 
     resp = client.post(
         "/webhooks",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Home Assistant",
@@ -135,7 +77,7 @@ def test_rejects_invalid_webhook_url_without_echoing_secret_path():
 
     resp = client.post(
         "/webhooks",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Unsafe endpoint",
@@ -157,7 +99,7 @@ def test_rejects_reserved_secret_header_name():
 
     resp = client.post(
         "/webhooks",
-        headers=_auth(token),
+        headers=auth(token),
         json={
             "family_id": family_id,
             "name": "Reserved header",
@@ -227,7 +169,7 @@ def test_test_webhook_sends_redacted_delivery(monkeypatch):
 
     monkeypatch.setattr(webhooks_core, "_post_webhook_json", fake_post)
 
-    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     body = resp.json()
@@ -248,7 +190,7 @@ def test_webhook_status_code_failure_is_recorded_safely(monkeypatch):
 
     monkeypatch.setattr(webhooks_core, "_post_webhook_json", lambda *_args, **_kwargs: 503)
 
-    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     body = resp.json()
@@ -270,7 +212,7 @@ def test_webhook_connection_error_records_safe_operator_error(monkeypatch):
 
     monkeypatch.setattr(webhooks_core, "_post_webhook_json", raise_connection_error)
 
-    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     body = resp.json()
@@ -292,7 +234,7 @@ def test_webhook_timeout_error_records_safe_operator_error(monkeypatch):
 
     monkeypatch.setattr(webhooks_core, "_post_webhook_json", raise_timeout)
 
-    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     body = resp.json()
@@ -305,18 +247,16 @@ def test_webhook_timeout_error_records_safe_operator_error(monkeypatch):
 
 def test_subscribed_shopping_event_creates_delivery(monkeypatch):
     token, family_id, user_id = _seed_admin()
+    list_id = seed_shopping_list(family_id, user_id=user_id)
     db = TestSession()
-    shopping_list = ShoppingList(family_id=family_id, name="Groceries", created_by_user_id=user_id)
-    endpoint = WebhookEndpoint(
+    db.add(WebhookEndpoint(
         family_id=family_id,
         name="Shopping Automation",
         url="https://automation.example/hook",
         events=["shopping.item.created"],
         active=True,
-    )
-    db.add_all([shopping_list, endpoint])
+    ))
     db.commit()
-    list_id = shopping_list.id
     db.close()
 
     sent_payloads = []
@@ -334,7 +274,7 @@ def test_subscribed_shopping_event_creates_delivery(monkeypatch):
 
     resp = client.post(
         f"/shopping/lists/{list_id}/items",
-        headers=_auth(token),
+        headers=auth(token),
         json={"name": "Milch"},
     )
 
@@ -381,7 +321,7 @@ def test_task_event_creates_delivery(monkeypatch):
 
     resp = client.post(
         "/tasks",
-        headers=_auth(token),
+        headers=auth(token),
         json={"family_id": family_id, "title": "Pack sports bag"},
     )
 
@@ -401,11 +341,10 @@ def test_task_event_creates_delivery(monkeypatch):
 
 def test_inactive_or_unsubscribed_webhooks_are_skipped(monkeypatch):
     token, family_id, user_id = _seed_admin()
+    list_id = seed_shopping_list(family_id, user_id=user_id)
     db = TestSession()
-    shopping_list = ShoppingList(family_id=family_id, name="Groceries", created_by_user_id=user_id)
     db.add_all(
         [
-            shopping_list,
             WebhookEndpoint(
                 family_id=family_id,
                 name="Inactive",
@@ -423,7 +362,6 @@ def test_inactive_or_unsubscribed_webhooks_are_skipped(monkeypatch):
         ]
     )
     db.commit()
-    list_id = shopping_list.id
     db.close()
 
     from app.core import webhooks as webhooks_core
@@ -435,7 +373,7 @@ def test_inactive_or_unsubscribed_webhooks_are_skipped(monkeypatch):
 
     resp = client.post(
         f"/shopping/lists/{list_id}/items",
-        headers=_auth(token),
+        headers=auth(token),
         json={"name": "Bread"},
     )
 
@@ -467,7 +405,7 @@ def test_webhook_delivery_blocks_private_network_targets(monkeypatch):
     monkeypatch.setattr(webhooks_core, "validate_http_url_route", reject_private)
     monkeypatch.setattr(webhooks_core, "_WEBHOOK_OPENER", FakeOpener())
 
-    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=_auth(token))
+    resp = client.post(f"/webhooks/{endpoint_id}/test", headers=auth(token))
 
     assert resp.status_code == 200, resp.json()
     body = resp.json()

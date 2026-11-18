@@ -8,108 +8,29 @@ from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core import notification_actions
-from app.core.push import PushResult, _fcm_message
-from app.database import Base, get_db
+from app.core.push import _fcm_message
 from app.main import app
-from app.models import (
-    CalendarEvent,
-    Family,
-    HouseholdActivity,
-    Membership,
-    Notification,
-    NotificationPreference,
-    ReminderSnooze,
-    Task,
-    User,
-    UserNavOrder,
-)
-from app.security import create_access_token, hash_password
+from app.models import CalendarEvent, HouseholdActivity, Notification, NotificationPreference, ReminderSnooze, Task, User
+from app.security import create_access_token
+from tests.notification_support import add_reader
+from tests.support import TestSession, auth, capture_pushes, freeze_scheduler
 
-engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-TestSession = sessionmaker(bind=engine, autoflush=False)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    monkeypatch.setenv("TZ", "Europe/Berlin")
-    from app.core.clock import app_timezone
-    from app.core import scheduler as scheduler_module
-
-    app_timezone.cache_clear()
-    Base.metadata.create_all(bind=engine)
-    monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    app_timezone.cache_clear()
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("scheduler_db", "berlin_tz")
 
 client = TestClient(app)
 
 
-def _seed(db, *, language: str | None = None, adult: bool = True) -> tuple[User, Family]:
-    user = User(email="act@example.com", password_hash=hash_password("p"), display_name="Anna")
-    family = Family(name="Act-Family")
-    db.add_all([user, family])
-    db.flush()
-    db.add(Membership(user_id=user.id, family_id=family.id, role="admin" if adult else "member", is_adult=adult))
-    db.add(NotificationPreference(user_id=user.id, reminders_enabled=True, reminder_minutes=30, push_enabled=True))
-    if language:
-        db.add(UserNavOrder(user_id=user.id, nav_order=[], ui_language=language))
-    db.flush()
-    return user, family
-
-
-def _freeze(monkeypatch, *, audit_now: datetime, wall_now: datetime) -> None:
-    from app.core import scheduler as scheduler_module
-
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: audit_now)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: wall_now)
-
-
-def _capture_pushes(monkeypatch) -> list:
-    from app.core import scheduler as scheduler_module
-
-    calls = []
-
-    def send(db, uid, title, body, link, **options):
-        calls.append({"title": title, "body": body, "link": link, **options})
-        return PushResult(attempted=1, succeeded=1)
-
-    monkeypatch.setattr(scheduler_module, "send_push_for_user", send)
-    return calls
-
-
 def _overdue_task_push(monkeypatch, *, language: str | None = None, adult: bool = True) -> tuple[dict, int]:
     with TestSession() as db:
-        user, family = _seed(db, language=language, adult=adult)
+        user, family = add_reader(db, language=language, adult=adult)
         task = Task(family_id=family.id, title="Take out the bins", status="open", due_date=datetime(2026, 9, 17, 8, 0), created_by_user_id=user.id)
         db.add(task)
         db.commit()
         task_id = task.id
-    _freeze(monkeypatch, audit_now=datetime(2026, 9, 17, 10, 0), wall_now=datetime(2026, 9, 17, 12, 0))
-    calls = _capture_pushes(monkeypatch)
+    freeze_scheduler(monkeypatch, datetime(2026, 9, 17, 10, 0), datetime(2026, 9, 17, 12, 0))
+    calls = capture_pushes(monkeypatch)
     from app.core import scheduler as scheduler_module
 
     scheduler_module._check_notifications()
@@ -150,8 +71,8 @@ def test_snooze_reminds_again_an_hour_later_once(monkeypatch):
 
     from app.core import scheduler as scheduler_module
 
-    calls = _capture_pushes(monkeypatch)
-    _freeze(monkeypatch, audit_now=remind_at - timedelta(minutes=1), wall_now=remind_at + timedelta(hours=2))
+    calls = capture_pushes(monkeypatch)
+    freeze_scheduler(monkeypatch, remind_at - timedelta(minutes=1), remind_at + timedelta(hours=2))
     scheduler_module.deliver_snoozed_reminders(
         TestSession(), now=remind_at - timedelta(minutes=1), local_now=remind_at, get_pref=lambda uid: NotificationPreference(user_id=uid, reminders_enabled=True, push_enabled=True),
     )
@@ -180,7 +101,7 @@ def test_a_snooze_for_a_finished_task_stays_quiet(monkeypatch):
     client.post("/notifications/actions", json={"token": push["action_token"], "action": "done"})
     from app.core import scheduler as scheduler_module
 
-    calls = _capture_pushes(monkeypatch)
+    calls = capture_pushes(monkeypatch)
     with TestSession() as db:
         remind_at = db.query(ReminderSnooze).one().remind_at
         scheduler_module.deliver_snoozed_reminders(
@@ -202,7 +123,7 @@ def test_action_tokens_are_scoped_and_no_session(monkeypatch):
     push, _ = _overdue_task_push(monkeypatch)
     token = push["action_token"]
     # Not an access token ...
-    assert client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+    assert client.get("/auth/me", headers=auth(token)).status_code == 401
     # ... and an access token is not an action token.
     with TestSession() as db:
         user = db.query(User).one()
@@ -215,7 +136,7 @@ def test_action_tokens_are_scoped_and_no_session(monkeypatch):
 
 def test_event_reminders_cannot_be_marked_done(monkeypatch):
     with TestSession() as db:
-        user, family = _seed(db)
+        user, family = add_reader(db)
         event_row = CalendarEvent(family_id=family.id, title="Swimming", all_day=False, starts_at=datetime(2026, 9, 17, 16, 0))
         db.add(event_row)
         db.commit()
@@ -263,7 +184,7 @@ def test_web_push_carries_labelled_buttons(monkeypatch):
     monkeypatch.setitem(sys.modules, "pywebpush", fake)
 
     with TestSession() as db:
-        user, _ = _seed(db)
+        user, _ = add_reader(db)
         db.add(PushSubscription(user_id=user.id, endpoint="https://push.example/1", p256dh="k", auth="a", platform="web"))
         db.commit()
         push_module.send_push_for_user(
@@ -300,7 +221,7 @@ def test_apps_only_get_the_buttons_they_know(monkeypatch):
     monkeypatch.setattr(push_module, "is_fcm_configured", lambda: True)
     monkeypatch.setattr(push_module, "_send_fcm_push", lambda token, title, body, url, **kwargs: sent_fcm.append(kwargs) or (True, None, False))
     with TestSession() as db:
-        user, _ = _seed(db)
+        user, _ = add_reader(db)
         db.add(PushSubscription(user_id=user.id, endpoint="fcm-token", p256dh="", auth="", platform="fcm", supports_actions=True))
         db.commit()
         push_module.send_push_for_user(db, user.id, "Swim", "", "/calendar", actions=("snooze", "mute"), action_token="tok")

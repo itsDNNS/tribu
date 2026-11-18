@@ -1,56 +1,18 @@
 """Household activity feed integration tests."""
 
-import hashlib
 from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
-from app.models import Family, HouseholdActivity, Membership, PersonalAccessToken, User
-from app.security import PAT_PREFIX, hash_password
+from app.models import HouseholdActivity
+from tests.support import TestSession, auth, seed_member
 
 
-engine = create_engine(
-    "sqlite:///./test-household-activity.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
-
-
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
 
 
 def _seed_member(
@@ -61,35 +23,10 @@ def _seed_member(
     is_adult: bool = True,
     family_id: int | None = None,
 ) -> tuple[str, int, int]:
-    db = TestSession()
-    user = User(
-        email=f"activity-{suffix}@example.com",
-        password_hash=hash_password("Password123"),
-        display_name=display_name,
+    member = seed_member(
+        f"activity-{suffix}@example.com", scopes=scopes, family_id=family_id, is_adult=is_adult, display_name=display_name,
     )
-    db.add(user)
-    db.flush()
-
-    if family_id is None:
-        family = Family(name=f"Activity Family {suffix}")
-        db.add(family)
-        db.flush()
-        family_id = family.id
-
-    db.add(Membership(user_id=user.id, family_id=family_id, role="admin" if is_adult else "member", is_adult=is_adult))
-    plain = f"{PAT_PREFIX}activity-{suffix}-{scopes.replace(',', '-').replace(':', '_').replace('*', 'star')}"
-    lookup = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(
-        user_id=user.id,
-        name="activity-pat",
-        token_hash=lookup,
-        token_lookup=lookup,
-        scopes=scopes,
-    ))
-    db.commit()
-    user_id = user.id
-    db.close()
-    return plain, family_id, user_id
+    return member.token, member.family_id, member.user_id
 
 
 def test_task_create_and_complete_are_recorded_public_safely():
@@ -103,7 +40,7 @@ def test_task_create_and_complete_are_recorded_public_safely():
             "description": "private bank detail should not leak",
             "priority": "normal",
         },
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert created.status_code == 200, created.json()
     task_id = created.json()["id"]
@@ -111,11 +48,11 @@ def test_task_create_and_complete_are_recorded_public_safely():
     completed = client.patch(
         f"/tasks/{task_id}",
         json={"status": "done"},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert completed.status_code == 200, completed.json()
 
-    feed = client.get(f"/activity?family_id={family_id}&limit=10", headers=_auth(token))
+    feed = client.get(f"/activity?family_id={family_id}&limit=10", headers=auth(token))
     assert feed.status_code == 200, feed.json()
     data = feed.json()
     assert data["total"] == 2
@@ -131,7 +68,7 @@ def test_task_create_and_complete_are_recorded_public_safely():
     db.commit()
     db.close()
 
-    feed_after_actor_delete = client.get(f"/activity?family_id={family_id}&limit=10", headers=_auth(token))
+    feed_after_actor_delete = client.get(f"/activity?family_id={family_id}&limit=10", headers=auth(token))
     assert feed_after_actor_delete.status_code == 200
     assert feed_after_actor_delete.json()["items"][0]["actor_display_name"] == "Dennis"
 
@@ -154,7 +91,7 @@ def test_shopping_activity_and_family_boundaries():
     shopping_list = client.post(
         "/shopping/lists",
         json={"family_id": family_id, "name": "Weekly groceries"},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert shopping_list.status_code == 200, shopping_list.json()
     list_id = shopping_list.json()["id"]
@@ -162,7 +99,7 @@ def test_shopping_activity_and_family_boundaries():
     item = client.post(
         f"/shopping/lists/{list_id}/items",
         json={"name": "Milk", "spec": "private note", "category": "Dairy"},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert item.status_code == 200, item.json()
     item_id = item.json()["id"]
@@ -170,14 +107,14 @@ def test_shopping_activity_and_family_boundaries():
     checked = client.patch(
         f"/shopping/items/{item_id}",
         json={"checked": True},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert checked.status_code == 200, checked.json()
 
-    denied = client.get(f"/activity?family_id={family_id}", headers=_auth(intruder_token))
+    denied = client.get(f"/activity?family_id={family_id}", headers=auth(intruder_token))
     assert denied.status_code == 403
 
-    feed = client.get(f"/activity?family_id={family_id}&limit=10", headers=_auth(token))
+    feed = client.get(f"/activity?family_id={family_id}&limit=10", headers=auth(token))
     assert feed.status_code == 200, feed.json()
     summaries = [entry["summary"] for entry in feed.json()["items"]]
     assert summaries == [
@@ -203,7 +140,7 @@ def test_calendar_event_activity_is_recorded_public_safely():
             "starts_at": "2026-05-01T15:00:00Z",
             "ends_at": "2026-05-01T16:00:00Z",
         },
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert created.status_code == 200, created.json()
     event_id = created.json()["id"]
@@ -211,17 +148,17 @@ def test_calendar_event_activity_is_recorded_public_safely():
     updated = client.patch(
         f"/calendar/events/{event_id}",
         json={"title": "Piano lesson", "description": "new private note"},
-        headers=_auth(token),
+        headers=auth(token),
     )
     assert updated.status_code == 200, updated.json()
 
-    deleted = client.delete(f"/calendar/events/{event_id}", headers=_auth(token))
+    deleted = client.delete(f"/calendar/events/{event_id}", headers=auth(token))
     assert deleted.status_code == 200, deleted.json()
 
-    denied = client.get(f"/activity?family_id={family_id}", headers=_auth(intruder_token))
+    denied = client.get(f"/activity?family_id={family_id}", headers=auth(intruder_token))
     assert denied.status_code == 403
 
-    feed = client.get(f"/activity?family_id={family_id}&limit=10", headers=_auth(token))
+    feed = client.get(f"/activity?family_id={family_id}&limit=10", headers=auth(token))
     assert feed.status_code == 200, feed.json()
     data = feed.json()
     assert data["total"] == 3
@@ -259,7 +196,7 @@ def test_activity_feed_orders_and_paginates():
     db.commit()
     db.close()
 
-    feed = client.get(f"/activity?family_id={family_id}&limit=2&offset=1", headers=_auth(token))
+    feed = client.get(f"/activity?family_id={family_id}&limit=2&offset=1", headers=auth(token))
     assert feed.status_code == 200, feed.json()
     data = feed.json()
     assert data["total"] == 3
@@ -273,11 +210,11 @@ def test_activity_feed_orders_and_paginates():
 
 def test_activity_read_scope_is_required_for_pats():
     token, family_id, _ = _seed_member("tasks:read", "bad-scope")
-    resp = client.get(f"/activity?family_id={family_id}", headers=_auth(token))
+    resp = client.get(f"/activity?family_id={family_id}", headers=auth(token))
     assert resp.status_code == 403
 
     good_token, good_family_id, _ = _seed_member("activity:read", "good-scope")
-    allowed = client.get(f"/activity?family_id={good_family_id}", headers=_auth(good_token))
+    allowed = client.get(f"/activity?family_id={good_family_id}", headers=auth(good_token))
     assert allowed.status_code == 200, allowed.json()
 
 
@@ -295,7 +232,7 @@ def test_entries_without_object_label_still_read():
     db.commit()
     db.close()
 
-    feed = client.get(f"/activity?family_id={family_id}", headers=_auth(token))
+    feed = client.get(f"/activity?family_id={family_id}", headers=auth(token))
     assert feed.status_code == 200, feed.json()
     entry = feed.json()["items"][0]
     assert entry["object_label"] is None

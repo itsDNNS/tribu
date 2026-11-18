@@ -1,51 +1,22 @@
 """Gifts around people: who sees what, wishes, "I'll take care of it",
 occasions with budgets, the link preview and the week-before reminder."""
 
-import hashlib
 from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core import gift_preview
 from app.core.clock import local_today
 from app.core.recipe_import import RecipeImportError
 from app.core.scheduler import deliver_gift_reminders
-from app.database import Base, get_db
 from app.main import app
-from app.models import Contact, Family, FamilyBirthday, GiftIdea, Membership, PersonalAccessToken, User
+from app.models import Contact, FamilyBirthday, GiftIdea
 from app.modules.gifts_router import easter_sunday
-from app.security import PAT_PREFIX, hash_password
-
-engine = create_engine("sqlite:///./test-gifts-people.db", connect_args={"check_same_thread": False})
-TestSession = sessionmaker(bind=engine)
+from tests.support import TestSession, add_member, auth
 
 
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
-
+pytestmark = pytest.mark.usefixtures("app_db")
 
 client = TestClient(app)
 
@@ -54,29 +25,27 @@ class Family_:
     """Dennis and Anna (adults), Lena and Max (children)."""
 
     def __init__(self) -> None:
-        db = TestSession()
-        family = Family(name="Gift People")
-        db.add(family)
-        db.flush()
-        self.family_id = family.id
+        self.family_id: int | None = None
         self.ids: dict[str, int] = {}
         self.tokens: dict[str, str] = {}
-        for name, adult in (("dennis", True), ("anna", True), ("lena", False), ("max", False)):
-            user = User(email=f"{name}@example.com", password_hash=hash_password("pw"), display_name=name.title())
-            db.add(user)
-            db.flush()
-            db.add(Membership(user_id=user.id, family_id=family.id, role="admin" if name == "dennis" else "member",
-                              is_adult=adult))
-            plain = f"{PAT_PREFIX}giftpeople-{name}"
-            digest = hashlib.sha256(plain.encode()).hexdigest()
-            db.add(PersonalAccessToken(user_id=user.id, name="pat", token_hash=digest, token_lookup=digest, scopes="*"))
-            self.ids[name] = user.id
-            self.tokens[name] = plain
-        db.commit()
-        db.close()
+        with TestSession() as db:
+            for name, adult in (("dennis", True), ("anna", True), ("lena", False), ("max", False)):
+                member = add_member(
+                    db,
+                    f"{name}@example.com",
+                    family_id=self.family_id,
+                    family_name="Gift People",
+                    role="admin" if name == "dennis" else "member",
+                    is_adult=adult,
+                    display_name=name.title(),
+                )
+                self.family_id = member.family_id
+                self.ids[name] = member.user_id
+                self.tokens[name] = member.token
+            db.commit()
 
     def h(self, name: str) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self.tokens[name]}"}
+        return auth(self.tokens[name])
 
     def add(self, who: str, **fields):
         resp = client.post("/gifts", json={"family_id": self.family_id, **fields}, headers=self.h(who))
