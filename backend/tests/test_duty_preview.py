@@ -5,63 +5,27 @@ from __future__ import annotations
 from datetime import date, datetime, time
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.push import PushResult
-from app.database import Base
-from app.models import (
-    Duty,
-    DutyException,
-    DutySlot,
-    Family,
-    Membership,
-    Notification,
-    NotificationPreference,
-    User,
-    UserNavOrder,
-)
-from app.security import hash_password
+from app.models import Duty, DutyException, DutySlot, Family, Membership, Notification, NotificationPreference, UserNavOrder
+from tests.support import TestSession, add_member, freeze_scheduler
 
-engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-TestSession = sessionmaker(bind=engine, autoflush=False)
+pytestmark = pytest.mark.usefixtures("scheduler_db", "berlin_tz")
 
 
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    monkeypatch.setenv("TZ", "Europe/Berlin")
-    from app.core.clock import app_timezone
-    from app.core import scheduler as scheduler_module
-
-    app_timezone.cache_clear()
-    Base.metadata.create_all(bind=engine)
-    monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
-    yield
-    app_timezone.cache_clear()
-    Base.metadata.drop_all(bind=engine)
-
-
-def _person(db, family, name, *, adult=True, language=None, push_categories=None):
-    user = User(email=f"{name}@example.com", password_hash=hash_password("p"), display_name=name)
-    db.add(user)
-    db.flush()
-    db.add(Membership(user_id=user.id, family_id=family.id, role="member", is_adult=adult))
+def _person(db, family, name, *, adult=True, language=None, push_categories=None) -> int:
+    user_id = add_member(
+        db, f"{name}@example.com", scopes=None, family_id=family.id, role="member", is_adult=adult,
+        password="p", display_name=name,
+    ).user_id
     db.add(NotificationPreference(
-        user_id=user.id, reminders_enabled=True, reminder_minutes=30, push_enabled=True,
+        user_id=user_id, reminders_enabled=True, reminder_minutes=30, push_enabled=True,
         push_categories=push_categories,
     ))
     if language:
-        db.add(UserNavOrder(user_id=user.id, nav_order=[], ui_language=language))
+        db.add(UserNavOrder(user_id=user_id, nav_order=[], ui_language=language))
     db.flush()
-    return user
+    return user_id
 
 
 def _seed(*, anna_categories=None) -> dict:
@@ -73,19 +37,18 @@ def _seed(*, anna_categories=None) -> dict:
         anna = _person(db, family, "anna", language="de", push_categories=anna_categories)
         ben = _person(db, family, "ben")
         kid = _person(db, family, "kid", adult=False)
-        duty = Duty(family_id=family.id, title="Pick up the kids", due_time=time(15, 30), created_by_user_id=anna.id)
-        duty.slots = [DutySlot(weekday=day, assigned_to_user_id=anna.id if day < 2 else ben.id) for day in range(5)]
+        duty = Duty(family_id=family.id, title="Pick up the kids", due_time=time(15, 30), created_by_user_id=anna)
+        duty.slots = [DutySlot(weekday=day, assigned_to_user_id=anna if day < 2 else ben) for day in range(5)]
         duty.exceptions = [DutyException(date=date(2026, 12, 18), skipped=True)]
         db.add(duty)
         db.commit()
-        return {"anna": anna.id, "ben": ben.id, "kid": kid.id}
+        return {"anna": anna, "ben": ben, "kid": kid}
 
 
 def _run(monkeypatch, wall_now: datetime) -> list:
     from app.core import scheduler as scheduler_module
 
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: wall_now)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: wall_now)
+    freeze_scheduler(monkeypatch, wall_now)
     calls = []
 
     def send(db, uid, title, body, link, **options):

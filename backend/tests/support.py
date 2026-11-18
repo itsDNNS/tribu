@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.push import PushResult
-from app.models import Family, Membership, PersonalAccessToken, User
+from app.models import Family, Membership, PersonalAccessToken, ShoppingList, User
 from app.security import PAT_PREFIX, hash_password
 
 # One in-memory database for the whole run; ``app_db`` creates the tables
@@ -143,6 +143,15 @@ def capture_pushes(monkeypatch) -> list[dict]:
 
     monkeypatch.setattr(scheduler_module, "send_push_for_user", send)
     return calls
+
+
+def seed_shopping_list(family_id: int, name: str = "Groceries", *, user_id: int | None = None) -> int:
+    """Commits a shopping list for ``family_id`` (created by ``user_id``) and returns its id."""
+    with TestSession() as db:
+        shopping_list = ShoppingList(family_id=family_id, name=name, created_by_user_id=user_id)
+        db.add(shopping_list)
+        db.commit()
+        return shopping_list.id
 
 
 def freeze_scheduler_in_utc(monkeypatch, now: datetime) -> None:

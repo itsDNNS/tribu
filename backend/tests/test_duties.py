@@ -2,54 +2,18 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-import app.models  # noqa: F401 - ensure all models are registered before create_all
 from app.core import duties as duties_core
-from app.database import Base, get_db
 from app.main import app
-from app.models import DutyException, Family, Membership, PersonalAccessToken, Task, User
+from app.models import DutyException, Membership, Task
 from app.modules import duties_router
-from app.security import PAT_PREFIX, hash_password
+from tests.support import Member, TestSession, add_member, auth
 
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSession = sessionmaker(bind=engine)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
+pytestmark = pytest.mark.usefixtures("app_db")
 
 
 class Clock:
@@ -67,53 +31,30 @@ def clock(monkeypatch):
 client = TestClient(app)
 
 
-def _token(db, user: User, name: str) -> str:
-    plain = f"{PAT_PREFIX}duties-{name}"
-    lookup = hashlib.sha256(plain.encode()).hexdigest()
-    db.add(PersonalAccessToken(
-        user_id=user.id, name=f"duties-{name}", token_hash=lookup, token_lookup=lookup,
-        scopes="tasks:read,tasks:write,families:write,profile:write",
-    ))
-    return plain
+def _member(db, name: str, **options) -> Member:
+    return add_member(
+        db, f"{name}@example.com", scopes="tasks:read,tasks:write,families:write,profile:write",
+        password="Password123", display_name=name, pat_name=f"duties-{name}", **options,
+    )
 
 
 @pytest.fixture
 def family():
-    db = TestSession()
-    try:
-        home = Family(name="Home")
-        other = Family(name="Neighbours")
-        users = {
-            name: User(email=f"{name}@example.com", password_hash=hash_password("Password123"), display_name=name)
-            for name in ("anna", "ben", "kid", "stranger")
-        }
-        db.add_all([home, other, *users.values()])
-        db.flush()
-        db.add_all([
-            Membership(user_id=users["anna"].id, family_id=home.id, role="admin", is_adult=True),
-            Membership(user_id=users["ben"].id, family_id=home.id, role="member", is_adult=True),
-            Membership(user_id=users["kid"].id, family_id=home.id, role="member", is_adult=False),
-            Membership(user_id=users["stranger"].id, family_id=other.id, role="admin", is_adult=True),
-        ])
-        result = {
-            "family_id": home.id,
-            "anna": users["anna"].id,
-            "ben": users["ben"].id,
-            "kid": users["kid"].id,
-            "stranger": users["stranger"].id,
-            "anna_token": _token(db, users["anna"], "anna"),
-            "ben_token": _token(db, users["ben"], "ben"),
-            "kid_token": _token(db, users["kid"], "kid"),
-            "stranger_token": _token(db, users["stranger"], "stranger"),
+    """Anna (admin), Ben and their kid at home; a stranger in the neighbours' family."""
+    with TestSession() as db:
+        anna = _member(db, "anna", family_name="Home")
+        people = {
+            "anna": anna,
+            "ben": _member(db, "ben", family_id=anna.family_id, role="member"),
+            "kid": _member(db, "kid", family_id=anna.family_id, is_adult=False),
+            "stranger": _member(db, "stranger", family_name="Neighbours"),
         }
         db.commit()
-        return result
-    finally:
-        db.close()
-
-
-def _auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+    return {
+        "family_id": anna.family_id,
+        **{name: member.user_id for name, member in people.items()},
+        **{f"{name}_token": member.token for name, member in people.items()},
+    }
 
 
 def _create_pickup(family, **overrides) -> dict:
@@ -131,7 +72,7 @@ def _create_pickup(family, **overrides) -> dict:
         ],
         **overrides,
     }
-    resp = client.post("/duties", headers=_auth(family["anna_token"]), json=payload)
+    resp = client.post("/duties", headers=auth(family["anna_token"]), json=payload)
     assert resp.status_code == 200, resp.text
     return resp.json()
 
@@ -168,7 +109,7 @@ def test_creating_a_duty_creates_assigned_tasks_for_the_coming_week(clock, famil
     assert monday.due_date == datetime(2026, 12, 7, 15, 30)
     assert monday.due_is_date is False
 
-    listed = client.get(f"/tasks?family_id={family['family_id']}", headers=_auth(family["anna_token"])).json()["items"]
+    listed = client.get(f"/tasks?family_id={family['family_id']}", headers=auth(family["anna_token"])).json()["items"]
     assert {item["duty_date"] for item in listed} == {d.isoformat() for d in tasks}
     assert {item["duty_id"] for item in listed} == {duty["id"]}
 
@@ -181,7 +122,7 @@ def test_a_change_months_ahead_applies_once_and_leaves_the_pattern(clock, family
 
     resp = client.put(
         f"/duties/{duty['id']}/exceptions/{trip_tuesday}",
-        headers=_auth(family["anna_token"]),
+        headers=auth(family["anna_token"]),
         json={"assigned_to_user_id": family["ben"]},
     )
     assert resp.status_code == 200, resp.text
@@ -189,7 +130,7 @@ def test_a_change_months_ahead_applies_once_and_leaves_the_pattern(clock, family
     assert trip_tuesday not in _duty_tasks(duty["id"]), "dates beyond the coming week get no task yet"
 
     week = client.get(
-        f"/duties/week?family_id={family['family_id']}&start=2026-12-21", headers=_auth(family["anna_token"]),
+        f"/duties/week?family_id={family['family_id']}&start=2026-12-21", headers=auth(family["anna_token"]),
     ).json()
     tuesday = next(occ for occ in week if occ["date"] == "2026-12-22")
     assert tuesday["assigned_to_user_id"] == family["ben"]
@@ -210,11 +151,11 @@ def test_reassigning_a_duty_task_is_kept_for_that_date_only(clock, family):
     duty = _create_pickup(family)
     tuesday = _duty_tasks(duty["id"])[date(2026, 12, 8)]
 
-    resp = client.patch(f"/tasks/{tuesday.id}", headers=_auth(family["anna_token"]), json={"assigned_to_user_id": family["ben"]})
+    resp = client.patch(f"/tasks/{tuesday.id}", headers=auth(family["anna_token"]), json={"assigned_to_user_id": family["ben"]})
     assert resp.status_code == 200, resp.text
 
     # Editing the duty rewrites its open tasks; the reassignment survives as an exception.
-    resp = client.patch(f"/duties/{duty['id']}", headers=_auth(family["anna_token"]), json={"title": "Fetch the kids"})
+    resp = client.patch(f"/duties/{duty['id']}", headers=auth(family["anna_token"]), json={"title": "Fetch the kids"})
     assert resp.status_code == 200, resp.text
     tasks = _duty_tasks(duty["id"])
     assert tasks[date(2026, 12, 8)].assigned_to_user_id == family["ben"]
@@ -222,7 +163,7 @@ def test_reassigning_a_duty_task_is_kept_for_that_date_only(clock, family):
     assert tasks[date(2026, 12, 7)].assigned_to_user_id == family["anna"]
 
     # Giving it back to the default person leaves no exception behind.
-    client.patch(f"/tasks/{tuesday.id}", headers=_auth(family["anna_token"]), json={"assigned_to_user_id": family["anna"]})
+    client.patch(f"/tasks/{tuesday.id}", headers=auth(family["anna_token"]), json={"assigned_to_user_id": family["anna"]})
     db = TestSession()
     try:
         assert db.query(DutyException).count() == 0
@@ -234,17 +175,17 @@ def test_deleting_a_duty_task_skips_its_date(clock, family):
     duty = _create_pickup(family)
     wednesday = _duty_tasks(duty["id"])[date(2026, 12, 9)]
 
-    assert client.delete(f"/tasks/{wednesday.id}", headers=_auth(family["anna_token"])).status_code == 200
+    assert client.delete(f"/tasks/{wednesday.id}", headers=auth(family["anna_token"])).status_code == 200
     _run_job()
 
     assert date(2026, 12, 9) not in _duty_tasks(duty["id"])
     week = client.get(
-        f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=_auth(family["anna_token"]),
+        f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=auth(family["anna_token"]),
     ).json()
     assert next(occ for occ in week if occ["date"] == "2026-12-09")["skipped"] is True
 
     # Undoing the change brings the task back.
-    resp = client.delete(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=_auth(family["anna_token"]))
+    resp = client.delete(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=auth(family["anna_token"]))
     assert resp.status_code == 200
     assert _duty_tasks(duty["id"])[date(2026, 12, 9)].assigned_to_user_id == family["ben"]
 
@@ -252,11 +193,11 @@ def test_deleting_a_duty_task_skips_its_date(clock, family):
 def test_changing_the_pattern_updates_open_tasks_but_never_done_ones(clock, family):
     duty = _create_pickup(family)
     monday = _duty_tasks(duty["id"])[date(2026, 12, 7)]
-    client.patch(f"/tasks/{monday.id}", headers=_auth(family["anna_token"]), json={"status": "done"})
+    client.patch(f"/tasks/{monday.id}", headers=auth(family["anna_token"]), json={"status": "done"})
 
     resp = client.patch(
         f"/duties/{duty['id']}",
-        headers=_auth(family["anna_token"]),
+        headers=auth(family["anna_token"]),
         json={
             "due_time": "16:00",
             "slots": [
@@ -282,10 +223,10 @@ def test_changing_the_pattern_updates_open_tasks_but_never_done_ones(clock, fami
 def test_deleting_a_duty_keeps_done_and_overdue_tasks(clock, family):
     duty = _create_pickup(family)
     tasks = _duty_tasks(duty["id"])
-    client.patch(f"/tasks/{tasks[date(2026, 12, 7)].id}", headers=_auth(family["anna_token"]), json={"status": "done"})
+    client.patch(f"/tasks/{tasks[date(2026, 12, 7)].id}", headers=auth(family["anna_token"]), json={"status": "done"})
 
     clock.now = datetime(2026, 12, 9, 8, 0)
-    assert client.delete(f"/duties/{duty['id']}", headers=_auth(family["anna_token"])).status_code == 200
+    assert client.delete(f"/duties/{duty['id']}", headers=auth(family["anna_token"])).status_code == 200
 
     db = TestSession()
     try:
@@ -308,8 +249,8 @@ def test_a_timed_date_that_already_passed_today_gets_no_task(clock, family):
 
 def test_only_adults_change_duties_and_input_is_checked(clock, family):
     duty = _create_pickup(family)
-    kid = _auth(family["kid_token"])
-    anna = _auth(family["anna_token"])
+    kid = auth(family["kid_token"])
+    anna = auth(family["anna_token"])
 
     assert client.get(f"/duties?family_id={family['family_id']}", headers=kid).status_code == 200
     assert client.patch(f"/duties/{duty['id']}", headers=kid, json={"title": "Mine"}).status_code == 403
@@ -334,7 +275,7 @@ def test_only_adults_change_duties_and_input_is_checked(clock, family):
 
 def test_a_change_only_rewrites_what_changed(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     tasks = _duty_tasks(duty["id"])
     client.patch(f"/tasks/{tasks[date(2026, 12, 8)].id}", headers=anna, json={"due_date": "2026-12-08T17:00:00"})
     client.patch(f"/tasks/{tasks[date(2026, 12, 9)].id}", headers=anna, json={"title": "Pick up the kids and Max"})
@@ -355,7 +296,7 @@ def test_a_change_only_rewrites_what_changed(clock, family):
 def test_the_job_leaves_existing_tasks_alone(clock, family):
     duty = _create_pickup(family)
     wednesday = _duty_tasks(duty["id"])[date(2026, 12, 9)]
-    client.patch(f"/tasks/{wednesday.id}", headers=_auth(family["anna_token"]), json={"title": "Bring the cake too"})
+    client.patch(f"/tasks/{wednesday.id}", headers=auth(family["anna_token"]), json={"title": "Bring the cake too"})
 
     _run_job()
     assert _duty_tasks(duty["id"])[date(2026, 12, 9)].title == "Bring the cake too"
@@ -375,7 +316,7 @@ def test_tasks_reach_exactly_seven_days_ahead(clock, family):
 
 def test_the_week_shows_who_did_a_done_task(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     monday = _duty_tasks(duty["id"])[date(2026, 12, 7)]
     client.patch(f"/tasks/{monday.id}", headers=anna, json={"status": "done"})
     slots = [{"weekday": day, "assigned_to_user_id": family["ben"]} for day in range(5)]
@@ -392,7 +333,7 @@ def test_the_week_shows_who_did_a_done_task(clock, family):
 
 def test_choosing_the_default_person_for_a_date_is_no_exception(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     client.put(f"/duties/{duty['id']}/exceptions/2026-12-22", headers=anna, json={"assigned_to_user_id": family["ben"]})
 
     resp = client.put(f"/duties/{duty['id']}/exceptions/2026-12-22", headers=anna, json={"assigned_to_user_id": family["anna"]})
@@ -412,7 +353,7 @@ def _keep_ben_in_another_family(family) -> None:
 
 def test_a_member_who_leaves_drops_out_of_duties(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     client.put(f"/duties/{duty['id']}/exceptions/2026-12-22", headers=anna, json={"assigned_to_user_id": family["ben"]})
     _keep_ben_in_another_family(family)
 
@@ -429,7 +370,7 @@ def test_a_member_who_leaves_drops_out_of_duties(clock, family):
 
 def test_other_families_cannot_see_or_change_duties(clock, family):
     duty = _create_pickup(family)
-    stranger = _auth(family["stranger_token"])
+    stranger = auth(family["stranger_token"])
     fid = family["family_id"]
 
     assert client.get(f"/duties?family_id={fid}", headers=stranger).status_code == 403
@@ -444,7 +385,7 @@ def test_other_families_cannot_see_or_change_duties(clock, family):
 
 def test_dates_far_away_are_refused(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
 
     assert client.get(f"/duties/week?family_id={family['family_id']}&start=9999-12-27", headers=anna).status_code == 400
     assert client.put(f"/duties/{duty['id']}/exceptions/2029-03-05", headers=anna, json={}).status_code == 400
@@ -455,7 +396,7 @@ def test_changing_a_past_duty_task_leaves_no_exception(clock, family):
     monday = _duty_tasks(duty["id"])[date(2026, 12, 7)]
 
     clock.now = datetime(2026, 12, 9, 8, 0)
-    client.delete(f"/tasks/{monday.id}", headers=_auth(family["anna_token"]))
+    client.delete(f"/tasks/{monday.id}", headers=auth(family["anna_token"]))
 
     db = TestSession()
     try:
@@ -468,10 +409,10 @@ def test_leaving_the_family_drops_out_of_duties(clock, family):
     duty = _create_pickup(family)
     _keep_ben_in_another_family(family)
 
-    left = client.post("/auth/me/leave-family", headers=_auth(family["ben_token"]), json={"family_id": family["family_id"]})
+    left = client.post("/auth/me/leave-family", headers=auth(family["ben_token"]), json={"family_id": family["family_id"]})
     assert left.status_code == 200, left.text
 
-    listed = client.get(f"/duties?family_id={family['family_id']}", headers=_auth(family["anna_token"])).json()[0]
+    listed = client.get(f"/duties?family_id={family['family_id']}", headers=auth(family["anna_token"])).json()[0]
     assert {slot["assigned_to_user_id"] for slot in listed["slots"] if slot["weekday"] >= 2} == {None}
     assert _duty_tasks(duty["id"])[date(2026, 12, 9)].assigned_to_user_id is None
 
@@ -485,7 +426,7 @@ def _create_alternating(family) -> dict:
 
 def test_alternating_weeks_take_turns(clock, family):
     duty = _create_alternating(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     assert _duty_tasks(duty["id"])[date(2026, 12, 7)].assigned_to_user_id == family["anna"]
 
     week = lambda start: client.get(f"/duties/week?family_id={family['family_id']}&start={start}", headers=anna).json()
@@ -505,7 +446,7 @@ def test_alternating_weeks_take_turns(clock, family):
 
 def test_turning_the_weeks_around_reassigns_open_tasks(clock, family):
     duty = _create_alternating(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
 
     resp = client.patch(f"/duties/{duty['id']}", headers=anna, json={"alternate_from": "2026-11-30"})
     assert resp.status_code == 200, resp.text
@@ -524,7 +465,7 @@ def test_reassigning_a_week_b_task_to_its_usual_person_leaves_no_exception(clock
     clock.now = datetime(2026, 12, 14, 7, 0)
     _run_job()
     monday = _duty_tasks(duty["id"])[date(2026, 12, 14)]
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
 
     client.patch(f"/tasks/{monday.id}", headers=anna, json={"assigned_to_user_id": family["anna"]})
     client.patch(f"/tasks/{monday.id}", headers=anna, json={"assigned_to_user_id": family["ben"]})
@@ -538,9 +479,9 @@ def test_reassigning_a_week_b_task_to_its_usual_person_leaves_no_exception(clock
 def test_a_member_who_leaves_drops_out_of_alternate_weeks(clock, family):
     duty = _create_alternating(family)
     _keep_ben_in_another_family(family)
-    client.delete(f"/families/{family['family_id']}/members/{family['ben']}", headers=_auth(family["anna_token"]))
+    client.delete(f"/families/{family['family_id']}/members/{family['ben']}", headers=auth(family["anna_token"]))
 
-    listed = client.get(f"/duties?family_id={family['family_id']}", headers=_auth(family["anna_token"])).json()
+    listed = client.get(f"/duties?family_id={family['family_id']}", headers=auth(family["anna_token"])).json()
     assert listed[0]["slots"][0]["alternate_assigned_to_user_id"] is None
     assert listed[0]["slots"][0]["assigned_to_user_id"] == family["anna"]
 
@@ -566,7 +507,7 @@ def test_a_weekday_can_have_its_own_time(clock, family):
     assert next(slot for slot in duty["slots"] if slot["weekday"] == 1)["due_time"] is None
 
     week = client.get(
-        f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=_auth(family["anna_token"]),
+        f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=auth(family["anna_token"]),
     ).json()
     assert [(occ["date"], occ["due_time"]) for occ in week][1:3] == [("2026-12-08", "15:30:00"), ("2026-12-09", "12:00:00")]
 
@@ -589,7 +530,7 @@ def test_a_day_time_that_already_passed_today_gets_no_task(clock, family):
 
 def test_changing_a_day_time_moves_only_that_day(clock, family):
     duty = _create_with_wednesday_noon(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     tasks = _duty_tasks(duty["id"])
     client.patch(f"/tasks/{tasks[date(2026, 12, 8)].id}", headers=anna, json={"due_date": "2026-12-08T17:00:00"})
 
@@ -619,7 +560,7 @@ def test_changing_a_day_time_moves_only_that_day(clock, family):
 
 def test_a_new_duty_time_leaves_days_with_their_own_time(clock, family):
     duty = _create_with_wednesday_noon(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     wednesday = _duty_tasks(duty["id"])[date(2026, 12, 9)]
     client.patch(f"/tasks/{wednesday.id}", headers=anna, json={"due_date": "2026-12-09T11:45:00"})
 
@@ -631,7 +572,7 @@ def test_a_new_duty_time_leaves_days_with_their_own_time(clock, family):
 
 def test_a_day_whose_time_stays_the_same_is_not_moved(clock, family):
     duty = _create_with_wednesday_noon(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     wednesday = _duty_tasks(duty["id"])[date(2026, 12, 9)]
     client.patch(f"/tasks/{wednesday.id}", headers=anna, json={"due_date": "2026-12-09T11:45:00"})
 
@@ -648,7 +589,7 @@ def test_a_day_whose_time_stays_the_same_is_not_moved(clock, family):
 
 def _pause(duty, family, start, end, token="anna_token"):
     return client.post(
-        f"/duties/{duty['id']}/pauses", headers=_auth(family[token]), json={"start": start, "end": end},
+        f"/duties/{duty['id']}/pauses", headers=auth(family[token]), json={"start": start, "end": end},
     )
 
 
@@ -661,7 +602,7 @@ def test_a_pause_creates_no_tasks_and_shows_in_the_week(clock, family):
 
     assert sorted(_duty_tasks(duty["id"])) == [date(2026, 12, 7), date(2026, 12, 8), date(2026, 12, 11)]
     week = client.get(
-        f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=_auth(family["anna_token"]),
+        f"/duties/week?family_id={family['family_id']}&start=2026-12-07", headers=auth(family["anna_token"]),
     ).json()
     paused = {occ["date"]: occ["paused"] for occ in week}
     assert paused == {"2026-12-07": False, "2026-12-08": False, "2026-12-09": True, "2026-12-10": True, "2026-12-11": False}
@@ -670,7 +611,7 @@ def test_a_pause_creates_no_tasks_and_shows_in_the_week(clock, family):
 
 def test_removing_a_pause_brings_its_tasks_back_and_done_ones_stay(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     monday = _duty_tasks(duty["id"])[date(2026, 12, 7)]
     client.patch(f"/tasks/{monday.id}", headers=anna, json={"status": "done"})
 
@@ -685,7 +626,7 @@ def test_removing_a_pause_brings_its_tasks_back_and_done_ones_stay(clock, family
 
 def test_a_person_set_for_a_date_wins_over_a_pause(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     client.put(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=anna, json={"assigned_to_user_id": family["anna"]})
     _pause(duty, family, "2026-12-07", "2026-12-11")
 
@@ -714,17 +655,17 @@ def test_pauses_are_checked_and_only_adults_of_the_family_set_them(clock, family
     assert _pause(duty, family, "2026-12-14", "2026-12-18", token="stranger_token").status_code == 403
 
     pause_id = _pause(duty, family, "2026-12-14", "2026-12-18").json()["pauses"][0]["id"]
-    kid = _auth(family["kid_token"])
+    kid = auth(family["kid_token"])
     assert client.delete(f"/duties/{duty['id']}/pauses/{pause_id}", headers=kid).status_code == 403
     other = _create_pickup(family, title="Bins")
-    assert client.delete(f"/duties/{other['id']}/pauses/{pause_id}", headers=_auth(family["anna_token"])).status_code == 404
+    assert client.delete(f"/duties/{other['id']}/pauses/{pause_id}", headers=auth(family["anna_token"])).status_code == 404
 
 
 def test_a_pause_that_ended_is_no_longer_listed(clock, family):
     duty = _create_pickup(family)
     assert _pause(duty, family, "2026-12-07", "2026-12-08").json()["pauses"] != []
     clock.now = datetime(2026, 12, 10, 7, 0)
-    listed = client.get(f"/duties?family_id={family['family_id']}", headers=_auth(family["anna_token"])).json()
+    listed = client.get(f"/duties?family_id={family['family_id']}", headers=auth(family["anna_token"])).json()
     assert listed[0]["pauses"] == []
 
 
@@ -732,14 +673,14 @@ def test_the_usual_person_set_for_a_paused_date_still_does_it(clock, family):
     duty = _create_pickup(family)
     _pause(duty, family, "2026-12-07", "2026-12-11")
 
-    resp = client.put(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=_auth(family["anna_token"]), json={"assigned_to_user_id": family["ben"]})
+    resp = client.put(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=auth(family["anna_token"]), json={"assigned_to_user_id": family["ben"]})
     assert resp.json()["exceptions"] == [{"date": "2026-12-09", "assigned_to_user_id": family["ben"], "skipped": False}]
     assert _duty_tasks(duty["id"])[date(2026, 12, 9)].assigned_to_user_id == family["ben"]
 
 
 def test_reassigning_a_paused_date_task_to_the_usual_person_keeps_it(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     _pause(duty, family, "2026-12-07", "2026-12-11")
     client.put(f"/duties/{duty['id']}/exceptions/2026-12-09", headers=anna, json={"assigned_to_user_id": family["anna"]})
     wednesday = _duty_tasks(duty["id"])[date(2026, 12, 9)]
@@ -752,7 +693,7 @@ def test_reassigning_a_paused_date_task_to_the_usual_person_keeps_it(clock, fami
 
 def test_a_done_task_in_a_later_pause_still_shows_who_did_it(clock, family):
     duty = _create_pickup(family)
-    anna = _auth(family["anna_token"])
+    anna = auth(family["anna_token"])
     monday = _duty_tasks(duty["id"])[date(2026, 12, 7)]
     client.patch(f"/tasks/{monday.id}", headers=anna, json={"status": "done"})
     clock.now = datetime(2026, 12, 9, 8, 0)

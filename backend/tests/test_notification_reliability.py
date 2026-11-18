@@ -11,16 +11,11 @@ from datetime import datetime, timedelta, timezone
 import logging
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from app.database import Base
 from app.models import (
     CalendarEvent,
     Family,
     FamilyBirthday,
-    Membership,
     Notification,
     NotificationPreference,
     NotificationSentLog,
@@ -28,49 +23,14 @@ from app.models import (
     Task,
     User,
 )
-from app.security import hash_password
+from tests.support import TestSession, add_member, capture_pushes, freeze_scheduler, freeze_scheduler_in_utc
 
-
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSession = sessionmaker(bind=engine, autoflush=False)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    monkeypatch.setenv("TZ", "Europe/Berlin")
-    from app.core.clock import app_timezone
-
-    app_timezone.cache_clear()
-    Base.metadata.create_all(bind=engine)
-    # Make ``SessionLocal()`` inside the scheduler hand out the in-memory
-    # test session so we don't need to spin up the real engine.
-    from app.core import scheduler as scheduler_module
-
-    monkeypatch.setattr(scheduler_module, "SessionLocal", TestSession)
-    yield
-    app_timezone.cache_clear()
-    Base.metadata.drop_all(bind=engine)
+pytestmark = pytest.mark.usefixtures("scheduler_db", "berlin_tz")
 
 
 def _seed_user(db, email: str = "rel@example.com") -> tuple[User, Family]:
-    user = User(email=email, password_hash=hash_password("p"), display_name="Rel")
-    fam = Family(name="Rel-Family")
-    db.add_all([user, fam])
-    db.flush()
-    db.add(Membership(user_id=user.id, family_id=fam.id, role="admin", is_adult=True))
-    db.flush()
-    return user, fam
+    member = add_member(db, email, scopes=None, family_name="Rel-Family", password="p", display_name="Rel")
+    return db.get(User, member.user_id), db.get(Family, member.family_id)
 
 
 def _set_pref(
@@ -96,21 +56,6 @@ def _set_pref(
     db.flush()
 
 
-def _freeze_now(monkeypatch, now: datetime) -> None:
-    from app.core import scheduler as scheduler_module
-
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: now)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: now)
-    monkeypatch.setattr(scheduler_module, "local_wall_to_utc_naive", lambda value: value)
-
-
-def _freeze_scheduler_clocks(monkeypatch, *, audit_now: datetime, wall_now: datetime) -> None:
-    from app.core import scheduler as scheduler_module
-
-    monkeypatch.setattr(scheduler_module, "utcnow", lambda: audit_now)
-    monkeypatch.setattr(scheduler_module, "local_wall_now", lambda _audit_now=None: wall_now)
-
-
 def test_event_reminder_uses_configured_local_wall_clock_and_utc_audit_timestamps(monkeypatch):
     db = TestSession()
     try:
@@ -130,7 +75,7 @@ def test_event_reminder_uses_configured_local_wall_clock_and_utc_audit_timestamp
 
     audit_now = datetime(2026, 5, 9, 6, 15, 0)
     wall_now = datetime(2026, 5, 9, 8, 15, 0)
-    _freeze_scheduler_clocks(monkeypatch, audit_now=audit_now, wall_now=wall_now)
+    freeze_scheduler(monkeypatch, audit_now, wall_now)
 
     from app.core.scheduler import _check_notifications
 
@@ -157,7 +102,6 @@ def _only_event() -> tuple[int, int]:
 @pytest.mark.parametrize("recurrence", [None, "weekly"])
 def test_calendar_push_uses_occurrence_start_and_urgent_expiry(monkeypatch, recurrence):
     from app.core import scheduler as scheduler_module
-    from app.core.push import PushResult
 
     with TestSession() as db:
         user, fam = _seed_user(db)
@@ -169,18 +113,12 @@ def test_calendar_push_uses_occurrence_start_and_urgent_expiry(monkeypatch, recu
         ))
         db.commit()
 
-    _freeze_scheduler_clocks(monkeypatch, audit_now=datetime(2026, 9, 17, 13, 45), wall_now=datetime(2026, 9, 17, 15, 45))
-    calls = []
-
-    def send(db, uid, title, body, link, **options):
-        calls.append((body, options))
-        return PushResult(attempted=1, succeeded=1)
-
-    monkeypatch.setattr(scheduler_module, "send_push_for_user", send)
+    freeze_scheduler(monkeypatch, datetime(2026, 9, 17, 13, 45), datetime(2026, 9, 17, 15, 45))
+    calls = capture_pushes(monkeypatch)
     scheduler_module._check_notifications()
     scheduler_module._check_notifications()
     assert len(calls) == 1
-    body, options = calls[0]
+    body, options = calls[0]["body"], calls[0]
     # Push and the in-app notification say the same, as a clock time.
     assert body == "Starts at 16:45"
     assert options["urgent"] is True
@@ -227,11 +165,7 @@ def test_event_reminder_does_not_fire_late_when_utc_clock_matches_future_window(
     finally:
         db.close()
 
-    _freeze_scheduler_clocks(
-        monkeypatch,
-        audit_now=datetime(2026, 5, 9, 8, 15, 0),
-        wall_now=datetime(2026, 5, 9, 10, 15, 0),
-    )
+    freeze_scheduler(monkeypatch, utc=datetime(2026, 5, 9, 8, 15, 0), wall=datetime(2026, 5, 9, 10, 15, 0))
 
     from app.core.scheduler import _check_notifications
 
@@ -268,11 +202,7 @@ def test_event_reminder_quiet_hours_are_evaluated_in_local_wall_time(monkeypatch
     finally:
         db.close()
 
-    _freeze_scheduler_clocks(
-        monkeypatch,
-        audit_now=datetime(2026, 5, 9, 6, 15, 0),
-        wall_now=datetime(2026, 5, 9, 8, 15, 0),
-    )
+    freeze_scheduler(monkeypatch, utc=datetime(2026, 5, 9, 6, 15, 0), wall=datetime(2026, 5, 9, 8, 15, 0))
 
     from app.core.scheduler import _check_notifications
 
@@ -302,11 +232,7 @@ def test_event_reminder_fires_at_real_offset_across_spring_dst_gap(monkeypatch):
     finally:
         db.close()
 
-    _freeze_scheduler_clocks(
-        monkeypatch,
-        audit_now=datetime(2026, 3, 29, 0, 15, 0),
-        wall_now=datetime(2026, 3, 29, 1, 15, 0),
-    )
+    freeze_scheduler(monkeypatch, utc=datetime(2026, 3, 29, 0, 15, 0), wall=datetime(2026, 3, 29, 1, 15, 0))
 
     from app.core.scheduler import _check_notifications
 
@@ -341,11 +267,7 @@ def test_recurring_event_reminder_prefilter_keeps_spring_dst_gap_occurrence(monk
     finally:
         db.close()
 
-    _freeze_scheduler_clocks(
-        monkeypatch,
-        audit_now=datetime(2026, 3, 29, 0, 15, 0),
-        wall_now=datetime(2026, 3, 29, 1, 15, 0),
-    )
+    freeze_scheduler(monkeypatch, utc=datetime(2026, 3, 29, 0, 15, 0), wall=datetime(2026, 3, 29, 1, 15, 0))
 
     from app.core.scheduler import _check_notifications
 
@@ -378,11 +300,7 @@ def test_event_reminder_does_not_fire_on_first_repeated_hour_before_fall_dst(mon
 
     from app.core.scheduler import _check_notifications
 
-    _freeze_scheduler_clocks(
-        monkeypatch,
-        audit_now=datetime(2026, 10, 25, 0, 30, 0),
-        wall_now=datetime(2026, 10, 25, 2, 30, 0),
-    )
+    freeze_scheduler(monkeypatch, utc=datetime(2026, 10, 25, 0, 30, 0), wall=datetime(2026, 10, 25, 2, 30, 0))
     _check_notifications()
 
     db = TestSession()
@@ -392,11 +310,7 @@ def test_event_reminder_does_not_fire_on_first_repeated_hour_before_fall_dst(mon
     finally:
         db.close()
 
-    _freeze_scheduler_clocks(
-        monkeypatch,
-        audit_now=datetime(2026, 10, 25, 1, 30, 0),
-        wall_now=datetime(2026, 10, 25, 2, 30, 0),
-    )
+    freeze_scheduler(monkeypatch, utc=datetime(2026, 10, 25, 1, 30, 0), wall=datetime(2026, 10, 25, 2, 30, 0))
     _check_notifications()
 
     db = TestSession()
@@ -428,7 +342,7 @@ def test_event_reminder_idempotent_across_runs(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
 
     from app.core.scheduler import _check_notifications
 
@@ -490,7 +404,7 @@ def test_same_day_legacy_log_is_adopted_without_duplicate_notification(monkeypat
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
     from app.core.scheduler import _check_notifications
 
     _check_notifications()
@@ -550,7 +464,7 @@ def test_overdue_task_respects_reminders_enabled(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, datetime(2026, 4, 25, 12, 0, 0))
+    freeze_scheduler_in_utc(monkeypatch, datetime(2026, 4, 25, 12, 0, 0))
     from app.core.scheduler import _check_notifications
 
     _check_notifications()
@@ -584,7 +498,7 @@ def test_transient_push_failure_keeps_one_notification_and_retries(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
 
     from app.core import push as push_module
     from app.core import scheduler as scheduler_module
@@ -664,7 +578,7 @@ def test_disabled_push_category_keeps_in_app_reminder_and_skips_push(monkeypatch
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
 
     from app.core import scheduler as scheduler_module
 
@@ -711,18 +625,11 @@ def test_enabled_push_category_sends_push(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
 
-    from app.core import push as push_module
     from app.core import scheduler as scheduler_module
 
-    calls = {"n": 0}
-
-    def fake_push(db, uid, title, body, url=None, **kwargs):
-        calls["n"] += 1
-        return push_module.PushResult(attempted=1, succeeded=1)
-
-    monkeypatch.setattr(scheduler_module, "send_push_for_user", fake_push)
+    calls = capture_pushes(monkeypatch)
     scheduler_module._check_notifications()
 
     db = TestSession()
@@ -731,7 +638,7 @@ def test_enabled_push_category_sends_push(monkeypatch):
         assert len(logs) == 1
         assert logs[0].status == "delivered"
         assert logs[0].last_error is None
-        assert calls["n"] == 1
+        assert len(calls) == 1
     finally:
         db.close()
 
@@ -754,7 +661,7 @@ def test_destination_dispatch_runs_after_in_app_and_push_delivery(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
 
     from app.core import push as push_module
     from app.core import scheduler as scheduler_module
@@ -801,7 +708,7 @@ def test_destination_dispatch_failure_does_not_log_trigger_key(monkeypatch, capl
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
 
     from app.core import scheduler as scheduler_module
 
@@ -844,7 +751,7 @@ def test_recurring_event_occurrence_creates_one_reminder(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
     from app.core.scheduler import _check_notifications, _event_trigger_key
 
     _check_notifications()
@@ -881,7 +788,7 @@ def test_removed_only_push_result_is_not_retried(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
     from app.core import push as push_module
     from app.core import scheduler as scheduler_module
 
@@ -996,7 +903,7 @@ def test_birthday_reminder_links_to_birthday_detail(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
     from app.core.scheduler import _check_notifications
 
     _check_notifications()
@@ -1030,7 +937,7 @@ def test_task_due_creates_one_log_then_does_not_duplicate(monkeypatch):
     finally:
         db.close()
 
-    _freeze_now(monkeypatch, now)
+    freeze_scheduler_in_utc(monkeypatch, now)
     from app.core.scheduler import _check_notifications
 
     _check_notifications()
@@ -1061,10 +968,9 @@ def test_event_assignment_push_respects_category_preference(monkeypatch):
     monkeypatch.setattr(calendar_router, "send_push_for_user", fake_push)
     try:
         actor, fam = _seed_user(db, "assign-actor@example.com")
-        assigned = User(email="assign-target@example.com", password_hash=hash_password("p"), display_name="Target")
-        db.add(assigned)
-        db.flush()
-        db.add(Membership(user_id=assigned.id, family_id=fam.id, role="member", is_adult=False))
+        assigned = db.get(User, add_member(
+            db, "assign-target@example.com", scopes=None, family_id=fam.id, is_adult=False, password="p", display_name="Target",
+        ).user_id)
         _set_pref(
             db,
             assigned.id,
@@ -1106,10 +1012,9 @@ def test_event_assignment_disabled_category_keeps_in_app_without_push(monkeypatc
     monkeypatch.setattr(calendar_router, "send_push_for_user", fake_push)
     try:
         actor, fam = _seed_user(db, "assign-off-actor@example.com")
-        assigned = User(email="assign-off-target@example.com", password_hash=hash_password("p"), display_name="Target")
-        db.add(assigned)
-        db.flush()
-        db.add(Membership(user_id=assigned.id, family_id=fam.id, role="member", is_adult=False))
+        assigned = db.get(User, add_member(
+            db, "assign-off-target@example.com", scopes=None, family_id=fam.id, is_adult=False, password="p", display_name="Target",
+        ).user_id)
         _set_pref(
             db,
             assigned.id,

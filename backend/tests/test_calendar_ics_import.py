@@ -10,84 +10,25 @@ Covers two pieces of the calendar interoperability work:
   inserting a duplicate (integration level, through TestClient).
 """
 
-import hashlib
 from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 from app.core.ics_utils import ics_to_event_dicts
-from app.database import Base, get_db
 from app.main import app
-from app.models import CalendarEvent, Family, Membership, PersonalAccessToken, User
-from app.security import hash_password, PAT_PREFIX
+from app.models import CalendarEvent, User
+from tests.calendar_feed_support import events_with_uid
+from tests.support import TestSession, auth, seed_member
 
-
-engine = create_engine(
-    "sqlite:///./test-calendar-ics-import.db",
-    connect_args={"check_same_thread": False},
-)
-TestSession = sessionmaker(bind=engine, autoflush=False)
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragma(dbapi_conn, _):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@pytest.fixture(autouse=True)
-def setup_db(monkeypatch):
-    monkeypatch.setenv("TZ", "Europe/Berlin")
-    from app.core.clock import app_timezone
-
-    app_timezone.cache_clear()
-    Base.metadata.create_all(bind=engine)
-
-    def _override():
-        db = TestSession()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = _override
-    yield
-    app_timezone.cache_clear()
-    app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=engine)
+pytestmark = pytest.mark.usefixtures("app_db", "berlin_tz")
 
 
 def _seed_adult(scopes: str = "calendar:read,calendar:write") -> tuple[str, int]:
-    db = TestSession()
-    try:
-        user = User(email="cal@example.com", password_hash=hash_password("p"), display_name="Cal")
-        db.add(user)
-        db.flush()
-        family = Family(name="ICS Family")
-        db.add(family)
-        db.flush()
-        db.add(Membership(user_id=user.id, family_id=family.id, role="admin", is_adult=True))
-        plain = f"{PAT_PREFIX}cal-rw"
-        digest = hashlib.sha256(plain.encode("utf-8")).hexdigest()
-        db.add(PersonalAccessToken(
-            user_id=user.id,
-            name="cal-pat",
-            token_hash=digest,
-            token_lookup=digest,
-            scopes=scopes,
-        ))
-        db.commit()
-        return plain, family.id
-    finally:
-        db.close()
-
-
-def _auth_headers(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}"}
+    member = seed_member(
+        "cal@example.com", scopes=scopes, family_name="ICS Family", password="p", display_name="Cal", pat_name="cal-pat",
+    )
+    return member.token, member.family_id
 
 
 def _ics(uid: str, summary: str = "Standup", dtstart: str = "20260310T090000", dtend: str = "20260310T093000") -> str:
@@ -163,7 +104,7 @@ class TestReimportUpdates:
                 "ics_text": _ics("evt-1@example.com", summary="Standup"),
                 "source_name": "Team feed",
             },
-            headers=_auth_headers(token),
+            headers=auth(token),
         )
         assert first.status_code == 200, first.text
         body = first.json()
@@ -177,25 +118,18 @@ class TestReimportUpdates:
                 "ics_text": _ics("evt-1@example.com", summary="Standup (renamed)"),
                 "source_name": "Team feed",
             },
-            headers=_auth_headers(token),
+            headers=auth(token),
         )
         assert second.status_code == 200, second.text
         body = second.json()
         assert body["created"] == 0
         assert body["updated"] == 1
 
-        db = TestSession()
-        try:
-            rows = db.query(CalendarEvent).filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.ical_uid == "evt-1@example.com",
-            ).all()
-            assert len(rows) == 1
-            assert rows[0].title == "Standup (renamed)"
-            assert rows[0].source_type == "import"
-            assert rows[0].source_name == "Team feed"
-        finally:
-            db.close()
+        rows = events_with_uid(family_id, "evt-1@example.com")
+        assert len(rows) == 1
+        assert rows[0].title == "Standup (renamed)"
+        assert rows[0].source_type == "import"
+        assert rows[0].source_name == "Team feed"
 
 
 
@@ -226,7 +160,7 @@ class TestReimportUpdates:
                 "ics_text": _ics("shared@example.com", summary="External version"),
                 "source_name": "External feed",
             },
-            headers=_auth_headers(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -235,17 +169,10 @@ class TestReimportUpdates:
         assert body["skipped"] == 1
         assert "non-imported event" in body["errors"][0]["error"]
 
-        db = TestSession()
-        try:
-            rows = db.query(CalendarEvent).filter(
-                CalendarEvent.family_id == family_id,
-                CalendarEvent.ical_uid == "shared@example.com",
-            ).all()
-            assert len(rows) == 1
-            assert rows[0].title == "Local copy"
-            assert rows[0].source_type == "local"
-        finally:
-            db.close()
+        rows = events_with_uid(family_id, "shared@example.com")
+        assert len(rows) == 1
+        assert rows[0].title == "Local copy"
+        assert rows[0].source_type == "local"
 
     def test_distinct_uids_create_separate_rows(self):
         token, family_id = _seed_adult()
@@ -272,7 +199,7 @@ class TestReimportUpdates:
         resp = client.post(
             "/calendar/events/import-ics",
             json={"family_id": family_id, "ics_text": ics_text},
-            headers=_auth_headers(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["created"] == 2
@@ -310,7 +237,7 @@ class TestExportMemberProjection:
 
         resp = client.get(
             f"/calendar/events/export.ics?family_id={family_id}",
-            headers=_auth_headers(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
         assert f"mailto:user-{user_id}@tribu.invalid" in resp.text
@@ -326,7 +253,7 @@ class TestExportMemberProjection:
 
         resp = client.get(
             f"/calendar/events/feed.ics?family_id={family_id}",
-            headers=_auth_headers(token),
+            headers=auth(token),
         )
         assert resp.status_code == 200, resp.text
         assert f"mailto:user-{user_id}@tribu.invalid" in resp.text
