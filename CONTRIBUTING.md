@@ -47,6 +47,13 @@ Examples:
 
 If a change conflicts with existing architecture, product direction, or documentation, raise it in the issue or PR instead of guessing.
 
+### 4. As little code as possible, nothing duplicated
+
+- Write the fewest lines that solve the problem correctly. No speculative options, layers, abstractions, or defensive code without a real need.
+- Extend existing code, helpers, and components instead of adding new ones next to them.
+- Never duplicate code, neither in features nor in tests: share logic, parametrize similar test cases, and reuse fixtures.
+- If an option you want costs a lot of code, say so in the issue first and offer a leaner variant.
+
 ## Repo map
 
 A simplified map of the main areas:
@@ -220,6 +227,8 @@ A good PR should:
 - keep unrelated changes out of scope
 - include tests or a clear reason they were not needed
 - update docs when behavior, setup, or contributor expectations changed
+- be trimmed before review, then checked for duplicates in code and tests: `npx jscpd --min-lines 6` for JavaScript, `symilar -d 6` (from pylint) for Python. Put the commands and results in the PR, along with the added lines split into code, tests, i18n, and migrations
+- leave out `Co-Authored-By` and "Generated with" lines in commits and PR text
 
 Recommended PR structure:
 
