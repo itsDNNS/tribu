@@ -5,7 +5,8 @@
 // Wiki). Other clients generate their tokens from a copy of the same file.
 // The themes in that file are the whole theme list: the web app reads their
 // names from it, and the backend gets a copy (backend/app/ui_themes.json) so
-// it accepts the same themes. A new theme is one more entry there.
+// it accepts the same themes. A new theme is one more entry there; "partner"
+// names its light or dark counterpart (Garden and Garden Night).
 //
 //   node scripts/generate-design-tokens.js           write both files
 //   node scripts/generate-design-tokens.js --check   fail when either is stale
@@ -38,6 +39,11 @@ function validate(tokens) {
     assert(THEME_KEY_PATTERN.test(theme) && theme !== 'system', `${theme}: theme keys are lower-case letters, digits and dashes, and not "system"`);
     assert(typeof entry.name === 'string' && entry.name.trim(), `${theme}: name is missing`);
     assert(['light', 'dark'].includes(entry.colorScheme), `${theme}: colorScheme must be light or dark`);
+    if (entry.partner !== undefined) {
+      const partner = tokens.themes[entry.partner];
+      assert(partner, `${theme}: partner ${entry.partner} is not a theme`);
+      assert(partner.colorScheme !== entry.colorScheme, `${theme}: its partner must be the other colour scheme`);
+    }
     assert(
       JSON.stringify(Object.keys(entry.color)) === JSON.stringify(roles),
       `${theme}: colour roles must match the light theme in the same order`,

@@ -60,7 +60,7 @@ export default function AccountSheet({ items, activeView, navigate, onClose }) {
             role="switch"
             aria-checked={isDark}
             className="ui-more-row"
-            onClick={() => setTheme(lastThemeFor(isDark ? 'light' : 'dark'))}
+            onClick={() => setTheme(lastThemeFor(isDark ? 'light' : 'dark'), { family: false })}
           >
             <Moon size={19} aria-hidden="true" />
             <span>{plannerText(messages, 'dark_mode')}</span>

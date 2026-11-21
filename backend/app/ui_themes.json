@@ -12,6 +12,34 @@
     {
       "key": "midnight-glass",
       "colorScheme": "dark"
+    },
+    {
+      "key": "garden",
+      "colorScheme": "light"
+    },
+    {
+      "key": "garden-night",
+      "colorScheme": "dark"
+    },
+    {
+      "key": "harbour",
+      "colorScheme": "light"
+    },
+    {
+      "key": "harbour-night",
+      "colorScheme": "dark"
+    },
+    {
+      "key": "hearth-day",
+      "colorScheme": "light"
+    },
+    {
+      "key": "hearth",
+      "colorScheme": "dark"
+    },
+    {
+      "key": "high-contrast",
+      "colorScheme": "light"
     }
   ]
 }

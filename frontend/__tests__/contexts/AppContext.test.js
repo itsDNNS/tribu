@@ -114,16 +114,42 @@ describe('AppProvider bootstrap', () => {
     expect(window.localStorage.getItem('tribu_theme')).toBe('dark');
   });
 
+  test('picking a theme sets its family, and Match device follows that family', async () => {
+    const query = { matches: true, addEventListener: jest.fn(), removeEventListener: jest.fn() };
+    const original = window.matchMedia;
+    window.matchMedia = jest.fn(() => query);
+    function Picker() {
+      const { setTheme } = useApp();
+      return (
+        <>
+          <button type="button" onClick={() => setTheme('garden')}>Pick Garden</button>
+          <button type="button" onClick={() => setTheme('system')}>Match device</button>
+        </>
+      );
+    }
+    try {
+      render(<AppProvider><Probe /><Picker /></AppProvider>);
+      fireEvent.click(screen.getByRole('button', { name: 'Pick Garden' }));
+      await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'garden'));
+      expect(window.localStorage.getItem('tribu_theme_dark')).toBe('garden-night');
+      fireEvent.click(screen.getByRole('button', { name: 'Match device' }));
+      await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'garden-night'));
+      expect(document.documentElement).toHaveAttribute('data-scheme', 'dark');
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
   test('marks every theme as a light or dark scheme, and forgets themes that no longer exist', async () => {
-    window.localStorage.setItem('tribu_theme', 'midnight-glass');
+    window.localStorage.setItem('tribu_theme', 'hearth');
     const { unmount } = render(<AppProvider><Probe /></AppProvider>);
-    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'midnight-glass'));
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'hearth'));
     expect(document.documentElement).toHaveAttribute('data-scheme', 'dark');
     unmount();
 
-    window.localStorage.setItem('tribu_theme', 'light');
+    window.localStorage.setItem('tribu_theme', 'garden');
     render(<AppProvider><Probe /></AppProvider>);
-    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'));
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'garden'));
     expect(document.documentElement).toHaveAttribute('data-scheme', 'light');
 
     act(() => {

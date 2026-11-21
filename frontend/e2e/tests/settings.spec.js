@@ -135,8 +135,15 @@ test.describe('Settings', () => {
     await appearance.selectOption('midnight-glass');
     await expect(html).toHaveAttribute('data-theme', 'midnight-glass');
     await expect(html).toHaveAttribute('data-scheme', 'dark');
+    // Every theme in design/tokens.json is offered; each says whether it is light or dark.
+    await appearance.selectOption('hearth');
+    await expect(html).toHaveAttribute('data-theme', 'hearth');
+    await expect(html).toHaveAttribute('data-scheme', 'dark');
+    await appearance.selectOption('garden');
+    await expect(html).toHaveAttribute('data-scheme', 'light');
+    // Match device follows the family picked last: Garden by day, Garden Night after dark.
     await appearance.selectOption('system');
-    await expect(html).toHaveAttribute('data-theme', 'light');
+    await expect(html).toHaveAttribute('data-theme', 'garden');
 
     await language.selectOption('sv');
     await expect(page.getByRole('region', { name: 'Den här enheten' })).toBeVisible();

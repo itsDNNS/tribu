@@ -25,7 +25,9 @@ const PRE_PAINT_BOOTSTRAP = `
     const themes = ${THEMES};
     const stored = window.localStorage.getItem('tribu_theme');
     const fixed = Object.prototype.hasOwnProperty.call(themes, stored);
-    const theme = fixed ? stored : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const scheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const family = window.localStorage.getItem('tribu_theme_' + scheme);
+    const theme = fixed ? stored : Object.prototype.hasOwnProperty.call(themes, family) && themes[family][0] === scheme ? family : scheme;
     root.dataset.theme = theme;
     root.dataset.scheme = themes[theme][0];
     document.querySelector('meta[name="color-scheme"]').content = fixed ? themes[theme][0] : 'light dark';

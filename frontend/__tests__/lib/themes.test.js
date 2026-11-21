@@ -34,6 +34,23 @@ describe('themes', () => {
     window.localStorage.setItem('tribu_theme_light', 'midnight-glass');
     expect(lastThemeFor('light')).toBe('light');
   });
+
+  it('every partner is a theme of the other scheme', () => {
+    for (const theme of listThemes().filter((item) => item.partner)) {
+      expect(isKnownTheme(theme.partner)).toBe(true);
+      expect(themeScheme(theme.partner)).not.toBe(theme.colorScheme);
+    }
+  });
+
+  it('picking a theme brings its partner along; the switch only sets its own side', () => {
+    window.localStorage.clear();
+    rememberTheme('garden', { family: true });
+    expect([lastThemeFor('light'), lastThemeFor('dark')]).toEqual(['garden', 'garden-night']);
+    rememberTheme('high-contrast', { family: true });
+    expect([lastThemeFor('light'), lastThemeFor('dark')]).toEqual(['high-contrast', 'garden-night']);
+    rememberTheme('garden-night');
+    expect(lastThemeFor('light')).toBe('high-contrast');
+  });
 });
 
 describe('pre-paint script', () => {
@@ -65,6 +82,32 @@ describe('pre-paint script', () => {
     expect(result.scheme).toBe(entry.colorScheme);
     expect(result.colorScheme).toBe(entry.colorScheme);
     expect(result.themeColor).toBe(entry.color.bg);
+  });
+
+  it('follows the device within the family last picked', () => {
+    const run2 = (prefersDark) => {
+      window.localStorage.setItem('tribu_theme_light', 'garden');
+      window.localStorage.setItem('tribu_theme_dark', 'garden-night');
+      const meta = document.createElement('meta');
+      meta.setAttribute('name', 'color-scheme');
+      const themeColor = document.createElement('meta');
+      themeColor.setAttribute('name', 'theme-color');
+      document.head.append(meta, themeColor);
+      window.localStorage.setItem('tribu_theme', 'system');
+      const original = window.matchMedia;
+      window.matchMedia = (query) => ({ matches: query.includes('dark') ? prefersDark : false });
+      try {
+        new Function(PRE_PAINT_BOOTSTRAP)();
+      } finally {
+        window.matchMedia = original;
+        meta.remove();
+        themeColor.remove();
+      }
+      return document.documentElement.dataset.theme;
+    };
+    expect(run2(false)).toBe('garden');
+    expect(run2(true)).toBe('garden-night');
+    window.localStorage.clear();
   });
 
   it('follows the device for system and for themes it does not know', () => {
