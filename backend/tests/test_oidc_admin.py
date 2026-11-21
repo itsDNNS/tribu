@@ -319,7 +319,7 @@ def test_register_blocked_when_password_login_disabled():
         "/auth/register",
         json={
             "email": "new@example.com",
-            "password": "Secure1Pass",
+            "password": "correct horse battery",
             "display_name": "New",
             "family_name": "Fam",
         },

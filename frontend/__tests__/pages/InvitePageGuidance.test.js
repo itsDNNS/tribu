@@ -163,7 +163,7 @@ describe('InvitePage onboarding guidance', () => {
 
     const email = await screen.findByLabelText('email');
     fireEvent.change(email, { target: { value: 'tom@example.com' } });
-    fireEvent.change(screen.getByLabelText('password'), { target: { value: 'Welcome12' } });
+    fireEvent.change(screen.getByLabelText('password'), { target: { value: 'welcome to tribu' } });
     fireEvent.change(screen.getByLabelText('your_name'), { target: { value: 'Tom' } });
     fireEvent.click(screen.getByRole('button', { name: 'invite_page_register' }));
 

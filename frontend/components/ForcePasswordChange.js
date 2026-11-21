@@ -89,7 +89,6 @@ export default function ForcePasswordChange() {
                 aria-invalid={invalidField === 'new_password'}
                 aria-describedby={describedBy('new_password', 'force-password-hint')}
                 required
-                minLength={8}
                 autoComplete="new-password"
               />
               <span id="force-password-hint" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t(messages, 'password_hint')}</span>

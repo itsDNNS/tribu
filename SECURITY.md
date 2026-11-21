@@ -11,7 +11,7 @@ We will acknowledge reports within 48 hours and provide a timeline for fixes.
 | Feature | Implementation |
 |---------|---------------|
 | Password storage | bcrypt (legacy PBKDF2-SHA256 hashes are verified and auto-rehashed on login) |
-| Password policy | Minimum 8 characters with at least 1 uppercase letter and 1 digit (enforced via Pydantic schema validation) |
+| Password policy | New passwords need at least 12 characters, with no rules on character types. Passwords set before this rule keep working. |
 | Authentication | httpOnly cookie (JWT HS256), Bearer token fallback for API testing |
 | Two-step sign-in | Optional authenticator app codes (TOTP, RFC 6238) for password logins, 10 single-use recovery codes stored as hashes, 5 wrong codes pause the second step for 15 minutes. A family admin can reset it for a member; `python -m app.reset_mfa <email>` in the backend container resets it for anyone. Single sign-on accounts use the identity provider's MFA. The instance admin can require it for every account with a password (Admin > Sign-in); until an account has set it up, its sessions reach only the setup, and the mobile app asks to set it up on the web first. Single sign-on-only accounts and access tokens (API, calendar sync) are not affected. |
 | Account recovery | A family admin can reset a member's password in the app, and an admin who forgot their own can run `python -m app.reset_password <email>` in the backend container. Both give a temporary password that must be changed at the next sign-in, and sign the account out everywhere. |

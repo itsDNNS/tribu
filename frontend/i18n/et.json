@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google'i kalender: tellige Google'i voog Tribu kalendrikanaliga URL või eksportige Google'i kalendrid nimega ICS ja importige need rakendusse Tribu. Neid kahte ei sünkroonita kahesuunaliselt; Valige kalendri tõeallikaks Tribu või Google.",
   "phone_sync_coexist_outlook": "Outlook / Exchange: lisage Tribu täiendava CalDAV kontona, kui seda toetatakse, või importige Outlooki ICS eksport. Outlook ei sünkrooni CalDAV-i Microsoft 365 postkastidest – kasutage seal olevat ekspordimarsruuti.",
   "admin_self_hint": "Sa ei saa oma rolli muuta",
-  "password_hint": "Min. 8 tähemärki, 1 suurtäht, 1 number",
+  "password_hint": "Vähemalt 12 tähemärki",
   "api_tokens": "API märgid",
   "automation_webhooks": "Automatiseerimise veebihaagid",
   "api_tokens_desc": "Isiklikud juurdepääsumärgid kolmandate osapoolte rakenduste ja skriptide jaoks.",

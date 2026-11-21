@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google Calendar: abonați-vă la feedul Tribu din Google cu feedul de calendar URL sau exportați calendarele Google ca ICS și importați-le în Tribu. Cele două nu se vor sincroniza bidirecțional; alegeți Tribu sau Google ca sursă de adevăr pe calendar.",
   "phone_sync_coexist_outlook": "Outlook / Exchange: adăugați Tribu ca cont suplimentar CalDAV acolo unde este acceptat sau importați un export Outlook ICS. Outlook nu sincronizează CalDAV din cutiile poștale Microsoft 365 - utilizați ruta de export acolo.",
   "admin_self_hint": "Nu-ți poți schimba propriul rol",
-  "password_hint": "Min. 8 caractere, 1 literă mare, 1 număr",
+  "password_hint": "Cel puțin 12 caractere",
   "api_tokens": "Jetoane API",
   "automation_webhooks": "Webhook-uri de automatizare",
   "api_tokens_desc": "Jetoane de acces personale pentru aplicații și scripturi terță parte.",

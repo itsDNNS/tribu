@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google Koledar: naročite se na vir Tribu v Googlu z virom koledarja URL ali izvozite Googlove koledarje kot ICS in jih uvozite v Tribu. Oba se ne bosta dvosmerno sinhronizirala; izberite Tribu ali Google kot vir resnice na koledar.",
   "phone_sync_coexist_outlook": "Outlook/Exchange: dodajte Tribu kot dodatni račun CalDAV, kjer je podprto, ali uvozite izvoz Outlook ICS. Outlook ne sinhronizira CalDAV iz nabiralnikov Microsoft 365 — tam uporabite izvozno pot.",
   "admin_self_hint": "Svoje vloge ne morete spremeniti",
-  "password_hint": "Min. 8 znakov, 1 velika črka, 1 številka",
+  "password_hint": "Vsaj 12 znakov",
   "api_tokens": "API žetoni",
   "automation_webhooks": "Avtomatizacija Webhooks",
   "api_tokens_desc": "Žetoni osebnega dostopa za aplikacije in skripte tretjih oseb.",

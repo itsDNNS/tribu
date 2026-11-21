@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google kalendar: pretplatite se na Tribu feed u Googleu s kalendarskim feedom URL ili izvezite Google kalendare kao ICS i uvezite ih u Tribu. Njih dvoje se neće dvosmjerno sinkronizirati; odaberite Tribu ili Google kao izvor istine po kalendaru.",
   "phone_sync_coexist_outlook": "Outlook / Exchange: dodajte Tribu kao dodatni CalDAV račun ako je podržano ili uvezite Outlook ICS izvoz. Outlook ne sinkronizira CalDAV iz Microsoft 365 poštanskih sandučića — tamo upotrijebite rutu izvoza.",
   "admin_self_hint": "Ne možete promijeniti vlastitu ulogu",
-  "password_hint": "Min. 8 znakova, 1 veliko slovo, 1 broj",
+  "password_hint": "Najmanje 12 znakova",
   "api_tokens": "API Tokeni",
   "automation_webhooks": "Automatizacija Webhooks",
   "api_tokens_desc": "Osobni tokeni pristupa za aplikacije i skripte trećih strana.",

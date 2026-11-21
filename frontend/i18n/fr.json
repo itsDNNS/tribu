@@ -123,7 +123,7 @@
   "phone_sync_coexist_google": "Google Agenda : abonnez-vous au flux Tribu dans Google avec l’URL du flux de calendrier, ou exportez les calendriers Google au format ICS et importez-les dans Tribu. Les deux ne se synchroniseront pas dans les deux sens ; choisissez Tribu ou Google comme source de vérité pour chaque calendrier.",
   "phone_sync_coexist_outlook": "Outlook / Exchange : ajoutez Tribu comme compte CalDAV supplémentaire là où c’est pris en charge, ou importez un export ICS Outlook. Outlook ne synchronise pas CalDAV depuis les boîtes Microsoft 365 — utilisez alors la voie de l’export.",
   "admin_self_hint": "Vous ne pouvez pas modifier votre propre rôle",
-  "password_hint": "8 caractères minimum, dont 1 majuscule et 1 chiffre",
+  "password_hint": "12 caractères minimum",
   "api_tokens": "Jetons API",
   "automation_webhooks": "Webhooks d’automatisation",
   "api_tokens_desc": "Jetons d’accès personnels pour les applications et scripts tiers.",

@@ -18,7 +18,7 @@ def _register(email):
         "/auth/register",
         json={
             "email": email,
-            "password": "Secure1Pass",
+            "password": "correct horse battery",
             "display_name": "User",
             "family_name": "Family",
         },
@@ -71,7 +71,7 @@ def test_invite_registration_still_works_after_initial_setup(monkeypatch):
         json={
             "token": "invite-token",
             "email": "invited@example.com",
-            "password": "Secure1Pass",
+            "password": "correct horse battery",
             "display_name": "Invited",
         },
     )
@@ -92,7 +92,7 @@ def test_invite_registration_rate_limit_still_applies_after_startup_patch():
         payload = {
             "token": "missing-invite-token",
             "email": "rate-limited@example.com",
-            "password": "Secure1Pass",
+            "password": "correct horse battery",
             "display_name": "Invited",
         }
 

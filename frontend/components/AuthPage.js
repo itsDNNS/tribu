@@ -202,7 +202,6 @@ export default function AuthPage() {
         aria-invalid={invalidField === id}
         aria-describedby={describedBy(id, hintId)}
         required
-        minLength={8}
         maxLength={128}
       />
       <button

@@ -12,7 +12,7 @@ test.describe('Form accessibility', () => {
 
     const password = page.getByLabel('Password', { exact: true });
     await expect(password).toHaveAttribute('autocomplete', 'new-password');
-    await expect(password).toHaveAccessibleDescription('Min. 8 characters, 1 uppercase letter, 1 number');
+    await expect(password).toHaveAccessibleDescription('At least 12 characters');
 
     let registered = false;
     page.on('request', (request) => { if (request.url().includes('/auth/register')) registered = true; });
@@ -44,15 +44,15 @@ test.describe('Form accessibility', () => {
     if (!await current.isVisible({ timeout: 2000 }).catch(() => false)) {
       await page.getByRole('button', { name: 'Account', exact: true }).click();
     }
-    await current.fill('Test1234');
+    await current.fill('Test1234-long');
     const next = page.getByLabel('New password', { exact: true });
-    await next.fill('lowercase1');
-    await page.getByLabel('Confirm new password').fill('lowercase1');
+    await next.fill('too short');
+    await page.getByLabel('Confirm new password').fill('too short');
     await page.getByRole('button', { name: 'Change password' }).click();
 
     await expect(next).toHaveAttribute('aria-invalid', 'true');
     await expect(next).toBeFocused();
-    await expect(page.getByLabel('Current password')).toHaveValue('Test1234');
+    await expect(page.getByLabel('Current password')).toHaveValue('Test1234-long');
   });
 
   test('the invite form is labelled for screen readers and password managers', async ({ authedPage: page, apiCtx }) => {
@@ -65,7 +65,7 @@ test.describe('Form accessibility', () => {
     await page.goto(`/invite/${token}`);
     await expect(page.getByLabel('Email')).toHaveAttribute('autocomplete', 'username');
     await expect(page.getByLabel('Password')).toHaveAttribute('autocomplete', 'new-password');
-    await expect(page.getByLabel('Password')).toHaveAccessibleDescription('Min. 8 characters, 1 uppercase letter, 1 number');
+    await expect(page.getByLabel('Password')).toHaveAccessibleDescription('At least 12 characters');
     await expect(page.getByLabel('Your name')).toHaveAttribute('autocomplete', 'name');
     await expect(page.getByRole('main')).toHaveAttribute('id', 'main-content');
   });

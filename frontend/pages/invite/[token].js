@@ -186,7 +186,7 @@ export default function InvitePage() {
             </div>
             <div className="form-field">
               <label htmlFor="invite-password">{t(messages, 'password')}</label>
-              <input id="invite-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => { setPassword(e.target.value); if (invalidField === 'invite-password') setInvalidField(''); }} autoComplete="new-password" required minLength={8} maxLength={128} aria-invalid={invalidField === 'invite-password'} aria-describedby={describedBy('invite-password', 'invite-password-hint')} />
+              <input id="invite-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => { setPassword(e.target.value); if (invalidField === 'invite-password') setInvalidField(''); }} autoComplete="new-password" required maxLength={128} aria-invalid={invalidField === 'invite-password'} aria-describedby={describedBy('invite-password', 'invite-password-hint')} />
               <small id="invite-password-hint" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
             </div>
             <div className="form-field">

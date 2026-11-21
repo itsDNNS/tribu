@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google Kalender: prenumerera på Tribu-flödet i Google med kalenderflödet URL, eller exportera Google-kalendrar som ICS och importera dem till Tribu. De två synkroniseras inte dubbelriktat; välj Tribu eller Google som källan till sanningen per kalender.",
   "phone_sync_coexist_outlook": "Outlook / Exchange: lägg till Tribu som ett ytterligare CalDAV-konto där det stöds, eller importera en Outlook ICS-export. Outlook synkroniserar inte CalDAV från Microsoft 365-postlådor — använd exportvägen dit.",
   "admin_self_hint": "Du kan inte ändra din egen roll",
-  "password_hint": "Min. 8 tecken, 1 versal, 1 siffra",
+  "password_hint": "Minst 12 tecken",
   "api_tokens": "API-tokens",
   "automation_webhooks": "Automatiseringswebhooks",
   "api_tokens_desc": "Personliga åtkomsttokens för appar och skript från tredje part.",

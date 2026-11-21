@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Kalendár Google: prihláste sa na odber informačného kanála Tribu v službe Google pomocou informačného kanála kalendára URL alebo exportujte kalendáre Google ako ICS a importujte ich do Tribu. Tieto dva sa nebudú obojsmerne synchronizovať; vyberte Tribu alebo Google ako zdroj pravdy podľa kalendára.",
   "phone_sync_coexist_outlook": "Outlook / Exchange: pridajte Tribu ako ďalší účet CalDAV tam, kde je to podporované, alebo importujte export programu Outlook ICS. Outlook nesynchronizuje CalDAV z poštových schránok Microsoft 365 – použite tam cestu exportu.",
   "admin_self_hint": "Nemôžete zmeniť svoju vlastnú rolu",
-  "password_hint": "Min. 8 znakov, 1 veľké písmeno, 1 číslo",
+  "password_hint": "Aspoň 12 znakov",
   "api_tokens": "Tokeny API",
   "automation_webhooks": "Webhooky pre automatizáciu",
   "api_tokens_desc": "Osobné prístupové tokeny pre aplikácie a skripty tretích strán.",
