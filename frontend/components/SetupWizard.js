@@ -5,15 +5,12 @@ import { errorField, errorText, meetsPasswordRule, parseServerInstant } from '..
 import { t } from '../lib/i18n';
 import * as api from '../lib/api';
 import AreaSwitches from './settings/AreaSwitches';
+import { getTheme } from '../lib/themes';
 
 const STEPS_FRESH = ['welcome', 'admin', 'family', 'prefs', 'done'];
 const STEPS_RESTORE = ['welcome', 'restore'];
-const THEME_PREVIEWS = {
-  system: 'linear-gradient(135deg, #f0ecf8 50%, #1e293b 50%)',
-  light: '#f0ecf8',
-  dark: '#1e293b',
-  'midnight-glass': '#111628',
-};
+// "System" shows the light and dark themes it switches between.
+const SYSTEM_PREVIEW = `linear-gradient(135deg, ${getTheme('light').background} 50%, ${getTheme('dark').background} 50%)`;
 
 export default function SetupWizard() {
   const {
@@ -345,7 +342,7 @@ export default function SetupWizard() {
                       onClick={() => setTheme(th.key)}
                       type="button"
                     >
-                      <div className="setup-theme-preview" style={{ background: THEME_PREVIEWS[th.key] }} />
+                      <div className="setup-theme-preview" style={{ background: th.key === 'system' ? SYSTEM_PREVIEW : th.preview }} />
                       <span>{th.name}</span>
                     </button>
                   ))}

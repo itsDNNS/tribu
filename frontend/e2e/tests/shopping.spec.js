@@ -399,7 +399,7 @@ test.describe('Shopping with the backend', () => {
       expect(channels[3] ?? 1).toBe(1);
     };
     for (const theme of ['light', 'dark']) {
-      await page.evaluate(value => document.documentElement.setAttribute('data-theme', value), theme);
+      await page.evaluate(value => { document.documentElement.setAttribute('data-theme', value); document.documentElement.setAttribute('data-scheme', value); }, theme);
       await search(page).focus();
       await expect(search(page)).toBeFocused();
       for (const selector of ['.app-header', '.shop-mobile-dock', '.ui-bottom-nav']) {
@@ -674,7 +674,7 @@ for (const width of [390, 768]) test(`quick-add suggestions stay opaque and reop
   await seedShoppingItem(apiCtx,list.id,'Milk','1 l','Dairy');
   await openList(page,`Suggestions ${width}`);
   for (const theme of ['light','dark']) {
-    await page.evaluate(value=>document.documentElement.setAttribute('data-theme',value),theme);
+    await page.evaluate(value=>{document.documentElement.setAttribute('data-theme',value);document.documentElement.setAttribute('data-scheme',value);},theme);
     await search(page).fill('');
     await search(page).fill('Mil');
     const suggestions=page.getByRole('listbox',{name:'Product suggestions'});

@@ -110,7 +110,26 @@ describe('AppProvider bootstrap', () => {
 
     await waitFor(() => expect(screen.getByTestId('theme')).toHaveTextContent('dark'));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(document.documentElement).toHaveAttribute('data-scheme', 'dark');
     expect(window.localStorage.getItem('tribu_theme')).toBe('dark');
+  });
+
+  test('marks every theme as a light or dark scheme, and forgets themes that no longer exist', async () => {
+    window.localStorage.setItem('tribu_theme', 'midnight-glass');
+    const { unmount } = render(<AppProvider><Probe /></AppProvider>);
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'midnight-glass'));
+    expect(document.documentElement).toHaveAttribute('data-scheme', 'dark');
+    unmount();
+
+    window.localStorage.setItem('tribu_theme', 'light');
+    render(<AppProvider><Probe /></AppProvider>);
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'));
+    expect(document.documentElement).toHaveAttribute('data-scheme', 'light');
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'tribu_theme', newValue: 'retired-theme' }));
+    });
+    await waitFor(() => expect(screen.getByTestId('theme')).toHaveTextContent('system'));
   });
 
   test('starts with the stored appearance and follows changes from other tabs', async () => {

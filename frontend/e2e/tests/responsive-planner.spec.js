@@ -30,7 +30,7 @@ test('mobile header and tab bar show unread, shopping and task counts', async ({
   const pages = page.getByRole('navigation', { name: 'Seiten in Listen' });
   await expect(pages.getByRole('button', { name: /Aufgaben/ })).toHaveText('Aufgaben1');
   await shot(page, 'menu-badges-light.png');
-  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+  await page.evaluate(() => { document.documentElement.setAttribute('data-theme', 'dark'); document.documentElement.setAttribute('data-scheme', 'dark'); });
   await shot(page, 'menu-badges-dark.png');
 });
 test('New sheet creates what the capture field recognises', async ({ page }) => {
@@ -286,9 +286,10 @@ test("compact editing and dark sheets retain family colors and reachable actions
     .click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox").first().fill("Demo-Termin bearbeitet");
-  await page.evaluate(() =>
-    document.documentElement.setAttribute("data-theme", "dark"),
-  );
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-scheme", "dark");
+  });
   await expect(
     dialog.getByRole("button", { name: "Speichern", exact: true }),
   ).toBeInViewport();

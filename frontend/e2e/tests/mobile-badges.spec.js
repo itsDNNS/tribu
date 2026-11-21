@@ -58,7 +58,7 @@ for (const width of [320, 390]) {
     await expect(listsTab).toHaveAccessibleDescription(`Shopping: ${shoppingCount}`);
 
     for (const theme of ['light', 'dark']) {
-      await page.evaluate(value => document.documentElement.setAttribute('data-theme', value), theme);
+      await page.evaluate(value => { document.documentElement.setAttribute('data-theme', value); document.documentElement.setAttribute('data-scheme', value); }, theme);
       await avatar.click();
       expect(await menu.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
       await page.keyboard.press('Escape');

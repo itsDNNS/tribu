@@ -31,13 +31,13 @@
 .mockup-settings-page .lang-btn{font-size:12px;border-radius:9px}
 .mockup-settings-page .theme-grid{grid-template-columns:1fr}
 .mockup-settings-page :is(button,select,input):focus-visible{outline:2px solid var(--dashboard-purple);outline-offset:3px}
-[data-theme="dark"] .mockup-settings-page,[data-theme="midnight-glass"] .mockup-settings-page{--ms-line:rgba(206,185,213,.12)}
+[data-scheme="dark"] .mockup-settings-page{--ms-line:color-mix(in srgb,var(--color-accent) 12%,transparent)}
 @media(max-width:1100px){.ms-grid,.ms-column,.mockup-settings-page .settings-grid{gap:14px}.ms-card,.mockup-settings-page .settings-section{padding:20px}.ms-row .ms-small{font-size:10px}}
 @media(max-width:900px){.ms-grid,.mockup-settings-page .settings-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.ms-card h2{font-size:16px}.ms-row{gap:10px}.mockup-settings-page .ms-row select{max-width:150px}.ms-detail-navigation{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.mockup-settings-page .ms-button{transition:none}.mockup-settings-page .ms-button:hover{transform:none}}
 .mockup-settings-page .ms-switch{width:38px;height:23px;padding:3px;flex:none;border:0;border-radius:20px;background:#d7d2dc;cursor:pointer;transition:background .18s}
 .ms-switch span{display:block;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0000000a;transition:transform .18s}
-.mockup-settings-page .ms-switch[aria-checked=true]{background:#73518d}
+.mockup-settings-page .ms-switch[aria-checked=true]{background:var(--color-accent-fill)}
 .ms-switch[aria-checked=true] span{transform:translateX(15px)}
 @media(prefers-reduced-motion:reduce){.mockup-settings-page .ms-switch,.ms-switch span{transition:none}}

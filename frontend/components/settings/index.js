@@ -13,6 +13,7 @@ import StoreLinksTab from './StoreLinksTab';
 import PhoneSyncTab from './PhoneSyncTab';
 import AboutTab from './AboutTab';
 import AreasTab from './AreasTab';
+import { listThemes } from '../../lib/themes';
 
 const TABS = [
   { key: 'account',       labelKey: 'settings_tab_account',  component: AccountTab,       visible: () => true },
@@ -38,7 +39,6 @@ const ADMIN_ROWS = [
   ['audit', 'audit_log_title'],
 ];
 
-export const APPEARANCES = ['system', 'light', 'dark', 'midnight-glass'];
 
 function SettingRow({ title, description, children }) {
   return <div className="ms-row"><div><strong>{title}</strong>{description && <div className="ms-small">{description}</div>}</div>{children}</div>;
@@ -101,12 +101,13 @@ export default function SettingsView() {
       })}
     </SettingRow>;
   };
+  const themes = availableThemes.length ? availableThemes : listThemes();
   const themeName = key => {
     if (key === 'system') return level('appearance_system');
     if (key === 'light' || key === 'dark') return copy(key);
-    return availableThemes.find(item => item.key === key)?.name || key;
+    return themes.find(item => item.key === key)?.name || key;
   };
-  const appearances = APPEARANCES.filter(key => key === 'system' || availableThemes.length === 0 || availableThemes.some(item => item.key === key));
+  const appearances = ['system', ...themes.map(item => item.key)];
 
   const device = <section className="ms-card" aria-labelledby="ms-device" key="device">
     <h2 id="ms-device">{level('device_title')}</h2><p>{level('device_intro')}</p>

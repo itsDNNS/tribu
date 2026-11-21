@@ -818,9 +818,9 @@ button.ui-date-label:hover {
   --surface: var(--surface-paper);
   --surface-2: var(--surface-raised);
   --surface-3: var(--surface-soft);
-  --purple: #73518d;
-  --purple-deep: var(--dashboard-purple, #4e3577);
-  --purple-bg: var(--surface-purple, #f3edf9);
+  --purple: var(--color-accent-fill);
+  --purple-deep: var(--dashboard-purple, var(--accent-strong));
+  --purple-bg: var(--color-accent-soft);
   --line: var(--border-subtle, rgba(88, 65, 80, 0.085));
   --tc-surface: var(--surface-paper);
 }
@@ -1382,11 +1382,6 @@ button.ui-date-label:hover {
   opacity: 0.4;
   cursor: not-allowed;
 }
-:is([data-theme='dark'], [data-theme='midnight-glass'])
-  :is(.ui-planner, .ui-bottom-nav, .ui-bottom-sheet, .tribu-calendar-dialog) {
-  --purple-bg: #382f43;
-  --purple-deep: #d2b5e5;
-}
 .tc-page .tc-calendar-day.selected:not(.today) {
   background: color-mix(in srgb, var(--tc-purple) 4%, var(--tc-surface));
 }
@@ -1437,8 +1432,8 @@ button.ui-date-label:hover {
   --bottom-sheet-amber: #99702a;
   --bottom-sheet-rose-bg: #f8e8eb;
   --bottom-sheet-rose: #9a5362;
-  --bottom-sheet-purple-bg: #f1e9f6;
-  --bottom-sheet-purple: #6b4d82;
+  --bottom-sheet-purple-bg: color-mix(in srgb,var(--color-accent-fill) 11%,var(--color-surface));
+  --bottom-sheet-purple: color-mix(in srgb,var(--color-accent-fill) 94%,var(--color-text));
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -1473,7 +1468,7 @@ button.ui-date-label:hover {
     opacity: 0.4;
   }
 }
-:is([data-theme='dark'], [data-theme='midnight-glass']) .ui-bottom-sheet {
+[data-scheme='dark'] .ui-bottom-sheet {
   --bottom-sheet-blue-bg: #22344a;
   --bottom-sheet-blue: #9cc6ea;
   --bottom-sheet-green-bg: #25352a;
@@ -1482,7 +1477,7 @@ button.ui-date-label:hover {
   --bottom-sheet-amber: #e3bf7f;
   --bottom-sheet-rose-bg: #3d2a31;
   --bottom-sheet-rose: #e0a7b3;
-  --bottom-sheet-purple-bg: #382f43;
+  --bottom-sheet-purple-bg: color-mix(in srgb,var(--color-accent-fill) 34%,var(--color-text));
   --bottom-sheet-purple: #d2b5e5;
 }
 .ui-bottom-sheet button,

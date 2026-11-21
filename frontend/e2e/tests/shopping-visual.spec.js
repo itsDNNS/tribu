@@ -244,6 +244,7 @@ for (const width of [320, 390, 768, 1024, 1448]) test(`visual shopping at ${widt
   }).click();
   await page.evaluate(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.setAttribute('data-scheme', 'dark');
   });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', {

@@ -252,6 +252,27 @@ describe('AppShell mobile bottom navigation', () => {
     expect(screen.queryByRole('dialog', { name: 'Account and settings' })).not.toBeInTheDocument();
   });
 
+  it('turns dark mode off back to the light theme this device had, and on to its dark one', () => {
+    window.localStorage.setItem('tribu_theme_light', 'light');
+    window.localStorage.setItem('tribu_theme_dark', 'midnight-glass');
+    const setTheme = jest.fn();
+    mockAppState = baseState({ setTheme, theme: 'midnight-glass', resolvedTheme: 'midnight-glass' });
+    const { unmount } = render(<AppShell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Account and settings' }));
+    const off = within(screen.getByRole('dialog', { name: 'Account and settings' })).getByRole('switch', { name: 'Dark' });
+    expect(off).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(off);
+    expect(setTheme).toHaveBeenCalledWith('light');
+    unmount();
+
+    mockAppState = baseState({ setTheme, theme: 'light', resolvedTheme: 'light' });
+    render(<AppShell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Account and settings' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Account and settings' })).getByRole('switch', { name: 'Dark' }));
+    expect(setTheme).toHaveBeenLastCalledWith('midnight-glass');
+    window.localStorage.clear();
+  });
+
   it('hides admin from members and switches families from the account menu', () => {
     const switchFamily = jest.fn();
     mockAppState = baseState({

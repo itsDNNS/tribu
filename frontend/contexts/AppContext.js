@@ -9,7 +9,7 @@ import { eventReminderTarget } from '../lib/reminderMute';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { cancelPendingClear, setPendingClearUser, withoutPendingClear } from '../lib/notificationClear';
 import { useNotificationExpiry } from '../hooks/useNotificationExpiry';
-import { listThemes } from '../lib/themes';
+import { getTheme, isKnownTheme, listThemes, rememberTheme, themeScheme } from '../lib/themes';
 
 export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'duties', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'family', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
 
@@ -18,7 +18,8 @@ const AppContext = createContext(null);
 function storedTheme() {
   if (typeof window === 'undefined') return 'system';
   try {
-    return window.localStorage.getItem('tribu_theme') || 'system';
+    const stored = window.localStorage.getItem('tribu_theme');
+    return isKnownTheme(stored) ? stored : 'system';
   } catch {
     return 'system';
   }
@@ -66,8 +67,8 @@ export function AppProvider({ children }) {
   const lastEventIdRef = useRef(0);
 
   // UI state
-  // Appearance of this device: light, dark, midnight-glass or system,
-  // which follows the device's light or dark mode (Tribu 2.0, X2).
+  // Appearance of this device: one of the themes in design/tokens.json, or
+  // system, which follows the device's light or dark mode (Tribu 2.0, X2).
   // Read on the first render, as the pre-paint script in _document does, so no other theme flashes.
   const [theme, setTheme] = useState(storedTheme);
   const [systemDark, setSystemDark] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-color-scheme: dark)').matches));
@@ -402,17 +403,22 @@ export function AppProvider({ children }) {
   // Persist theme
   useEffect(() => {
     window.localStorage.setItem('tribu_theme', theme);
+    rememberTheme(theme);
   }, [theme]);
 
   useEffect(() => {
+    const scheme = themeScheme(resolvedTheme);
     document.documentElement.setAttribute('data-theme', resolvedTheme);
-    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', theme === 'system' ? 'light dark' : resolvedTheme === 'light' ? 'light' : 'dark');
+    document.documentElement.setAttribute('data-scheme', scheme);
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', theme === 'system' ? 'light dark' : scheme);
+    // The installed app's status and navigation bars follow the theme too.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', getTheme(resolvedTheme).background);
   }, [theme, resolvedTheme]);
 
   // Another tab changed the appearance.
   useEffect(() => {
     const onStorage = (event) => {
-      if (event.key === 'tribu_theme') setTheme(event.newValue || 'system');
+      if (event.key === 'tribu_theme') setTheme(isKnownTheme(event.newValue) ? event.newValue : 'system');
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
