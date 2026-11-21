@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 
 from app.core import oidc as oidc_core
 from app.core.auth_sessions import cookie_secure, issue_refresh_session, issue_session_cookies
+from app.core.sign_ins import record_sign_in
 from app.core.clock import utcnow
 from app.core.config import REFRESH_COOKIE_MAX_AGE
 from app.core.errors import (
@@ -595,6 +596,7 @@ def callback(
     # SSO actually works end-to-end. Commit once for the whole
     # transaction (identity link + membership + timestamp).
     oidc_core.record_successful_sso_login(db)
+    record_sign_in(request, db, user, "sso")
 
     mobile_redirect_uri = flow.get("mobile_redirect_uri") or ""
     if mobile_redirect_uri:

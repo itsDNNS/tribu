@@ -21,7 +21,7 @@ from fastapi.testclient import TestClient
 from app.core import oidc as oidc_core
 from app.core.clock import utcnow
 from app.main import app
-from app.models import Family, FamilyInvitation, Membership, OIDCIdentity, User
+from app.models import AuditLog, Family, FamilyInvitation, Membership, OIDCIdentity, User
 from app.modules.oidc_auth_router import FLOW_COOKIE
 from app.security import JWT_SECRET
 from tests.oidc_support import ISSUER, discovery_document, seed_oidc_config, seed_user
@@ -605,6 +605,8 @@ def test_invite_bound_signup_creates_user_and_membership(monkeypatch):
         assert link.user_id == user.id
         inv = db.query(FamilyInvitation).filter(FamilyInvitation.token == "invite-xyz").one()
         assert inv.use_count == 1
+        sign_in = db.query(AuditLog).filter(AuditLog.action == "sign_in").one()
+        assert (sign_in.family_id, sign_in.target_user_id, sign_in.details["method"]) == (fam_id, user.id, "sso")
     finally:
         db.close()
     client.cookies.clear()

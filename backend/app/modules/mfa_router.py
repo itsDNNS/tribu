@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core import mfa
 from app.core import oidc as oidc_core
 from app.core.auth_sessions import issue_refresh_session, issue_session_cookies
+from app.core.sign_ins import record_sign_in
 from app.core.config import REFRESH_COOKIE_MAX_AGE
 from app.core.deps import current_user
 from app.core.errors import (
@@ -65,10 +66,18 @@ def _check_code(db: Session, user: User, code: str) -> None:
         raise HTTPException(status_code=400, detail=error_detail(MFA_CODE_INVALID))
 
 
-def _challenge_user(db: Session, token: str) -> User:
-    user = mfa.read_login_challenge(db, token)
+def _sign_in_user(request: Request, db: Session, payload: MfaLoginRequest) -> User:
+    """The account for a valid challenge and code; a wrong code is logged and audited."""
+    user = mfa.read_login_challenge(db, payload.mfa_token)
     if user is None:
         raise HTTPException(status_code=401, detail=error_detail(MFA_CHALLENGE_INVALID))
+    try:
+        _check_code(db, user, payload.code)
+    except HTTPException:
+        record_sign_in(request, db, user, "two-step", ok=False)
+        db.commit()
+        raise
+    record_sign_in(request, db, user, "two-step")
     return user
 
 
@@ -191,8 +200,7 @@ def mfa_disable(
 )
 @limiter.limit("20/minute")
 def login_mfa(request: Request, payload: MfaLoginRequest, db: Session = Depends(get_db)):
-    user = _challenge_user(db, payload.mfa_token)
-    _check_code(db, user, payload.code)
+    user = _sign_in_user(request, db, payload)
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
     issue_session_cookies(request, response, db, user)
     db.commit()
@@ -211,8 +219,7 @@ def login_mfa(request: Request, payload: MfaLoginRequest, db: Session = Depends(
 )
 @limiter.limit("20/minute")
 def mobile_login_mfa(request: Request, payload: MfaLoginRequest, db: Session = Depends(get_db)):
-    user = _challenge_user(db, payload.mfa_token)
-    _check_code(db, user, payload.code)
+    user = _sign_in_user(request, db, payload)
     refresh_token = issue_refresh_session(db, user)
     db.commit()
     return MobileLoginResponse(

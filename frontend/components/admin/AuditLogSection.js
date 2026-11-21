@@ -16,6 +16,8 @@ const ACTION_KEYS = {
   invite_created: 'audit_action_invite_created',
   invite_revoked: 'audit_action_invite_revoked',
   invite_used: 'audit_action_invite_used',
+  sign_in: 'audit_action_sign_in',
+  sign_in_failed: 'audit_action_sign_in_failed',
 };
 
 export default function AuditLogSection() {
@@ -53,11 +55,12 @@ export default function AuditLogSection() {
     if (entry.action === 'member_created' && entry.details.email) return entry.details.email;
     if (entry.action === 'invite_created' && entry.details.role_preset) return `${entry.details.role_preset} (${entry.details.expires_in_days}d)`;
     if (entry.action === 'invite_used' && entry.details.email) return entry.details.email;
+    if (entry.action.startsWith('sign_in')) return entry.details.ip;
     return null;
   }
 
   const visibleEntries = entries.filter(entry => {
-    const category = entry.action.startsWith('invite_') ? 'invites' : 'members';
+    const category = entry.action.startsWith('invite_') ? 'invites' : entry.action.startsWith('sign_in') ? 'sign_ins' : 'members';
     return (filter === 'all' || filter === category) &&
       [formatAction(entry), entry.admin_display_name, entry.target_display_name, formatDetails(entry)]
         .filter(Boolean).join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
@@ -77,7 +80,7 @@ export default function AuditLogSection() {
       </div>
 
       <div className="settings-section">
-        <div className="fam-audit-filters"><label className="fam-search"><Search size={16}/><input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={copy('audit_search')} aria-label={copy('audit_search')}/></label><select className="form-input" aria-label={copy('audit_filter')} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">{copy('audit_all')}</option><option value="members">{copy('audit_members')}</option><option value="invites">{copy('audit_invites')}</option></select></div>
+        <div className="fam-audit-filters"><label className="fam-search"><Search size={16}/><input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={copy('audit_search')} aria-label={copy('audit_search')}/></label><select className="form-input" aria-label={copy('audit_filter')} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">{copy('audit_all')}</option><option value="members">{copy('audit_members')}</option><option value="invites">{copy('audit_invites')}</option><option value="sign_ins">{copy('audit_sign_ins')}</option></select></div>
         {error && <p className="fam-error" role="alert">{copy('summary_unavailable')} <button className="fam-link" onClick={() => load(entries.length)}>{copy('retry')}</button></p>}
         {entries.length > 0 && !visibleEntries.length && <p className="fam-empty">{copy('audit_empty')}</p>}
         {entries.length === 0 && !loading && (
