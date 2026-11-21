@@ -124,6 +124,14 @@ export function apiDisableMfa(password, code) {
   return post('/auth/me/mfa/disable', { password, code });
 }
 
+export function apiGetMfaPolicy() {
+  return request('/admin/settings/two-step');
+}
+
+export function apiSetMfaPolicy(required) {
+  return request('/admin/settings/two-step', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ required }) });
+}
+
 export function apiCompleteOnboarding() {
   return post('/auth/me/complete-onboarding');
 }

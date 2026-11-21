@@ -50,14 +50,14 @@ for (const width of [320, 390, 768, 1024, 1448])
     for (const name of [
       "Einladungen",
       "Displays",
-      "Single Sign-On",
+      "Anmeldung",
       "Backups",
       "System",
       "Audit Log",
     ]) {
       await tabs.getByRole("button", { name, exact: true }).click();
       await expect(page.locator(".admin-subpage")).toBeVisible();
-      if (name === "Single Sign-On")
+      if (name === "Anmeldung")
         await expect(page.getByTestId("sso-admin-section")).toBeVisible();
       await noOverflow(page);
     }

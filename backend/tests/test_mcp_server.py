@@ -228,6 +228,7 @@ class TestCatalog:
         assert exclusion_reason("GET", "/setup-checklist", []) is None
         assert exclusion_reason("GET", "/auth/me", []) is None
         assert exclusion_reason("DELETE", "/auth/me", []) is not None
+        assert exclusion_reason("PUT", "/admin/settings/two-step", []) is not None
         assert all(reason for _method, _path, reason in EXCLUDED_PATHS)
 
     def test_excluded_operations_are_not_callable(self):

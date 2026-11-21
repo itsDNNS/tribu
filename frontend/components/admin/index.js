@@ -41,7 +41,7 @@ const TABS = [
   ["members", "admin_tab_members", Users],
   ["invites", "invite_title", Link],
   ["displays", "display_title", Monitor],
-  ["sso", "sso.title", KeyRound],
+  ["sso", "admin_tab_sign_in", KeyRound],
   ["backups", "backup_title", Archive],
   ["system", "system_title", HeartPulse],
   ["audit", "audit_log_title", Activity],

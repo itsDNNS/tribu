@@ -31,6 +31,8 @@ jest.mock('../../lib/api', () => ({
   apiGetOidcConfig: jest.fn(),
   apiUpdateOidcConfig: jest.fn(),
   apiTestOidcDiscovery: jest.fn(),
+  apiGetMfaPolicy: jest.fn(),
+  apiSetMfaPolicy: jest.fn(),
 }));
 
 import SsoSection from '../../components/admin/SsoSection';
@@ -63,6 +65,23 @@ describe('SsoSection admin panel', () => {
     const api = require('../../lib/api');
     api.apiGetOidcPresets.mockResolvedValue({ ok: true, data: PRESETS });
     api.apiGetOidcConfig.mockResolvedValue({ ok: true, data: mockCfg() });
+    api.apiGetMfaPolicy.mockResolvedValue({ ok: true, data: { required: false } });
+  });
+
+  it('requires two-step sign-in for everyone, and shows why the server refused', async () => {
+    const api = require('../../lib/api');
+    api.apiSetMfaPolicy
+      .mockResolvedValueOnce({ ok: false, data: { detail: { code: 'MFA_SET_UP_YOURSELF_FIRST' } } })
+      .mockResolvedValueOnce({ ok: true, data: { required: true } });
+    render(<SsoSection />);
+    const box = await screen.findByLabelText('two_step.require_label');
+
+    fireEvent.click(box);
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('toast.error'));
+    expect(box).not.toBeChecked();
+    fireEvent.click(box);
+    await waitFor(() => expect(box).toBeChecked());
+    expect(api.apiSetMfaPolicy).toHaveBeenLastCalledWith(true);
   });
 
   it('loads presets and config and renders the preset dropdown', async () => {

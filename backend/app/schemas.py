@@ -101,6 +101,7 @@ class MfaStatusResponse(BaseModel):
     enabled: bool = Field(..., description="True if sign-in asks for an authenticator code")
     available: bool = Field(..., description="False for accounts without a local password (single sign-on only)")
     recovery_codes_remaining: int = Field(0, description="Unused recovery codes")
+    required: bool = Field(False, description="True if the instance admin requires two-step sign-in, so it can't be turned off")
 
 
 class MfaPasswordRequest(BaseModel):
@@ -119,6 +120,11 @@ class MfaConfirmRequest(BaseModel):
     """Turn two-step sign-in on with the first code from the app."""
     setup_token: str = Field(..., max_length=2048, description="Token from the setup step")
     code: str = Field(..., min_length=6, max_length=16, description="6-digit authenticator code")
+
+
+class MfaPolicy(BaseModel):
+    """Whether every account with a password must use two-step sign-in."""
+    required: bool = Field(..., description="Require two-step sign-in for every account with a password")
 
 
 class MfaRecoveryCodesResponse(BaseModel):
@@ -151,6 +157,7 @@ class MeResponse(BaseModel):
     profile_image: Optional[str] = Field(None, description="Profile image as a 512 px square WebP data URL, or null")
     must_change_password: bool = Field(False, description="True if user must change their temporary password")
     has_completed_onboarding: bool = Field(True, description="True if user has completed the onboarding wizard")
+    mfa_setup_required: bool = Field(False, description="True if the admin requires two-step sign-in and this account must set it up before anything else")
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"user_id": 1, "email": "anna@example.com", "display_name": "Anna", "profile_image": None, "must_change_password": False, "has_completed_onboarding": True}]

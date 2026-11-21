@@ -11,7 +11,7 @@ from app.core.rate_limits import limiter_storage_options
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.core import cache
+from app.core import cache, mfa
 from app.core import oidc as oidc_core
 from app.core.deps import current_user, ensure_family_admin
 from app.core.scopes import require_scope
@@ -20,10 +20,10 @@ from app.database import get_db
 from app.models import Family, FamilyInvitation, Membership, User
 from app.schemas import (
     AUTH_RESPONSES, NOT_FOUND_RESPONSE, BaseUrlUpdate, InvitationCreate, InvitationResponse,
-    InviteInfoResponse, RegisterWithInviteRequest,
+    InviteInfoResponse, MfaPolicy, RegisterWithInviteRequest,
 )
 from app.security import hash_password
-from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, PASSWORD_LOGIN_DISABLED
+from app.core.errors import error_detail, INVALID_ROLE, ONLY_ADULTS_ADMIN, INVITATION_NOT_FOUND, INVITATION_INVALID, INVITATION_REVOKED, INVITATION_EXPIRED, INVITATION_FULLY_USED, EMAIL_ALREADY_EXISTS, MFA_SET_UP_YOURSELF_FIRST, PASSWORD_LOGIN_DISABLED
 
 from fastapi.responses import JSONResponse
 
@@ -331,3 +331,28 @@ def set_time_format(payload: dict, user: User = Depends(current_user), db: Sessi
     set_setting(db, "time_format", fmt)
     db.commit()
     return {"status": "ok", "time_format": fmt}
+
+
+@settings_router.get("/two-step", response_model=MfaPolicy, summary="Get the two-step sign-in requirement")
+def get_mfa_policy(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:read")):
+    ensure_instance_admin(db, user.id)
+    return MfaPolicy(required=mfa.mfa_required(db))
+
+
+@settings_router.put(
+    "/two-step",
+    response_model=MfaPolicy,
+    summary="Require two-step sign-in",
+    description=(
+        "Require two-step sign-in for every account with a password, or stop requiring it. Until an account "
+        "has set it up, its sessions reach only the setup. Accounts with single sign-on only and access tokens "
+        "are not affected. Your own account must use it first. Instance admin only."
+    ),
+)
+def set_mfa_policy(payload: MfaPolicy, user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("admin:write")):
+    ensure_instance_admin(db, user.id)
+    if payload.required and user.password_hash and not mfa.mfa_enabled(user):
+        raise HTTPException(status_code=409, detail=error_detail(MFA_SET_UP_YOURSELF_FIRST))
+    set_setting(db, mfa.REQUIRED_SETTING, "true" if payload.required else "false")
+    db.commit()
+    return payload

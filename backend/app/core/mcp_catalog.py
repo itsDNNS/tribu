@@ -68,6 +68,7 @@ EXCLUDED_PATHS: tuple[tuple[str, str, str], ...] = (
     ("DELETE", "/families/{family_id}/members/{target_user_id}", "deletes the member's account when this was their only family"),
     ("*", "/families/{family_id}/members/{target_user_id}/reset-password", "resets a password"),
     ("*", "/families/{family_id}/members/{target_user_id}/reset-mfa", "resets two-step sign-in"),
+    ("PUT", "/admin/settings/two-step", "turns required two-step sign-in on or off"),
     # Credentials and secrets.
     ("*", "/tokens", "personal access token management"),
     ("POST", "/families/{family_id}/display-devices", "mints a display device token"),

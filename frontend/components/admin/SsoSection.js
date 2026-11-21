@@ -6,6 +6,7 @@ import { errorText } from '../../lib/helpers';
 import { t } from '../../lib/i18n';
 import * as api from '../../lib/api';
 import { adminText } from './adminHelpers';
+import TwoStepPolicy from './TwoStepPolicy';
 
 // Render this inside the existing AdminView. Gated on demoMode so the
 // demo never shows the panel (admin endpoints refuse demo sessions
@@ -111,10 +112,12 @@ export default function SsoSection() {
             <KeyRound size={20} />
           </span>
           <div>
-            <h2 className="view-title">{t(messages, 'sso.title')}</h2>
+            <h2 className="view-title">{t(messages, 'admin_tab_sign_in')}</h2>
           </div>
         </div>
       </div>
+      <TwoStepPolicy />
+      <div className="adm-field-title">{t(messages, 'sso.title')}</div>
       <p className="adm-form-desc">{t(messages, 'sso.desc')}</p>
 
       <div className="sso-checkbox-field">

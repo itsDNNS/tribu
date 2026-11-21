@@ -23,7 +23,8 @@ from app.security import (
     verify_pat,
 )
 from app.core.scopes import parse_scopes
-from app.core.errors import error_detail, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED, USER_NOT_FOUND, NO_FAMILY_ACCESS, ADULT_REQUIRED, ADMIN_REQUIRED, DISPLAY_TOKEN_REVOKED
+from app.core import mfa
+from app.core.errors import error_detail, MFA_SETUP_REQUIRED, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED, USER_NOT_FOUND, NO_FAMILY_ACCESS, ADULT_REQUIRED, ADMIN_REQUIRED, DISPLAY_TOKEN_REVOKED
 
 security = HTTPBearer(
     auto_error=False,
@@ -114,6 +115,10 @@ def _resolve_user(request: Request, token_str: str, db: Session) -> User:
             invalidated_at = invalidated_at.replace(tzinfo=UTC)
         if datetime.fromtimestamp(issued_at, UTC) < invalidated_at:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_detail(INVALID_TOKEN))
+    # Required two-step sign-in not set up yet: the session reaches only the setup. Tokens are exempt.
+    route = request.scope.get("route")
+    if getattr(route, "path", None) not in mfa.SETUP_PATHS and mfa.setup_required(db, user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=error_detail(MFA_SETUP_REQUIRED))
     request.state.pat_scopes = None
     return user
 

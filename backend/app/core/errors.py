@@ -13,6 +13,9 @@ MFA_CODE_INVALID = "MFA_CODE_INVALID"
 MFA_CHALLENGE_INVALID = "MFA_CHALLENGE_INVALID"
 MFA_TOO_MANY_ATTEMPTS = "MFA_TOO_MANY_ATTEMPTS"
 SIGN_IN_DELAYED = "SIGN_IN_DELAYED"
+MFA_SETUP_REQUIRED = "MFA_SETUP_REQUIRED"
+MFA_REQUIRED_BY_ADMIN = "MFA_REQUIRED_BY_ADMIN"
+MFA_SET_UP_YOURSELF_FIRST = "MFA_SET_UP_YOURSELF_FIRST"
 MFA_ALREADY_ENABLED = "MFA_ALREADY_ENABLED"
 MFA_NOT_ENABLED = "MFA_NOT_ENABLED"
 MFA_SETUP_EXPIRED = "MFA_SETUP_EXPIRED"
@@ -198,6 +201,9 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     MFA_CHALLENGE_INVALID: "The sign-in took too long. Please sign in again.",
     MFA_TOO_MANY_ATTEMPTS: "Too many wrong codes. Please wait 15 minutes and try again.",
     SIGN_IN_DELAYED: "Too many wrong passwords. Please wait {seconds} s and try again.",
+    MFA_SETUP_REQUIRED: "Two-step sign-in is required. Set it up in the Tribu web app first.",
+    MFA_REQUIRED_BY_ADMIN: "Your admin requires two-step sign-in, so it can't be turned off.",
+    MFA_SET_UP_YOURSELF_FIRST: "Turn on two-step sign-in for your own account first.",
     MFA_ALREADY_ENABLED: "Two-step sign-in is already turned on",
     MFA_NOT_ENABLED: "Two-step sign-in is not turned on",
     MFA_SETUP_EXPIRED: "The setup took too long. Please start again.",

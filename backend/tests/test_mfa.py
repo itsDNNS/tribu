@@ -87,7 +87,7 @@ def test_setup_requires_password_and_a_valid_first_code():
     codes = confirm.json()["recovery_codes"]
     assert len(codes) == mfa.RECOVERY_CODE_COUNT
     assert len(set(codes)) == mfa.RECOVERY_CODE_COUNT
-    assert client.get("/auth/me/mfa").json() == {"enabled": True, "available": True, "recovery_codes_remaining": 10}
+    assert client.get("/auth/me/mfa").json() == {"enabled": True, "available": True, "recovery_codes_remaining": 10, "required": False}
 
     db = TestSession()
     try:

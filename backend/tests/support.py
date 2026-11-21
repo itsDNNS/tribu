@@ -229,3 +229,14 @@ def seed_family() -> tuple[int, int, int]:
 
 def login(client, email: str):
     return client.post("/auth/login", json={"email": email, "password": PASSWORD})
+
+
+def turn_on_two_step(email: str) -> str:
+    """Turns two-step sign-in on for the account; returns the authenticator secret."""
+    from app.core import mfa
+
+    secret = mfa.generate_totp_secret()
+    with TestSession() as db:
+        mfa.enable_mfa(db, db.query(User).filter(User.email == email).one(), secret, mfa.current_step() - 5)
+        db.commit()
+    return secret

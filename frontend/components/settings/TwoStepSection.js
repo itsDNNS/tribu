@@ -9,7 +9,7 @@ import DisplayPairingQr from '../admin/DisplayPairingQr';
 
 const LOW_RECOVERY_CODES = 3;
 
-export default function TwoStepSection() {
+export default function TwoStepSection({ onEnabled }) {
   const { messages, demoMode } = useApp();
   const { success: toastSuccess } = useToast();
   const [status, setStatus] = useState(null);
@@ -81,6 +81,7 @@ export default function TwoStepSection() {
     setRecoveryCodes([]);
     reset();
     toastSuccess(t(messages, 'two_step.enabled_toast'));
+    onEnabled?.();
   };
 
   const disable = (e) => {
@@ -158,7 +159,9 @@ export default function TwoStepSection() {
             </p>
           )}
           <p className="set-field-hint">{t(messages, 'two_step.admin_help')}</p>
-          {status.enabled ? (
+          {status.enabled && status.required ? (
+            <p className="set-field-hint">{t(messages, 'error.MFA_REQUIRED_BY_ADMIN')}</p>
+          ) : status.enabled ? (
             <button type="button" className="btn-secondary" onClick={() => reset('disable')}>{t(messages, 'two_step.turn_off')}</button>
           ) : (
             <button type="button" className="btn-primary" onClick={() => reset('password')}>{t(messages, 'two_step.turn_on')}</button>
