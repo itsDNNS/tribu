@@ -16,6 +16,11 @@
 - [ ] e2e
 - [ ] docs only
 
+## Size and duplicates
+
+- duplicate check (commands and results):
+- added lines (code / tests / i18n / migrations):
+
 ## Screenshots or recordings
 
 Add screenshots or short recordings for meaningful UI changes.
