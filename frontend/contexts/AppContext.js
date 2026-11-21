@@ -9,7 +9,7 @@ import { eventReminderTarget } from '../lib/reminderMute';
 import { notificationLinkView } from '../lib/notificationLinks';
 import { cancelPendingClear, setPendingClearUser, withoutPendingClear } from '../lib/notificationClear';
 import { useNotificationExpiry } from '../hooks/useNotificationExpiry';
-import { getTheme, isKnownTheme, listThemes, rememberTheme, themeScheme } from '../lib/themes';
+import { getTheme, isKnownTheme, lastThemeFor, listThemes, rememberTheme, themeScheme } from '../lib/themes';
 
 export const DEFAULT_NAV_ORDER = ['dashboard', 'calendar', 'weekly_plan', 'shopping', 'tasks', 'duties', 'activity', 'templates', 'meal_plans', 'school_timetables', 'recipes', 'family', 'rewards', 'gifts', 'contacts', 'notifications', 'settings', 'admin'];
 
@@ -70,9 +70,17 @@ export function AppProvider({ children }) {
   // Appearance of this device: one of the themes in design/tokens.json, or
   // system, which follows the device's light or dark mode (Tribu 2.0, X2).
   // Read on the first render, as the pre-paint script in _document does, so no other theme flashes.
-  const [theme, setTheme] = useState(storedTheme);
+  const [theme, setThemeState] = useState(storedTheme);
+  // Picking a theme takes its partner along for the other mode; the dark-mode
+  // switch passes { family: false } so it only changes the side it moves to.
+  const themeFamilyRef = useRef(false);
+  const setTheme = useCallback((value, { family = true } = {}) => {
+    themeFamilyRef.current = family;
+    setThemeState(value);
+  }, []);
   const [systemDark, setSystemDark] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-color-scheme: dark)').matches));
-  const resolvedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+  // "system" follows the device within the family last picked (Morning Mist and Dark until one is).
+  const resolvedTheme = theme === 'system' ? lastThemeFor(systemDark ? 'dark' : 'light') : theme;
   const [compactDashboard, setCompactDashboard] = useState(false);
   const [showNotificationBadge, setShowNotificationBadge] = useState(true);
   const [lang, setLang] = useState('en');
@@ -403,7 +411,8 @@ export function AppProvider({ children }) {
   // Persist theme
   useEffect(() => {
     window.localStorage.setItem('tribu_theme', theme);
-    rememberTheme(theme);
+    rememberTheme(theme, { family: themeFamilyRef.current });
+    themeFamilyRef.current = false;
   }, [theme]);
 
   useEffect(() => {
@@ -418,7 +427,7 @@ export function AppProvider({ children }) {
   // Another tab changed the appearance.
   useEffect(() => {
     const onStorage = (event) => {
-      if (event.key === 'tribu_theme') setTheme(isKnownTheme(event.newValue) ? event.newValue : 'system');
+      if (event.key === 'tribu_theme') setTheme(isKnownTheme(event.newValue) ? event.newValue : 'system', { family: false });
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);

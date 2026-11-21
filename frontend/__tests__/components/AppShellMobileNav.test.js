@@ -244,7 +244,7 @@ describe('AppShell mobile bottom navigation', () => {
     const sheet = screen.getByRole('dialog', { name: 'Account and settings' });
     expect(within(sheet).getByRole('button', { name: 'Close' })).toHaveFocus();
     fireEvent.click(within(sheet).getByRole('switch', { name: 'Dark' }));
-    expect(setTheme).toHaveBeenCalledWith('dark');
+    expect(setTheme).toHaveBeenCalledWith('dark', { family: false });
     fireEvent.click(within(sheet).getByRole('button', { name: 'Logout' }));
     expect(logout).toHaveBeenCalled();
     fireEvent.click(within(sheet).getByRole('button', { name: 'Manage your family', exact: true }));
@@ -262,14 +262,14 @@ describe('AppShell mobile bottom navigation', () => {
     const off = within(screen.getByRole('dialog', { name: 'Account and settings' })).getByRole('switch', { name: 'Dark' });
     expect(off).toHaveAttribute('aria-checked', 'true');
     fireEvent.click(off);
-    expect(setTheme).toHaveBeenCalledWith('light');
+    expect(setTheme).toHaveBeenCalledWith('light', { family: false });
     unmount();
 
     mockAppState = baseState({ setTheme, theme: 'light', resolvedTheme: 'light' });
     render(<AppShell />);
     fireEvent.click(screen.getByRole('button', { name: 'Account and settings' }));
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Account and settings' })).getByRole('switch', { name: 'Dark' }));
-    expect(setTheme).toHaveBeenLastCalledWith('midnight-glass');
+    expect(setTheme).toHaveBeenLastCalledWith('midnight-glass', { family: false });
     window.localStorage.clear();
   });
 

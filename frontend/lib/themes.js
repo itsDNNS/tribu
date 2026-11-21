@@ -7,6 +7,7 @@ const themes = Object.entries(tokens.themes).map(([key, entry]) => ({
   name: entry.name,
   description: entry.description || '',
   colorScheme: entry.colorScheme,
+  partner: entry.partner || null,
   background: entry.color.bg,
   // The swatch for theme pickers: the page colour with the theme's accent.
   preview: `linear-gradient(135deg, ${entry.color.bg} 0 58%, ${entry.color.accentFill} 58% 100%)`,
@@ -31,12 +32,17 @@ export function themeScheme(themeKey) {
   return isKnownTheme(themeKey) ? byKey[themeKey].colorScheme : 'dark';
 }
 
-// The last light and the last dark theme picked on this device, so the
-// dark-mode switch can go back to the theme someone had, not to Light.
-export function rememberTheme(themeKey) {
+// The light and the dark theme this device uses: the dark-mode switch moves
+// between them, and "Match device" picks one by the device's mode. Picking a
+// theme sets its side and, with { family: true }, its partner on the other
+// side, so Garden by day becomes Garden Night after dark. The switch itself
+// only sets its own side, so High Contrast -> dark -> back is High Contrast.
+export function rememberTheme(themeKey, { family = false } = {}) {
   if (!isKnownTheme(themeKey)) return;
+  const { colorScheme, partner } = byKey[themeKey];
   try {
-    window.localStorage.setItem(`tribu_theme_${byKey[themeKey].colorScheme}`, themeKey);
+    window.localStorage.setItem(`tribu_theme_${colorScheme}`, themeKey);
+    if (family && isKnownTheme(partner)) window.localStorage.setItem(`tribu_theme_${byKey[partner].colorScheme}`, partner);
   } catch {}
 }
 
