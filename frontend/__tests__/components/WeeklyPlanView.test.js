@@ -285,7 +285,10 @@ describe('weekly plan theme CSS contract', () => {
 
     const weeklyCss = css.slice(weeklyPlanStart, weeklyPlanEnd);
 
-    expect(weeklyCss).toContain('--weekly-plan-surface: rgb(255, 253, 248)');
+    // The surfaces come from the same theme as the text, so no theme needs its own pair.
+    expect(weeklyCss).toContain('--weekly-plan-surface: var(--color-surface)');
+    expect(weeklyCss).toContain('--weekly-plan-surface-soft: var(--color-surface-raised)');
+    expect(weeklyCss).not.toMatch(/\[data-theme=[^\]]*\] \.weekly-plan-page/);
     expect(weeklyCss).toContain('--weekly-plan-text-primary: var(--text-primary)');
     expect(weeklyCss).toContain('--weekly-plan-text-secondary: var(--text-secondary)');
     expect(weeklyCss).toContain('background: var(--weekly-plan-surface)');

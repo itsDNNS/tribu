@@ -131,8 +131,10 @@ test.describe('Settings', () => {
     const appearance = device.getByRole('combobox', { name: 'Appearance' });
     await expect(appearance).toHaveValue('system');
     await expect(html).toHaveAttribute('data-theme', 'light');
+    await expect(html).toHaveAttribute('data-scheme', 'light');
     await appearance.selectOption('midnight-glass');
     await expect(html).toHaveAttribute('data-theme', 'midnight-glass');
+    await expect(html).toHaveAttribute('data-scheme', 'dark');
     await appearance.selectOption('system');
     await expect(html).toHaveAttribute('data-theme', 'light');
 

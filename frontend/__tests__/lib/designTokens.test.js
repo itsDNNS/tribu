@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { render, validate } = require('../../scripts/generate-design-tokens');
+const { render, renderBackendThemes, validate } = require('../../scripts/generate-design-tokens');
 
 const tokens = JSON.parse(fs.readFileSync(path.join(__dirname, '../../design/tokens.json'), 'utf8'));
 
@@ -40,10 +40,23 @@ describe('design tokens', () => {
     ['danger', 'surface'],
     ['info', 'surface'],
   ];
-  for (const theme of ['light', 'dark']) {
+  // Every theme, so a new one is checked as soon as it is in tokens.json.
+  for (const theme of Object.keys(tokens.themes)) {
     it.each(pairs)(`${theme}: %s on %s reaches 4.5:1`, (fg, bg) => {
       const colors = tokens.themes[theme].color;
       expect(contrast(colors[fg], colors[bg])).toBeGreaterThanOrEqual(4.5);
     });
   }
+
+  it('the backend copy of the theme list is up to date', () => {
+    const copy = fs.readFileSync(path.join(__dirname, '../../../backend/app/ui_themes.json'), 'utf8');
+    expect(copy).toBe(renderBackendThemes(tokens));
+  });
+
+  it('every theme has a name and a light or dark colour scheme', () => {
+    for (const entry of Object.values(tokens.themes)) {
+      expect(entry.name).toEqual(expect.any(String));
+      expect(['light', 'dark']).toContain(entry.colorScheme);
+    }
+  });
 });

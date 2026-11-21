@@ -1,6 +1,7 @@
 import { LogOut, Moon } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { t } from '../../lib/i18n';
+import { lastThemeFor, themeScheme } from '../../lib/themes';
 import MemberAvatar from '../MemberAvatar';
 import BottomSheet from '../responsive/BottomSheet';
 import { plannerText } from '../responsive/PlannerUI';
@@ -13,7 +14,7 @@ export default function AccountSheet({ items, activeView, navigate, onClose }) {
   const own = members.find((member) => member.user_id === me?.user_id)
     || { display_name: me?.display_name, profile_image: profileImage };
   const currentFamily = families.find((family) => String(family.family_id) === String(familyId));
-  const isDark = (resolvedTheme || 'light') !== 'light';
+  const isDark = themeScheme(resolvedTheme || 'light') === 'dark';
 
   return (
     <BottomSheet title={t(messages, 'nav.account_menu')} messages={messages} onClose={onClose} className="account-sheet">
@@ -59,7 +60,7 @@ export default function AccountSheet({ items, activeView, navigate, onClose }) {
             role="switch"
             aria-checked={isDark}
             className="ui-more-row"
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            onClick={() => setTheme(lastThemeFor(isDark ? 'light' : 'dark'))}
           >
             <Moon size={19} aria-hidden="true" />
             <span>{plannerText(messages, 'dark_mode')}</span>

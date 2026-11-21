@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -15,7 +18,11 @@ DEFAULT_NAV_ORDER = ["dashboard", "calendar", "weekly_plan", "shopping", "tasks"
 KNOWN_KEYS = {"dashboard", "family", "calendar", "weekly_plan", "shopping", "tasks", "duties", "activity", "templates", "rewards", "gifts", "meal_plans", "school_timetables", "recipes", "contacts", "notifications", "settings", "admin"}
 DEFAULT_UI_THEME = "light"
 DEFAULT_UI_LANGUAGE = "en"
-KNOWN_UI_THEMES = {"light", "dark", "midnight-glass"}
+# Written from frontend/design/tokens.json by the frontend's
+# `npm run tokens:generate`, so a theme added there is accepted here too.
+KNOWN_UI_THEMES = {
+    theme["key"] for theme in json.loads((Path(__file__).resolve().parent.parent / "ui_themes.json").read_text())["themes"]
+}
 KNOWN_UI_LANGUAGES = {"de", "en", "es", "fr", "it", "nl", "pl", "pt", "sv", "da", "nb", "fi", "cs", "sk", "hu", "ro", "el", "bg", "hr", "sl", "lt", "lv", "et", "ga"}
 
 

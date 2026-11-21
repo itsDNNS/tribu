@@ -1,0 +1,17 @@
+{
+  "generatedFrom": "frontend/design/tokens.json",
+  "themes": [
+    {
+      "key": "light",
+      "colorScheme": "light"
+    },
+    {
+      "key": "dark",
+      "colorScheme": "dark"
+    },
+    {
+      "key": "midnight-glass",
+      "colorScheme": "dark"
+    }
+  ]
+}

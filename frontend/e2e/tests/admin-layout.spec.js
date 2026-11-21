@@ -239,9 +239,10 @@ test("dark admin sheets preserve focus, draft and reachable actions", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
-  await page.evaluate(() =>
-    document.documentElement.setAttribute("data-theme", "dark"),
-  );
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-scheme", "dark");
+  });
   await page
     .getByRole("button", { name: "Profil von Demo B bearbeiten" })
     .click();

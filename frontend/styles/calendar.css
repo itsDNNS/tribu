@@ -351,8 +351,8 @@
 .tc-page,
 .tribu-calendar-dialog {
   --tc-line: rgba(88, 65, 80, 0.085);
-  --tc-purple: #73518d;
-  --tc-purple-bg: #f3edf9;
+  --tc-purple: var(--color-accent-fill);
+  --tc-purple-bg: var(--color-accent-soft);
   --tc-surface: var(--surface-paper);
   --tc-soft: var(--surface-raised);
   --tc-ink: var(--text-primary);
@@ -817,10 +817,8 @@
   cursor: wait;
   transform: none;
 }
-[data-theme]:not([data-theme='light']) :is(.tc-page, .tribu-calendar-dialog) {
-  --tc-line: rgba(221, 203, 231, 0.13);
-  --tc-purple: #9976b5;
-  --tc-purple-bg: #342b43;
+[data-scheme]:not([data-scheme='light']) :is(.tc-page, .tribu-calendar-dialog) {
+  --tc-line: color-mix(in srgb, var(--color-accent) 13%, transparent);
 }
 @media (max-width: 768px) {
   .tc-page .tc-view-header {
@@ -931,9 +929,9 @@
 /* Keep readable text on the calendar's colored and muted surfaces. */
 .tc-page,
 .tribu-calendar-dialog {
-  --tc-button: #73518d;
+  --tc-button: color-mix(in srgb,var(--color-accent-fill) 98%,var(--color-surface));
 }
-[data-theme='light'] :is(.tc-page, .tribu-calendar-dialog) {
+[data-scheme='light'] :is(.tc-page, .tribu-calendar-dialog) {
   --tc-muted: #6e6573;
 }
 :is(.tc-page, .tribu-calendar-dialog) .tc-btn.primary,
@@ -942,7 +940,7 @@
   border-color: var(--tc-button);
 }
 :is(.tc-page, .tribu-calendar-dialog) .tc-btn.primary:hover {
-  background: #65447e;
+  background: color-mix(in srgb,var(--color-accent-fill) 87%,var(--color-text));
 }
 .tc-page .outside .tc-day-number {
   color: var(--tc-muted);
