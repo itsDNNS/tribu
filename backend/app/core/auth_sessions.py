@@ -52,6 +52,16 @@ def issue_session_cookies(request: Request, response: Response, db: Session, use
     )
 
 
+def end_all_sessions(db: Session, user: User) -> None:
+    """Sign the account out everywhere: void its access tokens and refresh sessions."""
+    now = utcnow_aware()
+    user.session_invalidated_at = now
+    db.query(UserSession).filter(
+        UserSession.user_id == user.id,
+        UserSession.revoked_at.is_(None),
+    ).update({UserSession.revoked_at: now}, synchronize_session=False)
+
+
 def clear_session_cookies(response: Response) -> None:
     response.delete_cookie(COOKIE_NAME, path="/")
     response.delete_cookie(REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)

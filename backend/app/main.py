@@ -28,8 +28,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.deps import current_user
 from app.core.duties import forget_member
-from app.core.auth_sessions import clear_session_cookies, issue_refresh_session, issue_session_cookies, revoke_refresh_session, rotate_refresh_session, rotate_refresh_token
-from app.core.clock import utcnow_aware
+from app.core.auth_sessions import clear_session_cookies, end_all_sessions, issue_refresh_session, issue_session_cookies, revoke_refresh_session, rotate_refresh_session, rotate_refresh_token
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.core.errors import (
     error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT,
@@ -43,7 +42,7 @@ from app.core.avatars import AvatarError, set_profile_image
 from app.core import mfa
 from app.core import oidc as oidc_core
 from app.database import get_db, SessionLocal
-from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User, UserSession
+from app.models import AuditLog, CalendarEvent, Family, Membership, ShoppingList, Task, User
 from app.modules.birthdays_router import router as birthdays_router
 from app.modules.calendar_router import router as calendar_router
 from app.modules.dashboard_router import router as dashboard_router
@@ -655,12 +654,7 @@ def change_password(
         raise HTTPException(status_code=400, detail=error_detail(OLD_PASSWORD_INCORRECT))
     user.password_hash = hash_password(payload.new_password)
     user.must_change_password = False
-    now = utcnow_aware()
-    user.session_invalidated_at = now
-    db.query(UserSession).filter(
-        UserSession.user_id == user.id,
-        UserSession.revoked_at.is_(None),
-    ).update({UserSession.revoked_at: now}, synchronize_session=False)
+    end_all_sessions(db, user)
     db.commit()
     response = JSONResponse(content={"status": "ok"})
     clear_session_cookies(response)
