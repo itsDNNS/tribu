@@ -144,6 +144,7 @@ curl -H "Authorization: Bearer tribu_pat_abc123..." \\
 MCP clients connect to `/mcp` (Streamable HTTP) with a PAT in the
 `Authorization` header. The token's scopes decide which operations they can list and
 call; every call runs through the regular endpoints. Browser sessions are refused there.
+`MCP_ENABLED=false` turns the endpoint off.
 
 ## Rate Limiting
 
@@ -850,12 +851,13 @@ app.include_router(notification_destinations_router)
 
 
 # ---------------------------------------------------------------------------
-# MCP (Model Context Protocol) endpoint, PAT only
+# MCP (Model Context Protocol) endpoint, PAT only; MCP_ENABLED=false leaves it out
 # ---------------------------------------------------------------------------
 
 from app.modules.mcp_server import MCP_PATH, create_mcp_endpoint  # noqa: E402
 
-app.add_route(MCP_PATH, create_mcp_endpoint(app, client_key=rate_limit_key), include_in_schema=False)
+if _env_bool("MCP_ENABLED", default=True):
+    app.add_route(MCP_PATH, create_mcp_endpoint(app, client_key=rate_limit_key), include_in_schema=False)
 
 
 # ---------------------------------------------------------------------------

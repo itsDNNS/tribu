@@ -2,6 +2,9 @@
 in-process calls through the real REST endpoints."""
 
 import json
+import os
+import subprocess
+import sys
 from datetime import timedelta
 
 import anyio
@@ -535,3 +538,10 @@ def test_sdk_client_round_trip():
     payload = json.loads(created.content[0].text)
     assert payload["status"] == 200
     assert payload["body"]["title"] == "From the SDK"
+
+
+def test_mcp_enabled_false_leaves_the_endpoint_out():
+    """Read once at start, so checked in a fresh interpreter; every other test here uses it switched on."""
+    check = "from app.main import app; from app.modules.mcp_server import MCP_PATH; print(MCP_PATH in {getattr(r, 'path', None) for r in app.routes})"
+    result = subprocess.run([sys.executable, "-c", check], env={**os.environ, "MCP_ENABLED": "false"}, capture_output=True, text=True, check=True)
+    assert result.stdout.split()[-1] == "False"

@@ -143,7 +143,7 @@ claude mcp add --transport http tribu https://tribu.example.com/api/mcp \
   --header "Authorization: Bearer tribu_pat_your_token"
 ```
 
-The assistant gets four tools: `whoami`, `list_operations`, `describe_operation`, and `call_operation`. Every call goes through the regular API with your token, so family membership, adult and admin roles, token permissions, and rate limits apply unchanged. The endpoint accepts only API tokens, never browser sessions. Sign-in and sessions, passwords, two-step sign-in, API token management, SSO settings, setup and restore, backup downloads, display device pairing, account deletion, and removing family members (which can delete their account) are not available over MCP. Revoke the token under **Settings -> API Tokens** to cut off access.
+The assistant gets four tools: `whoami`, `list_operations`, `describe_operation`, and `call_operation`. Every call goes through the regular API with your token, so family membership, adult and admin roles, token permissions, and rate limits apply unchanged. The endpoint accepts only API tokens, never browser sessions. Sign-in and sessions, passwords, two-step sign-in, API token management, SSO settings, setup and restore, backup downloads, display device pairing, account deletion, and removing family members (which can delete their account) are not available over MCP. Revoke the token under **Settings -> API Tokens** to cut off access. To turn the endpoint off for everyone, set `MCP_ENABLED=false`.
 
 ## Start in the way that fits you
 
@@ -225,6 +225,7 @@ Set `TZ` when you want family calendar times, task due dates, reminder windows, 
 | `TRUSTED_PROXY_CIDRS` | Optional comma-separated proxy CIDRs whose `X-Forwarded-For` header gives the client address, for login/register rate limits and the failed sign-in log line. Leave unset unless a trusted reverse proxy sits in front of the backend. |
 | `SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS` | Optional `true` to let ICS calendar subscriptions fetch private/LAN feed URLs such as a self-hosted calendar server. Leave `false` unless you trust the feed targets. |
 | `WEBHOOK_ALLOWED_HOSTS` | Optional comma-separated hosts on your network that webhooks may reach, for example `homeassistant.lan,192.168.1.50`. List each host exactly as it appears in the webhook URL. Other private or local addresses stay blocked. |
+| `MCP_ENABLED` | Optional `false` to turn off the [MCP endpoint](#ai-assistants-mcp) for AI assistants. On by default. |
 
 Generate the values and write them into `.env`:
 
