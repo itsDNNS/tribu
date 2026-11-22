@@ -36,6 +36,14 @@ def _expired_access_token(user_id: int) -> str:
     )
 
 
+@pytest.mark.parametrize("password", ["Whatever1", "Long" + "x" * 96])
+@pytest.mark.parametrize("path", ["/auth/login", "/auth/mobile-login"])
+def test_login_with_an_unknown_email_still_checks_a_password(path, password, checkpw_calls):
+    response = TestClient(app).post(path, json={"email": "nobody@example.com", "password": password})
+    assert response.status_code == 401
+    assert len(checkpw_calls) == 1
+
+
 def test_rotate_refresh_token_accepts_aware_postgres_expiry_timestamp():
     user_id = _seed_user()
     db = TestSession()

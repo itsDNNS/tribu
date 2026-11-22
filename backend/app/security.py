@@ -19,8 +19,18 @@ if not JWT_SECRET:
 # Password hashing (bcrypt)
 # ---------------------------------------------------------------------------
 
+def _bcrypt_input(password: str) -> bytes:
+    # bcrypt only uses the first 72 bytes and, since bcrypt 5, raises above that.
+    return password.encode()[:72]
+
+
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    return bcrypt.hashpw(_bcrypt_input(password), bcrypt.gensalt()).decode()
+
+
+# Checked instead of a missing hash, so a login takes as long for an unknown
+# email or an SSO-only account as for a wrong password.
+_DUMMY_HASH = bcrypt.hashpw(secrets.token_hex(16).encode(), bcrypt.gensalt())
 
 
 def verify_password(plain: str, hashed: str | None) -> bool:
@@ -32,11 +42,9 @@ def verify_password(plain: str, hashed: str | None) -> bool:
     coerce a successful login by sending a crafted payload against
     an account that was never meant to use password auth.
     """
-    if not hashed:
-        return False
-    if hashed.startswith("$2b$") or hashed.startswith("$2a$"):
-        return bcrypt.checkpw(plain.encode(), hashed.encode())
-    return False
+    valid = bool(hashed) and hashed.startswith(("$2b$", "$2a$"))
+    matches = bcrypt.checkpw(_bcrypt_input(plain), hashed.encode() if valid else _DUMMY_HASH)
+    return valid and matches
 
 
 # ---------------------------------------------------------------------------
