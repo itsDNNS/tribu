@@ -199,3 +199,13 @@ def checkpw_calls(monkeypatch):
     real_checkpw = security.bcrypt.checkpw
     monkeypatch.setattr(security.bcrypt, "checkpw", lambda *args: calls.append(args) or real_checkpw(*args))
     return calls
+
+
+@pytest.fixture
+def reset_rate_limits():
+    """Lets each test sign in as often as it needs."""
+    from app.main import limiter as app_limiter
+    from app.modules.mfa_router import limiter as mfa_limiter
+
+    app_limiter.reset()
+    mfa_limiter.reset()

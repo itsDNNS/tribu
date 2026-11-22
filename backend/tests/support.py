@@ -194,3 +194,38 @@ def propfind(client, path: str, body: str, *, headers: Mapping | None = None, de
     return client.request(
         "PROPFIND", path, headers={"Depth": depth, "Content-Type": "application/xml", **(headers or {})}, content=body,
     )
+
+
+# An onboarded admin and member in one family, for sign-in tests.
+PASSWORD = "Secure1Pass"
+ADMIN_EMAIL = "admin-mfa@example.com"
+MEMBER_EMAIL = "member-mfa@example.com"
+
+
+def new_client():
+    """A fresh browser: a test client without cookies."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    return TestClient(app)
+
+
+def seed_family() -> tuple[int, int, int]:
+    """Adds the admin and the member; returns family id, admin id and member id."""
+    onboarded = {"has_completed_onboarding": True}
+    with TestSession() as db:
+        admin = add_member(
+            db, ADMIN_EMAIL, scopes=None, family_name="MFA Family", password=PASSWORD,
+            display_name="Admin", user_fields=onboarded,
+        )
+        member = add_member(
+            db, MEMBER_EMAIL, scopes=None, family_id=admin.family_id, role="member", password=PASSWORD,
+            display_name="Member", user_fields=onboarded,
+        )
+        db.commit()
+        return admin.family_id, admin.user_id, member.user_id
+
+
+def login(client, email: str):
+    return client.post("/auth/login", json={"email": email, "password": PASSWORD})
