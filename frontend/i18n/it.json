@@ -560,6 +560,7 @@
   "error.MFA_CODE_INVALID": "Il codice non è valido",
   "error.MFA_CHALLENGE_INVALID": "L'accesso ha richiesto troppo tempo. Accedi di nuovo.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Troppi codici errati. Attendi 15 minuti e riprova.",
+  "error.SIGN_IN_DELAYED": "Troppe password errate. Attendi {seconds} s e riprova.",
   "error.MFA_ALREADY_ENABLED": "L'accesso in due passaggi è già attivo",
   "error.MFA_NOT_ENABLED": "L'accesso in due passaggi non è attivo",
   "error.MFA_SETUP_EXPIRED": "La configurazione ha richiesto troppo tempo. Ricomincia.",

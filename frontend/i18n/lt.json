@@ -559,6 +559,7 @@
   "error.MFA_CODE_INVALID": "Kodas negalioja",
   "error.MFA_CHALLENGE_INVALID": "Prisijungimas truko per ilgai. Prisijunkite iš naujo.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Per daug neteisingų kodų. Palaukite 15 minučių ir bandykite dar kartą.",
+  "error.SIGN_IN_DELAYED": "Per daug neteisingų slaptažodžių. Palaukite {seconds} s ir bandykite dar kartą.",
   "error.MFA_ALREADY_ENABLED": "Dviejų veiksmų prisijungimas jau įjungtas",
   "error.MFA_NOT_ENABLED": "Dviejų veiksmų prisijungimas neįjungtas",
   "error.MFA_SETUP_EXPIRED": "Nustatymas truko per ilgai. Pradėkite iš naujo.",

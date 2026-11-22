@@ -12,6 +12,7 @@ MFA_REQUIRED = "MFA_REQUIRED"
 MFA_CODE_INVALID = "MFA_CODE_INVALID"
 MFA_CHALLENGE_INVALID = "MFA_CHALLENGE_INVALID"
 MFA_TOO_MANY_ATTEMPTS = "MFA_TOO_MANY_ATTEMPTS"
+SIGN_IN_DELAYED = "SIGN_IN_DELAYED"
 MFA_ALREADY_ENABLED = "MFA_ALREADY_ENABLED"
 MFA_NOT_ENABLED = "MFA_NOT_ENABLED"
 MFA_SETUP_EXPIRED = "MFA_SETUP_EXPIRED"
@@ -196,6 +197,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     MFA_CODE_INVALID: "The code is not valid",
     MFA_CHALLENGE_INVALID: "The sign-in took too long. Please sign in again.",
     MFA_TOO_MANY_ATTEMPTS: "Too many wrong codes. Please wait 15 minutes and try again.",
+    SIGN_IN_DELAYED: "Too many wrong passwords. Please wait {seconds} s and try again.",
     MFA_ALREADY_ENABLED: "Two-step sign-in is already turned on",
     MFA_NOT_ENABLED: "Two-step sign-in is not turned on",
     MFA_SETUP_EXPIRED: "The setup took too long. Please start again.",

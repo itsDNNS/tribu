@@ -560,6 +560,7 @@
   "error.MFA_CODE_INVALID": "Kôd nije valjan",
   "error.MFA_CHALLENGE_INVALID": "Prijava je trajala predugo. Prijavi se ponovno.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Previše pogrešnih kodova. Pričekaj 15 minuta i pokušaj ponovno.",
+  "error.SIGN_IN_DELAYED": "Previše pogrešnih lozinki. Pričekaj {seconds} s i pokušaj ponovno.",
   "error.MFA_ALREADY_ENABLED": "Prijava u dva koraka je već uključena",
   "error.MFA_NOT_ENABLED": "Prijava u dva koraka nije uključena",
   "error.MFA_SETUP_EXPIRED": "Postavljanje je trajalo predugo. Počni ispočetka.",

@@ -559,6 +559,7 @@
   "error.MFA_CODE_INVALID": "De code is ongeldig",
   "error.MFA_CHALLENGE_INVALID": "Het inloggen duurde te lang. Log opnieuw in.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Te veel foute codes. Wacht 15 minuten en probeer het opnieuw.",
+  "error.SIGN_IN_DELAYED": "Te veel foute wachtwoorden. Wacht {seconds} sec. en probeer het opnieuw.",
   "error.MFA_ALREADY_ENABLED": "Inloggen in twee stappen staat al aan",
   "error.MFA_NOT_ENABLED": "Inloggen in twee stappen staat niet aan",
   "error.MFA_SETUP_EXPIRED": "Het instellen duurde te lang. Begin opnieuw.",

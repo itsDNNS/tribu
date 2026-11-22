@@ -560,6 +560,7 @@
   "error.MFA_CODE_INVALID": "Kods nav derīgs",
   "error.MFA_CHALLENGE_INVALID": "Pieteikšanās ilga pārāk ilgi. Piesakies vēlreiz.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Pārāk daudz nepareizu kodu. Pagaidi 15 minūtes un mēģini vēlreiz.",
+  "error.SIGN_IN_DELAYED": "Pārāk daudz nepareizu paroļu. Pagaidi {seconds} s un mēģini vēlreiz.",
   "error.MFA_ALREADY_ENABLED": "Divpakāpju pieteikšanās jau ir ieslēgta",
   "error.MFA_NOT_ENABLED": "Divpakāpju pieteikšanās nav ieslēgta",
   "error.MFA_SETUP_EXPIRED": "Iestatīšana ilga pārāk ilgi. Sāc no jauna.",

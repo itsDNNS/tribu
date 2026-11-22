@@ -559,6 +559,7 @@
   "error.MFA_CODE_INVALID": "Le code n'est pas valide",
   "error.MFA_CHALLENGE_INVALID": "La connexion a pris trop de temps. Veuillez vous reconnecter.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Trop de codes erronés. Veuillez patienter 15 minutes et réessayer.",
+  "error.SIGN_IN_DELAYED": "Trop de mots de passe erronés. Veuillez patienter {seconds} s et réessayer.",
   "error.MFA_ALREADY_ENABLED": "La connexion en deux étapes est déjà activée",
   "error.MFA_NOT_ENABLED": "La connexion en deux étapes n'est pas activée",
   "error.MFA_SETUP_EXPIRED": "La configuration a pris trop de temps. Veuillez recommencer.",
