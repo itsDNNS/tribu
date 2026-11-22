@@ -49,25 +49,20 @@ ADMIN_RESPONSES = {**UNAUTHORIZED_RESPONSE, **FORBIDDEN_RESPONSE, **NOT_FOUND_RE
 # Auth
 # ---------------------------------------------------------------------------
 
+# Length is what makes a password hard to guess; no character classes. Existing shorter passwords still sign in.
+NewPassword = Annotated[str, Field(min_length=12, max_length=128, description="New password, at least 12 characters")]
+
+
 class RegisterRequest(BaseModel):
     """Register a new user and create their first family."""
     email: EmailStr = Field(..., description="Email address (used for login)")
-    password: str = Field(min_length=8, max_length=128, description="Min 8 chars, must contain uppercase letter and digit")
+    password: NewPassword
     display_name: str = Field(..., description="Name displayed in the UI")
     family_name: str = Field(..., description="Name of the family to create")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"email": "anna@example.com", "password": "Secure1Pass", "display_name": "Anna", "family_name": "Mueller Family"}]
+        "examples": [{"email": "anna@example.com", "password": "correct horse battery", "display_name": "Anna", "family_name": "Mueller Family"}]
     })
-
-    @field_validator("password")
-    @classmethod
-    def password_strength(cls, v: str) -> str:
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one number")
-        return v
 
 
 class LoginRequest(BaseModel):
@@ -226,16 +221,7 @@ class DeleteAccountRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     """Change the current user's password."""
     old_password: str = Field(..., description="Current password")
-    new_password: str = Field(min_length=8, max_length=128, description="New password (min 8 chars, uppercase + digit required)")
-
-    @field_validator("new_password")
-    @classmethod
-    def password_strength(cls, v: str) -> str:
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one number")
-        return v
+    new_password: NewPassword
 
 
 # ---------------------------------------------------------------------------
@@ -1715,21 +1701,12 @@ class RegisterWithInviteRequest(BaseModel):
     """Register a new user via an invitation link."""
     token: str = Field(..., description="Invitation token from the URL")
     email: EmailStr = Field(..., description="Email address for the new account")
-    password: str = Field(min_length=8, max_length=128, description="Password (min 8 chars, uppercase + digit required)")
+    password: NewPassword
     display_name: str = Field(..., description="Display name")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"token": "abc123def456", "email": "newmember@example.com", "password": "Welcome1", "display_name": "Tom"}]
+        "examples": [{"token": "abc123def456", "email": "newmember@example.com", "password": "welcome to the family", "display_name": "Tom"}]
     })
-
-    @field_validator("password")
-    @classmethod
-    def password_strength(cls, v: str) -> str:
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one number")
-        return v
 
 
 # ---------------------------------------------------------------------------

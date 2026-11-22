@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google-kalenteri: tilaa Tribu-syöte Googlessa kalenterisyötteellä URL tai vie Google-kalenterit muodossa ICS ja tuo ne Tribu-sovellukseen. Nämä kaksi eivät synkronoidu kaksisuuntaisesti; valitse Tribu tai Google totuuden lähteeksi kalenterikohtaisesti.",
   "phone_sync_coexist_outlook": "Outlook / Exchange: lisää Tribu CalDAV-lisätiliksi, jos se tuetaan, tai tuo Outlook ICS -vienti. Outlook ei synkronoi CalDAV:tä Microsoft 365 -postilaatikoista – käytä siellä olevaa vientireittiä.",
   "admin_self_hint": "Et voi muuttaa omaa rooliasi",
-  "password_hint": "Min. 8 merkkiä, 1 iso kirjain, 1 numero",
+  "password_hint": "Vähintään 12 merkkiä",
   "api_tokens": "API Tokenit",
   "automation_webhooks": "Automaatio Webhooks",
   "api_tokens_desc": "Kolmannen osapuolen sovellusten ja komentosarjojen henkilökohtaiset käyttöoikeudet.",

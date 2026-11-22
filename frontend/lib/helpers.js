@@ -123,10 +123,10 @@ export function errorField(detail) {
   return '';
 }
 
-// The backend password rule (schemas.py) besides the length minLength already checks:
-// an uppercase A-Z and a digit. Python's \d matches any Unicode digit, as \p{Nd} does.
+// The backend rule for new passwords (NewPassword in schemas.py): at least 12 characters of any kind,
+// counted like Python counts them, so an emoji counts once.
 export function meetsPasswordRule(value) {
-  return /[A-Z]/.test(value) && /\p{Nd}/u.test(value);
+  return [...value].length >= 12;
 }
 
 // Enter and arrow keys confirm or pick IME candidates while composing; keyCode 229

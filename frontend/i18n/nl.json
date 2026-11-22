@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google Agenda: abonneer u op de Tribu-feed in Google met de agendafeed URL, of exporteer Google-agenda's als ICS en importeer ze in Tribu. De twee zullen niet bidirectioneel synchroniseren; kies Tribu of Google als bron van waarheid per kalender.",
   "phone_sync_coexist_outlook": "Outlook/Exchange: voeg Tribu toe als een extra CalDAV-account indien ondersteund, of importeer een Outlook ICS-export. Outlook synchroniseert CalDAV niet vanuit Microsoft 365-postvakken - gebruik daar de exportroute.",
   "admin_self_hint": "Je eigen rol kun je niet veranderen",
-  "password_hint": "Min. 8 tekens, 1 hoofdletter, 1 cijfer",
+  "password_hint": "Minstens 12 tekens",
   "api_tokens": "API-tokens",
   "automation_webhooks": "Automatiseringswebhooks",
   "api_tokens_desc": "Persoonlijke toegangstokens voor apps en scripts van derden.",

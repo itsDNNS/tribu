@@ -50,7 +50,7 @@ module.exports = async function globalSetup(config) {
       await ctx.post('/api/auth/register', {
         data: {
           email: 'setup@example.com',
-          password: 'Setup1234',
+          password: 'Setup1234-long',
           display_name: 'Setup',
           family_name: 'Setup Family',
         },

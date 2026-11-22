@@ -60,12 +60,12 @@ describe('SecuritySection', () => {
     api.apiChangePassword.mockResolvedValueOnce({ ok: true, data: {} });
 
     render(<SecuritySection />);
-    fillForm({ oldPw: 'currentpw', newPw: 'Fresh1234', confirm: 'Fresh1234' });
+    fillForm({ oldPw: 'currentpw', newPw: 'fresh and long', confirm: 'fresh and long' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 
     await waitFor(() => {
-      expect(api.apiChangePassword).toHaveBeenCalledWith('currentpw', 'Fresh1234');
+      expect(api.apiChangePassword).toHaveBeenCalledWith('currentpw', 'fresh and long');
     });
     expect(mockToastSuccess).toHaveBeenCalledWith('password_changed');
   });
@@ -78,7 +78,7 @@ describe('SecuritySection', () => {
     });
 
     render(<SecuritySection />);
-    fillForm({ oldPw: 'wrongpw', newPw: 'Fresh1234', confirm: 'Fresh1234' });
+    fillForm({ oldPw: 'wrongpw', newPw: 'fresh and long', confirm: 'fresh and long' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 
@@ -91,10 +91,10 @@ describe('SecuritySection', () => {
     expect(screen.getByLabelText('new_password')).toHaveAttribute('aria-invalid', 'false');
   });
 
-  it('checks the uppercase and digit rule before sending the request', async () => {
+  it('checks the length rule before sending the request', async () => {
     const api = require('../../lib/api');
     render(<SecuritySection />);
-    fillForm({ oldPw: 'currentpw', newPw: 'lowercase1', confirm: 'lowercase1' });
+    fillForm({ oldPw: 'currentpw', newPw: 'too short', confirm: 'too short' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 
@@ -105,7 +105,7 @@ describe('SecuritySection', () => {
     expect(newField).toHaveFocus();
     expect(api.apiChangePassword).not.toHaveBeenCalled();
 
-    fireEvent.change(newField, { target: { value: 'Uppercase1' } });
+    fireEvent.change(newField, { target: { value: 'long enough now' } });
     expect(newField).toHaveAttribute('aria-invalid', 'false');
     expect(newField).toHaveAccessibleDescription('password_hint');
   });
@@ -115,7 +115,7 @@ describe('SecuritySection', () => {
     api.apiChangePassword.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     render(<SecuritySection />);
-    fillForm({ oldPw: 'a', newPw: 'B1234567', confirm: 'B1234567' });
+    fillForm({ oldPw: 'a', newPw: 'twelve chars', confirm: 'twelve chars' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 
@@ -131,7 +131,7 @@ describe('SecuritySection', () => {
 
     render(<SecuritySection />);
     const inputs = document.querySelectorAll('input[type="password"]');
-    fillForm({ oldPw: 'a', newPw: 'B1234567', confirm: 'B1234567' });
+    fillForm({ oldPw: 'a', newPw: 'twelve chars', confirm: 'twelve chars' });
 
     fireEvent.click(screen.getByRole('button', { name: 'change_password' }));
 

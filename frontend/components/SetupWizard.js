@@ -295,7 +295,7 @@ export default function SetupWizard() {
                 </div>
                 <div className="form-field">
                   <label htmlFor="setup-password">{t(messages, 'password')}</label>
-                  <input id="setup-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => { setPassword(e.target.value); if (invalidField === 'setup-password') setInvalidField(''); }} autoComplete="new-password" required minLength={8} maxLength={128} aria-invalid={invalidField === 'setup-password'} aria-describedby={describedBy('setup-password', 'setup-password-hint')} />
+                  <input id="setup-password" className="form-input" type="password" placeholder={t(messages, 'password')} value={password} onChange={(e) => { setPassword(e.target.value); if (invalidField === 'setup-password') setInvalidField(''); }} autoComplete="new-password" required maxLength={128} aria-invalid={invalidField === 'setup-password'} aria-describedby={describedBy('setup-password', 'setup-password-hint')} />
                   <small id="setup-password-hint" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t(messages, 'password_hint')}</small>
                 </div>
                 <div className="form-field">

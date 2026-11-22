@@ -17,7 +17,7 @@ test('the family sees who is out shopping', async ({ authedPage: page, apiCtx, b
     expect(invitation.ok()).toBeTruthy();
     invite = await invitation.json();
     const registered = await context.request.post('/api/auth/register-with-invite', {
-      data: { token: invite.token, email: `shopper-${Date.now()}@example.com`, password: 'Shopper1234', display_name: 'Annika Shopper' },
+      data: { token: invite.token, email: `shopper-${Date.now()}@example.com`, password: 'Shopper12345', display_name: 'Annika Shopper' },
     });
     expect(registered.ok(), await registered.text()).toBeTruthy();
     memberId = (await (await context.request.get('/api/auth/me')).json()).user_id;

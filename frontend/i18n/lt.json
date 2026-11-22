@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "„Google“ kalendorius: užsiprenumeruokite „Google“ kanalą Tribu naudodami kalendoriaus tiekimą URL arba eksportuokite „Google“ kalendorius kaip ICS ir importuokite juos į Tribu. Jie nebus sinchronizuojami dviem kryptimis; kalendoriuje kaip tiesos šaltinį pasirinkite Tribu arba Google.",
   "phone_sync_coexist_outlook": "„Outlook“ / „Exchange“: pridėkite Tribu kaip papildomą CalDAV paskyrą, jei ji palaikoma, arba importuokite „Outlook ICS“ eksportą. „Outlook“ nesinchronizuoja CalDAV iš „Microsoft 365“ pašto dėžučių – naudokite ten esantį eksportavimo maršrutą.",
   "admin_self_hint": "Jūs negalite pakeisti savo vaidmens",
-  "password_hint": "Min. 8 simboliai, 1 didžioji raidė, 1 skaičius",
+  "password_hint": "Bent 12 simbolių",
   "api_tokens": "API žetonai",
   "automation_webhooks": "Automatizavimo žiniatinklio kabliukai",
   "api_tokens_desc": "Asmeniniai prieigos prieigos raktai trečiųjų šalių programoms ir scenarijams.",

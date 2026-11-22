@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google Naptár: iratkozzon fel a Tribu hírcsatornára a Google-ban a URL naptártáblázattal, vagy exportálja a Google-naptárakat ICS néven, és importálja őket a Tribu-be. A kettő nem lesz kétirányú szinkronizálás; naptáronként az igazság forrásaként válassza a Tribu-t vagy a Google-t.",
   "phone_sync_coexist_outlook": "Outlook / Exchange: adjon hozzá Tribu-t további CalDAV-fiókként, ahol ez támogatott, vagy importáljon egy Outlook ICS exportálást. Az Outlook nem szinkronizálja a CalDAV fájlt a Microsoft 365-postafiókokból – használja az ottani exportálási útvonalat.",
   "admin_self_hint": "A saját szerepedet nem tudod megváltoztatni",
-  "password_hint": "Min. 8 karakter, 1 nagybetű, 1 szám",
+  "password_hint": "Legalább 12 karakter",
   "api_tokens": "API tokenek",
   "automation_webhooks": "Automatizálási webhookok",
   "api_tokens_desc": "Személyes hozzáférési tokenek harmadik féltől származó alkalmazásokhoz és szkriptekhez.",

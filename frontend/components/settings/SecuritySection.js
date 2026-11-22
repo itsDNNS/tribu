@@ -104,7 +104,6 @@ export default function SecuritySection() {
             type="password"
             {...fieldProps('new_password', newPassword, setNewPassword, true)}
             autoComplete="new-password"
-            minLength={8}
             required
           />
           <span id={fieldId('hint')} className="set-field-hint">{t(messages, 'password_hint')}</span>
@@ -116,7 +115,6 @@ export default function SecuritySection() {
             type="password"
             {...fieldProps('confirm_password', confirmPassword, setConfirmPassword)}
             autoComplete="new-password"
-            minLength={8}
             required
           />
         </div>

@@ -149,12 +149,11 @@ describe('errorField', () => {
 });
 
 describe('meetsPasswordRule', () => {
-  it('needs an uppercase letter and a digit like the backend', () => {
-    expect(meetsPasswordRule('Secure1Pass')).toBe(true);
-    expect(meetsPasswordRule('secure1pass')).toBe(false);
-    expect(meetsPasswordRule('SecurePass')).toBe(false);
-    expect(meetsPasswordRule('Ärger1xyz')).toBe(false);
-    expect(meetsPasswordRule('Secure\u0661pass')).toBe(true);
+  it('needs 12 characters like the backend, nothing else', () => {
+    expect(meetsPasswordRule('correct horse')).toBe(true);
+    expect(meetsPasswordRule('Secure1Pass')).toBe(false);
+    expect(meetsPasswordRule('🐎🐎🐎🐎🐎🐎🐎🐎🐎🐎🐎🐎')).toBe(true);
+    expect(meetsPasswordRule('🐎🐎🐎🐎🐎🐎')).toBe(false);
   });
 });
 

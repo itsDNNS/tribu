@@ -124,7 +124,7 @@
   "phone_sync_coexist_google": "Google Calendar: liostáil don fhotha Tribu in Google leis an bhfotha féilire URL, nó easpórtáil féilirí Google mar ICS agus iompórtáil isteach i Tribu iad. Ní dhéanfaidh an dá shioncronú go déthreoch; roghnaigh Tribu nó Google mar fhoinse na fírinne in aghaidh an fhéilire.",
   "phone_sync_coexist_outlook": "Outlook / Exchange: cuir Tribu mar chuntas breise CalDAV nuair a fhaigheann sé tacaíocht, nó iompórtáil onnmhairiú Outlook ICS. Ní shioncronaíonn Outlook CalDAV ó bhoscaí ríomhphoist Microsoft 365 — bain úsáid as an mbealach easpórtála ansin.",
   "admin_self_hint": "Ní féidir leat do ról féin a athrú",
-  "password_hint": "Min. 8 gcarachtar, 1 litir chás uachtair, 1 uimhir",
+  "password_hint": "12 charachtar ar a laghad",
   "api_tokens": "Comharthaí API",
   "automation_webhooks": "Leabhair Ghréasáin uathoibrithe",
   "api_tokens_desc": "Comharthaí rochtana pearsanta le haghaidh aipeanna agus scripteanna tríú páirtí.",
