@@ -87,7 +87,7 @@ from app.core.rate_limits import limiter_storage_options, rate_limit_key
 from app.core.sign_ins import audit_sign_in, log_failed_sign_in
 from app.core.utils import utcnow
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
-from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION
+from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION, env_list
 
 logger = logging.getLogger(__name__)
 
@@ -266,17 +266,12 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _split_env_list(name: str) -> list[str]:
-    raw = os.getenv(name, "")
-    return [part.strip() for part in raw.replace(";", ",").split(",") if part.strip()]
-
-
 def _cors_allowed_origins() -> list[str]:
     origins = {
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     }
-    origins.update(_split_env_list("CORS_ALLOWED_ORIGINS"))
+    origins.update(env_list("CORS_ALLOWED_ORIGINS"))
     return sorted(origins)
 
 

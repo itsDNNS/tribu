@@ -7,18 +7,16 @@ these headers (native apps, DAV and calendar clients, older browsers)
 and requests that carry no session cookie are not affected.
 """
 
-import os
 from collections.abc import Container, Mapping
 
-from app.core.config import COOKIE_NAME, REFRESH_COOKIE_NAME
+from app.core.config import COOKIE_NAME, REFRESH_COOKIE_NAME, env_list
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
 def _configured_origins() -> set[str]:
     # Origins an admin listed for direct backend access may use the session cookie.
-    raw = os.getenv("CORS_ALLOWED_ORIGINS", "")
-    return {part.strip() for part in raw.replace(";", ",").split(",") if part.strip()}
+    return set(env_list("CORS_ALLOWED_ORIGINS"))
 
 
 def is_foreign_cookie_request(method: str, headers: Mapping[str, str], cookies: Container[str]) -> bool:

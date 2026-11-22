@@ -57,3 +57,11 @@ def test_rate_limit_key_takes_the_last_hop_that_is_not_a_trusted_proxy(monkeypat
     monkeypatch.setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/8")
     request = SimpleNamespace(client=SimpleNamespace(host=peer), headers={"x-forwarded-for": forwarded_for})
     assert rate_limit_key(request) == expected
+
+
+def test_env_list_splits_on_commas_and_semicolons_and_drops_blanks(monkeypatch):
+    from app.core.config import env_list
+
+    monkeypatch.setenv("TRIBU_TEST_LIST", " a.example , ;b.example;; ")
+    assert env_list("TRIBU_TEST_LIST") == ["a.example", "b.example"]
+    assert env_list("TRIBU_TEST_UNSET") == []

@@ -20,6 +20,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy.exc import IntegrityError
 
 from app.core.clock import local_wall_now, utcnow
+from app.core.config import env_list
 from app.database import SessionLocal
 from app.models import Membership, NotificationDestination, NotificationDestinationDelivery, NotificationPreference
 
@@ -118,8 +119,7 @@ def _target_url_fernet() -> Fernet:
 
 
 def _allowed_private_hosts() -> set[str]:
-    raw = os.getenv("NOTIFICATION_DESTINATION_ALLOWED_HOSTS", "")
-    return {part.strip().lower().strip("[]") for part in raw.replace(";", ",").split(",") if part.strip()}
+    return {host.lower().strip("[]") for host in env_list("NOTIFICATION_DESTINATION_ALLOWED_HOSTS")}
 
 
 def _private_hosts_globally_allowed() -> bool:

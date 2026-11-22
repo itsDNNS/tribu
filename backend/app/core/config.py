@@ -11,3 +11,8 @@ REFRESH_COOKIE_NAME = "tribu_refresh"
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
 REFRESH_COOKIE_MAX_AGE = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
 SECURE_COOKIES = os.getenv("SECURE_COOKIES", "auto").strip().lower()
+
+
+def env_list(name: str) -> list[str]:
+    """The comma- or semicolon-separated values of an environment variable, without blanks."""
+    return [part.strip() for part in os.getenv(name, "").replace(";", ",").split(",") if part.strip()]
