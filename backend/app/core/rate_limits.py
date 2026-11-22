@@ -16,6 +16,8 @@ import os
 
 from fastapi import Request
 
+from app.core.config import env_list
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,8 +29,7 @@ def limiter_storage_options() -> dict:
 
 
 def _trusted_proxy_networks() -> list[ipaddress._BaseNetwork]:
-    raw_networks = os.getenv("TRUSTED_PROXY_CIDRS", "").replace(";", ",").split(",")
-    networks = ["127.0.0.0/8", "::1/128", *(value.strip() for value in raw_networks if value.strip())]
+    networks = ["127.0.0.0/8", "::1/128", *env_list("TRUSTED_PROXY_CIDRS")]
     parsed = []
     for value in networks:
         try:

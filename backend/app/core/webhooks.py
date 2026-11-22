@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import socket
 import urllib.error
 import urllib.request
@@ -13,6 +12,7 @@ from urllib.parse import urlsplit, urlunsplit
 from sqlalchemy.orm import Session
 
 from app.core.calendar_subscriptions import IcsSubscriptionError, hostname_from_url, validate_http_url_route
+from app.core.config import env_list
 from app.core.utils import utcnow
 from app.models import WebhookDelivery, WebhookEndpoint
 
@@ -82,8 +82,7 @@ def _webhook_network_error_name(exc: BaseException) -> str:
 
 
 def _webhook_allowed_hosts() -> set[str]:
-    raw = os.getenv("WEBHOOK_ALLOWED_HOSTS", "")
-    return {part.strip().lower().strip("[]") for part in raw.split(",") if part.strip()}
+    return {host.lower().strip("[]") for host in env_list("WEBHOOK_ALLOWED_HOSTS")}
 
 
 def _post_webhook_json(url: str, *, payload: dict[str, Any], headers: dict[str, str]) -> int:
