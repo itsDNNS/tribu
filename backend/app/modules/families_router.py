@@ -3,6 +3,7 @@ from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session, joinedload, aliased
 
 from app.core import cache, mfa
+from app.core.auth_sessions import set_temporary_password
 from app.core.contact_birthdays import sync_contact_birthday, sync_member_birthday
 from app.core.deps import current_user, ensure_adult, ensure_family_admin, ensure_family_membership
 from app.core.duties import forget_member
@@ -421,7 +422,7 @@ def update_member_role(
     "/{family_id}/members/{target_user_id}/reset-password",
     response_model=ResetPasswordResponse,
     summary="Reset member password",
-    description="Generate a new temporary password for a family member. Cannot reset your own password. Admin role required. Scope: `families:write`.",
+    description="Generate a new temporary password for a family member and sign them out everywhere. Cannot reset your own password. Admin role required. Scope: `families:write`.",
     response_description="New temporary password",
     responses={**NOT_FOUND_RESPONSE},
 )
@@ -448,9 +449,7 @@ def reset_member_password(
     if not target_user:
         raise HTTPException(status_code=404, detail=error_detail(USER_NOT_FOUND))
 
-    temp_password = generate_temp_password()
-    target_user.password_hash = hash_password(temp_password)
-    target_user.must_change_password = True
+    temp_password = set_temporary_password(db, target_user)
     _audit(db, family_id, user.id, "password_reset", target_user_id=target_user_id)
     db.commit()
 

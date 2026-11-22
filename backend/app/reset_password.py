@@ -7,10 +7,9 @@ admin forgot their password:
 """
 import sys
 
-from app.core.auth_sessions import end_all_sessions
+from app.core.auth_sessions import set_temporary_password
 from app.database import SessionLocal
 from app.models import User
-from app.security import generate_temp_password, hash_password
 
 
 def reset_password(email: str) -> str | None:
@@ -19,10 +18,7 @@ def reset_password(email: str) -> str | None:
         user = db.query(User).filter(User.email == email.strip().lower()).first()
         if user is None:
             return None
-        temporary = generate_temp_password()
-        user.password_hash = hash_password(temporary)
-        user.must_change_password = True
-        end_all_sessions(db, user)
+        temporary = set_temporary_password(db, user)
         db.commit()
         return temporary
 

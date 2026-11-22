@@ -18,6 +18,8 @@ from app.models import User, UserSession
 from app.security import (
     create_access_token,
     generate_refresh_token,
+    generate_temp_password,
+    hash_password,
     refresh_token_lookup_key,
     verify_refresh_token,
 )
@@ -60,6 +62,15 @@ def end_all_sessions(db: Session, user: User) -> None:
         UserSession.user_id == user.id,
         UserSession.revoked_at.is_(None),
     ).update({UserSession.revoked_at: now}, synchronize_session=False)
+
+
+def set_temporary_password(db: Session, user: User) -> str:
+    """Give the account a temporary password it must change at the next sign-in, and sign it out everywhere."""
+    temporary = generate_temp_password()
+    user.password_hash = hash_password(temporary)
+    user.must_change_password = True
+    end_all_sessions(db, user)
+    return temporary
 
 
 def clear_session_cookies(response: Response) -> None:
