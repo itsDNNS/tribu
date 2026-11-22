@@ -678,17 +678,18 @@ class TestEmailVerifiedStrict:
         assert claims.email_verified is False
 
 
-class TestVerifyPasswordNullHash:
-    """Regression: verify_password must not crash on None/empty hash."""
+@pytest.mark.parametrize("hashed", [None, "", "deadbeef"])
+def test_verify_password_refuses_a_missing_hash_after_the_same_work(hashed, checkpw_calls):
+    """A missing or foreign hash is refused, but only after a full bcrypt check,
+    so the answer takes as long as for a wrong password."""
+    from app.security import verify_password
 
-    def test_none_hash_returns_false(self):
-        from app.security import verify_password
-        assert verify_password("anything", None) is False
+    assert verify_password("", hashed) is False
+    assert len(checkpw_calls) == 1
 
-    def test_empty_hash_returns_false(self):
-        from app.security import verify_password
-        assert verify_password("anything", "") is False
 
-    def test_non_bcrypt_hash_returns_false(self):
-        from app.security import verify_password
-        assert verify_password("anything", "deadbeef") is False
+def test_a_password_over_72_bytes_is_hashed_and_verified():
+    from app.security import hash_password, verify_password
+
+    password = "Long" + "x" * 96
+    assert verify_password(password, hash_password(password)) is True
