@@ -561,6 +561,7 @@
   "error.MFA_CODE_INVALID": "Codul nu este valid",
   "error.MFA_CHALLENGE_INVALID": "Autentificarea a durat prea mult. Autentifică-te din nou.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Prea multe coduri greșite. Așteaptă 15 minute și încearcă din nou.",
+  "error.SIGN_IN_DELAYED": "Prea multe parole greșite. Așteaptă {seconds} s și încearcă din nou.",
   "error.MFA_ALREADY_ENABLED": "Autentificarea în doi pași este deja activată",
   "error.MFA_NOT_ENABLED": "Autentificarea în doi pași nu este activată",
   "error.MFA_SETUP_EXPIRED": "Configurarea a durat prea mult. Începe din nou.",

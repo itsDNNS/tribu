@@ -559,6 +559,7 @@
   "error.MFA_CODE_INVALID": "Koda ni veljavna",
   "error.MFA_CHALLENGE_INVALID": "Prijava je trajala predolgo. Prijavite se znova.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Preveč napačnih kod. Počakajte 15 minut in poskusite znova.",
+  "error.SIGN_IN_DELAYED": "Preveč napačnih gesel. Počakajte {seconds} s in poskusite znova.",
   "error.MFA_ALREADY_ENABLED": "Prijava v dveh korakih je že vklopljena",
   "error.MFA_NOT_ENABLED": "Prijava v dveh korakih ni vklopljena",
   "error.MFA_SETUP_EXPIRED": "Nastavitev je trajala predolgo. Začnite znova.",

@@ -560,6 +560,7 @@
   "error.MFA_CODE_INVALID": "Koden er ugyldig",
   "error.MFA_CHALLENGE_INVALID": "Login tog for lang tid. Log ind igen.",
   "error.MFA_TOO_MANY_ATTEMPTS": "For mange forkerte koder. Vent 15 minutter, og prøv igen.",
+  "error.SIGN_IN_DELAYED": "For mange forkerte adgangskoder. Vent {seconds} sek., og prøv igen.",
   "error.MFA_ALREADY_ENABLED": "Login i to trin er allerede slået til",
   "error.MFA_NOT_ENABLED": "Login i to trin er ikke slået til",
   "error.MFA_SETUP_EXPIRED": "Opsætningen tog for lang tid. Start forfra.",

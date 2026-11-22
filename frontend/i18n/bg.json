@@ -560,6 +560,7 @@
   "error.MFA_CODE_INVALID": "Кодът е невалиден",
   "error.MFA_CHALLENGE_INVALID": "Влизането отне твърде дълго. Влезте отново.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Твърде много грешни кодове. Изчакайте 15 минути и опитайте отново.",
+  "error.SIGN_IN_DELAYED": "Твърде много грешни пароли. Изчакайте {seconds} с и опитайте отново.",
   "error.MFA_ALREADY_ENABLED": "Влизането в две стъпки вече е включено",
   "error.MFA_NOT_ENABLED": "Влизането в две стъпки не е включено",
   "error.MFA_SETUP_EXPIRED": "Настройката отне твърде дълго. Започнете отначало.",

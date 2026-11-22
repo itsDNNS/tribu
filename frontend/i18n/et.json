@@ -560,6 +560,7 @@
   "error.MFA_CODE_INVALID": "Kood ei kehti",
   "error.MFA_CHALLENGE_INVALID": "Sisselogimine võttis liiga kaua aega. Logi uuesti sisse.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Liiga palju valesid koode. Oota 15 minutit ja proovi uuesti.",
+  "error.SIGN_IN_DELAYED": "Liiga palju valesid paroole. Oota {seconds} s ja proovi uuesti.",
   "error.MFA_ALREADY_ENABLED": "Kaheastmeline sisselogimine on juba sees",
   "error.MFA_NOT_ENABLED": "Kaheastmeline sisselogimine pole sees",
   "error.MFA_SETUP_EXPIRED": "Seadistamine võttis liiga kaua aega. Alusta uuesti.",

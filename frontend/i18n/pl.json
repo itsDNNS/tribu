@@ -559,6 +559,7 @@
   "error.MFA_CODE_INVALID": "Kod jest nieprawidłowy",
   "error.MFA_CHALLENGE_INVALID": "Logowanie trwało zbyt długo. Zaloguj się ponownie.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Zbyt wiele błędnych kodów. Odczekaj 15 minut i spróbuj ponownie.",
+  "error.SIGN_IN_DELAYED": "Zbyt wiele błędnych haseł. Odczekaj {seconds} s i spróbuj ponownie.",
   "error.MFA_ALREADY_ENABLED": "Logowanie dwuetapowe jest już włączone",
   "error.MFA_NOT_ENABLED": "Logowanie dwuetapowe nie jest włączone",
   "error.MFA_SETUP_EXPIRED": "Konfiguracja trwała zbyt długo. Zacznij od nowa.",

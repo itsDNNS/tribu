@@ -30,7 +30,7 @@ from app.core.duties import forget_member
 from app.core.auth_sessions import clear_session_cookies, end_all_sessions, issue_refresh_session, issue_session_cookies, revoke_refresh_session, rotate_refresh_session, rotate_refresh_token
 from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.core.errors import (
-    error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, OLD_PASSWORD_INCORRECT,
+    error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, SIGN_IN_DELAYED, OLD_PASSWORD_INCORRECT,
     LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED,
     OPEN_REGISTRATION_DISABLED, SETUP_RESTORE_TOKEN_REQUIRED, MFA_REQUIRED,
     SETUP_RESTORE_TOKEN_INVALID, SETUP_RESTORE_UPLOAD_TOO_LARGE, PROFILE_IMAGE_UNREADABLE,
@@ -84,7 +84,7 @@ from app.schemas import (
 )
 from app.core import cache, process_health
 from app.core.rate_limits import limiter_storage_options, rate_limit_key
-from app.core.sign_ins import audit_sign_in, log_failed_sign_in
+from app.core.sign_ins import audit_sign_in, count_password_attempt, log_failed_sign_in, password_wait
 from app.core.utils import utcnow
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION
@@ -440,8 +440,13 @@ def _password_user(request: Request, db: Session, payload: LoginRequest) -> User
     """The account for a correct email and password; a wrong one is logged."""
     if oidc_core.password_login_disabled(db):
         raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+    wait = password_wait(payload.email)
+    if wait:
+        raise HTTPException(status_code=429, detail=error_detail(SIGN_IN_DELAYED, seconds=wait), headers={"Retry-After": str(wait)})
     user = db.query(User).filter(User.email == payload.email.lower()).first()
-    if not verify_password(payload.password, getattr(user, "password_hash", None)):
+    ok = verify_password(payload.password, getattr(user, "password_hash", None))
+    count_password_attempt(payload.email, ok=ok)
+    if not ok:
         log_failed_sign_in(request, "password")
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
     return user
@@ -458,7 +463,7 @@ def _password_user(request: Request, db: Session, payload: LoginRequest) -> User
         "for `POST /auth/login/mfa` instead. "
         "Rate limited to 20 requests per minute. No authentication required."
     ),
-    responses={401: {"model": ErrorResponse, "description": "Invalid credentials"}},
+    responses={401: {"model": ErrorResponse, "description": "Invalid credentials"}, 429: {"model": ErrorResponse, "description": "Too many wrong passwords for this email; wait the seconds in `params.seconds`"}},
     response_description="Login successful",
 )
 @limiter.limit("20/minute")
@@ -487,7 +492,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
         "Rate limited to 20 requests per minute. No authentication required."
     ),
     response_model=MobileLoginResponse,
-    responses={401: {"model": ErrorResponse, "description": "Invalid credentials"}},
+    responses={401: {"model": ErrorResponse, "description": "Invalid credentials"}, 429: {"model": ErrorResponse, "description": "Too many wrong passwords for this email; wait the seconds in `params.seconds`"}},
     response_description="Mobile login successful",
 )
 @limiter.limit("20/minute")

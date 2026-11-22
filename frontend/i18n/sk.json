@@ -559,6 +559,7 @@
   "error.MFA_CODE_INVALID": "Kód nie je platný",
   "error.MFA_CHALLENGE_INVALID": "Prihlásenie trvalo príliš dlho. Prihláste sa znova.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Príliš veľa chybných kódov. Počkajte 15 minút a skúste to znova.",
+  "error.SIGN_IN_DELAYED": "Príliš veľa chybných hesiel. Počkajte {seconds} s a skúste to znova.",
   "error.MFA_ALREADY_ENABLED": "Dvojstupňové prihlásenie je už zapnuté",
   "error.MFA_NOT_ENABLED": "Dvojstupňové prihlásenie nie je zapnuté",
   "error.MFA_SETUP_EXPIRED": "Nastavenie trvalo príliš dlho. Začnite odznova.",

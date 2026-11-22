@@ -560,6 +560,7 @@
   "error.MFA_CODE_INVALID": "Koodi ei kelpaa",
   "error.MFA_CHALLENGE_INVALID": "Kirjautuminen kesti liian kauan. Kirjaudu uudelleen.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Liian monta väärää koodia. Odota 15 minuuttia ja yritä uudelleen.",
+  "error.SIGN_IN_DELAYED": "Liian monta väärää salasanaa. Odota {seconds} s ja yritä uudelleen.",
   "error.MFA_ALREADY_ENABLED": "Kaksivaiheinen kirjautuminen on jo päällä",
   "error.MFA_NOT_ENABLED": "Kaksivaiheinen kirjautuminen ei ole päällä",
   "error.MFA_SETUP_EXPIRED": "Käyttöönotto kesti liian kauan. Aloita alusta.",

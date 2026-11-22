@@ -209,3 +209,11 @@ def reset_rate_limits():
 
     app_limiter.reset()
     mfa_limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def forget_password_attempts():
+    """Wrong passwords in one test must not delay sign-ins in the next."""
+    from app.core.sign_ins import password_attempts
+
+    password_attempts.reset()

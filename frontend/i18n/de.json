@@ -580,6 +580,7 @@
   "error.MFA_CODE_INVALID": "Der Code ist ungültig",
   "error.MFA_CHALLENGE_INVALID": "Die Anmeldung hat zu lange gedauert. Bitte melde dich erneut an.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Zu viele falsche Codes. Bitte warte 15 Minuten und versuche es dann erneut.",
+  "error.SIGN_IN_DELAYED": "Zu viele falsche Passwörter. Bitte warte {seconds} Sek. und versuche es dann erneut.",
   "error.MFA_ALREADY_ENABLED": "Die Zwei-Schritt-Anmeldung ist bereits an",
   "error.MFA_NOT_ENABLED": "Die Zwei-Schritt-Anmeldung ist nicht an",
   "error.MFA_SETUP_EXPIRED": "Die Einrichtung hat zu lange gedauert. Bitte starte neu.",

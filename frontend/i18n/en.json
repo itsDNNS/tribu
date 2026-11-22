@@ -581,6 +581,7 @@
   "error.MFA_CODE_INVALID": "The code is not valid",
   "error.MFA_CHALLENGE_INVALID": "The sign-in took too long. Please sign in again.",
   "error.MFA_TOO_MANY_ATTEMPTS": "Too many wrong codes. Please wait 15 minutes and try again.",
+  "error.SIGN_IN_DELAYED": "Too many wrong passwords. Please wait {seconds} s and try again.",
   "error.MFA_ALREADY_ENABLED": "Two-step sign-in is already on",
   "error.MFA_NOT_ENABLED": "Two-step sign-in is not on",
   "error.MFA_SETUP_EXPIRED": "The setup took too long. Please start again.",

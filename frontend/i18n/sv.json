@@ -560,6 +560,7 @@
   "error.MFA_CODE_INVALID": "Koden är ogiltig",
   "error.MFA_CHALLENGE_INVALID": "Inloggningen tog för lång tid. Logga in igen.",
   "error.MFA_TOO_MANY_ATTEMPTS": "För många felaktiga koder. Vänta 15 minuter och försök igen.",
+  "error.SIGN_IN_DELAYED": "För många felaktiga lösenord. Vänta {seconds} sek. och försök igen.",
   "error.MFA_ALREADY_ENABLED": "Inloggning i två steg är redan på",
   "error.MFA_NOT_ENABLED": "Inloggning i två steg är inte på",
   "error.MFA_SETUP_EXPIRED": "Inställningen tog för lång tid. Börja om.",
