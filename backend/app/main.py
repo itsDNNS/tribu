@@ -492,7 +492,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
         raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
 
     user = db.query(User).filter(User.email == payload.email.lower()).first()
-    if not user or not verify_password(payload.password, user.password_hash):
+    if not verify_password(payload.password, getattr(user, "password_hash", None)):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
 
     if mfa.mfa_enabled(user):
@@ -525,7 +525,7 @@ def mobile_login(request: Request, payload: LoginRequest, db: Session = Depends(
         raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
 
     user = db.query(User).filter(User.email == payload.email.lower()).first()
-    if not user or not verify_password(payload.password, user.password_hash):
+    if not verify_password(payload.password, getattr(user, "password_hash", None)):
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
 
     if mfa.mfa_enabled(user):

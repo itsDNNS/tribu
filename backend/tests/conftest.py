@@ -188,3 +188,14 @@ def oidc_db(app_db):
 
     yield
     oidc_core.invalidate_discovery_cache()
+
+
+@pytest.fixture
+def checkpw_calls(monkeypatch):
+    """Records every bcrypt check, to prove a login did the full password work."""
+    from app import security
+
+    calls = []
+    real_checkpw = security.bcrypt.checkpw
+    monkeypatch.setattr(security.bcrypt, "checkpw", lambda *args: calls.append(args) or real_checkpw(*args))
+    return calls
