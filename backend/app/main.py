@@ -32,7 +32,7 @@ from app.core.scopes import require_scope, SCOPE_DESCRIPTIONS
 from app.core.errors import (
     error_detail, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, SIGN_IN_DELAYED, OLD_PASSWORD_INCORRECT,
     LAST_ADMIN, MEMBER_NOT_FOUND, INVALID_CONFIRMATION, PASSWORD_LOGIN_DISABLED,
-    OPEN_REGISTRATION_DISABLED, SETUP_RESTORE_TOKEN_REQUIRED, MFA_REQUIRED,
+    OPEN_REGISTRATION_DISABLED, SETUP_RESTORE_TOKEN_REQUIRED, MFA_REQUIRED, MFA_SETUP_REQUIRED,
     SETUP_RESTORE_TOKEN_INVALID, SETUP_RESTORE_UPLOAD_TOO_LARGE, PROFILE_IMAGE_UNREADABLE,
     CROSS_SITE_REQUEST,
 )
@@ -497,6 +497,9 @@ def mobile_login(request: Request, payload: LoginRequest, db: Session = Depends(
     if mfa.mfa_enabled(user):
         # An error rather than a new success shape, so older apps that expect tokens fail clearly.
         raise HTTPException(status_code=401, detail=error_detail(MFA_REQUIRED, mfa_token=mfa.create_login_challenge(user)))
+    if mfa.setup_required(db, user):
+        # The setup needs the web app's QR code.
+        raise HTTPException(status_code=401, detail=error_detail(MFA_SETUP_REQUIRED))
 
     audit_sign_in(db, user, "password")
     refresh_token = issue_refresh_session(db, user)
@@ -599,8 +602,8 @@ def refresh_session(request: Request, db: Session = Depends(get_db)):
     responses={**AUTH_RESPONSES},
     response_description="User profile",
 )
-def me(user: User = Depends(current_user), _scope=require_scope("profile:read")):
-    return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image_large, must_change_password=user.must_change_password, has_completed_onboarding=user.has_completed_onboarding)
+def me(user: User = Depends(current_user), db: Session = Depends(get_db), _scope=require_scope("profile:read")):
+    return MeResponse(user_id=user.id, email=user.email, display_name=user.display_name, profile_image=user.profile_image_large, must_change_password=user.must_change_password, has_completed_onboarding=user.has_completed_onboarding, mfa_setup_required=mfa.setup_required(db, user))
 
 
 @app.patch(

@@ -7,8 +7,8 @@ import logging
 import pytest
 
 from app.core import mfa
-from app.models import AuditLog, User
-from tests.support import ADMIN_EMAIL, PASSWORD, TestSession, new_client, seed_family
+from app.models import AuditLog
+from tests.support import ADMIN_EMAIL, PASSWORD, TestSession, new_client, seed_family, turn_on_two_step
 
 
 pytestmark = pytest.mark.usefixtures("app_db", "reset_rate_limits")
@@ -35,10 +35,7 @@ def test_wrong_passwords_are_only_logged_and_sign_ins_audited(path, caplog):
 
 def test_two_step_codes_are_audited_and_wrong_ones_logged(caplog):
     seed_family()
-    secret = mfa.generate_totp_secret()
-    with TestSession() as db:
-        mfa.enable_mfa(db, db.query(User).filter(User.email == ADMIN_EMAIL).one(), secret, mfa.current_step() - 5)
-        db.commit()
+    secret = turn_on_two_step(ADMIN_EMAIL)
     client = new_client()
     token = client.post("/auth/login", json={"email": ADMIN_EMAIL, "password": PASSWORD}).json()["mfa_token"]
 

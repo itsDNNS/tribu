@@ -20,6 +20,7 @@ import jwt
 from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow_aware
+from app.core.utils import get_setting
 from app.models import MfaRecoveryCode, User
 from app.security import JWT_ALG, JWT_SECRET
 
@@ -36,6 +37,10 @@ LOGIN_CHALLENGE_TTL = timedelta(minutes=5)
 SETUP_TTL = timedelta(minutes=10)
 MAX_FAILED_ATTEMPTS = 5
 LOCKOUT = timedelta(minutes=15)
+
+REQUIRED_SETTING = "require_mfa"
+# What an account that still has to set it up may reach: the setup itself.
+SETUP_PATHS = frozenset({"/auth/me", "/auth/me/mfa", "/auth/me/mfa/setup", "/auth/me/mfa/confirm"})
 
 LOGIN_CHALLENGE_TYPE = "mfa_login"
 SETUP_TYPE = "mfa_setup"
@@ -155,6 +160,16 @@ def enable_mfa(db: Session, user: User, secret: str, confirmed_step: int) -> lis
     user.mfa_failed_attempts = 0
     user.mfa_last_failed_at = None
     return codes
+
+
+def mfa_required(db: Session) -> bool:
+    """The instance admin requires two-step sign-in for every account with a password."""
+    return get_setting(db, REQUIRED_SETTING) == "true"
+
+
+def setup_required(db: Session, user: User) -> bool:
+    """True while this account must set it up; accounts with single sign-on only never must."""
+    return bool(user.password_hash) and not mfa_enabled(user) and mfa_required(db)
 
 
 def disable_mfa(db: Session, user: User) -> None:

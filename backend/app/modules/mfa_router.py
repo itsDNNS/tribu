@@ -17,6 +17,7 @@ from app.core.errors import (
     MFA_CHALLENGE_INVALID,
     MFA_CODE_INVALID,
     MFA_NOT_ENABLED,
+    MFA_REQUIRED_BY_ADMIN,
     MFA_SETUP_EXPIRED,
     MFA_TOO_MANY_ATTEMPTS,
     PASSWORD_INCORRECT,
@@ -99,6 +100,7 @@ def mfa_status(
         enabled=enabled,
         available=bool(user.password_hash) and not oidc_core.password_login_disabled(db),
         recovery_codes_remaining=mfa.remaining_recovery_codes(db, user) if enabled else 0,
+        required=mfa.mfa_required(db),
     )
 
 
@@ -181,6 +183,8 @@ def mfa_disable(
 ):
     if not mfa.mfa_enabled(user):
         raise HTTPException(status_code=400, detail=error_detail(MFA_NOT_ENABLED))
+    if mfa.mfa_required(db):
+        raise HTTPException(status_code=409, detail=error_detail(MFA_REQUIRED_BY_ADMIN))
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=400, detail=error_detail(PASSWORD_INCORRECT))
     _check_code(db, user, payload.code)

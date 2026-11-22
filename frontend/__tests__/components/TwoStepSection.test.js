@@ -54,7 +54,8 @@ describe('TwoStepSection', () => {
       .mockResolvedValueOnce({ ok: false, data: { detail: { code: 'MFA_CODE_INVALID' } } })
       .mockResolvedValueOnce({ ok: true, data: { recovery_codes: ['aaaaa-bbbbb', 'ccccc-ddddd'] } });
 
-    render(<TwoStepSection />);
+    const onEnabled = jest.fn();
+    render(<TwoStepSection onEnabled={onEnabled} />);
     fireEvent.click(await screen.findByRole('button', { name: 'two_step.turn_on' }));
     fireEvent.change(screen.getByLabelText('password'), { target: { value: 'Secure1Pass' } });
     fireEvent.click(screen.getByRole('button', { name: 'two_step.continue' }));
@@ -88,8 +89,19 @@ describe('TwoStepSection', () => {
     fireEvent.click(done);
 
     expect(mockToastSuccess).toHaveBeenCalledWith('two_step.enabled_toast');
+    expect(onEnabled).toHaveBeenCalled();
     expect(screen.queryByTestId('two-step-recovery-codes')).not.toBeInTheDocument();
     expect(screen.getByText(/two_step\.codes_low/)).toBeInTheDocument();
+  });
+
+  it('cannot be turned off while the admin requires it', async () => {
+    const api = require('../../lib/api');
+    api.apiGetMfaStatus.mockResolvedValue({ ok: true, data: { enabled: true, available: true, recovery_codes_remaining: 10, required: true } });
+
+    render(<TwoStepSection />);
+
+    expect(await screen.findByText('error.MFA_REQUIRED_BY_ADMIN')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'two_step.turn_off' })).not.toBeInTheDocument();
   });
 
   it('turns off with password and code', async () => {

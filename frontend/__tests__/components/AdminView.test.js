@@ -41,7 +41,7 @@ const messages = {
   admin_sections: 'Admin sections',
   admin_tab_members: 'Members',
   invite_title: 'Invitations',
-  'sso.title': 'Single Sign-On',
+  admin_tab_sign_in: 'Sign-in',
   backup_title: 'Backups',
   audit_log_title: 'Audit Log',
   time_format: 'Time format',
@@ -100,7 +100,7 @@ describe('AdminView', () => {
     const nav = screen.getByRole('navigation', { name: 'Admin sections' });
     expect(within(nav).getByRole('button', { name: 'Members' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('button', { name: 'Invitations' })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: 'Single Sign-On' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Sign-in' })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Backups' })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Audit Log' })).toBeInTheDocument();
 
@@ -110,9 +110,9 @@ describe('AdminView', () => {
     expect(screen.queryByLabelText('Backups panel')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Audit log panel')).not.toBeInTheDocument();
 
-    fireEvent.click(within(nav).getByRole('button', { name: 'Single Sign-On' }));
+    fireEvent.click(within(nav).getByRole('button', { name: 'Sign-in' }));
 
-    expect(within(nav).getByRole('button', { name: 'Single Sign-On' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('button', { name: 'Sign-in' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByLabelText('SSO panel')).toBeInTheDocument();
     expect(screen.queryByText('Time format')).not.toBeInTheDocument();
   });

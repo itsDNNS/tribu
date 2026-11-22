@@ -485,13 +485,17 @@ export function AppProvider({ children }) {
       setLoading(true);
       try {
         // The startup check already loaded the account; a fresh sign-in has not.
-        if (!me) {
+        let account = me;
+        if (!account) {
           const { ok: meOk, data: meData } = await api.apiGetMe();
           if (meOk) {
+            account = meData;
             setMe(meData);
             if (meData.profile_image) setProfileImage(meData.profile_image);
           }
         }
+        // Required two-step sign-in comes first; the backend refuses everything else until then.
+        if (account?.mfa_setup_required) return;
 
         const { ok: famOk, data: famData } = await api.apiGetMyFamilies();
         if (famOk && famData.length > 0) {
@@ -530,8 +534,9 @@ export function AppProvider({ children }) {
   }, [setActiveView]);
 
   // SSE real-time notifications with polling fallback
+  const sessionReady = !!me && !me.mfa_setup_required;
   useEffect(() => {
-    if (!loggedIn || demoMode) return;
+    if (!loggedIn || demoMode || !sessionReady) return;
 
     let cancelled = false;
     let es = null;
@@ -591,7 +596,7 @@ export function AppProvider({ children }) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [loggedIn, demoMode, loadNotificationsWrapped]);
+  }, [loggedIn, demoMode, sessionReady, loadNotificationsWrapped]);
 
   const value = {
     // Auth
