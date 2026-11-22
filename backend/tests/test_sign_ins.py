@@ -1,4 +1,4 @@
-"""Sign-ins in the audit log, and the failed sign-in log line.
+"""The failed sign-in log line, and sign-ins in the audit log.
 
 The address comes from ``rate_limit_key``, tested with trusted proxies in test_cors_headers.
 """
@@ -20,7 +20,7 @@ def _entries() -> list[tuple[str, int, dict]]:
 
 
 @pytest.mark.parametrize("path", ["/auth/login", "/auth/mobile-login"])
-def test_password_sign_ins_are_audited_and_failures_logged(path, caplog):
+def test_wrong_passwords_are_only_logged_and_sign_ins_audited(path, caplog):
     _, admin_id, _ = seed_family()
     client = new_client()
 
@@ -30,13 +30,10 @@ def test_password_sign_ins_are_audited_and_failures_logged(path, caplog):
     assert client.post(path, json={"email": ADMIN_EMAIL, "password": PASSWORD}).status_code == 200
 
     assert caplog.messages == ["Failed sign-in: ip=testclient method=password"] * 2
-    assert _entries() == [
-        ("sign_in_failed", admin_id, {"ip": "testclient", "method": "password"}),
-        ("sign_in", admin_id, {"ip": "testclient", "method": "password"}),
-    ]
+    assert _entries() == [("sign_in", admin_id, {"method": "password"})]
 
 
-def test_two_step_codes_are_audited_and_failures_logged(caplog):
+def test_two_step_codes_are_audited_and_wrong_ones_logged(caplog):
     seed_family()
     secret = mfa.generate_totp_secret()
     with TestSession() as db:
@@ -51,7 +48,7 @@ def test_two_step_codes_are_audited_and_failures_logged(caplog):
     assert client.post("/auth/login/mfa", json={"mfa_token": token, "code": code}).status_code == 200
 
     assert caplog.messages == ["Failed sign-in: ip=testclient method=two-step"]
-    assert [(action, details["method"]) for action, _, details in _entries()] == [
-        ("sign_in_failed", "two-step"),
-        ("sign_in", "two-step"),
+    assert [(action, details) for action, _, details in _entries()] == [
+        ("sign_in_failed", {"method": "two-step"}),
+        ("sign_in", {"method": "two-step"}),
     ]

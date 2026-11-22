@@ -55,7 +55,6 @@ export default function AuditLogSection() {
     if (entry.action === 'member_created' && entry.details.email) return entry.details.email;
     if (entry.action === 'invite_created' && entry.details.role_preset) return `${entry.details.role_preset} (${entry.details.expires_in_days}d)`;
     if (entry.action === 'invite_used' && entry.details.email) return entry.details.email;
-    if (entry.action.startsWith('sign_in')) return entry.details.ip;
     return null;
   }
 

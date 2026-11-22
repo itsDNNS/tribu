@@ -84,7 +84,7 @@ from app.schemas import (
 )
 from app.core import cache, process_health
 from app.core.rate_limits import limiter_storage_options, rate_limit_key
-from app.core.sign_ins import record_sign_in
+from app.core.sign_ins import audit_sign_in, log_failed_sign_in
 from app.core.utils import utcnow
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION
@@ -437,13 +437,12 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
 
 
 def _password_user(request: Request, db: Session, payload: LoginRequest) -> User:
-    """The account for a correct email and password; a wrong one is logged and audited."""
+    """The account for a correct email and password; a wrong one is logged."""
     if oidc_core.password_login_disabled(db):
         raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     if not verify_password(payload.password, getattr(user, "password_hash", None)):
-        record_sign_in(request, db, user, "password", ok=False)
-        db.commit()
+        log_failed_sign_in(request, "password")
         raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
     return user
 
@@ -469,7 +468,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     if mfa.mfa_enabled(user):
         return JSONResponse(content={"status": "mfa_required", "mfa_token": mfa.create_login_challenge(user)})
 
-    record_sign_in(request, db, user, "password")
+    audit_sign_in(db, user, "password")
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
     issue_session_cookies(request, response, db, user)
     db.commit()
@@ -499,7 +498,7 @@ def mobile_login(request: Request, payload: LoginRequest, db: Session = Depends(
         # An error rather than a new success shape, so older apps that expect tokens fail clearly.
         raise HTTPException(status_code=401, detail=error_detail(MFA_REQUIRED, mfa_token=mfa.create_login_challenge(user)))
 
-    record_sign_in(request, db, user, "password")
+    audit_sign_in(db, user, "password")
     refresh_token = issue_refresh_session(db, user)
     db.commit()
     return MobileLoginResponse(

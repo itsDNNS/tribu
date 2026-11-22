@@ -5,9 +5,9 @@ multiply every limit (for example login attempts). With Valkey configured, all
 workers share the counters and fall back to in-memory counting while Valkey is
 unreachable.
 
-Limits count per client address: the first ``X-Forwarded-For`` hop when the
-request comes from a trusted proxy (loopback or ``TRUSTED_PROXY_CIDRS``),
-otherwise the direct peer.
+Limits count per client address: when the request comes from a trusted proxy
+(loopback or ``TRUSTED_PROXY_CIDRS``), the last ``X-Forwarded-For`` hop that
+isn't a trusted proxy, otherwise the direct peer.
 """
 
 import ipaddress
@@ -49,14 +49,20 @@ def _client_ip_is_trusted_proxy(client_host: str | None) -> bool:
 
 
 def rate_limit_key(request: Request) -> str:
-    client_host = request.client.host if request.client else ""
-    if _client_ip_is_trusted_proxy(client_host):
-        forwarded_for = request.headers.get("x-forwarded-for", "")
-        first_hop = forwarded_for.split(",", 1)[0].strip()
-        if first_hop:
+    """The client's address: from a trusted proxy, the last ``X-Forwarded-For`` hop that isn't one.
+
+    Proxies append to the header, so only the hops on the right were added by
+    them; anything further left may come from the client.
+    """
+    address = request.client.host if request.client else ""
+    if _client_ip_is_trusted_proxy(address):
+        for hop in reversed(request.headers.get("x-forwarded-for", "").split(",")):
+            hop = hop.strip()
             try:
-                ipaddress.ip_address(first_hop)
-                return first_hop
+                ipaddress.ip_address(hop)
             except ValueError:
-                pass
-    return client_host or "unknown"
+                break
+            address = hop
+            if not _client_ip_is_trusted_proxy(hop):
+                break
+    return address or "unknown"

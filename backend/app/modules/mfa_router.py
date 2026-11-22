@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core import mfa
 from app.core import oidc as oidc_core
 from app.core.auth_sessions import issue_refresh_session, issue_session_cookies
-from app.core.sign_ins import record_sign_in
+from app.core.sign_ins import audit_sign_in, log_failed_sign_in
 from app.core.config import REFRESH_COOKIE_MAX_AGE
 from app.core.deps import current_user
 from app.core.errors import (
@@ -74,10 +74,11 @@ def _sign_in_user(request: Request, db: Session, payload: MfaLoginRequest) -> Us
     try:
         _check_code(db, user, payload.code)
     except HTTPException:
-        record_sign_in(request, db, user, "two-step", ok=False)
+        log_failed_sign_in(request, "two-step")
+        audit_sign_in(db, user, "two-step", ok=False)
         db.commit()
         raise
-    record_sign_in(request, db, user, "two-step")
+    audit_sign_in(db, user, "two-step")
     return user
 
 
