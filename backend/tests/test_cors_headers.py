@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -42,18 +43,17 @@ def test_lan_origin_is_not_allowed_by_default():
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_rate_limit_key_uses_forwarded_for_only_from_trusted_proxy():
+@pytest.mark.parametrize("peer, forwarded_for, expected", [
+    ("127.0.0.1", "203.0.113.7, 10.0.0.2", "203.0.113.7"),  # skips the trusted proxy 10.0.0.2
+    ("127.0.0.1", "6.6.6.6, 203.0.113.7", "203.0.113.7"),  # the client's own entry in front is ignored
+    ("127.0.0.1", "garbage, 203.0.113.7", "203.0.113.7"),
+    ("127.0.0.1", "", "127.0.0.1"),
+    ("198.51.100.9", "203.0.113.7", "198.51.100.9"),  # not from a trusted proxy
+])
+def test_rate_limit_key_takes_the_last_hop_that_is_not_a_trusted_proxy(monkeypatch, peer, forwarded_for, expected):
     from types import SimpleNamespace
     from app.main import rate_limit_key
 
-    trusted = SimpleNamespace(
-        client=SimpleNamespace(host="127.0.0.1"),
-        headers={"x-forwarded-for": "203.0.113.7, 10.0.0.2"},
-    )
-    untrusted = SimpleNamespace(
-        client=SimpleNamespace(host="198.51.100.9"),
-        headers={"x-forwarded-for": "203.0.113.7"},
-    )
-
-    assert rate_limit_key(trusted) == "203.0.113.7"
-    assert rate_limit_key(untrusted) == "198.51.100.9"
+    monkeypatch.setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/8")
+    request = SimpleNamespace(client=SimpleNamespace(host=peer), headers={"x-forwarded-for": forwarded_for})
+    assert rate_limit_key(request) == expected

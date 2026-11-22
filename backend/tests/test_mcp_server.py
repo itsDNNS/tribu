@@ -455,7 +455,8 @@ class TestForwarding:
         assert "cookie" not in headers
         assert headers["authorization"] == f"Bearer {token}"
 
-    def test_trusted_proxy_forwards_the_real_client(self):
+    def test_trusted_proxy_forwards_the_real_client(self, monkeypatch):
+        monkeypatch.setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/8")
         user_id, family_id = _family_with_admin("Proxy Family", "proxy@example.com")
         token = _token(user_id, "tasks:read", "proxy")
         proxy = TestClient(app, client=("127.0.0.1", 40000))

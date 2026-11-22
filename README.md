@@ -222,7 +222,7 @@ Set `TZ` when you want family calendar times, task due dates, reminder windows, 
 | `TZ` | Optional IANA timezone for family calendar/task times and reminder windows, for example `Europe/Berlin`. If unset or invalid, Tribu falls back to UTC. Audit timestamps remain UTC. |
 | `CORS_ALLOWED_ORIGINS` | Optional comma-separated exact browser origins for deployments that call the backend directly. The default allows localhost development origins only. |
 | `CORS_ALLOW_LAN_ORIGINS` | Optional `true` to allow `192.168.x.x` browser origins when you deliberately expose the backend on a LAN. |
-| `TRUSTED_PROXY_CIDRS` | Optional comma-separated proxy CIDRs whose `X-Forwarded-For` header may be used for login/register rate-limit keys. Leave unset unless a trusted reverse proxy sits in front of the backend. |
+| `TRUSTED_PROXY_CIDRS` | Optional comma-separated proxy CIDRs whose `X-Forwarded-For` header gives the client address, for login/register rate limits and the failed sign-in log line. Leave unset unless a trusted reverse proxy sits in front of the backend. |
 | `SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS` | Optional `true` to let ICS calendar subscriptions fetch private/LAN feed URLs such as a self-hosted calendar server. Leave `false` unless you trust the feed targets. |
 | `WEBHOOK_ALLOWED_HOSTS` | Optional comma-separated hosts on your network that webhooks may reach, for example `homeassistant.lan,192.168.1.50`. List each host exactly as it appears in the webhook URL. Other private or local addresses stay blocked. |
 

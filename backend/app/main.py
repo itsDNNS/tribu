@@ -1,6 +1,5 @@
 import asyncio
 import hmac
-import ipaddress
 import os
 import logging
 from contextlib import asynccontextmanager
@@ -84,7 +83,8 @@ from app.schemas import (
     ChangePasswordRequest, DeleteAccountRequest, LeaveFamilyRequest, LoginRequest, MeResponse, MobileLoginResponse, MobileRefreshRequest, ProfileImageUpdate, RegisterRequest,
 )
 from app.core import cache, process_health
-from app.core.rate_limits import limiter_storage_options
+from app.core.rate_limits import limiter_storage_options, rate_limit_key
+from app.core.sign_ins import audit_sign_in, log_failed_sign_in
 from app.core.utils import utcnow
 from app.security import JWT_EXPIRE_HOURS, create_access_token, hash_password, verify_password
 from app.core.config import REFRESH_COOKIE_MAX_AGE, REFRESH_COOKIE_NAME, VERSION
@@ -289,42 +289,6 @@ def _cors_allowed_origin_regex() -> str:
     return r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?"
 
 
-def _trusted_proxy_networks() -> list[ipaddress._BaseNetwork]:
-    raw_networks = _split_env_list("TRUSTED_PROXY_CIDRS")
-    networks = ["127.0.0.0/8", "::1/128", *raw_networks]
-    parsed = []
-    for value in networks:
-        try:
-            parsed.append(ipaddress.ip_network(value, strict=False))
-        except ValueError:
-            logger.warning("Ignoring invalid TRUSTED_PROXY_CIDRS entry")
-    return parsed
-
-
-def _client_ip_is_trusted_proxy(client_host: str | None) -> bool:
-    if not client_host:
-        return False
-    try:
-        client_ip = ipaddress.ip_address(client_host)
-    except ValueError:
-        return False
-    return any(client_ip in network for network in _trusted_proxy_networks())
-
-
-def rate_limit_key(request: Request) -> str:
-    client_host = request.client.host if request.client else ""
-    if _client_ip_is_trusted_proxy(client_host):
-        forwarded_for = request.headers.get("x-forwarded-for", "")
-        first_hop = forwarded_for.split(",", 1)[0].strip()
-        if first_hop:
-            try:
-                ipaddress.ip_address(first_hop)
-                return first_hop
-            except ValueError:
-                pass
-    return client_host or "unknown"
-
-
 limiter = Limiter(key_func=rate_limit_key, **limiter_storage_options())
 
 app = FastAPI(
@@ -472,6 +436,17 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     return response
 
 
+def _password_user(request: Request, db: Session, payload: LoginRequest) -> User:
+    """The account for a correct email and password; a wrong one is logged."""
+    if oidc_core.password_login_disabled(db):
+        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
+    user = db.query(User).filter(User.email == payload.email.lower()).first()
+    if not verify_password(payload.password, getattr(user, "password_hash", None)):
+        log_failed_sign_in(request, "password")
+        raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
+    return user
+
+
 @app.post(
     "/auth/login",
     tags=["auth"],
@@ -488,16 +463,12 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
 )
 @limiter.limit("20/minute")
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
-    if oidc_core.password_login_disabled(db):
-        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
-
-    user = db.query(User).filter(User.email == payload.email.lower()).first()
-    if not verify_password(payload.password, getattr(user, "password_hash", None)):
-        raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
+    user = _password_user(request, db, payload)
 
     if mfa.mfa_enabled(user):
         return JSONResponse(content={"status": "mfa_required", "mfa_token": mfa.create_login_challenge(user)})
 
+    audit_sign_in(db, user, "password")
     response = JSONResponse(content={"status": "ok", "must_change_password": user.must_change_password})
     issue_session_cookies(request, response, db, user)
     db.commit()
@@ -521,17 +492,13 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
 )
 @limiter.limit("20/minute")
 def mobile_login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
-    if oidc_core.password_login_disabled(db):
-        raise HTTPException(status_code=403, detail=error_detail(PASSWORD_LOGIN_DISABLED))
-
-    user = db.query(User).filter(User.email == payload.email.lower()).first()
-    if not verify_password(payload.password, getattr(user, "password_hash", None)):
-        raise HTTPException(status_code=401, detail=error_detail(INVALID_CREDENTIALS))
+    user = _password_user(request, db, payload)
 
     if mfa.mfa_enabled(user):
         # An error rather than a new success shape, so older apps that expect tokens fail clearly.
         raise HTTPException(status_code=401, detail=error_detail(MFA_REQUIRED, mfa_token=mfa.create_login_challenge(user)))
 
+    audit_sign_in(db, user, "password")
     refresh_token = issue_refresh_session(db, user)
     db.commit()
     return MobileLoginResponse(
