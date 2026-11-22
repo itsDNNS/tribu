@@ -13,7 +13,7 @@ from app.core.config import (
     REFRESH_COOKIE_NAME,
     SECURE_COOKIES,
 )
-from app.core.clock import to_utc_naive, utcnow, utcnow_aware
+from app.core.clock import to_utc_naive, utcnow_aware
 from app.models import User, UserSession
 from app.security import (
     create_access_token,
@@ -64,9 +64,12 @@ def end_all_sessions(db: Session, user: User) -> None:
     ).update({UserSession.revoked_at: now}, synchronize_session=False)
 
 
-def set_temporary_password(db: Session, user: User) -> str:
-    """Give the account a temporary password it must change at the next sign-in, and sign it out everywhere."""
-    temporary = generate_temp_password()
+def set_temporary_password(db: Session, user: User, temporary: str | None = None) -> str:
+    """Give the account a temporary password it must change at the next sign-in, and sign it out everywhere.
+
+    Generated unless given, for example typed in at the server shell.
+    """
+    temporary = temporary or generate_temp_password()
     user.password_hash = hash_password(temporary)
     user.must_change_password = True
     end_all_sessions(db, user)
