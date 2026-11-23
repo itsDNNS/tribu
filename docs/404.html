@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page not found | Tribu</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #faf8f4;
+      --surface: #ffffff;
+      --line: #e4d9cc;
+      --text: #231a15;
+      --muted: #64564d;
+      --accent: #9c4528;
+      --accent-hover: #7f361e;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16120f;
+        --surface: #221c18;
+        --line: #3a312a;
+        --text: #f4eee8;
+        --muted: #b5a99e;
+        --accent: #a8502f;
+        --accent-hover: #8f4225;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    main {
+      width: min(520px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 36px;
+    }
+    .code {
+      display: inline-block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 500;
+      font-size: 2rem;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+    p {
+      margin: 14px 0 0;
+      color: var(--muted);
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+    a.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+    a.primary:hover { background: var(--accent-hover); }
+  </style>
+</head>
+<body>
+  <main>
+    <span class="code">404</span>
+    <h1>This page does not exist.</h1>
+    <p>The link may be outdated or moved. Return to the Tribu home page or browse the guides in the GitHub Wiki.</p>
+    <div class="actions">
+      <a class="primary" href="https://itsdnns.github.io/tribu/">Back to Tribu</a>
+      <a href="https://github.com/itsDNNS/tribu/wiki">Documentation Wiki</a>
+      <a href="https://github.com/itsDNNS/tribu">GitHub</a>
+    </div>
+  </main>
+</body>
+</html>
