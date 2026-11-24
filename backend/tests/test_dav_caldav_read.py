@@ -598,9 +598,16 @@ class TestCalDAVMemberProjection:
 
     def test_ctag_changes_after_member_rename_and_membership_change(self, dav_app, seeded):
         """Member renames/additions change emitted ATTENDEE content without
-        touching any event row, so the collection ctag must reflect the
-        family membership fingerprint."""
+        touching any event row, so the collection ctag must change too.
+        Radicale derives the ctag from the sync token over the served
+        events, so the join needs an event assigned to everyone, which
+        lists each member."""
         token, family_id = seeded
+        with SessionLocal() as db:
+            db.query(CalendarEvent).filter(
+                CalendarEvent.family_id == family_id, CalendarEvent.title == "Picnic"
+            ).update({"assigned_to": "all"})
+            db.commit()
         client = TestClient(dav_app)
         headers = {"Authorization": dav_basic(EMAIL, token)}
 
