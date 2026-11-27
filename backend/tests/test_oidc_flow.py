@@ -459,16 +459,17 @@ def test_callback_links_existing_user_by_verified_email(monkeypatch):
     client.cookies.clear()
 
 
-def test_callback_refuses_unverified_email(monkeypatch):
+@pytest.mark.parametrize("email, verified", [("anna@example.com", False), ("anna", True)])
+def test_callback_refuses_unverified_or_non_email_claims(monkeypatch, email, verified):
     seed_oidc_config()
-    seed_user("anna@example.com", "Anna")
+    seed_user(email, "Anna")
 
     state = _perform_login_and_extract_state(monkeypatch)
     _mock_token_exchange(
         monkeypatch,
         subject="sub-bad",
-        email="anna@example.com",
-        email_verified=False,
+        email=email,
+        email_verified=verified,
     )
 
     resp = client.get(f"/auth/oidc/callback?code=authcode&state={state}")

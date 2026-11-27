@@ -7,7 +7,8 @@ import re
 
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, EmailStr, ConfigDict, Field, TypeAdapter, ValidationError, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
 from app.core.calendar_icons import normalize_calendar_event_icon
 from app.core.notification_destinations import clean_events as clean_notification_destination_events
@@ -52,6 +53,27 @@ ADMIN_RESPONSES = {**UNAUTHORIZED_RESPONSE, **FORBIDDEN_RESPONSE, **NOT_FOUND_RE
 # Length is what makes a password hard to guess; no character classes. Existing shorter passwords still sign in.
 NewPassword = Annotated[str, Field(min_length=12, max_length=128, description="New password, at least 12 characters")]
 
+# Tribu sends no mail, so the sign-in name may also be a username, e.g. for a child without an email address (#663).
+_USERNAME = re.compile(r"[a-z0-9]+(?:[._-][a-z0-9]+)*")
+_EMAIL = TypeAdapter(EmailStr)
+
+
+def _login_name(value: str) -> str:
+    value = value.strip()
+    name = value.lower()
+    if value.isascii() and 2 <= len(name) <= 32 and _USERNAME.fullmatch(name):
+        return name
+    try:
+        # Validate first, then lowercase, exactly as registration stores email keys.
+        return _EMAIL.validate_python(value).lower()
+    except ValidationError:
+        raise PydanticCustomError(
+            "INVALID_LOGIN_NAME", "Use an email address or a username of 2 to 32 letters and digits, joined by . _ or -",
+        ) from None
+
+
+LoginName = Annotated[str, AfterValidator(_login_name)]
+
 
 class RegisterRequest(BaseModel):
     """Register a new user and create their first family."""
@@ -66,8 +88,8 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    """Authenticate with email and password."""
-    email: EmailStr = Field(..., description="Registered email address")
+    """Authenticate with email address or username and password."""
+    email: LoginName = Field(..., description="Registered email address or username")
     password: str = Field(min_length=8, max_length=128, description="Account password")
 
     model_config = ConfigDict(json_schema_extra={
@@ -321,20 +343,20 @@ class MemberBirthdateUpdate(BaseModel):
 
 class CreateMemberRequest(BaseModel):
     """Create a new family member (admin only). A temporary password is generated."""
-    email: EmailStr = Field(..., description="Email for the new member")
+    email: LoginName = Field(..., description="Email address or username the new member signs in with")
     display_name: str = Field(..., description="Display name")
     role: str = Field("member", description="Role: 'admin' or 'member'")
     is_adult: bool = Field(False, description="Whether the new member is an adult")
 
     model_config = ConfigDict(json_schema_extra={
-        "examples": [{"email": "kid@example.com", "display_name": "Lena", "role": "member", "is_adult": False}]
+        "examples": [{"email": "lena", "display_name": "Lena", "role": "member", "is_adult": False}]
     })
 
 
 class CreateMemberResponse(BaseModel):
     """Newly created family member with temporary password."""
     user_id: int = Field(..., description="Created user ID")
-    email: str = Field(..., description="Email address")
+    email: str = Field(..., description="Email address or username")
     display_name: str = Field(..., description="Display name")
     role: str = Field(..., description="Assigned role")
     is_adult: bool = Field(..., description="Adult status")
