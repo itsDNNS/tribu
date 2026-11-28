@@ -64,7 +64,7 @@ from app.modules.invitations_router import router as invitations_router, public_
 from app.modules.oidc_auth_router import router as oidc_auth_router
 from app.modules.mfa_router import router as mfa_router
 from app.modules.oidc_router import router as oidc_admin_router
-from app.modules.setup_router import router as setup_router
+from app.modules.setup_router import SETUP_RESTORE_TOKEN_HEADER, router as setup_router, setup_restore_max_bytes
 from app.modules.search_router import router as search_router
 from app.modules.rewards_router import router as rewards_router
 from app.modules.gifts_router import router as gifts_router
@@ -95,18 +95,6 @@ logger = logging.getLogger(__name__)
 def open_registration_enabled() -> bool:
     return os.getenv("ALLOW_OPEN_REGISTRATION", "false").lower() in {"1", "true", "yes", "on"}
 
-SETUP_RESTORE_TOKEN_HEADER = "x-setup-restore-token"
-DEFAULT_SETUP_RESTORE_MAX_BYTES = 100 * 1024 * 1024
-
-
-def setup_restore_max_bytes() -> int:
-    raw = os.getenv("SETUP_RESTORE_MAX_BYTES")
-    if not raw:
-        return DEFAULT_SETUP_RESTORE_MAX_BYTES
-    try:
-        return max(1, int(raw))
-    except ValueError:
-        return DEFAULT_SETUP_RESTORE_MAX_BYTES
 
 
 def setup_restore_token_configured() -> str:

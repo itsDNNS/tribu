@@ -9,8 +9,8 @@ oracle:
 * Redirects are not followed. An external feed URL that 302s to a
   different host would otherwise let an attacker steer Tribu's outbound
   request after validation.
-* The response body is capped (1 MiB) so a hostile endpoint cannot
-  exhaust memory by streaming gigabytes.
+* The response body is capped (``ICS_FEED_MAX_BYTES``, 1 MiB by default)
+  so a hostile endpoint cannot exhaust memory by streaming gigabytes.
 
 Errors surface as ``IcsSubscriptionError`` whose message is short and
 user-safe; the caller maps them to a 400 without echoing transport
@@ -26,8 +26,10 @@ import socket
 import ssl
 import urllib.parse
 
+from app.core.config import env_int
 
-_MAX_ICS_BYTES = 1024 * 1024  # 1 MiB
+
+_MAX_ICS_BYTES = 1024 * 1024  # 1 MiB unless ICS_FEED_MAX_BYTES says otherwise
 _FETCH_TIMEOUT = 10.0
 _USER_AGENT = "tribu-calendar-subscription/1.0"
 
@@ -128,19 +130,21 @@ def hostname_from_url(url: str) -> str:
         return ""
 
 
-def _read_limited_response(resp: http.client.HTTPResponse, max_bytes: int) -> bytes:
-    body = resp.read(max_bytes + 1)
-    if len(body) > max_bytes:
-        raise IcsSubscriptionError(
-            f"Subscription feed exceeds {max_bytes} bytes; refusing to import"
-        )
+def _read_limited_response(resp: http.client.HTTPResponse, max_bytes: int) -> bytearray:
+    # In chunks, so a high admin-set limit is not allocated up front.
+    body = bytearray()
+    while chunk := resp.read(min(64 * 1024, max_bytes + 1 - len(body))):
+        body += chunk
+        if len(body) > max_bytes:
+            raise IcsSubscriptionError(
+                f"Subscription feed exceeds {max_bytes} bytes; refusing to import"
+            )
     return body
 
 
 def fetch_ics_text(
     url: str,
     *,
-    max_bytes: int = _MAX_ICS_BYTES,
     timeout: float = _FETCH_TIMEOUT,
     allow_private_networks: bool | None = None,
 ) -> str:
@@ -188,7 +192,7 @@ def fetch_ics_text(
             raise IcsSubscriptionError("Subscription URL redirects are not allowed")
         if resp.status >= 400:
             raise IcsSubscriptionError(f"Subscription URL returned HTTP {resp.status}")
-        body = _read_limited_response(resp, max_bytes)
+        body = _read_limited_response(resp, env_int("ICS_FEED_MAX_BYTES", _MAX_ICS_BYTES))
     except IcsSubscriptionError:
         raise
     except TimeoutError:

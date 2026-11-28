@@ -224,6 +224,8 @@ Set `TZ` when you want family calendar times, task due dates, reminder windows, 
 | `CORS_ALLOW_LAN_ORIGINS` | Optional `true` to allow `192.168.x.x` browser origins when you deliberately expose the backend on a LAN. |
 | `TRUSTED_PROXY_CIDRS` | Optional comma-separated proxy CIDRs whose `X-Forwarded-For` header gives the client address, for login/register rate limits and the failed sign-in log line. Leave unset unless a trusted reverse proxy sits in front of the backend. |
 | `SUBSCRIPTIONS_ALLOW_PRIVATE_NETWORKS` | Optional `true` to let ICS calendar subscriptions fetch private/LAN feed URLs such as a self-hosted calendar server. Leave `false` unless you trust the feed targets. |
+| `ICS_FEED_MAX_BYTES` | Optional size limit for one calendar feed download, in bytes. Default `1048576` (1 MiB). |
+| `ICS_MAX_EVENTS` | Optional limit on events per calendar feed sync or ICS import. Default `500`. |
 | `WEBHOOK_ALLOWED_HOSTS` | Optional comma-separated hosts on your network that webhooks may reach, for example `homeassistant.lan,192.168.1.50`. List each host exactly as it appears in the webhook URL. Other private or local addresses stay blocked. |
 | `MCP_ENABLED` | Optional `false` to turn off the [MCP endpoint](#ai-assistants-mcp) for AI assistants. On by default. |
 
