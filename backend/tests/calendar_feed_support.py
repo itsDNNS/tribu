@@ -15,11 +15,9 @@ def seed_calendar_admin(**options) -> tuple[str, int]:
     return member.token, member.family_id
 
 
-def ics_event(uid: str, summary: str = "Holiday") -> str:
-    """A calendar with one VEVENT on 2026-03-10 09:00."""
-    return (
-        "BEGIN:VCALENDAR\r\n"
-        "VERSION:2.0\r\n"
+def ics_event(*uids: str, summary: str = "Holiday") -> str:
+    """A calendar with one VEVENT per UID, each on 2026-03-10 09:00."""
+    vevents = "".join(
         "BEGIN:VEVENT\r\n"
         f"SUMMARY:{summary}\r\n"
         "DTSTART:20260310T090000\r\n"
@@ -27,8 +25,9 @@ def ics_event(uid: str, summary: str = "Holiday") -> str:
         "DTSTAMP:20260101T000000\r\n"
         f"UID:{uid}\r\n"
         "END:VEVENT\r\n"
-        "END:VCALENDAR\r\n"
+        for uid in uids
     )
+    return f"BEGIN:VCALENDAR\r\nVERSION:2.0\r\n{vevents}END:VCALENDAR\r\n"
 
 
 def seed_calendar_event(family_id: int, title: str, ical_uid: str, **fields) -> None:

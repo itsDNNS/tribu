@@ -443,3 +443,55 @@ class TestManagedSubscriptions:
         assert body["last_sync_error"] == "Could not fetch subscription URL"
         assert "10.1.2.3" not in resp.text
         assert body["sync_history"][0]["status"] == "failed"
+
+
+# --- Size limits set by the instance admin (#662) ----------------------------
+
+
+def test_imports_feeds_and_previews_report_events_above_the_limit(monkeypatch):
+    monkeypatch.setenv("ICS_MAX_EVENTS", "2")
+    token, family_id = seed_calendar_admin()
+    three = ics_event(*(f"cap-{i}@feed.example.com" for i in range(3)))
+    patch_ics_fetch(monkeypatch, lambda url, **kw: three)
+    feed = {"family_id": family_id, "source_url": "https://feed.example.com/big.ics"}
+
+    preview = client.post("/calendar/events/subscribe-ics/preview", json=feed, headers=auth(token)).json()
+    assert (preview["would_create"], preview["would_skip"]) == (2, 1)
+    assert preview["errors"][-1]["error"] == "Only the first 2 events would be processed"
+    synced = client.post("/calendar/subscriptions", json=feed, headers=auth(token)).json()
+    assert (synced["last_created"], synced["last_skipped"], synced["last_sync_error"]) == (2, 1, "Only the first 2 events were processed")
+    imported = client.post(
+        "/calendar/events/import-ics",
+        json={"family_id": family_id, "ics_text": ics_event(*(f"file-{i}@example.com" for i in range(3)))},
+        headers=auth(token),
+    ).json()
+    assert (imported["created"], imported["skipped"]) == (2, 1)
+    assert imported["errors"][-1]["error"] == "Only the first 2 events were processed"
+
+
+def test_fetch_refuses_a_feed_above_the_byte_limit(monkeypatch):
+    import http.server
+    import threading
+
+    class _Feed(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(feed)
+
+        def log_message(self, *args):
+            pass
+
+    feed = b"x" * (64 * 1024 + 5)  # more than one read chunk
+    server = http.server.HTTPServer(("127.0.0.1", 0), _Feed)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_port}/feed.ics"
+    try:
+        monkeypatch.setenv("ICS_FEED_MAX_BYTES", str(len(feed)))
+        assert fetch_ics_text(url, allow_private_networks=True) == feed.decode()
+        monkeypatch.setenv("ICS_FEED_MAX_BYTES", str(len(feed) - 1))
+        with pytest.raises(IcsSubscriptionError, match=f"exceeds {len(feed) - 1} bytes"):
+            fetch_ics_text(url, allow_private_networks=True)
+    finally:
+        server.shutdown()
+        server.server_close()

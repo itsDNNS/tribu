@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core import cache
 from app.core.activity import record_activity
+from app.core.config import env_int
 from app.core.clock import local_day_bounds_as_utc_naive, local_wall_to_utc_naive, to_local_wall_naive, utcnow
 from app.core.calendar_icons import normalize_calendar_event_icon
 from app.core.calendar_subscriptions import (
@@ -207,7 +208,11 @@ def _safe_subscription_error(exc: Exception) -> str:
     return "Could not fetch subscription URL"
 
 
-MAX_ICS_EVENTS = 500
+def max_ics_events() -> int:
+    """How many VEVENTs one import, feed sync or preview takes over (``ICS_MAX_EVENTS``)."""
+    return env_int("ICS_MAX_EVENTS", 500)
+
+
 SUBSCRIPTION_SKIP_ERROR = "VEVENT UID already exists as a non-subscription or different-feed event; skipped to avoid overwriting it"
 IMPORT_SKIP_ERROR = "VEVENT UID already exists as a non-imported event; skipped to avoid overwriting a local or synced event"
 
@@ -255,7 +260,8 @@ def _apply_ics_events(
     created = 0
     updated = 0
     skipped = 0
-    for event_dict in valid_events[:MAX_ICS_EVENTS]:
+    limit = max_ics_events()
+    for event_dict in valid_events[:limit]:
         existing, owner = _find_ics_event(db, family_id, event_dict)
         if owner is not None and not owns(owner):
             skipped += 1
@@ -282,6 +288,9 @@ def _apply_ics_events(
                 }
             db.add(CalendarEvent(**event_dict))
             created += 1
+    if len(valid_events) > limit:
+        skipped += len(valid_events) - limit
+        errors.append({"index": limit, "summary": "", "error": f"Only the first {limit} events were processed"})
 
     removed = 0
     series_uids = {d["ical_uid"] for d in valid_events if d.get("ical_uid") and d.get("recurrence_id") is None}
@@ -364,7 +373,7 @@ def _refresh_calendar_subscription(
             source_url=subscription.source_url,
         )
         now = utcnow()
-        for event_dict in valid_events[:MAX_ICS_EVENTS]:
+        for event_dict in valid_events:
             event_dict["subscription_id"] = subscription.id
             event_dict["source_name"] = subscription.name
             event_dict["source_url"] = subscription.source_url
@@ -378,9 +387,6 @@ def _refresh_calendar_subscription(
             owns=owned_by_this_feed,
             skip_error=SUBSCRIPTION_SKIP_ERROR,
         )
-        if len(valid_events) > MAX_ICS_EVENTS:
-            skipped += len(valid_events) - MAX_ICS_EVENTS
-            errors.append({"index": MAX_ICS_EVENTS, "summary": "", "error": f"Only the first {MAX_ICS_EVENTS} events were processed"})
         # Surface constraint violations here, where they can still be
         # recorded as a failed refresh instead of an HTTP 500.
         db.flush()
@@ -431,7 +437,6 @@ def _classify_ics_preview(
     errors: list[dict],
     source_type: str,
     normalized_url: str | None = None,
-    max_events: int = 500,
     sample_limit: int = 10,
 ) -> dict:
     """Classify an ICS import/refresh without mutating calendar rows."""
@@ -440,8 +445,9 @@ def _classify_ics_preview(
     would_skip = 0
     preview_errors = list(errors)
     sample_events: list[dict] = []
+    limit = max_ics_events()
 
-    for event_dict in valid_events[:max_events]:
+    for event_dict in valid_events[:limit]:
         ical_uid = event_dict.get("ical_uid")
         existing, owner = _find_ics_event(db, family_id, event_dict)
         if source_type == "import":
@@ -475,11 +481,12 @@ def _classify_ics_preview(
                 "outcome": outcome,
             })
 
-    if len(valid_events) > max_events:
+    if len(valid_events) > limit:
+        would_skip += len(valid_events) - limit
         preview_errors.append({
-            "index": max_events,
+            "index": limit,
             "summary": "",
-            "error": f"Only the first {max_events} events would be processed",
+            "error": f"Only the first {limit} events would be processed",
         })
 
     return {
@@ -525,7 +532,7 @@ def preview_import_calendar_ics(
 @router.post(
     "/events/import-ics",
     summary="Import events from ICS",
-    description="Parse ICS text and create calendar events (max 500). Adult only. Scope: `calendar:write`.",
+    description="Parse ICS text and create calendar events (at most `ICS_MAX_EVENTS`, 500 by default). Adult only. Scope: `calendar:write`.",
     response_description="Import result with created count and errors",
 )
 def import_calendar_ics(

@@ -6,6 +6,7 @@ import tempfile
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 
+from app.core.config import env_int
 from app.core.backup import restore_backup, validate_backup
 from app.database import get_db, engine
 from app.models import User
@@ -25,14 +26,8 @@ def _needs_setup(db: Session) -> bool:
     return db.query(User).count() == 0
 
 
-def _setup_restore_max_bytes() -> int:
-    raw = os.getenv("SETUP_RESTORE_MAX_BYTES")
-    if not raw:
-        return DEFAULT_SETUP_RESTORE_MAX_BYTES
-    try:
-        return max(1, int(raw))
-    except ValueError:
-        return DEFAULT_SETUP_RESTORE_MAX_BYTES
+def setup_restore_max_bytes() -> int:
+    return env_int("SETUP_RESTORE_MAX_BYTES", DEFAULT_SETUP_RESTORE_MAX_BYTES)
 
 
 def _require_setup_restore_token(request: Request) -> None:
@@ -81,7 +76,7 @@ def setup_restore(
 
     tmp_path = None
     try:
-        max_bytes = _setup_restore_max_bytes()
+        max_bytes = setup_restore_max_bytes()
         written = 0
         with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tmp:
             tmp_path = tmp.name
