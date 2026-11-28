@@ -365,7 +365,8 @@ def _link_or_create_user(
             existing.email_at_login = claims.email
         return user
 
-    if not claims.email or not claims.email_verified:
+    # A claim without "@" could match a username account (#663), so it is no usable email.
+    if not isinstance(claims.email, str) or "@" not in claims.email or not claims.email_verified:
         raise HTTPException(
             status_code=400,
             detail=error_detail(

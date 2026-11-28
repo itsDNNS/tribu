@@ -50,7 +50,7 @@ const messages = {
   child: 'Child',
   add_member: 'Add member',
   add_member_desc: 'Add a member.',
-  member_email: 'Email',
+  email_or_username: 'Email or username',
   member_name: 'Name',
   member_role: 'Role',
   member_is_adult: 'Adult',

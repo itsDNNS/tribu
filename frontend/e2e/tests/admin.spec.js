@@ -7,7 +7,7 @@ test.describe('Admin', () => {
 
     await expect(page.locator('.profile-name', { hasText: testUser.displayName })).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: `Edit profile for ${testUser.displayName}` }).click();
-    await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Email', exact: true })).toHaveValue(testUser.email);
+    await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Email or username', exact: true })).toHaveValue(testUser.email);
   });
 
   test('admin sections switch through the submenu', async ({ authedPage: page }) => {
@@ -71,29 +71,29 @@ test('member dialog persists creation, role changes and removal through the API'
   await page.getByRole('button', { name: 'Add member', exact: true }).first().click();
   let dialog = page.getByRole('dialog');
   await dialog.getByRole('textbox', { name: 'Display name', exact: true }).fill(name);
-  await dialog.getByRole('textbox', { name: 'Email', exact: true }).fill(`demo-admin-${Date.now()}@example.com`);
+  await dialog.getByRole('textbox', { name: 'Email or username', exact: true }).fill(`demo-${Date.now()}`);
   await dialog.getByRole('button', { name: 'Add member', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await page.reload();
-  await page.getByRole('button', { name: `Edit profile for ${name}` }).click();
-  dialog = page.getByRole('dialog');
+  const reopen = async () => {
+    await page.reload();
+    await page.getByRole('button', { name: `Edit profile for ${name}` }).click();
+    return page.getByRole('dialog');
+  };
+  const save = async () => {
+    await dialog.getByRole('checkbox').check();
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+  };
+  dialog = await reopen();
   await expect(dialog.getByRole('combobox', { name: 'Role', exact: true })).toBeDisabled();
   await dialog.getByRole('combobox', { name: 'Family profile' }).selectOption('adult');
   await dialog.getByRole('combobox', { name: 'Role', exact: true }).selectOption('admin');
-  await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(dialog).toHaveCount(0);
-  await page.reload();
-  await page.getByRole('button', { name: `Edit profile for ${name}` }).click();
-  dialog = page.getByRole('dialog');
+  await save();
+  dialog = await reopen();
   await expect(dialog.getByRole('combobox', { name: 'Role', exact: true })).toHaveValue('admin');
   await dialog.getByRole('combobox', { name: 'Family profile' }).selectOption('child');
-  await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(dialog).toHaveCount(0);
-  await page.reload();
-  await page.getByRole('button', { name: `Edit profile for ${name}` }).click();
-  dialog = page.getByRole('dialog');
+  await save();
+  dialog = await reopen();
   await expect(dialog.getByRole('combobox', { name: 'Role', exact: true })).toHaveValue('member');
   await dialog.getByRole('button', { name: 'Remove', exact: true }).click();
   await dialog.getByRole('button', { name: 'Confirm change', exact: true }).click();

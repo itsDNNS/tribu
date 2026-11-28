@@ -187,14 +187,16 @@ export default function MemberEditor({
               />
             </label>
             <label>
-              {t(messages, "member_email")}
+              {t(messages, "email_or_username")}
               <input
-                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 readOnly={!creating}
                 autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
               />
             </label>
             <label>

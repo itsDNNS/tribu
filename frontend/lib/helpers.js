@@ -109,6 +109,8 @@ export function errorText(detail, fallback, messages) {
     }
     if (detail.message) return detail.message;
   }
+  const typed = Array.isArray(detail) && messages?.[`error.${detail[0]?.type}`];
+  if (typed) return typed;
   if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg;
   if (typeof detail === 'object' && detail.msg) return detail.msg;
   if (typeof detail === 'object' && detail.message) return detail.message;

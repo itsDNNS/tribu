@@ -69,6 +69,10 @@ describe('errorText', () => {
     expect(errorText([{ msg: 'field error' }], 'fallback')).toBe('field error');
   });
 
+  it('translates a typed validation error', () => {
+    expect(errorText([{ type: 'INVALID_LOGIN_NAME', msg: 'raw' }], 'fallback', { 'error.INVALID_LOGIN_NAME': 'translated' })).toBe('translated');
+  });
+
   it('extracts msg from object', () => {
     expect(errorText({ msg: 'obj error' }, 'fallback')).toBe('obj error');
   });

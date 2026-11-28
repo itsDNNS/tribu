@@ -43,7 +43,7 @@ async function submitPassword() {
   const api = require('../../lib/api');
   render(<AuthPage />);
   await waitFor(() => expect(api.apiGetOidcPublicConfig).toHaveBeenCalled());
-  fireEvent.change(screen.getByLabelText('email'), { target: { value: 'anna@example.com' } });
+  fireEvent.change(screen.getByLabelText('email_or_username'), { target: { value: 'anna@example.com' } });
   fireEvent.change(screen.getByLabelText('password'), { target: { value: 'Secure1Pass' } });
   fireEvent.click(screen.getByRole('button', { name: 'login' }));
 }
@@ -81,5 +81,14 @@ describe('AuthPage two-step sign-in', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('MFA_CHALLENGE_INVALID');
     expect(screen.getByLabelText('password')).toBeInTheDocument();
     expect(mockSetLoggedIn).not.toHaveBeenCalled();
+  });
+
+  it('marks the sign-in field when the server refuses its format', async () => {
+    const api = require('../../lib/api');
+    api.apiLogin.mockResolvedValue({ ok: false, data: { detail: [{ type: 'INVALID_LOGIN_NAME', loc: ['body', 'email'] }] } });
+    await submitPassword();
+
+    await waitFor(() => expect(screen.getByLabelText('email_or_username')).toHaveAttribute('aria-invalid', 'true'));
+    expect(screen.getByLabelText('email_or_username')).toHaveFocus();
   });
 });

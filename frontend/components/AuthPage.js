@@ -142,7 +142,12 @@ export default function AuthPage() {
     setMsg('');
     setInvalidField('');
     const { ok, data } = await api.apiLogin(email, password);
-    if (!ok) { setMsg(errorText(data?.detail, t(messages, 'toast.login_failed'), messages)); toastError(errorText(data?.detail, t(messages, 'toast.login_failed'), messages)); return; }
+    if (!ok) {
+      const text = errorText(data?.detail, t(messages, 'toast.login_failed'), messages);
+      fail(text, errorField(data?.detail) === 'email' ? 'login-email' : '');
+      toastError(text);
+      return;
+    }
     if (data?.status === 'mfa_required') {
       setMfaToken(data.mfa_token);
       setMfaCode('');
@@ -306,8 +311,8 @@ export default function AuthPage() {
             ) : (
               <form onSubmit={login} className="auth-form">
                 <div className="form-field">
-                  <label htmlFor="login-email">{t(messages, 'email')}</label>
-                  <input id="login-email" className="form-input" type="email" placeholder="name@family.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+                  <label htmlFor="login-email">{t(messages, 'email_or_username')}</label>
+                  <input id="login-email" className="form-input" value={email} onChange={(e) => { setEmail(e.target.value); if (invalidField === 'login-email') setInvalidField(''); }} autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required aria-invalid={invalidField === 'login-email'} aria-describedby={describedBy('login-email')} />
                 </div>
                 <div className="form-field">
                   <label htmlFor="login-password">{t(messages, 'password')}</label>

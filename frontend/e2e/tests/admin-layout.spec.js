@@ -146,7 +146,7 @@ test("failed member save keeps the draft and reports an error", async ({
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Anzeigename", { exact: true }).fill("Demo E");
   await dialog
-    .getByLabel("E-Mail", { exact: true })
+    .getByLabel("E-Mail oder Benutzername", { exact: true })
     .fill("demo-e@example.test");
   await dialog
     .getByRole("button", { name: "Mitglied hinzufügen", exact: true })
